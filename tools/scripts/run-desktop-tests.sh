@@ -35,12 +35,31 @@ fi
 npm run build >/dev/null
 
 if [ "$SUITE" = "all" ]; then
-  exec node --test --test-timeout 30000 tests/*.test.mjs
+  FILES=(tests/*.test.mjs)
+else
+  FILES=("tests/${SUITE}.test.mjs")
+  if [ ! -f "${FILES[0]}" ]; then
+    echo "run-desktop-tests: no suite called '${SUITE}' (looked for desktop/${FILES[0]})" >&2
+    exit 2
+  fi
 fi
 
-FILE="tests/${SUITE}.test.mjs"
-if [ ! -f "$FILE" ]; then
-  echo "run-desktop-tests: no suite called '${SUITE}' (looked for desktop/${FILE})" >&2
-  exit 2
+# The output is shown, and then the LAST line names what failed.
+#
+# tools/scripts/run-tests.py reports each TST-* note's command by its final
+# line of output, and node's final line is a duration. A red build that says
+# "duration_ms 656" sends the reader to the logs to find out what broke; this
+# says it in the line they were already going to read.
+set +e
+node --test --test-timeout 30000 "${FILES[@]}" 2>&1 | tee /tmp/deck-test-output.$$
+status=${PIPESTATUS[0]}
+set -e
+
+if [ "$status" -ne 0 ]; then
+  failed="$(grep -E '^(not ok|✖)' "/tmp/deck-test-output.$$" | sed -E 's/^(not ok [0-9]+ -|✖)[[:space:]]*//; s/ \([0-9.]+ms\)$//' | grep -v '^failing tests:$' | sort -u | paste -sd '; ' -)"
+  rm -f "/tmp/deck-test-output.$$"
+  echo "FAILED ${SUITE}: ${failed:-node exited ${status} with no named failure}"
+  exit "$status"
 fi
-exec node --test --test-timeout 30000 "$FILE"
+rm -f "/tmp/deck-test-output.$$"
+exit 0

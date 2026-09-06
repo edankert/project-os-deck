@@ -112,6 +112,16 @@ export function parseAddress(raw: string): DeckAddress {
   return out;
 }
 
+/**
+ * Whether a desk name can be written into an address.
+ *
+ * Exported so the place a person types one can refuse it there, with a reason,
+ * rather than letting it through and failing later when the address is copied.
+ */
+export function isDeskName(value: string): boolean {
+  return DESK_RE.test(value);
+}
+
 /** Parse without throwing, for callers that want to report rather than fail. */
 export function tryParseAddress(raw: string): { ok: true; address: DeckAddress } | { ok: false; reason: string } {
   try {

@@ -7,7 +7,7 @@
  * this file.
  */
 import type { CardModel, DeckView, Workspace } from '../shared/types.js';
-import { AddressError, formatAddress, parseAddress, tryParseAddress } from '../shared/address.js';
+import { AddressError, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry } from '../shared/views.js';
 import { SidecarClient, cardsFromNav } from '../shared/sidecar-client.js';
 import { deskFrom, reconcileDesk } from '../shared/desk.js';
@@ -472,6 +472,12 @@ function wireControls(): void {
       if (workspace === null) return;
       const name = await askText('desk name:', state.deskName ?? '');
       if (name === null) return;
+      if (!isDeskName(name)) {
+        // Refused here, where the person can retype it, rather than later when
+        // they copy the address and Deck rejects its own string.
+        say(`that name cannot go in an address: up to 64 characters, and no control characters`, true);
+        return;
+      }
       const origin = el.desk.getBoundingClientRect();
       const cards = Array.from(el.desk.querySelectorAll<HTMLElement>('.card'))
         .filter((element) => !element.hidden)

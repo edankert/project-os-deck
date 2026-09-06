@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { formatAddress, parseAddress, tryParseAddress, AddressError } = load('shared/address.js');
+const { formatAddress, parseAddress, tryParseAddress, AddressError, isDeskName } = load('shared/address.js');
 
 const WORKSPACE = '3f2a1b0c9d8e7f60';
 
@@ -124,5 +124,19 @@ test('anything format produces, parse accepts', () => {
       assert.equal(parsed.desk, desk);
       assert.equal(parsed.note, note);
     }
+  }
+});
+
+
+test('a desk name is judged by the same rule that writes it into an address', () => {
+  // The interface asks this before saving, so the two ends cannot disagree.
+  for (const good of ["Edwin's desk", 'sprint #3', 'a/b', 'x'.repeat(64)]) {
+    assert.equal(isDeskName(good), true, JSON.stringify(good) + ' should be a desk name');
+    assert.doesNotThrow(() =>
+      formatAddress({ workspaceId: WORKSPACE, viewId: 'cards', desk: good, note: null, panel: null }),
+    );
+  }
+  for (const bad of ['', 'x'.repeat(65), 'a' + String.fromCharCode(9) + 'b']) {
+    assert.equal(isDeskName(bad), false, JSON.stringify(bad) + ' should not be a desk name');
   }
 });

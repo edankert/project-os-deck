@@ -48,7 +48,7 @@ An address is the written form of a Deck state. This suite asserts the round tri
 
 ## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh address`: 9 checks, all passing on 2026-09-06, over a table of five reachable states, twelve malformed inputs, and forty-nine combinations of awkward desk names and note ids.
+- `bash tools/scripts/run-desktop-tests.sh address`: 10 checks, all passing on 2026-09-06, over a table of five reachable states, twelve malformed inputs, and forty-nine combinations of awkward desk names and note ids. A tenth check ties the interface to the grammar: the desk prompt refuses a name that could not be written into an address, where the person can still retype it.
 - The awkward cases are the ones that matter: `Edwin's desk`, `sprint #3`, `a=b&c`, `100%`, `a/b`, and the stats view's note ids such as `notes/total`. The independent review found that formatting accepted all of these and parsing then refused them, so Copy address handed back a string Deck itself rejected.
 - In the running application: the copy control produced an address that parsed, named the open workspace and carried the focused note.
 
