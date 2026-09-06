@@ -70,8 +70,14 @@ if [ "$status" -ne 0 ]; then
   # reason and not only a name.
   why="$( { grep -E "^[[:space:]]*([A-Za-z]*Error|error:)" "$out" \
       | head -1 | sed -E "s/^[[:space:]]*(error:)?[[:space:]]*//; s/^'//; s/'$//" | cut -c1-140; } || true)"
+  # Nothing named means node did not fail a test — it crashed, or something
+  # after the tests did. The tail is then the only useful thing to say, and
+  # this one line is all that reaches CI.
+  if [ -z "$failed" ]; then
+    failed="node exited ${status}; tail: $( { grep -v '^$' "$out" | tail -n 8 | paste -sd '|' - | cut -c1-400; } || true)"
+  fi
   rm -f "$out"
-  echo "FAILED ${SUITE}: ${failed:-node exited ${status} with no named failure}${why:+ -- ${why}}"
+  echo "FAILED ${SUITE}: ${failed}${why:+ -- ${why}}"
   exit "$status"
 fi
 rm -f "$out"
