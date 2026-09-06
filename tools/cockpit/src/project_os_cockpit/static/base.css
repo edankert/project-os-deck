@@ -1,0 +1,768 @@
+/* project-os-cockpit base stylesheet
+ *
+ * Visual contract: REQ-0012 — muted greyscale palette, semantic-only color,
+ * dual light/dark themes. All colors are CSS custom properties; component
+ * rules use var(--token) only. Accents are ≤60% saturation.
+ */
+
+:root {
+  --bg:            hsl(0 0% 99%);
+  --surface:      hsl(0 0% 96%);
+  --surface-2:    hsl(0 0% 92%);
+  --border:       hsl(0 0% 86%);
+  --border-strong: hsl(0 0% 76%);
+  --text:         hsl(0 0% 13%);
+  --text-muted:   hsl(0 0% 38%);
+  --text-faint:   hsl(0 0% 55%);
+
+  --accent-link:   hsl(212 48% 42%);
+  --accent-link-hover: hsl(212 55% 35%);
+  --accent-focus:  hsl(212 60% 50%);
+
+  /* Status palette — 7 buckets, all ≤60% saturation per REQ-0012 (as
+     amended 2026-07-24: the Delivered bucket, ISS-0023). Membership is
+     canonical in src/project_os_cockpit/statuses.py. */
+  --status-active:    hsl(140 32% 38%);   /* active / approved / accepted / ready / doing / in-progress / in-review / next / mitigating */
+  --status-pending:   hsl(220 14% 48%);   /* planned / backlog / todo / open / pending / draft / proposed / triage */
+  --status-done:      hsl(160 28% 38%);   /* done positive: done / merged / fixed / resolved / fulfilled / met / complete / verified / passing / published / released / closed */
+  --status-archived:  hsl(0 0% 48%);      /* done negative: obsolete / retired / cancelled / superseded / wont-fix / reverted / rolled-back / deprecated */
+  --status-blocked:   hsl(5 48% 46%);     /* blocked / failing / reopened */
+  --status-reference: hsl(180 24% 40%);   /* reference / deferred */
+  --status-default:   hsl(0 0% 45%);
+
+  /* Severity palette — used by issue group icons + (future) issue badges. */
+  --severity-critical: hsl(5 60% 46%);
+  --severity-high:     hsl(20 60% 46%);
+  --severity-medium:   hsl(45 55% 42%);
+  --severity-low:      hsl(0 0% 50%);
+
+  --error-fg: hsl(5 48% 38%);
+  --error-bg: hsl(5 38% 96%);
+  --warn-fg:  hsl(36 50% 32%);
+  --warn-bg:  hsl(36 50% 95%);
+
+  --code-bg:    hsl(0 0% 95%);
+  --code-text:  hsl(0 0% 18%);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+  --radius:    4px;
+  --radius-lg: 6px;
+
+  --shadow-soft: 0 1px 2px hsl(0 0% 0% / 0.04);
+}
+
+[data-theme="dark"] {
+  --bg:           hsl(0 0% 11%);
+  --surface:      hsl(0 0% 14%);
+  --surface-2:    hsl(0 0% 17%);
+  --border:       hsl(0 0% 22%);
+  --border-strong: hsl(0 0% 32%);
+  --text:         hsl(0 0% 87%);
+  --text-muted:   hsl(0 0% 65%);
+  --text-faint:   hsl(0 0% 50%);
+
+  --accent-link:   hsl(212 50% 65%);
+  --accent-link-hover: hsl(212 55% 72%);
+  --accent-focus:  hsl(212 55% 60%);
+
+  --status-active:    hsl(140 32% 60%);
+  --status-pending:   hsl(220 14% 65%);
+  --status-done:      hsl(160 28% 60%);
+  --status-archived:  hsl(0 0% 58%);
+  --status-blocked:   hsl(5 50% 65%);
+  --status-reference: hsl(180 24% 60%);
+  --status-default:   hsl(0 0% 60%);
+
+  --severity-critical: hsl(5 60% 65%);
+  --severity-high:     hsl(20 60% 65%);
+  --severity-medium:   hsl(45 55% 60%);
+  --severity-low:      hsl(0 0% 62%);
+
+  --error-fg: hsl(5 50% 70%);
+  --error-bg: hsl(5 30% 18%);
+  --warn-fg:  hsl(36 48% 65%);
+  --warn-bg:  hsl(36 30% 18%);
+
+  --code-bg:   hsl(0 0% 16%);
+  --code-text: hsl(0 0% 88%);
+
+  --shadow-soft: 0 1px 2px hsl(0 0% 0% / 0.4);
+}
+
+/* ----- Reset & base ----- */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+html, body { height: 100%; }
+/* Body is the flex-column shell: page-header at top, cockpit fills the
+ * middle, page-footer at the bottom. Lock to viewport height + hide
+ * overflow so the three panes (and the centre column's terminal) can
+ * scroll INTERNALLY. Without this, a long left/right pane stretches the
+ * grid row and the body scroll takes over, dragging the terminal with
+ * it. */
+body {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+a {
+  color: var(--accent-link);
+  text-decoration: none;
+}
+a:hover { color: var(--accent-link-hover); text-decoration: underline; }
+a:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ----- Page chrome ----- */
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  /* Pin both rows to the top so they stay visible if the body scrolls
+   * (mobile layout, long centre-pane content, …). On desktop the
+   * cockpit's internal overflow:hidden already keeps the header
+   * visible, so sticky is a no-op there. */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.page-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 20px;
+  min-height: 30px;
+}
+.page-header-row-2 {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.page-header-row-2.is-empty {
+  display: none;   /* synthetic landing or non-cockpit pages */
+}
+
+.page-header .home-link {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition: color 80ms ease, border-color 80ms ease, background-color 80ms ease;
+}
+.page-header .home-link:hover {
+  color: var(--accent-link);
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+.page-header .breadcrumb {
+  flex: 1;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-header .breadcrumb a { color: var(--text-muted); }
+.page-header .breadcrumb a:hover { color: var(--accent-link); }
+.page-header .breadcrumb .sep {
+  margin: 0 6px;
+  color: var(--text-faint);
+}
+
+.page-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.page-footer .brand-mark {
+  text-transform: lowercase;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.page-footer .version-mark {
+  font-family: var(--font-mono);
+}
+
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.theme-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+}
+
+/* ----- Main layout ----- */
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 32px 80px;
+}
+
+/* ----- Metadata strip ----- */
+
+.metadata-strip {
+  margin-bottom: 28px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+/* Collapsible <details> form (TASK-0032). The summary is a tiny header
+ * row; the body is the existing <dl>. Open by default; JS strips the
+ * open attribute when the user has previously collapsed it. */
+details.metadata-strip > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+details.metadata-strip > summary::-webkit-details-marker { display: none; }
+details.metadata-strip[open] > summary {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.metadata-strip-chevron {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+  transition: transform 100ms ease;
+  opacity: 0.7;
+}
+details.metadata-strip:not([open]) > summary .metadata-strip-chevron {
+  transform: translateY(1px) rotate(-45deg);
+}
+details.metadata-strip > summary:hover {
+  color: var(--text-muted);
+}
+
+.metadata-strip dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.metadata-strip dt {
+  font-weight: 500;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  padding-top: 3px;
+}
+
+.metadata-strip dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.metadata-strip dd .meta-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+/* ----- Wikilinks ----- */
+
+/* Resolved [[X]] is intentionally indistinguishable from a regular markdown
+ * link — same anchor styling — to match Obsidian's behaviour. */
+
+.broken-wikilink {
+  /* Unresolved [[X]] — Obsidian-aligned: faded text with a dotted underline,
+   * still readable but visibly "this didn't resolve". */
+  color: var(--text-faint);
+  text-decoration: underline dotted var(--text-faint);
+  text-underline-offset: 2px;
+}
+
+/* ----- Status chips ----- */
+
+.status-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  vertical-align: middle;
+  color: var(--status-default);
+  text-transform: lowercase;
+  /* A status is one token: `in-review` must never wrap to `in-` / `review`. */
+  white-space: nowrap;
+}
+/* Active bucket */
+.status-chip[data-status="active"]      { color: var(--status-active); }
+.status-chip[data-status="approved"]    { color: var(--status-active); }
+.status-chip[data-status="accepted"]    { color: var(--status-active); }
+.status-chip[data-status="ready"]       { color: var(--status-pending); }
+.status-chip[data-status="doing"]       { color: var(--status-active); }
+.status-chip[data-status="in-progress"] { color: var(--status-active); }
+.status-chip[data-status="review"]   { color: var(--status-active); }
+.status-chip[data-status="next"]        { color: var(--status-active); }
+.status-chip[data-status="mitigating"]  { color: var(--status-active); }
+/* Pending bucket */
+.status-chip[data-status="planned"]     { color: var(--status-pending); }
+.status-chip[data-status="backlog"]     { color: var(--status-pending); }
+.status-chip[data-status="todo"]        { color: var(--status-pending); }
+.status-chip[data-status="open"]        { color: var(--status-pending); }
+.status-chip[data-status="pending"]     { color: var(--status-pending); }
+.status-chip[data-status="draft"]       { color: var(--status-pending); }
+.status-chip[data-status="proposed"]    { color: var(--status-pending); }
+.status-chip[data-status="triage"]      { color: var(--status-pending); }
+/* Done — positive. (The Delivered band that briefly sat here was
+   retired by ADR-0006 once ADR-0008 deleted its last two members.) */
+.status-chip[data-status="done"]        { color: var(--status-done); }
+.status-chip[data-status="merged"]      { color: var(--status-done); }
+.status-chip[data-status="fixed"]       { color: var(--status-done); }
+.status-chip[data-status="resolved"]    { color: var(--status-done); }
+.status-chip[data-status="fulfilled"]   { color: var(--status-done); }
+.status-chip[data-status="met"]         { color: var(--status-done); }
+.status-chip[data-status="complete"]    { color: var(--status-done); }
+.status-chip[data-status="implemented"] { color: var(--status-done); }
+.status-chip[data-status="verified"]    { color: var(--status-done); }
+.status-chip[data-status="passing"]     { color: var(--status-done); }
+.status-chip[data-status="published"]   { color: var(--status-done); }
+.status-chip[data-status="released"]    { color: var(--status-done); }
+.status-chip[data-status="closed"]      { color: var(--status-done); }
+/* Done — negative (terminal without success) */
+.status-chip[data-status="obsolete"]    { color: var(--status-archived); }
+.status-chip[data-status="retired"]     { color: var(--status-archived); }
+.status-chip[data-status="cancelled"]   { color: var(--status-archived); }
+.status-chip[data-status="superseded"]  { color: var(--status-archived); }
+.status-chip[data-status="reconciled"]  { color: var(--status-archived); }
+.status-chip[data-status="declined"]    { color: var(--status-archived); }
+.status-chip[data-status="reverted"]    { color: var(--status-archived); }
+.status-chip[data-status="rolled-back"] { color: var(--status-archived); }
+.status-chip[data-status="deprecated"]  { color: var(--status-archived); }
+/* Blocked */
+.status-chip[data-status="blocked"]     { color: var(--status-blocked); }
+.status-chip[data-status="failing"]     { color: var(--status-blocked); }
+.status-chip[data-status="reopened"]    { color: var(--status-blocked); }
+/* Reference */
+.status-chip[data-status="reference"]   { color: var(--status-reference); }
+.status-chip[data-status="deferred"]    { color: var(--status-reference); }
+
+/* ----- Verification-surface chips (FEAT-0018 / TASK-0113) ----- */
+/* Same pill shape as .status-chip; hues reuse existing tokens only:
+ * the warn (amber) pair for waivers / missing adequacy evidence, and
+ * the status palette for review verdicts. */
+
+.waiver-chip,
+.verdict-chip,
+.adequacy-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  vertical-align: middle;
+  text-transform: lowercase;
+}
+
+/* Amber "waived" — a waived terminal status must not read as verified. */
+.waiver-chip {
+  color: var(--warn-fg);
+  background: var(--warn-bg);
+}
+
+/* Review verdict: green approved / red changes-requested. */
+.verdict-chip { color: var(--status-default); }
+.verdict-chip[data-verdict="approved"]         { color: var(--status-active); }
+.verdict-chip[data-verdict="changes-requested"] { color: var(--status-blocked); }
+
+/* TST notes without adequacy evidence — dashed amber marker. */
+.adequacy-chip {
+  color: var(--warn-fg);
+  border-style: dashed;
+}
+
+/* ----- Article ----- */
+
+.content {
+  color: var(--text);
+}
+
+.content h1, .content h2, .content h3,
+.content h4, .content h5, .content h6 {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.6em 0 0.5em;
+}
+.content h1 { font-size: 1.85em; margin-top: 0.2em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+.content h2 { font-size: 1.4em;  border-bottom: 1px solid var(--border); padding-bottom: 0.2em; }
+.content h3 { font-size: 1.15em; }
+.content h4 { font-size: 1em; color: var(--text-muted); }
+
+.content p { margin: 0.8em 0; }
+
+.content ul, .content ol { padding-left: 1.4em; margin: 0.6em 0; }
+.content li { margin: 0.15em 0; }
+.content li > p { margin: 0.2em 0; }
+
+.content blockquote {
+  margin: 0.8em 0;
+  padding: 0.4em 1em;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted);
+  background: var(--surface);
+}
+
+.content hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.6em 0;
+}
+
+.content code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.content pre {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  line-height: 1.5;
+}
+.content pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.content table {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  width: 100%;
+  font-size: 0.95em;
+}
+.content th, .content td {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.content th {
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom-color: var(--border-strong);
+}
+
+.content img {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+
+/* ----- Error / not-found / placeholder pages ----- */
+
+.notice {
+  margin: 24px auto;
+  max-width: 640px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+.notice.error  { border-color: var(--error-fg); background: var(--error-bg); color: var(--error-fg); }
+.notice h2 { margin-top: 0; }
+.notice code { background: var(--surface-2); }
+
+/* ----- Index pages (landing + /index/<plural>) ----- */
+
+.muted-count {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 0.85em;
+}
+
+.index-list {
+  margin: 0.4em 0;
+  padding-left: 1.2em;
+  list-style: none;
+}
+.index-list li {
+  padding: 4px 0;
+  font-size: 1.05em;
+}
+.index-list li::before {
+  content: "▸ ";
+  color: var(--text-faint);
+}
+
+.index-group {
+  margin: 0 0 14px;
+}
+.index-group > details > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.index-group > details > summary::-webkit-details-marker { display: none; }
+.index-group > details > summary::before {
+  content: "▸";
+  color: var(--text-faint);
+  display: inline-block;
+  width: 0.8em;
+  transition: transform 80ms ease;
+}
+.index-group > details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.index-group > details > summary:hover {
+  border-color: var(--border-strong);
+}
+.index-group > details > summary > .count {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.index-items {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  border-left: 2px solid var(--border);
+  margin-left: 12px;
+  padding-left: 14px;
+}
+.index-items li {
+  padding: 3px 0;
+  font-size: 0.95em;
+}
+.index-id {
+  display: inline-block;
+  min-width: 6em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.meta-heading {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin: 0 0 6px;
+}
+
+/* ----- Directory listing (used for index pages) ----- */
+
+.dir-listing {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.dir-listing li {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.dir-listing li:last-child { border-bottom: 0; }
+.dir-listing li:hover { background: var(--surface); }
+.dir-listing .meta {
+  margin-left: 8px;
+  color: var(--text-faint);
+  font-size: 0.9em;
+}
+.dir-listing .dir::before {
+  content: "▸ ";
+  color: var(--text-faint);
+}
+
+/* ----- Task-list checkboxes (Obsidian-style, read-only) ----- */
+/* Rendered by pymdownx.tasklist with custom_checkbox=true:
+ *   <li class="task-list-item">
+ *     <label class="task-list-control">
+ *       <input type="checkbox" disabled [checked]>
+ *       <span class="task-list-indicator"></span>
+ *     </label>
+ *     item text
+ *   </li>
+ * We hide the actual <input> and re-paint the indicator span with the
+ * muted REQ-0012 palette. Read-only — source is truth, page is view.
+ */
+.content ul.task-list {
+  list-style: none;
+  padding-left: 1.2em;
+}
+.content ul.task-list ul {
+  list-style: disc;       /* nested non-task lists keep bullets */
+}
+.content .task-list-item {
+  position: relative;
+  padding-left: 0;
+}
+.content .task-list-control {
+  display: inline-flex;
+  align-items: center;
+  margin-left: -1.4em;
+  margin-right: 6px;
+  cursor: default;
+}
+.content .task-list-control input[type="checkbox"] {
+  display: none;
+}
+.content .task-list-indicator {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--bg);
+  position: relative;
+  vertical-align: -2px;
+}
+.content .task-list-control input[type="checkbox"]:checked
+  ~ .task-list-indicator {
+  border-color: var(--status-done);
+  background: var(--status-done);
+}
+.content .task-list-control input[type="checkbox"]:checked
+  ~ .task-list-indicator::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 4px;
+  height: 9px;
+  border: solid var(--bg);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+/* Done items get the muted text + strikethrough that Obsidian shows. */
+.content .task-list-item:has(input[type="checkbox"]:checked) {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-faint);
+}
+
+/* ISS-0231: one line — handle, id, title, bar, percentage. The bar is an
+   inline element here, not the overview's block, because a nav row is one
+   line tall; the previous attempt took the phase row's vertical stack. */
+.nav-surface { list-style: none; margin: 0; }
+.nav-surface-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 4px; border-radius: 4px; min-width: 0;
+}
+.nav-surface-head:hover { background: var(--bg-subtle, #21262d); }
+.nav-surface-id { flex: none; font-size: 0.82em; color: var(--accent-link, #58a6ff); }
+.nav-surface-id.is-link { cursor: pointer; }
+.nav-surface-id.is-link:hover { text-decoration: underline; }
+.nav-surface-title {
+  flex: 1 1 auto; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; font-size: 0.92em;
+}
+.nav-surface-bar {
+  flex: none; width: 56px; height: 4px; border-radius: 2px;
+  background: var(--bg-inset, #010409); overflow: hidden;
+}
+.nav-surface-bar > i { display: block; height: 100%; background: var(--accent-link, #58a6ff); }
+.nav-surface-bar.has-stale > i { background: var(--warn, #d29922); }
+.nav-surface-pct {
+  flex: none; width: 34px; text-align: right;
+  font-size: 0.78em; color: var(--fg-muted, #8b949e);
+}
+.nav-surface-checks { list-style: none; margin: 0; padding-left: 18px; }
+.nav-check {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 4px; border-radius: 3px; min-width: 0;
+}
+.nav-check:hover { background: var(--bg-subtle, #21262d); }
+.nav-check-id { flex: none; font-size: 0.78em; color: var(--accent-link, #58a6ff); }
+.nav-check-name {
+  flex: 1 1 auto; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; font-size: 0.86em;
+}
+/* Right-aligned, which is what `flex:1` on the name buys. */
+.nav-check-mark { flex: none; font-size: 0.75em; text-transform: lowercase; }

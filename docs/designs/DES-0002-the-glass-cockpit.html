@@ -1,0 +1,1829 @@
+<meta charset="utf-8">
+<title>The glass cockpit — depth is priority, and a view is a re-arrangement</title>
+<style>
+  :root {
+    --status-active:    hsl(140 32% 38%);
+    --status-pending:   hsl(220 14% 48%);
+    --status-done:      hsl(160 28% 38%);
+    --status-archived:  hsl(0 0% 48%);
+    --status-blocked:   hsl(5 48% 46%);
+    --status-reference: hsl(180 24% 40%);
+    --status-default:   hsl(0 0% 45%);
+    --severity-critical: hsl(5 60% 46%);
+    --severity-high:     hsl(20 60% 46%);
+    --severity-medium:   hsl(45 55% 42%);
+    --severity-low:      hsl(0 0% 50%);
+
+    --paper: #F7F7F5; --surface: #FFFFFF; --sunk: #EFEFEC;
+    --ink: #16181C; --ink-soft: #444A54; --ink-faint: #767C87;
+    --rule: #DCDCD6; --rule-soft: #EAEAE5;
+    --accent: #12627A; --accent-soft: #E4F0F4;
+    --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --status-active: hsl(140 32% 60%); --status-pending: hsl(220 14% 65%);
+      --status-done: hsl(160 28% 60%); --status-archived: hsl(0 0% 58%);
+      --status-blocked: hsl(5 50% 65%); --status-reference: hsl(180 24% 60%);
+      --status-default: hsl(0 0% 60%);
+      --severity-critical: hsl(5 60% 65%); --severity-high: hsl(20 60% 65%);
+      --severity-medium: hsl(45 55% 60%); --severity-low: hsl(0 0% 62%);
+      --paper: #131519; --surface: #1A1D22; --sunk: #101216;
+      --ink: #E7E9ED; --ink-soft: #B0B6C0; --ink-faint: #838A96;
+      --rule: #2C313A; --rule-soft: #22262D;
+      --accent: #6FC5DE; --accent-soft: #12242C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --status-active: hsl(140 32% 60%); --status-pending: hsl(220 14% 65%);
+    --status-done: hsl(160 28% 60%); --status-archived: hsl(0 0% 58%);
+    --status-blocked: hsl(5 50% 65%); --status-reference: hsl(180 24% 60%);
+    --status-default: hsl(0 0% 60%);
+    --severity-critical: hsl(5 60% 65%); --severity-high: hsl(20 60% 65%);
+    --severity-medium: hsl(45 55% 60%); --severity-low: hsl(0 0% 62%);
+    --paper: #131519; --surface: #1A1D22; --sunk: #101216;
+    --ink: #E7E9ED; --ink-soft: #B0B6C0; --ink-faint: #838A96;
+    --rule: #2C313A; --rule-soft: #22262D;
+    --accent: #6FC5DE; --accent-soft: #12242C;
+  }
+  * { box-sizing: border-box; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 110px; }
+  .masthead { padding: 60px 0 30px; border-bottom: 2px solid var(--ink); }
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 16px; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: 44px; line-height: 1.1; letter-spacing: -.015em; margin: 0 0 16px; }
+  .standfirst { font-size: 18px; line-height: 1.55; color: var(--ink-soft); max-width: 74ch; margin: 0 0 20px; }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+  .byline { display: flex; flex-wrap: wrap; gap: 10px 22px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); }
+  .byline b { color: var(--ink-soft); font-weight: 500; }
+  h2.section { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 56px 0 10px; }
+  .section-sub { color: var(--ink-faint); font-size: 14.5px; max-width: 78ch; margin: 0 0 20px; }
+  code { font-family: var(--mono); font-size: .87em; background: var(--sunk); padding: 1px 4px; border-radius: 2px; }
+  .try { margin: 22px 0 12px; padding: 13px 18px; border-left: 3px solid var(--accent); background: var(--sunk); font-size: 14.5px; color: var(--ink-soft); }
+  .try b { color: var(--ink); }
+
+  /* ---------------- the stage ---------------- */
+  .stage-outer { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: #04090D;
+    position: relative; left: 50%; transform: translateX(-50%);
+    width: min(calc(100vw - 30px), 1560px); }
+  .stage {
+    --cy: #7FE4FF; --cy-dim: #2C7A93; --cy-line: #12455A; --glass: rgb(6 26 34 / .5);
+    position: relative; height: 740px; min-width: 900px; overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% 40%, #072230 0%, #04090D 62%, #01050A 100%);
+    color: var(--cy); font-family: var(--mono); font-size: 11px; user-select: none;
+  }
+  .field { position: absolute; inset: 0; pointer-events: none; }
+  .field-inner { position: absolute; inset: 0; pointer-events: none; }
+  .card {
+    position: absolute; left: 50%; top: 46%; width: 186px; padding: 7px 9px 8px;
+    border: 1px solid var(--cy-line); background: rgb(8 30 40 / .62);
+    border-left-width: 2px; border-radius: 2px; cursor: pointer;
+    transition: transform .55s cubic-bezier(.22,.8,.28,1), opacity .55s, filter .55s, background .3s;
+    pointer-events: auto;
+    will-change: transform; backface-visibility: hidden;
+  }
+  .card:hover { background: rgb(16 56 70 / .88); border-color: var(--cy);
+                box-shadow: 0 0 0 1px rgb(127 228 255 / .22), 0 8px 26px rgb(0 0 0 / .5); }
+  .card { transition-timing-function: cubic-bezier(.2,.9,.24,1.06); }
+  .card .cid { font-size: 9.5px; letter-spacing: .04em; display: flex; justify-content: space-between; gap: 6px; }
+  .card .cid b { font-weight: 500; }
+  .card .ct { color: #D6F2FB; font-size: 10.5px; line-height: 1.35; margin-top: 4px; max-height: 28px; overflow: hidden; }
+  .card.owed { border-color: var(--cy); box-shadow: 0 0 0 1px rgb(127 228 255 / .18), 0 6px 24px rgb(0 0 0 / .5); }
+  .card.deep { pointer-events: none; }
+  .card.focused { width: 320px; cursor: default; background: rgb(10 40 52 / .93); border-color: var(--cy); }
+  .card.focused .ct { max-height: none; font-size: 12px; }
+  .card .cbody { display: none; margin-top: 8px; border-top: 1px dashed var(--cy-line); padding-top: 7px; color: #9FD4E6; font-size: 10px; line-height: 1.5; }
+  .card.focused .cbody { display: block; }
+  #wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2500; }
+
+
+
+  /* ---- rev 7: the desk ----
+     Two surfaces, not one. The FIELD is every note, arranged by the view's
+     rule, and it re-arranges when the view changes. The DESK is the notes you
+     picked up: it persists across view switches, because you put them there.
+     Opening = taking a note out of the field and onto the desk. */
+  .note-win {
+    position: absolute; z-index: 3000; width: 300px; border: 1px solid var(--cy-line);
+    border-left-width: 2px; border-radius: 3px; background: rgb(7 28 37 / .95);
+    box-shadow: 0 14px 40px rgb(0 0 0 / .55); display: flex; flex-direction: column;
+    transition: box-shadow .2s, border-color .2s;
+  }
+  .note-win.top { border-color: var(--cy); box-shadow: 0 0 0 1px rgb(127 228 255 / .3), 0 18px 52px rgb(0 0 0 / .6); }
+  .nw-head { display: flex; align-items: center; gap: 7px; padding: 5px 8px; cursor: grab;
+             border-bottom: 1px solid var(--cy-line); font-size: 9.5px; }
+  .nw-head:active { cursor: grabbing; }
+  .nw-head .nid { color: var(--cy); font-weight: 500; }
+  .nw-head .nst { margin-left: auto; }
+  .nw-head button { font: inherit; font-size: 10px; background: transparent; border: 0; color: var(--cy-dim);
+                    cursor: pointer; padding: 0 3px; }
+  .nw-head button:hover { color: var(--cy); }
+  .nw-face { padding: 4px 8px 0; }
+  .nw-body { padding: 6px 9px 9px; font-size: 10.5px; line-height: 1.55; color: #9FD4E6; }
+  .nw-body .tt { color: #D6F2FB; font-family: var(--body); font-size: 12px; line-height: 1.35; margin-bottom: 6px; }
+  .nw-body .meta { color: #5FA9C4; margin-top: 7px; }
+  .note-win.collapsed .nw-body, .note-win.collapsed .nw-face { display: none; }
+  .note-win.collapsed { width: 210px; }
+  .card.lifted { border-style: dashed; opacity: .3 !important; }
+  .card.kin { border-color: var(--cy) !important; box-shadow: 0 0 0 1px rgb(127 228 255 / .35); }
+  .card.kin-shared { border-color: var(--severity-medium) !important;
+                     box-shadow: 0 0 0 1px hsl(45 55% 60% / .5); }
+  .deskbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; z-index: 4200;
+             display: flex; gap: 10px; align-items: center; background: rgb(3 16 22 / .88);
+             border: 1px solid var(--cy-line); border-radius: 3px; padding: 5px 11px;
+             font-family: var(--mono); font-size: 10px; color: var(--cy-dim); backdrop-filter: blur(5px); }
+  .deskbar b { color: var(--cy); font-weight: 500; }
+  .deskbar button { font: inherit; font-size: 9.5px; border: 1px solid var(--cy-line); background: transparent;
+                    color: var(--cy); border-radius: 2px; padding: 2px 7px; cursor: pointer; }
+  .deskbar button:hover { border-color: var(--cy); }
+
+  /* ---- rev 4: depth without blur ----
+     Aerial perspective instead of a blur pass: a far card loses saturation and
+     contrast, drops its title, and the whole field sits under one gradient.
+     All three are free — a gradient is painted once, and hiding a text node
+     removes work rather than adding a filter to it. */
+  .fog { position: absolute; inset: 0; pointer-events: none; z-index: 1500;
+         background: radial-gradient(56% 68% at 56% 46%, rgb(4 9 13 / 0) 0%,
+                     rgb(4 9 13 / .42) 66%, rgb(4 9 13 / .82) 100%); }
+  .stage[data-render="cheap"] .card.deep { filter: none; width: 146px; padding: 5px 8px 6px; }
+  .stage[data-render="cheap"] .card.deep .ct { display: none; }   /* the title is the costly part */
+  .stage[data-render="cheap"] .card.deep .face { margin-top: 4px; }
+  .stage[data-render="cheap"] .card.deep .bar { height: 5px; }
+  .stage[data-render="blur"] .fog { opacity: .35; }
+  .rendersw { position: absolute; left: 8px; bottom: 12px; z-index: 4000; font-family: var(--mono);
+              font-size: 9.5px; color: var(--cy-dim); background: rgb(3 16 22 / .82);
+              border: 1px solid var(--cy-line); border-radius: 2px; padding: 7px 9px; width: 240px; line-height: 1.7; }
+  .rendersw b { color: var(--cy); font-weight: 500; }
+  .rendersw button { font: inherit; font-size: 9.5px; border: 1px solid var(--cy-line); background: transparent;
+                     color: var(--cy); border-radius: 2px; padding: 2px 7px; cursor: pointer; margin-top: 5px; }
+  .rendersw button:hover { border-color: var(--cy); }
+
+  /* ---- rev 2: panels, faces, lists, files ---- */
+  .slab.pin { box-shadow: 0 18px 60px rgb(0 0 0 / .55), 0 0 0 1px var(--cy); }
+  .slab-head .sh-btn { border: 1px solid var(--cy-line); border-radius: 2px; padding: 1px 6px;
+                       color: var(--cy); cursor: pointer; font-size: 9.5px; background: transparent; font-family: inherit; }
+  .slab-head .sh-btn:hover { border-color: var(--cy); }
+  .slab-body table { border-collapse: collapse; width: 100%; font-size: 10px; }
+  .slab-body td { padding: 2px 6px 2px 0; white-space: nowrap; color: #9FD4E6; }
+  .slab-body td.i { color: var(--cy); }
+  .slab-body tr:hover td { background: rgb(20 70 88 / .5); cursor: pointer; }
+  .slab-body .tree { line-height: 1.75; }
+  .slab-body .tree .d { color: var(--cy); cursor: pointer; }
+  .slab-body .tree .f { color: #7FB6C9; padding-left: 14px; }
+  .slab-body .lane { display: grid; grid-template-columns: 118px 1fr 84px; gap: 8px; align-items: center;
+                     padding: 3px 0; border-bottom: 1px solid rgb(18 69 90 / .55); }
+  .slab-body .lane canvas { width: 100%; height: 22px; display: block; }
+  .slab-body .lane .nm { color: #D6F2FB; }
+  .slab-body .lane .gz { color: var(--cy-dim); text-align: right; }
+  .card .face { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 9px; color: var(--cy-dim); }
+  .card .bar { flex: 1; height: 4px; background: rgb(18 69 90 / .8); border-radius: 2px; overflow: hidden; }
+  .card .bar i { display: block; height: 100%; background: var(--status-done); }
+  .card .sev { border: 1px solid currentColor; border-radius: 2px; padding: 0 4px; }
+  .card.phase { border-left-width: 3px; }
+  .card.pinned { box-shadow: 0 0 0 1px var(--cy), 0 10px 30px rgb(0 0 0 / .5); }
+  .topstrip input.q { background: rgb(8 30 40 / .8); border: 1px solid var(--cy-line); border-radius: 3px;
+                      color: var(--cy); font: inherit; padding: 3px 9px; width: 200px; }
+  .topstrip input.q::placeholder { color: var(--cy-dim); }
+  .topstrip .vbtn { border: 1px solid var(--cy-line); border-radius: 3px; padding: 2px 8px; color: var(--cy);
+                    background: transparent; font: inherit; font-size: 10.5px; cursor: pointer; }
+  .topstrip .vbtn:hover { border-color: var(--cy); }
+
+  /* view rail */
+  .rail { position: absolute; left: 8px; top: 152px; width: 132px; padding: 0 0 10px; z-index: 4000;
+          }
+  .rail button {
+    display: block; width: 118px; text-align: left; font: inherit; font-size: 10.5px; letter-spacing: .08em;
+    padding: 5px 10px; margin: 0 0 1px 6px; border: 0; border-left: 2px solid transparent;
+    background: transparent; color: var(--cy-dim); cursor: pointer; text-transform: uppercase;
+  }
+  .rail button:hover { color: var(--cy); }
+  .rail button[aria-pressed="true"] { color: #04090D; background: var(--cy); border-left-color: #D6F2FB; }
+  .rail .rail-h { font-size: 9px; letter-spacing: .16em; color: #2A5F72; padding: 10px 10px 4px 16px; }
+
+  /* top strip */
+  .topstrip { position: absolute; left: 0; right: 0; top: 0; height: 38px; display: flex; align-items: center;
+              gap: 14px; padding: 0 16px; z-index: 4000; border-bottom: 1px solid var(--cy-line);
+              background: rgb(3 16 22 / .72); backdrop-filter: blur(6px); }
+  .topstrip .k { color: var(--cy-dim); }
+  .topstrip .pill { border: 1px solid var(--cy-line); border-radius: 3px; padding: 2px 9px; color: var(--cy); }
+  .topstrip .pill.warn { border-color: var(--severity-medium); color: var(--severity-medium); }
+  .topstrip .tab { border-bottom: 1px solid transparent; padding: 2px 0; color: var(--cy-dim); }
+  .topstrip .tab.on { color: var(--cy); border-bottom-color: var(--cy); }
+  .topstrip .grow { margin-left: auto; }
+
+  /* console slab */
+  .slab {
+    position: absolute; z-index: 4500; border: 1px solid var(--cy-line); border-radius: 3px;
+    background: var(--glass); backdrop-filter: blur(7px); box-shadow: 0 18px 60px rgb(0 0 0 / .55);
+    display: flex; flex-direction: column; min-width: 260px; min-height: 120px;
+  }
+  .slab-head { display: flex; align-items: center; gap: 10px; padding: 6px 10px; cursor: grab;
+               border-bottom: 1px solid var(--cy-line); color: var(--cy); }
+  .slab-head:active { cursor: grabbing; }
+  .slab-head .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--status-active); }
+  .slab-body { flex: 1; overflow: hidden; padding: 8px 11px; color: #8FD6EA; line-height: 1.65; font-size: 10.5px; }
+  .slab-body .p { color: var(--cy); }
+  .slab-body .dim { color: var(--cy-dim); }
+  .slab-op { display: flex; align-items: center; gap: 8px; }
+  .slab-op input { width: 66px; }
+  .slab-grip { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize;
+               background: linear-gradient(135deg, transparent 46%, var(--cy-line) 46%, var(--cy-line) 58%, transparent 58%,
+                           transparent 68%, var(--cy-line) 68%, var(--cy-line) 80%, transparent 80%); }
+
+  /* carousel */
+  .carousel { position: absolute; left: 262px; bottom: 14px; width: 300px; height: 116px; z-index: 4000; perspective: 620px; }
+  .car-inner { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .car-card {
+    position: absolute; left: 50%; top: 26px; width: 158px; margin-left: -79px; padding: 7px 9px;
+    border: 1px solid var(--cy-line); background: rgb(8 30 40 / .78); border-radius: 2px; cursor: pointer;
+    transition: transform .45s cubic-bezier(.22,.8,.28,1), opacity .45s;
+  }
+  .car-card .cn { color: #D6F2FB; font-size: 10.5px; }
+  .car-card .cs { color: var(--cy-dim); font-size: 9.5px; margin-top: 2px; }
+  .car-card.front { border-color: var(--cy); }
+  .car-lab { position: absolute; left: 0; bottom: -2px; color: #2A5F72; font-size: 9px; letter-spacing: .14em; }
+
+  /* repo ring */
+  .ring { position: absolute; left: 8px; top: 46px; width: 210px; height: 96px; z-index: 4000; perspective: 560px; }
+  .ring-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.22,.8,.28,1); }
+  .ring-slab {
+    position: absolute; left: 50%; top: 24px; width: 96px; margin-left: -48px; padding: 6px 8px;
+    border: 1px solid var(--cy-line); background: rgb(8 30 40 / .8); border-radius: 2px; cursor: pointer;
+    text-align: center;
+  }
+  .ring-slab .rn { color: #D6F2FB; font-size: 10px; }
+  .ring-slab .ro { color: var(--severity-medium); font-size: 9px; margin-top: 2px; }
+  .ring-slab.here { border-color: var(--cy); }
+  .ring-lab { position: absolute; left: 0; top: 2px; color: #2A5F72; font-size: 9px; letter-spacing: .14em; }
+
+  /* band legend + readout */
+  .bands { position: absolute; right: 14px; top: 48px; z-index: 4000; text-align: right; line-height: 1.9; color: var(--cy-dim);
+         background: rgb(3 16 22 / .82); border: 1px solid var(--cy-line); border-radius: 2px; padding: 8px 11px; backdrop-filter: blur(4px); }
+  .bands b { color: var(--cy); font-weight: 500; }
+  .compass { position: absolute; right: 14px; top: 152px; z-index: 4000; text-align: right; color: var(--cy-dim);
+         background: rgb(3 16 22 / .82); border: 1px solid var(--cy-line); border-radius: 2px; padding: 8px 11px; backdrop-filter: blur(4px); }
+  .comp-dial { width: 54px; height: 54px; margin: 0 0 6px auto; border: 1px solid var(--cy-line); border-radius: 50%;
+               position: relative; background: rgb(6 26 34 / .5); }
+  .comp-dial::after { content: ""; position: absolute; left: 50%; top: 4px; width: 1px; height: 7px; background: var(--cy); margin-left: -.5px; }
+  .comp-mark { position: absolute; inset: 5px; border-radius: 50%; transform: rotate(var(--turn, 0deg)); transition: transform .3s; }
+  .comp-mark::before { content: ""; position: absolute; left: 50%; top: -1px; width: 3px; height: 15px; margin-left: -1.5px;
+                       background: linear-gradient(180deg, #D6F2FB, transparent); }
+  .comp-mark::after { content: ""; position: absolute; left: 50%; bottom: -1px; width: 3px; height: 15px; margin-left: -1.5px;
+                      background: linear-gradient(0deg, var(--cy-dim), transparent); }
+  .comp-read { line-height: 1.75; }
+  .comp-read b { color: var(--cy); font-weight: 500; }
+  .comp-read .dim { color: #2A5F72; }
+  .comp-btns { margin-top: 7px; display: flex; gap: 6px; justify-content: flex-end; }
+  .comp-btns button { font: inherit; font-size: 9.5px; letter-spacing: .08em; padding: 3px 8px; cursor: pointer;
+                      border: 1px solid var(--cy-line); background: rgb(6 26 34 / .6); color: var(--cy); border-radius: 2px; }
+  .comp-btns button:hover { border-color: var(--cy); }
+  .card .cact { display: flex; gap: 12px; margin-top: 9px; }
+  .card .cact span { cursor: pointer; color: var(--cy); border-bottom: 1px solid var(--cy-line); }
+  .card .cact span:hover { border-bottom-color: var(--cy); }
+  .hintline { position: absolute; right: 14px; bottom: 14px; z-index: 4000; text-align: right; color: #2A5F72; line-height: 1.9;
+            background: rgb(3 16 22 / .78); border-radius: 2px; padding: 6px 9px; }
+  .viewnote { position: absolute; left: 8px; bottom: 232px; z-index: 4000; width: 240px; padding: 9px 11px;
+            background: rgb(3 16 22 / .82); border: 1px solid var(--cy-line); border-radius: 2px;
+            color: var(--cy-dim); line-height: 1.6; font-size: 10px; backdrop-filter: blur(4px); }
+  .viewnote b { color: var(--cy); font-weight: 500; }
+  .stage-cap { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); padding: 10px 14px; border-top: 1px solid var(--rule); background: var(--sunk); }
+
+  table.g { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.g th, table.g td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  table.g thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; border-bottom: 1px solid var(--rule); }
+  table.g td.v { font-family: var(--mono); font-weight: 600; color: var(--ink); white-space: nowrap; }
+  table.g tbody tr:hover { background: var(--sunk); }
+  .gwrap { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--rule); margin-top: 20px; }
+  .cols > div { padding: 16px 20px 4px 0; }
+  .cols > div + div { padding-left: 20px; border-left: 1px solid var(--rule-soft); }
+  .cols h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; margin: 0 0 9px; }
+  .cols p { margin: 0 0 10px; font-size: 13.6px; line-height: 1.55; color: var(--ink-soft); }
+  .cols strong { color: var(--ink); }
+  .warnbox { border-left: 3px solid var(--severity-high); background: var(--sunk); padding: 16px 20px; margin-top: 20px; }
+  .warnbox h4 { margin: 0 0 7px; font-family: var(--display); font-size: 16px; font-weight: 400; }
+  .warnbox p { margin: 0 0 9px; font-size: 14px; color: var(--ink-soft); line-height: 1.58; max-width: 80ch; }
+  .warnbox p:last-child { margin: 0; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } .cols > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule-soft); } h1 { font-size: 33px; } }
+</style>
+
+<div class="wrap">
+<header class="masthead" data-design-region="masthead">
+  <div class="kicker">DES-0002 · proposal · PHASE-028 Borrowed capability · 2026-09-05</div>
+  <h1>The glass cockpit</h1>
+  <p class="standfirst">
+    <strong>Depth is priority.</strong> The cockpit's left pane is a list, and a list has one dimension — so everything competes for vertical position, which is why <code>ADR-0025</code> had to be written down as a rule. Here the same three bands every view already computes become <em>near, middle and far</em>: what needs a person is at the front plane, the view's own subject sits in the mid field, and the finished 70% of the corpus recedes into fog. A view is not a page you navigate to; it is a re-arrangement you watch happen.
+  </p>
+  <div class="byline">
+    <span><b>11</b> views, all of them</span><span><b>80</b> real notes on the stage</span>
+    <span><b>195</b> real links between them</span><span>desktop · mouse and keyboard · no headset</span>
+  </div>
+</header>
+
+<h2 class="section">The rule the whole thing rests on</h2>
+<p class="section-sub">
+  This is not a metaphor imposed on the data. <code>nav_payload</code> prepends <code>_needs_you_group</code> to all eleven modes and appends <code>suppressed_group</code> to most of them — <strong>every view in the cockpit is already three bands</strong>. A list can only express that by putting one above another. Depth expresses it directly, and frees vertical position to mean something else.
+</p>
+<div class="gwrap" data-design-region="depth-rule">
+<table class="g">
+  <thead><tr><th>band</th><th>what is in it</th><th>where it comes from today</th><th>how it looks</th></tr></thead>
+  <tbody>
+    <tr><td class="v">front plane</td><td>what needs a person, in this view</td><td><code>_needs_you_group</code>, prepended to every mode (ADR-0025)</td><td>large, sharp, lit edge, unavoidable</td></tr>
+    <tr><td class="v">mid field</td><td>the view's own subject, by the view's own rule</td><td>the eleven <code>_*_groups</code> builders</td><td>normal, legible, arranged</td></tr>
+    <tr><td class="v">deep field</td><td>the quiet: terminal work, suppressed items</td><td><code>suppressed_group</code>, appended last (TASK-0425)</td><td>small, dim, blurred — present, not gone</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="try" style="border-left-color:var(--status-active)">
+  <b>Try the desk.</b> <b>Every click adds</b> — no modifier, nothing is ever replaced by accident. Notes stack with their headers always readable, and <b>what is joined to the note you are holding comes to the front band at full size</b>, so you can read it and click it onto the desk too. <code>×</code> puts one back, <code>⌥×</code> closes the others, <code>esc</code> clears the desk. Switch workspace on the ring: the desk stays, and each note keeps the repo it came from.
+</div>
+
+<div class="try">
+  <b>The stage below is live.</b> Switch views in the left rail and watch the same cards re-sort rather than the page change. Drag the console by its title bar and the notes flow around it. Spin the workspace ring, bring a session to the front of the carousel, and click any card to open it with its linked neighbours.
+</div>
+
+<div class="stage-outer" data-design-region="stage">
+<div class="stage" id="stage" data-render="cheap">
+  <div class="field" id="field"><div class="field-inner" id="fieldInner"></div></div>
+  <div class="fog"></div>
+  <svg id="wires"></svg>
+
+  <nav class="rail" id="rail" aria-label="Views"></nav>
+
+  <div class="topstrip">
+    <input class="q" id="q" type="search" placeholder="⌘K  fly to a note…" aria-label="Search notes">
+    <span class="k">←  →</span>
+    <span class="tab on" id="tabA">overview</span>
+    <span class="tab" id="tabB">—</span>
+    <button class="vbtn" id="asList" type="button">as list</button>
+    <button class="vbtn" id="addConsole" type="button">+ console</button>
+    <button class="vbtn" id="openFiles" type="button">files</button>
+    <button class="vbtn" id="openPulse" type="button">pulse</button>
+    <span class="grow"></span>
+    <span class="pill">inbox · 2</span>
+    <span class="pill warn">validator · 2 warnings</span>
+  </div>
+
+  <div class="ring" data-design-region="ring">
+    <div class="ring-lab">WORKSPACE</div>
+    <div class="ring-inner" id="ringInner"></div>
+  </div>
+
+  <div class="bands">
+    <div><b id="nFront">0</b> ahead of you — needs you</div>
+    <div><b id="nMid">0</b> around you — the subject</div>
+    <div><b id="nDeep">0</b> behind you — the quiet</div>
+  </div>
+
+  <div class="compass" id="compass" aria-hidden="true">
+    <div class="comp-dial"><div class="comp-mark"></div></div>
+    <div class="comp-read"><b id="heading">0°</b> · <span id="facing">facing what needs you</span><br>
+      <span class="dim"><b id="behindCount">0</b> out of sight behind you</span></div>
+    <div class="comp-btns">
+      <button type="button" id="lookAhead">look ahead</button>
+      <button type="button" id="lookBack">behind ↻</button>
+    </div>
+  </div>
+
+  <div class="rendersw" id="rendersw">
+    <div>depth is drawn by <b id="rmode">fog + detail</b></div>
+    <div id="rwhy">no blur pass · far cards drop their title · one gradient over the field</div>
+    <button type="button" id="rtoggle">show the blur version</button>
+  </div>
+
+  <div class="viewnote" id="viewnote"></div>
+
+  <div class="carousel" data-design-region="carousel">
+    <div class="car-inner" id="carInner"></div>
+    <div class="car-lab">CONSOLES &amp; SESSIONS — click to bring forward · ⇧click to deal a second slab</div>
+  </div>
+
+  <div id="desk"></div>
+  <div id="panels"></div>
+  <div class="deskbar" id="deskbar" hidden></div>
+
+  <div class="hintline" id="hint">drag the background to turn · the quiet is behind you<br>click any card to open it · ⇧click to pin a second one</div>
+</div>
+<div class="stage-cap">Every card is a real note in this repository, at its real status, with its real links. Card colour is the note <em>type</em>; <strong>depth</strong> carries priority, which is how this design avoids the cost the glass palette otherwise pays — DES-0001 measured it washing four of six status bands into 25 degrees of hue.</div>
+</div>
+
+<script>
+(function () {
+  const NOTES = [{"id":"FEAT-0001","t":"The corpus has an inside","s":"planned","k":"feature","ph":"","sev":"","l":["DES-0001","TASK-0001","TASK-0002","TASK-0003","TASK-0004","TASK-0005"]},{"id":"FEAT-0143","t":"The fleet runs one validator","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0037","ADR-0040","FEAT-0142","TASK-0587","TASK-0588","TASK-0589"]},{"id":"FEAT-0142","t":"A release says what is in it","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0035","ADR-0037","ADR-0039","ADR-0040"]},{"id":"FEAT-0141","t":"The contract says it upstream","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0038","ADR-0039"]},{"id":"FEAT-0140","t":"Sections are derived, not filed","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0034","ADR-0039","DES-0012","REQ-0059","REQ-0060"]},{"id":"FEAT-0139","t":"The suite is the verdict","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0037","ADR-0038","REQ-0058"]},{"id":"FEAT-0138","t":"Coverage is observed, not declared","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0037","DES-0012","FEAT-0131","FEAT-0134","REQ-0057"]},{"id":"FEAT-0137","t":"One outcome vocabulary, written down once","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0034","ADR-0037","REQ-0056"]},{"id":"FEAT-0136","t":"The cockpit reads and writes the ledger","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0035","ADR-0037","REQ-0055"]},{"id":"FEAT-0135","t":"Everything downstream is a query","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0034","ADR-0037","DES-0012","FEAT-0136"]},{"id":"FEAT-0134","t":"The check note sheds the verdict","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0034","ADR-0037","DES-0012","FEAT-0138"]},{"id":"FEAT-0133","t":"The ledger is a file","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0035","ADR-0037","FEAT-0134","FEAT-0135","FEAT-0136"]},{"id":"FEAT-0132","t":"A feature gets its acceptance tests by rule, not by being asked","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0036","DES-0012","REQ-0059"]},{"id":"FEAT-0131","t":"The suite is refined","s":"done","k":"feature","ph":"","sev":"","l":["ADR-0039","DES-0012"]},{"id":"ISS-0278","t":"CLAUDE.md states the stale-verdict backlog as 49 notes; it is 70, and the ","s":"triage","k":"issue","ph":"","sev":"low","l":["DES-0001"]},{"id":"ISS-0277","t":"Nothing detects a stale, divergent or incomplete tools/cockpit","s":"open","k":"issue","ph":"","sev":"medium","l":[]},{"id":"ISS-0276","t":"21 tests still assert over a fixed character window, an idiom that has now","s":"open","k":"issue","ph":"","sev":"low","l":["ISS-0275"]},{"id":"ISS-0275","t":"Five tests failed and none of them had found a defect","s":"fixed","k":"issue","ph":"","sev":"medium","l":["ISS-0274","ISS-0276"]},{"id":"ISS-0274","t":"The inbox refuses every file type outside a seventeen-suffix list, and tha","s":"fixed","k":"issue","ph":"","sev":"medium","l":[]},{"id":"ISS-0273","t":"Cursor sessions do not receive tools/instructions/WRITING.md, because the ","s":"triage","k":"issue","ph":"","sev":"low","l":[]},{"id":"ISS-0271","t":"Five UI and server tasks joined a `done`, already-reviewed feature about m","s":"triage","k":"issue","ph":"","sev":"medium","l":["FEAT-0143","TASK-0587","TASK-0588","TASK-0589","TASK-0590","TASK-0591"]},{"id":"ISS-0270","t":"The gate figures do not reproduce and two declared filings do not exist","s":"triage","k":"issue","ph":"","sev":"medium","l":["TASK-0591"]},{"id":"ISS-0269","t":"A retired check sheds the obligation and keeps the credit","s":"triage","k":"issue","ph":"","sev":"medium","l":["FEAT-0143","REQ-0059","TASK-0591"]},{"id":"ISS-0268","t":"The platform scoping stops at the derived view","s":"triage","k":"issue","ph":"","sev":"medium","l":["FEAT-0142","TASK-0587"]},{"id":"ISS-0267","t":"`~tests/<TST>/run` and `~accept/<FEAT>` are still evicted","s":"triage","k":"issue","ph":"","sev":"medium","l":["ISS-0266","TASK-0589"]},{"id":"ISS-0266","t":"Five mutants survive the guards written for them","s":"triage","k":"issue","ph":"","sev":"high","l":["TASK-0587","TASK-0588","TASK-0589","TASK-0590"]},{"id":"TASK-0005","t":"The treatment is chosen, not assumed","s":"backlog","k":"task","ph":"","sev":"","l":["DES-0001","TASK-0003"]},{"id":"TASK-0004","t":"Landing opens the note in the reader that already exists, so the field nev","s":"backlog","k":"task","ph":"","sev":"","l":["FEAT-0001"]},{"id":"TASK-0003","t":"The field renders and flies","s":"backlog","k":"task","ph":"","sev":"","l":["DES-0001","FEAT-0001","TASK-0005"]},{"id":"TASK-0002","t":"The layout is computed once and kept","s":"backlog","k":"task","ph":"","sev":"","l":["DES-0001","FEAT-0001"]},{"id":"TASK-0001","t":"The whole edge list is one payload","s":"backlog","k":"task","ph":"","sev":"","l":["DES-0001","FEAT-0001"]},{"id":"TASK-0591","t":"A retired check leaves the walk and the gate, and keeps its record in the ","s":"done","k":"task","ph":"","sev":"","l":["ISS-0269","ISS-0270"]},{"id":"TASK-0590","t":"The check-write endpoints re-index before they answer, so a mark is readab","s":"done","k":"task","ph":"","sev":"","l":["ISS-0266","ISS-0270"]},{"id":"TASK-0589","t":"A view knows which pages it owns, so refreshing the navigator stops evicti","s":"done","k":"task","ph":"","sev":"","l":["ISS-0266","ISS-0267"]},{"id":"TASK-0588","t":"A write on `~checks` repaints without re-reading the address, so the reade","s":"done","k":"task","ph":"","sev":"","l":["ISS-0266"]},{"id":"TASK-0587","t":"A release's derived contents are its own platform's","s":"done","k":"task","ph":"","sev":"","l":["ADR-0040","DES-0012","FEAT-0142","ISS-0266","ISS-0268","ISS-0270"]},{"id":"TST-0081","t":"The drift check fails when the fleet falls behind","s":"active","k":"test","ph":"","sev":"","l":["FEAT-0143"]},{"id":"TST-0080","t":"The backlink reconciliation writes only what the notes declare","s":"active","k":"test","ph":"","sev":"","l":["FEAT-0143"]},{"id":"TST-0079","t":"Every source file parses under the oldest Python the project claims","s":"active","k":"test","ph":"","sev":"","l":["FEAT-0138"]},{"id":"TST-0078","t":"The element xterm is opened into carries no padding","s":"active","k":"test","ph":"","sev":"","l":[]},{"id":"TST-0043","t":"A release can be finished","s":"active","k":"test","ph":"","sev":"","l":[]},{"id":"TST-0042","t":"TESTING.md rule 3 made performable","s":"retired","k":"test","ph":"","sev":"","l":["ADR-0036","DES-0012"]},{"id":"ADR-0040","t":"A release selects its features, and a check that cannot be walked is excus","s":"accepted","k":"decision","ph":"","sev":"","l":["ADR-0035","ADR-0037","FEAT-0142"]},{"id":"ADR-0039","t":"Three sections, derived and not filed","s":"accepted","k":"decision","ph":"","sev":"","l":["ADR-0034","ADR-0037","ADR-0038","DES-0012","FEAT-0138"]},{"id":"ADR-0038","t":"An automated test records that it is automated, not whether it passed","s":"accepted","k":"decision","ph":"","sev":"","l":["ADR-0034","ADR-0037","ADR-0039","DES-0012","FEAT-0138","REQ-0057"]},{"id":"ADR-0037","t":"A verdict is an event in a per-release, single-platform ledger","s":"accepted","k":"decision","ph":"","sev":"","l":["ADR-0034","ADR-0035","ADR-0036","DES-0012","FEAT-0132","REL-0001"]},{"id":"ADR-0036","t":"The acceptance sweep is withdrawn","s":"accepted","k":"decision","ph":"","sev":"","l":["DES-0012","FEAT-0132"]},{"id":"ADR-0035","t":"A release page reports what holds it; the mark is recorded where the check","s":"accepted","k":"decision","ph":"","sev":"","l":["ADR-0034"]},{"id":"ADR-0034","t":"Three axes, not one word","s":"accepted","k":"decision","ph":"","sev":"","l":["ADR-0033"]},{"id":"ADR-0033","t":"A manual test is an acceptance test","s":"superseded","k":"decision","ph":"","sev":"","l":["ADR-0034"]},{"id":"DES-0002","t":"The glass cockpit","s":"proposed","k":"design","ph":"","sev":"","l":["DES-0001"]},{"id":"DES-0001","t":"Nine ways to read the record, and a tenth that was cut and then asked for","s":"proposed","k":"design","ph":"","sev":"","l":["FEAT-0001","TASK-0005"]},{"id":"DES-0012","t":"Tests in two flows","s":"accepted","k":"design","ph":"","sev":"","l":["ADR-0034","ADR-0035"]},{"id":"DES-0011","t":"Publication is an obligation","s":"accepted","k":"design","ph":"","sev":"","l":[]},{"id":"DES-0010","t":"The desk shows what it owes","s":"superseded","k":"design","ph":"","sev":"","l":[]},{"id":"REQ-0060","t":"A check that is not a standing behaviour claim names the issue it verifies","s":"implemented","k":"requirement","ph":"","sev":"","l":["ADR-0039","FEAT-0140"]},{"id":"REQ-0059","t":"A check's section is derived from what it covers and who executes it, neve","s":"implemented","k":"requirement","ph":"","sev":"","l":["ADR-0039","FEAT-0140"]},{"id":"REQ-0058","t":"An automated test carries no verdict","s":"implemented","k":"requirement","ph":"","sev":"","l":["ADR-0038","FEAT-0139"]},{"id":"REQ-0057","t":"Coverage is observed from a run and never declared on a note","s":"implemented","k":"requirement","ph":"","sev":"","l":["ADR-0037","DES-0012","FEAT-0138"]},{"id":"REQ-0056","t":"One outcome vocabulary, defined in one document, and a check that fails wh","s":"implemented","k":"requirement","ph":"","sev":"","l":["ADR-0034","ADR-0037","FEAT-0137"]},{"id":"REQ-0055","t":"No cockpit surface reads a verdict from a note or writes one onto a note","s":"implemented","k":"requirement","ph":"","sev":"","l":["ADR-0035","ADR-0037","FEAT-0136"]},{"id":"RISK-0007","t":"Remote workspace trust boundary","s":"open","k":"risk","ph":"","sev":"","l":["RISK-0005"]},{"id":"RISK-0006","t":"The unattended worker","s":"open","k":"risk","ph":"","sev":"high","l":["REL-0001","RISK-0005"]},{"id":"RISK-0005","t":"The write surface","s":"closed","k":"risk","ph":"","sev":"high","l":["REL-0001"]},{"id":"RISK-0004","t":"Hook injection modifies agent CLI configuration surfaces","s":"open","k":"risk","ph":"","sev":"medium","l":[]},{"id":"PHASE-999","t":"Future / Unphased","s":"planned","k":"phase","ph":"","sev":"","l":[]},{"id":"PHASE-041","t":"The gate runs where the checks are, and the fleet stops drifting","s":"done","k":"phase","ph":"","sev":"","l":["ADR-0037","ADR-0040","FEAT-0142","FEAT-0143","TST-0081"]},{"id":"PHASE-040","t":"An agent session is not a terminal","s":"planned","k":"phase","ph":"","sev":"","l":[]},{"id":"PHASE-039","t":"A test says who executes it, and every section is derived","s":"done","k":"phase","ph":"","sev":"","l":["ADR-0034","ADR-0037","ADR-0038","ADR-0039","DES-0012","FEAT-0138"]},{"id":"PHASE-038","t":"A verdict is an event","s":"done","k":"phase","ph":"","sev":"","l":["ADR-0034","ADR-0037","DES-0012","FEAT-0132","FEAT-0133","FEAT-0134"]},{"id":"PHASE-037","t":"The release page and the tests view report at the granularity the reader i","s":"done","k":"phase","ph":"","sev":"","l":["ADR-0034","ADR-0035","ADR-0036","ADR-0039","ADR-0040","DES-0012"]},{"id":"PHASE-036","t":"Three axes","s":"done","k":"phase","ph":"","sev":"","l":["ADR-0033","ADR-0034"]},{"id":"PHASE-035","t":"The testing model","s":"done","k":"phase","ph":"","sev":"","l":["REL-0001","TST-0043"]},{"id":"CHG-20260902-The-Inbox-Takes-Any-File-Type","t":"The inbox takes any file type, the per-item cap goes to 250 MB, and the ju","s":"merged","k":"change","ph":"","sev":"","l":["ISS-0274"]},{"id":"CHG-20260902-Five-Failing-Tests-Were-Measuring-The-Wrong-Thing","t":"The suite is green: five failures were tests measuring by proxy, and the p","s":"merged","k":"change","ph":"","sev":"","l":["ISS-0274","ISS-0275","ISS-0276"]},{"id":"CHG-20260831-Writing-Rules-Reach-The-Fleet","t":"A new instruction file tells agents how to write prose a reader can follow","s":"merged","k":"change","ph":"","sev":"","l":["ISS-0273"]},{"id":"CHG-20260829","t":"The fleet runs one validator","s":"merged","k":"change","ph":"","sev":"","l":["FEAT-0143","TST-0080","TST-0081"]},{"id":"CHG-20260825-The-Console-Stops-Clipping-Its-Last-Line","t":"The console stops clipping its last line","s":"merged","k":"change","ph":"","sev":"","l":["TST-0078"]},{"id":"CHG-20260821-Three-Silences-Get-A-Voice","t":"A held-back feature says why, an orphaned surface is reported, and a verdi","s":"merged","k":"change","ph":"","sev":"","l":["ADR-0035","ADR-0040","FEAT-0142"]},{"id":"REL-0001","t":"The human has levers, and every surface says what it owes","s":"released","k":"release","ph":"","sev":"","l":["RISK-0005","RISK-0006"]}];
+  const PHASES = {"PHASE-001":{"s":"done","t":15,"d":15,"n":"MVP"},"PHASE-002":{"s":"done","t":61,"d":58,"n":"Project-os adapter"},"PHASE-003":{"s":"superseded","t":1,"d":1,"n":"Downstream pilot"},"PHASE-004":{"s":"done","t":10,"d":9,"n":"Embedded terminal"},"PHASE-005":{"s":"done","t":10,"d":9,"n":"Desktop shell (Electron + Python sidecar)"},"PHASE-006":{"s":"done","t":65,"d":60,"n":"Native cockpit UI (TypeScript rewrite)"},"PHASE-007":{"s":"done","t":140,"d":134,"n":"Agent instrumentation (hooks-aware terminal)"},"PHASE-008":{"s":"done","t":21,"d":19,"n":"State & review surfaces"},"PHASE-009":{"s":"done","t":43,"d":43,"n":"Design surfaces"},"PHASE-010":{"s":"done","t":26,"d":25,"n":"Surface ownership"},"PHASE-011":{"s":"done","t":15,"d":14,"n":"Unproven claims become visible"},"PHASE-012":{"s":"done","t":4,"d":4,"n":"Attention in the strip "},"PHASE-013":{"s":"done","t":12,"d":12,"n":"Fleet surfaces "},"PHASE-014":{"s":"done","t":6,"d":6,"n":"The project inbox "},"PHASE-015":{"s":"done","t":3,"d":3,"n":"Record hygiene "},"PHASE-016":{"s":"done","t":22,"d":22,"n":"The overview answers questions "},"PHASE-017":{"s":"superseded","t":0,"d":0,"n":"History as document events "},"PHASE-018":{"s":"superseded","t":0,"d":0,"n":"History you can reach and traverse "},"PHASE-019":{"s":"superseded","t":0,"d":0,"n":"Overview legibility "},"PHASE-020":{"s":"done","t":7,"d":7,"n":"A clipboard that works the same way everywhere"},"PHASE-021":{"s":"done","t":4,"d":4,"n":"Git is not the user's job "},"PHASE-022":{"s":"done","t":31,"d":30,"n":"Completed work gets quieter, never absent "},"PHASE-023":{"s":"done","t":26,"d":26,"n":"Levers for the human "},"PHASE-024":{"s":"done","t":20,"d":20,"n":"Acceptance witnessed "},"PHASE-025":{"s":"done","t":18,"d":18,"n":"Design before code "},"PHASE-026":{"s":"done","t":18,"d":18,"n":"The returning human "},"PHASE-027":{"s":"done","t":27,"d":27,"n":"The standing worker "},"PHASE-028":{"s":"active","t":11,"d":0,"n":"Borrowed capability "},"PHASE-029":{"s":"planned","t":11,"d":3,"n":"One tool, two front doors "},"PHASE-030":{"s":"done","t":69,"d":69,"n":"Obligations go home "},"PHASE-031":{"s":"planned","t":1,"d":0,"n":"The supervised week "},"PHASE-032":{"s":"done","t":12,"d":12,"n":"The reasoning is recorded "},"PHASE-033":{"s":"planned","t":16,"d":1,"n":"The workspace is not always local "},"PHASE-034":{"s":"done","t":81,"d":68,"n":"Three phases, and publication is the third "},"PHASE-035":{"s":"done","t":60,"d":56,"n":"The testing model "},"PHASE-036":{"s":"done","t":25,"d":25,"n":"Three axes "},"PHASE-037":{"s":"done","t":99,"d":98,"n":"The release page and the tests view report at "},"PHASE-038":{"s":"done","t":38,"d":38,"n":"A verdict is an event "},"PHASE-039":{"s":"done","t":28,"d":28,"n":"A test says who executes it, and every section"},"PHASE-040":{"s":"planned","t":0,"d":0,"n":"An agent session is not a terminal "},"PHASE-041":{"s":"done","t":23,"d":21,"n":"The gate runs where the checks are, and the fl"},"PHASE-999":{"s":"planned","t":27,"d":0,"n":"Future / Unphased"}};
+  const stage = document.getElementById('stage');
+  const inner = document.getElementById('fieldInner');
+  const wires = document.getElementById('wires');
+  const panels = document.getElementById('panels');
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const STILL = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PERSP = 900, DEG = Math.PI / 180, RAIL = 150, HUD = 200;
+  const centreX = w => RAIL + (w - RAIL - HUD) / 2;
+
+  const TERMINAL = new Set(['done','fixed','merged','resolved','implemented','met','complete','passing',
+    'published','released','closed','accepted','verified','fulfilled','obsolete','retired','cancelled',
+    'superseded','declined','reverted','deprecated','reconciled']);
+  const LIVE = new Set(['active','doing','in-progress','review','next','mitigating','ready']);
+  const OWED = new Set(['open','triage','backlog','todo','planned','proposed','draft','pending','blocked','failing','reopened']);
+  const KIND_HUE = { feature:188, issue:12, task:176, test:148, decision:262, design:300,
+                     requirement:208, risk:32, phase:92, change:224, release:52 };
+  const kc = (k, l) => 'hsl(' + (KIND_HUE[k] || 190) + ' 62% ' + l + '%)';
+  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const band = s =>
+    ['done','fixed','merged','resolved','implemented','met','complete','passing','published','released','closed','verified','fulfilled'].includes(s) ? 'done' :
+    ['active','doing','in-progress','review','next','mitigating','ready','accepted'].includes(s) ? 'active' :
+    ['blocked','failing','reopened'].includes(s) ? 'blocked' :
+    ['obsolete','retired','cancelled','superseded','declined','reverted','deprecated','reconciled'].includes(s) ? 'archived' :
+    ['reference','deferred'].includes(s) ? 'reference' : 'pending';
+
+  // ---- what a CLOSED card shows, per note type ------------------------
+  // A phase carries a progress bar because a phase is the one note type whose
+  // whole meaning is "how far through are we"; an issue carries severity
+  // because that is what decides whether you read it now.
+  function face(n) {
+    if (n.k === 'phase') {
+      const ph = PHASES[n.id];
+      if (!ph || !ph.t) return '<div class="face">no children</div>';
+      const pct = Math.round(ph.d / ph.t * 100);
+      return '<div class="face"><span>' + ph.d + '/' + ph.t + '</span>' +
+             '<span class="bar"><i style="width:' + pct + '%"></i></span><span>' + pct + '%</span></div>';
+    }
+    if (n.k === 'issue' || n.k === 'risk')
+      return '<div class="face"><span class="sev" style="color:var(--severity-' + (n.sev || 'low') + ')">' +
+             (n.sev || 'unset') + '</span><span>' + (n.ph || 'no phase') + '</span></div>';
+    if (n.k === 'test')
+      return '<div class="face"><span>covers ' + (n.l.length || 0) + '</span><span>' + (n.ph || 'no phase') + '</span></div>';
+    if (n.k === 'release' || n.k === 'change')
+      return '<div class="face"><span>' + n.l.length + ' items</span></div>';
+    return '<div class="face"><span>' + (n.ph || 'no phase') + '</span><span>' + n.l.length + ' links</span></div>';
+  }
+
+  const VIEWS = [
+    { id:'overview', label:'Overview',
+      note:'<b>Everything, sorted by how much it wants you.</b> Phases sit in the mid field with their progress on the card.',
+      about:()=>true, owed:n=>OWED.has(n.s), group:n=>n.k },
+    { id:'intent', label:'Intent',
+      note:'<b>What this project is.</b> Decisions, designs, requirements, risks. Proposals and open questions swing to the front.',
+      about:n=>['decision','design','requirement','risk'].includes(n.k),
+      owed:n=>['proposed','draft','open','mitigating'].includes(n.s), group:n=>n.k },
+    { id:'features', label:'Features',
+      note:'<b>Grouped by phase</b> — each phase gets a sector, and <b>the phase card leads it</b> with its real progress bar.',
+      about:n=>['feature','requirement','phase'].includes(n.k),
+      owed:n=>n.k!=='phase' && !TERMINAL.has(n.s), group:n=>n.ph||(n.k==='phase'?n.id:'no phase'), lead:'phase' },
+    { id:'tasks', label:'Tasks',
+      note:'<b>Tasks under their feature.</b> Doing and backlog ahead of you; done is behind you.',
+      about:n=>['task','phase'].includes(n.k), owed:n=>n.k==='task'&&!TERMINAL.has(n.s),
+      group:n=>n.ph||(n.k==='phase'?n.id:'no phase'), lead:'phase' },
+    { id:'issues', label:'Issues',
+      note:'<b>By severity, then risks the same way.</b> Severity sets the sector; open and triage set the distance.',
+      about:n=>['issue','risk'].includes(n.k), owed:n=>OWED.has(n.s), group:n=>n.sev||'unset' },
+    { id:'tests', label:'Tests',
+      note:'<b>Every TST by what it needs.</b> Anything owed a run is in front — the view that gathers rather than receives.',
+      about:n=>['test','feature'].includes(n.k), owed:n=>n.k==='test'&&!TERMINAL.has(n.s),
+      group:n=>n.k==='test'?'tests':'covered' },
+    { id:'publication', label:'Publication',
+      note:'<b>How far the work has travelled.</b> Unpublished work is in front, because publishing is a person\u2019s act.',
+      about:n=>['release','change','feature'].includes(n.k), owed:n=>n.k==='release'&&!TERMINAL.has(n.s), group:n=>n.k },
+    { id:'review', label:'Review',
+      note:'<b>What owes a verdict, and what owes an answer to one.</b> A verdict is the reviewer\u2019s; this view never clears it.',
+      about:n=>['feature','design','test','issue'].includes(n.k),
+      owed:n=>['proposed','review','open'].includes(n.s), group:n=>n.k },
+    { id:'active', label:'Active',
+      note:'<b>In flight, across every type.</b> The smallest field of the thirteen — most of the corpus is behind you here.',
+      about:n=>LIVE.has(n.s)||OWED.has(n.s)||n.k==='phase', owed:n=>LIVE.has(n.s),
+      group:n=>LIVE.has(n.s)?'doing':'next' },
+    { id:'orbit', label:'Orbit',
+      note:'<b>The link field.</b> Distance is how connected a note is, not what it owes — the well-linked pull to the centre and every visible edge is drawn.',
+      about:()=>true, owed:n=>n.l.length>=4, group:n=>n.k, orbit:true },
+    { id:'files', label:'Files',
+      note:'<b>The library became a file browser.</b> Directories are cards; opening one deals its files. <b>files</b> in the top strip opens the real tree.',
+      about:n=>['decision','design','change','release','requirement'].includes(n.k),
+      owed:n=>n.s==='proposed', group:n=>n.k, files:true },
+    { id:'recent', label:'Recent',
+      note:'<b>Newest first, whatever it is.</b> The one view where distance is age rather than obligation — and it says so.',
+      about:()=>true, owed:(n,i)=>i<8, group:n=>n.k },
+  ];
+
+  const rail = document.getElementById('rail');
+  rail.innerHTML = '<div class="rail-h">VIEWS</div>';
+  let view = VIEWS[0];
+  VIEWS.forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = v.label;
+    b.setAttribute('aria-pressed', String(v === view));
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      useDeskFor(v.id);                   // stash this view's desk, restore that one's
+      view = v;
+      rail.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+      assign(); render(true); syncPanels();
+    });
+    rail.appendChild(b);
+  });
+
+  const els = new Map(), SLOT = new Map();
+  for (const n of NOTES) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.style.borderLeftColor = kc(n.k, 58);
+    el.innerHTML =
+      '<div class="cid"><b style="color:' + kc(n.k, 68) + '">' + n.id + '</b>' +
+      '<span style="color:var(--status-' + band(n.s) + ')">' + (n.s || '\u2014') + '</span></div>' +
+      '<div class="ct">' + esc(n.t) + '</div>' + face(n) +
+      '<div class="cbody">The note opens here in the cockpit\u2019s own renderer — wikilinks, backlinks and tickable ' +
+      'checkboxes intact. A second Markdown parser is the mistake ISS-0151 names, and glass is not a reason to make one.' +
+      '<br><br><span style="color:#5FA9C4">' + n.k + ' · ' + (n.ph || 'no phase') + ' · ' + n.l.length + ' outbound links</span>' +
+      '<div class="cact"><span data-act="behind">put behind me \u21BB</span><span data-act="pin">pin beside \u2295</span>' +
+      '<span data-act="close">close</span></div></div>';
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const act = e.target && e.target.dataset && e.target.dataset.act;
+      if (act === 'behind') return putBehind(n);
+      if (act === 'close') return closeOne(n.id);
+      if (act === 'pin') return openOn(n, true);
+      openOn(n);
+    });
+    if (n.k === 'phase') el.classList.add('phase');
+    inner.appendChild(el);
+    els.set(n.id, el);
+  }
+
+  const INBOUND = new Map();
+  for (const n of NOTES) for (const x of n.l) {
+    if (!INBOUND.has(x)) INBOUND.set(x, []);
+    INBOUND.get(x).push(n.id);
+  }
+  const byId = new Map(NOTES.map(n => [n.id, n]));
+
+  let RENDER = 'cheap';
+  const pushed = new Set();
+  let yaw = 0;
+  const norm = a => { while (a > Math.PI) a -= 2*Math.PI; while (a < -Math.PI) a += 2*Math.PI; return a; };
+  function slabRects() {
+    const s = stage.getBoundingClientRect();
+    const boxes = [...panels.children];
+    for (const d of desk) boxes.push(d.el);     // a note window blocks slots too
+    return boxes.filter(el => el.offsetParent !== null).map(el => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
+    });
+  }
+
+  function slots() {
+    const out = { front: [], mid: [], quiet: [] };
+    for (let row = 0; row < 4; row++)
+      for (let col = -1; col <= 1; col++)
+        out.front.push({ th: col*37*DEG, d: 380, y: -170 + row*113, rank: Math.abs(col) });
+    for (const side of [-1, 1])
+      for (let col = 0; col < 5; col++)
+        for (let row = 0; row < 4; row++)
+          out.mid.push({ th: side*(50 + col*23)*DEG, d: 620, y: -176 + row*128, rank: col });
+    for (let ring = 0; ring < 2; ring++)
+      for (let col = -3; col <= 3; col++)
+        for (let row = 0; row < 5; row++)
+          out.quiet.push({ th: (180 + col*18)*DEG, d: 720 + ring*170, y: -205 + row*130 });
+    out.front.sort((p, q) => p.rank - q.rank || p.y - q.y);
+    out.mid.sort((p, q) => p.rank - q.rank || Math.abs(p.th) - Math.abs(q.th));
+    const s = stage.getBoundingClientRect(), rects = slabRects();
+    const free = sl => {
+      const phi = norm(sl.th - yaw);
+      if (Math.abs(phi) > 78*DEG) return true;
+      const z = -Math.cos(phi)*sl.d, k = PERSP/(PERSP - z);
+      const cx = centreX(s.width) + Math.sin(phi)*sl.d*k, cy = s.height*.46 + sl.y*k;
+      const hw = 99*k, hh = 36*k;
+      if (cx - hw < RAIL || cx + hw > s.width - HUD + 40) return false;
+      return !rects.some(r => cx + hw > r.x - 10 && cx - hw < r.x + r.w + 10 &&
+                              cy + hh > r.y - 8 && cy - hh < r.y + r.h + 8);
+    };
+    out.front = out.front.filter(free);
+    out.mid = out.mid.filter(free);
+    return out;
+  }
+
+  function focusKin() {
+    if (!desk.length) return new Set();
+    const n = byId.get(desk[desk.length - 1].id);
+    if (!n) return new Set();
+    return new Set([...(n.l || []), ...(INBOUND.get(n.id) || [])].filter(id => byId.has(id)));
+  }
+  function assign() {
+    const subject = NOTES.filter(view.about);
+    const near = focusKin();
+    const onDesk = new Set(desk.map(d => d.id));
+    const front = [], mid = [], quiet = [];
+    // While a note is held, the front band belongs to what is joined to it —
+    // at full size and full detail, so they are readable rather than merely
+    // outlined. They stay FIELD cards: click one and it joins the desk.
+    NOTES.forEach(n => { if (near.has(n.id) && !onDesk.has(n.id)) front.push(n); });
+    subject.forEach((n, i) => {
+      if (near.has(n.id) || onDesk.has(n.id)) return;
+      if (pushed.has(n.id)) quiet.push(n);
+      else if (!desk.length && view.owed(n, i)) front.push(n);
+      else if (view.lead === 'phase' && n.k === 'phase') mid.push(n);
+      else if (TERMINAL.has(n.s)) quiet.push(n);
+      else mid.push(n);
+    });
+    NOTES.filter(n => !view.about(n) && !near.has(n.id) && !onDesk.has(n.id)).forEach(n => quiet.push(n));
+    const S = slots();
+    front.splice(S.front.length).forEach(n => mid.push(n));
+    SLOT.clear();
+    front.forEach((n, i) => SLOT.set(n.id, Object.assign({ b: 'front' }, S.front[i])));
+
+    const groups = new Map();
+    for (const n of mid) {
+      const g = String(view.group(n) || '\u2014');
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(n);
+    }
+    // a phase leads its own sector, so the progress bar is the first thing in it
+    for (const [, arr] of groups)
+      arr.sort((x, y) => (y.k === 'phase') - (x.k === 'phase'));
+    // Only the nearest two columns a side are inside the visible arc, so the
+    // sectors are dealt in order of how much live work they hold. A sector of
+    // finished work in the nearest column is a wasted column.
+    const live = arr => arr.filter(n => !TERMINAL.has(n.s)).length;
+    const ordered = [...groups.entries()].sort((a, b) =>
+      live(b[1]) - live(a[1]) || b[1].length - a[1].length);
+    let mi = 0;
+    for (const [, arr] of ordered) {
+      for (const n of arr) {
+        if (mi < S.mid.length) SLOT.set(n.id, Object.assign({ b: 'mid' }, S.mid[mi++]));
+        else quiet.push(n);
+      }
+      // a big sector earns its own column; a one-note sector gets a gap, or
+      // eight small sectors consume every visible column and show four cards
+      if (arr.length >= 3) mi = Math.ceil(mi / 4) * 4; else mi += 1;
+    }
+    let qi = 0;
+    for (const n of quiet) {
+      if (SLOT.has(n.id)) continue;
+      SLOT.set(n.id, Object.assign({ b: 'quiet' }, S.quiet[qi++ % S.quiet.length]));
+    }
+    document.getElementById('viewnote').innerHTML = view.note;
+    document.getElementById('nFront').textContent = front.length;
+    document.querySelector('.bands div:first-child').lastChild.textContent =
+      desk.length ? ' joined to what you are holding' : ' ahead of you — needs you';
+    document.getElementById('nMid').textContent = Math.min(mid.length, S.mid.length);
+    document.getElementById('nDeep').textContent = NOTES.length - front.length - Math.min(mid.length, S.mid.length);
+    document.getElementById('tabA').textContent = view.id;
+  }
+
+  function render(anim) {
+    const SW = stage.clientWidth;
+    const kin = kinship();
+    const onDesk = new Set(desk.map(d => d.id));
+    let behind = 0;
+    for (const n of NOTES) {
+      const el = els.get(n.id), sl = SLOT.get(n.id);
+      if (!sl) continue;
+      el.style.transition = anim === false ? 'none' : '';
+      const phi = norm(sl.th - yaw);
+      // a wave rather than a jump: what you are facing settles first, the
+      // periphery follows. Free — it is a delay, not more work.
+      el.style.transitionDelay = anim === false ? '0ms'
+        : Math.min(170, Math.abs(phi) / DEG * 1.9).toFixed(0) + 'ms';
+      const kk = PERSP / (PERSP + Math.cos(phi)*sl.d);
+      const cx = centreX(SW) + Math.sin(phi)*sl.d*kk, hw = 99*kk;
+      const vis = Math.abs(phi) < 78*DEG && cx - hw > RAIL - 30 && cx + hw < SW - HUD + 60;
+      if (!vis) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; behind++; continue; }
+      const sx = Math.sin(phi)*sl.d*kk, sy = sl.y*kk;
+      const fade = Math.max(0, Math.min(1, (78*DEG - Math.abs(phi)) / (26*DEG)));
+      // every card you can SEE, you can OPEN — the quiet band was unclickable
+      // in rev 1, which is why FEAT-0143 could not be opened at all
+      el.style.pointerEvents = 'auto';
+      el.className = 'card' + (n.k === 'phase' ? ' phase' : '') +
+                     (sl.b === 'front' ? ' owed' : '') + (sl.b === 'mid' ? ' mid' : '') +
+                     (sl.b === 'quiet' ? ' deep' : '');
+      el.style.transform = 'translate(' + (sx - 93 + (centreX(SW) - SW/2)) + 'px,' + sy + 'px) scale(' + kk.toFixed(3) + ')';
+      // With notes on the desk the field steps back — but only to .34, never
+      // out of sight. What is joined to the note you are holding comes back to
+      // full strength instead of being pulled out of position.
+      const k = kin.get(n.id) || 0;
+      const dim = desk.length ? (k ? 1 : .3) : 1;
+      el.style.opacity = String((sl.b === 'quiet' ? .5 : sl.b === 'mid' ? .94 : 1) * (0.28 + 0.72*fade) * dim);
+      if (onDesk.has(n.id)) el.classList.add('lifted');
+      else if (k > 1) el.classList.add('kin-shared');
+      else if (k === 1) el.classList.add('kin');
+      el.style.filter = (RENDER === 'blur' && sl.b === 'quiet') ? 'blur(1.4px)' : 'none';
+      el.style.zIndex = String(2000 + Math.round(-Math.cos(phi)*sl.d));
+    }
+    document.getElementById('behindCount').textContent = behind;
+    drawCompass();
+    paintDesk();
+    if (view.orbit && !desk.length) drawOrbitEdges(); else drawWires();
+  }
+
+  const comp = document.getElementById('compass');
+  function drawCompass() {
+    const deg = ((yaw / DEG) % 360 + 360) % 360;
+    comp.style.setProperty('--turn', (-deg) + 'deg');
+    document.getElementById('heading').textContent = Math.round(deg) + '\u00B0';
+    document.getElementById('facing').textContent =
+      deg < 45 || deg > 315 ? 'facing what needs you' :
+      deg > 135 && deg < 225 ? 'facing the quiet' : 'facing the mid field';
+  }
+  function turn(by) { yaw += by; render(); }
+  document.getElementById('lookAhead').addEventListener('click', e => { e.stopPropagation(); yaw = 0; render(); });
+  document.getElementById('lookBack').addEventListener('click', e => { e.stopPropagation(); yaw = Math.PI; render(); });
+
+  let look = null, moved = 0;
+  stage.addEventListener('pointerdown', e => {
+    if (e.target.closest('.slab, .rail, .carousel, .ring, .card, .topstrip, button, input')) return;
+    look = { x: e.clientX, yaw }; moved = 0;
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!look) return;
+    moved = Math.max(moved, Math.abs(e.clientX - look.x));
+    yaw = look.yaw - (e.clientX - look.x)*.0042;
+    render(false);
+  });
+  stage.addEventListener('pointerup', () => {
+    /* a background click no longer sweeps — too destructive by accident */
+    look = null; render(true);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'Escape') sweep();
+    if (e.key === 'ArrowLeft') turn(-14*DEG);
+    if (e.key === 'ArrowRight') turn(14*DEG);
+  });
+
+  function putBehind(n) {
+    pushed.add(n.id); closeOne(n.id);
+    assign(); render(true);
+    document.getElementById('hint').innerHTML =
+      '<b style="color:var(--cy)">' + n.id + '</b> is behind you now — turn to find it<br>' +
+      pushed.size + ' put away by hand this session';
+  }
+
+  // ---- the desk: notes you picked up ----------------------------------
+  // Two surfaces, not one. The FIELD is every note, arranged by the view's
+  // rule; it re-arranges when the view changes. The DESK is what you picked
+  // up, and it survives view switches because YOU put it there. Opening is
+  // lifting a note out of the field; its slot stays behind, ghosted.
+  const deskEl = document.getElementById('desk');
+  const deskBar = document.getElementById('deskbar');
+  const desks = new Map();               // view id -> its own desk
+  let desk = [];                         // the current view's; last = focused
+  function useDeskFor(id) {
+    desks.set(view.id, desk);
+    desk = desks.get(id) || [];
+    for (const el of deskEl.children) el.style.display = 'none';
+    desk.forEach(d => { d.el.style.display = ''; });
+  }
+  let dz = 3000;
+
+  // Click ADDS to the desk. Clicking one already on it raises it. Nothing is
+  // ever replaced by accident, and no modifier is needed for the main act.
+  function openOn(n) {
+    if (desk.some(d => d.id === n.id)) { bringToTop(n.id); return; }
+    const i = desk.length;
+    desk.push(makeWin(n, 220 + (i % 6) * 30, 112 + (i % 6) * 34));
+    yaw = 0;                    // picking a note up turns you to face its kin
+    bringToTop(n.id);
+  }
+  function makeWin(n, x, y) {
+    const el = document.createElement('div');
+    el.className = 'note-win';
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.borderLeftColor = kc(n.k, 58);
+    el.innerHTML =
+      '<div class="nw-head"><span class="nid">' + n.id + '</span>' +
+      '<span style="color:var(--cy-dim)">' + REPOS[ringAt][0].replace('project-os-', 'p-os-') + '</span>' +
+      '<span class="nst" style="color:var(--status-' + band(n.s) + ')">' + (n.s || '\u2014') + '</span>' +
+      '<button type="button" data-a="fold" title="Collapse to its header">\u2013</button>' +
+      '<button type="button" data-a="close" title="Back to the field \u00B7 \u2325 closes the others">\u00D7</button></div>' +
+      '<div class="nw-face">' + face(n) + '</div>' +
+      '<div class="nw-body"><div class="tt">' + esc(n.t) + '</div>' +
+      'The note renders here with the cockpit\u2019s own reader — wikilinks, backlinks, tickable checkboxes.' +
+      '<div class="meta">' + n.k + ' \u00B7 ' + (n.ph || 'no phase') + ' \u00B7 ' + n.l.length +
+      ' outbound \u00B7 ' + (INBOUND.get(n.id) || []).length + ' inbound</div></div>';
+    deskEl.appendChild(el);
+    const rec = { id: n.id, el: el, collapsed: false };
+    el.addEventListener('pointerdown', () => bringToTop(n.id), true);
+    el.querySelector('[data-a=close]').addEventListener('click', e => {
+      e.stopPropagation();
+      if (e.altKey) closeOthers(n.id); else closeOne(n.id);
+    });
+    el.querySelector('[data-a=fold]').addEventListener('click', e => {
+      e.stopPropagation();
+      rec.collapsed = !rec.collapsed;
+      el.classList.toggle('collapsed', rec.collapsed);
+      e.target.textContent = rec.collapsed ? '+' : '\u2013';
+    });
+    dragWin(el, rec);
+    return rec;
+  }
+  function dragWin(el, rec) {
+    const head = el.querySelector('.nw-head');
+    let d = null;
+    head.addEventListener('pointerdown', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+      d = { dx: e.clientX - r.left, dy: e.clientY - r.top, s };
+      head.setPointerCapture(e.pointerId); e.stopPropagation();
+    });
+    head.addEventListener('pointermove', e => {
+      if (!d) return;
+      el.style.left = Math.max(RAIL + 4, Math.min(d.s.width - el.offsetWidth - 8, e.clientX - d.s.left - d.dx)) + 'px';
+      el.style.top = Math.max(44, Math.min(d.s.height - 56, e.clientY - d.s.top - d.dy)) + 'px';
+      drawWires();
+    });
+    head.addEventListener('pointerup', () => { if (d) { d = null; keepHeadersVisible(rec, 0); assign(); render(true); } });
+  }
+  // Overlap is allowed anywhere EXCEPT over another note's header. A stack of
+  // any depth stays addressable, because every note in it still shows its id.
+  function keepHeadersVisible(rec, depth) {
+    if (depth > 8) return;
+    const mine = rec.el.getBoundingClientRect();
+    for (const o of desk) {
+      if (o === rec) continue;
+      const r = o.el.getBoundingClientRect();
+      const acrossX = mine.left < r.right - 10 && mine.right > r.left + 10;
+      const onHeader = mine.top > r.top - 26 && mine.top < r.top + 30;
+      if (acrossX && onHeader) {
+        rec.el.style.top = (parseFloat(rec.el.style.top) + (r.top + 34 - mine.top)) + 'px';
+        return keepHeadersVisible(rec, depth + 1);
+      }
+    }
+  }
+  function bringToTop(id) {
+    const w = desk.find(d => d.id === id); if (!w) return;
+    w.el.style.zIndex = String(++dz);
+    desk.splice(desk.indexOf(w), 1); desk.push(w);
+    desk.forEach(d => d.el.classList.toggle('top', d === w));
+    yaw = 0;                    // the front band is now this note's kin
+    assign(); render(true);
+  }
+  function closeOne(id) {
+    const i = desk.findIndex(d => d.id === id); if (i < 0) return;
+    desk[i].el.remove(); desk.splice(i, 1);
+    if (desk.length) bringToTop(desk[desk.length - 1].id); else { clearWires(); assign(); render(true); }
+  }
+  function closeOthers(id) { desk.slice().forEach(d => { if (d.id !== id) closeOne(d.id); }); }
+  function sweep() { desk.slice().forEach(d => closeOne(d.id)); }
+
+  // How many desk notes each field note is joined to. 1 = a neighbour of the
+  // focused note; 2+ = shared, which is the question you cannot ask today.
+  function kinship() {
+    const marks = new Map();
+    for (const d of desk) {
+      const n = byId.get(d.id); if (!n) continue;
+      new Set([...(n.l || []), ...(INBOUND.get(n.id) || [])]).forEach(k => marks.set(k, (marks.get(k) || 0) + 1));
+    }
+    return marks;
+  }
+  function paintDesk() {
+    deskBar.hidden = desk.length === 0;
+    if (!desk.length) return;
+    const top = desk[desk.length - 1];
+    const shared = [...kinship().values()].filter(v => v > 1).length;
+    const elsewhere = [...desks.entries()]
+      .filter(([k, v]) => k !== view.id && v.length)
+      .map(([k, v]) => v.length + ' on ' + k);
+    deskBar.innerHTML = '<span><b>' + desk.length + '</b> on the ' + view.label.toLowerCase() + ' desk</span>' +
+      '<span>focused <b>' + top.id + '</b></span>' +
+      (desk.length > 1 ? '<span><b>' + shared + '</b> joined to more than one</span>' : '') +
+      (elsewhere.length ? '<span style="color:var(--cy-dim)">' + elsewhere.join(' \u00B7 ') + '</span>' : '') +
+      '<button type="button" data-d="tidy">tidy</button>' +
+      '<button type="button" data-d="sweep">sweep</button>' +
+      '<span>esc clears \u00B7 \u2325\u00D7 closes the others</span>';
+    deskBar.querySelector('[data-d=sweep]').addEventListener('click', e => { e.stopPropagation(); sweep(); });
+    deskBar.querySelector('[data-d=tidy]').addEventListener('click', e => {
+      e.stopPropagation();
+      desk.forEach((d, i) => { d.el.style.left = (220 + i * 30) + 'px'; d.el.style.top = (118 + i * 34) + 'px'; });
+      drawWires();
+    });
+  }
+
+
+  // ---- wires ----------------------------------------------------------
+  function clearWires() { while (wires.firstChild) wires.removeChild(wires.firstChild); }
+  // where a line from the centre of `r` toward (tx,ty) crosses r's border
+  function edgePoint(r, tx, ty, pad) {
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = tx - cx, dy = ty - cy;
+    if (!dx && !dy) return [cx, cy];
+    const hw = r.width / 2 + (pad || 0), hh = r.height / 2 + (pad || 0);
+    const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+    return [cx + dx * t, cy + dy * t];
+  }
+  function wire(x1, y1, x2, y2, col, w) {
+    const ln = document.createElementNS(SVGNS, 'path');
+    ln.setAttribute('d', 'M' + x1 + ' ' + y1 + ' C' + ((x1+x2)/2) + ' ' + y1 + ',' + ((x1+x2)/2) + ' ' + y2 + ',' + x2 + ' ' + y2);
+    ln.setAttribute('fill', 'none'); ln.setAttribute('stroke', col); ln.setAttribute('stroke-width', w || '1');
+    wires.appendChild(ln);
+  }
+  let wireTimer = null;
+  function paintWires() {
+    clearWires();
+    if (!desk.length) return;
+    const s = stage.getBoundingClientRect();
+    // only the FOCUSED note draws its threads, so the picture stays readable
+    // however many are on the desk
+    const top = desk[desk.length - 1];
+    const n = byId.get(top.id); if (!n) return;
+    const near = new Set([...(n.l || []), ...(INBOUND.get(n.id) || [])]);
+    const c = top.el.getBoundingClientRect();
+    const ccx = c.left + c.width / 2, ccy = c.top + c.height / 2;
+    for (const r of near) {
+      const el = els.get(r);
+      if (!el || parseFloat(el.style.opacity || '0') < .05) continue;
+      const b2 = el.getBoundingClientRect();
+      const a1 = edgePoint(c, b2.left + b2.width / 2, b2.top + b2.height / 2, 2);
+      const a2 = edgePoint(b2, ccx, ccy, 2);
+      wire(a1[0] - s.left, a1[1] - s.top, a2[0] - s.left, a2[1] - s.top, 'rgba(127,228,255,.42)');
+    }
+  }
+  function drawWires() {
+    clearTimeout(wireTimer);
+    if (!desk.length) { clearWires(); return; }
+    const t0 = performance.now();
+    const tick = () => { paintWires(); if (desk.length && performance.now() - t0 < 900) wireTimer = setTimeout(tick, 50); };
+    tick();
+  }
+  function drawOrbitEdges() {
+    if (desk.length) return;
+    clearWires();
+    const s = stage.getBoundingClientRect();
+    const seen = new Map();
+    for (const n of NOTES) {
+      const el = els.get(n.id);
+      if (el.style.opacity === '0') continue;
+      const r = el.getBoundingClientRect();
+      seen.set(n.id, [r.left - s.left + r.width/2, r.top - s.top + r.height/2]);
+    }
+    let drawn = 0;
+    for (const n of NOTES) {
+      const a = seen.get(n.id); if (!a) continue;
+      for (const x of n.l) {
+        const b2 = seen.get(x); if (!b2 || drawn > 160) continue;
+        wire(a[0], a[1], b2[0], b2[1], 'rgba(110,200,232,.22)');
+        drawn++;
+      }
+    }
+  }
+
+  // ---- search: type an id, fly to it ----------------------------------
+  const q = document.getElementById('q');
+  q.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key !== 'Enter') return;
+    const term = q.value.trim().toLowerCase();
+    if (!term) return;
+    const hit = NOTES.find(n => n.id.toLowerCase() === term) ||
+                NOTES.find(n => n.id.toLowerCase().startsWith(term)) ||
+                NOTES.find(n => n.t.toLowerCase().includes(term));
+    if (!hit) { q.value = ''; q.placeholder = 'no note matches — try FEAT-0143'; return; }
+    const sl = SLOT.get(hit.id);
+    if (sl) { yaw = sl.th; render(true); }      // fly, do not cut
+    setTimeout(() => openOn(hit), STILL ? 0 : 420);
+    q.blur();
+  });
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); q.focus(); q.select(); }
+  });
+
+  // ---- panels: consoles, lists, files, pulse --------------------------
+  const RUNNING = [
+    { n:'project-os-cockpit', s:'shell · idle', live:false,
+      body:['<span class="dim">$</span> <span class="p">bash tools/scripts/validate-docs.sh</span>','validate-docs: OK',
+            '<span class="dim">$</span> <span class="p">git log --oneline -1</span>','9f01d65 DES-0002 \u2026','<span class="dim">$</span> \u2588'] },
+    { n:'claude · 3f2a', s:'writing · renderer.ts', live:true,
+      body:['<span class="dim">hook</span> PreToolUse Edit','renderer.ts +41 \u221212','context 64% · $2.41 · 38m','<span class="p">writing\u2026</span> \u2588'] },
+    { n:'codex · xngr', s:'reading · 41 files', live:true,
+      body:['<span class="dim">grep</span> \u00D714 <span class="dim">read</span> \u00D727','no writes yet','context 22% · $0.33 · 11m','<span class="p">reading\u2026</span> \u2588'] },
+    { n:'your-trainer', s:'waiting · approval', live:false,
+      body:['<span style="color:var(--severity-medium)">asked to push to origin</span>','idle 4m 12s','3 commits unpushed','<span class="dim">A</span> approve  <span class="dim">S</span> stop'] },
+    { n:'your-health', s:'shell · idle', live:false, body:['<span class="dim">$</span> \u2588'] },
+  ];
+  let pz = 4500, pn = 0;
+  function makePanel(opts) {
+    const el = document.createElement('div');
+    el.className = 'slab';
+    el.style.cssText = 'left:' + opts.x + 'px;top:' + opts.y + 'px;width:' + opts.w + 'px;height:' + opts.h + 'px;z-index:' + (++pz);
+    el.innerHTML =
+      '<div class="slab-head"><span class="dot" style="background:' + (opts.live ? 'var(--status-active)' : 'var(--cy-dim)') + '"></span>' +
+      '<span class="t">' + esc(opts.title) + '</span>' +
+      '<span class="slab-op" style="margin-left:auto"><span class="dim">opacity</span>' +
+      '<input type="range" min="20" max="95" value="' + (opts.op || 55) + '" aria-label="Panel opacity">' +
+      '<button class="sh-btn" type="button" data-x>\u00D7</button></span></div>' +
+      '<div class="slab-body"></div><div class="slab-grip"></div>';
+    el.dataset.kind = opts.kind;
+    el.style.background = 'rgb(6 26 34 / ' + ((opts.op || 55)/100) + ')';
+    panels.appendChild(el);
+    const body = el.querySelector('.slab-body');
+    if (typeof opts.body === 'string') body.innerHTML = opts.body; else opts.body(body);
+    const head = el.querySelector('.slab-head'), grip = el.querySelector('.slab-grip');
+    el.addEventListener('pointerdown', () => { el.style.zIndex = String(++pz); }, true);
+    let dg = null, rs = null;
+    head.addEventListener('pointerdown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+      const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+      dg = { dx: e.clientX - r.left, dy: e.clientY - r.top, s };
+      head.setPointerCapture(e.pointerId); e.stopPropagation();
+    });
+    head.addEventListener('pointermove', e => {
+      if (!dg) return;
+      el.style.left = Math.max(RAIL, Math.min(dg.s.width - el.offsetWidth - 8, e.clientX - dg.s.left - dg.dx)) + 'px';
+      el.style.top = Math.max(44, Math.min(dg.s.height - el.offsetHeight - 8, e.clientY - dg.s.top - dg.dy)) + 'px';
+    });
+    head.addEventListener('pointerup', () => { if (dg) { dg = null; assign(); render(true); } });
+    grip.addEventListener('pointerdown', e => {
+      const r = el.getBoundingClientRect();
+      rs = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+      grip.setPointerCapture(e.pointerId); e.stopPropagation();
+    });
+    grip.addEventListener('pointermove', e => {
+      if (!rs) return;
+      el.style.width = Math.max(240, rs.w + (e.clientX - rs.x)) + 'px';
+      el.style.height = Math.max(110, rs.h + (e.clientY - rs.y)) + 'px';
+    });
+    grip.addEventListener('pointerup', () => { if (rs) { rs = null; assign(); render(true); } });
+    el.querySelector('input[type=range]').addEventListener('input', ev => {
+      el.style.background = 'rgb(6 26 34 / ' + (ev.target.value/100) + ')';
+    });
+    el.querySelector('[data-x]').addEventListener('click', ev => {
+      ev.stopPropagation(); el.remove(); assign(); render(true);
+    });
+    return el;
+  }
+  function consolePanel(i, offset) {
+    const r = RUNNING[i];
+    return makePanel({ kind:'console', title: r.n + ' · ' + r.s.split(' · ')[0], live: r.live,
+      x: 330 + (offset||0)*38, y: 448 + (offset||0)*24, w: 372, h: 176, op: 55,
+      body: r.body.join('<br>') });
+  }
+  function listPanel() {
+    const rows = NOTES.filter(view.about).sort((a, b) => (SLOT.get(a.id)?.b === 'front' ? -1 : 1));
+    return makePanel({ kind:'list', title: view.label.toLowerCase() + ' · as list · ' + rows.length + ' rows',
+      x: RAIL + 16, y: 84, w: 352, h: 272, op: 82,
+      body: b => {
+        b.innerHTML = '<table>' + rows.map(n =>
+          '<tr data-id="' + n.id + '"><td class="i">' + n.id + '</td><td style="color:var(--status-' + band(n.s) + ')">' +
+          (n.s || '\u2014') + '</td><td>' + esc(n.t.slice(0, 46)) + '</td></tr>').join('') + '</table>';
+        b.addEventListener('click', ev => {
+          const tr = ev.target.closest('tr');
+          if (tr && byId.has(tr.dataset.id)) openOn(byId.get(tr.dataset.id));
+        });
+      } });
+  }
+  const TREE = [['docs/features/', ['FEAT-0001-The-Corpus-Has-An-Inside.md', 'plan/PLAN.md', 'plan/tasks/ (5)']],
+                ['docs/issues/', ['ISS-0278-The-Recorded-Stale-Verdict-Count.md', 'ISS-0277-\u2026', '\u2026 277 files']],
+                ['docs/decisions/', ['ADR-0040-A-Release-Selects-Its-Features.md', '\u2026 32 files']],
+                ['docs/designs/', ['DES-0002-The-Glass-Cockpit.md', 'DES-0002-the-glass-cockpit.html', '\u2026 12 more']],
+                ['docs/phases/', ['PHASE-041-\u2026.md', '\u2026 42 files']],
+                ['SNAPSHOT.yaml', []], ['CONTEXT.md', []]];
+  function filesPanel() {
+    return makePanel({ kind:'files', title:'files · docs/ \u2014 1547 markdown files', x: RAIL + 16, y: 84, w: 344, h: 292, op: 84,
+      body: b => {
+        b.innerHTML = '<div class="tree">' + TREE.map(([d, fs]) =>
+          '<div class="d">\u25B8 ' + d + '</div>' + fs.map(f => '<div class="f">' + f + '</div>').join('')).join('') +
+          '</div><div style="margin-top:10px;border-top:1px solid var(--cy-line);padding-top:8px">' +
+          '<button class="sh-btn" type="button">open in Finder</button> ' +
+          '<button class="sh-btn" type="button">open a system browser panel</button></div>';
+      } });
+  }
+  function pulsePanel() {
+    return makePanel({ kind:'pulse', title:'pulse · 5 consoles and sessions', x: stage.clientWidth - HUD - 452, y: 84, w: 430, h: 178, op: 66,
+      body: b => {
+        b.innerHTML = RUNNING.map(r =>
+          '<div class="lane"><span class="nm">' + esc(r.n) + '</span><canvas></canvas>' +
+          '<span class="gz">' + (r.live ? 'live' : r.s.split(' · ')[1] || 'idle') + '</span></div>').join('');
+        const cvs = [...b.querySelectorAll('canvas')];
+        const bufs = cvs.map(() => new Array(90).fill(0));
+        let sd = 991;
+        const rnd = () => (sd = (sd*1103515245 + 12345) % 2147483648) / 2147483648;
+        const paint = () => {
+          if (!b.isConnected) return;
+          cvs.forEach((cv, i) => {
+            const w = cv.clientWidth || 200, h = 22;
+            if (cv.width !== w) { cv.width = w; cv.height = h; }
+            const ctx = cv.getContext('2d');
+            const arr = bufs[i];
+            if (!STILL) { arr.shift(); arr.push(RUNNING[i].live ? (rnd() < .4 ? rnd() : rnd()*.1) : rnd()*.05); }
+            ctx.clearRect(0, 0, w, h);
+            ctx.strokeStyle = RUNNING[i].live ? 'hsl(140 32% 60%)' : '#2C7A93';
+            ctx.lineWidth = 1; ctx.beginPath();
+            arr.forEach((v, k) => { const x = k/arr.length*w, y = h - 2 - v*(h - 5); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+            ctx.stroke();
+          });
+          if (!STILL) setTimeout(paint, 90);
+        };
+        paint();
+      } });
+  }
+  document.getElementById('asList').addEventListener('click', e => { e.stopPropagation(); listPanel(); assign(); render(true); });
+  document.getElementById('addConsole').addEventListener('click', e => {
+    e.stopPropagation();
+    consolePanel(carFront, panels.querySelectorAll('[data-kind=console]').length);
+    assign(); render(true);
+  });
+  document.getElementById('openFiles').addEventListener('click', e => { e.stopPropagation(); filesPanel(); assign(); render(true); });
+  document.getElementById('openPulse').addEventListener('click', e => { e.stopPropagation(); pulsePanel(); assign(); render(true); });
+  function syncPanels() {
+    [...panels.querySelectorAll('[data-kind=list]')].forEach(el => el.remove());
+  }
+
+  // ---- carousel --------------------------------------------------------
+  const carInner = document.getElementById('carInner');
+  let carFront = 0;
+  RUNNING.forEach((r, i) => {
+    const c = document.createElement('div');
+    c.className = 'car-card';
+    c.innerHTML = '<div class="cn">' + esc(r.n) + '</div><div class="cs">' +
+      (r.live ? '<span style="color:var(--status-active)">\u25CF</span> ' : '<span style="color:var(--cy-dim)">\u25CB</span> ') + r.s + '</div>';
+    c.addEventListener('click', e => {
+      e.stopPropagation();
+      if (e.shiftKey) { consolePanel(i, panels.querySelectorAll('[data-kind=console]').length); assign(); render(true); return; }
+      carFront = i; drawCar();
+      const first = panels.querySelector('[data-kind=console]');
+      if (first) {
+        first.querySelector('.t').textContent = RUNNING[i].n + ' · ' + RUNNING[i].s.split(' · ')[0];
+        first.querySelector('.slab-body').innerHTML = RUNNING[i].body.join('<br>');
+        first.querySelector('.dot').style.background = RUNNING[i].live ? 'var(--status-active)' : 'var(--cy-dim)';
+      } else consolePanel(i, 0);
+    });
+    carInner.appendChild(c);
+  });
+  function drawCar() {
+    for (let i = 0; i < carInner.children.length; i++) {
+      const d = i - carFront, c = carInner.children[i];
+      c.style.transform = 'translate3d(' + (d*44) + 'px,' + (Math.abs(d)*7) + 'px,' + (-Math.abs(d)*108) + 'px) rotateY(' + (-d*26) + 'deg)';
+      c.style.opacity = String(Math.max(.22, 1 - Math.abs(d)*.3));
+      c.style.zIndex = String(50 - Math.abs(d));
+      c.classList.toggle('front', i === carFront);
+    }
+  }
+  drawCar();
+
+  const REPOS = [['project-os-cockpit',6],['your-trainer',3],['project-os',0],['your-sudoku',1],
+                 ['your-health',0],['xngr',2],['edankert.com',0],['articles',4],
+                 ['project-os-dev',1],['bounce',0],['xmlhammer',0],['obsidian-supernote-sync',0]];
+  const ringInner = document.getElementById('ringInner');
+  let ringAt = 0;
+  REPOS.forEach((r, i) => {
+    const s = document.createElement('div');
+    s.className = 'ring-slab';
+    s.innerHTML = '<div class="rn">' + r[0].replace('project-os-', 'p-os-') + '</div>' +
+      (r[1] ? '<div class="ro">' + r[1] + ' owed</div>' : '<div class="ro" style="color:var(--cy-dim)">quiet</div>');
+    s.addEventListener('click', e => {
+      e.stopPropagation(); ringAt = i; drawRing();
+      // the desk survives the switch: what you picked up is yours, not the
+      // workspace's. Each note keeps the repo tag it was lifted from.
+      if (desk.length) paintDesk();
+    });
+    ringInner.appendChild(s);
+  });
+  function drawRing() {
+    const n = REPOS.length, step = 360/n;
+    ringInner.style.transform = 'rotateY(' + (-ringAt*step) + 'deg)';
+    for (let i = 0; i < n; i++) {
+      const el = ringInner.children[i];
+      el.style.transform = 'rotateY(' + (i*step) + 'deg) translateZ(200px)';
+      el.classList.toggle('here', i === ringAt);
+      const d = Math.min(Math.abs(i - ringAt), n - Math.abs(i - ringAt));
+      el.style.opacity = String(Math.max(.12, 1 - d*.34));
+    }
+  }
+  drawRing();
+
+  document.getElementById('rtoggle').addEventListener('click', e => {
+    e.stopPropagation();
+    RENDER = RENDER === 'cheap' ? 'blur' : 'cheap';
+    stage.setAttribute('data-render', RENDER);
+    document.getElementById('rmode').textContent = RENDER === 'cheap' ? 'fog + detail' : 'a blur pass';
+    document.getElementById('rwhy').textContent = RENDER === 'cheap'
+      ? 'no blur pass · far cards drop their title · one gradient over the field'
+      : 'blur(1.4px) on every far card · an offscreen pass each, every frame';
+    e.target.textContent = RENDER === 'cheap' ? 'show the blur version' : 'back to fog + detail';
+    render(true);
+  });
+
+  consolePanel(0, 0);
+  assign(); render(true);
+  new ResizeObserver(() => { assign(); render(true); }).observe(stage);
+})();
+</script>
+
+<h2 class="section">What the shape buys that a list cannot</h2>
+<p class="section-sub">
+  Rev 1 pitched depth as a better way to show the same things. That undersold it. <strong>A field with room in it makes several things possible that the current cockpit cannot do at all</strong> — not because it lacks the feature, but because a single stacked pane has nowhere to put a second one.
+</p>
+<div class="gwrap" data-design-region="unlocks">
+<table class="g">
+  <thead><tr><th>this becomes possible</th><th>why the current cockpit cannot</th><th>in the prototype</th></tr></thead>
+  <tbody>
+    <tr><td class="v">many consoles at once</td><td>one terminal panel; a second shell means a tab, and a tab means the first one is <em>gone</em> — you cannot watch two agents work</td><td><b>+ console</b>, or ⇧click a carousel card. Each slab drags, resizes and fades on its own</td></tr>
+    <tr><td class="v">lists, where a list is better</td><td>the pane is the list, so there is nowhere to put a spatial view beside it — it is one or the other</td><td><b>as list</b> opens the current view as a dense table. Click a row and the field flies to that note</td></tr>
+    <tr><td class="v">several notes open together</td><td>one document pane; comparing two notes means two windows or two trips</td><td>⇧click, or <b>pin beside</b> on an open card. They tile at the front plane and each keeps its own link ring</td></tr>
+    <tr><td class="v">a file browser that is not a metaphor</td><td>the Library view lists <em>note types</em>; the actual directory tree is not visible anywhere</td><td><b>files</b> — the real tree, and a button to hand off to the system browser</td></tr>
+    <tr><td class="v">live agents beside the record</td><td>the agents panel replaces the nav pane, so watching agents means not reading</td><td><b>pulse</b> — five lanes with live traces, floating over the field rather than replacing it</td></tr>
+    <tr><td class="v">the link graph as a view</td><td>no graph surface exists; links are resolved one click at a time</td><td><b>Orbit</b> in the rail: distance becomes connectedness and every visible edge is drawn</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>And the tension this immediately creates</h4>
+  <p>Open four panels in the prototype and the field empties out — the obstacle rule does its job and there is nowhere left to deal a card. <strong>Panels and the field compete for the same pixels</strong>, and on one monitor that competition has no good resolution.</p>
+  <p>That is not a bug to tune away. It is the argument for the next section.</p>
+</div>
+
+<h2 class="section">The views, as arrangements</h2>
+<p class="section-sub">
+  Each row is a view the cockpit has today. <strong>Switching one is not a navigation</strong> — no page loads, no scroll position is lost, and the cards you were looking at do not disappear. They move. Watching <code>ISS-0260</code> travel from the front of Issues to the deep field of Library is a statement about that note that no pair of pages can make.
+</p>
+<div class="gwrap" data-design-region="views">
+<table class="g">
+  <thead><tr><th>view</th><th>what it is about</th><th>what comes to the front</th><th>what goes behind you</th></tr></thead>
+  <tbody>
+    <tr><td class="v">Overview</td><td>everything — the only view with no subject of its own</td><td>anything owed, whatever its type</td><td>every terminal note in the repo</td></tr>
+    <tr><td class="v">Intent</td><td>decisions, designs, requirements, risks</td><td>proposals, drafts, open questions, mitigating risks</td><td>accepted decisions and met requirements</td></tr>
+    <tr><td class="v">Features</td><td>features and their requirements, in phase sectors</td><td>anything not done, and anything owing a check</td><td>done features — 131 of them here</td></tr>
+    <tr><td class="v">Tasks</td><td>tasks under their feature</td><td>doing and backlog</td><td>done tasks</td></tr>
+    <tr><td class="v">Issues</td><td>issues and risks, severity setting the sector</td><td>open and triage</td><td>fixed — 249 of them</td></tr>
+    <tr><td class="v">Tests</td><td>every <code>TST-*</code>, plus the checks</td><td>anything owed a run</td><td>passing tests</td></tr>
+    <tr><td class="v">Publication</td><td>releases and changes</td><td>work that is committed but not published</td><td>released work</td></tr>
+    <tr><td class="v">Review</td><td>anything that can carry a verdict</td><td>owed a verdict, or owing an answer to one</td><td>approved, and answered</td></tr>
+    <tr><td class="v">Active</td><td>in flight, across every type</td><td>doing</td><td>everything else — this view is nearly all behind you</td></tr>
+    <tr><td class="v">Orbit</td><td>the link graph — <em>DES-0001's ORBIT, folded in</em></td><td>the well-connected: distance is how many notes join you, not what you owe</td><td>orphans, at the far edge, which is the one query this view answers that a table cannot</td></tr>
+    <tr><td class="v">Files</td><td><em>replaces Library</em> — the real directory tree</td><td>directories with unread or untriaged content</td><td>everything already filed</td></tr>
+    <tr><td class="v">Recent</td><td>everything, newest first</td><td>the last week — <em>the one view where distance is age, not obligation</em></td><td>older than a month</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>The one that breaks the rule, and why it is labelled</h4>
+  <p><strong>Recent uses distance for age instead of obligation.</strong> Every other view means the same thing by "in front of you", and a surface that quietly changes what its main axis measures is exactly the kind of thing <code>DESIGN.md</code>'s first rule forbids. So Recent says so, in the panel, every time you open it. The alternative — dropping the view — loses the only answer to "what has been happening", which is the question a returning human actually asks.</p>
+</div>
+
+<h2 class="section">The console is furniture</h2>
+<div class="cols" data-design-region="console">
+  <div>
+    <h4>Where it sits</h4>
+    <p><strong>Bottom centre by default</strong>, because that is where a console has been on every terminal since VT100s, and because the front plane is above eye level in this layout so the two do not fight.</p>
+    <p>Drag it by the title bar to anywhere in the window; drag the corner to resize. Both are remembered per workspace, like every other pane position the shell already stores.</p>
+  </div>
+  <div>
+    <h4>Why it is transparent</h4>
+    <p>Not for looks. <strong>A console covers the part of the field you are working on</strong> — you opened it because of something in front of you — so the field has to stay readable through it. The slider in the mock is real: at 20% you can read the notes underneath, at 95% you cannot.</p>
+    <p>The deep field is allowed to sit under the glass. The front plane is not — see the next column.</p>
+  </div>
+  <div>
+    <h4>The obstacle rule</h4>
+    <p><strong>Slots under the console are removed from the pool before any note is dealt into one.</strong> Nothing is nudged aside after the fact, because nudging is how cards land on their neighbours — which is precisely the bug this prototype had and shows in its own commit history.</p>
+    <p>So moving the console re-deals the front and mid bands around its new footprint, and the quiet band ignores it entirely.</p>
+  </div>
+</div>
+
+<h2 class="section">Consoles, sessions and workspaces are one mechanic</h2>
+<div class="cols">
+  <div data-design-region="carousel">
+    <h4>The carousel</h4>
+    <p>Every running thing is a card on an arc at the lower left: a workspace shell, a Claude session, a Codex session, a session waiting for approval. <strong>The front card is the one the slab is showing.</strong></p>
+    <p>That single rule replaces two separate places in today's cockpit — the agents panel, which lists sessions, and the terminal panel, which shows one shell. Bringing a card forward is the same act as attaching the console to it.</p>
+    <p>A session that needs you does not wait its turn: it rotates itself to the front and the slab title turns amber. That is the <code>undocumented</code> flag and the approval prompt given somewhere to appear.</p>
+  </div>
+  <div data-design-region="ring">
+    <h4>The workspace ring</h4>
+    <p>Twelve repos on a slow ring at the upper left, edge-on, the current one facing you. Each slab carries its owed count, so <strong>the fleet's attention is legible without visiting it</strong> — which the current rail cannot do.</p>
+    <p>Same gesture as the carousel, wider radius. Learned once.</p>
+    <p><em>The honest limit:</em> those counts come from twelve separate sidecars, and one of them being slow or down has to look different from one being quiet. Absent is not zero — this project has learned that three times.</p>
+  </div>
+  <div data-design-region="focus">
+    <h4>Selecting a note</h4>
+    <p>The card comes to the front plane and opens. Every note it links to, <strong>and every note linking to it</strong>, flies into a ring around it with a filament drawn to each. Everything else drops back and dims to almost nothing.</p>
+    <p>In the mock, opening <code>FEAT-0143</code> pulls in twelve real neighbours — the ADRs it rests on, the phase that contains it, the tasks under it and the tests that cover it. That is the corpus's 16148 links finally doing work in the reading surface.</p>
+    <p>The body renders with the cockpit's own renderer. The ring is new; the reader is not.</p>
+  </div>
+</div>
+
+<h2 class="section">Turning around, and putting things away</h2>
+<p class="section-sub">
+  The field is a cylinder, not a wall. Drag the background — or press ← and → — and you turn on the spot; the compass says which way you are facing and <strong>how many notes are out of sight behind you</strong>. This is what makes the quiet band honest: it is not a dimmed pile cluttering the working view, it is genuinely out of the way, and it is genuinely still there.
+</p>
+<div class="cols">
+  <div>
+    <h4>Why behind, and not just far</h4>
+    <p>70% of this corpus is terminal. Rendered small and blurred in front of you, that is still 1000 rectangles of visual noise between you and nine things that matter.</p>
+    <p><strong>Behind you it costs nothing and is one gesture away.</strong> "Look behind" is a button, and the count is always on screen so you can never quietly lose track of what has been put there.</p>
+  </div>
+  <div>
+    <h4>Putting one away by hand</h4>
+    <p>An open card offers <strong>put behind me</strong>. It is the direct-manipulation form of the thing the cockpit already computes as <code>suppressed_group</code> — "not now, and I know it exists".</p>
+    <p>It is per-session and never a write. Quieting a note in a view must not change the note, or the gesture becomes a status change nobody recorded a reason for.</p>
+  </div>
+  <div>
+    <h4>What it costs</h4>
+    <p><strong>Anything out of sight can be forgotten</strong>, and this design has just built a machine for putting things out of sight. The counter and the compass are the whole mitigation, and they may not be enough.</p>
+    <p>The test is simple and worth running before building: after a week, does anyone press "look behind"?</p>
+  </div>
+</div>
+
+<h2 class="section">Where the rest of the cockpit went</h2>
+<div class="gwrap" data-design-region="chrome">
+<table class="g">
+  <thead><tr><th>today</th><th>here</th><th>why</th></tr></thead>
+  <tbody>
+    <tr><td class="v">⌘P search</td><td>top strip, and it <em>flies</em> the field to the hit rather than jumping</td><td>arriving from a direction is how you keep your bearings; this is the one place the 3D earns its keep for navigation</td></tr>
+    <tr><td class="v">centre tabs</td><td>top strip, unchanged</td><td>tabs are a flat idea and work fine; there is no reason to make them spatial</td></tr>
+    <tr><td class="v">back / forward</td><td>top strip — history of <em>focus</em>, not of pages</td><td>there are no pages, so the stack holds which note was open and which view was on</td></tr>
+    <tr><td class="v">the validator</td><td>a chip in the top strip; clicking it brings every failing note to the front plane</td><td>findings are already per-note, so they are a front-plane query rather than a screen</td></tr>
+    <tr><td class="v">the inbox</td><td>a chip in the top strip; items arrive as cards at the near edge, unplaced</td><td>untriaged material has no slot by definition — showing it without one is accurate</td></tr>
+    <tr><td class="v">obligation count</td><td>the front-plane count, always on screen</td><td>same number, same computation; it is simply also the thing you are looking at</td></tr>
+    <tr><td class="v">the reader</td><td>the opened card, using the cockpit's renderer</td><td>a second Markdown parser is <code>ISS-0151</code>, and glass is not a reason to make one</td></tr>
+    <tr><td class="v">every write path</td><td>unchanged, behind the same server-side guards</td><td>a new front door with its own weaker lock is the failure <code>REQ-0026</code> exists to prevent</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 class="section">Cards say different things when they are closed</h2>
+<p class="section-sub">
+  A closed card had one job in rev 1 — carry an ID, a title and a status. That wastes the one thing a card has that a list row does not: <strong>area</strong>. So each note type now uses it for the thing you actually want to know about that type without opening it.
+</p>
+<div class="gwrap" data-design-region="faces">
+<table class="g">
+  <thead><tr><th>type</th><th>the closed card carries</th><th>because</th></tr></thead>
+  <tbody>
+    <tr><td class="v">phase</td><td><strong>a progress bar</strong> — done over total, and the percentage</td><td>a phase's whole meaning is "how far through are we". <code>PHASE-041</code> reads 21/23; <code>PHASE-028</code> reads 0/11; <code>PHASE-999</code> reads 0/27 and that is the parking lot showing its size</td></tr>
+    <tr><td class="v">issue / risk</td><td>severity chip and phase</td><td>severity is what decides whether you read it now, and it is the axis the Issues view already groups by</td></tr>
+    <tr><td class="v">test</td><td>how many notes it covers</td><td>a test with no <code>covers:</code> is the failure mode this repo has hit; showing the number makes zero visible</td></tr>
+    <tr><td class="v">release / change</td><td>item count</td><td>a release is a set, and its size is the question</td></tr>
+    <tr><td class="v">everything else</td><td>phase, and outbound link count</td><td>the two cheap facts that tell you whether opening it will lead anywhere</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>You were right that phases were missing</h4>
+  <p>Rev 1 grouped by phase everywhere and <strong>never showed a phase</strong>. The sector labels were phase IDs with no note behind them, which is exactly the "a number that says what it counts" rule this project already wrote down.</p>
+  <p>Now the phase note itself leads its own sector in Features and Tasks, with its real progress bar, and phases appear as cards in Overview and Active. The numbers in the prototype are measured from the corpus, not invented.</p>
+</div>
+
+<h2 class="section">Many monitors</h2>
+<p class="section-sub">
+  You are right that this wants more than one screen — and the panel-versus-field competition above is the proof. The proposal is not "the window can be dragged onto a second monitor". It is that <strong>the four surfaces have genuinely different refresh rates and attention costs</strong>, and each wants a screen of its own.
+</p>
+<div class="cols" data-design-region="monitors">
+  <div>
+    <h4>Screen 1 — the field</h4>
+    <p>The record, the view rail, the compass, the workspace ring. <strong>Nothing that scrolls, nothing that updates on its own.</strong> This is the screen you turn in.</p>
+    <p>Freed of panels, the front and mid bands get their full angular budget back — three columns a side instead of one.</p>
+  </div>
+  <div>
+    <h4>Screen 2 — the consoles</h4>
+    <p>Every shell and session, tiled rather than carouselled, because a second monitor has room to show five at once. <strong>Pulse is this screen at rest</strong>; a console expands out of a lane when you attach to it.</p>
+    <p>This is the screen that moves. Keeping it off the reading screen is the point.</p>
+  </div>
+  <div>
+    <h4>Screen 3 — the reader and the lists</h4>
+    <p>Opened notes and list panels. Where a list beats a field it gets a whole display, and the field stays a field.</p>
+    <p>A laptop alone collapses all three into one window, panels and all — which works, and is worse. The design should degrade to that, not be built for it.</p>
+  </div>
+</div>
+<div class="warnbox">
+  <h4>What multi-monitor actually costs to build</h4>
+  <p><strong>One state, several windows.</strong> Electron gives you extra <code>BrowserWindow</code>s cheaply; the hard part is that yaw, view, open set and pushed set now live in a process that no window owns. The shell already has this problem solved for workspaces — the main process holds the state and each renderer subscribes — so this extends an existing pattern rather than inventing one.</p>
+  <p>The genuinely new question is <strong>what "in front of you" means when there are three fronts</strong>. My answer: only screen 1 has a front plane. The others are surfaces, not fields, and they do not get a depth axis. Two screens both claiming to show what needs you is how a person ends up trusting neither.</p>
+</div>
+
+<h2 class="section">Measuring it, rather than asserting it</h2>
+<p class="section-sub">
+  I claimed blur was the expensive part. That was an assertion, so here is the measurement. <strong>The bench below is the real thing at real scale</strong> — a cylinder of cards turning continuously, with the three techniques switchable and a frame-time meter running. Change the count to 1537 and watch what happens.
+</p>
+<style>
+  .bench { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: #04090D; }
+  .bench-ctl { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 14px;
+               border-bottom: 1px solid #12455A; font-family: var(--mono); font-size: 11px; color: #7FE4FF; }
+  .bench-ctl label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .bench-ctl select { font: inherit; background: #082028; color: #7FE4FF; border: 1px solid #12455A; border-radius: 3px; padding: 2px 6px; }
+  .bench-ctl .m { margin-left: auto; display: flex; gap: 14px; }
+  .bench-ctl .m b { color: #D6F2FB; font-weight: 500; }
+  .bench-ctl .m .bad { color: hsl(5 60% 65%); }
+  .bench-ctl .m .ok { color: hsl(140 32% 60%); }
+  .bench-stage { position: relative; height: 340px; perspective: 900px; overflow: hidden;
+                 background: radial-gradient(120% 90% at 50% 45%, #072230 0%, #04090D 62%, #01050A 100%); }
+  .bench-inner { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+  .bc { position: absolute; left: 50%; top: 45%; width: 176px; padding: 6px 8px; border: 1px solid #12455A;
+        border-left-width: 2px; background: rgb(8 30 40 / .62); border-radius: 2px; font-family: var(--mono);
+        will-change: transform; backface-visibility: hidden; }
+  .bc .i { font-size: 9px; color: #7FE4FF; display: flex; justify-content: space-between; }
+  .bc .h { font-size: 10px; color: #D6F2FB; line-height: 1.3; margin-top: 3px; height: 26px; overflow: hidden; }
+  .bc.far .h { display: none; }
+  .bc.far { width: 96px; padding: 3px 6px; }
+  .bench-fog { position: absolute; inset: 0; pointer-events: none;
+               background: radial-gradient(58% 70% at 50% 45%, rgb(4 9 13 / 0) 0%, rgb(4 9 13 / .55) 72%, rgb(4 9 13 / .86) 100%); }
+  .bench-cap { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); padding: 9px 14px;
+               border-top: 1px solid var(--rule); background: var(--sunk); }
+</style>
+<div class="bench" data-design-region="bench">
+  <div class="bench-ctl">
+    <label>cards
+      <select id="bN"><option>200</option><option selected>600</option><option>1537</option></select>
+    </label>
+    <label><input type="checkbox" id="bBlur" checked> blur the far field</label>
+    <label><input type="checkbox" id="bLod"> detail by distance</label>
+    <label><input type="checkbox" id="bPool"> pool and recycle</label>
+    <span class="m">
+      <span>frame <b id="bMs">—</b></span>
+      <span>fps <b id="bFps">—</b></span>
+      <span>in DOM <b id="bDom">—</b></span>
+    </span>
+  </div>
+  <div class="bench-stage" id="bStage">
+    <div class="bench-inner" id="bInner"></div>
+    <div class="bench-fog"></div>
+  </div>
+  <div class="bench-cap"><strong>The numbers are yours, not mine.</strong> They are measured on the machine reading this page, in this browser, right now — I could not fill them in because the tab I built this in was in the background and <code>requestAnimationFrame</code> is suspended there. Median frame time over the last 40 frames, while turning. The cylinder, the card markup and the transform maths are the cockpit's. Blur is <code>filter: blur(1.4px)</code> on everything past the mid field — which is where most of a real corpus lives.</div>
+</div>
+
+<script>
+(function () {
+  const stageEl = document.getElementById('bStage');
+  const inner = document.getElementById('bInner');
+  const DEG = Math.PI / 180, PERSP = 900;
+  const STILL = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const KINDS = ['feature','issue','task','test','decision','phase','change','requirement'];
+  const HUE = { feature:188, issue:12, task:176, test:148, decision:262, phase:92, change:224, requirement:208 };
+  const STAT = ['done','open','triage','active','backlog','passing'];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+
+  let DATA = [], pool = [], yaw = 0, running = true;
+  function build(n) {
+    DATA = [];
+    for (let i = 0; i < n; i++) {
+      const k = KINDS[(rnd() * KINDS.length) | 0];
+      DATA.push({
+        id: k.slice(0, 4).toUpperCase() + '-' + String(1000 + i).slice(1),
+        s: STAT[(rnd() * STAT.length) | 0], hue: HUE[k],
+        t: 'A note title of roughly the length these actually run to',
+        th: rnd() * Math.PI * 2, d: 380 + ((rnd() * 4) | 0) * 150, y: -230 + rnd() * 460,
+      });
+    }
+    inner.textContent = '';
+    pool = [];
+  }
+  function makeEl() {
+    const el = document.createElement('div');
+    el.className = 'bc';
+    el.innerHTML = '<div class="i"><b></b><span></span></div><div class="h"></div>';
+    inner.appendChild(el);
+    return el;
+  }
+  function bind(el, n) {
+    el.querySelector('b').textContent = n.id;
+    el.querySelector('b').style.color = 'hsl(' + n.hue + ' 62% 68%)';
+    el.querySelector('span').textContent = n.s;
+    el.querySelector('.h').textContent = n.t;
+    el.style.borderLeftColor = 'hsl(' + n.hue + ' 62% 58%)';
+  }
+  const norm = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+
+  const $ = id => document.getElementById(id);
+  const times = [];
+  let last = 0;
+  function frame(ts) {
+    if (!running) return;
+    if (last) { times.push(ts - last); if (times.length > 40) times.shift(); }
+    last = ts;
+    if (!STILL) yaw += 0.0035;
+
+    const blur = $('bBlur').checked, lod = $('bLod').checked, doPool = $('bPool').checked;
+    const W = stageEl.clientWidth, H = stageEl.clientHeight;
+    let used = 0;
+
+    if (doPool) {
+      // materialise only what is inside the visible arc, and recycle the nodes
+      const vis = [];
+      for (const n of DATA) if (Math.abs(norm(n.th - yaw)) < 78 * DEG) vis.push(n);
+      while (pool.length < vis.length) pool.push(makeEl());
+      for (let i = 0; i < pool.length; i++) {
+        const el = pool[i];
+        if (i >= vis.length) { el.style.display = 'none'; continue; }
+        el.style.display = '';
+        const n = vis[i];
+        if (el.__id !== n.id) { bind(el, n); el.__id = n.id; }
+        place(el, n, W, H, blur, lod);
+      }
+      used = Math.min(pool.length, vis.length);
+    } else {
+      if (pool.length !== DATA.length) {
+        inner.textContent = ''; pool = [];
+        for (const n of DATA) { const el = makeEl(); bind(el, n); el.__id = n.id; pool.push(el); }
+      }
+      for (let i = 0; i < DATA.length; i++) place(pool[i], DATA[i], W, H, blur, lod);
+      used = DATA.length;
+    }
+
+    const med = times.length ? [...times].sort((a, b) => a - b)[times.length >> 1] : 0;
+    $('bMs').textContent = med ? med.toFixed(1) + ' ms' : '—';
+    $('bMs').className = med > 22 ? 'bad' : med > 0 ? 'ok' : '';
+    $('bFps').textContent = med ? Math.round(1000 / med) : '—';
+    $('bFps').className = med > 22 ? 'bad' : med > 0 ? 'ok' : '';
+    $('bDom').textContent = inner.childElementCount + (doPool ? ' pooled' : '');
+    requestAnimationFrame(frame);
+  }
+  function paintOnce() {
+    const blur = $('bBlur').checked, lod = $('bLod').checked, doPool = $('bPool').checked;
+    const W = stageEl.clientWidth, H = stageEl.clientHeight;
+    if (!doPool && pool.length !== DATA.length) {
+      inner.textContent = ''; pool = [];
+      for (const n of DATA) { const el = makeEl(); bind(el, n); el.__id = n.id; pool.push(el); }
+    }
+    if (doPool) {
+      const vis = DATA.filter(n => Math.abs(norm(n.th - yaw)) < 78 * DEG);
+      while (pool.length < vis.length) pool.push(makeEl());
+      pool.forEach((el, i) => {
+        if (i >= vis.length) { el.style.display = 'none'; return; }
+        el.style.display = '';
+        if (el.__id !== vis[i].id) { bind(el, vis[i]); el.__id = vis[i].id; }
+        place(el, vis[i], W, H, blur, lod);
+      });
+    } else {
+      DATA.forEach((n, i) => place(pool[i], n, W, H, blur, lod));
+    }
+    $('bDom').textContent = inner.childElementCount + (doPool ? ' pooled' : '');
+  }
+  function place(el, n, W, H, blur, lod) {
+    const phi = norm(n.th - yaw);
+    if (Math.abs(phi) > 78 * DEG) { el.style.opacity = '0'; return; }
+    const x = Math.sin(phi) * n.d, z = -Math.cos(phi) * n.d;
+    const far = n.d > 600;
+    el.style.transform = 'translate3d(' + (x - 88) + 'px,' + n.y + 'px,' + z + 'px)';
+    el.style.opacity = String(far ? .45 : .95);
+    el.style.filter = (blur && far) ? 'blur(1.4px)' : 'none';
+    el.classList.toggle('far', lod && far);
+  }
+
+  $('bN').addEventListener('change', () => { build(+$('bN').value); times.length = 0; paintOnce(); });
+  ['bBlur','bLod','bPool'].forEach(id => $(id).addEventListener('change', () => {
+    times.length = 0;
+    if (id === 'bPool') { inner.textContent = ''; pool = []; }
+    paintOnce();
+  }));
+  build(600);
+  paintOnce();
+  // only run the bench while it is on screen — a hidden benchmark is a lie
+  new IntersectionObserver(es => {
+    const on = es[0].isIntersecting;
+    if (on && !running) { running = true; last = 0; requestAnimationFrame(frame); }
+    running = on;
+  }, { threshold: .05 }).observe(stageEl);
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<h2 class="section">Would it actually run?</h2>
+<p class="section-sub">
+  The prototype holds 80 cards. This repo has 1537 notes, and <code>your-trainer</code> has more. Rev 2 asserted that blur was the expensive part; <strong>rev 4 measures it</strong> — and the measurement changed the design rather than confirming it.
+</p>
+
+<h3 style="font-family:var(--display);font-weight:400;font-size:19px;margin:28px 0 8px">What the two renderers cost, counted</h3>
+<p class="section-sub">
+  Taken from the stage above, in both modes, <strong>turned to face the quiet</strong> — which is the worst case, because that is when the largest number of cards is on screen at once.
+</p>
+<div class="gwrap" data-design-region="measured">
+<table class="g">
+  <thead><tr><th>facing the quiet band</th><th>blur</th><th>fog + detail</th><th></th></tr></thead>
+  <tbody>
+    <tr><td class="v">cards on screen</td><td>55</td><td>55</td><td>same field, same slots</td></tr>
+    <tr><td class="v">cards running a blur pass</td><td><strong style="color:var(--severity-critical)">52</strong></td><td><strong style="color:var(--status-done)">0</strong></td><td>each one is an offscreen buffer, filtered and composited back</td></tr>
+    <tr><td class="v">blurred area</td><td><strong style="color:var(--severity-critical)">288,726 px²</strong></td><td><strong style="color:var(--status-done)">0</strong></td><td>0.29 megapixels through a separable Gaussian, every frame you turn</td></tr>
+    <tr><td class="v">glyphs rasterised</td><td>4,299</td><td><strong>1,819</strong></td><td><strong>58% less text</strong> — the far card drops its <em>title</em>, which is the long unreadable-at-distance part</td></tr>
+    <tr><td class="v">cards still showing progress / severity</td><td>55</td><td><strong>55</strong></td><td><strong>the cheap version loses nothing that carries signal.</strong> A progress bar is a rectangle and a severity chip is one word; both survive distance. Only the sentence goes</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>The measurement changed my mind about the look, not just the cost</h4>
+  <p>I expected to be trading appearance for speed. <strong>The cheap version reads better.</strong> A blurred card is unreadable <em>and</em> still occupies a full card's worth of space, so the quiet band becomes 52 smeared rectangles of text you cannot use. Dropping the title turns each one into a small ID tile, and the fog gradient does the receding — so the far field becomes a texture of identifiers instead of a wall of noise.</p>
+  <p>That is aerial perspective, which is how distance actually looks: things lose contrast and detail, they do not go out of focus. <strong>Blur was simulating a camera, and there is no camera here.</strong></p>
+  <p><strong>Rev 5 got the detail level backwards and rev 6 fixed it.</strong> Distance was dropping the <em>face</em> — the progress bar and the severity chip — and keeping the title. That is exactly wrong: a bar is a rectangle and a chip is one word, both of which survive being small, while a sentence does not. The far field now reads as identifier, status and progress, which is more information than the blurred version carried and less work than either.</p>
+  <p>One more thing the measurement showed, which no amount of reasoning would have: <strong>the blur cost is nearly zero while you face the front.</strong> The quiet band is behind you, so the expensive band is off-screen most of the time — and the cost only arrives at the moment you turn, which is the moment the interface most needs to stay smooth.</p>
+</div>
+
+<h3 style="font-family:var(--display);font-weight:400;font-size:19px;margin:34px 0 8px">The rest of the budget</h3>
+<div class="gwrap" data-design-region="performance">
+<table class="g">
+  <thead><tr><th>concern</th><th>measured or bounded</th><th>what it forces</th></tr></thead>
+  <tbody>
+    <tr><td class="v">DOM cards</td><td>the visible arc holds <strong>~55 cards</strong> at the widest; 1537 elements is 28× more than can ever be seen</td><td><strong>Pool and recycle.</strong> Materialise ~120 card elements and rebind them as the yaw changes — a virtualised list in polar coordinates. The bench above has this as a switch; it is the single most important decision in the build</td></tr>
+    <tr><td class="v"><code>filter: blur()</code></td><td>52 of 55 visible cards, 821k px², per frame</td><td><strong>Gone.</strong> Replaced by one gradient painted once and a detail level that removes work instead of adding a pass over it</td></tr>
+    <tr><td class="v">text</td><td>4,299 glyphs against 1,109 for the same field</td><td>detail by distance is a <em>rendering</em> decision with a legibility payoff, which is the rare kind worth taking twice</td></tr>
+    <tr><td class="v">transforms</td><td><code>translate3d</code> is GPU-composited; a few hundred layers is ordinary</td><td>keep <code>will-change: transform</code>; never animate <code>width</code>, <code>top</code> or <code>filter</code></td></tr>
+    <tr><td class="v">layout on every turn</td><td>slot assignment is O(notes) and must not enter the frame loop</td><td><strong>Assign on view change and panel move; never on yaw.</strong> Already how the prototype works, and why turning stays smooth while the card set stays stable</td></tr>
+    <tr><td class="v">the wire overlay</td><td>Orbit draws up to 160 SVG paths, capped and visibly so</td><td>a single <code>&lt;canvas&gt;</code> past ~200 edges, and any cap stated on screen rather than silently applied</td></tr>
+    <tr><td class="v">a layout that survives restarts</td><td>not a render problem — it is <code>TASK-0002</code>, already written for <code>FEAT-0001</code></td><td>positions computed once and stored; the same work serves both designs</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>What I still cannot tell you</h4>
+  <p><strong>Frame times.</strong> The bench measures them live, but I could not read them: the tab I built this in was in the background, and browsers suspend <code>requestAnimationFrame</code> there — so every number would have been zero or invented. The counts above are structural and I stand behind them; the milliseconds are on the page for you to read on your own machine.</p>
+  <p>The bound I will commit to: with pooling and no blur this is <strong>an ordinary compositing workload</strong> — a few hundred GPU-composited layers, which browsers do comfortably. Without pooling it is 1537 elements, and 52 of every 55 on screen running a blur pass. <strong>Pooling is not an optimisation to add later, it is the architecture</strong>, and this prototype — which still skips it — proves the interaction and nothing about the cost.</p>
+</div>
+
+<h2 class="section">The desk: as many notes as you need, stacked</h2>
+<p class="section-sub">
+  Opening a note used to mean "the field re-arranges around it", which does not survive a second note and does not survive at all past three. <strong>The fix is to stop treating it as one surface.</strong> There are two, and conflating them was the whole problem.
+</p>
+<div class="cols" data-design-region="desk">
+  <div>
+    <h4>The field</h4>
+    <p>Every note, arranged by the view's rule. <strong>It re-arranges when you switch views</strong>, because the arrangement is the view's opinion, not yours.</p>
+    <p>Nothing on it is "open". It is the place things are when you are not holding them.</p>
+  </div>
+  <div>
+    <h4>The desk</h4>
+    <p>The notes you picked up — <strong>one desk per view</strong>. Switch to Issues and you get the Issues desk; switch back and Publication's five notes are exactly where you left them, untouched.</p>
+    <p>It survives a <em>workspace</em> switch, though, and the difference is the whole rule: <strong>the desk belongs to the job, the view is the job, and the workspace is only which repo you happen to be looking at.</strong></p>
+  </div>
+  <div>
+    <h4>So "opening" is lifting</h4>
+    <p>A note is taken <em>out</em> of the field and put on the desk. <strong>Its slot stays behind, ghosted</strong> — a dashed outline where it came from — so you can see the hole and put it back.</p>
+    <p>Nothing is recorded. A note on the desk has no status, owes nothing, and closing it is not an action anyone needs to confirm.</p>
+  </div>
+</div>
+
+<h3 style="font-family:var(--display);font-weight:400;font-size:19px;margin:30px 0 8px">The three rules that make stacking work</h3>
+<div class="gwrap" data-design-region="desk-rules">
+<table class="g">
+  <thead><tr><th>the problem you raised</th><th>the rule</th><th>why it holds at any depth</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="v">"the notes behind will need to be more visible"</td>
+      <td><strong>Overlap anywhere except a header — and the field flows around the desk.</strong> Drag a note where you like; if it would cover another's header it snaps below. Note windows also count as obstacles, so no promoted neighbour is ever dealt underneath one</td>
+      <td>Every note in a stack of any depth still shows its <strong>id, status and face</strong> — so it is always readable and always clickable. Click a header and that note comes to the top. A stack of eight is eight headers and one body</td>
+    </tr>
+    <tr>
+      <td class="v">"how does that work with the associated notes?"</td>
+      <td><strong>The front band becomes the neighbourhood.</strong> While you hold a note, its neighbours take the front band — full size, full detail, readable — and picking the note up turns you to face them</td>
+      <td>The front plane means <em>what wants you</em>. While you are holding something, what wants you is what is joined to it, so the axis already had the right meaning. They stay <strong>field</strong> cards: click one and it joins the desk, so five notes never drag sixty onto it. Only the focused note claims the band, so the picture stays readable however many are open</td>
+    </tr>
+    <tr>
+      <td class="v">"and how does closing work?"</td>
+      <td><strong>Three verbs, none destructive — and adding needs no modifier.</strong> Every click adds; <code>×</code> puts one back; <code>⌥×</code> closes the others; <code>esc</code> or <em>sweep</em> clears the desk. A click on the background does nothing, because sweeping a desk by accident is unforgivable</td>
+      <td>Closing is not a state change — nothing was recorded when you opened it. So no confirmation, no undo needed beyond opening it again, and the ghosted slot tells you exactly where it goes back to</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>And the thing that only works because of the two surfaces</h4>
+  <p>With more than one note on the desk, the field marks <strong>notes joined to more than one of them</strong> in a different colour, and the desk bar counts them. Put three issues on the desk and the field answers <em>what do these have in common</em> — in the screenshot above, three notes share six.</p>
+  <p>That question is asked constantly during triage and close-out, and <strong>the current cockpit cannot answer it at all.</strong> It only works because the neighbours stayed in the field instead of being dragged onto the desk — the same decision that fixed the crowding.</p>
+</div>
+
+<h3 style="font-family:var(--display);font-weight:400;font-size:19px;margin:30px 0 8px">Why you would want several open — from this repo</h3>
+<div class="gwrap" data-design-region="desk-cases">
+<table class="g">
+  <thead><tr><th>the job</th><th>what is on the desk</th><th>what it costs today</th></tr></thead>
+  <tbody>
+    <tr><td class="v">answering a review</td><td>the design, the reviewer's verdict, and the notes the findings cite</td><td>four or five trips through one document pane, holding the findings in your head</td></tr>
+    <tr><td class="v">closing a phase</td><td>the phase note and every unresolved child, side by side</td><td><code>PHASE-041</code> closed on 5 of 6 criteria — that judgment needed the phase and the evidence visible together</td></tr>
+    <tr><td class="v">tracing a regression</td><td>the change note, the test that should have caught it, the task that introduced it</td><td>the strongest case, and the one the current pane makes genuinely hard</td></tr>
+    <tr><td class="v">writing a change note</td><td>the task, the issue it fixed, the feature it belongs to</td><td>you are synthesising three notes into a fourth, from memory</td></tr>
+    <tr><td class="v">comparing two proposals</td><td><code>DES-0001</code> and <code>DES-0002</code></td><td>two windows, or two trips</td></tr>
+    <tr><td class="v">"what do these share?"</td><td>three issues, and the field answers</td><td><strong>not possible today at all</strong></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>What I would still argue about</h4>
+  <p><strong>One desk per view, surviving workspace switches.</strong> Rev 7 had this backwards — it kept one desk across every view, which turns switching into clutter you have to clean up. Edwin: <em>"each view should allow for its own selected notes"</em>, and he is right, because the two boundaries are not the same kind of thing.</p>
+  <p><strong>The view is the job.</strong> Triaging issues, closing a phase, preparing a release — different work, different notes, and the notes for one job have no business on another job's desk. <strong>The workspace is not a job</strong>, it is which repo you are looking at, so a job that spans repos is ordinary. That is why the desk survives one boundary and not the other.</p>
+  <p>It still does not violate <code>FEAT-0093</code>: the desk holds notes from several repos, but <strong>each note's content still comes from its own sidecar</strong>. No process queries across repos — the desk is a place to put things, not a joined index. Each card carries its repo tag, and the desk bar names any other view holding notes, so nothing is silently left behind.</p>
+  <p>It does not violate <code>FEAT-0093</code>, and the distinction matters: the desk holds notes from several repos, but <strong>each note's content still comes from its own sidecar</strong>. No process is querying across repos — the desk is a place to put things, not a joined index. Each card carries its repo tag so you always know which record you are reading.</p>
+  <p><strong>And whether a stack should be nameable.</strong> "The notes for answering this review" is a real object with a lifetime, and a saved desk is one keystroke from being a saved query — which is a different feature wearing this one's clothes. I have not built it, deliberately.</p>
+</div>
+
+<h2 class="section">Keeping it alive while pooling</h2>
+<p class="section-sub">
+  Pooling costs animation, and a field that snaps is a dead field. But the two are only in conflict if you pool the wrong band — and <strong>the animation budget is bounded by the visible arc, not by the corpus.</strong> Fifty cards moving is nothing; you never have fifteen hundred on screen.
+</p>
+<div class="gwrap" data-design-region="alive">
+<table class="g">
+  <thead><tr><th>rule</th><th>what it protects</th></tr></thead>
+  <tbody>
+    <tr><td class="v">pool only the far band</td><td><strong>The near bands are never recycled.</strong> The front holds ~12 and the mid ~40 — bound to their notes for as long as they are near, so they animate freely between views. The quiet band is where the thousand live and where nobody follows an individual card. You get full motion exactly where it is watched, and pooling exactly where the count is</td></tr>
+    <tr><td class="v">recycle only off-screen</td><td>A card about to animate is on screen by definition, so it is never a recycling candidate. This is what makes the rule above safe rather than hopeful</td></tr>
+    <tr><td class="v">cross-fade, never cross-morph</td><td>When a recycle is unavoidable, sliding element #37 from <code>FEAT-0143</code>'s position to <code>ISS-0260</code>'s is a lie about a note that never moved. Fade it out as one and in as the other — 120ms, opacity only, compositor-only</td></tr>
+    <tr><td class="v">FLIP for view switches</td><td>Measure first and last positions, apply the inverted transform, then play. The standard technique, and it works with a pool as long as identity is stable within the frame — which rule two guarantees</td></tr>
+    <tr><td class="v">stagger, do not synchronise</td><td>Cards settle in a wave from where you are facing outward. <strong>This is in the prototype now</strong> and costs nothing at all — it is a <code>transition-delay</code>, not extra work. Everything arriving at once reads as a jump; the same motion staggered reads as a field settling</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>Why this is not a compromise</h4>
+  <p>Transform and opacity transitions run on the compositor — they do not touch layout or paint. <strong>The cost is per animating element on screen, and the arc caps that at about 55.</strong> So the honest position is not "pool and accept a dead interface"; it is that the interface can only ever animate what you can see, and pooling changes nothing about that number.</p>
+  <p>What pooling genuinely removes is the <em>continuity</em> of a card that leaves and returns. Turn 180° and back, and the card that comes into view may be a different element than the one that left. Nobody can perceive that — but it means you cannot rely on element identity for anything that must persist, which is the rule already stated: opened and pinned cards live outside the pool.</p>
+</div>
+
+<h2 class="section">What pooling actually means here</h2>
+<p class="section-sub">
+  <strong>A fixed set of DOM elements, recycled across a much larger set of notes.</strong> The field holds about 55 cards at the widest; the corpus holds 1537. So you build roughly 120 card elements once and re-point them at different notes as you turn, the way a scrolling list reuses row elements. Nothing else about the design changes — but several things stop being free, and they are worth knowing before rather than after.
+</p>
+<div class="gwrap" data-design-region="pooling">
+<table class="g">
+  <thead><tr><th>what it gives</th><th>what it takes away</th><th>the rule that follows</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="v">constant cost</td>
+      <td>—</td>
+      <td>120 elements whether the repo has 200 notes or 7,400 across the fleet. Memory, style recalc and paint stop scaling with the corpus, which is the whole point</td>
+    </tr>
+    <tr>
+      <td class="v">—</td>
+      <td class="v">animation between states</td>
+      <td>If element #37 was <code>FEAT-0143</code> and becomes <code>ISS-0260</code>, there is nothing to animate <em>between</em> — it must snap. <strong>So: only recycle an element after it has left the visible arc</strong>, never one mid-transition. The "watch a note change importance when you switch views" effect only survives for cards that stay bound</td>
+    </tr>
+    <tr>
+      <td class="v">—</td>
+      <td class="v">browser find-in-page</td>
+      <td><code>⌘F</code> can only find text that exists in the DOM, so it would search ~120 cards out of 1537 and silently miss the rest. <strong>The application must own search</strong> — which it does — and must never let the browser's own find look like it worked</td>
+    </tr>
+    <tr>
+      <td class="v">—</td>
+      <td class="v">the accessibility tree</td>
+      <td>A screen reader sees the pool, not the corpus. <strong>The list panel stops being a convenience and becomes the accessible view</strong> — which is a good outcome, but only if it is built that way deliberately</td>
+    </tr>
+    <tr>
+      <td class="v">—</td>
+      <td class="v">per-note element state</td>
+      <td>Anything attached to a card element — an open editor, a text selection, a scroll position — dies when the element is reused. <strong>So opened, pinned and neighbour cards live outside the pool</strong> and get dedicated elements. The pool holds only closed cards in the field</td>
+    </tr>
+    <tr>
+      <td class="v">—</td>
+      <td class="v">"just focus that note"</td>
+      <td>A note that is not materialised has no element to focus or scroll to. <strong>Placement must precede focus</strong>: fly first, then open — which is already how the search box works, and is now a requirement rather than a flourish</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="warnbox">
+  <h4>The one-line version</h4>
+  <p><strong>Pooling buys unbounded corpus size and costs you the browser's built-in affordances.</strong> Find-in-page, the accessibility tree and element-attached state all assume the DOM is the data. Once it is a window onto the data, the application has to supply each of those itself — and a design that skips that is one that works beautifully for a sighted user with 80 notes and fails everyone else at 1537.</p>
+</div>
+
+<h2 class="section">Should this be right before anything is built?</h2>
+<p class="section-sub">
+  You are right that you could list many more defects. That is the most useful signal in this document, and it deserves a straight answer rather than more polish.
+</p>
+<div class="cols" data-design-region="build-or-design">
+  <div>
+    <h4>What the mock has been good for</h4>
+    <p>Four things it produced that reading the code alone would not: <strong>the depth mechanic came out of <code>nav_payload</code></strong>, not the metaphor; <strong>the quiet band belongs behind you</strong>, which only became obvious once you could turn; <strong>blur costs 52 passes over 821k px²</strong>, measured, and the cheap version reads better; and <strong>three real interaction bugs</strong>, two of which you found.</p>
+    <p>That is a good return. It is also mostly spent.</p>
+  </div>
+  <div>
+    <h4>The triage rule I would use</h4>
+    <p>A defect is a <strong>design question</strong> if the answer changes what you would build. It is <strong>polish</strong> if a real implementation fixes it for free.</p>
+    <p>Your two were design questions, and both are now answered: a wire anchors at the card's <em>edge</em>, on the bearing of its neighbour; and <strong>an open card owns an exclusion zone</strong> — neighbours flank it in columns rather than ringing it, which clears it by construction instead of by nudging.</p>
+    <p>"The hover state is a bit dim" is polish. Do not spend the mock on it.</p>
+  </div>
+  <div>
+    <h4>So: stop here</h4>
+    <p><strong>Stop when the next defect is polish</strong> — which is roughly now. Three of the last four fixes were fights with the prototype's own scaffolding rather than with the design: hand-rolled projection, a measurement environment that lies about frozen transitions, synthetic clicks that skip hit-testing.</p>
+    <p>Those are not questions about the interface. They are the cost of simulating a renderer instead of using one.</p>
+  </div>
+</div>
+<div class="warnbox">
+  <h4>What I would build instead of more mock</h4>
+  <p>Not "the glass cockpit". <strong>The narrow slice every version of this needs, which only real data can validate:</strong> a read-only field view inside the cockpit that exists — pooled, no writes, no console, no panels — over the real 1537 notes.</p>
+  <p>That is <code>FEAT-0001</code> as already written: <code>TASK-0001</code> for the edge payload, <code>TASK-0002</code> for a layout that stays put while the corpus adds 634 notes a month, and a renderer. It answers three things this mock structurally cannot: <strong>does the field stay legible at real scale, does a stable layout survive real growth, and what does pooling actually cost.</strong> Every one of those is a go/no-go for the whole idea, and none of them can be answered with 80 fake cards.</p>
+  <p>What the mock is still cheap for, and worth keeping for: <strong>the arrangement rule per view.</strong> Whether Issues should sector by severity or by age needs no renderer, no real data and no performance budget — just an argument and a picture. That is the part to keep iterating here.</p>
+</div>
+
+<h2 class="section">What is wrong with this</h2>
+<div class="cols" data-design-region="objections">
+  <div>
+    <h4>Depth is bad at counting</h4>
+    <p><strong>"How many issues are open?" is answered instantly by a list and badly by a field.</strong> You can see that there are several; you cannot see that there are eleven without a number in the corner — which is why one is in the corner, and why the corner number is doing more work here than the design would like to admit.</p>
+    <p>Any view whose real question is quantitative is worse in this than in the list it replaces.</p>
+  </div>
+  <div>
+    <h4>Depth is bad at comparing</h4>
+    <p>Two notes at different depths are different sizes, and <strong>you cannot compare two things that are not the same size.</strong> A list is uniform on purpose. Bringing two cards to the same plane to compare them is a gesture this design would have to invent, and inventing gestures is how interfaces become unlearnable.</p>
+  </div>
+  <div>
+    <h4>And the honest summary</h4>
+    <p>This is <strong>a reading and triage surface, not a working one.</strong> It is good at "what wants me, and what is this connected to", and worse than a list at almost everything else.</p>
+    <p>The strongest version of this proposal is not a replacement at all: it is a <em>twelfth view</em> in the cockpit that exists, sharing its reader, its verbs and its guards. That is a smaller claim than the one this document opened with, and it is the one I would defend.</p>
+  </div>
+</div>
+
+<div style="margin-top:56px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:11px;color:var(--ink-faint);display:flex;gap:20px;flex-wrap:wrap">
+  <span>DES-0002</span><span>proposal · nothing accepted</span><span>PHASE-028 · Borrowed capability</span>
+  <span>80 real notes · 195 real links</span><span style="margin-left:auto">measured 2026-09-05</span>
+</div>
+
+</div>

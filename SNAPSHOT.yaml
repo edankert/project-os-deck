@@ -1,0 +1,159 @@
+version: 1
+updated: "2026-09-06T12:00Z"
+
+template:
+  replace_me: false
+
+project:
+  name: "project-os-deck"
+  summary: "Deck: the second application over project-os notes and any Obsidian vault. Notes as cards arranged across windows and screens (Spread), and a spatial field where depth is priority (Glass). Shares project-os-cockpit's sidecar; the cockpit is frozen except for fixes while Deck grows."
+  repo_root: "."
+
+# Optional team model for multi-user/multi-agent projects. Descriptive only:
+# project-os keeps no session/claim/heartbeat state — coordination is delegated
+# to the tool's native orchestration (see tools/instructions/SNAPSHOT.md).
+# team:
+#   members:
+#     - id: user:edwin
+#       tool: claude-code
+#       adapter: tools/adapters/claude-code
+#     - id: user:alice
+#       tool: codex
+#       adapter: tools/adapters/codex
+
+retention:
+  policy: active-and-recent
+  recent_changes_max: 25
+  # Read by tools/scripts/sync-snapshot.py (ADR-0018). Absent = feature off.
+  derive_fields: true      # title/goal derived from the note
+  prune_window: 25         # keep N most recent terminal items per collection
+  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive."
+
+docs_system:
+  source_of_truth: SNAPSHOT.yaml
+  instructions:
+    - tools/instructions/OBSIDIAN.md
+    - tools/instructions/MARKDOWN.md
+    - tools/instructions/LIFECYCLE.md
+  references:
+    - docs/PHASES.md           # Phase registry (optional phase-gated development)
+    - docs/__bases__/NAVIGATION.base # Optional Obsidian navigation view
+    - docs/__bases__/CONTEXT.base    # Optional Obsidian active-note context view
+    - docs/reference/README.md # Optional non-lifecycle reference/source documentation area
+    - tools/cockpit/README.md  # Optional local docs cockpit browser
+
+# ID allocation helpers (highest allocated numbers).
+counters:
+  ADR: 0
+  CHG:
+    last_date: 0
+  DES: 2
+  FEAT: 1
+  ISS: 0
+  PHASE: 0
+  REQ: 0
+  RISK: 0
+  REL: 0
+  TASK: 5
+  TST: 0
+  WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
+
+# Current focus (set when something is actively being worked).
+focus:
+  phase: ""        # Active development phase (PHASE-### note link/ID preferred)
+  feature: ""
+  task: ""
+  issue: ""
+
+# Canonical state for tracked items (empty for a fresh template).
+items:
+  features:
+    FEAT-0001:
+      file: "docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md"
+      title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in the cockpit"
+      status: planned
+      owner: user:edwin
+      requirements: []
+      tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
+      note: "Asked for directly by Edwin 2026-09-05 off DES-0001's ORBIT plate. A VIEW at ~orbit, not a replacement for the reader: landing opens the note in the existing document pane and NO verb is discharged in the field (ADR-0020). The two hard tasks are not the renderer -- TASK-0002 (a layout that stays put while the corpus adds 634 notes a month) and TASK-0005 (the treatment decision, glass or blocks, which is human-only and BLOCKS the renderer). Its own design says the orphan-note query is one a table could answer; what a table cannot answer is which clusters hang by a single edge, and where a note sits two hops out."
+  tasks:
+    TASK-0001:
+      file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
+      title: "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0001"
+    TASK-0002:
+      file: "docs/features/orbit-view/plan/tasks/TASK-0002-The-Layout-Is-Computed-Once-And-Kept.md"
+      title: "The layout is computed once and kept — and a new note takes a place without moving its neighbours"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0001"
+    TASK-0003:
+      file: "docs/features/orbit-view/plan/tasks/TASK-0003-The-Field-Renders-And-Flies.md"
+      title: "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0001"
+    TASK-0004:
+      file: "docs/features/orbit-view/plan/tasks/TASK-0004-Landing-Opens-The-Note.md"
+      title: "Landing opens the note in the reader that already exists, so the field never becomes a second document pane"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0001"
+    TASK-0005:
+      file: "docs/features/orbit-view/plan/tasks/TASK-0005-The-Treatment-Is-Chosen-Not-Assumed.md"
+      title: "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0001"
+  issues: {}
+  requirements: {}
+  phases: {}
+  risks: {}
+  tests: {}
+  releases: {}
+  workflows: {}
+  changes: {}
+  decisions: {}
+  designs:
+    DES-0001:
+      file: "docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md"
+      title: "Nine ways to read the record, and a tenth that was cut and then asked for — whole applications over one corpus"
+      status: proposed
+      owner: user:edwin
+      note: "REV 2 re-pitched these as WHOLE APPLICATIONS after Edwin: the ask was a replacement for the cockpit, terminal included, not nine views. Carries a twelve-capability inventory read off the routes/endpoints/obligation registry and a coverage table; FOUR OF TEN cannot be a replacement and say so (PULSE no reader, DECK refuses navigation, BROADSHEET is print, ROOM cannot host a shell). Five keep the cockpit's reader and route to it. ORBIT and ROOM each carry a LIVE THREE-WAY TREATMENT TOGGLE, and both record a cost rather than a mood: glass collapses four of six status hues into 25 degrees, blocks cannot draw the 16148 edges. ORBIT is filed as FEAT-0001; ROOM was cut, challenged and promoted to plate 10. Originally: nine concepts drawn as working mocks in one artifact: ORBIT, ATLAS, REEL, PULSE, ASK, DECK, LEDGER, BROADSHEET, FOUNDRY. Each is separated from the others on six axes stated in the artifact's matrix, so the claim `these are different applications` is checkable rather than asserted. NOTHING IS ACCEPTED AND NOTHING IS SCHEDULED. Two of the nine collide with recorded decisions and the artifact says so on the plate rather than in a footnote: ASK is the conversation UI PHASE-028 itself puts out of scope, and DECK's one-card queue contradicts ADR-0020 (obligations live with their subject, not in a central queue). Mocks are driven by measured corpus figures, not invented ones — 1537 notes, 16148 wikilinks, 2206 distinct targets, and the month histogram 180/1/313/634 that makes the June silence visible."
+    DES-0002:
+      file: "docs/designs/DES-0002-The-Glass-Cockpit.md"
+      title: "The glass cockpit — depth is priority, every view is a re-arrangement rather than a page, and the console is furniture that floats over the notes"
+      status: proposed
+      owner: user:edwin
+      note: "REV 2 fixed the bug that made it untestable -- quiet cards carried pointer-events:none, so FEAT-0143 (done, therefore always quiet) could not be opened AT ALL; every visible card is now clickable and the search box flies to an id. Rev 2 also: per-type card faces with REAL phase progress bars (PHASE-041 21/23, PHASE-028 0/11, PHASE-999 0/27), phases leading their own sectors (rev 1 grouped by phase in four views and never rendered a phase), multiple console slabs, list panels beside the field, files, pulse lanes, the Orbit arrangement, multi-card open, and sector ordering so finished work stops occupying the visible columns. NEW SECTIONS: many monitors (only screen 1 gets a front plane -- two screens both claiming to show what needs you is how you end up trusting neither) and whether it would run (the visible arc holds ~40 cards of 1537, so POOLING IS THE ARCHITECTURE not an optimisation, and filter:blur must go). Originally: DES-0001's GLASS treatment taken seriously as a whole application, headset dropped on Edwin's instruction: desktop, mouse and keyboard, one window. THE MECHANIC IS THE FINDING -- nav_payload already prepends _needs_you_group to all eleven modes and appends suppressed_group to most, so every view is ALREADY three bands and a list can only express that by vertical position (which is why ADR-0025 had to be written). Depth carries it instead: front plane = owed, mid = the view's subject, deep field = the quiet 70%. A view switch is a re-arrangement, not a navigation, so you watch a note change importance. Console is furniture (drag, resize, translucent) and the layout treats it as an OBSTACLE that cards flow around. Consoles and agent sessions share one carousel; the twelve repos are the same mechanic at a different radius. Selecting a note brings its linked neighbours into a ring. Hue is left to say only what a note IS -- depth carries priority -- which is this design's answer to the four-hues-in-25-degrees cost DES-0001 recorded."
+
+# Latest release context for agents (lightweight; full history in REL-* notes).
+# releases:
+#   latest:
+#     id: REL-0001
+#     version: "1.0.0"
+#     tag: v1.0.0
+#     date: "2026-03-08"
+#     status: released
+#   history:
+#     - { id: REL-0001, version: "1.0.0", date: "2026-03-08", status: released }
+
+metrics:
+  counts:
+    features_total: 1
+    features_done: 0
+    phases_total: 0
+    phases_done: 0
+    tasks_total: 5
+    tasks_done: 0
+    tests_total: 0
+    tests_passing: 0
+    tests_failing: 0
+    issues_open: 0
+    issues_triage: 0
+    risks_open: 0
+    releases_total: 0
+    decisions_total: 0

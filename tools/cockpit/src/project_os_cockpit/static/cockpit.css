@@ -1,0 +1,1820 @@
+/* project-os-cockpit cockpit layout — REQ-0013.
+ *
+ * Three columns: features-by-phase nav (left), rendered note (centre),
+ * outbound + inbound-only relationships (right). All colors via tokens
+ * from base.css (REQ-0012); no hard-coded values here.
+ */
+
+/* ----- Type-tag tokens (≤60% saturation per REQ-0012) ----- */
+
+:root {
+  --type-feature:     hsl(210 50% 42%);
+  --type-task:        hsl(140 35% 38%);
+  --type-requirement: hsl(270 35% 48%);
+  --type-issue:       hsl(5 50% 46%);
+  --type-risk:        hsl(25 50% 42%);
+  --type-adr:         hsl(190 40% 38%);
+  --type-change:      hsl(45 50% 38%);
+  --type-release:     hsl(165 35% 38%);
+  --type-workflow:    hsl(320 35% 48%);
+  --type-test:        hsl(100 35% 38%);
+  --type-phase:       hsl(285 35% 48%);
+  --type-plan:        hsl(225 25% 48%);
+  --type-reference:   hsl(205 20% 38%);
+  --type-default:     hsl(0 0% 45%);
+}
+[data-theme="dark"] {
+  --type-feature:     hsl(210 50% 65%);
+  --type-task:        hsl(140 35% 60%);
+  --type-requirement: hsl(270 35% 68%);
+  --type-issue:       hsl(5 50% 65%);
+  --type-risk:        hsl(25 50% 60%);
+  --type-adr:         hsl(190 40% 60%);
+  --type-change:      hsl(45 50% 58%);
+  --type-release:     hsl(165 35% 58%);
+  --type-workflow:    hsl(320 35% 68%);
+  --type-test:        hsl(100 35% 58%);
+  --type-phase:       hsl(285 35% 68%);
+  --type-plan:        hsl(225 25% 65%);
+  --type-reference:   hsl(205 20% 68%);
+  --type-default:     hsl(0 0% 60%);
+}
+
+/* ----- Layout shell ----- */
+
+.cockpit {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 340px;
+  /* Single row constrained to the cockpit's allocated flex height —
+   * without this, the row auto-sizes to content and the bottom panel
+   * pushes off-screen / drags the centre pane along on body scroll. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+/* When the user has collapsed the relationships pane, drop the third
+ * column so the centre takes the freed width. */
+.cockpit.right-collapsed {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+.cockpit.right-collapsed .cockpit-right {
+  display: none;
+}
+/* Mirror for the left navigator pane. */
+.cockpit.left-collapsed {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.cockpit.left-collapsed .cockpit-left {
+  display: none;
+}
+/* Both collapsed → centre pane fills the whole cockpit. */
+.cockpit.left-collapsed.right-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cockpit-pane {
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 13px;
+}
+.cockpit-left {
+  border-left: 0;
+  border-right: 1px solid var(--border);
+}
+
+/* ----- Quiet scrollbars in the three scrolling surfaces -----
+ * Default: thin + transparent (effectively invisible). Hovering the
+ * pane reveals a muted thumb; hovering the thumb itself nudges it a
+ * shade darker for affordance. Both Firefox + WebKit covered. */
+.cockpit-pane,
+.cockpit-centre {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 120ms ease;
+}
+.cockpit-pane:hover,
+.cockpit-centre:hover {
+  scrollbar-color: var(--border-strong) transparent;
+}
+.cockpit-pane::-webkit-scrollbar,
+.cockpit-centre::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.cockpit-pane::-webkit-scrollbar-track,
+.cockpit-centre::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cockpit-pane::-webkit-scrollbar-thumb,
+.cockpit-centre::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-clip: padding-box;
+  transition: background-color 120ms ease;
+}
+.cockpit-pane:hover::-webkit-scrollbar-thumb,
+.cockpit-centre:hover::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+}
+.cockpit-pane::-webkit-scrollbar-thumb:hover,
+.cockpit-centre::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-faint);
+}
+.cockpit-pane::-webkit-scrollbar-corner,
+.cockpit-centre::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Centre column = centre pane (top) + optional bottom panel (terminal /
+ * preview). Vertical flex so the centre fills remaining height; the
+ * bottom panel is a fixed-height sibling with its own scroll. */
+.cockpit-centre-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  /* Explicit overflow guard so a long centre pane can't push the
+   * bottom panel out of the column. */
+  overflow: hidden;
+}
+
+.cockpit-centre {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 32px 80px;
+  background: var(--bg);
+}
+
+/* ----- Bottom panel (TASK-0043) ----- */
+
+.cockpit-bottom-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  min-height: 0;
+  /* Same dark surface ttyd's theme uses inside — gives the panel a
+   * single visual identity (header strip + terminal blend together). */
+  background: #1b1d1f;
+  border-top: 1px solid var(--border);
+}
+.cockpit-bottom-panel.is-collapsed {
+  height: 28px;
+  background: var(--surface);
+}
+.cockpit-bottom-panel.is-collapsed .cockpit-bottom-body {
+  display: none;
+}
+
+.cockpit-bottom-header {
+  flex: 0 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(0 0% 65%);
+  background: hsl(0 0% 14%);
+  border-bottom: 1px solid hsl(0 0% 22%);
+  user-select: none;
+}
+.cockpit-bottom-panel.is-collapsed .cockpit-bottom-header {
+  border-bottom: 0;
+  /* When collapsed, match the surrounding chrome rather than the
+   * terminal's dark surface — quieter at rest. */
+  color: var(--text-faint);
+  background: var(--surface);
+}
+.cockpit-bottom-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.cockpit-bottom-title {
+  font-weight: 600;
+}
+.cockpit-bottom-toggle {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: hsl(0 0% 65%);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  transition: background-color 80ms ease, color 80ms ease;
+}
+.cockpit-bottom-panel.is-collapsed .cockpit-bottom-toggle {
+  color: var(--text-muted);
+}
+.cockpit-bottom-toggle:hover {
+  color: #ffffff;
+  background: hsl(0 0% 22%);
+}
+.cockpit-bottom-panel.is-collapsed .cockpit-bottom-toggle:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.cockpit-bottom-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  background: #1b1d1f;
+  /* Tiny inner padding so the terminal's first line doesn't touch the
+   * header divider — gives the iframe a small breathing room. */
+  padding: 4px 0 0;
+  /* Clip the iframe overshoot (see iframe rule below) so the terminal's
+   * own scrollbar — which sits at the iframe's right edge — is hidden
+   * from view. xterm.js still reserves space for the scrollbar in its
+   * column-grid calculation, so no terminal text is lost. */
+  overflow: hidden;
+}
+.cockpit-bottom-body iframe {
+  width: calc(100% + 16px);
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #1b1d1f;
+}
+.cockpit-bottom-placeholder {
+  padding: 14px 18px;
+  font-size: 12px;
+  color: hsl(0 0% 65%);
+}
+.cockpit-bottom-placeholder code {
+  background: hsl(0 0% 22%);
+  color: hsl(0 0% 90%);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* Resizer — 4px-tall draggable splitter between centre and bottom panel.
+ * Hidden when the bottom panel is collapsed. */
+.cockpit-bottom-resizer {
+  flex: 0 0 4px;
+  cursor: ns-resize;
+  background: transparent;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid transparent;
+  transition: background-color 80ms ease;
+}
+.cockpit-bottom-resizer:hover,
+.cockpit-bottom-resizer.is-dragging {
+  background: var(--accent-link);
+  opacity: 0.4;
+}
+.cockpit-centre-column:has(.cockpit-bottom-panel.is-collapsed) > .cockpit-bottom-resizer {
+  display: none;
+}
+
+/* Mobile-narrow: hide the side panes, centre takes full width. */
+@media (max-width: 900px) {
+  .cockpit {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .cockpit-left, .cockpit-right { display: none; }
+}
+
+/* ----- Platform picker (mounted in the page header, hidden when empty) ----- */
+
+.cockpit-platform-slot {
+  display: flex;
+  align-items: center;
+  margin-left: auto;            /* push everything from here toward the right */
+}
+.cockpit-platform-slot:empty {
+  display: none;                /* hide entirely when the project has no platforms */
+}
+.platform-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px;
+  background: transparent;
+}
+.platform-pill {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: background-color 80ms ease, color 80ms ease;
+}
+.platform-pill:hover {
+  color: var(--text);
+}
+.platform-pill.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ----- Pin button (mounted in the page header when an active note exists) ----- */
+
+.cockpit-pin-slot {
+  display: flex;
+  align-items: center;
+}
+.cockpit-pin-slot:empty {
+  display: none;
+}
+.pin-toggle {
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  background: transparent;
+  color: var(--text-faint);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: color 80ms ease, background-color 80ms ease, border-color 80ms ease;
+}
+.pin-toggle:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+.pin-toggle.is-pinned {
+  color: var(--accent-link);
+}
+
+/* ----- Pane toggles (mounted in the page header, TASK-0032/0033/0034) -----
+ * Left toggle = leftmost control on row 1; right toggle = rightmost.
+ * Both use Lucide's panel-left / panel-right SVGs — same shape Obsidian
+ * uses for its sidebar toggles. */
+
+/* Both slots use a negative outer margin to pull the icon past the
+ * page-header row's 20px side padding, leaving ~4px from the viewport
+ * edge. The inner margin (margin-left for right slot / margin-right
+ * for left slot) preserves the 8px gap to the neighbouring control. */
+.cockpit-right-toggle-slot {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  margin-right: -16px;
+}
+.cockpit-left-toggle-slot {
+  display: flex;
+  align-items: center;
+  margin-left: -16px;
+  margin-right: 8px;
+}
+.right-pane-toggle,
+.left-pane-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 4px;
+  cursor: pointer;
+  line-height: 0;
+  transition: background-color 80ms ease, color 80ms ease;
+}
+.right-pane-toggle:hover,
+.left-pane-toggle:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+.right-pane-toggle.is-collapsed,
+.left-pane-toggle.is-collapsed {
+  color: var(--text);
+}
+.panel-right-icon,
+.panel-left-icon {
+  display: block;
+}
+
+/* ----- Follow-agent toggle (TASK-0050) ----- */
+
+.cockpit-follow-slot {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+.follow-agent-toggle {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  cursor: pointer;
+  transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease;
+}
+.follow-agent-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.follow-agent-toggle.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* ----- Validation health badge + drift panel (FEAT-0018 / TASK-0112) ----- */
+/* Badge mirrors the follow-agent pill; the dot + count reuse the existing
+ * status palette tokens (green = active, red = blocked, grey = default). */
+
+.cockpit-health-slot {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  cursor: pointer;
+  transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease;
+}
+.health-badge:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-default);
+  flex: none;
+}
+.health-badge[data-state="ok"] .health-dot        { background: var(--status-active); }
+.health-badge[data-state="failing"] .health-dot   { background: var(--status-blocked); }
+.health-badge[data-state="failing"]               { color: var(--status-blocked); border-color: currentColor; }
+.health-badge[data-state="unavailable"] .health-dot,
+.health-badge[data-state="unknown"] .health-dot   { background: var(--status-default); }
+.health-badge[data-state="unavailable"],
+.health-badge[data-state="unknown"]               { color: var(--text-faint); }
+
+.health-panel {
+  position: fixed;
+  top: 52px;
+  right: 12px;
+  z-index: 90;
+  width: min(440px, calc(100vw - 24px));
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.25);
+  padding: 10px 12px 12px;
+  font-size: 12.5px;
+}
+.health-panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.health-panel-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.health-panel-checked {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.health-panel-close {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+}
+.health-panel-close:hover { color: var(--text); }
+.health-panel-empty {
+  margin: 6px 0 2px;
+  color: var(--text-muted);
+}
+.health-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.health-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 6px;
+  border-radius: 5px;
+  color: var(--text);
+  text-decoration: none;
+}
+a.health-row:hover { background: var(--surface-2); }
+.health-code {
+  flex: none;
+  font-size: 11px;
+  color: var(--status-blocked);
+}
+.health-rows-warn .health-code { color: var(--warn-fg); }
+.health-message {
+  overflow-wrap: anywhere;
+}
+.health-warn-label {
+  margin: 8px 0 2px;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.health-rows-warn .health-message { color: var(--text-muted); }
+
+/* ----- Filter pill (mounted in the page header) ----- */
+
+.cockpit-filter-slot {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+/* When the platform slot exists with content, it owns the margin-left:auto;
+ * when it's empty/hidden, the filter slot needs to push itself right. */
+.cockpit-platform-slot:empty + .cockpit-filter-slot {
+  margin-left: auto;
+}
+
+.filter-toggle {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  cursor: pointer;
+  transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease;
+}
+.filter-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.filter-toggle.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* ----- Empty / error placeholders ----- */
+
+.cockpit-empty {
+  margin: 14px 14px;
+  color: var(--text-faint);
+  font-style: italic;
+  font-size: 13px;
+}
+.cockpit-error {
+  margin: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--error-fg);
+  border-radius: var(--radius);
+  color: var(--error-fg);
+  background: var(--error-bg);
+  font-size: 12px;
+}
+
+/* ===== Collapsible group primitives (used by both panes) ===== */
+
+/* <details>/<summary> reset — we draw our own chevron. */
+details > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+details > summary::-webkit-details-marker { display: none; }
+
+/* ONE handle across the tree (ISS-0091). Group heads drew an 8px
+   rotated-border caret and feature rows a 4px solid triangle, so two
+   levels of the same tree disagreed about what "expand" looks like.
+   The smaller solid one wins — it is the one Edwin picked, and a caret
+   built from two rotated borders never sits on the text baseline the way
+   a triangle does. */
+.group-chevron {
+  display: inline-block;
+  position: relative;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 1;
+}
+.group-chevron::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  color: var(--text-faint);
+  transform: rotate(90deg);            /* points down (open) */
+  transition: transform 100ms ease;
+}
+details:not([open]) > summary .group-chevron::before {
+  transform: rotate(0deg);             /* points right (closed) */
+}
+@media (prefers-reduced-motion: reduce) {
+  .group-chevron::before { transition: none; }
+}
+
+.group-header-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ===== Left pane: features by phase ===== */
+
+.nav-group {
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The group head takes the context card head's box (ISS-0087).
+   Type was already identical — 11px / 600 / uppercase / --text-faint —
+   and every remaining difference was padding, a background and a border.
+   Measured: 42px against the right pane's 22px, nineteen times over in
+   the features navigator, on a pane whose rows are 27px.
+
+   The bar goes with it. A background and a bottom border per group are
+   what make nineteen heads read as nineteen bars rather than as a list of
+   names; the right pane has neither and is the surface being copied. */
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  background: none;
+  border-bottom: 0;
+}
+.nav-group:not([open]) > .nav-group-header {
+  border-bottom: 0;
+}
+/* The chip is the tallest thing in a group head — 21px against the text's
+   16px, so it alone set the head's height (ISS-0087). Trimmed to sit
+   inside the line rather than define it; the chip in a ROW is untouched,
+   where it is the row's own subject. */
+.nav-group-header .status-chip {
+  padding: 0 6px;
+  line-height: 15px;
+  font-size: 10px;
+}
+.nav-group-header:hover {
+  color: var(--text-muted);
+}
+.nav-group-header .group-header-link {
+  color: inherit;
+  text-decoration: none;
+}
+.nav-group-header .group-header-link:hover {
+  color: var(--accent-link);
+}
+/* The .group-header-inner is flex; spacer pushes the trailing chip
+ * (e.g. the phase status) to the right edge of the header. */
+.nav-group-header .group-header-inner {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-group-spacer {
+  flex: 1 1 auto;
+}
+
+.nav-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Whole cell is an <a>, styled to look like a card. */
+.nav-item {
+  display: block;
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.nav-item:last-child {
+  border-bottom: 0;
+}
+.nav-item:hover {
+  background: var(--surface);
+  text-decoration: none;
+}
+/* The fold's own row (FEAT-0056). Quiet, but never invisible: a fold that
+   hides the fact that it hid something is indistinguishable from having
+   nothing there. */
+/* The one-line row (TASK-0271), matching the desktop's `.nav-item-line`.
+   `.nav-item` above sets `padding: 8px 14px 10px` and a bottom border —
+   19px of the 33px this removes — so the reset is explicit rather than
+   relying on cascade order. `.nav-line` wraps by default, which would put
+   the full-width title back on a line of its own. */
+/* The context card's count-and-status (TASK-0274), matching the
+   desktop's `.ctx-card-right`. */
+.ctx-card-right {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.ctx-type-label { display: flex; align-items: center; gap: 6px; min-width: 0; width: 100%; }
+
+/* Nav groups ARE cards (ISS-0088) — same frame as the context pane's. */
+.nav-group {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated, var(--surface));
+  padding: 4px 6px;
+  margin-bottom: 6px;
+}
+/* The completed band IS a card, like the overview's and the right pane's;
+   its children carry no frame of their own — one border per object. */
+.nav-group.nav-rollup {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated, var(--surface));
+  padding: 4px 6px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+.nav-rollup .nav-group {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 0 0 0 2px;
+  margin-bottom: 0;
+}
+/* Nested rows lose their rules: indentation already says they belong to
+   the row above. */
+.nav-item-nested { border-bottom: 0; }
+.nav-item-children-list { padding-left: 14px; }
+.nav-children-toggle {
+  flex: none; width: 12px; height: 12px; padding: 0; border: 0;
+  background: none; cursor: pointer; position: relative;
+}
+.nav-children-toggle::before {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 0; height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  color: var(--text-faint);
+}
+.nav-children-toggle.is-open::before { transform: rotate(90deg); }
+
+/* A head that names a THING reads as a name, not as a label (ISS-0089).
+   The faint uppercase treatment is right for `TASKS` — scaffolding you
+   read past — and wrong for `PHASE-007 · Agent instrumentation`, which is
+   the content. */
+.nav-group-header.is-thing {
+  font-size: 12.5px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+  padding: 5px 8px;
+}
+.nav-group-header.is-thing .group-header-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.nav-group-header.is-thing .nav-id {
+  font-size: 11.5px;
+  text-transform: none;
+}
+.nav-group-header.is-thing .nav-group-summary { font-size: 11px; }
+/* …and a thing is not framed. Four boxes around four categories read as
+   structure; eighteen around eighteen phases read as clutter. A single
+   hairline between them is enough to separate one from the next. */
+/* ISS-0131, reversed on Edwin's decision 2026-08-11: a phase group is a card,
+   the same card the Issues and Intent groups get. It keeps the base
+   `.nav-group` box entirely -- border, radius, background, padding -- so the
+   three views cannot drift apart again by carrying separate numbers.
+
+   The count argument this replaces (eighteen boxes read as clutter) was true
+   when written; the view now opens on `OPEN · 8` with finished phases folded
+   into a roll-up, so the live choice is about eight.
+
+   ISS-0093's protection is unaffected: the head's indent came from three
+   paddings compounding, and the body still carries its own 5px below, so the
+   head stays left of its own features. */
+.nav-group:has(> .nav-group-header.is-thing) { margin-bottom: 6px; }
+/* The pill has to be legible where it survives. */
+.nav-group-header .status-chip { color: var(--text-muted); }
+
+.nav-set-heading {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* A thing-head is the overview's scope row (ISS-0090): same weight,
+   colour and gap, and the same `✓ N` trailing form. Four rounds were
+   spent walking this row toward the context card's head; it belongs
+   beside the scope row instead. */
+.nav-group-header.is-thing {
+  font-weight: 400;
+  color: var(--text-muted);
+  gap: 7px;
+}
+.nav-group-header.is-thing .group-header-name {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.nav-group-header.is-thing .nav-group-summary { font-size: 10.5px; }
+.nav-group-header.is-thing .nav-group-summary.is-done { color: var(--status-done); }
+/* A handle standing in for an absent id — `PLAN` — quieter than a real
+   one, because it names a type rather than a note. */
+/* Same SIZE as a real id — `ch` is relative to the font, so a smaller
+   handle makes a narrower column and puts the row back on its own grid.
+   Only the opacity marks it as standing in for something absent. */
+.nav-id.is-typeless { opacity: 0.7; letter-spacing: 0.04em; }
+
+/* The id column needs a WIDTH, or two rows with differently-sized ids sit
+   on different grids — `REQ-0008` is eight characters and `PLAN` is four,
+   which left the plan's title 27px adrift even once it had a handle
+   (ISS-0090). Monospace, so `ch` is exact: nine covers `REQ-0008` and
+   `TASK-0277` alike. */
+.nav-item-children-list .nav-id { min-width: 9ch; }
+
+/* A group head's id never shrinks (ISS-0091). `flex: none` was scoped to
+   `.nav-item-line`, so in a HEAD the id was a flexible item inside an
+   overflow-hidden container and a long phase title squeezed it —
+   `PHASE-007` rendered 7px of the 62px it needs. The name is the thing
+   with an ellipsis; the id is eight characters and fixed. */
+.nav-group-header .nav-id { flex: none; }
+.nav-group-header .group-header-name { min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Left-pane consistency sweep (ISS-0093) ----------------------------
+   Measured across all six left panes, three things disagreed:
+
+     section headings   11px/600 in the navigators, 10px/700 on the
+                        overview and the review desk — two styles for one
+                        role, because `.nav-set-heading` was written
+                        without checking `.scope-heading` existed
+     row height         24px everywhere except design's 27, where a status
+                        chip is present and sets the height
+     title column       98px / 103px / 96px, because the id column is as
+                        wide as its longest id and that differs per mode
+
+   Deliberately NOT unified: a group head that names a THING is 12.5px/400
+   and one that names a CATEGORY is 11px/600. That difference is the rule
+   from ISS-0089, not drift. */
+
+/* One section heading. `.scope-heading` is the older of the two and is
+   what the overview and the review desk already use. */
+.nav-set-heading,
+.nav-rollup-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+/* MARGIN, not padding — `.scope-heading` spaces itself with margin, and
+   padding made the same words a 29px block against its 15px. */
+.nav-set-heading { padding: 0; margin: 10px 4px 4px; }
+/* A framed group's content starts 7px in (1px border + 6px padding); an
+   unframed thing-group's started at 0, so the features navigator's rows
+   sat 5px left of every other navigator's. The BODY takes the offset, not
+   the head — the head is the thing being indented from. */
+.nav-group:has(> .nav-group-header.is-thing) > .group-body { padding-left: 5px; }
+
+
+/* A chip never sets a row's height — same rule the group head got at
+   ISS-0087, for the same reason: it is the tallest thing on the line and
+   it is not the line's subject. */
+.nav-item-line .status-chip {
+  padding: 0 6px;
+  line-height: 15px;
+  font-size: 10px;
+}
+
+/* One id column across every navigator, so titles start at the same x
+   whatever the longest id in the mode happens to be. Monospace, so `ch`
+   is exact; ten covers `PHASE-022` and `TASK-0277` alike. */
+.nav-item-line .nav-id { min-width: 10ch; }
+
+/* The roll-up: everything finished, behind one line (TASK-0273). */
+.nav-group.nav-rollup { border-top: 1px solid var(--border); margin-top: 6px; }
+.nav-rollup-header { padding: 6px 12px; }
+.nav-rollup-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.nav-rollup-sub {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.nav-rollup-header:hover .nav-rollup-label { color: var(--text); }
+/* A group header is one line: a phase title can run to 90 characters, and
+   wrapping it restores exactly the space the compaction removed. */
+.nav-group-header { flex-wrap: nowrap; }
+.nav-group-header .group-header-link,
+.nav-group-header > span:not(.nav-group-spacer):not(.nav-group-summary) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-group-summary {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The nested row: same grammar, indented (ISS-0085). */
+.nav-item.nav-item-line.nav-item-nested { padding-left: 22px; }
+
+.nav-item.nav-item-line {
+  display: block;
+  padding: 3px 8px;
+  border-bottom: 0;
+  border-radius: 4px;
+}
+.nav-item-line .nav-line {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12px;
+}
+.nav-item-line .nav-id { flex: none; font-size: 11px; }
+.nav-item.nav-item-line .nav-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  display: block;
+  -webkit-line-clamp: none;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.nav-item-line .status-chip { flex: none; margin-left: 0; }
+.nav-item-line .nav-subtitle {
+  margin: 1px 0 0;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-item.nav-more {
+  padding: 0;
+  background: none;
+}
+.nav-more-btn {
+  display: block;
+  width: 100%;
+  padding: 4px 8px;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.nav-more-btn:hover { color: var(--text-muted); }
+.nav-more-btn:focus-visible {
+  outline: 2px solid var(--accent-link);
+  outline-offset: -2px;
+}
+.nav-item.is-active {
+  background: var(--surface-2);
+}
+
+.nav-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.4;
+}
+
+.nav-id {
+  color: var(--text-faint);
+  font-size: 11px;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Title is a row-2 paragraph in the stacked default layout — block element,
+ * 2-line clamp with ellipsis, regular weight. */
+.nav-title {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nav-item:hover .nav-title {
+  color: var(--accent-link);
+}
+.nav-item.is-active .nav-title {
+  color: var(--accent-link);
+  font-weight: 600;
+}
+
+.nav-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ----- Nested children under a card (reqs under features, TASK-0030) ----- */
+
+.nav-item-children {
+  margin: 0;
+  background: var(--bg);
+}
+.nav-item-children > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Left padding aligns the chevron with where the feature card's id text
+   * starts (card padding 14px + icon ~14px + gap 8px ≈ 36px). */
+  padding: 4px 14px 4px 30px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  background: transparent;
+}
+/* Suppress the feature card's bottom border when it has an immediately-
+ * following children block — the line read as separation between the
+ * card and its own collapsed reqs. */
+.nav-item:has(+ .nav-item-children) {
+  border-bottom: 0;
+}
+.nav-item-children > summary::-webkit-details-marker { display: none; }
+.nav-item-children > summary:hover {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.nav-children-chevron {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+  transition: transform 100ms ease;
+  opacity: 0.7;
+}
+.nav-item-children:not([open]) > summary .nav-children-chevron {
+  transform: translateY(1px) rotate(-45deg);
+}
+.nav-item-children-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nav-item-nested {
+  padding: 5px 14px 6px 30px;
+  border-bottom: 1px solid var(--border);
+}
+.nav-item-nested:last-child {
+  border-bottom: 0;
+}
+.nav-title-nested {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-item-nested:hover .nav-title-nested {
+  color: var(--accent-link);
+}
+
+/* ----- Obsidian-style file tree (compact tree groups in Project mode) -----
+ *
+ * Folder/file icons are inline SVGs encoded as data URLs; we mask-image them
+ * so `background-color: currentColor` recolors with theme + per-row state
+ * (hover, active). Indent guides come from a left border on each subgroup.
+ * Indentation depth is driven by the --tree-indent custom property the JS
+ * renderer sets on each header/body.
+ */
+
+:root {
+  --icon-folder: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z'/></svg>");
+  --icon-file: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/><path d='M14 2v6h6'/></svg>");
+}
+
+.nav-subgroup {
+  margin: 0;
+  border-top: 0;
+  background: var(--bg);
+  position: relative;
+}
+/* Indent guide: a thin vertical line at the indent depth, drawn behind the
+ * content so it doesn't push it. Only nested subgroups (depth > 0) show one. */
+.nav-group-compact .nav-subgroup[data-depth]:not([data-depth="0"])::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: calc(14px + var(--tree-indent, 0px) - 6px);
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.nav-subgroup > .nav-subgroup-header {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 3px 14px 3px calc(14px + var(--tree-indent, 0px));
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.nav-subgroup > .nav-subgroup-header:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.nav-subgroup > .nav-subgroup-header .group-chevron {
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-width: 1.5px;
+}
+/* Folder icon between chevron and label (mask-image, recolored to currentColor). */
+.nav-subgroup > .nav-subgroup-header .group-header-inner::before {
+  content: "";
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: 6px;
+  background-color: currentColor;
+  mask-image: var(--icon-folder);
+  -webkit-mask-image: var(--icon-folder);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  opacity: 0.7;
+  flex-shrink: 0;
+  vertical-align: -2px;
+}
+
+/* Compact file rows: file icon + filename. Full-width hover band, no
+ * dividers between rows. Padding accounts for the icon column. */
+.nav-subgroup .nav-item-compact {
+  padding-left: calc(28px + var(--tree-indent, 0px));
+}
+.nav-item-compact {
+  position: relative;
+  padding: 3px 14px 3px 28px;
+  border-bottom: 0;
+  color: var(--text-muted);
+}
+.nav-item-compact::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask-image: var(--icon-file);
+  -webkit-mask-image: var(--icon-file);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  opacity: 0.55;
+  vertical-align: -2px;
+}
+/* Suppress the default file ::before mask when the row already carries a
+ * type icon (e.g. References use the book-open icon). */
+.nav-item-compact.has-type-icon::before {
+  content: none;
+}
+.nav-item-compact .type-icon {
+  margin-right: 8px;
+}
+.nav-item-compact:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.nav-item-compact.is-active {
+  background: var(--surface-2);
+  color: var(--accent-link);
+}
+
+/* ----- Stacked layout: status+id top, title underneath ----- */
+/* Used by Project mode's pinned + rare-types groups. */
+.nav-item-stacked {
+  padding: 6px 14px 8px;
+}
+.nav-title-stacked {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nav-item-stacked:hover .nav-title-stacked {
+  color: var(--accent-link);
+}
+.nav-subtitle-stacked {
+  margin: 2px 0 0;
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----- Compact layout: filename only, tight padding ----- */
+/* Used by Project mode's docs/reference directory trees. */
+.nav-item-compact {
+  padding: 3px 14px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  border-bottom: 1px solid transparent;   /* override .nav-item border for visual quiet */
+}
+.nav-title-compact {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-item-compact:hover .nav-title-compact {
+  color: var(--accent-link);
+}
+/* Tighten the group body when compact items are inside. */
+.nav-group-compact .nav-items {
+  padding: 2px 0;
+}
+
+/* ----- Mode tabs (mounted in the page header, Row 1) ----- */
+
+.cockpit-mode-slot {
+  display: flex;
+  align-items: center;
+}
+.nav-mode-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px;
+  background: transparent;
+}
+.nav-mode-tab {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 14px;
+  cursor: pointer;
+  transition: background-color 80ms ease, color 80ms ease;
+}
+.nav-mode-tab:hover {
+  color: var(--text);
+}
+.nav-mode-tab.is-active {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+/* ===== Right pane: relationships, merged per type ===== */
+
+.ctx-group {
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Inbound-only items inside a merged type group get a subtle muted look. */
+.ctx-item-inbound {
+  background: var(--surface);
+}
+.ctx-item-inbound .ctx-title {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.ctx-item-inbound:hover {
+  background: var(--surface-2);
+}
+.ctx-item-inbound:hover .ctx-title {
+  color: var(--accent-link);
+}
+
+/* Divider that separates outbound items from inbound-only items inside a group. */
+.ctx-divider {
+  list-style: none;
+  margin: 0;
+  padding: 4px 14px 6px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  background: var(--surface);
+  border-top: 1px dashed var(--border);
+}
+.ctx-divider-leading {
+  border-top: 0;
+}
+
+.ctx-group-header {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.ctx-group:not([open]) > .ctx-group-header {
+  border-bottom: 0;
+}
+.ctx-group-header:hover .ctx-type-label {
+  filter: brightness(1.1);
+}
+
+/* Type label inside the group header: type-color text, no pill. */
+.ctx-type-label {
+  color: var(--type-default);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.ctx-type-label[data-type="feature"]     { color: var(--type-feature); }
+.ctx-type-label[data-type="task"]        { color: var(--type-task); }
+.ctx-type-label[data-type="requirement"] { color: var(--type-requirement); }
+.ctx-type-label[data-type="issue"]       { color: var(--type-issue); }
+.ctx-type-label[data-type="risk"]        { color: var(--type-risk); }
+.ctx-type-label[data-type="adr"]         { color: var(--type-adr); }
+.ctx-type-label[data-type="change"]      { color: var(--type-change); }
+.ctx-type-label[data-type="release"]     { color: var(--type-release); }
+.ctx-type-label[data-type="workflow"]    { color: var(--type-workflow); }
+.ctx-type-label[data-type="test"]        { color: var(--type-test); }
+.ctx-type-label[data-type="phase"]       { color: var(--type-phase); }
+.ctx-type-label[data-type="plan"]        { color: var(--type-plan); }
+.ctx-type-label[data-type="reference"]   { color: var(--type-reference); }
+
+.ctx-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Whole cell is an <a>, two-line layout matching the left pane's nav-item. */
+.ctx-item {
+  display: block;
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.ctx-item:last-child {
+  border-bottom: 0;
+}
+.ctx-item:hover {
+  background: var(--surface);
+  text-decoration: none;
+}
+.ctx-group-inbound .ctx-item:hover {
+  background: var(--surface-2);
+}
+
+.ctx-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.4;
+}
+
+.ctx-id {
+  color: var(--text-faint);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.ctx-title {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ctx-item:hover .ctx-title {
+  color: var(--accent-link);
+}
+
+/* Flex spacer used in the stacked nav line and ctx line so the trailing
+ * status chip (and priority chip on ctx) sit at the right edge regardless
+ * of how short the id/title is. */
+.nav-line-spacer { flex: 1 1 auto; }
+
+.ctx-priority {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.ctx-priority[data-priority="high"]   { color: var(--status-blocked);  border-color: currentColor; }
+.ctx-priority[data-priority="medium"] { color: var(--status-active);   border-color: currentColor; }
+.ctx-priority[data-priority="low"]    { color: var(--status-pending);  border-color: currentColor; }
+
+/* Severity chip — same shape as priority, recoloured via the --severity-*
+ * tokens shared with the issue group icons (TASK-0035). */
+.ctx-severity {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.ctx-severity[data-severity="critical"] { color: var(--severity-critical); border-color: currentColor; }
+.ctx-severity[data-severity="high"]     { color: var(--severity-high);     border-color: currentColor; }
+.ctx-severity[data-severity="medium"]   { color: var(--severity-medium);   border-color: currentColor; }
+.ctx-severity[data-severity="low"]      { color: var(--severity-low);      border-color: currentColor; }
+
+/* ----- Type icons (Lucide-style SVG, recolored via per-type tokens) ----- */
+
+.type-icon {
+  flex-shrink: 0;
+  color: var(--type-default);
+  vertical-align: -2px;
+}
+.type-icon[data-type="feature"]     { color: var(--type-feature); }
+.type-icon[data-type="task"]        { color: var(--type-task); }
+.type-icon[data-type="requirement"] { color: var(--type-requirement); }
+.type-icon[data-type="issue"]       { color: var(--type-issue); }
+.type-icon[data-type="risk"]        { color: var(--type-risk); }
+.type-icon[data-type="adr"]         { color: var(--type-adr); }
+.type-icon[data-type="decision"]    { color: var(--type-adr); }
+.type-icon[data-type="change"]      { color: var(--type-change); }
+.type-icon[data-type="release"]     { color: var(--type-release); }
+.type-icon[data-type="workflow"]    { color: var(--type-workflow); }
+.type-icon[data-type="test"]        { color: var(--type-test); }
+.type-icon[data-type="phase"]       { color: var(--type-phase); }
+.type-icon[data-type="plan"]        { color: var(--type-plan); }
+.type-icon[data-type="reference"]   { color: var(--type-reference); }
+
+/* In a type-label group header, tighten the gap between icon and text. */
+.ctx-type-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Left-pane group-header icons (TASK-0028). Type icons in rare:* groups
+ * keep their per-type colour via the .type-icon rules above; the rest of
+ * the group icons (star, folder-tree, layers, list-checks, alert-octagon,
+ * sun/moon/calendar/history) sit in a muted neutral by default and
+ * recolour for tasks (data-status) / issues (data-severity) groups. */
+.group-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+/* Tasks-mode group icons: colour-coded by status, mirroring the same
+ * status-bucket palette used by .status-chip[data-status=...]. */
+.group-icon[data-status="active"],
+.group-icon[data-status="approved"],
+.group-icon[data-status="accepted"],
+.group-icon[data-status="doing"],
+.group-icon[data-status="in-progress"],
+.group-icon[data-status="review"],
+.group-icon[data-status="next"],
+.group-icon[data-status="mitigating"] { color: var(--status-active); }
+
+.group-icon[data-status="ready"],
+.group-icon[data-status="planned"],
+.group-icon[data-status="backlog"],
+.group-icon[data-status="todo"],
+.group-icon[data-status="open"],
+.group-icon[data-status="pending"],
+.group-icon[data-status="draft"],
+.group-icon[data-status="proposed"],
+.group-icon[data-status="triage"]     { color: var(--status-pending); }
+
+
+.group-icon[data-status="done"],
+.group-icon[data-status="merged"],
+.group-icon[data-status="fixed"],
+.group-icon[data-status="resolved"],
+.group-icon[data-status="fulfilled"],
+.group-icon[data-status="met"],
+.group-icon[data-status="complete"],
+.group-icon[data-status="implemented"],
+.group-icon[data-status="verified"],
+.group-icon[data-status="passing"],
+.group-icon[data-status="published"],
+.group-icon[data-status="released"],
+.group-icon[data-status="closed"]     { color: var(--status-done); }
+
+.group-icon[data-status="blocked"],
+.group-icon[data-status="failing"],
+.group-icon[data-status="reopened"]   { color: var(--status-blocked); }
+
+.group-icon[data-status="obsolete"],
+.group-icon[data-status="retired"],
+.group-icon[data-status="cancelled"],
+.group-icon[data-status="superseded"],
+.group-icon[data-status="declined"],
+.group-icon[data-status="reverted"],
+.group-icon[data-status="rolled-back"],
+.group-icon[data-status="reconciled"],
+.group-icon[data-status="deprecated"] { color: var(--status-archived); }
+
+.group-icon[data-status="reference"],
+.group-icon[data-status="deferred"]   { color: var(--status-reference); }
+
+/* Issues-mode group icons: colour by severity. */
+.group-icon[data-severity="critical"] { color: var(--severity-critical); }
+.group-icon[data-severity="high"]     { color: var(--severity-high); }
+.group-icon[data-severity="medium"]   { color: var(--severity-medium); }
+.group-icon[data-severity="low"]      { color: var(--severity-low); }
+.group-header-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ----- Monospace bits (ids) ----- */
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* ----- Override .page padding when wrapped in .cockpit-centre ----- */
+
+.cockpit-centre .metadata-strip {
+  margin-top: 0;
+}
+
+/* ===== Synthetic home (centre pane on /) ===== */
+
+.cockpit-home {
+  max-width: 880px;
+  margin: 0 auto;
+}
+.cockpit-home h1.home-title {
+  margin: 0 0 18px;
+  font-size: 24px;
+  font-weight: 600;
+}
+.cockpit-home > section {
+  margin: 24px 0;
+  padding: 0;
+}
+.cockpit-home > section > h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+/* Focus block */
+.home-focus-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.home-focus-row:last-child { border-bottom: 0; }
+.home-focus-label {
+  flex: 0 0 90px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+/* Phases */
+.home-phase-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.home-phase-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.home-phase-row:last-child { border-bottom: 0; }
+.home-phase-id { font-family: var(--font-mono); color: var(--text-muted); flex-shrink: 0; }
+.home-phase-title { flex: 1 1 auto; color: var(--text); }
+.muted-count { color: var(--text-faint); font-size: 12px; }
+
+/* Metrics grid */
+.home-metric-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px 18px;
+}
+.home-metric {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.home-metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+.home-metric-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Recent changes */
+.home-change-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.home-change-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.home-change-row:last-child { border-bottom: 0; }
+.home-change-id { font-family: var(--font-mono); color: var(--text-muted); flex-shrink: 0; font-size: 11px; }
+.home-change-title { color: var(--text); flex: 1 1 auto; }
+
+/* Browse-by-type fallback */
+.home-indexes .index-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.home-indexes .index-list a {
+  text-decoration: none;
+  color: var(--text-muted);
+}
+.home-indexes .index-list a:hover { color: var(--accent-link); }
+
+
+/* ---- Obsidian callouts (FEAT-0095 / TASK-0397) -------------------------
+   Mode 1 renders the same notes through the same pipeline, so it needs the
+   same rules — a decision record legible in the shell and not on the tablet
+   would be the two-front-doors divergence ADR-0010 is about. */
+.callout {
+  border-left: 3px solid var(--status-pending);
+  background: var(--bg-elevated);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px; margin: 12px 0;
+}
+.callout-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; color: var(--text); }
+.callout-body { font-size: 13px; color: var(--text-muted); }
+.callout-body p:first-child { margin-top: 0; }
+.callout-body p:last-child { margin-bottom: 0; }
+.callout[data-callout="question"], .callout[data-callout="help"],
+.callout[data-callout="faq"] { border-left-color: var(--accent-link); }
+.callout[data-callout="warning"], .callout[data-callout="caution"],
+.callout[data-callout="danger"], .callout[data-callout="error"],
+.callout[data-callout="bug"] { border-left-color: var(--status-blocked); }
+.callout[data-callout="success"], .callout[data-callout="check"],
+.callout[data-callout="done"] { border-left-color: var(--status-done); }

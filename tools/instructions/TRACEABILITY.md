@@ -1,0 +1,52 @@
+---
+type: instruction
+id: INSTR-TRACEABILITY
+status: active
+owner: group:maintainers
+created: 2026-01-27
+updated: 2026-09-03
+tags: [instructions, traceability]
+---
+
+# Traceability rules
+
+This documentation system relies on explicit link graphs so agents can follow relationships reliably.
+
+## Required links (minimum)
+- Task (`[[task]]`)
+  - Must have exactly one `parent` (feature or issue).
+  - Exception: a `deferred` task has no `parent`; `origin` (the former parent) plus a forward home (`phase`) replace it while parked. On re-adoption a new `parent` is assigned and `origin` stays as history. See `../instructions/STATUSES.md`, "Deferral and re-adoption".
+- Feature (`[[feature]]`)
+  - Should link its `requirements` and `tasks` (frontmatter lists). `tasks` is the feature's **current scope**; descoped (deferred) children move to the `deferred` list instead.
+- Phase (`[[phase]]`)
+  - Should link planned `features`, `requirements`, `tasks`, and `issues` when phase-gated development is used.
+  - Items with a `phase` value should link back to the corresponding `PHASE-*` note where possible.
+- Issue (`[[issue]]`)
+  - Should link impacted `features` and/or planned `tasks` (frontmatter or `related`).
+- Requirement (`[[requirement]]`)
+  - Must have `acceptance` criteria.
+  - Should link implementing features and verifying scripts/workflows.
+- Test (`[[test]]`)
+  - Should link the requirements it verifies (`requirements`) and any relevant features/issues/tasks.
+- Risk (`[[risk]]`)
+  - Should link mitigation tasks or the items it impacts.
+- Change (`[[change]]`)
+  - Should link `issues` and `features` impacted by the change.
+- Decision (`[[adr]]`)
+  - Should link related items and use `supersedes`/`superseded` when applicable.
+
+## Snapshot alignment
+- Represent the link graph in `../../SNAPSHOT.yaml` using IDs.
+- The snapshot must include `file` paths for jump-to-source.
+
+## Import provenance
+- When deriving items from existing sources, record origin in note frontmatter `source` and/or Evidence sections.
+- See `IMPORTING.md` for recommended conventions.
+
+## `[[design]]` links
+
+- A design **implements** the features or phases it specifies: `implements: ["[[FEAT-...]]", "[[PHASE-...]]"]`.
+- Those notes point back with `design: ["[[DES-...]]"]`. Both directions are written, as everywhere else in this system — a link that only exists one way is invisible from the side that needs it.
+- `asset:` names the rendered artifact beside the note. `DESIGN-ASSET` reports a note whose asset does not resolve; `DESIGN-ORPHAN` reports an artifact no note claims.
+- Revisions are **commits against the asset**, not new notes. A design that spawns a note per revision is being used as a changelog, and the reason for each revision belongs in the commit message where it survives the tool.
+- Supersession is design-to-design: `supersedes:` / `superseded_by:`. What `implemented` and `superseded` mean for a design is `STATUSES.md` `[[design]]`.
