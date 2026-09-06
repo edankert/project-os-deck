@@ -19,11 +19,11 @@ Deck has three phases, in this order, and none of them is open. The order is Edw
 | 2 | [PHASE-0002](phases/PHASE-0002-Glass.md) | Glass | The spatial field where how close a note is says how much it needs you. [FEAT-0001](features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md) builds the read-only field first; DES-0002's arrangements follow only if its measurements pass. | The three measurements written down as numbers; the treatment chosen by a person; every card reachable from the list panel by keyboard |
 | 3 | [PHASE-0003](phases/PHASE-0003-Vault.md) | Vault | Deck opens an Obsidian vault: types detected from the vault's own templates, `.base` files as views, `.canvas` files as read-only boards, the vault's statuses banded. | `~/Notes` opens; the Comics notes arrive typed; the four Comic base views appear; browsing leaves the vault's `git status` unchanged |
 
-Two rules cross the phase boundaries and are honoured from the first line of code, because both are cheap now and expensive to retrofit: Deck asks the sidecar which views a workspace has and hard-codes none, and every reachable Deck state has an address.
+Two rules cross the phase boundaries and are honoured from the first line of code, because both are cheap now and expensive to retrofit: Deck's renderer holds no fixed set of view buttons but takes its list from a view provider chosen by workspace kind (the project-os provider is built in and matches the cockpit; the Vault phase adds one that reads `.base` files), and every reachable Deck state has an address.
 
 There is no foundations phase before Deck. The Electron shell, the store, the read-only sidecar consumption and the two-host rule all sit inside the Deck phase; [PHASE-0001](phases/PHASE-0001-Deck.md) states the reason and names the split point should the phase prove too large to steer.
 
-`PHASE-0002` depends on `PHASE-0001` for the store, the addresses and the tablet host. `PHASE-0003` also depends on `PHASE-0001`, for the views seam, and not on `PHASE-0002`; its third place is the stated order rather than a technical constraint.
+`PHASE-0002` depends on `PHASE-0001` for the store, the addresses and the tablet host. `PHASE-0003` also depends on `PHASE-0001`, for the view-provider seam, and not on `PHASE-0002`; its third place is the stated order rather than a technical constraint.
 
 For durable phase tracking, create `[[phase]]` notes from `docs/__templates__/phase.md` and link to them from the `phase` field.
 Use `tools/skills/phase-planning/SKILL.md` when creating or migrating first-class phase notes.

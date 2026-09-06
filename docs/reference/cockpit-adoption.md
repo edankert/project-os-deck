@@ -45,7 +45,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.workspaces.rail` | not yet | |
 | `shell.workspaces.discovery` | not yet | Deck adds a second marker for vaults (`.obsidian`) in its Vault phase |
 | `shell.fleet.rollup` | not yet | |
-| `shell.nav.modes` | not yet | Deck asks the sidecar which views a workspace has; it does not hard-code the modes |
+| `shell.nav.modes` | not yet | Deck's project-os view provider offers the same views; the renderer takes the list from the provider rather than a fixed set of buttons (Edwin, 2026-09-06) |
 | `shell.nav.needs-you` | not yet | the front plane in Glass; the owed band kept in fixed chrome in every layout |
 | `shell.nav.platform` | not yet | |
 | `shell.nav.hide-completed` | not yet | |
@@ -84,7 +84,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 | key | position | note |
 | --- | --- | --- |
-| `api.read.nav` | not yet | plus a "views for this workspace" answer Deck needs and the cockpit does not have |
+| `api.read.nav` | not yet | as is; the list of views is Deck's own and the sidecar is not asked for it (Edwin, 2026-09-06) |
 | `api.read.note` | not yet | |
 | `api.read.record` | not yet | |
 | `api.read.obligations` | not yet | |
