@@ -49,13 +49,13 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 8
-  ISS: 0
+  ISS: 2
   PHASE: 3
   REQ: 0
   RISK: 1
   REL: 0
   TASK: 22
-  TST: 13
+  TST: 14
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -295,7 +295,27 @@ items:
       owner: user:edwin
       parent: "FEAT-0008"
       phase: PHASE-0001
-  issues: {}
+  issues:
+    ISS-0002:
+      file: "docs/issues/ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing.md"
+      title: "A second Deck cannot start and says nothing — the free-port probe binds loopback while the host binds every interface, so a port another Deck already holds looks free, and the failure is an unhandled rejection with no window and no message"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: ["TST-0001"]
+      note: "FIXED 2026-09-06; two Decks now start side by side on 7300 and 7301. TWO faults, found 2026-09-06 while adding an npm script for the tablet walk. freePort probes by binding 127.0.0.1 and the host binds 0.0.0.0 under --lan, so a port another Deck holds on every interface reads as free and listen fails with EADDRINUSE. And app.whenReady().then(...) has no catch, so the failure skips window creation entirely: no window, no message, an application that appears to do nothing when launched. The second fault is what makes the first hard to diagnose."
+    ISS-0001:
+      file: "docs/issues/ISS-0001-Cards-From-The-Previous-View-Stay-On-Screen.md"
+      title: "Cards from the previous view stay on screen — the pool hides a spare card with the `hidden` attribute, and the stylesheet's own `display: flex` overrides it, so switching to a shorter view repaints its cards over the top of the old ones"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: ["TST-0014"]
+      note: "FIXED 2026-09-06 with one stylesheet rule: [hidden] { display: none !important; }. Found by Edwin walking TST-0008, and his counts are the diagnosis: switching from Features (30 cards) to Tests (13) repaints 13 and leaves 17 of the old view on screen; Issues, Publication and Library have 0 and change nothing. CAUSE: the pool hides a spare card with element.hidden, and .card { display: flex } in Deck's own stylesheet beats the browser rule for hidden elements, so the mark is set and the card stays visible. NOTHING IN THE RENDERER IS WRONG -- the pool's arithmetic is right, only the paint is. No test caught it because none of the seven suites renders anything, and the smoke run counted `.card:not([hidden])`, which returns the right number while the wrong number is on screen."
   requirements: {}
   phases:
     PHASE-0001:
@@ -388,6 +408,14 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0007"]
       note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0007 -- the provider list pinned against the cockpit's, and a source search asserting no view name is a literal in the renderer."
+    TST-0014:
+      file: "docs/features/spread/plan/tests/TST-0014-A-Hidden-Card-Leaves-The-Screen.md"
+      title: "A card the pool has hidden leaves the screen, and no stylesheet rule can put it back"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["ISS-0001"]
+      note: "The regression guard for ISS-0001. Reads the BUILT stylesheet and refuses any rule that could outrank [hidden]. Adequacy checked by removing the fix: this suite fails on its first assertion and the smoke run reports 1 card marked and 30 on screen, which is the defect as Edwin saw it."
     TST-0007:
       file: "docs/features/two-hosts/plan/tests/TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else.md"
       title: "The host serves the renderer, proxies reads, and refuses every method and path that is not one"
@@ -406,7 +434,7 @@ items:
       note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 1, walked: the same ids, order and statuses in both applications for this repository."
     TST-0009:
       file: "docs/tests/acceptance/TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display.md"
-      title: "A status window moved to a second display is there again after Deck restarts"
+      title: "A popped-out window reopens on the display it was left on, across a restart"
       status: active
       owner: user:edwin
       phase: PHASE-0001
@@ -493,7 +521,7 @@ metrics:
     phases_done: 0
     tasks_total: 22
     tasks_done: 17
-    tests_total: 7
+    tests_total: 8
     tests_passing: 0
     tests_failing: 0
     issues_open: 0

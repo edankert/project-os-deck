@@ -323,6 +323,32 @@ test('a discovery file with rubbish in it is ignored', async () => {
   await assert.rejects(() => supervisor.resolve(workspace));
 });
 
+test('a port held on every interface is not offered for every interface', async () => {
+  // ISS-0002. A probe that binds loopback says a port is free while another
+  // process holds it on 0.0.0.0, and the caller then fails with EADDRINUSE at
+  // the moment it tries to serve. The interface has to be part of the question.
+  const { createServer } = await import('node:http');
+  const port = await freePort(8900, 8999, '0.0.0.0');
+  const blocker = createServer(() => {});
+  await new Promise((r) => blocker.listen(port, '0.0.0.0', r));
+  try {
+    const forAll = await freePort(port, port + 5, '0.0.0.0');
+    assert.notEqual(forAll, port, 'a port already held on 0.0.0.0 was offered for 0.0.0.0');
+
+    // And the port really is unusable there, which is the thing the caller hits.
+    await assert.rejects(
+      () => new Promise((resolve, reject) => {
+        const s = createServer(() => {});
+        s.once('error', reject);
+        s.listen(port, '0.0.0.0', () => s.close(resolve));
+      }),
+      /EADDRINUSE/,
+    );
+  } finally {
+    await new Promise((r) => blocker.close(r));
+  }
+});
+
 test('a free port is one nothing is listening on', async () => {
   const port = await freePort(8900, 8999);
   assert.ok(port >= 8900 && port <= 8999);

@@ -258,12 +258,23 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-/** A port that was free when Deck asked. Deck's own range, not the cockpit's. */
-export function freePort(start = PORT_RANGE_START, end = PORT_RANGE_END): Promise<number> {
+/**
+ * A port that was free when Deck asked, ON THE INTERFACE IT WILL BE USED ON.
+ *
+ * The interface is a parameter because getting it wrong is silent: a port
+ * another process holds on every interface is still free on loopback, so a
+ * probe that asks about `127.0.0.1` hands back a port that `0.0.0.0` cannot
+ * listen on, and the failure arrives later as EADDRINUSE (ISS-0002).
+ */
+export function freePort(
+  start = PORT_RANGE_START,
+  end = PORT_RANGE_END,
+  bind = '127.0.0.1',
+): Promise<number> {
   return new Promise((resolve, reject) => {
     const tryPort = (port: number): void => {
       if (port > end) {
-        reject(new Error(`no free port between ${start} and ${end}`));
+        reject(new Error(`no free port between ${start} and ${end} on ${bind}`));
         return;
       }
       const server = net.createServer();
@@ -271,7 +282,7 @@ export function freePort(start = PORT_RANGE_START, end = PORT_RANGE_END): Promis
       server.once('listening', () => {
         server.close(() => resolve(port));
       });
-      server.listen(port, '127.0.0.1');
+      server.listen(port, bind);
     };
     tryPort(start);
   });

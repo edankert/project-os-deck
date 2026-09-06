@@ -1,5 +1,12 @@
 {
   "platform": "app",
-  "entries": [],
+  "entries": [
+    {"check": "TST-0008", "mark": "fail", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "In general it looks like only the first couple of items cards get overwritten when switching views for instance test overwrites the first 13, publication, issues and library overwrite nothing, intent 15, overview 7 ..."},
+    {"check": "TST-0009", "mark": "fail", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "I cannot see a status view I can move to anther window."},
+    {"check": "TST-0010", "mark": "question", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "How do I run this?"},
+    {"check": "TST-0011", "mark": "question", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "How do I run something?"},
+    {"check": "TST-0012", "mark": "question", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "Don't know how to pop out a panel."},
+    {"check": "TST-0013", "mark": "pass", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "I think this bit works ..."}
+  ],
   "evidence": []
 }

@@ -13,6 +13,18 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * Hidden means hidden.
+ *
+ * An author rule beats the browser's own `[hidden] { display: none }`, so any
+ * selector here that sets `display` un-hides every element it matches. That is
+ * ISS-0001: the card pool marked its spare cards hidden, `.card` set
+ * `display: flex`, and the previous view stayed on screen underneath the new
+ * one. The `!important` is the point rather than a shortcut — it survives the
+ * next rule somebody adds without thinking about this one.
+ */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--ground);

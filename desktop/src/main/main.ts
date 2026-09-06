@@ -207,23 +207,37 @@ function registerIpc(): void {
 
 async function startHost(): Promise<void> {
   const bindLan = process.argv.includes('--lan');
-  const port = await freePort(7300, 7399);
-  const listening = await host.listen(port, bindLan ? '0.0.0.0' : '127.0.0.1');
+  const bind = bindLan ? '0.0.0.0' : '127.0.0.1';
+  // Probed on the interface the host will bind, not on loopback regardless.
+  const port = await freePort(7300, 7399, bind);
+  const listening = await host.listen(port, bind);
   hostOrigin = `http://127.0.0.1:${listening.port}`;
   console.log(`deck: serving ${WEB_ROOT} on ${listening.address}:${listening.port}`);
 }
 
 app.whenReady().then(async () => {
-  registerIpc();
-  await startHost();
-  if (process.argv.includes('--smoke')) {
-    await runSmoke();
-    return;
+  try {
+    registerIpc();
+    await startHost();
+    if (process.argv.includes('--smoke')) {
+      await runSmoke();
+      return;
+    }
+    createWindow('focus', null, null);
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow('focus', null, null);
+    });
+  } catch (err) {
+    // Said out loud, and then stop. Without this the failure skips window
+    // creation and macOS keeps the application alive with nothing on screen,
+    // which reads as an application that does nothing when launched
+    // (ISS-0002).
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`deck: could not start — ${message}`);
+    dialog.showErrorBox('Deck could not start', message);
+    shutdown();
+    app.exit(1);
   }
-  createWindow('focus', null, null);
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow('focus', null, null);
-  });
 });
 
 app.on('window-all-closed', () => {
@@ -339,14 +353,26 @@ async function runSmoke(): Promise<void> {
         `document.querySelectorAll('#switcher button')[3].click()`,
       );
       await delay(2000);
+      // What the browser DISPLAYS, not what the DOM is marked as. ISS-0001 hid
+      // its cards correctly and left them on the screen, and a count of
+      // `.card:not([hidden])` reported the right number throughout.
+      const onScreen = `Array.from(document.querySelectorAll('.card')).filter((c) => getComputedStyle(c).display !== 'none').length`;
       const afterSwitch = (await focus.webContents.executeJavaScript(
-        `({ total: document.querySelectorAll('.card').length, visible: document.querySelectorAll('.card:not([hidden])').length })`,
-      )) as { total: number; visible: number };
+        `({ total: document.querySelectorAll('.card').length, marked: document.querySelectorAll('.card:not([hidden])').length, shown: ${onScreen}, status: document.getElementById('status').textContent })`,
+      )) as { total: number; marked: number; shown: number; status: string };
       record(
         afterSwitch.total <= poolBefore,
         `the pool did not grow when the view changed (${poolBefore} then ${afterSwitch.total})`,
       );
-      record(afterSwitch.visible <= afterSwitch.total, 'no more cards are shown than the pool holds');
+      record(
+        afterSwitch.shown === afterSwitch.marked,
+        `every card the pool hid left the screen (${afterSwitch.marked} marked, ${afterSwitch.shown} shown)`,
+      );
+      const claimed = Number(/· (\d+) cards$/.exec(afterSwitch.status)?.[1] ?? '-1');
+      record(
+        claimed === afterSwitch.shown,
+        `the screen shows what the view says it has (says ${claimed}, shows ${afterSwitch.shown})`,
+      );
       await focus.webContents.executeJavaScript(
         `document.querySelectorAll('#switcher button')[2].click()`,
       );

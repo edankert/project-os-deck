@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.web.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "start": "npm run build && electron .",
+    "start:lan": "npm run build && electron . --lan",
     "test": "npm run build && node --test --test-timeout 30000 tests/*.test.mjs",
     "smoke": "npm run build && electron . --smoke"
   },
