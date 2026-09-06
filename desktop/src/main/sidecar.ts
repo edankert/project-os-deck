@@ -242,10 +242,19 @@ async function waitForHealth(base: string, root: string, hasExited: () => boolea
   return false;
 }
 
+/**
+ * A pause that is actually awaited, so its timer must NOT be unref'd.
+ *
+ * An unref'd timer is skipped when nothing else is keeping the event loop
+ * alive, and a promise waiting on it then never settles. Under `node --test`
+ * that surfaces as "Promise resolution is still pending", with no failing
+ * assertion to point at; under Electron the loop never empties, so it hid.
+ * The SIGKILL timer in `stopOne` is a different case: nothing awaits it, and
+ * it should not hold the process open.
+ */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
-    const t = setTimeout(resolve, ms);
-    t.unref?.();
+    setTimeout(resolve, ms);
   });
 }
 

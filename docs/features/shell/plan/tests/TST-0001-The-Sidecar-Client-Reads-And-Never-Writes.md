@@ -57,4 +57,6 @@ Deck's only route to the sidecar is one typed client. This suite runs that clien
 
 ## Adequacy (who verifies this test?)
 
+This suite found a bug no assertion was aiming at. Running on Linux it reported "Promise resolution is still pending" with no failing assertion, which is what node says when a promise waits on a timer that has been unref'd and the event loop has emptied. The readiness poll's pause was unref'd, so it could be skipped and its promise never settle. Under Electron the loop never empties and it would never have shown.
+
 Verified by mutation on 2026-09-06. Removing the required-field check in the client (`requireString` returning `''` instead of throwing) makes "a response missing a field Deck needs is an error that names the field" fail. The read-only claim is asserted twice over: once on the client's own method names, once on what the fake sidecar recorded.
