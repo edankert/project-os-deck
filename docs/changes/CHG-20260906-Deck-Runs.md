@@ -58,6 +58,10 @@ The review gate ran before any feature was set to `done`, from a clean context, 
 - **A sidecar Deck started could be dropped without being stopped.** Forgetting an unreachable sidecar deleted the handle the shutdown iterates, so the child outlived Deck. Forgetting one of ours now stops it; a borrowed one is still left alone.
 - **Two acceptance criteria no longer matched the code** and were amended with the reason rather than ticked to fit.
 
+**A second pass approved all four features it gated**, and re-tested the proxy hardest: twenty attacks from a network address against the host bound beyond loopback, with a recorder in front of a live sidecar. None reached it. Two of the reviewer's own mutations survived — the ordering of the allow-list check, and an early return in the state normaliser — and in both cases another guard already covers the behaviour, so they are redundancy rather than holes. They are recorded here rather than fixed.
+
+**The review ran against a moving tree, which is a fault of the process and not of the reviewer.** Files changed under it twice while it worked, and one of its findings was closed by a commit that landed mid-pass. A recorded verdict is supposed to point at particular code; the verdicts here name the commit they were taken at. Next time the tree stops moving for the duration.
+
 ## Follow-ups
 
 - [ ] Three acceptance walks are owed, and each needs something a machine has not got: the side-by-side comparison with the cockpit ([[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]]), a second monitor ([[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]]) and a tablet ([[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]]).

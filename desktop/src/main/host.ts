@@ -45,6 +45,10 @@ export function isForwardable(sidecarPath: string): boolean {
   // allowed path into a forbidden one: `/api/render/%252e%252e/api/inbox`
   // decodes once to `%2e%2e`, passes a check on that string, and is then
   // resolved by `fetch` to `/api/inbox`. Two decodings, one check, no lock.
+  // Refusing every percent sign is blunt, and it is what Deck needs: the paths
+  // it reads carry their arguments in the query, never in a path segment. A
+  // future sidecar route with an encoded segment would be unforwardable until
+  // this is loosened, which is the right way round for a rule facing a network.
   if (sidecarPath.includes('%')) return false;
   if (sidecarPath.split('/').some((segment) => segment === '..' || segment === '.')) return false;
   return FORWARDABLE.some((allowed) => sidecarPath === allowed || sidecarPath.startsWith(`${allowed}/`));

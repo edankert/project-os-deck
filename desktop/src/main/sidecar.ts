@@ -125,10 +125,15 @@ export class SidecarSupervisor {
     if (!ready) {
       this.stopOne(workspace.id);
       const tail = record.stderrTail.join('').split('\n').slice(-10).join('\n').trim();
+      // The interpreter is named, always. The usual cause of this failure is a
+      // python that cannot import the sidecar, and a message that does not say
+      // which python was used sends the reader to the wrong place. DECK_PYTHON
+      // overrides it.
+      const which = `using ${this.python}`;
       throw new Error(
         exited
-          ? `the sidecar for ${workspace.name} exited before it answered${tail === '' ? '' : `:\n${tail}`}`
-          : `the sidecar for ${workspace.name} did not answer within ${READY_TIMEOUT_MS / 1000}s${tail === '' ? '' : `:\n${tail}`}`,
+          ? `the sidecar for ${workspace.name} exited before it answered (${which})${tail === '' ? '' : `:\n${tail}`}`
+          : `the sidecar for ${workspace.name} did not answer within ${READY_TIMEOUT_MS / 1000}s (${which})${tail === '' ? '' : `:\n${tail}`}`,
       );
     }
     return { ...record };

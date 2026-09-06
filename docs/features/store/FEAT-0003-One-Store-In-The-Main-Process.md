@@ -14,6 +14,9 @@ requirements: []
 tasks: ["[[TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It]]", "[[TASK-0011-The-State-Survives-A-Restart]]"]
 release: ""
 acceptance_exception: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-06
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
 ---
 
@@ -47,3 +50,23 @@ Deck keeps its state in one place, the Electron main process, and every window s
 ## Where this stands
 
 **2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — watching a second window follow the first, and quitting and coming back — is [[TST-0012-Two-Windows-Show-The-Same-State]], and nobody has walked it yet.
+
+## Independent review — 2026-09-06 (second pass)
+
+**Verdict: approved.** Clean context, separate session; same model family, recorded in `reviewed_by`. The first pass held this feature at changes-requested over one finding, now fixed and verified at `9b99c36`.
+
+**A window received a change and did not repaint.** The `host.onState` subscription called `renderRail`, `renderDeskList` and `paintSwitcher` but not `drawDesk`, which is the only thing that repaints cards. A focused-note change made in another window updated the receiving window's copy of the state and changed nothing visible. `drawDesk()` is now in the subscription.
+
+The fix was confirmed by mutation rather than by reading. Removing `drawDesk()` from the subscription again fails three smoke checks:
+
+```
+"the saved desk reached the window"
+"closing the desk redrew the satellite (1 card then 1)"
+"the satellite REDREW when the focused note changed (FEAT-0002 then FEAT-0002, wanted TASK-0008)"
+```
+
+Those checks now read the DOM — the highlighted card and the visible card count — rather than `window.__deckLastState`. That was the substance of the original finding: the old check asserted on the transport, so it passed while the window showed the wrong thing.
+
+Also closed from the first pass's non-blocking list: `restore` carried a whole state and was dispatchable from a window; `isRendererAction` now refuses it at the IPC boundary, and the state file is written atomically as before. The focused note is reopened after a restart rather than merely highlighted.
+
+Coverage gap left open, worth knowing: nothing exercises the restart path through the renderer. `reopenFocusedNote` is read, not tested; the store's own restart is tested.

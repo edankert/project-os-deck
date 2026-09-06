@@ -51,18 +51,28 @@ fi
 # "duration_ms 656" sends the reader to the logs to find out what broke; this
 # says it in the line they were already going to read.
 set +e
-node --test --test-timeout 30000 "${FILES[@]}" 2>&1 | tee /tmp/deck-test-output.$$
+out="$(mktemp -t deck-test-output)"
+node --test --test-timeout 30000 "${FILES[@]}" 2>&1 | tee "$out"
 status=${PIPESTATUS[0]}
 set -e
 
 if [ "$status" -ne 0 ]; then
-  failed="$(grep -E '^(not ok|✖)' "/tmp/deck-test-output.$$" | sed -E 's/^(not ok [0-9]+ -|✖)[[:space:]]*//; s/ \([0-9.]+ms\)$//' | grep -v '^failing tests:$' | sort -u | paste -sd '; ' -)"
+  # Every extraction below ends in `|| true`. Without it, `set -euo pipefail`
+  # kills this script the moment a grep finds nothing — which is exactly when
+  # the summary is most needed, and it takes the summary with it.
+  #
+  # Node prints ✖ lines to a terminal and TAP ("not ok 1 - name") to a pipe,
+  # and CI is always a pipe, so both forms are read here.
+  failed="$( { grep -E '^(not ok [0-9]+ -|✖)' "$out" \
+      | sed -E 's/^(not ok [0-9]+ -|✖)[[:space:]]*//; s/ \([0-9.]+ms\)$//' \
+      | grep -v '^failing tests:$' | sort -u | paste -sd '; ' -; } || true)"
   # The first thing the failure said, so the one line CI prints carries a
   # reason and not only a name.
-  why="$(grep -A 4 -E '^✖' "/tmp/deck-test-output.$$" | grep -E '^[[:space:]]+(Error|AssertionError|TypeError|[A-Za-z]+Error)' | head -1 | sed -E 's/^[[:space:]]+//' | cut -c1-120)"
-  rm -f "/tmp/deck-test-output.$$"
+  why="$( { grep -E "^[[:space:]]*([A-Za-z]*Error|error:)" "$out" \
+      | head -1 | sed -E "s/^[[:space:]]*(error:)?[[:space:]]*//; s/^'//; s/'$//" | cut -c1-140; } || true)"
+  rm -f "$out"
   echo "FAILED ${SUITE}: ${failed:-node exited ${status} with no named failure}${why:+ -- ${why}}"
   exit "$status"
 fi
-rm -f "/tmp/deck-test-output.$$"
+rm -f "$out"
 exit 0
