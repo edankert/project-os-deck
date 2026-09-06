@@ -4,10 +4,10 @@ id: TASK-0005
 aliases: ["TASK-0005"]
 title: "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks"
 status: backlog
-phase: ""
+phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: ["Edwin 2026-09-05: 'this feels a little minority report like or did you have something more like (wooden) play blocks in mind'"]
 parent: "FEAT-0001"
 effort: ""

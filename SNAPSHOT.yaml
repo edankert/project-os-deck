@@ -50,7 +50,7 @@ counters:
   DES: 2
   FEAT: 1
   ISS: 0
-  PHASE: 0
+  PHASE: 3
   REQ: 0
   RISK: 0
   REL: 0
@@ -73,6 +73,7 @@ items:
       title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in the cockpit"
       status: planned
       owner: user:edwin
+      phase: PHASE-0002
       requirements: []
       tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
       note: "Asked for directly by Edwin 2026-09-05 off DES-0001's ORBIT plate. A VIEW at ~orbit, not a replacement for the reader: landing opens the note in the existing document pane and NO verb is discharged in the field (ADR-0020). The two hard tasks are not the renderer -- TASK-0002 (a layout that stays put while the corpus adds 634 notes a month) and TASK-0005 (the treatment decision, glass or blocks, which is human-only and BLOCKS the renderer). Its own design says the orphan-note query is one a table could answer; what a table cannot answer is which clusters hang by a single edge, and where a note sits two hops out."
@@ -83,33 +84,71 @@ items:
       status: backlog
       owner: user:edwin
       parent: "FEAT-0001"
+      phase: PHASE-0002
     TASK-0002:
       file: "docs/features/orbit-view/plan/tasks/TASK-0002-The-Layout-Is-Computed-Once-And-Kept.md"
       title: "The layout is computed once and kept — and a new note takes a place without moving its neighbours"
       status: backlog
       owner: user:edwin
       parent: "FEAT-0001"
+      phase: PHASE-0002
     TASK-0003:
       file: "docs/features/orbit-view/plan/tasks/TASK-0003-The-Field-Renders-And-Flies.md"
       title: "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop"
       status: backlog
       owner: user:edwin
       parent: "FEAT-0001"
+      phase: PHASE-0002
     TASK-0004:
       file: "docs/features/orbit-view/plan/tasks/TASK-0004-Landing-Opens-The-Note.md"
       title: "Landing opens the note in the reader that already exists, so the field never becomes a second document pane"
       status: backlog
       owner: user:edwin
       parent: "FEAT-0001"
+      phase: PHASE-0002
     TASK-0005:
       file: "docs/features/orbit-view/plan/tasks/TASK-0005-The-Treatment-Is-Chosen-Not-Assumed.md"
       title: "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks"
       status: backlog
       owner: user:edwin
       parent: "FEAT-0001"
+      phase: PHASE-0002
   issues: {}
   requirements: {}
-  phases: {}
+  phases:
+    PHASE-0001:
+      file: "docs/phases/PHASE-0001-Deck.md"
+      title: "Deck — one store, windows on any screen, and Spread as the first view"
+      status: planned
+      order: 1
+      owner: user:edwin
+      features: []
+      requirements: []
+      tasks: []
+      issues: []
+      note: "The phase that makes Deck a thing you can open, and the one that carries the foundations rather than a separate foundations phase before it. Deliberate: a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge, and the two rules that must hold from the first line of code -- one renderer with two hosts, and views asked for from the sidecar rather than hard-coded -- would be stranded in a phase that ends before any view exists. Exit is measured, not listed: Spread opens the same notes as the cockpit, a status window survives a restart on a second display, and the same renderer served by the sidecar opens read-only on a tablet. If the phase proves too large to steer, the split point is the first criterion. Depends on work outside this repository: the sidecar gains a 'views for this workspace' answer, which is cheap now and expensive to retrofit."
+    PHASE-0002:
+      file: "docs/phases/PHASE-0002-Glass.md"
+      title: "Glass — depth carries priority, built on what FEAT-0001 measures"
+      status: planned
+      order: 2
+      owner: user:edwin
+      features: ["FEAT-0001"]
+      requirements: []
+      tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
+      issues: []
+      note: "Gated on measurement, not on taste. FEAT-0001 builds the read-only field over the real link graph and produces three numbers -- whether the whole edge list arrives in one request, whether the layout stays put when the corpus grows, and what frame rate the field holds on a laptop -- and DES-0002's arrangements are built only if those pass. Depends on PHASE-0001 for the store, the address grammar and the tablet host. TWO THINGS TO KNOW: FEAT-0001's own note still describes a route at ~orbit INSIDE THE COCKPIT because it was written on 2026-09-05 before Deck existed, so the venue is read from this phase and the feature text was not rewritten; and the measurements can fail, in which case the phase closes with the field alone and Spread is unaffected."
+    PHASE-0003:
+      file: "docs/phases/PHASE-0003-Vault.md"
+      title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
+      status: planned
+      order: 3
+      owner: user:edwin
+      features: []
+      requirements: []
+      tasks: []
+      issues: []
+      note: "Point Deck at ~/Notes and the vault's own structure appears: types detected from its templates and properties, its .base files as views, its .canvas files as read-only boards, its statuses banded. Reads everything, writes none of Obsidian's files. Depends on PHASE-0001 for the seam (the sidecar answering which views a workspace has) and NOT on PHASE-0002; third place is Edwin's stated order from 2026-09-06, not a technical constraint, so grooming can bring it forward. One blocker lives in the other repository: the cockpit's indexer drops a list-valued type:, which leaves 99 of the vault's 407 notes untyped, and that is project-os-cockpit ISS-0279 at triage. The cross-repo reference is kept in prose and related: only."
   risks: {}
   tests: {}
   releases: {}
@@ -145,7 +184,7 @@ metrics:
   counts:
     features_total: 1
     features_done: 0
-    phases_total: 0
+    phases_total: 3
     phases_done: 0
     tasks_total: 5
     tasks_done: 0

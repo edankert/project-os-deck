@@ -381,6 +381,7 @@ Obsidian:
 
 This note describes the shell, the sidecar and the vault on 2026-09-06. A decision on any part of it, or a note from Part 7 being created, makes the corresponding section historical. Do not edit the findings; add a dated line under this heading saying what changed.
 
+- 2026-09-06 — the three phases of Part 8 item 2 were created as notes: [[PHASE-0001-Deck]], [[PHASE-0002-Glass]] and [[PHASE-0003-Vault]], with the registry in `docs/PHASES.md`. Two things resolved on the way. The first phase is named **Deck**, not Canopy: the application was named Deck when this repository was created, so every "Canopy" in Part 8 reads as Deck. There is no separate foundations phase before it — the Electron shell, the store, the read-only sidecar consumption and the two-host rule sit inside the Deck phase, and PHASE-0001 states why. [[FEAT-0001]] and its five tasks now carry `phase: [[PHASE-0002-Glass]]`.
 - 2026-09-06 — Edwin answered the seven questions of Part 6 the same day; Part 8 records the answers. Part 4's one condition (rebuild the classic layout from panel factories) is reversed: the current application is frozen and a new one, Canopy, is built beside it. Part 2's JSON Canvas suggestion is withdrawn as a default. Part 7's phase becomes three. Later the same day Edwin withdrew the frozen-cockpit rule in Part 8 item 1: the cockpit stays the primary place for new functionality and Deck tracks it.
 
 ## Provenance

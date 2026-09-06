@@ -4,10 +4,10 @@ id: TASK-0001
 aliases: ["TASK-0001"]
 title: "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it"
 status: backlog
-phase: ""
+phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 parent: "FEAT-0001"
 effort: ""

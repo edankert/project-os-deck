@@ -4,10 +4,10 @@ id: TASK-0004
 aliases: ["TASK-0004"]
 title: "Landing opens the note in the reader that already exists, so the field never becomes a second document pane"
 status: backlog
-phase: ""
+phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 parent: "FEAT-0001"
 effort: ""

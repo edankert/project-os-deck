@@ -4,10 +4,10 @@ id: FEAT-0001
 aliases: ["FEAT-0001"]
 title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in the cockpit"
 status: planned
-phase: ""
+phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: ["Edwin 2026-09-05: 'I like the idea of the 3d world fly-through ... I would like an orbit view in the application in general, so feel free to create the corresponding docs for thus'"]
 goal: "Give the cockpit a view of the link graph as a whole — 16148 edges over 1537 notes, coloured by status band, entered by flying rather than by listing — so the structural questions the reader cannot currently ask (what does nothing link to, which clusters hang by one edge) have somewhere to be asked."
 requirements: []

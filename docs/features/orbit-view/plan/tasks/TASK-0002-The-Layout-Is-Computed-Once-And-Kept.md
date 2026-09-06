@@ -4,10 +4,10 @@ id: TASK-0002
 aliases: ["TASK-0002"]
 title: "The layout is computed once and kept — and a new note takes a place without moving its neighbours"
 status: backlog
-phase: ""
+phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 parent: "FEAT-0001"
 effort: ""
