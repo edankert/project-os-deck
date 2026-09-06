@@ -51,7 +51,12 @@ fi
 # "duration_ms 656" sends the reader to the logs to find out what broke; this
 # says it in the line they were already going to read.
 set +e
-out="$(mktemp -t deck-test-output)"
+# Plain `mktemp`, because `mktemp -t PREFIX` means different things on BSD and
+# GNU: macOS generates a name from the prefix, GNU wants XXXXXX in the template
+# and fails without it. That failure left the capture file empty on Linux, so
+# the summary below had nothing to report and every CI failure said only that
+# node exited 1.
+out="$(mktemp)"
 node --test --test-timeout 30000 "${FILES[@]}" 2>&1 | tee "$out"
 status=${PIPESTATUS[0]}
 set -e

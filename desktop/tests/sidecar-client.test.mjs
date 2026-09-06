@@ -125,9 +125,14 @@ test('a sidecar that is not there produces an error, not a crash', async () => {
 
 test('a sidecar that never answers gives up rather than hanging', async () => {
   const { createServer } = await import('node:http');
-  const server = createServer(() => {
-    /* deliberately never responds */
+  const server = createServer((req, res) => {
+    // Deliberately never responds. The handlers are here because the client
+    // aborts this request, and an unhandled 'error' on either side would take
+    // the whole run down rather than fail a test.
+    req.on('error', () => {});
+    res.on('error', () => {});
   });
+  server.on('clientError', () => {});
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   try {
     const client = new SidecarClient(`http://127.0.0.1:${server.address().port}`, { timeoutMs: 250 });

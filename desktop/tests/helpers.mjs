@@ -24,6 +24,12 @@ export function load(relative) {
 export async function fakeSidecar(routes = {}) {
   const received = [];
   const server = http.createServer((req, res) => {
+    // A client that aborts mid-request (these tests abort on purpose) makes
+    // node emit 'error' on the request and the response. Unhandled, that is an
+    // uncaught exception and the whole run dies with no failing test to point
+    // at, which is a miserable thing to debug from a CI log.
+    req.on('error', () => {});
+    res.on('error', () => {});
     received.push({ method: req.method, url: req.url });
     const url = new URL(req.url, 'http://fake.invalid');
     const route = routes[url.pathname];
@@ -41,6 +47,7 @@ export async function fakeSidecar(routes = {}) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(typeof body === 'string' ? body : JSON.stringify(body));
   });
+  server.on('clientError', () => {});
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   return {
