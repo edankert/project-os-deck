@@ -54,6 +54,8 @@ interface WindowInfo {
   panel: string | null;
   address: string | null;
   unsubscribe: () => void;
+  /** Write this window's geometry now, wherever the quit came from. */
+  saveBounds: () => void;
 }
 
 const windowInfo = new Map<number, WindowInfo>();
@@ -95,8 +97,6 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
   const unsubscribe = store.subscribe((state) => {
     if (!win.isDestroyed()) win.webContents.send('deck:state', state);
   });
-  windowInfo.set(win.id, { role, panel, address, unsubscribe });
-  if (role === 'focus') focusWindowId = win.id;
 
   const saveBounds = (): void => {
     if (win.isDestroyed() || win.isMinimized() || win.isFullScreen()) return;
@@ -104,6 +104,9 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
     const display = screen.getDisplayMatching(b);
     windowBook.set(key, { ...b, displayId: display.id });
   };
+
+  windowInfo.set(win.id, { role, panel, address, unsubscribe, saveBounds });
+  if (role === 'focus') focusWindowId = win.id;
   let timer: NodeJS.Timeout | null = null;
   const debouncedSave = (): void => {
     if (timer !== null) clearTimeout(timer);
@@ -239,6 +242,17 @@ let shutDown = false;
 function shutdown(): void {
   if (shutDown) return;
   shutDown = true;
+  // Geometry first. A window's own `close` handler saves it, but a quit that
+  // comes from a signal calls `app.exit`, which never closes the windows: a
+  // move made in the last quarter second would go with it, and where a window
+  // was is the whole question after a restart.
+  for (const info of windowInfo.values()) {
+    try {
+      info.saveBounds();
+    } catch {
+      // One window's geometry is not worth stopping a quit for.
+    }
+  }
   store.close();
   sidecars.stopAll();
   void host.close();
