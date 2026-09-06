@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0022
 aliases: ["TASK-0022"]
 title: "Capability is detected, not assumed — the renderer asks its host what it can do, and shell-only capability is absent when served"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,17 +26,17 @@ The renderer asks the bridge which capabilities the host offers, and renders acc
 
 ## Definition of Done
 
-- [ ] The bridge reports a capability set, and the renderer reads it rather than testing for Electron.
-- [ ] Served over the host, pop-out windows and the other shell-only actions are absent from the interface, not merely disabled.
-- [ ] The renderer's own views and cards are identical in both hosts, from the same source files.
-- [ ] A capability the renderer does not know about is ignored rather than breaking it.
+- [x] The bridge reports a capability set, and the renderer reads it rather than testing for Electron.
+- [x] Served over the host, pop-out windows and the other shell-only actions are absent from the interface, not merely disabled.
+- [x] The renderer's own views and cards are identical in both hosts, from the same source files.
+- [x] A capability the renderer does not know about is ignored rather than breaking it.
 
 ## Steps
 
-- [ ] Declare the capability set and expose it from the preload bridge.
-- [ ] Provide the served fallback, which declares the reading capabilities only.
-- [ ] Gate the shell-only affordances on the capability set.
-- [ ] Test the renderer's decisions against both capability sets.
+- [x] Declare the capability set and expose it from the preload bridge.
+- [x] Provide the served fallback, which declares the reading capabilities only.
+- [x] Gate the shell-only affordances on the capability set.
+- [x] Test the renderer's decisions against both capability sets.
 
 ## Notes
 

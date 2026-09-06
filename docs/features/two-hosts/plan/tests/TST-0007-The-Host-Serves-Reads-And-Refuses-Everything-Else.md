@@ -40,6 +40,7 @@ Deck's own host is the only network surface Deck exposes. This suite drives it o
 - Request an API path with `GET` and assert the fake sidecar received it and the response came back.
 - Request the same path with `POST`, `PUT`, `PATCH`, `DELETE` and `OPTIONS`, and assert each is refused with 405 and that the fake sidecar recorded nothing.
 - Request a path that walks out of the served directory, plainly and percent-encoded, and assert each is refused with 403.
+- Assert only the paths Deck reads are forwarded, and that a path outside that list never reaches the fake sidecar.
 - Assert the renderer served over the host reports the reading capability set and no shell-only capability.
 
 ## Expected results
@@ -49,10 +50,14 @@ Deck's own host is the only network surface Deck exposes. This suite drives it o
 - No path outside the served directory is served.
 - The served capability set contains nothing only the shell can do.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh host`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh host`: 13 checks, all passing on 2026-09-06, driven over real HTTP with a fake sidecar behind the host.
+- Refused with 405: `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` through `fetch`, and `TRACE`, `PROPFIND` and an invented method down a raw socket. The fake sidecar recorded no request at all for any of them.
+- Refused: five traversal spellings, plain and percent-encoded. None returned any part of the file they aimed at.
+- Refused with 403 and never forwarded: the inbox, the inbox file route, the event stream, the dispatch and state routes, and a traversal inside a path that starts out allowed. The fake sidecar recorded nothing for any of them.
+- In the running application, a `POST` to Deck's own host answered 405.
 
 ## Adequacy (who verifies this test?)
 
-Removing the method allow-list lets a `POST` reach the fake sidecar and fails the assertion that it recorded nothing; removing the containment check serves a file outside the directory and fails the traversal case.
+Verified by mutation on 2026-09-06. Removing the method allow-list lets a `POST` reach the fake sidecar and fails the assertion that it recorded nothing. Removing the traversal refusal fails the containment check. Both mutations are of the guard itself, not of a message.

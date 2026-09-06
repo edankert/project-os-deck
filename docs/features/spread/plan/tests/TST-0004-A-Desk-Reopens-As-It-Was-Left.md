@@ -46,10 +46,11 @@ A desk is an arrangement with a name. This suite checks it round-trips through t
 - A desk missing one note opens with the rest and reports how many it dropped.
 - A card's status band always comes from the current payload, never from what the desk saved.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh desk`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh desk`: 6 checks, all passing on 2026-09-06.
+- In the running application: 30 cards drawn from this repository's own notes, their ids and status bands read from the sidecar payload.
 
 ## Adequacy (who verifies this test?)
 
-Caching the band in the desk rather than reading it from the payload fails the status case; dropping the reconciliation fails the missing-note case.
+Verified by mutation on 2026-09-06. Removing the count of dropped cards makes "a desk naming a note that is gone opens with the rest, and counts what it dropped" fail. The status case is guarded separately: a desk cannot show a status the current payload does not carry, because the band is read from the payload rather than from the desk.

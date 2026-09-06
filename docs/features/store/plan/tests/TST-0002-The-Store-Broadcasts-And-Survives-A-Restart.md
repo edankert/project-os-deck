@@ -48,10 +48,12 @@ The state lives once and every window sees it change. This suite tests the reduc
 - Every live subscriber receives every change, and a closed one receives none.
 - A bad state file leaves Deck starting from defaults, with the reason available.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh store`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh store`: 11 checks, all passing on 2026-09-06.
+- In the running application: a note focused in the main process appeared in a second window without a reload, and a desk saved in one window appeared in the other's list.
+- The state file round-tripped through a real restart of the smoke run before that run was given a state directory of its own.
 
 ## Adequacy (who verifies this test?)
 
-Reverting the atomic write to a plain `writeFileSync` fails the interruption case; removing the shape validation fails the wrong-shape case.
+Verified by mutation on 2026-09-06. Removing the try/catch around a subscriber's first paint makes "one window that throws while rendering does not stop the others" fail. Weakening the field-level normalisation (`str` returning the raw value) makes "a damaged state file leaves Deck starting from defaults" fail. One mutation was NOT caught: deleting the early `typeof value !== 'object'` return in `normaliseState`. That guard turns out to be redundant, because the field-by-field normalisation already yields defaults for a number or an array, and that path is guarded.

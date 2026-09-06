@@ -37,7 +37,7 @@ A person launches Deck, picks a workspace and sees that workspace's notes. This 
 - Deck finds this repository by its `SNAPSHOT.yaml` and lists it as a workspace.
 - Opening a workspace starts one sidecar for it, on a loopback port chosen at runtime, and the renderer receives that base URL.
 - The renderer lists the workspace's notes, read through the sidecar, with each note's id, title and status.
-- Quitting Deck leaves no sidecar process running.
+- Quitting Deck leaves no sidecar process that Deck started. **Amended 2026-09-06:** a sidecar Deck borrowed is not Deck's to stop, and killing one would take down the cockpit's own ([[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]).
 
 ## Links
 

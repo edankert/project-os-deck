@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0011
 aliases: ["TASK-0011"]
 title: "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,17 +26,17 @@ Deck reopens where it was left. The state file is written atomically after chang
 
 ## Definition of Done
 
-- [ ] Quitting and relaunching restores the workspace, view, desk and focused note.
-- [ ] The write is atomic: a crash mid-write leaves either the old file or the new one, never a half file.
-- [ ] An unreadable, empty or malformed file leaves Deck starting from defaults, with the reason logged.
-- [ ] Writes are debounced, so dragging a card does not write the file on every frame.
+- [x] Quitting and relaunching restores the workspace, view, desk and focused note.
+- [x] The write is atomic: a crash mid-write leaves either the old file or the new one, never a half file.
+- [x] An unreadable, empty or malformed file leaves Deck starting from defaults, with the reason logged.
+- [x] Writes are debounced, so dragging a card does not write the file on every frame.
 
 ## Steps
 
-- [ ] Choose the state file path under Electron's per-user data directory.
-- [ ] Write through a temporary file and rename.
-- [ ] Debounce the write and flush on quit.
-- [ ] Validate on read and fall back to defaults.
+- [x] Choose the state file path under Electron's per-user data directory.
+- [x] Write through a temporary file and rename.
+- [x] Debounce the write and flush on quit.
+- [x] Validate on read and fall back to defaults.
 
 ## Notes
 

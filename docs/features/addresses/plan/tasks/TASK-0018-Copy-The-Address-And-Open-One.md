@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0018
 aliases: ["TASK-0018"]
 title: "Copy the address and open one — the round trip a person can actually perform"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,16 +26,16 @@ A person copies Deck's current address to the clipboard and pastes one in to go 
 
 ## Definition of Done
 
-- [ ] A command copies the current address to the clipboard.
-- [ ] A command accepts a pasted address and moves Deck to it.
-- [ ] Opening an address that names another workspace switches workspace first, then resolves the rest.
-- [ ] An address that cannot be resolved leaves Deck where it was and reports what failed.
+- [x] A command copies the current address to the clipboard.
+- [x] A command accepts a pasted address and moves Deck to it.
+- [x] Opening an address that names another workspace switches workspace first, then resolves the rest.
+- [x] An address that cannot be resolved leaves Deck where it was and reports what failed.
 
 ## Steps
 
-- [ ] Add the copy action and the open action to the renderer.
-- [ ] Resolve a parsed address against the workspaces, the provider's views and the saved desks.
-- [ ] Report failures in the interface rather than only in the console.
+- [x] Add the copy action and the open action to the renderer.
+- [x] Resolve a parsed address against the workspaces, the provider's views and the saved desks.
+- [x] Report failures in the interface rather than only in the console.
 
 ## Notes
 

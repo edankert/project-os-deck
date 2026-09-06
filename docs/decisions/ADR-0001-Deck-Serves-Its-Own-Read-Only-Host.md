@@ -48,3 +48,4 @@ The host binds loopback by default. Serving a tablet is opting in to a wider bin
 - The shell and the served host run identical bytes, so a difference between them can only come from the capability set, which is [[TASK-0022-Capability-Is-Detected-Not-Assumed]].
 - Deck manages a second port beside the sidecar's, and stops the host when it quits.
 - The sidecar keeps its own loopback-only guard on writes. Deck's refusal is a second lock on a door that is already locked, which is the right number of locks for a door facing the local network.
+- **The proxy changes where a request appears to come from**, and that has to be paid for. Everything Deck forwards reaches the sidecar from loopback, so the sidecar's own loopback-only reads — the inbox among them — would be handed to whoever can reach Deck's host. Deck therefore forwards an allow-list of the paths it actually reads and refuses everything else, rather than proxying `/api` wholesale.

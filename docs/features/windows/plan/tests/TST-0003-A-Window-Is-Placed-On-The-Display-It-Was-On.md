@@ -47,10 +47,11 @@ The placement decision is a pure function of the saved bounds and the displays p
 - A window is never placed where no display can show it.
 - One panel's geometry never overwrites another's.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh window-placement`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh window-placement`: 8 checks, all passing on 2026-09-06, over display sets including an unplugged second monitor, bounds off every screen, and a window larger than its display.
+- The physical check on a real second display is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] and is owed.
 
 ## Adequacy (who verifies this test?)
 
-Removing the display-presence check fails the unplugged-monitor case; removing the clamp fails the oversized-bounds case.
+Verified by mutation on 2026-09-06. Removing the check that the saved display is still connected makes "bounds are kept when the display they were on is still connected" fail. The function is pure, so every case here is a case a laptop cannot otherwise produce.

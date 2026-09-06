@@ -46,10 +46,12 @@ Deck's views are the provider's answer, not a list in the renderer. This suite p
 - The switcher's content is a function of the provider alone.
 - No view id is written into the renderer.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh views`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh views`: 7 checks, all passing on 2026-09-06.
+- The fixture `desktop/fixtures/cockpit-views.json` was read off the cockpit's own navigator markup on 2026-09-06 and matches its seven buttons in order.
+- In the running application the switcher drew: Overview, Intent, Features, Issues, Tests, Publication, Library.
 
 ## Adequacy (who verifies this test?)
 
-Hard-coding one button in the renderer fails the source search; the fixture assertion fails when the cockpit adds or renames a view, which is the signal that the adoption table needs a row.
+Verified by mutation on 2026-09-06. Adding one hard-coded view name to the renderer makes "no view id is written into the renderer" fail. The source search is crude by design: it is the only kind of check that catches someone adding a convenient literal button, which a behavioural test would not notice while the provider still returns the same list.

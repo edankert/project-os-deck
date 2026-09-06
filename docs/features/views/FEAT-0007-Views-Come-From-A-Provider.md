@@ -14,6 +14,9 @@ requirements: []
 tasks: ["[[TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider]]", "[[TASK-0020-The-Switcher-Draws-What-The-Provider-Returned]]"]
 release: ""
 acceptance_exception: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-06
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
 ---
 
@@ -43,3 +46,19 @@ Deck asks a view provider which views the current workspace has and draws whatev
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider]], [[TASK-0020-The-Switcher-Draws-What-The-Provider-Returned]]
 - Plan: `docs/features/views/plan/PLAN.md`
+
+## Independent review — 2026-09-06
+
+**Verdict: approved.** Reviewed from a clean context (a separate session that never saw the author's reasoning), starting from the notes and the working tree. Same model family as the author, recorded in `reviewed_by`; the independence claimed here is session and context, not vendor (`tools/instructions/QUALITY.md`, "Independent review (clean-context)").
+
+All four acceptance criteria were checked against the code rather than the notes.
+
+- **No literal view names in the renderer.** `renderSwitcher` (`desktop/src/renderer/renderer.ts:174`) iterates `currentViews`, which comes from `registry.viewsFor(workspace)`. The guard in `desktop/tests/views.test.mjs:61` scans the built renderer for each fixture id.
+- **The list matches the cockpit, checked name by name.** Verified independently of the fixture, against the cockpit's own navigator markup (`../project-os-cockpit/desktop/src/renderer/index.html`, the `.top-bar-modes` buttons): overview, intent, features, issues, tests, publication, library — seven, in that order. `desktop/fixtures/cockpit-views.json` and `PROJECT_OS_VIEWS` both match. The live smoke run drew the same seven.
+- **A second provider changes the views with no switcher change.** `ViewRegistry.register` plus the vault-provider case in the suite.
+- **A view the provider did not return cannot be selected.** Guarded in `selectView` and reported by `applyAddress`.
+
+Two observations that are not criterion misses and were left as notes rather than issues.
+
+- The renderer prefers `DEFAULT_VIEW_ID` (`renderer.ts:170`) when the restored `viewId` is not in the provider's list. The constant lives in the provider module, so the criterion holds, but the behaviour is a silent fallback to `features` — the same shape as the cockpit bug FEAT-0006 exists to prevent. Nothing reports that the stored view was dropped.
+- The literal scan covers `dist/web/renderer/` only, so a view name moved into `dist/web/shared/` would not be seen. That is the correct scope for the criterion as written; it is worth knowing the guard's edge.

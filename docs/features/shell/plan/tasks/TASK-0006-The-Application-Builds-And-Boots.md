@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0006
 aliases: ["TASK-0006"]
 title: "The application builds and boots — one compile, a main process, a preload bridge and a renderer that draws"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,18 +26,18 @@ tests: []
 
 ## Definition of Done
 
-- [ ] A single `tsc` compile produces `dist/main.js`, `dist/preload.js` and the renderer modules, and the assets are copied beside them.
-- [ ] `npm start` opens one window with Deck's own markup and no framework.
-- [ ] `npm run typecheck` passes with `strict` on.
-- [ ] `node_modules/` and `dist/` are ignored by git, and `package-lock.json` is committed.
+- [x] **Amended 2026-09-06:** two compiles, not one. The main process needs CommonJS and the renderer needs ES modules the browser can import, and one `tsc` cannot emit both. `npm run build` runs `tsconfig.main.json`, then `tsconfig.web.json`, then copies the assets. The point of the original wording — no bundler, one command — holds.
+- [x] `npm start` opens one window with Deck's own markup and no framework.
+- [x] `npm run typecheck` passes with `strict` on, for both compiles.
+- [x] `node_modules/` and `dist/` are ignored by git, and `package-lock.json` is committed.
 
 ## Steps
 
-- [ ] Write `desktop/package.json` with the build, start, typecheck and test scripts.
-- [ ] Write `desktop/tsconfig.json` targeting Node for the main process and the DOM for the renderer, both strict.
-- [ ] Write the main process entry that creates the first window, and the preload that exposes the bridge object.
-- [ ] Write the renderer entry, its HTML and its stylesheet.
-- [ ] Add the asset copy step so the HTML and CSS land in `dist/`.
+- [x] Write `desktop/package.json` with the build, start, typecheck and test scripts.
+- [x] Write `desktop/tsconfig.json` targeting Node for the main process and the DOM for the renderer, both strict.
+- [x] Write the main process entry that creates the first window, and the preload that exposes the bridge object.
+- [x] Write the renderer entry, its HTML and its stylesheet.
+- [x] Add the asset copy step so the HTML and CSS land in `dist/`.
 
 ## Notes
 

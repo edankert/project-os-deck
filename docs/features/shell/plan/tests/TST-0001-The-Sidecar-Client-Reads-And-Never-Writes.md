@@ -48,10 +48,12 @@ Deck's only route to the sidecar is one typed client. This suite runs that clien
 - An unreachable sidecar produces an error, not a crash.
 - The fake sidecar records no request whose method is not `GET`.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh sidecar-client`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh sidecar-client`, from the repository root: 20 checks, all passing on 2026-09-06.
+- The fake sidecar records every request it receives. After exercising every client method, the set of methods it saw was exactly `['GET']`.
+- Run live against the sidecar the cockpit already had open on this repository: Deck reused it rather than starting a second one, and read 8 groups' worth of notes through it.
 
 ## Adequacy (who verifies this test?)
 
-Break the guard and the suite fails: adding a write method to the client, or relaxing the field validation, is caught by the method assertion and the malformed-payload case respectively. Recorded in the note when the suite first ran.
+Verified by mutation on 2026-09-06. Removing the required-field check in the client (`requireString` returning `''` instead of throwing) makes "a response missing a field Deck needs is an error that names the field" fail. The read-only claim is asserted twice over: once on the client's own method names, once on what the fake sidecar recorded.

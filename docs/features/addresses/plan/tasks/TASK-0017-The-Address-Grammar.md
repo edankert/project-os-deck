@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0017
 aliases: ["TASK-0017"]
 title: "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,16 +26,16 @@ One module formats Deck's state as an address and parses an address back into st
 
 ## Definition of Done
 
-- [ ] Formatting a state and parsing the result returns the same state, for every state the renderer can reach.
-- [ ] An address naming an unknown view or desk is refused with the name it could not resolve.
-- [ ] A malformed address is refused with the reason and never resolves to a default.
-- [ ] The grammar is documented in the feature note, with an example of each form.
+- [x] Formatting a state and parsing the result returns the same state, for every state the renderer can reach.
+- [x] An address naming an unknown view or desk is refused with the name it could not resolve.
+- [x] A malformed address is refused with the reason and never resolves to a default.
+- [x] The grammar is documented in the feature note, with an example of each form.
 
 ## Steps
 
-- [ ] Define the grammar and write it down.
-- [ ] Write the formatter and the parser as pure functions.
-- [ ] Test the round trip over a table of states, and the refusals over a table of bad inputs.
+- [x] Define the grammar and write it down.
+- [x] Write the formatter and the parser as pure functions.
+- [x] Test the round trip over a table of states, and the refusals over a table of bad inputs.
 
 ## Notes
 

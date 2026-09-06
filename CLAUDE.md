@@ -74,4 +74,4 @@ Preflight and planning are delegated to the `planner` subagent (`.claude/agents/
 
 ## Project-specific notes
 
-Stack: none yet. When the Deck phase opens, the shell is Electron with a vanilla TypeScript renderer (no framework), and the sidecar is consumed from the sibling checkout. Upstream relationship: this repo is downstream of `../project-os` (the canonical template). Run `tools/scripts/sync-project-os.sh ../project-os` to pull template-owned files when the upstream changes.
+Stack: Electron with a TypeScript renderer, no framework and no bundler, in `desktop/`. `cd desktop && npm install && npm start` runs it; `npm test` builds and runs every suite; `bash tools/scripts/run-desktop-tests.sh <suite>` runs one, which is what each `TST-*` note's `command:` does. The sidecar is consumed from the sibling checkout and is never vendored; Deck reuses one that is already running before starting its own. Upstream relationship: this repo is downstream of `../project-os` (the canonical template). Run `tools/scripts/sync-project-os.sh ../project-os` to pull template-owned files when the upstream changes.

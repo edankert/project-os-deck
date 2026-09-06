@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0016
 aliases: ["TASK-0016"]
 title: "A desk is saved and reopened — an arrangement with a name, and a card whose note is gone does not break it"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,16 +26,16 @@ An arrangement of cards is a desk. A desk is saved by name into Deck's store and
 
 ## Definition of Done
 
-- [ ] A desk records which notes are on it and where each card sits.
-- [ ] Saving a desk by name and reopening it restores the same cards in the same places, across a restart.
-- [ ] A desk naming a note the workspace no longer has opens without that card, and says how many it dropped.
-- [ ] Desks are part of the persisted state, so they survive with it.
+- [x] A desk records which notes are on it and where each card sits.
+- [x] Saving a desk by name and reopening it restores the same cards in the same places, across a restart.
+- [x] A desk naming a note the workspace no longer has opens without that card, and says how many it dropped.
+- [x] Desks are part of the persisted state, so they survive with it.
 
 ## Steps
 
-- [ ] Declare the desk model: a name, and a list of note ids with positions.
-- [ ] Add save, open and list actions to the store.
-- [ ] Reconcile a desk against the current note list when it opens.
+- [x] Declare the desk model: a name, and a list of note ids with positions.
+- [x] Add save, open and list actions to the store.
+- [x] Reconcile a desk against the current note list when it opens.
 
 ## Notes
 

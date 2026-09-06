@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deck</title>
+    <link rel="stylesheet" href="./deck.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="brand">Deck</div>
+      <nav class="switcher" id="switcher" role="tablist" aria-label="Views"></nav>
+      <div class="bar-right">
+        <span class="host-mark" id="host-mark" title="which host is serving this page"></span>
+        <button type="button" class="action" id="copy-address" title="Copy this state's address">Copy address</button>
+        <button type="button" class="action" id="open-address" title="Open a pasted address">Open address…</button>
+        <button type="button" class="action" id="pop-out" title="Open this panel in its own window" hidden>Pop out</button>
+      </div>
+    </header>
+
+    <div class="body">
+      <aside class="rail" id="rail" aria-label="Workspaces"></aside>
+
+      <main class="desk-area">
+        <div class="desk-bar">
+          <span id="desk-name" class="desk-name">no desk</span>
+          <button type="button" class="action" id="save-desk">Save desk…</button>
+          <select id="desk-list" aria-label="Saved desks"></select>
+          <span class="spacer"></span>
+          <span id="count" class="count"></span>
+        </div>
+        <div class="desk" id="desk" aria-live="polite"></div>
+      </main>
+
+      <section class="reader" id="reader" aria-label="Reader">
+        <div class="reader-empty">Open a card to read its note.</div>
+      </section>
+    </div>
+
+    <div class="status" id="status" role="status"></div>
+    <script type="module" src="./renderer/renderer.js"></script>
+  </body>
+</html>

@@ -26,6 +26,8 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 **Read against:** cockpit register at baseline `570da22`, 2026-09-06.
 
+**Positions last moved 2026-09-06**, when [[PHASE-0001-Deck]]'s implementation landed: twelve rows changed, and the register was re-read on the same day. The rows Spread relies on are `surface.shell`, `shell.workspaces.rail`, `shell.workspaces.discovery`, `shell.nav.modes`, `shell.reader.render`, `shell.windows`, `api.read.nav`, `api.read.note` and `api.read.record`; all nine are `adopted`.
+
 ## Positions
 
 `adopted` means Deck does it. `not yet` means Deck will need it and has not built it. `not applicable` means Deck does not need it, with the reason. `replaced by` names what Deck does instead.
@@ -34,7 +36,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 | key | position | note |
 | --- | --- | --- |
-| `surface.shell` | not yet | Deck's shell; one renderer with two hosts (Part 8 of [[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]) |
+| `surface.shell` | adopted | 2026-09-06: an Electron shell, and Deck's own HTTP host serving the same renderer for a tablet ([[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]) |
 | `surface.sidecar-html` | not applicable | the sidecar's own HTML stays the cockpit's; Deck served from the sidecar is a different page |
 | `surface.cli` | not yet | `cockpit focus` and `cockpit state` need a Deck meaning (an address for a view, a desk and a focused note) |
 
@@ -42,10 +44,10 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 | key | position | note |
 | --- | --- | --- |
-| `shell.workspaces.rail` | not yet | |
-| `shell.workspaces.discovery` | not yet | Deck adds a second marker for vaults (`.obsidian`) in its Vault phase |
+| `shell.workspaces.rail` | adopted | 2026-09-06: the rail lists the workspaces Deck knows and opens one |
+| `shell.workspaces.discovery` | adopted | 2026-09-06: the `SNAPSHOT.yaml` marker, with `.obsidian` already recognised as the vault kind so [[PHASE-0003-Vault]] adds a branch rather than a concept |
 | `shell.fleet.rollup` | not yet | |
-| `shell.nav.modes` | not yet | Deck's project-os view provider offers the same views; the renderer takes the list from the provider rather than a fixed set of buttons (Edwin, 2026-09-06) |
+| `shell.nav.modes` | adopted | 2026-09-06: Deck's project-os view provider offers the same seven views, pinned to a fixture read off the cockpit's navigator; the renderer takes the list from the provider and holds no view names (Edwin, 2026-09-06) |
 | `shell.nav.needs-you` | not yet | the front plane in Glass; the owed band kept in fixed chrome in every layout |
 | `shell.nav.platform` | not yet | |
 | `shell.nav.hide-completed` | not yet | |
@@ -55,7 +57,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.stage.find` | not yet | the application owns search when the DOM is pooled (DES-0002) |
 | `shell.stage.quick-switch` | not yet | |
 | `shell.stage.capture` | not yet | |
-| `shell.reader.render` | not yet | the cockpit's renderer, unchanged; never a second Markdown parser |
+| `shell.reader.render` | adopted | 2026-09-06: Deck shows the HTML the sidecar rendered and parses no Markdown of its own |
 | `shell.reader.actuators` | not yet | same verbs, same guards |
 | `shell.reader.design` | not yet | |
 | `shell.context.pane` | replaced by | the neighbourhood in Glass; a context panel in Spread |
@@ -71,27 +73,27 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.agents.strip` | not yet | |
 | `shell.agents.attention` | not yet | |
 | `shell.agents.approvals` | not yet | |
-| `shell.agents.follow` | not yet | one focus window; satellites never take navigation |
+| `shell.agents.follow` | not yet | one focus window; satellites draw no switcher at all as of 2026-09-06, so there is nothing to follow yet |
 | `shell.terminal` | not yet | several consoles; PHASE-040's control plane as the source; a context budget past sixteen |
 | `shell.live` | not yet | a change arriving mid-view is announced, never applied silently |
 | `shell.validation` | not yet | |
 | `shell.theme` | not yet | Glass has no light-mode form yet (review, Part 2) |
 | `shell.settings` | not yet | |
-| `shell.windows` | not yet | pop-out windows are Deck's first visible capability |
-| `shell.state.local` | replaced by | one store in the main process, every window subscribes |
+| `shell.windows` | adopted | 2026-09-06: a panel opens in its own window at its own address, its bounds are remembered per window WITH the display they were on, and a satellite neither takes focus nor offers navigation |
+| `shell.state.local` | replaced by | 2026-09-06: one store in the main process; every window subscribes and sees a change without a reload |
 
 ### Sidecar API
 
 | key | position | note |
 | --- | --- | --- |
-| `api.read.nav` | not yet | as is; the list of views is Deck's own and the sidecar is not asked for it (Edwin, 2026-09-06) |
-| `api.read.note` | not yet | |
-| `api.read.record` | not yet | |
+| `api.read.nav` | adopted | 2026-09-06: read as is, through Deck's own host, which proxies GET and HEAD and refuses everything else. The list of views is Deck's own and the sidecar is not asked for it (Edwin, 2026-09-06) |
+| `api.read.note` | adopted | 2026-09-06: `/api/render`, read through the same proxy; its HTML goes straight into the reader |
+| `api.read.record` | adopted | 2026-09-06: the stats payload only, which is what the overview view draws |
 | `api.read.obligations` | not yet | |
 | `api.read.agents` | not yet | |
 | `api.read.validation` | not yet | |
 | `api.read.state` | not yet | needs a Deck address grammar first |
-| `api.write.notes` | not yet | unchanged, behind the same guards |
+| `api.write.notes` | not applicable | 2026-09-06: Deck adds no write path at all. The client has no method that writes, and Deck's host answers 405 to every method that is not a read |
 | `api.write.design` | not yet | |
 | `api.write.agents` | not yet | |
 | `api.write.inbox` | not yet | |

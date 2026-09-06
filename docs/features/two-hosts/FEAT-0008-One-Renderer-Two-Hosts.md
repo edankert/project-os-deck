@@ -25,7 +25,7 @@ The same renderer runs in two places. The shell hosts it locally through the pre
 
 ## Scope
 
-**In scope.** A host inside Deck's main process that serves the renderer bundle and proxies reads to the workspace's sidecar. The proxy allows `GET` and `HEAD` and refuses every other method, so a write cannot reach the sidecar through it whatever the page asks. Capability detection through the preload bridge, so the renderer asks what this host can do instead of assuming a shell. Shell-only capability, pop-out windows among it, absent and not merely disabled when served.
+**In scope.** A host inside Deck's main process that serves the renderer bundle and proxies reads to the workspace's sidecar. The proxy allows `GET` and `HEAD` and refuses every other method, so a write cannot reach the sidecar through it whatever the page asks. It also forwards only the handful of paths Deck actually reads: the proxy makes every request appear to come from loopback, and the sidecar withholds some reads from everywhere else, so forwarding anything under `/api` would hand a tablet exactly what that guard exists to withhold. Capability detection through the preload bridge, so the renderer asks what this host can do instead of assuming a shell. Shell-only capability, pop-out windows among it, absent and not merely disabled when served.
 
 **Why Deck serves itself.** [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]] records the decision and the alternative that was rejected, which was asking the cockpit's sidecar to serve Deck's bundle.
 
@@ -36,6 +36,7 @@ The same renderer runs in two places. The shell hosts it locally through the pre
 - The renderer served over the network draws the same views and the same cards as the renderer in the shell, from the same source files.
 - A `POST`, `PUT`, `PATCH` or `DELETE` through the host is refused, and nothing reaches the sidecar.
 - A path outside the served bundle is refused, including one that walks up out of the directory.
+- A sidecar path Deck does not read is refused, and the sidecar never sees it. The inbox is the case that matters: the sidecar allows it from loopback only, and everything Deck forwards reaches the sidecar from loopback.
 - The served renderer offers no pop-out window and no shell-only action, because the capability is reported absent rather than disabled.
 - The host binds a port Deck chooses and stops when Deck quits.
 

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0014
 aliases: ["TASK-0014"]
 title: "Satellites do not steal focus — one window owns navigation and the others watch"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,16 +26,16 @@ A satellite window opens and updates without taking the keyboard. Navigation bel
 
 ## Definition of Done
 
-- [ ] Opening a satellite leaves the keyboard in the window that had it.
-- [ ] A satellite that re-renders on a state change does not raise itself.
-- [ ] Navigation actions dispatched from a satellite move the focus window rather than the satellite.
-- [ ] If the focus window closes, a satellite is promoted rather than leaving Deck with no navigator.
+- [x] Opening a satellite leaves the keyboard in the window that had it.
+- [x] A satellite that re-renders on a state change does not raise itself.
+- [x] **Amended 2026-09-06:** a satellite offers no navigation to dispatch. It draws no view switcher, no workspace rail and no pop-out control, so the question of where its navigation lands cannot arise. Stronger than the original wording and simpler to check.
+- [x] If the focus window closes, a satellite is promoted rather than leaving Deck with no navigator.
 
 ## Steps
 
-- [ ] Open satellites without activation.
-- [ ] Route navigation actions to the focus window's address.
-- [ ] Promote a satellite on the focus window's close.
+- [x] Open satellites without activation.
+- [x] Route navigation actions to the focus window's address.
+- [x] Promote a satellite on the focus window's close.
 
 ## Notes
 

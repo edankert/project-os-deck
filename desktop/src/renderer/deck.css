@@ -1,0 +1,173 @@
+:root {
+  color-scheme: dark;
+  --ink: #e8eaf0;
+  --ink-dim: #9aa3b5;
+  --ground: #12141a;
+  --panel: #1a1d26;
+  --panel-2: #222634;
+  --line: #2c3140;
+  --accent: #7aa2f7;
+  --owed: #e0af68;
+  --done: #6fbf73;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.brand { font-weight: 600; letter-spacing: 0.04em; }
+.switcher { display: flex; gap: 4px; flex-wrap: wrap; }
+.bar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+.switcher button,
+.action {
+  background: var(--panel-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.switcher button[aria-selected="true"] { background: var(--accent); color: #0b0d12; border-color: var(--accent); }
+.action:hover, .switcher button:hover { border-color: var(--accent); }
+
+.host-mark { color: var(--ink-dim); font-size: 11px; padding-right: 6px; }
+
+.body { display: flex; flex: 1 1 auto; min-height: 0; }
+
+.rail {
+  width: 190px;
+  flex: 0 0 auto;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.rail button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+.rail button[aria-current="true"] { background: var(--panel-2); border-color: var(--line); }
+.rail .kind { display: block; color: var(--ink-dim); font-size: 11px; }
+
+.desk-area { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+.desk-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.desk-bar .spacer { flex: 1 1 auto; }
+.desk-name { color: var(--ink-dim); }
+.count { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+
+.desk {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  position: relative;
+}
+
+.card {
+  width: 210px;
+  min-height: 96px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.card:hover { border-color: var(--accent); }
+.card[aria-current="true"] { outline: 2px solid var(--accent); }
+.card .id { color: var(--ink-dim); font-size: 11px; letter-spacing: 0.04em; }
+.card .title { font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.card .meta { margin-top: auto; color: var(--ink-dim); font-size: 11px; }
+.card[data-band="owed"] { border-left-color: var(--owed); }
+.card[data-band="done"] { border-left-color: var(--done); }
+.card[data-band="doing"] { border-left-color: var(--accent); }
+
+.desk.placed { display: block; }
+.desk.placed .card { position: absolute; }
+
+.reader {
+  width: 40%;
+  max-width: 620px;
+  flex: 0 0 auto;
+  border-left: 1px solid var(--line);
+  overflow: auto;
+  padding: 16px 20px;
+  background: var(--panel);
+}
+.reader-empty { color: var(--ink-dim); }
+.reader h1, .reader h2, .reader h3 { line-height: 1.25; }
+.reader pre { background: var(--ground); padding: 10px; border-radius: 6px; overflow-x: auto; }
+.reader code { background: var(--ground); padding: 1px 4px; border-radius: 4px; }
+.reader table { border-collapse: collapse; }
+.reader td, .reader th { border: 1px solid var(--line); padding: 4px 8px; }
+
+.status {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-dim);
+  min-height: 24px;
+  font-size: 11px;
+}
+.status.error { color: #f7768e; }
+
+/* A satellite shows its own address and offers no way to navigate away. */
+body.pinned .rail,
+body.pinned #pop-out { display: none; }
+body.pinned .reader { width: 100%; max-width: none; }
+
+@media (max-width: 900px) {
+  .rail { width: 130px; }
+  .reader { width: 100%; max-width: none; border-left: 0; border-top: 1px solid var(--line); }
+  .body { flex-wrap: wrap; }
+}

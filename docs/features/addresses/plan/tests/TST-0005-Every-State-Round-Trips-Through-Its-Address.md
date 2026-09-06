@@ -46,10 +46,11 @@ An address is the written form of a Deck state. This suite asserts the round tri
 - Every refusal names what it could not read.
 - No input silently becomes the default view.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh address`, run from the repository root.
+- `bash tools/scripts/run-desktop-tests.sh address`: 5 checks, all passing on 2026-09-06, over a table of five reachable states and twelve malformed inputs.
+- In the running application: the copy control produced an address that parsed, named the open workspace and carried the focused note.
 
 ## Adequacy (who verifies this test?)
 
-Replacing a refusal with a fallback to the default view fails the last assertion, which is the failure this test exists for: the cockpit's silent mode fallback hid a broken view for thirty-three hours.
+Verified by mutation on 2026-09-06. Replacing the scheme refusal with a fallback to a default view makes two checks fail, including "nothing malformed ever resolves to a view" — which is the failure this suite exists for, since the cockpit's silent fallback for an unknown mode hid a broken view for thirty-three hours.

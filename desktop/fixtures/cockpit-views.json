@@ -1,0 +1,14 @@
+{
+  "recorded": "2026-09-06",
+  "source": "../project-os-cockpit/desktop/src/renderer/index.html, .top-bar-modes buttons (data-mode plus aria-label)",
+  "note": "The seven views the cockpit's navigator shows for a project-os repository. Deck's project-os provider must match this list, in this order. When the cockpit adds or renames a view, this fixture stops matching and the failure is the signal that docs/reference/cockpit-adoption.md needs a row.",
+  "views": [
+    { "id": "overview", "label": "Overview" },
+    { "id": "intent", "label": "Intent" },
+    { "id": "features", "label": "Features" },
+    { "id": "issues", "label": "Issues" },
+    { "id": "tests", "label": "Tests" },
+    { "id": "publication", "label": "Publication" },
+    { "id": "library", "label": "Library" }
+  ]
+}

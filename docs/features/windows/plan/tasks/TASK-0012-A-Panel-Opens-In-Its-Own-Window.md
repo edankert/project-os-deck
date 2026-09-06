@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0012
 aliases: ["TASK-0012"]
 title: "A panel opens in its own window — the same renderer, a different address, and a role that says what it is for"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,16 +26,16 @@ A panel can be opened as its own window. It runs the same renderer, opened at it
 
 ## Definition of Done
 
-- [ ] A command opens a named panel in a new window, at the address that panel represents.
-- [ ] The new window runs the same renderer files as the first window.
-- [ ] Every window carries a role: exactly one focus window, any number of satellites.
-- [ ] Closing a satellite does not disturb the focus window.
+- [x] A command opens a named panel in a new window, at the address that panel represents.
+- [x] The new window runs the same renderer files as the first window.
+- [x] Every window carries a role: exactly one focus window, any number of satellites.
+- [x] Closing a satellite does not disturb the focus window.
 
 ## Steps
 
-- [ ] Add a window factory taking a role and an address.
-- [ ] Pass the role and address to the renderer at start.
-- [ ] Track open windows by id and role in the main process.
+- [x] Add a window factory taking a role and an address.
+- [x] Pass the role and address to the renderer at start.
+- [x] Track open windows by id and role in the main process.
 
 ## Notes
 

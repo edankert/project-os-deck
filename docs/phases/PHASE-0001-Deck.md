@@ -49,12 +49,18 @@ Three words are used throughout and mean one thing each. **Deck** is the applica
 
 ## Exit Criteria
 
-- [ ] Spread opens the same notes as the cockpit for a project-os repository: the same list, the same statuses, checked side by side on this repository.
-- [ ] A status window moved to a second display reopens on that display after Deck is restarted.
-- [ ] Deck served over the local network opens in Safari on a tablet, reads the notes, and refuses every write at its own host.
-- [ ] Every view in Deck's switcher comes from the view provider for the workspace kind, the renderer holds no fixed list of view names, and for a project-os repository the list matches the cockpit's navigator.
-- [ ] An address copied out of Deck and pasted back into it restores the same view, the same desk and the same focused note.
-- [ ] Every row of the cockpit's capability register that Spread relies on is marked `adopted` in `docs/reference/cockpit-adoption.md`, with the register re-read on the day the phase closes.
+- [ ] Spread opens the same notes as the cockpit for a project-os repository: the same list, the same statuses, checked side by side on this repository. **2026-09-06:** Deck draws this repository's thirty notes as cards, read through the sidecar the cockpit itself was using, so the payload is the same one by construction. The side-by-side comparison a person makes is [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]] and is owed.
+- [ ] A status window moved to a second display reopens on that display after Deck is restarted. **2026-09-06:** built, and the decision is a pure function tested over display sets including an unplugged monitor ([[TST-0003-A-Window-Is-Placed-On-The-Display-It-Was-On]]). The walk needs a second monitor and is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]].
+- [ ] Deck served over the local network opens in Safari on a tablet, reads the notes, and refuses every write at its own host. **2026-09-06:** the host is built and the refusal is tested over real HTTP, including methods a browser will not send; `--lan` binds it beyond loopback. The tablet itself is [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]] and is owed.
+- [x] Every view in Deck's switcher comes from the view provider for the workspace kind, the renderer holds no fixed list of view names, and for a project-os repository the list matches the cockpit's navigator. **Evidence, 2026-09-06:** [[TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit]] pins the list against a fixture read off the cockpit's own navigator and searches the built renderer for every view name; the running application drew Overview, Intent, Features, Issues, Tests, Publication and Library.
+- [x] An address copied out of Deck and pasted back into it restores the same view, the same desk and the same focused note. **Evidence, 2026-09-06:** [[TST-0005-Every-State-Round-Trips-Through-Its-Address]] round-trips a table of states and refuses twelve malformed ones; in the running application the copy control produced an address that parsed, named the open workspace and carried the focused note.
+- [ ] Every row of the cockpit's capability register that Spread relies on is marked `adopted` in `docs/reference/cockpit-adoption.md`, with the register re-read on the day the phase closes. **2026-09-06:** the register was re-read and twelve rows moved; the nine rows Spread relies on are all `adopted`. The criterion asks for that re-read on the closing day, so it is ticked then, not now.
+
+## Where this stands
+
+**2026-09-06: the phase is built and three of its six criteria are ticked.** Seventeen tasks are `done`. Seven suites of seventy-two checks run from the test notes' own commands, and a smoke run boots the real Electron application, opens this repository through the sidecar the cockpit already had running, and checks twenty-one things a person would otherwise have to look at.
+
+**What is owed is what a machine cannot do**: the side-by-side comparison with the cockpit, a second monitor, and a tablet. Those three are [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]], [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] and [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]], and the phase stays `active` until they are walked.
 
 ## Notes
 

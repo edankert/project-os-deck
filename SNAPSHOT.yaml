@@ -179,119 +179,119 @@ items:
     TASK-0006:
       file: "docs/features/shell/plan/tasks/TASK-0006-The-Application-Builds-And-Boots.md"
       title: "The application builds and boots — one compile, a main process, a preload bridge and a renderer that draws"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0002"
       phase: PHASE-0001
     TASK-0007:
       file: "docs/features/shell/plan/tasks/TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck.md"
       title: "The sidecar starts and stops with Deck — one per workspace, on a free loopback port, waited for before it is used"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0002"
       phase: PHASE-0001
     TASK-0008:
       file: "docs/features/shell/plan/tasks/TASK-0008-Workspaces-Are-Found-And-Remembered.md"
       title: "Workspaces are found and remembered — a project-os repository is the one that carries a SNAPSHOT.yaml"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0002"
       phase: PHASE-0001
     TASK-0009:
       file: "docs/features/shell/plan/tasks/TASK-0009-A-Typed-Read-Only-Client-Over-The-Sidecar.md"
       title: "A typed read-only client over the sidecar — one method per endpoint Deck reads, and no method that writes"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0002"
       phase: PHASE-0001
     TASK-0010:
       file: "docs/features/store/plan/tasks/TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It.md"
       title: "The store holds the state and broadcasts it — one record in the main process, every window subscribed"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0003"
       phase: PHASE-0001
     TASK-0011:
       file: "docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md"
       title: "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0003"
       phase: PHASE-0001
     TASK-0012:
       file: "docs/features/windows/plan/tasks/TASK-0012-A-Panel-Opens-In-Its-Own-Window.md"
       title: "A panel opens in its own window — the same renderer, a different address, and a role that says what it is for"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0004"
       phase: PHASE-0001
     TASK-0013:
       file: "docs/features/windows/plan/tasks/TASK-0013-A-Window-Reopens-Where-It-Was.md"
       title: "A window reopens where it was — bounds remembered per window and placed on the display it was on"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0004"
       phase: PHASE-0001
     TASK-0014:
       file: "docs/features/windows/plan/tasks/TASK-0014-Satellites-Do-Not-Steal-Focus.md"
       title: "Satellites do not steal focus — one window owns navigation and the others watch"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0004"
       phase: PHASE-0001
     TASK-0015:
       file: "docs/features/spread/plan/tasks/TASK-0015-Notes-Become-Cards.md"
       title: "Notes become cards — the sidecar's list, drawn as several cards at once, each carrying its status band"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
     TASK-0016:
       file: "docs/features/spread/plan/tasks/TASK-0016-A-Desk-Is-Saved-And-Reopened.md"
       title: "A desk is saved and reopened — an arrangement with a name, and a card whose note is gone does not break it"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
     TASK-0017:
       file: "docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md"
       title: "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0006"
       phase: PHASE-0001
     TASK-0018:
       file: "docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md"
       title: "Copy the address and open one — the round trip a person can actually perform"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0006"
       phase: PHASE-0001
     TASK-0019:
       file: "docs/features/views/plan/tasks/TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider.md"
       title: "The provider interface, and the project-os provider whose views match the cockpit's"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0007"
       phase: PHASE-0001
     TASK-0020:
       file: "docs/features/views/plan/tasks/TASK-0020-The-Switcher-Draws-What-The-Provider-Returned.md"
       title: "The switcher draws what the provider returned — and the renderer holds no list of view names"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0007"
       phase: PHASE-0001
     TASK-0021:
       file: "docs/features/two-hosts/plan/tasks/TASK-0021-Decks-Own-Read-Only-Host.md"
       title: "Deck's own read-only host — it serves the renderer and proxies reads, and refuses every method that is not a read"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0008"
       phase: PHASE-0001
     TASK-0022:
       file: "docs/features/two-hosts/plan/tasks/TASK-0022-Capability-Is-Detected-Not-Assumed.md"
       title: "Capability is detected, not assumed — the renderer asks its host what it can do, and shell-only capability is absent when served"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0008"
       phase: PHASE-0001
@@ -422,7 +422,13 @@ items:
       note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 3, walked: same views on the tablet, no shell-only action present, and a POST refused with 405."
   releases: {}
   workflows: {}
-  changes: {}
+  changes:
+    CHG-20260906-Deck-Runs:
+      file: "docs/changes/CHG-20260906-Deck-Runs.md"
+      title: ""
+      status: merged
+      owner: user:edwin
+      note: "The phase's implementation. Deck opens, lists workspaces, draws a workspace's notes as cards and opens one in a reader -- all of it read-only, through three locks (a client with no write method, a proxy that answers 405 to anything that is not a read, and the sidecar's own loopback guard). New: desktop/, and tools/scripts/run-desktop-tests.sh, which each TST-* command names. Deck opens a SECOND PORT for its own host, loopback unless --lan. It REUSES a running sidecar after checking the root it reports, and stops only the ones it started (RISK-0001). Also fixes a mistake made when the phase opened: .cockpit/ was committed and is now ignored and untracked."
   decisions:
     ADR-0001:
       file: "docs/decisions/ADR-0001-Deck-Serves-Its-Own-Read-Only-Host.md"
@@ -462,7 +468,7 @@ metrics:
     phases_total: 3
     phases_done: 0
     tasks_total: 22
-    tasks_done: 0
+    tasks_done: 17
     tests_total: 7
     tests_passing: 0
     tests_failing: 0

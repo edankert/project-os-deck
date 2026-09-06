@@ -21,6 +21,13 @@ tools/cockpit/.venv/
 # tasks were missing from a fresh clone, which then failed the validator).
 /inbox/
 
+# The sidecar's runtime state, written into the repository it serves: the port
+# it is listening on, the PID, the agent state and the session list. It is a
+# running process's bookkeeping, not the project's record, and `.cockpit/url`
+# names a local port that means nothing on another machine. Ignored in
+# project-os-cockpit for the same reason.
+/.cockpit/
+
 # macOS Finder metadata: window position and icon layout, not project state.
 .DS_Store
 

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0008
 aliases: ["TASK-0008"]
 title: "Workspaces are found and remembered — a project-os repository is the one that carries a SNAPSHOT.yaml"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -26,16 +26,16 @@ Deck lists the workspaces it knows, recognises a project-os repository by its `S
 
 ## Definition of Done
 
-- [ ] A directory carrying `SNAPSHOT.yaml` is recognised as a project-os workspace, and its name and root are reported.
-- [ ] A directory carrying neither marker is refused with the reason.
-- [ ] Added workspaces persist across a restart in Deck's own settings file.
-- [ ] The workspace kind is part of what discovery returns, because the view provider is chosen by it.
+- [x] A directory carrying `SNAPSHOT.yaml` is recognised as a project-os workspace, and its name and root are reported.
+- [x] A directory carrying neither marker is refused with the reason.
+- [x] Added workspaces persist across a restart in Deck's own settings file.
+- [x] The workspace kind is part of what discovery returns, because the view provider is chosen by it.
 
 ## Steps
 
-- [ ] Write the detector: given a path, return the workspace kind or nothing.
-- [ ] Write the settings file read and write, atomic on write.
-- [ ] Expose the list and the add action over the bridge.
+- [x] Write the detector: given a path, return the workspace kind or nothing.
+- [x] Write the settings file read and write, atomic on write.
+- [x] Expose the list and the add action over the bridge.
 
 ## Notes
 
