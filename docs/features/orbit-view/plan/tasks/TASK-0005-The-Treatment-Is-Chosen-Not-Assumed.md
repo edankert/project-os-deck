@@ -14,7 +14,7 @@ effort: ""
 due: ""
 depends: []
 blocks: ["TASK-0003"]
-related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-Cockpit-Design-System]]"]
+related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[project-os-cockpit#DES-0002]]"]
 tests: []
 ---
 

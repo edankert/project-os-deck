@@ -18,7 +18,7 @@ superseded_by: ""
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
-related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[PHASE-028-Borrowed-Capability]]", "[[DES-0002-Cockpit-Design-System]]", "[[project-os-cockpit#ADR-0025]]", "[[project-os-cockpit#ADR-0020]]", "[[project-os-cockpit#FEAT-0003]]", "[[DESIGN]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
+related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[project-os-cockpit#PHASE-028]]", "[[project-os-cockpit#DES-0002]]", "[[project-os-cockpit#ADR-0025]]", "[[project-os-cockpit#ADR-0020]]", "[[project-os-cockpit#FEAT-0003]]", "[[DESIGN]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
 tags: [design, glass, views]
 ---
 

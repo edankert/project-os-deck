@@ -58,7 +58,7 @@ The phase is gated on measurement, not on taste. [[FEAT-0001-The-Corpus-Has-An-I
 
 **Depends on [[PHASE-0001-Deck]].** Glass is a client of the store and the address grammar that phase builds, and it is served to the tablet by the two-host rule that phase establishes. Building Glass first would mean building those twice.
 
-**FEAT-0001 was written for the cockpit and now sits here.** Its note describes a route at `~orbit` inside the cockpit, because it was written on 2026-09-05 before Deck existed. Placing it in this phase says the field is built in Deck. Whether the cockpit also gets an orbit route is a separate decision and nobody has taken it; the feature's own text has not been rewritten, so read the venue from this phase rather than from the feature's Scope section.
+**FEAT-0001 was written for the cockpit and now sits here.** Its note was written on 2026-09-05, before Deck existed, and described a route at `~orbit` inside the cockpit. On 2026-09-06 Edwin decided the field is Deck-only and the cockpit gets no orbit route; the feature's text was rewritten the same day.
 
 **The measurements can fail.** If the edge list cannot arrive in one request, or the layout moves neighbours whenever a note is added, or the frame rate is not there, then DES-0002's arrangements are not built and this phase closes with the field alone. That is a real outcome, not a failure of the phase, and Spread is unaffected by it.
 

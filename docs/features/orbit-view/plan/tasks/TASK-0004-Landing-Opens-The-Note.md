@@ -22,7 +22,7 @@ tests: []
 
 ## Objective
 
-Double-clicking a node opens that note in the cockpit's document pane. Any note can send you the other way — "show this in the field" — with the camera flying to it rather than cutting.
+Double-clicking a node opens that note in Deck's reader, the pane Spread already opens notes in. Any note can send you the other way — "show this in the field" — with the camera flying to it rather than cutting.
 
 ## Detail
 

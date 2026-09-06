@@ -22,13 +22,13 @@ tests: []
 
 ## Objective
 
-`~orbit` draws the field and lets you move through it: drag to turn, scroll to close in, hover an edge to read the sentence that made it.
+The Glass view draws the field and lets you move through it: drag to turn, scroll to close in, hover an edge to read the sentence that made it.
 
 ## Detail
 
 Canvas, not SVG — 16148 edge elements in the DOM is a different and worse problem.
 
-Colour is the **status band**, read from the same source the rest of the cockpit reads. Size is inbound links. Clusters are phases.
+Colour is the **status band**, read from the sidecar, the same source the cockpit reads. Size is inbound links. Clusters are phases.
 
 The treatment — the holographic field or the lit workshop of blocks — is [[TASK-0005]]'s decision and arrives before this task starts. The two differ in more than palette: blocks are opaque and stack, so occlusion carries meaning, and edges have to be drawn differently or not at all.
 

@@ -18,7 +18,7 @@ superseded_by: ""
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
-related: ["[[PHASE-028-Borrowed-Capability]]", "[[project-os-cockpit#FEAT-0080]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[DES-0002-Cockpit-Design-System]]", "[[project-os-cockpit#ADR-0020]]", "[[DESIGN]]"]
+related: ["[[project-os-cockpit#PHASE-028]]", "[[project-os-cockpit#FEAT-0080]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[project-os-cockpit#DES-0002]]", "[[project-os-cockpit#ADR-0020]]", "[[DESIGN]]"]
 tags: [design, survey, exploration]
 ---
 

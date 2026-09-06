@@ -70,13 +70,13 @@ items:
   features:
     FEAT-0001:
       file: "docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md"
-      title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in the cockpit"
+      title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck"
       status: planned
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
       tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
-      note: "Asked for directly by Edwin 2026-09-05 off DES-0001's ORBIT plate. A VIEW at ~orbit, not a replacement for the reader: landing opens the note in the existing document pane and NO verb is discharged in the field (ADR-0020). The two hard tasks are not the renderer -- TASK-0002 (a layout that stays put while the corpus adds 634 notes a month) and TASK-0005 (the treatment decision, glass or blocks, which is human-only and BLOCKS the renderer). Its own design says the orphan-note query is one a table could answer; what a table cannot answer is which clusters hang by a single edge, and where a note sits two hops out."
+      note: "Asked for directly by Edwin 2026-09-05 off DES-0001's ORBIT plate. A Deck view, and Deck-only (Edwin 2026-09-06: the cockpit gets no orbit route), not a replacement for the reader: landing opens the note in the existing document pane and NO verb is discharged in the field (ADR-0020). The two hard tasks are not the renderer -- TASK-0002 (a layout that stays put while the corpus adds 634 notes a month) and TASK-0005 (the treatment decision, glass or blocks, which is human-only and BLOCKS the renderer). Its own design says the orphan-note query is one a table could answer; what a table cannot answer is which clusters hang by a single edge, and where a note sits two hops out."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -137,7 +137,7 @@ items:
       requirements: []
       tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
       issues: []
-      note: "Gated on measurement, not on taste. FEAT-0001 builds the read-only field over the real link graph and produces three numbers -- whether the whole edge list arrives in one request, whether the layout stays put when the corpus grows, and what frame rate the field holds on a laptop -- and DES-0002's arrangements are built only if those pass. Depends on PHASE-0001 for the store, the address grammar and the tablet host. TWO THINGS TO KNOW: FEAT-0001's own note still describes a route at ~orbit INSIDE THE COCKPIT because it was written on 2026-09-05 before Deck existed, so the venue is read from this phase and the feature text was not rewritten; and the measurements can fail, in which case the phase closes with the field alone and Spread is unaffected."
+      note: "Gated on measurement, not on taste. FEAT-0001 builds the read-only field over the real link graph and produces three numbers -- whether the whole edge list arrives in one request, whether the layout stays put when the corpus grows, and what frame rate the field holds on a laptop -- and DES-0002's arrangements are built only if those pass. Depends on PHASE-0001 for the store, the address grammar and the tablet host. TWO THINGS TO KNOW: the field is DECK-ONLY (Edwin 2026-09-06, the cockpit gets no orbit route; FEAT-0001 was rewritten that day from its cockpit-era text); and the measurements can fail, in which case the phase closes with the field alone and Spread is unaffected."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
       title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"

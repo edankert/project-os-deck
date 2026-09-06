@@ -4,7 +4,7 @@ title: "Plan — the orbit view"
 status: draft
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 implements: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]"]
@@ -18,7 +18,7 @@ related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]"]
 2. **[[TASK-0002]] — the layout.** Positions computed once from the edge list and stored, with the rule for what a *new* note does: take a place without moving its neighbours. This is the task that decides whether the view is stable enough to be worth learning.
 3. **[[TASK-0005]] — the treatment.** The decision, before the renderer. Drawn both ways in [[DES-0001]]; taken by a person.
 4. **[[TASK-0003]] — the renderer.** Canvas, status-band colour, fly/zoom/land, at 1537 nodes and 16148 edges without dropping frames.
-5. **[[TASK-0004]] — landing.** A node opens the note in the existing reader, so the field never becomes a second, worse document pane.
+5. **[[TASK-0004]] — landing.** A node opens the note in Deck's reader, so the field never becomes a second, worse document pane.
 
 ## Sequencing note
 
