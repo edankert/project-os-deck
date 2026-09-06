@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0007
 aliases: ["FEAT-0007"]
 title: "Views come from a provider: the renderer holds no fixed set of view buttons"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -62,3 +62,7 @@ Two observations that are not criterion misses and were left as notes rather tha
 
 - The renderer prefers `DEFAULT_VIEW_ID` (`renderer.ts:170`) when the restored `viewId` is not in the provider's list. The constant lives in the provider module, so the criterion holds, but the behaviour is a silent fallback to `features` — the same shape as the cockpit bug FEAT-0006 exists to prevent. Nothing reports that the stored view was dropped.
 - The literal scan covers `dist/web/renderer/` only, so a view name moved into `dist/web/shared/` would not be seen. That is the correct scope for the criterion as written; it is worth knowing the guard's edge.
+
+## Where this stands
+
+**2026-09-06: built, tested and independently reviewed; the acceptance walk is owed.** The review is recorded above and approved this feature against its four criteria. The status is `review` rather than `done` because the claim a person settles — that Deck's views are the cockpit's views — is settled by looking at both applications, which is [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]]. The automated half of that claim is pinned to a fixture read off the cockpit's own navigator, so a drift fails the build rather than waiting for the walk.

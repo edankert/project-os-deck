@@ -55,7 +55,7 @@ counters:
   RISK: 1
   REL: 0
   TASK: 22
-  TST: 10
+  TST: 13
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -80,7 +80,7 @@ items:
     FEAT-0002:
       file: "docs/features/shell/FEAT-0002-Deck-Opens-A-Workspace.md"
       title: "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -89,7 +89,7 @@ items:
     FEAT-0003:
       file: "docs/features/store/FEAT-0003-One-Store-In-The-Main-Process.md"
       title: "One store in the main process: every window reads the same state and watches it change"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -98,7 +98,7 @@ items:
     FEAT-0004:
       file: "docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md"
       title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -107,7 +107,7 @@ items:
     FEAT-0005:
       file: "docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md"
       title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -116,7 +116,7 @@ items:
     FEAT-0006:
       file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
       title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -125,7 +125,7 @@ items:
     FEAT-0007:
       file: "docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md"
       title: "Views come from a provider: the renderer holds no fixed set of view buttons"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -134,7 +134,7 @@ items:
     FEAT-0008:
       file: "docs/features/two-hosts/FEAT-0008-One-Renderer-Two-Hosts.md"
       title: "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -398,7 +398,7 @@ items:
       note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0008 -- real HTTP with a fake sidecar behind it: every write method refused with 405 and nothing recorded downstream, traversal refused with 403."
     TST-0008:
       file: "docs/tests/acceptance/TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit.md"
-      title: "Spread opens the same notes as the cockpit, for this repository, checked side by side"
+      title: "Spread opens the same views and the same notes as the cockpit, for this repository, checked side by side"
       status: active
       owner: user:edwin
       phase: PHASE-0001
@@ -420,6 +420,30 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0008"]
       note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 3, walked: same views on the tablet, no shell-only action present, and a POST refused with 405."
+    TST-0011:
+      file: "docs/tests/acceptance/TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running.md"
+      title: "Deck opens a workspace you add, and leaves nothing running when you quit"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0002-Deck-Opens-A-Workspace"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The claim a person settles for [[FEAT-0002-Deck-Opens-A-Workspace]]."
+    TST-0012:
+      file: "docs/tests/acceptance/TST-0012-Two-Windows-Show-The-Same-State.md"
+      title: "Two windows show the same state, and Deck reopens where you left it"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0003-One-Store-In-The-Main-Process"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The claim a person settles for [[FEAT-0003-One-Store-In-The-Main-Process]]. The cockpit fails this."
+    TST-0013:
+      file: "docs/tests/acceptance/TST-0013-An-Address-Survives-Being-Written-Down.md"
+      title: "An address survives being written down: copy it, quit, come back and paste it"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0006-Every-State-Has-An-Address"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The claim a person settles for [[FEAT-0006-Every-State-Has-An-Address]]."
   releases: {}
   workflows: {}
   changes:

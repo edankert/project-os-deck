@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0005
 aliases: ["FEAT-0005"]
 title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -43,3 +43,7 @@ Deck's first view shows notes as cards a person arranges, rather than as a list 
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0015-Notes-Become-Cards]], [[TASK-0016-A-Desk-Is-Saved-And-Reopened]]
 - Plan: `docs/features/spread/plan/PLAN.md`
+
+## Where this stands
+
+**2026-09-06: built and tested; the acceptance walk is owed.** The status is `review` rather than `done` because one criterion here can only be settled by a person doing something a machine cannot: opening this repository in the cockpit and in Deck side by side and comparing the ids, the order and the statuses. That walk is [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]].

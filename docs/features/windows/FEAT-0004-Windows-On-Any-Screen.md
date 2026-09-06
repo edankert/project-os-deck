@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0004
 aliases: ["FEAT-0004"]
 title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -41,3 +41,7 @@ A person drags a Deck panel onto a second monitor and it is still there after a 
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0012-A-Panel-Opens-In-Its-Own-Window]], [[TASK-0013-A-Window-Reopens-Where-It-Was]], [[TASK-0014-Satellites-Do-Not-Steal-Focus]]
 - Plan: `docs/features/windows/plan/PLAN.md`
+
+## Where this stands
+
+**2026-09-06: built and tested; the acceptance walk is owed.** The status is `review` rather than `done` because one criterion here can only be settled by a person doing something a machine cannot: moving a window onto a second monitor, restarting Deck, and then unplugging that monitor and restarting again. That walk is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]].

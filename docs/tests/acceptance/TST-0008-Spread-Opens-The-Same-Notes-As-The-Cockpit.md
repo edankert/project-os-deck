@@ -2,7 +2,7 @@
 type: "[[test]]"
 id: TST-0008
 aliases: ["TST-0008"]
-title: "Spread opens the same notes as the cockpit, for this repository, checked side by side"
+title: "Spread opens the same views and the same notes as the cockpit, for this repository, checked side by side"
 status: active
 owner: user:edwin
 created: 2026-09-06
@@ -14,7 +14,7 @@ level: acceptance
 entrypoint: ""
 command: ""
 last_verified: ""
-covers: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]"]
+covers: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[FEAT-0007-Views-Come-From-A-Provider]]"]
 issues: []
 tasks: []
 artifacts: []
@@ -36,12 +36,14 @@ The first exit criterion of [[PHASE-0001-Deck]]. Deck is not a second opinion ab
 ## Procedure
 
 - Open this repository in the cockpit and in Deck at the same time.
+- Compare the view buttons across the top of each: the same names, in the same order. A difference means Deck's view provider and the cockpit's navigator have drifted, and the adoption table owes a row.
 - Pick the features view in both.
 - Compare the note ids listed, in order, and the status shown against each.
 - Repeat for the issues view and the tests view.
 
 ## Expected results
 
+- The same view names appear in both, in the same order.
 - The same note ids appear in both, in the same order, with the same statuses.
 - A difference is a defect in Deck, and is filed rather than explained.
 

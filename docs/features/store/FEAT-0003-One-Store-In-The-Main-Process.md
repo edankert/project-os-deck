@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0003
 aliases: ["FEAT-0003"]
 title: "One store in the main process: every window reads the same state and watches it change"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -43,3 +43,7 @@ Deck keeps its state in one place, the Electron main process, and every window s
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It]], [[TASK-0011-The-State-Survives-A-Restart]]
 - Plan: `docs/features/store/plan/PLAN.md`
+
+## Where this stands
+
+**2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — watching a second window follow the first, and quitting and coming back — is [[TST-0012-Two-Windows-Show-The-Same-State]], and nobody has walked it yet.

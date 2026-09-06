@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0008
 aliases: ["FEAT-0008"]
 title: "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -45,3 +45,9 @@ The same renderer runs in two places. The shell hosts it locally through the pre
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0021-Decks-Own-Read-Only-Host]], [[TASK-0022-Capability-Is-Detected-Not-Assumed]]
 - Plan: `docs/features/two-hosts/plan/PLAN.md`
+
+## Where this stands
+
+**2026-09-06: built and tested; the acceptance walk is owed.** The status is `review` rather than `done` because one criterion here can only be settled by a person doing something a machine cannot: opening Deck's served address in Safari on a tablet on the same network. That walk is [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]].
+
+**Everything short of the tablet is verified.** Deck's served address was opened in a desktop browser on 2026-09-06: no preload bridge, the same seven views, the same thirty cards with the same ids, no pop-out control and no add-workspace control anywhere in the interface, and the host reporting a capability set that is false throughout. A `POST` to it answered 405. What the tablet adds is Safari, touch, and a second machine.

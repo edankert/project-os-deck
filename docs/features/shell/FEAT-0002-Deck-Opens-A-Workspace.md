@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0002
 aliases: ["FEAT-0002"]
 title: "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -44,3 +44,7 @@ A person launches Deck, picks a workspace and sees that workspace's notes. This 
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0006-The-Application-Builds-And-Boots]], [[TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck]], [[TASK-0008-Workspaces-Are-Found-And-Remembered]], [[TASK-0009-A-Typed-Read-Only-Client-Over-The-Sidecar]]
 - Plan: `docs/features/shell/plan/PLAN.md`
+
+## Where this stands
+
+**2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — adding a folder by hand, and looking for a leftover process after quitting — is [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]], and nobody has walked it yet.

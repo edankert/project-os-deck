@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0006
 aliases: ["FEAT-0006"]
 title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -41,3 +41,7 @@ Any state a person can reach in Deck can be written down as a short string, and 
 - Phase: [[PHASE-0001-Deck]]
 - Tasks: [[TASK-0017-The-Address-Grammar]], [[TASK-0018-Copy-The-Address-And-Open-One]]
 - Plan: `docs/features/addresses/plan/PLAN.md`
+
+## Where this stands
+
+**2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — copying an address, quitting, and pasting it back tomorrow — is [[TST-0013-An-Address-Survives-Being-Written-Down]], and nobody has walked it yet.
