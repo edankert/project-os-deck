@@ -62,18 +62,12 @@ export class SidecarSupervisor {
 
   /** A sidecar someone else started, named by the repository's discovery file. */
   private async borrow(workspace: Workspace): Promise<SidecarHandle | null> {
-    const discovery = path.join(workspace.root, '.cockpit', 'url');
-    let base: string;
-    try {
-      base = fs.readFileSync(discovery, 'utf-8').trim();
-    } catch {
-      return null;
-    }
-    if (base === '' || !/^https?:\/\//.test(base)) return null;
+    const base = discoveryUrl(workspace.root);
+    if (base === null) return null;
     if (!(await alive(base, workspace.root))) return null;
     const record: Record_ = {
       workspaceId: workspace.id,
-      base: base.replace(/\/+$/, ''),
+      base,
       ownedByDeck: false,
       process: null,
       stderrTail: [],
@@ -173,6 +167,28 @@ export class SidecarSupervisor {
   stopAll(): void {
     for (const id of [...this.records.keys()]) this.stopOne(id);
   }
+}
+
+/**
+ * The address in a repository's `.cockpit/url`, or null when there is nothing
+ * usable there.
+ *
+ * The sidecar writes this file when it starts and removes it at exit, but an
+ * exit it did not choose leaves the file behind naming a port nobody is
+ * listening on. So this says only "there is an address written here"; whether
+ * anything is answering, and whether it is serving this repository, is a
+ * separate question and a separate check.
+ */
+export function discoveryUrl(root: string): string | null {
+  let text: string;
+  try {
+    text = fs.readFileSync(path.join(root, '.cockpit', 'url'), 'utf-8');
+  } catch {
+    return null;
+  }
+  const base = text.trim();
+  if (base === '' || !/^https?:\/\/[^\s]+$/.test(base)) return null;
+  return base.replace(/\/+$/, '');
 }
 
 /**

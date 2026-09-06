@@ -217,7 +217,15 @@ test('added workspaces are remembered between runs, and re-read from disk', () =
 
 // --- reusing a sidecar rather than starting a second one (RISK-0001) ----
 
-const { SidecarSupervisor, freePort, defaultPython } = load('main/sidecar.js');
+const { SidecarSupervisor, freePort, defaultPython, discoveryUrl } = load('main/sidecar.js');
+
+/**
+ * An interpreter that certainly exists and certainly exits: node, handed the
+ * sidecar's Python arguments, refuses them and stops. Pointing these tests at
+ * a path that does not exist made them depend on how each platform reports a
+ * failed spawn, which is not what they are about.
+ */
+const FAILING_INTERPRETER = process.execPath;
 
 function workspaceAt(dir, name = 'a repo') {
   fs.writeFileSync(path.join(dir, 'SNAPSHOT.yaml'), `project:\n  name: "${name}"\n`);
@@ -236,7 +244,7 @@ test('a sidecar already running for this workspace is reused, not duplicated', a
     fs.writeFileSync(path.join(dir, '.cockpit', 'url'), `${sidecar.base}\n`);
 
     // If it tried to spawn, this interpreter would fail immediately.
-    const supervisor = new SidecarSupervisor('/nonexistent/python');
+    const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
     const handle = await supervisor.resolve(workspace);
     assert.equal(handle.base, sidecar.base);
     assert.equal(handle.ownedByDeck, false, 'a borrowed sidecar must not be marked as ours');
@@ -260,13 +268,34 @@ test('a sidecar serving a different repository is not borrowed', async () => {
   try {
     fs.mkdirSync(path.join(dir, '.cockpit'), { recursive: true });
     fs.writeFileSync(path.join(dir, '.cockpit', 'url'), `${sidecar.base}\n`);
-    const supervisor = new SidecarSupervisor('/nonexistent/python');
+    const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
     // Refusing to borrow it, it tries to start one, and that fails loudly.
     await assert.rejects(() => supervisor.resolve(workspace));
     assert.equal(supervisor.handle(workspace.id), null);
   } finally {
     await sidecar.close();
   }
+});
+
+test('the discovery file is read, and nothing unusable is taken from it', () => {
+  const dir = tmpDir();
+  assert.equal(discoveryUrl(dir), null, 'no file at all');
+
+  fs.mkdirSync(path.join(dir, '.cockpit'), { recursive: true });
+  const write = (text) => fs.writeFileSync(path.join(dir, '.cockpit', 'url'), text);
+
+  write('');
+  assert.equal(discoveryUrl(dir), null, 'an empty file');
+  write('not a url at all\n');
+  assert.equal(discoveryUrl(dir), null, 'prose');
+  write('ftp://127.0.0.1:8765\n');
+  assert.equal(discoveryUrl(dir), null, 'a scheme Deck does not speak');
+  write('  \n');
+  assert.equal(discoveryUrl(dir), null, 'whitespace');
+  write('http://127.0.0.1:8765\n');
+  assert.equal(discoveryUrl(dir), 'http://127.0.0.1:8765', 'a plain address');
+  write('http://127.0.0.1:8765/\n');
+  assert.equal(discoveryUrl(dir), 'http://127.0.0.1:8765', 'a trailing slash is dropped');
 });
 
 test('a stale discovery file is ignored rather than trusted', async () => {
@@ -276,7 +305,7 @@ test('a stale discovery file is ignored rather than trusted', async () => {
   fs.mkdirSync(path.join(dir, '.cockpit'), { recursive: true });
   // Nothing is listening on that port: the file outlived its sidecar.
   fs.writeFileSync(path.join(dir, '.cockpit', 'url'), `http://127.0.0.1:${port}\n`);
-  const supervisor = new SidecarSupervisor('/nonexistent/python');
+  const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
   await assert.rejects(() => supervisor.resolve(workspace));
 });
 
@@ -285,7 +314,7 @@ test('a discovery file with rubbish in it is ignored', async () => {
   const workspace = workspaceAt(dir);
   fs.mkdirSync(path.join(dir, '.cockpit'), { recursive: true });
   fs.writeFileSync(path.join(dir, '.cockpit', 'url'), 'not a url at all\n');
-  const supervisor = new SidecarSupervisor('/nonexistent/python');
+  const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
   await assert.rejects(() => supervisor.resolve(workspace));
 });
 
@@ -321,7 +350,7 @@ test('a sidecar Deck started is stopped when it is forgotten, never orphaned', (
   // `forget` runs when a sidecar stops answering. Dropping the handle for one
   // Deck started would leave the process running with nothing holding it: the
   // shutdown at quit iterates this map.
-  const supervisor = new SidecarSupervisor('/nonexistent/python');
+  const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
   const signals = [];
   supervisor.records.set('ours', {
     workspaceId: 'ours',
@@ -348,7 +377,7 @@ test('a sidecar Deck started is stopped when it is forgotten, never orphaned', (
 });
 
 test('stopping everything reaches a sidecar Deck started', () => {
-  const supervisor = new SidecarSupervisor('/nonexistent/python');
+  const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
   const signals = [];
   supervisor.records.set('ours', {
     workspaceId: 'ours',

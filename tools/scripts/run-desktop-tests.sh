@@ -57,8 +57,11 @@ set -e
 
 if [ "$status" -ne 0 ]; then
   failed="$(grep -E '^(not ok|✖)' "/tmp/deck-test-output.$$" | sed -E 's/^(not ok [0-9]+ -|✖)[[:space:]]*//; s/ \([0-9.]+ms\)$//' | grep -v '^failing tests:$' | sort -u | paste -sd '; ' -)"
+  # The first thing the failure said, so the one line CI prints carries a
+  # reason and not only a name.
+  why="$(grep -A 4 -E '^✖' "/tmp/deck-test-output.$$" | grep -E '^[[:space:]]+(Error|AssertionError|TypeError|[A-Za-z]+Error)' | head -1 | sed -E 's/^[[:space:]]+//' | cut -c1-120)"
   rm -f "/tmp/deck-test-output.$$"
-  echo "FAILED ${SUITE}: ${failed:-node exited ${status} with no named failure}"
+  echo "FAILED ${SUITE}: ${failed:-node exited ${status} with no named failure}${why:+ -- ${why}}"
   exit "$status"
 fi
 rm -f "/tmp/deck-test-output.$$"
