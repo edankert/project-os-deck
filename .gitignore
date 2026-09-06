@@ -23,3 +23,6 @@ tools/cockpit/.venv/
 
 # macOS Finder metadata: window position and icon layout, not project state.
 .DS_Store
+
+# Node dependencies for the Electron shell (desktop/).
+node_modules/

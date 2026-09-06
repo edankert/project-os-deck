@@ -44,25 +44,25 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 0
+  ADR: 1
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 1
+  FEAT: 8
   ISS: 0
   PHASE: 3
   REQ: 0
-  RISK: 0
+  RISK: 1
   REL: 0
-  TASK: 5
-  TST: 0
+  TASK: 22
+  TST: 10
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
-  phase: ""        # Active development phase (PHASE-### note link/ID preferred)
-  feature: ""
-  task: ""
+  phase: "PHASE-0001"
+  feature: "FEAT-0002"
+  task: "TASK-0006"
   issue: ""
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -77,6 +77,69 @@ items:
       requirements: []
       tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
       note: "Asked for directly by Edwin 2026-09-05 off DES-0001's ORBIT plate. A Deck view, and Deck-only (Edwin 2026-09-06: the cockpit gets no orbit route), not a replacement for the reader: landing opens the note in the existing document pane and NO verb is discharged in the field (ADR-0020). The two hard tasks are not the renderer -- TASK-0002 (a layout that stays put while the corpus adds 634 notes a month) and TASK-0005 (the treatment decision, glass or blocks, which is human-only and BLOCKS the renderer). Its own design says the orphan-note query is one a table could answer; what a table cannot answer is which clusters hang by a single edge, and where a note sits two hops out."
+    FEAT-0002:
+      file: "docs/features/shell/FEAT-0002-Deck-Opens-A-Workspace.md"
+      title: "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0006", "TASK-0007", "TASK-0008", "TASK-0009"]
+      note: "The application itself: the Electron shell, discovery by the SNAPSHOT.yaml marker, one sidecar per workspace and a typed read-only client. Everything else in PHASE-0001 needs a window and a sidecar to read from, so this lands first. Deliberately NOT here: the terminal, the agent instrumentation and the fleet roll-up -- main-process concerns the cockpit already carries, which no exit criterion of this phase measures; their absence is a decision, recorded in the feature's Scope."
+    FEAT-0003:
+      file: "docs/features/store/FEAT-0003-One-Store-In-The-Main-Process.md"
+      title: "One store in the main process: every window reads the same state and watches it change"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0010", "TASK-0011"]
+      note: "State lives once, in the main process, and every window subscribes. This exists because of a measured cockpit failure: its renderer reads localStorage once at start and never listens for changes, so two cockpit windows never see each other change. The reducer is pure and tested without Electron; the transport is the thin half."
+    FEAT-0004:
+      file: "docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md"
+      title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0012", "TASK-0013", "TASK-0014"]
+      note: "Pop-out windows, bounds remembered per window and placed by display, one focus window that owns navigation and satellites that never steal it. The cockpit's window state is app-wide and carries no display identity, so a window saved on a monitor that is later unplugged restores off-screen; Deck's placement is a pure function of saved bounds and present displays, which is what makes the second exit criterion checkable without a second monitor."
+    FEAT-0005:
+      file: "docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md"
+      title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0015", "TASK-0016"]
+      note: "The phase's visible half: notes as cards, several at once, and a desk that saves an arrangement by name and reopens as it was left. Cards are drawn from a pool rather than one element per note, because adding pooling later means rewriting the renderer that assumed otherwise. A desk naming a note that is gone opens without it and says how many it dropped."
+    FEAT-0006:
+      file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
+      title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0017", "TASK-0018"]
+      note: "One grammar covering workspace, view, desk and focused note, with a formatter and a strict parser. It is what makes a layout serialisable and a window restorable. The parser REFUSES what it cannot read rather than falling back to a default: the cockpit's silent fallback for an unknown nav mode made the Tests view look broken for thirty-three hours."
+    FEAT-0007:
+      file: "docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md"
+      title: "Views come from a provider: the renderer holds no fixed set of view buttons"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0019", "TASK-0020"]
+      note: "Edwin's decision of 2026-09-06 in code: the list of views is Deck's own and the sidecar is not asked for it. A provider chosen by workspace kind returns the views; the project-os provider matches the cockpit's navigator, pinned by a fixture so that a cockpit change fails the test and earns a row in the adoption table. A grep test asserts no view name is a literal in the renderer."
+    FEAT-0008:
+      file: "docs/features/two-hosts/FEAT-0008-One-Renderer-Two-Hosts.md"
+      title: "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0021", "TASK-0022"]
+      note: "Deck's own HTTP host serves the renderer and proxies reads to the sidecar, allowing GET and HEAD and refusing everything else (ADR-0001). The Electron window loads from that host too, so the shell and the tablet run identical bytes over one origin and there is no second data path. Capability is detected through the preload bridge, so shell-only actions are ABSENT when served rather than disabled."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -113,13 +176,132 @@ items:
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
+    TASK-0006:
+      file: "docs/features/shell/plan/tasks/TASK-0006-The-Application-Builds-And-Boots.md"
+      title: "The application builds and boots — one compile, a main process, a preload bridge and a renderer that draws"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0002"
+      phase: PHASE-0001
+    TASK-0007:
+      file: "docs/features/shell/plan/tasks/TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck.md"
+      title: "The sidecar starts and stops with Deck — one per workspace, on a free loopback port, waited for before it is used"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0002"
+      phase: PHASE-0001
+    TASK-0008:
+      file: "docs/features/shell/plan/tasks/TASK-0008-Workspaces-Are-Found-And-Remembered.md"
+      title: "Workspaces are found and remembered — a project-os repository is the one that carries a SNAPSHOT.yaml"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0002"
+      phase: PHASE-0001
+    TASK-0009:
+      file: "docs/features/shell/plan/tasks/TASK-0009-A-Typed-Read-Only-Client-Over-The-Sidecar.md"
+      title: "A typed read-only client over the sidecar — one method per endpoint Deck reads, and no method that writes"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0002"
+      phase: PHASE-0001
+    TASK-0010:
+      file: "docs/features/store/plan/tasks/TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It.md"
+      title: "The store holds the state and broadcasts it — one record in the main process, every window subscribed"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0003"
+      phase: PHASE-0001
+    TASK-0011:
+      file: "docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md"
+      title: "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0003"
+      phase: PHASE-0001
+    TASK-0012:
+      file: "docs/features/windows/plan/tasks/TASK-0012-A-Panel-Opens-In-Its-Own-Window.md"
+      title: "A panel opens in its own window — the same renderer, a different address, and a role that says what it is for"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0004"
+      phase: PHASE-0001
+    TASK-0013:
+      file: "docs/features/windows/plan/tasks/TASK-0013-A-Window-Reopens-Where-It-Was.md"
+      title: "A window reopens where it was — bounds remembered per window and placed on the display it was on"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0004"
+      phase: PHASE-0001
+    TASK-0014:
+      file: "docs/features/windows/plan/tasks/TASK-0014-Satellites-Do-Not-Steal-Focus.md"
+      title: "Satellites do not steal focus — one window owns navigation and the others watch"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0004"
+      phase: PHASE-0001
+    TASK-0015:
+      file: "docs/features/spread/plan/tasks/TASK-0015-Notes-Become-Cards.md"
+      title: "Notes become cards — the sidecar's list, drawn as several cards at once, each carrying its status band"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
+    TASK-0016:
+      file: "docs/features/spread/plan/tasks/TASK-0016-A-Desk-Is-Saved-And-Reopened.md"
+      title: "A desk is saved and reopened — an arrangement with a name, and a card whose note is gone does not break it"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
+    TASK-0017:
+      file: "docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md"
+      title: "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0006"
+      phase: PHASE-0001
+    TASK-0018:
+      file: "docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md"
+      title: "Copy the address and open one — the round trip a person can actually perform"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0006"
+      phase: PHASE-0001
+    TASK-0019:
+      file: "docs/features/views/plan/tasks/TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider.md"
+      title: "The provider interface, and the project-os provider whose views match the cockpit's"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0007"
+      phase: PHASE-0001
+    TASK-0020:
+      file: "docs/features/views/plan/tasks/TASK-0020-The-Switcher-Draws-What-The-Provider-Returned.md"
+      title: "The switcher draws what the provider returned — and the renderer holds no list of view names"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0007"
+      phase: PHASE-0001
+    TASK-0021:
+      file: "docs/features/two-hosts/plan/tasks/TASK-0021-Decks-Own-Read-Only-Host.md"
+      title: "Deck's own read-only host — it serves the renderer and proxies reads, and refuses every method that is not a read"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0008"
+      phase: PHASE-0001
+    TASK-0022:
+      file: "docs/features/two-hosts/plan/tasks/TASK-0022-Capability-Is-Detected-Not-Assumed.md"
+      title: "Capability is detected, not assumed — the renderer asks its host what it can do, and shell-only capability is absent when served"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0008"
+      phase: PHASE-0001
   issues: {}
   requirements: {}
   phases:
     PHASE-0001:
       file: "docs/phases/PHASE-0001-Deck.md"
       title: "Deck — one store, windows on any screen, and Spread as the first view"
-      status: planned
+      status: active
       order: 1
       owner: user:edwin
       features: []
@@ -149,12 +331,105 @@ items:
       tasks: []
       issues: []
       note: "Point Deck at ~/Notes and the vault's own structure appears: types detected from its templates and properties, its .base files as views, its .canvas files as read-only boards, its statuses banded. Reads everything, writes none of Obsidian's files. Depends on PHASE-0001 for the seam (the view provider the renderer asks; this phase adds the one that reads .base files) and NOT on PHASE-0002; third place is Edwin's stated order from 2026-09-06, not a technical constraint, so grooming can bring it forward. One blocker lives in the other repository: the cockpit's indexer drops a list-valued type:, which leaves 99 of the vault's 407 notes untyped, and that is project-os-cockpit ISS-0279 at triage. The cross-repo reference is kept in prose and related: only."
-  risks: {}
-  tests: {}
+  risks:
+    RISK-0001:
+      file: "docs/risks/RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing.md"
+      title: "A second sidecar on the same repository takes over the cockpit's focus routing"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      note: "The sidecar writes .cockpit/url into the repository and the cockpit command follows it, so a second sidecar on one repository silently captures that routing -- and Deck and the cockpit are meant to be open together during this phase, because exit criterion 1 is a side-by-side comparison. Mitigated in TASK-0007 by reusing a running sidecar after verifying its identity, and starting one only when none answers."
+  tests:
+    TST-0001:
+      file: "docs/features/shell/plan/tests/TST-0001-The-Sidecar-Client-Reads-And-Never-Writes.md"
+      title: "The sidecar client reads what Deck needs and has no way to write"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0002"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0002 -- the client is the only route to the sidecar; the fake sidecar records that only GET ever arrives."
+    TST-0002:
+      file: "docs/features/store/plan/tests/TST-0002-The-Store-Broadcasts-And-Survives-A-Restart.md"
+      title: "The store broadcasts to every window and survives a restart, including a corrupt state file"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0003"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0003 -- pure reducer, subscriber fan-out, atomic write, and three shapes of corrupt state file that must yield defaults rather than a dead application."
+    TST-0003:
+      file: "docs/features/windows/plan/tests/TST-0003-A-Window-Is-Placed-On-The-Display-It-Was-On.md"
+      title: "A window is placed on the display it was on, and on the primary display when that monitor is gone"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0004"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0004 -- the placement function run over display sets a laptop cannot produce, including an unplugged monitor."
+    TST-0004:
+      file: "docs/features/spread/plan/tests/TST-0004-A-Desk-Reopens-As-It-Was-Left.md"
+      title: "A desk reopens as it was left, and a desk naming a note that is gone opens without it"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0005 -- round trip, and the degradation when a note the desk names is gone."
+    TST-0005:
+      file: "docs/features/addresses/plan/tests/TST-0005-Every-State-Round-Trips-Through-Its-Address.md"
+      title: "Every state round-trips through its address, and a malformed address is refused rather than defaulted"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0006"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0006 -- round trip over a table of states, refusals over a table of bad input, and the assertion that nothing malformed ever becomes the default view."
+    TST-0006:
+      file: "docs/features/views/plan/tests/TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit.md"
+      title: "Views come from the provider, match the cockpit's list, and appear nowhere as literals in the renderer"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0007"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0007 -- the provider list pinned against the cockpit's, and a source search asserting no view name is a literal in the renderer."
+    TST-0007:
+      file: "docs/features/two-hosts/plan/tests/TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else.md"
+      title: "The host serves the renderer, proxies reads, and refuses every method and path that is not one"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0008"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0008 -- real HTTP with a fake sidecar behind it: every write method refused with 405 and nothing recorded downstream, traversal refused with 403."
+    TST-0008:
+      file: "docs/tests/acceptance/TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit.md"
+      title: "Spread opens the same notes as the cockpit, for this repository, checked side by side"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 1, walked: the same ids, order and statuses in both applications for this repository."
+    TST-0009:
+      file: "docs/tests/acceptance/TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display.md"
+      title: "A status window moved to a second display is there again after Deck restarts"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0004"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 2, walked: it needs a real second monitor and then the monitor unplugged."
+    TST-0010:
+      file: "docs/tests/acceptance/TST-0010-Deck-Opens-Read-Only-On-A-Tablet.md"
+      title: "Deck served over the local network opens on a tablet, reads the notes and refuses writes"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0008"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 3, walked: same views on the tablet, no shell-only action present, and a POST refused with 405."
   releases: {}
   workflows: {}
   changes: {}
-  decisions: {}
+  decisions:
+    ADR-0001:
+      file: "docs/decisions/ADR-0001-Deck-Serves-Its-Own-Read-Only-Host.md"
+      title: "Deck serves its own renderer over HTTP and proxies the sidecar read-only"
+      status: accepted
+      owner: user:edwin
+      note: "Deck runs its own HTTP host: it serves the renderer, proxies GET and HEAD to the sidecar and answers 405 to everything else, and the Electron window loads from it too. Forced by two facts plus one decision: the sidecar's static directory is fixed to its own package at import time, its one outside-directory flag serves a single allow-listed file (renderer.css) and 404s the rest, and Edwin ruled on 2026-09-06 that the cockpit is not changed for Deck. The by-product is the bigger win -- one origin for both hosts, so the shell and the tablet share one data path instead of two."
   designs:
     DES-0001:
       file: "docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md"
@@ -182,17 +457,17 @@ items:
 
 metrics:
   counts:
-    features_total: 1
+    features_total: 8
     features_done: 0
     phases_total: 3
     phases_done: 0
-    tasks_total: 5
+    tasks_total: 22
     tasks_done: 0
-    tests_total: 0
+    tests_total: 7
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
     issues_triage: 0
-    risks_open: 0
+    risks_open: 1
     releases_total: 0
-    decisions_total: 0
+    decisions_total: 1
