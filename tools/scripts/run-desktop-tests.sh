@@ -82,7 +82,10 @@ if [ "$status" -ne 0 ]; then
     failed="node exited ${status}; tail: $( { grep -v '^$' "$out" | tail -n 8 | paste -sd '|' - | cut -c1-400; } || true)"
   fi
   rm -f "$out"
-  echo "FAILED ${SUITE}: ${failed}${why:+ -- ${why}}"
+  # The reason first, then the names. tools/scripts/run-tests.py shows the
+  # first sixty characters of this line, and the reason is what a reader can
+  # act on; the name is recoverable from the suite.
+  echo "FAILED ${SUITE}: ${why:-no reason given} << ${failed}"
   exit "$status"
 fi
 rm -f "$out"
