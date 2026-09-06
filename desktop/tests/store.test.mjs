@@ -149,3 +149,16 @@ test('the write is atomic: a reader never sees half a file', () => {
 test('reading a file that is not there is not an error', () => {
   assert.equal(readJsonFile(path.join(os.tmpdir(), 'deck-does-not-exist-1234.json')), null);
 });
+
+
+test('a window may not replace the whole state through the dispatch channel', () => {
+  const { isRendererAction } = load('shared/store-state.js');
+  assert.equal(isRendererAction({ type: 'focus-note', noteId: 'X' }), true);
+  assert.equal(isRendererAction({ type: 'save-desk', desk: {} }), true);
+  // `restore` carries a whole state, saved desks included.
+  assert.equal(isRendererAction({ type: 'restore', state: initialState() }), false);
+  assert.equal(isRendererAction({ type: 'anything-else' }), false);
+  assert.equal(isRendererAction(null), false);
+  assert.equal(isRendererAction('focus-note'), false);
+  assert.equal(isRendererAction({}), false);
+});

@@ -18,6 +18,22 @@ export type DeckAction =
   | { type: 'delete-desk'; workspaceId: string; name: string }
   | { type: 'restore'; state: DeckState };
 
+/**
+ * The actions a window may dispatch.
+ *
+ * `restore` is not among them: it replaces the whole state, saved desks
+ * included, and belongs to the main process reading its own file. The channel
+ * a window dispatches on is reachable from any page the window loads, so what
+ * crosses it is named rather than assumed.
+ */
+const RENDERER_ACTIONS = new Set(['open-workspace', 'select-view', 'focus-note', 'open-desk', 'save-desk', 'delete-desk']);
+
+export function isRendererAction(value: unknown): value is DeckAction {
+  if (typeof value !== 'object' || value === null) return false;
+  const type = (value as { type?: unknown }).type;
+  return typeof type === 'string' && RENDERER_ACTIONS.has(type);
+}
+
 export function initialState(): DeckState {
   return { workspaceId: null, viewId: null, deskName: null, noteId: null, desks: {}, revision: 0 };
 }

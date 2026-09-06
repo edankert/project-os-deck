@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { load, desktopRoot, fakeSidecar, HEALTH, navPayload, item } from './helpers.mjs';
 
-const { DeckHost, resolveWithin, isForwardable } = load('main/host.js');
+const { DeckHost, resolveWithin, isForwardable, resolveSidecarTarget } = load('main/host.js');
 const { SHELL_CAPABILITIES, SERVED_CAPABILITIES, normaliseCapabilities, can } = load('shared/capability.js');
 
 const WEB_ROOT = path.join(desktopRoot, 'dist', 'web');
@@ -123,6 +123,45 @@ test('only the reads Deck actually makes are forwarded', async () => {
   }
 });
 
+test('a path that only becomes forbidden after decoding is still refused', async () => {
+  // The hole this closes: decode once, check the result, then hand the
+  // still-encoded remainder to `fetch`, which decodes again and resolves
+  // `%252e%252e` into `..`. Two decodings and one check is no check.
+  const { sidecar, host, origin } = await standUp();
+  try {
+    for (const attempt of [
+      '/api/render/%2e%2e/%2e%2e/api/inbox',
+      '/api/render/%252e%252e/%252e%252e/api/inbox',
+      '/api/render/%25252e%25252e/api/inbox',
+      '/api/render/..%2f..%2fapi/inbox',
+      '/api/render/%2E%2E/api/inbox',
+      '/api/cockpit/nav/%2e%2e/%2e%2e/_events',
+      '/api/render/./../api/inbox',
+    ]) {
+      const response = await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}${attempt}`);
+      assert.equal(response.status, 403, `${attempt} was forwarded`);
+    }
+    assert.deepEqual(sidecar.received, [], 'an encoded traversal reached the sidecar');
+  } finally {
+    await host.close();
+    await sidecar.close();
+  }
+});
+
+test('the target is checked after it is resolved, not before', () => {
+  const base = 'http://127.0.0.1:9999';
+  assert.notEqual(resolveSidecarTarget(base, '/api/cockpit/nav?mode=x'), null);
+  assert.equal(resolveSidecarTarget(base, '/api/render/%2e%2e/api/inbox'), null);
+  assert.equal(resolveSidecarTarget(base, '/api/render/../api/inbox'), null);
+  assert.equal(resolveSidecarTarget(base, '/api/inbox'), null);
+  // A path that resolves to another host is not this sidecar's path.
+  assert.equal(resolveSidecarTarget(base, '//evil.example/api/render'), null);
+  assert.equal(resolveSidecarTarget(base, 'http://evil.example/api/render'), null);
+  const ok = resolveSidecarTarget(base, '/api/render?path=docs/a.md');
+  assert.equal(ok.pathname, '/api/render');
+  assert.equal(ok.searchParams.get('path'), 'docs/a.md');
+});
+
 test('the forwarding rule matches on whole path segments', () => {
   assert.equal(isForwardable('/api/render'), true);
   assert.equal(isForwardable('/api/render/anything'), true);
@@ -131,6 +170,8 @@ test('the forwarding rule matches on whole path segments', () => {
   assert.equal(isForwardable('/api/cockpit/navigate-elsewhere'), false);
   assert.equal(isForwardable('/api/inbox'), false);
   assert.equal(isForwardable('/api/render/../inbox'), false);
+  assert.equal(isForwardable('/api/render/%2e%2e/inbox'), false, 'anything still encoded is refused');
+  assert.equal(isForwardable('/api/render/./x'), false);
 });
 
 test('a HEAD is served, because it is a read', async () => {

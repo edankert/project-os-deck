@@ -74,3 +74,55 @@ test('formatting refuses a state it could not parse back', () => {
     AddressError,
   );
 });
+
+
+test('a desk name a person can actually type survives the round trip', () => {
+  // These are names the desk prompt accepts, so the grammar has to accept them
+  // too: an address the interface can produce and the parser refuses is worse
+  // than no address at all.
+  for (const desk of ["Edwin's desk", 'sprint #3', 'Q4 (draft)', 'deja vu', 'a=b&c=d', '100%', 'a/b', 'ends with space ']) {
+    const address = formatAddress({ workspaceId: WORKSPACE, viewId: 'cards', desk, note: null, panel: null });
+    assert.equal(parseAddress(address).desk, desk, 'round trip failed for ' + JSON.stringify(desk));
+  }
+});
+
+test('a note id the sidecar can produce survives the round trip', () => {
+  for (const note of ['FEAT-0002', 'notes/total', 'owed items', 'CHG-20260906-Deck-Runs', 'a note with (brackets)']) {
+    const address = formatAddress({ workspaceId: WORKSPACE, viewId: 'cards', desk: null, note, panel: null });
+    assert.equal(parseAddress(address).note, note, 'round trip failed for ' + JSON.stringify(note));
+  }
+});
+
+test('formatting refuses every field parsing would refuse, not just the two in the path', () => {
+  const base = { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: null, panel: null };
+  const cases = [
+    ['desk', ''],
+    ['desk', 'a' + String.fromCharCode(10) + 'b'],
+    ['desk', 'x'.repeat(65)],
+    ['note', ''],
+    ['note', 'x'.repeat(201)],
+    ['panel', 'Not A Panel'],
+    ['panel', ''],
+  ];
+  for (const [field, value] of cases) {
+    assert.throws(
+      () => formatAddress({ ...base, [field]: value }),
+      AddressError,
+      'formatting accepted a ' + field + ' of ' + JSON.stringify(value) + ' that parsing would refuse',
+    );
+  }
+});
+
+test('anything format produces, parse accepts', () => {
+  // The invariant the two functions exist to keep, asserted over the awkward
+  // cases rather than only the tidy ones.
+  const values = ["Edwin's desk", 'deja vu', 'a=b&c', '100%', 'a/b', 'FEAT-0002', 'x'.repeat(64)];
+  for (const desk of values) {
+    for (const note of values) {
+      const address = formatAddress({ workspaceId: WORKSPACE, viewId: 'cards', desk, note, panel: 'status' });
+      const parsed = parseAddress(address);
+      assert.equal(parsed.desk, desk);
+      assert.equal(parsed.note, note);
+    }
+  }
+});

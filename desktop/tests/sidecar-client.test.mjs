@@ -315,3 +315,48 @@ test('the interpreter defaults to something, and honours DECK_PYTHON', () => {
     else process.env.DECK_PYTHON = before;
   }
 });
+
+
+test('a sidecar Deck started is stopped when it is forgotten, never orphaned', () => {
+  // `forget` runs when a sidecar stops answering. Dropping the handle for one
+  // Deck started would leave the process running with nothing holding it: the
+  // shutdown at quit iterates this map.
+  const supervisor = new SidecarSupervisor('/nonexistent/python');
+  const signals = [];
+  supervisor.records.set('ours', {
+    workspaceId: 'ours',
+    base: 'http://127.0.0.1:1',
+    ownedByDeck: true,
+    process: { kill: (sig) => signals.push(sig), once: () => {} },
+    stderrTail: [],
+  });
+  supervisor.forget('ours');
+  assert.deepEqual(signals, ['SIGTERM'], 'a sidecar Deck started was dropped without being stopped');
+  assert.equal(supervisor.handle('ours'), null);
+
+  const borrowedSignals = [];
+  supervisor.records.set('theirs', {
+    workspaceId: 'theirs',
+    base: 'http://127.0.0.1:2',
+    ownedByDeck: false,
+    process: { kill: (sig) => borrowedSignals.push(sig), once: () => {} },
+    stderrTail: [],
+  });
+  supervisor.forget('theirs');
+  assert.deepEqual(borrowedSignals, [], 'a sidecar Deck borrowed was killed');
+  assert.equal(supervisor.handle('theirs'), null);
+});
+
+test('stopping everything reaches a sidecar Deck started', () => {
+  const supervisor = new SidecarSupervisor('/nonexistent/python');
+  const signals = [];
+  supervisor.records.set('ours', {
+    workspaceId: 'ours',
+    base: 'http://127.0.0.1:1',
+    ownedByDeck: true,
+    process: { kill: (sig) => signals.push(sig), once: () => {} },
+    stderrTail: [],
+  });
+  supervisor.stopAll();
+  assert.deepEqual(signals, ['SIGTERM']);
+});

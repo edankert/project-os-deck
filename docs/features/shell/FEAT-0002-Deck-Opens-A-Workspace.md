@@ -34,8 +34,8 @@ A person launches Deck, picks a workspace and sees that workspace's notes. This 
 ## Acceptance
 
 - Deck starts from a single command in the repository and opens a window.
-- Deck finds this repository by its `SNAPSHOT.yaml` and lists it as a workspace.
-- Opening a workspace starts one sidecar for it, on a loopback port chosen at runtime, and the renderer receives that base URL.
+- Deck recognises this repository by its `SNAPSHOT.yaml` and lists it as a workspace. **Amended 2026-09-06:** "finds" overstated it. A person adds a folder and Deck says what kind it is, or refuses it with the reason. Nothing scans the disk looking for repositories, and the cockpit stopped doing that too.
+- Opening a workspace resolves one sidecar for it on a loopback port, reusing a running one where there is one. **Amended 2026-09-06:** the renderer never receives that base URL, because [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]] replaced the direct call with a same-origin proxy. Both hosts read through `/deck/sidecar/<workspace>`, which is the point of the decision: one data path, not two.
 - The renderer lists the workspace's notes, read through the sidecar, with each note's id, title and status.
 - Quitting Deck leaves no sidecar process that Deck started. **Amended 2026-09-06:** a sidecar Deck borrowed is not Deck's to stop, and killing one would take down the cockpit's own ([[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]).
 

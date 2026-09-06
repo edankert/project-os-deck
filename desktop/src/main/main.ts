@@ -9,7 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { BrowserWindow, app, clipboard, dialog, ipcMain, screen } from 'electron';
 import { SHELL_CAPABILITIES, SERVED_CAPABILITIES } from '../shared/capability.js';
-import { type DeckAction } from '../shared/store-state.js';
+import { type DeckAction, isRendererAction } from '../shared/store-state.js';
 import type { WindowRole } from '../shared/types.js';
 import { tryParseAddress } from '../shared/address.js';
 import { DeckHost } from './host.js';
@@ -172,7 +172,11 @@ function registerIpc(): void {
   });
 
   handle('deck:state:get', () => store.getState());
-  handle('deck:state:dispatch', (_e, action: DeckAction) => store.dispatch(action));
+  handle('deck:state:dispatch', (_e, action: DeckAction) => {
+    // The rule is stated once, in the shared module, and tested there.
+    if (!isRendererAction(action)) return store.getState();
+    return store.dispatch(action);
+  });
   handle('deck:state:resend', (event) => {
     event.sender.send('deck:state', store.getState());
     return true;
@@ -258,6 +262,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
  */
 async function runSmoke(): Promise<void> {
   const failures: string[] = [];
+  let drawnCards: string[] = [];
   const record = (ok: boolean, what: string): void => {
     if (!ok) failures.push(what);
   };
@@ -292,6 +297,7 @@ async function runSmoke(): Promise<void> {
       const drawn = (await focus.webContents.executeJavaScript(
         `({ cards: Array.from(document.querySelectorAll('.card:not([hidden]) .id')).map((e) => e.textContent), views: Array.from(document.querySelectorAll('#switcher button')).map((e) => e.textContent), status: document.getElementById('status').textContent })`,
       )) as { cards: string[]; views: string[]; status: string };
+      drawnCards = drawn.cards;
       record(drawn.cards.length > 0, 'the desk drew cards from the real workspace');
       record(drawn.views.length > 0, 'the switcher drew the views the provider returned');
       console.log(
@@ -351,6 +357,17 @@ async function runSmoke(): Promise<void> {
         record(parsed.address.note !== null, 'the address carries the focused note');
       }
 
+      // The note a person left open comes back with the state that named it.
+      focus.webContents.reload();
+      await once(focus.webContents, 'did-finish-load');
+      await untilBooted(focus);
+      await delay(1500);
+      const afterRestart = (await focus.webContents.executeJavaScript(
+        `({ reader: document.getElementById('reader').textContent.trim().length, current: (document.querySelector('.card[aria-current="true"] .id') || {}).textContent || null })`,
+      )) as { reader: number; current: string | null };
+      record(afterRestart.reader > 20, 'the note that was open came back after a reload');
+      record(afterRestart.current !== null, 'the card that was open is still marked as current');
+
       // A desk saved in the main process reaches the window that is drawing.
       store.dispatch({
         type: 'save-desk',
@@ -390,12 +407,35 @@ async function runSmoke(): Promise<void> {
     record(satelliteChrome.views === 0, 'the satellite drew no switcher, so it owns no navigation');
     record(satelliteChrome.rail === 'none', 'the satellite drew no workspace rail');
 
-    store.dispatch({ type: 'focus-note', noteId: 'FEAT-0002' });
-    await delay(300);
-    const seen = (await satellite.webContents.executeJavaScript(
-      'window.__deckLastState ? window.__deckLastState.noteId : null',
-    )) as string | null;
-    record(seen === 'FEAT-0002', 'the satellite saw the focused note change');
+    // What a person sees, not what the window was told. Reading the state a
+    // window holds passes while the cards on it never move.
+    const highlighted = async (win: BrowserWindow): Promise<string | null> =>
+      (await win.webContents.executeJavaScript(
+        `(document.querySelector('.card[aria-current="true"]:not([hidden]) .id') || {}).textContent || null`,
+      )) as string | null;
+
+    const visible = async (win: BrowserWindow): Promise<number> =>
+      (await win.webContents.executeJavaScript(
+        `document.querySelectorAll('.card:not([hidden])').length`,
+      )) as number;
+
+    // The satellite opened on the desk saved earlier, which holds one card.
+    // Closing that desk in the main process has to reach it.
+    const onDesk = await visible(satellite);
+    store.dispatch({ type: 'open-desk', name: null });
+    await delay(800);
+    const offDesk = await visible(satellite);
+    record(onDesk === 1 && offDesk > 1, `closing the desk redrew the satellite (${onDesk} card then ${offDesk})`);
+
+    const before = await highlighted(satellite);
+    const target = (drawnCards[3] ?? drawnCards[0]) ?? 'FEAT-0002';
+    store.dispatch({ type: 'focus-note', noteId: target });
+    await delay(800);
+    const after = await highlighted(satellite);
+    record(
+      after === target && after !== before,
+      `the satellite REDREW when the focused note changed (${before} then ${after}, wanted ${target})`,
+    );
 
     // Closing the window that owns navigation must not leave Deck without one.
     focus.close();

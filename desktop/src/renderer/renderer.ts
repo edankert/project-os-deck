@@ -101,8 +101,11 @@ async function boot(): Promise<void> {
 
   host.onState(() => {
     renderRail();
-    renderDeskList();
     paintSwitcher();
+    // drawDesk, not just the chrome: it is the only thing that repaints the
+    // cards, so leaving it out means a window receives a change from another
+    // window and shows nothing.
+    drawDesk();
   });
   wireControls();
 }
@@ -168,7 +171,13 @@ async function selectWorkspace(id: string): Promise<void> {
   }
   const wanted = host.state().viewId;
   const view = views.find((v) => v.id === wanted) ?? views.find((v) => v.id === DEFAULT_VIEW_ID) ?? views[0];
+  if (wanted !== null && views.every((v) => v.id !== wanted)) {
+    // Said out loud. A view that quietly becomes a different view is the
+    // failure the address grammar refuses, and it would be no better here.
+    say(`this workspace has no view called "${wanted}", so Deck opened ${view?.label ?? 'nothing'}`, true);
+  }
   if (view !== undefined) await selectView(view.id);
+  await reopenFocusedNote();
 }
 
 function renderSwitcher(): void {
@@ -274,6 +283,17 @@ function drawDesk(): void {
   renderDeskList();
 }
 
+/**
+ * Show the note the state still names, after a restart or a workspace change.
+ * Without this the card is marked as current and the reader stays empty.
+ */
+async function reopenFocusedNote(): Promise<void> {
+  const noteId = host.state().noteId;
+  if (noteId === null) return;
+  const card = currentCards.find((c) => c.noteId === noteId);
+  if (card !== undefined) await openCard(card);
+}
+
 function renderDeskList(): void {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
@@ -340,17 +360,26 @@ function currentAddress(): string | null {
 
 async function applyAddress(raw: string): Promise<void> {
   const address = parseAddress(raw);
+
+  // Everything is resolved BEFORE anything moves. An address that cannot be
+  // followed leaves Deck exactly where it was, which is the whole point of
+  // refusing rather than defaulting.
   const workspace = workspaceById(address.workspaceId);
   if (workspace === null) {
     say(`that address names a workspace Deck does not know: ${address.workspaceId}`, true);
     return;
   }
-  panel = address.panel;
-  await selectWorkspace(workspace.id);
   if (registry.resolve(workspace, address.viewId) === null) {
     say(`that address names a view this workspace does not have: ${address.viewId}`, true);
     return;
   }
+  if (address.desk !== null && host.state().desks[deskKey(workspace.id, address.desk)] === undefined) {
+    say(`that address names a desk this workspace does not have: ${address.desk}`, true);
+    return;
+  }
+
+  panel = address.panel;
+  await selectWorkspace(workspace.id);
   await selectView(address.viewId);
   await host.dispatch({ type: 'open-desk', name: address.desk });
   if (address.note !== null) {

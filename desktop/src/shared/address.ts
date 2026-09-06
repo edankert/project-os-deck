@@ -12,8 +12,13 @@ import type { DeckAddress } from './types.js';
 const SCHEME = 'deck://';
 const WORKSPACE_RE = /^[a-z0-9]{4,64}$/;
 const VIEW_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const NOTE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
-const DESK_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/;
+// Desk names are typed by a person and note ids come from the sidecar, so
+// both admit apostrophes, spaces, accents and slashes. Values are
+// percent-encoded in the address, which is what makes that safe; what is
+// refused is only what cannot survive the round trip — control characters,
+// nothing, or something absurdly long.
+const NOTE_RE = /^[^\u0000-\u001f\u007f]{1,200}$/;
+const DESK_RE = /^[^\u0000-\u001f\u007f]{1,64}$/;
 const PANEL_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
 const QUERY_KEYS = new Set(['desk', 'note', 'panel']);
 
@@ -30,6 +35,18 @@ export function formatAddress(address: DeckAddress): string {
   }
   if (!VIEW_RE.test(address.viewId)) {
     throw new AddressError(`not a view id: "${address.viewId}"`);
+  }
+  // Every field is checked here, not only the two in the path. The two ends
+  // have to agree: a desk name the interface accepts but the parser refuses
+  // hands the person an address that Deck itself rejects.
+  if (address.desk !== null && !DESK_RE.test(address.desk)) {
+    throw new AddressError(`not a desk name: "${address.desk}"`);
+  }
+  if (address.note !== null && !NOTE_RE.test(address.note)) {
+    throw new AddressError(`not a note id: "${address.note}"`);
+  }
+  if (address.panel !== null && !PANEL_RE.test(address.panel)) {
+    throw new AddressError(`not a panel id: "${address.panel}"`);
   }
   const query: string[] = [];
   if (address.desk !== null) query.push(`desk=${encodeURIComponent(address.desk)}`);

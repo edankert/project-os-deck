@@ -48,9 +48,12 @@ An address is the written form of a Deck state. This suite asserts the round tri
 
 ## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh address`: 5 checks, all passing on 2026-09-06, over a table of five reachable states and twelve malformed inputs.
+- `bash tools/scripts/run-desktop-tests.sh address`: 9 checks, all passing on 2026-09-06, over a table of five reachable states, twelve malformed inputs, and forty-nine combinations of awkward desk names and note ids.
+- The awkward cases are the ones that matter: `Edwin's desk`, `sprint #3`, `a=b&c`, `100%`, `a/b`, and the stats view's note ids such as `notes/total`. The independent review found that formatting accepted all of these and parsing then refused them, so Copy address handed back a string Deck itself rejected.
 - In the running application: the copy control produced an address that parsed, named the open workspace and carried the focused note.
 
 ## Adequacy (who verifies this test?)
 
 Verified by mutation on 2026-09-06. Replacing the scheme refusal with a fallback to a default view makes two checks fail, including "nothing malformed ever resolves to a view" — which is the failure this suite exists for, since the cockpit's silent fallback for an unknown mode hid a broken view for thirty-three hours.
+
+**A gap the mutation pass could not see.** One check was named "formatting refuses a state it could not parse back" and asserted over two of the five fields. The name claimed the invariant; the body covered less than half of it, and the missing part was broken. An independent review found it. The check now covers every field, and a second check asserts the invariant directly: anything `formatAddress` produces, `parseAddress` accepts.

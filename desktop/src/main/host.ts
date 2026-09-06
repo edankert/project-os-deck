@@ -40,10 +40,32 @@ const FORWARDABLE = [
 ];
 
 export function isForwardable(sidecarPath: string): boolean {
-  // A traversal could name a path outside the list once the sidecar resolves
-  // it, so a request carrying one is refused rather than normalised.
-  if (sidecarPath.split('/').some((segment) => segment === '..')) return false;
+  // Checked AFTER the URL parser has done its normalisation, never before.
+  // Deciding on the path as written lets a second decoding step turn an
+  // allowed path into a forbidden one: `/api/render/%252e%252e/api/inbox`
+  // decodes once to `%2e%2e`, passes a check on that string, and is then
+  // resolved by `fetch` to `/api/inbox`. Two decodings, one check, no lock.
+  if (sidecarPath.includes('%')) return false;
+  if (sidecarPath.split('/').some((segment) => segment === '..' || segment === '.')) return false;
   return FORWARDABLE.some((allowed) => sidecarPath === allowed || sidecarPath.startsWith(`${allowed}/`));
+}
+
+/**
+ * The URL this request would actually reach, or null if it cannot be one.
+ *
+ * The path is resolved against the sidecar's base FIRST, so that whatever
+ * normalisation the URL parser performs has already happened by the time the
+ * allow-list sees the path. What is checked is what is fetched.
+ */
+export function resolveSidecarTarget(base: string, rawPathAndQuery: string): URL | null {
+  let target: URL;
+  try {
+    target = new URL(rawPathAndQuery, `${base}/`);
+  } catch {
+    return null;
+  }
+  if (target.origin !== new URL(base).origin) return null;
+  return isForwardable(target.pathname) ? target : null;
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -127,7 +149,8 @@ export class DeckHost {
     }
 
     const url = new URL(req.url ?? '/', 'http://deck.invalid');
-    const pathname = decodeSafely(url.pathname);
+    const rawPathname = url.pathname;
+    const pathname = decodeSafely(rawPathname);
     if (pathname === null) {
       plain(res, 400, 'that path is not readable as text');
       return;
@@ -141,24 +164,22 @@ export class DeckHost {
       json(res, 200, { workspaces: this.options.listWorkspaces() });
       return;
     }
-    if (pathname.startsWith(SIDECAR_PREFIX)) {
-      await this.proxy(pathname, url.search, method, res);
+    if (rawPathname.startsWith(SIDECAR_PREFIX)) {
+      await this.proxy(rawPathname, url.search, method, res);
       return;
     }
     this.serveFile(pathname, method, res);
   }
 
-  private async proxy(pathname: string, search: string, method: string, res: http.ServerResponse): Promise<void> {
-    const rest = pathname.slice(SIDECAR_PREFIX.length);
+  private async proxy(rawPathname: string, search: string, method: string, res: http.ServerResponse): Promise<void> {
+    // The RAW path, not the decoded one: what reaches the sidecar has to be
+    // decided on the same text the URL parser will resolve.
+    const rest = rawPathname.slice(SIDECAR_PREFIX.length);
     const slash = rest.indexOf('/');
-    const workspaceId = slash === -1 ? rest : rest.slice(0, slash);
+    const workspaceId = decodeSafely(slash === -1 ? rest : rest.slice(0, slash)) ?? '';
     const sidecarPath = slash === -1 ? '/' : rest.slice(slash);
     if (workspaceId === '') {
       plain(res, 404, 'that request names no workspace');
-      return;
-    }
-    if (!isForwardable(sidecarPath)) {
-      plain(res, 403, 'Deck does not forward that path');
       return;
     }
     const base = this.options.sidecarBaseFor(workspaceId);
@@ -166,7 +187,11 @@ export class DeckHost {
       plain(res, 503, 'no sidecar is running for that workspace');
       return;
     }
-    const target = `${base}${sidecarPath}${search}`;
+    const target = resolveSidecarTarget(base, `${sidecarPath}${search}`);
+    if (target === null) {
+      plain(res, 403, 'Deck does not forward that path');
+      return;
+    }
     let upstream: Response;
     try {
       upstream = await fetch(target, { method });

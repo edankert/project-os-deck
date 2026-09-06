@@ -51,7 +51,9 @@ export class SidecarSupervisor {
     if (existing !== undefined && (await alive(existing.base, workspace.root))) {
       return { ...existing };
     }
-    if (existing !== undefined) this.records.delete(workspace.id);
+    // Same rule as `forget`: a sidecar of ours that is no longer answering is
+    // stopped, not simply forgotten.
+    if (existing !== undefined) this.forget(workspace.id);
 
     const borrowed = await this.borrow(workspace);
     if (borrowed !== null) return borrowed;
@@ -144,6 +146,15 @@ export class SidecarSupervisor {
    * sidecar is not ours to kill, and it may simply have been restarted.
    */
   forget(workspaceId: string): void {
+    const record = this.records.get(workspaceId);
+    if (record === undefined) return;
+    if (record.ownedByDeck) {
+      // Ours, and it stopped answering. Dropping the handle would leave the
+      // process running with nothing holding it: `stopAll` at quit iterates
+      // what is in this map, so a forgotten child outlives Deck.
+      this.stopOne(workspaceId);
+      return;
+    }
     this.records.delete(workspaceId);
   }
 

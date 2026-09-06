@@ -58,7 +58,9 @@ Three words are used throughout and mean one thing each. **Deck** is the applica
 
 ## Where this stands
 
-**2026-09-06: the phase is built and three of its six criteria are ticked.** Seventeen tasks are `done`. Seven suites of seventy-two checks run from the test notes' own commands, and a smoke run boots the real Electron application, opens this repository through the sidecar the cockpit already had running, and checks twenty-one things a person would otherwise have to look at.
+**2026-09-06: the phase is built and three of its six criteria are ticked.** Seventeen tasks are `done`. Seven suites of eighty-one checks run from the test notes' own commands, and a smoke run boots the real Electron application, opens this repository through the sidecar the cockpit already had running, and checks twenty-four things a person would otherwise have to look at.
+
+**An independent review found five defects and a security hole, and all six are fixed.** The hole was in Deck's own host: its allow-list of forwardable paths was applied to the once-decoded path, and `fetch` then decoded again, so a double-encoded traversal walked out of an allowed path into the sidecar's loopback-only reads. The reviewer demonstrated it from a network address against the running sidecar. The check now runs on the resolved URL. The other five were a window that received a change and did not repaint it, a desk name the interface accepted and the parser refused, an unresolvable address that moved Deck before failing, a sidecar Deck started that could be dropped without being stopped, and two acceptance criteria the code no longer matched.
 
 **What is owed is what a machine cannot do**: the side-by-side comparison with the cockpit, a second monitor, and a tablet. Those three are [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]], [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] and [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]], and the phase stays `active` until they are walked.
 

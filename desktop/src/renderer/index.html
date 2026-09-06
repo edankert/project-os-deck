@@ -3,6 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      Note HTML comes from the sidecar and is injected into the reader, in a
+      page that holds the preload bridge. A <script> would not run from
+      innerHTML, but an onerror= attribute would, so the policy says where
+      code and connections may come from: this origin, and nowhere else.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
     <title>Deck</title>
     <link rel="stylesheet" href="./deck.css" />
   </head>
