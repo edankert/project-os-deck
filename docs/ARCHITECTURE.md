@@ -37,5 +37,5 @@ Deck is one renderer with two hosts: the Electron shell hosts it with the termin
 
 ## Relationship to project-os-cockpit
 - The sidecar is the cockpit's and stays there. Deck does not fork it.
-- The cockpit is frozen except for fixes. New capability lands in Deck.
+- The cockpit stays the primary place for new functionality. Deck tracks the register and must be able to support what arrives.
 - The cockpit's capability register (`../project-os-cockpit/docs/reference/cockpit-capability-register.md`) is the contract; `reference/cockpit-adoption.md` is Deck's side of it.

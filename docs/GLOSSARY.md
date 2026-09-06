@@ -18,7 +18,7 @@ tags: [glossary]
 - **panel**: one instance of a surface (a navigator in one mode, a reader on one note, a terminal on one PTY). Panels can exist more than once and each has an address.
 - **the store**: the one state in Deck's main process that every window subscribes to.
 - **the sidecar**: project-os-cockpit's Python server, one per workspace. Deck shares it and does not fork it.
-- **the cockpit**: project-os-cockpit, the current application. Frozen except for fixes while Deck grows.
+- **the cockpit**: project-os-cockpit, the current application. Still the primary place where new functionality is built; Deck tracks its capability register.
 - **capability register**: the cockpit's list of what it can do, one stable key per capability. Deck's adoption table cites those keys.
 - **workspace profile**: what the sidecar needs to know to serve a workspace that is not a project-os repository: types, parents, statuses, views, faces, verbs. Detected from the vault's own templates and bases before anyone selects it.
 - **the record**: project-os's word for the notes on disk. A vault is a record too.

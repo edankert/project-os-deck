@@ -20,7 +20,7 @@ tags: [reference, register, adoption, cockpit]
 
 ## Purpose
 
-Deck is built beside project-os-cockpit and shares its sidecar. The cockpit is frozen except for fixes, but new capability will still arrive there, and this table is how Deck sees it. The cockpit keeps a capability register with a stable key per capability ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]); this note lists every key from that register with Deck's position on it.
+Deck is built beside project-os-cockpit and shares its sidecar. The cockpit stays the primary place where new functionality is built, so capability keeps arriving there, and this table is how Deck sees it and commits to supporting it. The cockpit keeps a capability register with a stable key per capability ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]); this note lists every key from that register with Deck's position on it.
 
 The cockpit's rule, mirrored here: a change note there that adds, changes or retires capability updates its register in the same commit. Deck's rule: when a new row appears there, it appears here as `not yet` with the date, and grooming decides.
 

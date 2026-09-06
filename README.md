@@ -1,6 +1,6 @@
 # project-os-deck
 
-**Deck** is the second application over project-os notes, and over any Obsidian-style vault. It shows notes as cards you arrange across windows and screens, and as a spatial field where depth is priority. It is built beside [project-os-cockpit](https://github.com/edankert/project-os-cockpit), shares that repository's Python sidecar, and is meant to replace the cockpit once it is mature. Until then the cockpit stays the default and takes fixes only.
+**Deck** is the second application over project-os notes, and over any Obsidian-style vault. It shows notes as cards you arrange across windows and screens, and as a spatial field where depth is priority. It is built beside [project-os-cockpit](https://github.com/edankert/project-os-cockpit), shares that repository's Python sidecar, and may replace the cockpit one day. For now the cockpit stays the default and the primary place where new functionality is built; Deck tracks the cockpit's capability register so it can support what arrives there.
 
 Two views are designed, neither is built yet:
 

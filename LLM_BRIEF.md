@@ -2,7 +2,7 @@
 
 ## Project Identity
 - Name: project-os-deck (the application is called Deck)
-- Purpose: the second application over project-os notes and any Obsidian-style vault. Notes as cards arranged across windows and screens (Spread), and a spatial field where depth is priority (Glass). Built beside project-os-cockpit, sharing its Python sidecar; the cockpit is frozen except for fixes while Deck grows and is meant to be replaced by it.
+- Purpose: the second application over project-os notes and any Obsidian-style vault. Notes as cards arranged across windows and screens (Spread), and a spatial field where depth is priority (Glass). Built beside project-os-cockpit, sharing its Python sidecar; the cockpit stays the primary place for new functionality; Deck tracks its capability register and must be able to support what arrives there.
 - Canonical runtime state: `SNAPSHOT.yaml`
 
 ## Read Order
@@ -24,7 +24,7 @@
 ## Invariants
 - `SNAPSHOT.yaml` is canonical for active work state.
 - Deck shares the cockpit's sidecar and adds no write path of its own; every verb goes through the sidecar's guards.
-- The classic cockpit is not refactored; new capability lands here.
+- The classic cockpit is not refactored, and it stays the primary place for new functionality; Deck tracks the cockpit's capability register and keeps its adoption table current.
 - Every Deck state a person can reach has an address (a view, a desk, a focused note), per the cockpit's ISS-0203 rule.
 - Deck asks the sidecar which views a workspace has; it hard-codes none.
 - Keep traceability links coherent between features, tasks, issues, tests, workflows, and changes.

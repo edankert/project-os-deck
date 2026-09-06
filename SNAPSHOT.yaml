@@ -6,7 +6,7 @@ template:
 
 project:
   name: "project-os-deck"
-  summary: "Deck: the second application over project-os notes and any Obsidian vault. Notes as cards arranged across windows and screens (Spread), and a spatial field where depth is priority (Glass). Shares project-os-cockpit's sidecar; the cockpit is frozen except for fixes while Deck grows."
+  summary: "Deck: the second application over project-os notes and any Obsidian vault. Notes as cards arranged across windows and screens (Spread), and a spatial field where depth is priority (Glass). Shares project-os-cockpit's sidecar; the cockpit stays the primary place for new functionality, and Deck tracks its capability register so it can support what arrives."
   repo_root: "."
 
 # Optional team model for multi-user/multi-agent projects. Descriptive only:

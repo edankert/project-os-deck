@@ -274,6 +274,8 @@ Edwin answered the seven questions of Part 6 on 2026-09-06, the same day. This p
 - **The new application starts its own renderer.** Where it needs a piece of the old one (the xterm wiring, the health marks, the reader's markup), it copies or lifts it into a shared module without changing the old application's behaviour.
 - **The new application is one renderer with two hosts.** The shell hosts it locally with the preload bridge; the sidecar can also serve it over the LAN at `/_static/`, the way it serves `cockpit.js` today. Shell-only capability (terminal, pop-out windows, the fleet) is detected through the bridge and absent when served. This is what makes the tablet answer in item 6 cheap, and it is the one-view-set-two-front-doors rule of [[project-os-cockpit#ADR-0010]] applied to the new application from the start.
 
+**Corrected later the same day.** Edwin: *"At the moment I think it is too early to say that any new cockpit functionality should land in the deck instead. I think for now cockpit should be the primary place for new functionality needed to support the different projects, the deck needs to however keep an eye on this functionality and needs to ensure it can support it going forward."* So the first bullet above is withdrawn: the cockpit is not frozen and stays the primary place for new functionality. Deck's obligation is the adoption table against the cockpit's register, kept current, and an architecture that can carry what arrives. The sharing, own-renderer and two-hosts bullets stand.
+
 **Names.** Checked against the record on 2026-09-06 so that a name does not already mean something here:
 
 | name | for | in the record today |
@@ -379,7 +381,7 @@ Obsidian:
 
 This note describes the shell, the sidecar and the vault on 2026-09-06. A decision on any part of it, or a note from Part 7 being created, makes the corresponding section historical. Do not edit the findings; add a dated line under this heading saying what changed.
 
-- 2026-09-06 — Edwin answered the seven questions of Part 6 the same day; Part 8 records the answers. Part 4's one condition (rebuild the classic layout from panel factories) is reversed: the current application is frozen and a new one, Canopy, is built beside it. Part 2's JSON Canvas suggestion is withdrawn as a default. Part 7's phase becomes three.
+- 2026-09-06 — Edwin answered the seven questions of Part 6 the same day; Part 8 records the answers. Part 4's one condition (rebuild the classic layout from panel factories) is reversed: the current application is frozen and a new one, Canopy, is built beside it. Part 2's JSON Canvas suggestion is withdrawn as a default. Part 7's phase becomes three. Later the same day Edwin withdrew the frozen-cockpit rule in Part 8 item 1: the cockpit stays the primary place for new functionality and Deck tracks it.
 
 ## Provenance
 
