@@ -32,4 +32,6 @@ The two binds are not the same bind. Node sets `SO_REUSEADDR` on every socket it
 
 **Fixed 2026-09-07 by retrying rather than by probing harder.** A sidecar that dies saying the address is in use is started again on the next free port, up to four ports, and each port Deck has already offered is excluded from the next choice. A sidecar that dies for any other reason, a Python that cannot import the module being the usual one, is reported at once and not retried.
 
+**The port was only half of it.** Edwin hit the same empty windows again after the retry landed, and the second cause is in [[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]: two windows now boot at once, both open the same workspace, and the second one stops the sidecar the first is still waiting for.
+
 The check is [[TST-0022-A-Refused-Port-Is-Not-The-End-Of-It]]. It spawns a stand-in interpreter exactly as the real one is spawned, and that stand-in refuses its first port with the same traceback CPython prints.

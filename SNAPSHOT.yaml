@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 8
-  ISS: 9
+  ISS: 10
   PHASE: 3
   REQ: 0
   RISK: 1
@@ -358,6 +358,16 @@ items:
       component: main
       tests: []
       note: "Found 2026-09-07: two Deck processes were listening on 7300 at the same time, one on *:7300 (started with --lan on 2026-09-06) and one on 127.0.0.1:7300 (started without it on 2026-09-07). Which one answers a browser at 127.0.0.1:7300 is UNDETERMINED. This is the MIRROR of ISS-0002, whose fix made freePort bind the same interface as the host: that stopped a wildcard host claiming a loopback-held port, and does nothing about a loopback host claiming a wildcard-held one. Starting the same fresh Deck with --lan made the probe bind 0.0.0.0, fail, and move to 7301."
+    ISS-0010:
+      file: "docs/issues/ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar.md"
+      title: "Two windows opening one workspace at the same time kill each other's sidecar, so both show nothing and say the sidecar exited before it answered"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: ["TST-0022"]
+      note: "FIXED 2026-09-07. Deck did this to itself, and only since panels are restored at launch: two windows boot, both open the workspace their state names, and the SECOND resolve finds the first one's child registered but not yet answering, calls it a dead sidecar of ours and stops it. The first call's child then exits with NO stderr, which is why the message carries no traceback. Your Trainer takes ~10s to index 2660 notes, so the window is most of the startup."
     ISS-0009:
       file: "docs/issues/ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It.md"
       title: "A sidecar Deck starts can be refused the port Deck offered it, because Deck's probe sets a socket option the sidecar's Python server does not, and the workspace then will not open"
@@ -642,7 +652,7 @@ items:
       note: "Automated, so it carries no verdict: CI is the verdict. Covers ISS-0002 and ISS-0004, which are two halves of one probe: a bind on loopback cannot see a process holding the port on every interface, so the probe asks whether anything ANSWERS there first. The check holds a real port on 0.0.0.0 and asserts the probe walks past it."
     TST-0022:
       file: "docs/features/shell/plan/tests/TST-0022-A-Refused-Port-Is-Not-The-End-Of-It.md"
-      title: "A sidecar refused the port Deck offered is started on another one, and a sidecar that fails for any other reason is not retried"
+      title: "A sidecar refused its port is started on another one, two windows asking at once get one sidecar, and a slow one is waited for"
       status: active
       owner: user:edwin
       phase: PHASE-0001

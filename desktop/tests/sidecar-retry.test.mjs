@@ -22,7 +22,7 @@ const { SidecarSupervisor, isPortCollision, freePort } = load('main/sidecar.js')
  * An interpreter that behaves like the sidecar's Python: it refuses the first
  * ports it is given, and serves on the next one.
  */
-function stubInterpreter(dir, refusals) {
+function stubInterpreter(dir, refusals, listenAfterMs = 0) {
   const marker = path.join(dir, 'refusals');
   fs.writeFileSync(marker, String(refusals), 'utf-8');
   const file = path.join(dir, 'python-stub.mjs');
@@ -58,7 +58,8 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body));
 });
-server.listen(port, '127.0.0.1');
+// A real sidecar indexes before it listens, which is most of its startup.
+setTimeout(() => server.listen(port, '127.0.0.1'), ${listenAfterMs});
 `,
     { mode: 0o755 },
   );
@@ -123,6 +124,43 @@ test('a sidecar that fails for any other reason is reported at once', async () =
       1,
       'a python that cannot import the sidecar is not a port problem, so it is not retried',
     );
+  } finally {
+    supervisor.stopAll();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('two windows opening one workspace at once get one sidecar, not a fight', async () => {
+  // ISS-0010: the second resolve used to find the first one's child registered
+  // but not yet answering, call it a dead sidecar of ours, and stop it. The
+  // first was still waiting on that child, which then exited with no output.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-sidecar-'));
+  const supervisor = new SidecarSupervisor(stubInterpreter(dir, 0, 1200));
+  try {
+    const workspace = workspaceIn(dir);
+    const [first, second] = await Promise.all([supervisor.resolve(workspace), supervisor.resolve(workspace)]);
+    assert.equal(first.base, second.base, 'the two windows were given different sidecars');
+    const tried = fs.readFileSync(path.join(dir, 'ports-tried'), 'utf-8').trim().split('\n');
+    assert.equal(tried.length, 1, `one sidecar was started, not ${tried.length}`);
+    // And it is still alive: the second caller did not stop what the first was
+    // waiting for.
+    const response = await fetch(`${first.base}/healthz`);
+    assert.equal(response.ok, true, 'the sidecar both windows were given is not answering');
+  } finally {
+    supervisor.stopAll();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a slow sidecar is waited for rather than killed and reported', async () => {
+  // Your Trainer takes about ten seconds to index 2660 notes before it
+  // listens. A sidecar that is slow to start is not a sidecar that failed.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-sidecar-'));
+  const supervisor = new SidecarSupervisor(stubInterpreter(dir, 0, 2500));
+  try {
+    const handle = await supervisor.resolve(workspaceIn(dir));
+    const response = await fetch(`${handle.base}/healthz`);
+    assert.equal(response.ok, true);
   } finally {
     supervisor.stopAll();
     fs.rmSync(dir, { recursive: true, force: true });

@@ -30,7 +30,15 @@ interface Record_ extends SidecarHandle {
 
 const PORT_RANGE_START = 8900;
 const PORT_RANGE_END = 8999;
-const READY_TIMEOUT_MS = 15_000;
+/**
+ * How long a sidecar has to answer.
+ *
+ * Long, because indexing is what it is doing: Your Trainer's 2660 notes take
+ * about ten seconds before the server listens, measured on 2026-09-07, and a
+ * vault in a later phase will be slower. A timeout under that turns a slow
+ * start into a failed one.
+ */
+const READY_TIMEOUT_MS = 45_000;
 /** How many ports Deck will try before it gives up on starting a sidecar. */
 const START_ATTEMPTS = 4;
 
@@ -48,6 +56,17 @@ export function isPortCollision(err: unknown): boolean {
 
 export class SidecarSupervisor {
   private readonly records = new Map<string, Record_>();
+  /**
+   * One resolve in flight per workspace.
+   *
+   * Two windows now start at once, because a popped-out panel is reopened
+   * beside the focus window, and each opens the workspace its state names. Two
+   * resolves for one workspace used to fight: the second found the first's
+   * child registered but not yet answering, called it a sidecar of ours that
+   * had stopped answering, and stopped it. The first was still waiting on that
+   * child, so it exited with no output at all (ISS-0010).
+   */
+  private readonly inFlight = new Map<string, Promise<SidecarHandle>>();
   private readonly python: string;
 
   constructor(python?: string) {
@@ -61,6 +80,20 @@ export class SidecarSupervisor {
 
   /** Reuse a live sidecar for this workspace, or start one. */
   async resolve(workspace: Workspace): Promise<SidecarHandle> {
+    // A second caller waits for the first caller's answer rather than racing
+    // it. Two windows asking at once is now the normal case, not the odd one.
+    const pending = this.inFlight.get(workspace.id);
+    if (pending !== undefined) return pending;
+    const attempt = this.resolveOnce(workspace);
+    this.inFlight.set(workspace.id, attempt);
+    try {
+      return await attempt;
+    } finally {
+      this.inFlight.delete(workspace.id);
+    }
+  }
+
+  private async resolveOnce(workspace: Workspace): Promise<SidecarHandle> {
     const existing = this.records.get(workspace.id);
     if (existing !== undefined && (await alive(existing.base, workspace.root))) {
       return { ...existing };

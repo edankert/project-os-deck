@@ -2,23 +2,23 @@
 type: "[[test]]"
 id: TST-0022
 aliases: ["TST-0022"]
-title: "A sidecar refused the port Deck offered is started on another one, and a sidecar that fails for any other reason is not retried"
+title: "A sidecar refused its port is started on another one, two windows asking at once get one sidecar, and a slow one is waited for"
 status: active
 owner: user:edwin
 created: 2026-09-07
 updated: 2026-09-07
-source: ["[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]"]
+source: ["[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]", "[[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
 level: unit
 entrypoint: "desktop/tests/sidecar-retry.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh sidecar-retry"
 last_verified: ""
-covers: ["[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]"]
-issues: ["[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]"]
+covers: ["[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]", "[[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]"]
+issues: ["[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]", "[[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]"]
 tasks: []
 artifacts: []
-adequacy: "Removing the retry fails the first check, because the workspace never opens. Retrying on every failure fails the third, because a Python that cannot import the sidecar is then tried four times over. Offering a port already tried fails the second, which asserts four different ports. The stand-in interpreter is spawned by the real supervisor with the real arguments, so a change to how Deck spawns a sidecar breaks these checks rather than passing them."
+adequacy: "Removing the coalescing fails the concurrency check, which is how ISS-0010 was found: two resolves arrive, two sidecars start, and one kills the other. Lowering the readiness timeout under a sidecar's indexing time fails the slow-start check. Removing the retry fails the first check, because the workspace never opens. Retrying on every failure fails the third, because a Python that cannot import the sidecar is then tried four times over. Offering a port already tried fails the second, which asserts four different ports. The stand-in interpreter is spawned by the real supervisor with the real arguments, so a change to how Deck spawns a sidecar breaks these checks rather than passing them."
 mutation_score: ""
 reviewed_by: ""
 review_date: ""
@@ -52,10 +52,12 @@ Nothing to install and nothing to run by hand. The suite spawns a stand-in inter
 - A sidecar that fails for another reason, a Python that cannot import the module being the usual one, is reported after a single attempt.
 - What counts as the port being taken is read off what the sidecar printed: `[Errno 48]`, `EADDRINUSE`, or the words in either message.
 - A port already offered is never offered again in the same start.
+- Two windows opening one workspace at the same time are handed the SAME sidecar, one port is used, and that sidecar is still answering afterwards.
+- A sidecar that takes seconds to listen is waited for rather than reported as failed.
 
 ## Evidence
 
-**2026-09-07:** five checks, all passing, in a run of 151 across the desktop suites. The stand-in interpreter prints the same traceback CPython prints, and the console shows Deck saying which port was taken and that it is trying another.
+**2026-09-07:** seven checks, all passing, in a run of 153 across the desktop suites. The two concurrency checks were written against the defect first: before the fix, the probe showed two ports tried, one child killed, and each window handed its own sidecar. The stand-in interpreter prints the same traceback CPython prints, and the console shows Deck saying which port was taken and that it is trying another.
 
 ## Notes
 
