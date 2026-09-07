@@ -7,14 +7,17 @@ status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[PHASE-0001-Deck]]"]
 goal: "The same renderer runs in two places. The shell hosts it locally through the preload bridge. Deck's own small HTTP host serves it over the local network for a tablet, reading only. Capability that only the shell can offer is detected rather than assumed, and is simply absent when Deck is served."
 requirements: []
 tasks: ["[[TASK-0021-Decks-Own-Read-Only-Host]]", "[[TASK-0022-Capability-Is-Detected-Not-Assumed]]"]
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: changes-requested
 release: ""
 acceptance_exception: ""
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # One renderer, two hosts
@@ -51,3 +54,14 @@ The same renderer runs in two places. The shell hosts it locally through the pre
 **2026-09-06: built and tested; the acceptance walk is owed.** The status is `review` rather than `done` because one criterion here can only be settled by a person doing something a machine cannot: opening Deck's served address in Safari on a tablet on the same network. That walk is [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]].
 
 **Everything short of the tablet is verified.** Deck's served address was opened in a desktop browser on 2026-09-06: no preload bridge, the same seven views, the same thirty cards with the same ids, no pop-out control and no add-workspace control anywhere in the interface, and the host reporting a capability set that is false throughout. A `POST` to it answered 405. What the tablet adds is Safari, touch, and a second machine.
+
+## Independent review — 2026-09-07 (first pass, at the close-out)
+
+**Verdict: changes-requested.** Clean context, separate session ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]). This feature had never been reviewed, so it got the closest reading of the seven.
+
+- **A read from the served page kills a sidecar that is still indexing** ([[ISS-0011-A-Read-From-The-Served-Page-Kills-A-Sidecar-That-Is-Still-Indexing]]). Deck's own host is half of this: `proxy` treats a connection refusal as a dead sidecar and calls `onSidecarUnreachable`, which stops it. The served page is the only surface that can reach it, because it issues reads without waiting for a sidecar the way the shell does.
+- **The forwarding allow-list reads the path and never the query** ([[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]]), so `/api/render?path=...` is forwarded as written and the sidecar's own guard is the only lock. Not exploitable today; [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]]'s claim that the sidecar never sees a refused target is corrected.
+
+**What the review found strong.** [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] is the best suite in the repository: seventeen checks over real HTTP, methods `fetch` will not send pushed down a raw socket, and the double- and triple-encoded traversals from the earlier security finding. Nothing the reviewer tried got past it except the query.
+
+**One guard that is missing rather than wrong.** The reader assigns the sidecar's HTML with `innerHTML` in a page holding the preload bridge, and Python-Markdown passes raw HTML straight through. The Content-Security-Policy meta tag in `index.html` is what stops that, and nothing asserts the tag exists, so deleting it would reopen the hole with every check green. Filed with [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]; it matters most in [[PHASE-0003-Vault]].

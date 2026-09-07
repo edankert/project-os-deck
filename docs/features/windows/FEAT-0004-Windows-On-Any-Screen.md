@@ -17,7 +17,7 @@ acceptance_exception: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-07
 review_verdict: changes-requested
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # Windows on any screen
@@ -70,3 +70,13 @@ A person drags a Deck panel onto a second monitor and it is still there after a 
 Checked and cleared. A saved address whose workspace or note has since vanished cannot stop Deck starting: `normaliseAddresses` drops anything that no longer parses (`window-book.ts:93-98`), the address grammar is the only thing consulted at start-up, and a window whose workspace has gone opens and says so from `applyAddress` (`renderer.ts:559-562`) rather than throwing. Panels cannot accumulate from one address, because `add` de-duplicates on the exact string; there is no cap on the number of distinct addresses, which only matters if the removal path above is fixed. The three panel types are genuinely exclusive in the stylesheet (`deck.css:319-333` hides the navigator in all three), and a satellite draws no switcher and no rail.
 
 One observation, not blocking: a window carrying `desk` still draws the desk bar's Save, Clear and desk picker, and the desk it shows is the shared live desk rather than a snapshot, so clearing from the panel clears the main window too. TASK-0026's criterion says "shows that desk's cards where they were placed", which does not settle whether that was intended.
+
+## Independent review — 2026-09-07 (close-out pass)
+
+**Verdict: changes-requested.** Clean context, separate session ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]). One defect and two leads.
+
+- **The remove control is still drawn on a card in the Needs-you strip and now does nothing when clicked** ([[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]]). [[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]] recorded both halves of that fix and only the refusal was built.
+- **A lead against the sixth criterion**, "a new focus window adopts navigation": the main process sets the role, but the renderer asks its role once in `boot()` and nothing pushes a change, so a promoted satellite would keep `pinned = true` and draw no view buttons and no workspace rail. Nobody has reproduced it by running Deck, and the smoke run asserts on the main-process map rather than on what the window draws.
+- **A lead about the panel in an address**: a satellite's own Copy address produces one carrying `panel=`, and pasting it into the focus window hides the navigator and the reader with no control to bring them back.
+
+[[ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel]]'s fix is correct as read but guarded by nothing automated — no suite can import `main/main.js`, `PanelBook` is untested, and the smoke run reloads rather than restarts. That rides with [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]].

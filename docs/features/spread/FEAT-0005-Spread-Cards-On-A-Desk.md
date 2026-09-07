@@ -17,7 +17,7 @@ acceptance_exception: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-07
 review_verdict: changes-requested
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # Spread
@@ -79,3 +79,11 @@ Deck's first view shows notes as cards a person arranges, rather than as a list 
 Not defects, checked and cleared: the identity claim in `move-card` holds (`store-state.ts:174-179` returns untouched cards by reference, and the check asserts by identity); a pooled card element cannot show one note's data with another note's handler, because every handler resolves its model from the element's current `data-note-id` (`cards.ts:81-84`); and `hidden` really removes an element, because `deck.css:27` sets `[hidden] { display: none !important; }`, which `render.test.mjs` guards including against a future `!important` that would outrank it.
 
 Two smaller observations, not blocking. `NavigatorList.paintRow` recovers the row index with `this.rows.indexOf(row)` (`navigator.ts:88`) when the caller already has it, which is quadratic in the row count. And a navigator row hands the click handler `this.cards.get(row.card.noteId)` rather than `row.card` (`navigator.ts:81`); when the same note appears in two groups — which `groups.test.mjs:82` establishes it does, in Needs-you and again under its phase — the handler gets whichever model was painted last, not the one that row drew. Nothing visible depends on the difference today, because only `noteId` and `rel` are used downstream.
+
+## Independent review — 2026-09-07 (close-out pass)
+
+**Verdict: changes-requested.** Clean context, separate session ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]). One defect, one measurement and one lead.
+
+- **A filter set on one view still narrows the next one, and the dropdowns then say nothing is filtered** ([[ISS-0012-A-Filter-Survives-The-View-It-Was-Set-On]]). The reducer clears the search box on a workspace change and never clears the filters; a view change clears neither.
+- **The clamp fix from [[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]] is guarded by nothing.** Replacing the clamp call in the built renderer with a plain assignment left all 153 checks green. That is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] with a number on it, and [[TST-0019-The-Desk-Is-Chosen-And-Arranged]]'s `adequacy` field, which claimed the opposite, is corrected.
+- **A lead**: `deskBounds` measures `scrollHeight` before the pool renders, so it reads the previous paint. A card restored below the desk's height would then creep down by about 56 pixels on every repaint until it is off-screen again. Read from the arithmetic, not run.

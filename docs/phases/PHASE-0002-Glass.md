@@ -12,7 +12,7 @@ goal: "Deck opens in Glass: a field where a note's distance says how much it nee
 features: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 requirements: []
 tasks: ["[[TASK-0029-The-Band-Function]]", "[[TASK-0030-The-Slot-Geometry]]", "[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0002-The-Layout-Is-Computed-Once-And-Kept]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[TASK-0005-The-Treatment-Is-Chosen-Not-Assumed]]"]
-issues: []
+issues: ["[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 depends: ["[[PHASE-0001-Deck]]"]
 related: ["[[ADR-0002-Glass-Is-The-Main-View]]", "[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]]", "[[TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives]]", "[[TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible]]", "[[PHASE-0001-Deck]]", "[[PHASE-0004-Parity]]", "[[PHASE-0003-Vault]]"]
 tags: [phase, glass, field, deck]

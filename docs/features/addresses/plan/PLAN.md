@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — every state has an address"
-status: active
+status: done
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[FEAT-0006-Every-State-Has-An-Address]]"]
 implements: ["[[FEAT-0006-Every-State-Has-An-Address]]"]
 related: ["[[PHASE-0001-Deck]]"]

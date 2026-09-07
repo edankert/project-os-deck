@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0006
 aliases: ["FEAT-0006"]
 title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[PHASE-0001-Deck]]"]
 goal: "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside."
 requirements: []
@@ -15,9 +15,9 @@ tasks: ["[[TASK-0017-The-Address-Grammar]]", "[[TASK-0018-Copy-The-Address-And-O
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-06
+review_date: 2026-09-07
 review_verdict: approved
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # Every state has an address
@@ -46,6 +46,8 @@ Any state a person can reach in Deck can be written down as a short string, and 
 - Plan: `docs/features/addresses/plan/PLAN.md`
 
 ## Where this stands
+
+**2026-09-07: done.** The walk is made and the second independent review approved this feature. [[TST-0013-An-Address-Survives-Being-Written-Down]] passed — Edwin walked it on 2026-09-06 and marked it pass in the release ledger, with the remark "I think this bit works". A second clean-context review, run at the close-out of [[PHASE-0001-Deck]], read this feature's code and criteria again and approved it with no findings against it ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]).
 
 **2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — copying an address, quitting, and pasting it back tomorrow — is [[TST-0013-An-Address-Survives-Being-Written-Down]], and nobody has walked it yet.
 

@@ -16,8 +16,8 @@ depends: ["TASK-0023", "TASK-0024"]
 blocks: []
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-07
-review_verdict: changes-requested
-related: ["[[FEAT-0004-Windows-On-Any-Screen]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]]"]
+review_verdict: approved
+related: ["[[FEAT-0004-Windows-On-Any-Screen]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]", "[[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]]", "[[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]]"]
 tests: ["[[TST-0020-A-Popped-Out-Window-Carries-One-Panel]]"]
 ---
 
@@ -72,3 +72,7 @@ The automated check is [[TST-0020-A-Popped-Out-Window-Carries-One-Panel]], and t
 What does hold: the panel is in the address and refused when unknown, each panel type hides what it does not carry through `deck.css:319-333`, a satellite draws no rail, no switcher and no pop-out, and `showInactive` keeps the keyboard where it was. A saved address whose workspace has vanished does not stop Deck starting.
 
 One thing the criteria do not settle, noted rather than filed: a `desk` panel shows the shared live desk rather than the desk as it was at pop-out, so clearing it in the panel clears the main window too.
+
+**2026-09-07, the close-out review: the verdict moves to approved, and two new things were found against the same panels.** The change this review asked for was made — [[ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel]] is fixed, and Edwin's walk of [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] passed on the same day. Leaving the field at `changes-requested` on a task marked `done` said the opposite.
+
+The second review of the day ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]) found two more, and they belong to [[FEAT-0004-Windows-On-Any-Screen]] rather than to this task's own criteria. One is filed: the remove control is still drawn on a card in the Needs-you strip and now does nothing when clicked ([[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]]). One is a lead nobody has reproduced: a satellite's own Copy address produces an address carrying `panel=`, and pasting that into the focus window hides the navigator and the reader with no control to bring them back.

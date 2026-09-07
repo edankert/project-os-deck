@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-07T12:00Z"
+updated: "2026-09-07T18:00Z"
 
 template:
   replace_me: false
@@ -49,10 +49,10 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 10
-  ISS: 10
+  ISS: 16
   PHASE: 4
   REQ: 0
-  RISK: 1
+  RISK: 2
   REL: 0
   TASK: 37
   TST: 25
@@ -90,7 +90,7 @@ items:
     FEAT-0003:
       file: "docs/features/store/FEAT-0003-One-Store-In-The-Main-Process.md"
       title: "One store in the main process: every window reads the same state and watches it change"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -117,7 +117,7 @@ items:
     FEAT-0006:
       file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
       title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -126,7 +126,7 @@ items:
     FEAT-0007:
       file: "docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md"
       title: "Views come from a provider: the renderer holds no fixed set of view buttons"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -371,6 +371,66 @@ items:
       parent: "FEAT-0010"
       phase: PHASE-0002
   issues:
+    ISS-0016:
+      file: "docs/issues/ISS-0016-The-Acceptance-Gate-Reads-A-Field-This-Repo-Does-Not-Use.md"
+      title: "The validator's acceptance gate reads a mark: field on the test note and never the release ledger, so it can never be satisfied here, and on 2026-11-20 it turns this repository red"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tools
+      tests: []
+      note: "Found by closing three features on 2026-09-07: each raised VERIFY-ACCEPTANCE naming a walk Edwin had already marked pass. validate-docs.py _acceptance_is_settled reads fm['mark'] on the TEST NOTE; this repo puts the verdict in docs/releases/ledgers/WORKING-app.json (ADR-0037) and the note rests at active with no mark. The word 'ledger' appears nowhere in the validator. The message also asks for done/incomplete/canceled, which TAXONOMY.md lists as LEGACY, never written; current is pass/partial/na/excused/blocked/question/fail. WARNING today, ERROR on 2026-11-20 per the PROMOTIONS table. Fix belongs UPSTREAM in ../project-os -- tools/scripts/ is template-owned and sync-project-os.sh overwrites a local patch."
+    ISS-0011:
+      file: "docs/issues/ISS-0011-A-Read-From-The-Served-Page-Kills-A-Sidecar-That-Is-Still-Indexing.md"
+      title: "A read from the served page kills the sidecar Deck is still waiting for, so a tablet opening a large workspace gets an empty screen and 'the sidecar exited before it answered'"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: []
+      note: "The close-out review's sharpest finding, 2026-09-07, reproduced with a stub sidecar and one proxied read. ISS-0010's symptom down a path that fix does not cover. startOnce registers the record BEFORE waitForHealth on purpose (so a quit mid-wait kills the child), so sidecarBaseFor answers for the whole indexing window -- ten seconds for Your Trainer, up to forty-five. A read then gets a connection refusal, host.ts calls onSidecarUnreachable, main.ts wires that to forget(), and forget stops a sidecar Deck owns. The SHELL cannot reach it (boot awaits resolve); the SERVED PAGE can, because its openWorkspace only dispatches locally and loadView reads at once. That is the tablet configuration TST-0010 walks. HOLDS FEAT-0002 and FEAT-0008 at review."
+    ISS-0012:
+      file: "docs/issues/ISS-0012-A-Filter-Survives-The-View-It-Was-Set-On.md"
+      title: "A filter set on one view still narrows the next one, and the dropdowns say nothing is filtered, so the navigator reads empty for no visible reason"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: []
+      note: "Close-out review 2026-09-07, reproduced. reduce() clears query on open-workspace and never clears filters; select-view clears neither (shared/store-state.ts:97-115). renderFilters then rebuilds the select from the NEW view's values and falls back to '', so syncFilters assigns a value with no matching option and the DOM ignores it: the navigator says 0 of 30 while both dropdowns say any. store.test.mjs:33 is titled 'opening a different workspace clears what belonged to the old one' and asserts only viewId, noteId, deskName -- the title is wider than the assertions, which is why it was missed. HOLDS FEAT-0005 at review."
+    ISS-0013:
+      file: "docs/issues/ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing.md"
+      title: "The remove control still appears on a card in the Needs-you strip and now silently does nothing, which is not the behaviour ISS-0007 recorded as fixed"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: renderer
+      tests: []
+      note: "Close-out review 2026-09-07, reproduced. ISS-0007 recorded 'hidden in the strip and refuses there in any case'; only the refusal was built. grep for remove in deck.css returns three rules and none hides the control, in source or in the built stylesheet, and renderer.ts:76 repeats the claim. So a person is offered an action that quietly does nothing -- a DIFFERENT wrong behaviour, not the absence of one. ISS-0007's claim is corrected in place. HOLDS FEAT-0004 at review."
+    ISS-0014:
+      file: "docs/issues/ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query.md"
+      title: "Deck's forwarding allow-list constrains the path and never the query, so a request from the LAN can ask the sidecar to render any file and only the sidecar's own guard stops it"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: main
+      tests: []
+      note: "Close-out review 2026-09-07, reproduced against a recording fake sidecar: /api/render?path=../../../../etc/passwd is forwarded verbatim. NOT EXPLOITABLE today -- the cockpit's _serve_render refuses it twice (a '..' part check, then _is_under(docs_root)). But Deck's second lock does not cover the shape and TST-0007's Expected results claimed 'the sidecar never sees it', which is corrected. Two non-defects from the same probe: //healthz is refused 403 although it is a legitimate read, and a traversal out of an allowed path answers 503 rather than 403 because normalisation happens before the workspace id is split off. HOLDS FEAT-0008 at review."
+    ISS-0015:
+      file: "docs/issues/ISS-0015-Four-Smaller-Things-The-Close-Out-Review-Found.md"
+      title: "Four smaller things the close-out review found: a check asserting on a message the code no longer emits, two satellites sharing one saved rectangle, a quadratic row lookup, and a count that counts a note twice"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: renderer
+      tests: []
+      note: "Close-out review 2026-09-07. sidecar-retry.test.mjs:174 asserts on 'did not answer within 15s' and the timeout is 45s now. boundsKey(role, panel) gives two panel=desk windows one rectangle so they stack. paintRow recovers the index with indexOf when the caller has it. The N of M count counts a note twice when the sidecar sends it twice (consistent on both sides, just not distinct). Plus: the click handler resolves cards.get(noteId) rather than row.card, so a note in two groups opens whichever painted last. Blocks nothing; groom."
     ISS-0003:
       file: "docs/issues/ISS-0003-A-Served-Page-Cannot-Open-A-Workspace-The-Shell-Has-Not.md"
       title: "A served page cannot open a workspace the shell has not opened, and the only thing it tells you is that the sidecar answered 503"
@@ -416,11 +476,11 @@ items:
       title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
       status: triage
       owner: user:edwin
-      phase: PHASE-0001
+      phase: PHASE-0002
       severity: medium
       component: tests
       tests: []
-      note: "The independent review's STRUCTURAL finding, 2026-09-07, and the reason three of its six defects existed. No suite loads desktop/src/renderer/; the smoke run does drive it, and the smoke run is not in CI because it needs Electron's binary. Three ways out and they are not the same size: a document stand-in (a first dependency), a headless Electron job (a 100MB download per run), or moving yet more logic into shared/ (already done for rows, search, faces and desk; the drag and the pool cannot leave). Which one is worth it is Edwin's call, which is why this rests at triage."
+      note: "The independent review's STRUCTURAL finding, 2026-09-07, and the reason three of its six defects existed. No suite loads desktop/src/renderer/; the smoke run does drive it, and the smoke run is not in CI because it needs Electron's binary. Three ways out and they are not the same size: a document stand-in (a first dependency), a headless Electron job (a 100MB download per run), or moving yet more logic into shared/ (already done for rows, search, faces and desk; the drag and the pool cannot leave). Which one is worth it is Edwin's call, which is why this rests at triage. MOVED to PHASE-0002 on 2026-09-07 when PHASE-0001 closed: a phase cannot be done while a note naming it in phase: is unresolved, and Glass is all renderer, so the gap widens there. Still triage; grooming decides, and PHASE-0004 is the other candidate."
     ISS-0005:
       file: "docs/issues/ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled.md"
       title: "A card jumps hundreds of pixels when it is dragged on a desk that has scrolled, because the clamp measures the window while the position measures the content"
@@ -493,7 +553,7 @@ items:
       features: ["FEAT-0009", "FEAT-0010", "FEAT-0001"]
       requirements: []
       tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
-      issues: []
+      issues: ["ISS-0008"]
       note: "OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit; its issues are ironed out here. Was gated on FEAT-0001's three measurements; those are now EXIT CRITERIA written as numbers, not a gate. Three features: FEAT-0009 the field (the focus; bands from the groups the sidecar already sends; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band (what Edwin said he cannot see today), FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Three acceptance walks: TST-0023, TST-0024, TST-0025. Asks nothing new of the sidecar except FEAT-0001's endpoint, which is cockpit work. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk, the navigator, the addresses and the tablet host."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
@@ -518,10 +578,17 @@ items:
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
+    RISK-0002:
+      file: "docs/risks/RISK-0002-Decks-Read-Only-Guarantee-Rests-On-The-Sidecars-Own-Checks.md"
+      title: "Deck's read-only guarantee rests on the sidecar's own path checks for anything carried in a query string, and Deck does not know when those change"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      note: "Risk scan at the PHASE-0001 close-out, 2026-09-07, from ISS-0014. Deck's allow-list matches the PATH; /api/render takes its target in the QUERY, so an allowed path carrying any target is forwarded verbatim from the LAN. What refuses it is the cockpit's _serve_render, in ANOTHER repository, and nothing in Deck watches it: not the tests, not ADR-0001, not the adoption table. Low likelihood (the guard is old and tested upstream), high impact (Deck's claim on this surface is 'reads only, second lock', on a host bound beyond loopback for a tablet). WORSE IN PHASE-0003: a vault is a personal corpus. Two shapes open, ISS-0014 does not pick: constrain the query, or accept one lock and WRITE THE DEPENDENCY DOWN in TST-0007, ADR-0001 and the adoption table."
     RISK-0001:
       file: "docs/risks/RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing.md"
       title: "A second sidecar on the same repository takes over the cockpit's focus routing"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0001
       note: "The sidecar writes .cockpit/url into the repository and the cockpit command follows it, so a second sidecar on one repository silently captures that routing -- and Deck and the cockpit are meant to be open together during this phase, because exit criterion 1 is a side-by-side comparison. Mitigated in TASK-0007 by reusing a running sidecar after verifying its identity, and starting one only when none answers."
@@ -782,7 +849,7 @@ items:
 metrics:
   counts:
     features_total: 10
-    features_done: 0
+    features_done: 3
     phases_total: 4
     phases_done: 0
     tasks_total: 37
@@ -791,7 +858,7 @@ metrics:
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 1
+    issues_triage: 7
     risks_open: 1
     releases_total: 0
     decisions_total: 2

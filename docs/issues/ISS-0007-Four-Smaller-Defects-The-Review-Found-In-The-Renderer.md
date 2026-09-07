@@ -32,4 +32,12 @@ The independent review of 2026-09-07 found four defects too small for a note eac
 
 ## Resolution
 
-**All four fixed 2026-09-07.** A restored position is clamped when it is drawn, not when it is stored, so the saved desk keeps the positions it was saved with. Both halves of the navigator's ratio are counted the same way, children included. The remove control is hidden in the strip and refuses there in any case. The filters are set from the state on every repaint, the way the search box already was.
+**All four fixed 2026-09-07.** A restored position is clamped when it is drawn, not when it is stored, so the saved desk keeps the positions it was saved with. Both halves of the navigator's ratio are counted the same way, children included. The remove control refuses in the strip. The filters are set from the state on every repaint, the way the search box already was.
+
+## Correction, 2026-09-07: half of the third fix was never built
+
+**The remove control is still drawn on a card in the Needs-you strip.** The sentence above said "hidden in the strip and refuses there in any case", and only the refusal was built. The close-out review of the same day looked for the hiding rule and found none: `grep -n "remove" desktop/src/renderer/deck.css` returns three rules and not one of them hides the control, in the source or in the built stylesheet ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]).
+
+So a person hovering a card in a popped-out strip is still offered a ×, and clicking it now does nothing at all. That is a different wrong behaviour from the one this note filed, not the absence of one, and it is [[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]]. The claim here is corrected rather than deleted, because what the note asserted is part of the record.
+
+**The first fix, the clamp, is real but guarded by nothing.** The same review replaced the clamp call in the built renderer with a plain assignment and all 153 checks passed. That is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] measured, not a new defect here.

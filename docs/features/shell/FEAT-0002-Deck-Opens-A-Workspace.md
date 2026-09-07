@@ -7,7 +7,7 @@ status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[PHASE-0001-Deck]]"]
 goal: "A person launches Deck, picks a workspace and sees that workspace's notes. This feature is the application itself: the Electron shell, the discovery that finds a project-os repository on disk, the sidecar process started for it, and a typed client that reads the sidecar over HTTP."
 requirements: []
@@ -15,9 +15,9 @@ tasks: ["[[TASK-0006-The-Application-Builds-And-Boots]]", "[[TASK-0007-The-Sidec
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-06
-review_verdict: approved
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
+review_date: 2026-09-07
+review_verdict: changes-requested
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # Deck opens a workspace
@@ -52,6 +52,8 @@ A person launches Deck, picks a workspace and sees that workspace's notes. This 
 
 **2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — adding a folder by hand, and looking for a leftover process after quitting — is [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]], and nobody has walked it yet.
 
+**2026-09-07: the sidecar work moved on and this note did not, which is why the feature is still `review`.** Between the approval below and the phase's close-out, the code this feature owns gained four-port retry, per-workspace resolve coalescing and a readiness timeout raised from fifteen seconds to forty-five, with two new test notes ([[TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free]], [[TST-0022-A-Refused-Port-Is-Not-The-End-Of-It]]). [[TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck]] now carries that account. The approval below predates all of it, so it cannot carry this feature to `done`.
+
 ## Independent review — 2026-09-06 (second pass)
 
 **Verdict: approved.** Clean context, separate session; same model family, recorded in `reviewed_by`. The first pass held this feature at changes-requested over two findings. Both are fixed, verified at commit `9b99c36` and re-confirmed at `2539206`.
@@ -62,3 +64,11 @@ A person launches Deck, picks a workspace and sees that workspace's notes. This 
 Verified live: `electron . --smoke --workspace .` boots, borrows the sidecar the cockpit already had running, draws 30 cards with id, title and status, and exits `ok: true`.
 
 One note, not a defect. `defaultPython()` locates the cockpit's virtual environment by walking four directories up from `__dirname`. Running the built app from anywhere else silently falls back to a bare `python3`, and the failure then surfaces as "the sidecar exited before it answered" — the misdirection the function's own comment warns about. `DECK_PYTHON` is the escape hatch and it works.
+
+## Independent review — 2026-09-07 (close-out pass)
+
+**Verdict: changes-requested.** Clean context, separate session ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]). Three things hold this feature at `review`.
+
+- **A read arriving while Deck is still starting a sidecar kills that sidecar** ([[ISS-0011-A-Read-From-The-Served-Page-Kills-A-Sidecar-That-Is-Still-Indexing]]). Reproduced with a stub sidecar and one proxied read. It is [[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]'s failure down a path that fix does not cover, and the served page is where it is reachable.
+- **The approval below predates the code it covers**, which is the paragraph above under "Where this stands".
+- **The walk that ticked the fifth criterion passed carrying a doubt.** The release ledger records Edwin's `pass` on [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]] with the reason "I am not sure if it doesn't leave anything running when I quit???". The automated evidence is `desktop/tests/sidecar-client.test.mjs:380-421`, which asserts that `'SIGTERM'` was pushed onto an array by a stub object's `kill` — not that a process died. And `stopOne`'s SIGKILL escalation is a three-second `unref`'d timer, which cannot fire once the main process has gone, so a sidecar that is slow on SIGTERM does outlive Deck. Ticking that criterion on a walk whose stated reason is "I am not sure" is what `tools/instructions/QUALITY.md` calls ticking to fit.

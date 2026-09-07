@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — one store in the main process"
-status: active
+status: done
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[FEAT-0003-One-Store-In-The-Main-Process]]"]
 implements: ["[[FEAT-0003-One-Store-In-The-Main-Process]]"]
 related: ["[[PHASE-0001-Deck]]"]

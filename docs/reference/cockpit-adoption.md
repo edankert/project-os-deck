@@ -107,6 +107,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 ## Maintenance
 
+- 2026-09-07, closing day — the re-read [[PHASE-0001-Deck]]'s last exit criterion asks for, made on the day that phase closed. The cockpit is still at `c0ed9e3` and has landed no change note since the previous read, so no key arrived and no row moved. The keys were compared mechanically rather than by eye: the register lists 55 and this table carries 55, with no key on either side that the other lacks. The nine rows Spread relies on — `surface.shell`, `shell.workspaces.rail`, `shell.workspaces.discovery`, `shell.nav.modes`, `shell.reader.render`, `shell.windows`, `api.read.nav`, `api.read.note` and `api.read.record` — are all `adopted`, as are `shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find` and `api.guards`.
 - 2026-09-07, later — no row moved. The Parity phase, [[PHASE-0004-Parity]], is now the phase that takes the `not yet` rows a working day needs; the `shell.terminal` row records Edwin's wish to evaluate T3 Code's terminal before Deck builds a console.
 - Re-read the cockpit register whenever `git log --since=<last read> -- docs/changes` in project-os-cockpit returns anything, and add a dated line here saying what was read and which rows changed.
 - 2026-09-06 — written against baseline `570da22`; every row `not yet` except `api.guards`, and three `replaced by`.

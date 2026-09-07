@@ -17,11 +17,11 @@ covers: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]"]
 issues: []
 tasks: ["[[TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty]]", "[[TASK-0025-Cards-Are-Dragged-And-Removed]]"]
 artifacts: []
-adequacy: "Rebuilding every card on a move fails the identity check while every position is still correct. Saving the desk by reference rather than by copy fails the copy check. Removing the clamp fails the smaller-window check."
+adequacy: "Rebuilding every card on a move fails the identity check while every position is still correct. Saving the desk by reference rather than by copy fails the copy check. The clamp is NOT guarded: the close-out review of 2026-09-07 replaced the clamp call in the built renderer with a plain assignment and all 153 checks still passed, because no suite loads desktop/src/renderer/ ([[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]). The clamp rests on the acceptance walk alone."
 mutation_score: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-07
-review_verdict: changes-requested
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty]]", "[[TASK-0025-Cards-Are-Dragged-And-Removed]]", "[[TST-0004-A-Desk-Reopens-As-It-Was-Left]]"]
 ---
 
@@ -85,3 +85,5 @@ The rest of the suite guards what it says it does: the identity check would fail
 ## Where this stands
 
 **2026-09-07, review: changes requested, and made.** The review's sharpest point about this suite: its clamp check called the pure function directly, so it passed whether or not the application ever called it, and the application did not ([[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]]). Two checks were added that assert the DEFECT as well as the fix, using the real numbers from a desk scrolled below its own window ([[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]]).
+
+**2026-09-07, close-out review: the verdict moves to approved and the `adequacy` field stops overclaiming.** The second review of the day measured what the first one argued ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]): it replaced the clamp call in the built renderer with a plain assignment and every one of the 153 checks still passed. So the sentence "Removing the clamp fails the smaller-window check" was false and is gone. What this suite does guard, it guards — the identity check and the copy check both fail when their behaviour is reverted. The clamp is covered by the acceptance walk and by nothing automated, which is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] and not a fault of this note.

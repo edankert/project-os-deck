@@ -6,7 +6,7 @@ title: "The host serves the renderer, proxies reads, and refuses every method an
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[FEAT-0008-One-Renderer-Two-Hosts]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -40,14 +40,14 @@ Deck's own host is the only network surface Deck exposes. This suite drives it o
 - Request an API path with `GET` and assert the fake sidecar received it and the response came back.
 - Request the same path with `POST`, `PUT`, `PATCH`, `DELETE` and `OPTIONS`, and assert each is refused with 405 and that the fake sidecar recorded nothing.
 - Request a path that walks out of the served directory, plainly and percent-encoded, and assert each is refused with 403.
-- Assert only the paths Deck reads are forwarded, and that a path outside that list never reaches the fake sidecar.
+- Assert only the paths Deck reads are forwarded, and that a path outside that list never reaches the fake sidecar. **The allow-list reads the path and not the query**: an allowed path carrying a traversal in its query string is forwarded, and the sidecar's own guard is what refuses it ([[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]]).
 - Assert the renderer served over the host reports the reading capability set and no shell-only capability.
 
 ## Expected results
 
 - Reads are served and proxied.
 - Every write method is refused before the sidecar is reached.
-- No path outside the served directory is served.
+- No path outside the served directory is served. This is a claim about the **path**. A request whose query names a file — `/api/render?path=...` is the one that does — is forwarded as written, and containment for it rests on the sidecar upstream ([[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]], filed 2026-09-07).
 - The served capability set contains nothing only the shell can do.
 
 ## Evidence

@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0003
 aliases: ["FEAT-0003"]
 title: "One store in the main process: every window reads the same state and watches it change"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[PHASE-0001-Deck]]"]
 goal: "Deck keeps its state in one place, the Electron main process, and every window subscribes to it. Open two windows, change the focused note in one, and the other shows the change immediately."
 requirements: []
@@ -15,9 +15,9 @@ tasks: ["[[TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It]]", "[[TASK-001
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-06
+review_date: 2026-09-07
 review_verdict: approved
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # One store in the main process
@@ -48,6 +48,8 @@ Deck keeps its state in one place, the Electron main process, and every window s
 - Plan: `docs/features/store/plan/PLAN.md`
 
 ## Where this stands
+
+**2026-09-07: done.** The walk is made and the second independent review approved this feature. [[TST-0012-Two-Windows-Show-The-Same-State]] passed — Edwin walked it on 2026-09-07 and marked it pass in the release ledger. A second clean-context review, run at the close-out of [[PHASE-0001-Deck]], read this feature's code and criteria again and approved it with no findings against it ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]).
 
 **2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — watching a second window follow the first, and quitting and coming back — is [[TST-0012-Two-Windows-Show-The-Same-State]], and nobody has walked it yet.
 

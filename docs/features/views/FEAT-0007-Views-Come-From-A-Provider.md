@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0007
 aliases: ["FEAT-0007"]
 title: "Views come from a provider: the renderer holds no fixed set of view buttons"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["[[PHASE-0001-Deck]]"]
 goal: "Deck asks a view provider which views the current workspace has and draws whatever comes back. For a project-os repository the built-in provider offers the same views the cockpit's navigator does. A vault's `.base` files can become views later by adding a provider, without touching the renderer."
 requirements: []
@@ -15,9 +15,9 @@ tasks: ["[[TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider]]", "[[T
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-06
+review_date: 2026-09-07
 review_verdict: approved
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
 # Views come from a provider
@@ -64,5 +64,7 @@ Two observations that are not criterion misses and were left as notes rather tha
 - The literal scan covers `dist/web/renderer/` only, so a view name moved into `dist/web/shared/` would not be seen. That is the correct scope for the criterion as written; it is worth knowing the guard's edge.
 
 ## Where this stands
+
+**2026-09-07: done.** The walk is made and the second independent review approved this feature. [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]] passed — Edwin walked it on 2026-09-07 and marked it pass in the release ledger. A second clean-context review, run at the close-out of [[PHASE-0001-Deck]], read this feature's code and criteria again and approved it with no findings against it ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]).
 
 **2026-09-06: built, tested and independently reviewed; the acceptance walk is owed.** The review is recorded above and approved this feature against its four criteria. The status is `review` rather than `done` because the claim a person settles — that Deck's views are the cockpit's views — is settled by looking at both applications, which is [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]]. The automated half of that claim is pinned to a fixture read off the cockpit's own navigator, so a drift fails the build rather than waiting for the walk.
