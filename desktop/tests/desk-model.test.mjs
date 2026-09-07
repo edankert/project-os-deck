@@ -11,7 +11,8 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, deskKey, deskCardsOf, isOnDesk } = load('shared/store-state.js');
-const { nextSlot, clampToSurface, deskBounds, reconcileDesk, CARD_WIDTH } = load('shared/desk.js');
+const { nextSlot, clampToSurface, deskBounds, placementBounds, reconcileDesk, CARD_WIDTH, CARD_HEIGHT } =
+  load('shared/desk.js');
 
 const WORKSPACE = 'aaaa1111';
 
@@ -171,4 +172,65 @@ test('a desk restored onto a smaller window comes back on screen', () => {
   const saved = { x: 1400, y: 900 };
   const onLaptop = clampToSurface(saved, { width: 900, height: 500 });
   assert.ok(onLaptop.x <= 900 - 48 && onLaptop.y <= 500 - 48, `${JSON.stringify(onLaptop)} is off the surface`);
+});
+
+test('a restored card sits in the same place however many times the desk repaints', () => {
+  // ISS-0017. `deskBounds` measures the CONTENT, and the content is what the
+  // previous paint made — which for a restored card is where this same clamp
+  // last put it. Each repaint therefore moved it a little further down, and a
+  // repaint happens on every fold, every search keystroke and every change
+  // arriving from another window.
+  const GAP = 12;
+  const window_ = { clientWidth: 900, clientHeight: 400 };
+  const stored = [{ x: 20, y: 2000 }];
+
+  // The defect, reproduced against the bound that caused it.
+  let content = { ...window_, scrollWidth: 900, scrollHeight: 400 };
+  const crept = [];
+  for (let paint = 0; paint < 4; paint += 1) {
+    const at = clampToSurface(stored[0], deskBounds(content));
+    crept.push(at.y);
+    content = { ...content, scrollHeight: Math.max(window_.clientHeight, at.y + CARD_HEIGHT + GAP) };
+  }
+  assert.ok(crept[3] > crept[0], 'the content bound was stable after all, so this check guards nothing');
+  assert.ok(crept[3] - crept[0] > 100, `expected a visible drift, got ${crept.join(' -> ')}`);
+
+  // The fix: a bound computed from the saved positions, so every paint agrees.
+  const steady = [0, 1, 2, 3].map(() => clampToSurface(stored[0], placementBounds(window_, stored)).y);
+  assert.deepEqual(steady, [steady[0], steady[0], steady[0], steady[0]], `a restored card moved: ${steady.join(' -> ')}`);
+});
+
+test('a desk taller than its window keeps every card in its own place', () => {
+  // The second wrong answer, guarded so it cannot come back. Clamping every
+  // card to the WINDOW is stable and squeezes the desk flat: no painted card
+  // exceeds the viewport, so the desk never grows enough to scroll to the
+  // rest, and cards land on top of each other.
+  const window_ = { clientWidth: 900, clientHeight: 600 };
+  const stored = [];
+  for (let i = 0; i < 40; i += 1) stored.push(nextSlot(stored, window_.clientWidth));
+  assert.ok(
+    stored.some((c) => c.y > window_.clientHeight),
+    'the fixture does not even fill one screen, so it tests nothing',
+  );
+
+  const bounds = placementBounds(window_, stored);
+  const painted = stored.map((c) => clampToSurface(c, bounds));
+  assert.deepEqual(painted, stored, 'a saved position was moved on a desk that can scroll to it');
+  assert.equal(
+    new Set(painted.map((p) => `${p.x},${p.y}`)).size,
+    stored.length,
+    'two cards were drawn in the same place',
+  );
+
+  // And it still catches what a clamp is for: a position off the top or left.
+  assert.deepEqual(clampToSurface({ x: -80, y: -40 }, bounds), { x: 0, y: 0 });
+});
+
+test('the drag still clamps against the content, which is what ISS-0005 needed', () => {
+  // The two clamps are for two jobs. A card being DRAGGED on a desk scrolled
+  // 500 pixels down is on content that already extends that far, and clamping
+  // it to the window would yank it back to the top.
+  const scrolled = { clientWidth: 900, clientHeight: 400, scrollWidth: 900, scrollHeight: 1200 };
+  const at = clampToSurface({ x: 20, y: 900 }, deskBounds(scrolled));
+  assert.equal(at.y, 900, 'a dragged card was clamped as though the desk did not scroll');
 });

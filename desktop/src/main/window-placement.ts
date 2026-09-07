@@ -77,9 +77,17 @@ function centreIn(area: Rect, size: { width: number; height: number }): Rect {
 }
 
 /**
- * The key a window's bounds are saved under. Per role and panel, so a status
- * satellite and the focus window do not fight over one rectangle.
+ * The key a window's bounds are saved under.
+ *
+ * Per role, panel AND what the panel carries, so a status satellite and the
+ * focus window do not fight over one rectangle — and neither do two windows
+ * carrying the same kind of panel. Keying on the panel type alone gave every
+ * `panel=desk` window one saved rectangle, so two desks on two monitors came
+ * back stacked on one of them (ISS-0015).
  */
-export function boundsKey(role: string, panel: string | null): string {
-  return panel === null ? role : `${role}:${panel}`;
+export function boundsKey(role: string, panel: string | null, subject?: string | null): string {
+  const parts = [role];
+  if (panel !== null) parts.push(panel);
+  if (subject !== undefined && subject !== null && subject !== '') parts.push(subject);
+  return parts.join(':');
 }

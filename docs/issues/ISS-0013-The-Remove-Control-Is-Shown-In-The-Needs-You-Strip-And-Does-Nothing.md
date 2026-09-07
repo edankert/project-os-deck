@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0013
 aliases: ["ISS-0013"]
 title: "The remove control still appears on a card in the Needs-you strip and now silently does nothing, which is not the behaviour ISS-0007 recorded as fixed"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -45,3 +45,9 @@ It is drawn, it responds to hover, and clicking it does nothing.
 ## Next Actions
 
 - [ ] Add the hiding rule, and correct the claim in [[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]] and the comment at `renderer.ts:76`.
+
+## Resolution, 2026-09-07
+
+`body[data-panel="needs-you"] .card .remove { display: none; }` in `desktop/src/renderer/deck.css`, beside the other rules that say what a panel does not carry. The comment in `renderer.ts` that claimed this was already done now describes what is there.
+
+**Guarded by nothing automated**, because no suite loads the renderer or its stylesheet's effect ([[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]). The walk is to pop out a Needs-you panel and hover a card.

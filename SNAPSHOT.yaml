@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 10
-  ISS: 16
+  ISS: 21
   PHASE: 4
   REQ: 0
   RISK: 2
@@ -371,6 +371,56 @@ items:
       parent: "FEAT-0010"
       phase: PHASE-0002
   issues:
+    ISS-0021:
+      file: "docs/issues/ISS-0021-A-Sidecar-Started-After-The-Quit-Began-Outlives-Deck.md"
+      title: "A sidecar spawned after the quit began, or any quit that came from a signal, still left a Python process running after Deck was gone"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: main
+      tests: ["TST-0001"]
+      note: "SECOND pass at FEAT-0002's fifth criterion and at Edwin's TST-0011 doubt; the first pass held the quit open and two paths walked round it. ONE: stopAll runs once and a child spawned after it is held by nobody -- the ISS-0009 port retry spawns exactly that. TWO: the SIGNAL path called app.exit, which never raises before-quit, so it never waited; stopOne's SIGKILL escalation is an unref'd timer that cannot fire from a gone process. So kill -TERM on a terminal-launched Deck left a sidecar. THREE: nothing checked the quit CALLED the waiter -- stopAll returning [] passed all 163 checks. Fixed: the supervisor carries a never-cleared stopped flag checked before AND after the spawn; every quit path awaits waitForExit; a check asserts stopAll hands back exactly Deck's own children and that a late resolve is refused. main.ts's before-quit handler itself stays unguarded (ISS-0008)."
+    ISS-0017:
+      file: "docs/issues/ISS-0017-A-Restored-Card-Creeps-Down-The-Desk-On-Every-Repaint.md"
+      title: "A card restored below the desk's window creeps further down on every repaint, so it walks off the bottom again while a person folds a group or types in the search box"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: ["TST-0019"]
+      note: "A close-out review LEAD, reproduced by a check on 2026-09-07 and fixed. drawDesk clamped against deskBounds, which takes max(clientHeight, scrollHeight) -- and scrollHeight was measured BEFORE pool.render, so it described the previous paint, which for a restored card is where this same clamp last put it. 2000 -> 352 -> 408 -> 464, about 56px per repaint, and a repaint happens on every fold, keystroke and cross-window change. TWO JOBS, TWO BOUNDS: a DRAGGED card keeps deskBounds (the content already scrolls that far, ISS-0005); a RESTORED card uses the new viewportBounds, a fixed measure. The check drives the OLD bound and fails if the drift is absent, so it cannot pass by accident."
+    ISS-0018:
+      file: "docs/issues/ISS-0018-A-Needs-You-Panel-Follows-The-Focus-Windows-View.md"
+      title: "A popped-out Needs-you panel silently re-points at whatever view the main window last chose, thirty seconds later, which is the opposite of what a satellite promises"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: []
+      note: "A close-out review LEAD, established by READING and fixed 2026-09-07. startNeedsYouPoll refreshes every 30s because nothing pushes from the sidecar, and it resolved its workspace and view from host.state() -- the SHARED store the focus window writes to. So the strip followed a view change with no click and no visible cause. Now read ONCE when the poll starts. UNGUARDED by anything automated (ISS-0008); the walk is TST-0020."
+    ISS-0019:
+      file: "docs/issues/ISS-0019-Pasting-A-Panel-Address-Collapses-The-Focus-Window.md"
+      title: "Pasting an address copied from a popped-out window hides the main window's navigator and reader, and no control left on screen brings them back"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: []
+      note: "A close-out review LEAD, established by READING and fixed 2026-09-07. A satellite's own Copy address ends ?panel=desk, because the panel is in the grammar so a restart reopens the right thing. applyAddress stamped it on ANY window, and the stylesheet then hides the navigator and the reader -- including the controls that would undo it. Recovery meant retyping the address without the panel. Now only a satellite adopts a panel from an address; the focus window follows the rest and SAYS it left the panel behind. UNGUARDED (ISS-0008)."
+    ISS-0020:
+      file: "docs/issues/ISS-0020-A-Promoted-Satellite-Draws-No-Navigation.md"
+      title: "Closing the main window promotes a satellite that keeps drawing one panel, so Deck is left with a window it calls the focus window that has no view buttons and no workspace rail"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: main
+      tests: []
+      note: "A close-out review LEAD, established by READING and fixed 2026-09-07. FEAT-0004's sixth criterion says a new focus window adopts navigation; the first half (satellites keep rendering) held and the second did not. The promotion set info.role in a main-process map the renderer reads ONCE, in boot(), so the promoted window kept pinned=true and drew no rail and no switcher. The smoke run asserted promoted==='focus' out of that same map -- the transport, not the behaviour. Now the window is reloaded at /?role=focus: state lives in the main process and comes back, only the pinning is dropped. UNGUARDED: no suite can import main/main.js (ISS-0008)."
     ISS-0016:
       file: "docs/issues/ISS-0016-The-Acceptance-Gate-Reads-A-Field-This-Repo-Does-Not-Use.md"
       title: "The validator's acceptance gate reads a mark: field on the test note and never the release ledger, so it can never be satisfied here, and on 2026-11-20 it turns this repository red"
@@ -384,7 +434,7 @@ items:
     ISS-0011:
       file: "docs/issues/ISS-0011-A-Read-From-The-Served-Page-Kills-A-Sidecar-That-Is-Still-Indexing.md"
       title: "A read from the served page kills the sidecar Deck is still waiting for, so a tablet opening a large workspace gets an empty screen and 'the sidecar exited before it answered'"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high
@@ -394,7 +444,7 @@ items:
     ISS-0012:
       file: "docs/issues/ISS-0012-A-Filter-Survives-The-View-It-Was-Set-On.md"
       title: "A filter set on one view still narrows the next one, and the dropdowns say nothing is filtered, so the navigator reads empty for no visible reason"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -404,7 +454,7 @@ items:
     ISS-0013:
       file: "docs/issues/ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing.md"
       title: "The remove control still appears on a card in the Needs-you strip and now silently does nothing, which is not the behaviour ISS-0007 recorded as fixed"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: low
@@ -414,7 +464,7 @@ items:
     ISS-0014:
       file: "docs/issues/ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query.md"
       title: "Deck's forwarding allow-list constrains the path and never the query, so a request from the LAN can ask the sidecar to render any file and only the sidecar's own guard stops it"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -424,7 +474,7 @@ items:
     ISS-0015:
       file: "docs/issues/ISS-0015-Four-Smaller-Things-The-Close-Out-Review-Found.md"
       title: "Four smaller things the close-out review found: a check asserting on a message the code no longer emits, two satellites sharing one saved rectangle, a quadratic row lookup, and a count that counts a note twice"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: low
@@ -581,7 +631,7 @@ items:
     RISK-0002:
       file: "docs/risks/RISK-0002-Decks-Read-Only-Guarantee-Rests-On-The-Sidecars-Own-Checks.md"
       title: "Deck's read-only guarantee rests on the sidecar's own path checks for anything carried in a query string, and Deck does not know when those change"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0001
       note: "Risk scan at the PHASE-0001 close-out, 2026-09-07, from ISS-0014. Deck's allow-list matches the PATH; /api/render takes its target in the QUERY, so an allowed path carrying any target is forwarded verbatim from the LAN. What refuses it is the cockpit's _serve_render, in ANOTHER repository, and nothing in Deck watches it: not the tests, not ADR-0001, not the adoption table. Low likelihood (the guard is old and tested upstream), high impact (Deck's claim on this surface is 'reads only, second lock', on a host bound beyond loopback for a tablet). WORSE IN PHASE-0003: a vault is a personal corpus. Two shapes open, ISS-0014 does not pick: constrain the query, or accept one lock and WRITE THE DEPENDENCY DOWN in TST-0007, ADR-0001 and the adoption table."
@@ -796,6 +846,12 @@ items:
   releases: {}
   workflows: {}
   changes:
+    CHG-20260907-Nine-Defects-Before-The-Phase-Closes:
+      file: "docs/changes/CHG-20260907-Nine-Defects-Before-The-Phase-Closes.md"
+      title: ""
+      status: merged
+      owner: user:edwin
+      note: "The close-out review's five defects and four leads, all fixed on Edwin's instruction rather than carried into PHASE-0002. NO NEW CAPABILITY: every change is something Deck already claimed and did not do. The worst: a read from the SERVED page killed a sidecar still indexing, which is the tablet configuration TST-0010 walks (ISS-0011). Quitting now WAITS for the sidecars Deck started and SIGKILLs what will not go, which is the doubt Edwin recorded passing TST-0011. Filters clear with the view (ISS-0012); Deck's host refuses a traversal in a QUERY, closing RISK-0002 (ISS-0014); a restored card stops creeping down the desk 56px per repaint (ISS-0017); plus ISS-0013, ISS-0015, ISS-0018, ISS-0019, ISS-0020. Suites 153 -> 163. FOUR fixes are renderer/main-only and UNGUARDED (ISS-0008), and the smoke run could NOT be executed in the session that made the edits."
     CHG-20260907-Spread-Becomes-Two-Surfaces:
       file: "docs/changes/CHG-20260907-Spread-Becomes-Two-Surfaces.md"
       title: ""
@@ -858,7 +914,7 @@ metrics:
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 7
-    risks_open: 1
+    issues_triage: 2
+    risks_open: 0
     releases_total: 0
     decisions_total: 2

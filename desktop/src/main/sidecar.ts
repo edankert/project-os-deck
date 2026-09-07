@@ -26,6 +26,18 @@ export interface SidecarHandle {
 interface Record_ extends SidecarHandle {
   process: ChildProcess | null;
   stderrTail: string[];
+  /**
+   * False while the readiness wait is still running.
+   *
+   * The record is in the map before the sidecar answers, so that a quit
+   * mid-wait still kills the child. That has a cost: `sidecarBaseFor` answers
+   * with a live-looking address for the whole indexing window, which is ten
+   * seconds for a large workspace and can be forty-five. A read arriving in
+   * that window is refused by a port nobody is listening on yet, and a
+   * connection refusal used to be read as "this sidecar has died", which
+   * stopped it (ISS-0011). This flag is what tells the two apart.
+   */
+  ready: boolean;
 }
 
 const PORT_RANGE_START = 8900;
@@ -68,6 +80,16 @@ export class SidecarSupervisor {
    */
   private readonly inFlight = new Map<string, Promise<SidecarHandle>>();
   private readonly python: string;
+  /**
+   * Set by `stopAll`, and never cleared: Deck is going.
+   *
+   * `stopAll` runs once, from the quit, and stops what is in the map at that
+   * instant. A child spawned AFTER it is held by nobody — not in the array the
+   * quit waits on, and there is no second `stopAll` — so it outlives Deck. The
+   * window is real rather than theoretical: the port-collision retry spawns
+   * exactly such a child, and that retry exists because ISS-0009 happens.
+   */
+  private stopped = false;
 
   constructor(python?: string) {
     this.python = python ?? defaultPython();
@@ -118,6 +140,8 @@ export class SidecarSupervisor {
       ownedByDeck: false,
       process: null,
       stderrTail: [],
+      // Borrowed only after `alive` answered, so there is no window to protect.
+      ready: true,
     };
     this.records.set(workspace.id, record);
     return { ...record };
@@ -154,6 +178,7 @@ export class SidecarSupervisor {
   }
 
   private async startOnce(workspace: Workspace, tried: number[]): Promise<SidecarHandle> {
+    if (this.stopped) throw new Error('Deck is shutting down; not starting a sidecar');
     const port = await freePort(PORT_RANGE_START, PORT_RANGE_END, '127.0.0.1', tried);
     tried.push(port);
     const base = `http://127.0.0.1:${port}`;
@@ -176,9 +201,16 @@ export class SidecarSupervisor {
       },
     );
 
-    const record: Record_ = { workspaceId: workspace.id, base, ownedByDeck: true, process: child, stderrTail: [] };
+    const record: Record_ = { workspaceId: workspace.id, base, ownedByDeck: true, process: child, stderrTail: [], ready: false };
     // Registered BEFORE the readiness wait, so a quit mid-wait still kills it.
     this.records.set(workspace.id, record);
+
+    // And if the quit happened between the check above and the spawn, this is
+    // the only moment anything will ever hold this child.
+    if (this.stopped) {
+      this.stopOne(workspace.id);
+      throw new Error('Deck is shutting down; not starting a sidecar');
+    }
 
     child.stderr?.on('data', (chunk: Buffer) => {
       record.stderrTail.push(chunk.toString('utf-8'));
@@ -214,6 +246,7 @@ export class SidecarSupervisor {
           : `the sidecar for ${workspace.name} did not answer within ${READY_TIMEOUT_MS / 1000}s (${which})${tail === '' ? '' : `:\n${tail}`}`,
       );
     }
+    record.ready = true;
     return { ...record };
   }
 
@@ -225,6 +258,13 @@ export class SidecarSupervisor {
   forget(workspaceId: string): void {
     const record = this.records.get(workspaceId);
     if (record === undefined) return;
+    // A sidecar that has not answered yet is not a sidecar that has died. It
+    // belongs to the resolve that is still waiting on it, and that resolve
+    // cleans up its own failure. Without this, one read from the served page
+    // during a large workspace's indexing killed the sidecar the shell was
+    // waiting for, and the person was told the sidecar had exited on its own
+    // (ISS-0011).
+    if (!record.ready) return;
     if (record.ownedByDeck) {
       // Ours, and it stopped answering. Dropping the handle would leave the
       // process running with nothing holding it: `stopAll` at quit iterates
@@ -247,9 +287,70 @@ export class SidecarSupervisor {
     child.once('exit', () => clearTimeout(timer));
   }
 
-  stopAll(): void {
-    for (const id of [...this.records.keys()]) this.stopOne(id);
+  /** Whether a sidecar for this workspace is started and has not answered yet. */
+  isStarting(workspaceId: string): boolean {
+    const record = this.records.get(workspaceId);
+    return record !== undefined && !record.ready;
   }
+
+  /**
+   * Stop everything Deck started, and hand back the children it signalled so
+   * the caller can wait for them.
+   *
+   * The waiting matters at quit. `stopOne`'s escalation to SIGKILL is a
+   * three-second `unref`'d timer, which cannot fire once the main process has
+   * gone — so a sidecar that is slow on SIGTERM, or ignores it, outlived Deck
+   * and kept both the port and the repository's `.cockpit/url` file. Edwin
+   * walked TST-0011 on 2026-09-07 and passed it with the remark "I am not sure
+   * if it doesn't leave anything running when I quit???"; he was right to
+   * doubt it.
+   */
+  stopAll(): ChildProcess[] {
+    this.stopped = true;
+    const signalled: ChildProcess[] = [];
+    for (const id of [...this.records.keys()]) {
+      const record = this.records.get(id);
+      const child = record !== undefined && record.ownedByDeck ? record.process : null;
+      this.stopOne(id);
+      if (child !== null) signalled.push(child);
+    }
+    return signalled;
+  }
+}
+
+/**
+ * Wait for signalled children to exit, and kill outright whatever is left.
+ *
+ * Called from the quit, where there is no later moment to escalate in. A
+ * process that has not gone when the grace runs out is sent SIGKILL, which
+ * nothing can ignore, rather than being left behind.
+ */
+export function waitForExit(children: ChildProcess[], graceMs = 3000): Promise<void> {
+  const pending = children.filter((child) => child.exitCode === null && child.signalCode === null);
+  if (pending.length === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    let left = pending.length;
+    const timer = setTimeout(() => {
+      for (const child of pending) {
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          // Already gone between the check and here, which is the good case.
+        }
+      }
+      resolve();
+    }, graceMs);
+    // NOT unref'd: this timer is the only thing that ends the wait when a
+    // child ignores SIGTERM, and the quit is being held open for it.
+    const done = (): void => {
+      left -= 1;
+      if (left === 0) {
+        clearTimeout(timer);
+        resolve();
+      }
+    };
+    for (const child of pending) child.once('exit', done);
+  });
 }
 
 /**

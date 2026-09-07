@@ -222,7 +222,7 @@ test('added workspaces are remembered between runs, and re-read from disk', () =
 
 // --- reusing a sidecar rather than starting a second one (RISK-0001) ----
 
-const { SidecarSupervisor, freePort, defaultPython, discoveryUrl } = load('main/sidecar.js');
+const { SidecarSupervisor, freePort, waitForExit, defaultPython, discoveryUrl } = load('main/sidecar.js');
 
 /**
  * An interpreter that certainly exists and certainly exits: node, handed the
@@ -389,6 +389,7 @@ test('a sidecar Deck started is stopped when it is forgotten, never orphaned', (
     ownedByDeck: true,
     process: { kill: (sig) => signals.push(sig), once: () => {} },
     stderrTail: [],
+    ready: true,
   });
   supervisor.forget('ours');
   assert.deepEqual(signals, ['SIGTERM'], 'a sidecar Deck started was dropped without being stopped');
@@ -401,6 +402,7 @@ test('a sidecar Deck started is stopped when it is forgotten, never orphaned', (
     ownedByDeck: false,
     process: { kill: (sig) => borrowedSignals.push(sig), once: () => {} },
     stderrTail: [],
+    ready: true,
   });
   supervisor.forget('theirs');
   assert.deepEqual(borrowedSignals, [], 'a sidecar Deck borrowed was killed');
@@ -416,7 +418,109 @@ test('stopping everything reaches a sidecar Deck started', () => {
     ownedByDeck: true,
     process: { kill: (sig) => signals.push(sig), once: () => {} },
     stderrTail: [],
+    ready: true,
   });
   supervisor.stopAll();
   assert.deepEqual(signals, ['SIGTERM']);
+});
+
+test('a sidecar that has not answered yet is not stopped when a read fails', () => {
+  // ISS-0011. The record is in the map before the readiness wait, so a read
+  // arriving during indexing is refused by a port nobody is listening on. That
+  // used to be read as "this sidecar has died" and stopped it, while the
+  // resolve that was waiting on the same child reported that the sidecar had
+  // exited before it answered.
+  const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
+  const signals = [];
+  supervisor.records.set('starting', {
+    workspaceId: 'starting',
+    base: 'http://127.0.0.1:1',
+    ownedByDeck: true,
+    process: { kill: (sig) => signals.push(sig), once: () => {} },
+    stderrTail: [],
+    ready: false,
+  });
+  assert.equal(supervisor.isStarting('starting'), true);
+  supervisor.forget('starting');
+  assert.deepEqual(signals, [], 'a sidecar that was still starting was killed by a failed read');
+  assert.notEqual(supervisor.handle('starting'), null, 'the record was dropped while a resolve still owned it');
+
+  // Once it has answered, the old behaviour is exactly right again.
+  supervisor.records.get('starting').ready = true;
+  assert.equal(supervisor.isStarting('starting'), false);
+  supervisor.forget('starting');
+  assert.deepEqual(signals, ['SIGTERM'], 'a sidecar that had answered and then stopped was left running');
+});
+
+test('the quit waits for a sidecar to go, and kills what ignores SIGTERM', async () => {
+  // FEAT-0002's fifth criterion, and the doubt Edwin recorded walking TST-0011
+  // on 2026-09-07. A REAL child process, not a stub with a kill method: the
+  // claim is that nothing is left running, and only a real process can settle
+  // it. `stopOne`'s own escalation is an unref'd timer that cannot fire once
+  // the main process has gone, so the wait has to escalate itself.
+  const { spawn } = await import('node:child_process');
+
+  const polite = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
+  polite.kill('SIGTERM');
+  await waitForExit([polite], 3000);
+  assert.notEqual(polite.exitCode ?? polite.signalCode, null, 'a sidecar that takes SIGTERM was not waited for');
+
+  // One that ignores SIGTERM entirely. The grace is short so the check is not.
+  const stubborn = spawn(process.execPath, [
+    '-e',
+    "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)",
+  ]);
+  // Give it a moment to install the handler before signalling it.
+  await new Promise((r) => setTimeout(r, 300));
+  stubborn.kill('SIGTERM');
+  const started = Date.now();
+  await waitForExit([stubborn], 400);
+  assert.ok(Date.now() - started >= 350, 'the grace period was not honoured');
+  await new Promise((r) => stubborn.once('exit', r));
+  assert.equal(stubborn.signalCode, 'SIGKILL', 'a sidecar that ignored SIGTERM outlived Deck');
+});
+
+test('waiting for nothing is not a wait', async () => {
+  await waitForExit([], 10_000);
+});
+
+test('the quit hands its children to the waiter, and starts no more after that', async () => {
+  // F1 and F3 of the second close-out review. `stopAll` runs ONCE, from the
+  // quit, and stops what is in the map at that instant. A child spawned after
+  // it is held by nobody: not in the array the quit waits on, and there is no
+  // second `stopAll`. The port-collision retry spawns exactly such a child,
+  // and that retry exists because ISS-0009 happens.
+  const supervisor = new SidecarSupervisor(FAILING_INTERPRETER);
+  const child = { kill: () => {}, once: () => {} };
+  supervisor.records.set('ours', {
+    workspaceId: 'ours',
+    base: 'http://127.0.0.1:1',
+    ownedByDeck: true,
+    process: child,
+    stderrTail: [],
+    ready: true,
+  });
+  supervisor.records.set('theirs', {
+    workspaceId: 'theirs',
+    base: 'http://127.0.0.1:2',
+    ownedByDeck: false,
+    process: { kill: () => {}, once: () => {} },
+    stderrTail: [],
+    ready: true,
+  });
+
+  const signalled = supervisor.stopAll();
+  assert.deepEqual(signalled, [child], 'the quit was given nothing to wait for, so it waits for nothing');
+
+  // And nothing starts after the quit, however the caller got here.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-quit-'));
+  try {
+    await assert.rejects(
+      () => supervisor.resolve({ id: 'late', root: dir, name: 'late', kind: 'project-os' }),
+      /shutting down/,
+      'a sidecar was started after Deck had already stopped everything',
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -14,10 +14,10 @@ import type { CardGroup, CardModel, DeckView, PanelType, Workspace } from '../sh
 import { AddressError, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry } from '../shared/views.js';
 import { SidecarClient, flattenGroups, groupsFromNav } from '../shared/sidecar-client.js';
-import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, reconcileDesk } from '../shared/desk.js';
+import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { deskCardsOf } from '../shared/store-state.js';
 import { PANEL_LABELS, PANEL_TYPES, panelOrNull } from '../shared/panels.js';
-import { countCards, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
+import { countDistinct, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
@@ -73,7 +73,8 @@ const pool = new CardPool(el.desk, {
   },
   remove: (card) => {
     // A card in the Needs-you strip is not on anybody's desk, so there is
-    // nothing to take off. The control is hidden there too (ISS-0007).
+    // nothing to take off. The stylesheet hides the control there as well,
+    // which ISS-0007 claimed and ISS-0013 actually built.
     if (panel === 'needs-you') return;
     void host.dispatch({ type: 'take-off-desk', noteId: card.noteId });
   },
@@ -336,6 +337,12 @@ function describe(value: unknown): string {
 function narrowed(): CardGroup[] {
   const state = host.state();
   const groups = panel === 'needs-you' ? currentGroups.filter((g) => g.needsHuman) : currentGroups;
+  // A satellite is a window onto ONE thing and draws no search box of its own,
+  // so it must not be narrowed by the box in another window: typing in the
+  // focus window used to empty a popped-out strip on a second monitor, with
+  // nothing on that screen to say why (ISS-0018 fixed the same sentence for
+  // the view; this is the rest of it).
+  if (pinned) return groups;
   return narrowGroups(groups, { query: state.query, filters: state.filters });
 }
 
@@ -344,9 +351,12 @@ function drawNavigator(): void {
   const groups = narrowed();
   // Both halves counted the same way, children included. One side counting
   // top-level rows and the other counting flattened notes read as "230 of
-  // 1400" with nothing narrowed (ISS-0007).
-  const shown = groups.reduce((n, g) => n + countCards(g.cards), 0);
-  const held = currentGroups.reduce((n, g) => n + countCards(g.cards), 0);
+  // 1400" with nothing narrowed (ISS-0007). Counted by DISTINCT note since
+  // ISS-0015: the sidecar sends a note that needs a person twice, once in
+  // Needs-you and once under its phase, and "30 of 30" for a workspace holding
+  // 30 notes is what the label promises.
+  const shown = countDistinct(groups);
+  const held = countDistinct(currentGroups);
   navigator.render({
     groups,
     folds: state.folds,
@@ -411,7 +421,13 @@ function drawDesk(): void {
   // Clamped at PAINT time rather than in the store: a desk saved on a large
   // monitor keeps the positions it was saved with, and opens on a laptop with
   // every card reachable (ISS-0007). The saved desk is not rewritten.
-  const bounds = deskBounds(el.desk);
+  //
+  // Against the desk's OWN EXTENT, computed from the saved positions, not
+  // measured off the DOM. The DOM is the previous paint, which for a restored
+  // card is where this clamp last put it, so each repaint moved it a little
+  // further down (ISS-0017). The drag below is the other case and keeps
+  // `deskBounds`, because a card being moved is on content that already exists.
+  const bounds = placementBounds(el.desk, reconciled.cards);
   const placed: PlacedCard[] = reconciled.cards.map((c) => {
     const at = clampToSurface({ x: c.x, y: c.y }, bounds);
     return { card: c.card, x: at.x, y: at.y };
@@ -594,8 +610,17 @@ async function applyAddress(raw: string): Promise<void> {
     return;
   }
 
-  panel = address.panel;
-  document.body.dataset['panel'] = panel ?? '';
+  // A panel belongs to a satellite. A satellite's own Copy address carries one,
+  // and pasting that into the focus window used to hide the navigator and the
+  // reader with no control left to bring them back: recovery meant typing
+  // another address with the panel stripped by hand (ISS-0019). The rest of
+  // the address is followed either way, and the drop is said out loud.
+  if (pinned) {
+    panel = address.panel;
+    document.body.dataset['panel'] = panel ?? '';
+  } else if (address.panel !== null) {
+    say(`that address carries the ${address.panel} panel, which belongs to a popped-out window; opening the rest of it here`);
+  }
   await selectWorkspace(workspace.id);
   await selectView(address.viewId);
   if (address.desk !== null) await host.dispatch({ type: 'open-desk', name: address.desk });
@@ -804,12 +829,18 @@ function wireControls(): void {
  */
 function startNeedsYouPoll(): void {
   const beat = 30_000;
+  // The workspace and view this window was opened on, read once. Taking them
+  // from the shared state on every beat made the strip follow the focus
+  // window's view, silently, thirty seconds later — the opposite of what the
+  // comment on `pinned` promises (ISS-0018).
+  const opened = host.state();
+  const workspaceId = opened.workspaceId;
+  const viewId = opened.viewId;
   setInterval(() => {
     void (async () => {
-      const state = host.state();
-      const workspace = workspaceById(state.workspaceId);
-      if (workspace === null || state.viewId === null) return;
-      const view = registry.resolve(workspace, state.viewId);
+      const workspace = workspaceById(workspaceId);
+      if (workspace === null || viewId === null) return;
+      const view = registry.resolve(workspace, viewId);
       if (view === null) return;
       await loadView(workspace, view);
     })();

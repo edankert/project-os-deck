@@ -61,6 +61,53 @@ export function isForwardable(sidecarPath: string): boolean {
  * normalisation the URL parser performs has already happened by the time the
  * allow-list sees the path. What is checked is what is fetched.
  */
+/**
+ * Whether a query value could name a file outside the workspace.
+ *
+ * The allow-list above reads the path, and `/api/render` takes the file it
+ * renders as a query argument — so an allowed path carrying any target at all
+ * used to be forwarded verbatim from the local network, and what refused it
+ * was a function in the cockpit repository that nothing here watches
+ * (ISS-0014, RISK-0002). This is the lock on Deck's side of that door.
+ *
+ * A literal per cent in a filename is NOT refused. `50% off.md` cannot be
+ * decoded a second time, and refusing it on that ground would make a note
+ * unreadable over the LAN because of a character in its name. A value that
+ * will not decode is checked once, which is all there is to check.
+ *
+ * A DRIVE LETTER needs a separator after it: `C:/Windows` is a way out and
+ * `a:b.md` is a filename with a colon in it, which macOS allows.
+ */
+export function namesAWayOut(value: string): boolean {
+  const suspects = [value];
+  try {
+    const again = decodeURIComponent(value);
+    if (again !== value) suspects.push(again);
+  } catch {
+    // Not decodable, so there is no second form to check.
+  }
+  return suspects.some(
+    (s) =>
+      s.includes('\0') ||
+      // The replacement character means the bytes were not valid UTF-8, so
+      // what this function inspected is not what `fetch` will send. An
+      // overlong `%c0%ae` arrives here as U+FFFD and leaves as the original
+      // bytes. Deck's reads never contain one; anything that does is refused
+      // rather than guessed at.
+      s.includes('\uFFFD') ||
+      s.startsWith('/') ||
+      s.startsWith('\\') ||
+      /^[A-Za-z]:[/\\]/.test(s) ||
+      // A segment of nothing but dots, with any `;`-parameter cut off first.
+      // `..` is the one that matters; `....//` and `..;/` are the spellings
+      // that servers which strip dots or path parameters collapse INTO it.
+      // Neither is a way out of the sidecar Deck talks to today, and neither
+      // is a note filename either, so they are refused rather than reasoned
+      // about every time somebody changes what is behind this proxy.
+      s.split(/[/\\]/).some((segment) => /^\.+$/.test(segment.split(';')[0] ?? '')),
+  );
+}
+
 export function resolveSidecarTarget(base: string, rawPathAndQuery: string): URL | null {
   let target: URL;
   try {
@@ -69,7 +116,16 @@ export function resolveSidecarTarget(base: string, rawPathAndQuery: string): URL
     return null;
   }
   if (target.origin !== new URL(base).origin) return null;
-  return isForwardable(target.pathname) ? target : null;
+  if (!isForwardable(target.pathname)) return null;
+  // Keys AND values, not just the ones Deck itself sends: `/api/cockpit/locate`
+  // and `/api/cockpit/context` are already forwardable and take arguments the
+  // Glass phase will start using — and a query with no `=` in it, such as
+  // `?../../etc/passwd`, is parsed as a KEY with an empty value, so checking
+  // values alone let the whole traversal through.
+  for (const [key, value] of target.searchParams) {
+    if (namesAWayOut(key) || namesAWayOut(value)) return null;
+  }
+  return target;
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -98,6 +154,17 @@ export interface HostOptions {
    * for it again rather than keep addressing a port nobody is listening on.
    */
   onSidecarUnreachable?: (workspaceId: string) => void;
+  /**
+   * Whether a sidecar for this workspace has been started and has not answered
+   * yet.
+   *
+   * A read that arrives during that wait is refused by a port nobody is
+   * listening on, which looks exactly like a sidecar that has died. Treating it
+   * as one killed the sidecar the shell was still waiting for (ISS-0011), and
+   * it was reachable only from a page this host serves, because that page
+   * issues reads without waiting for a sidecar the way the shell does.
+   */
+  isSidecarStarting?: (workspaceId: string) => boolean;
 }
 
 export interface Listening {
@@ -208,6 +275,11 @@ export class DeckHost {
     try {
       upstream = await fetch(target, { method });
     } catch {
+      // Still starting is not the same as gone. Say so, and leave it alone.
+      if (this.options.isSidecarStarting?.(workspaceId) === true) {
+        plain(res, 503, 'the sidecar for that workspace is still starting');
+        return;
+      }
       this.options.onSidecarUnreachable?.(workspaceId);
       plain(res, 502, 'the sidecar did not answer');
       return;

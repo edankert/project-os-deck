@@ -68,3 +68,9 @@ The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sourc
 **Verdict: approved.** Clean context, separate session. The suite is a real guard on the grammar: putting `status` back in `PANEL_TYPES` fails the refusal check at both ends, and the formatter and the parser are asserted to agree, which is the failure this grammar exists to prevent. `address.test.mjs` was also corrected so the desk-with-a-space check finds its state by content rather than by index, which is the right repair.
 
 What this suite cannot reach is the window: it tests the address, not what happens when Deck restarts. The persistence half of TASK-0026 has a defect recorded on [[FEAT-0004-Windows-On-Any-Screen]], and nothing here or in the smoke run would have caught it.
+
+## Which window a panel address opens in, 2026-09-07
+
+This suite checks the address grammar: a panel survives being written and read back. **Which window then adopts it is not this suite's question and is not the same answer for every window.** A satellite adopts a panel from an address; the focus window does not, and says so, because a satellite's own Copy address carries one and pasting it into the main window used to hide the navigator and the reader with nothing left on screen to undo it ([[ISS-0019-Pasting-A-Panel-Address-Collapses-The-Focus-Window]]).
+
+[[FEAT-0004-Windows-On-Any-Screen]]'s third criterion is narrowed to match, with the reasoning in that note's `## Amendments`. Nothing in this suite changes: the grammar is the same and the restart path — a window reopening carrying what it carried — is untouched.

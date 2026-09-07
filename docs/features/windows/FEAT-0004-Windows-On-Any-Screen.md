@@ -38,7 +38,7 @@ A person drags a Deck panel onto a second monitor and it is still there after a 
 
 - Popping out offers a choice of panel: the Needs-you strip, the focused note, or the current desk, and the new window carries only that.
 - A panel opened as its own window appears on the display it was last closed on, at the same size and position, across a restart of Deck.
-- A popped-out window's address names its panel type, and opening that address again produces the same panel.
+- A popped-out window's address names its panel type, and opening that address **in a popped-out window** produces the same panel. **Narrowed 2026-09-07**; see `## Amendments`.
 - A window whose remembered display is no longer connected opens on the primary display, fully on-screen.
 - A satellite window that opens or updates does not take focus from the focus window.
 - Closing the focus window does not orphan the satellites: they keep rendering, and a new focus window adopts navigation.
@@ -80,3 +80,17 @@ One observation, not blocking: a window carrying `desk` still draws the desk bar
 - **A lead about the panel in an address**: a satellite's own Copy address produces one carrying `panel=`, and pasting it into the focus window hides the navigator and the reader with no control to bring them back.
 
 [[ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel]]'s fix is correct as read but guarded by nothing automated — no suite can import `main/main.js`, `PanelBook` is untested, and the smoke run reloads rather than restarts. That rides with [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]].
+
+## Amendments
+
+**2026-09-07 — the third criterion is narrowed from "opening that address again" to "opening that address in a popped-out window".**
+
+*What it said:* "A popped-out window's address names its panel type, and opening that address again produces the same panel."
+
+*Why it changed:* taken literally, it made the main window follow a satellite's address into being a panel, and that is a trap. A satellite's Copy address ends `?panel=desk`; pasting that into the focus window hid the navigator and the reader, and the controls that would undo it are among the things hidden. Recovery meant opening the address dialog again and retyping the address without the `panel=` part, which nobody would guess ([[ISS-0019-Pasting-A-Panel-Address-Collapses-The-Focus-Window]]). The criterion was written for the restart path — a window reopening carrying what it carried — and that path is untouched: the panel is still in the address, still refused when it names something Deck cannot draw, and still what brings the window back on the display it was left on.
+
+*What Deck does now:* a satellite adopts a panel from an address; the focus window follows the workspace, the view, the desk and the note, and says out loud that it left the panel behind rather than dropping it silently.
+
+*Who decided:* recorded here at the close-out rather than asked, because the alternative reading traps the person in a window they cannot get out of. If the wider reading is wanted, the way to have it is a pasted panel address opening a NEW popped-out window, which is more work than this phase has left and is a reasonable [[PHASE-0004-Parity]] item.
+
+[[TST-0020-A-Popped-Out-Window-Carries-One-Panel]] carries the same narrowing.

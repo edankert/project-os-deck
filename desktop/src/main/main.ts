@@ -4,6 +4,7 @@
  * The window loads its page from Deck's own HTTP host rather than from a file,
  * so the shell and a tablet run identical bytes over one origin (ADR-0001).
  */
+import type { ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,7 +15,7 @@ import type { WindowRole } from '../shared/types.js';
 import { tryParseAddress } from '../shared/address.js';
 import { DeckHost } from './host.js';
 import { DeckStore } from './store.js';
-import { SidecarSupervisor, freePort } from './sidecar.js';
+import { SidecarSupervisor, freePort, waitForExit } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
@@ -48,6 +49,7 @@ const host = new DeckHost({
   listWorkspaces: () => workspaces.list(),
   sidecarBaseFor: (id) => sidecars.handle(id)?.base ?? null,
   onSidecarUnreachable: (id) => sidecars.forget(id),
+  isSidecarStarting: (id) => sidecars.isStarting(id),
 });
 
 interface WindowInfo {
@@ -71,8 +73,23 @@ function displays(): DisplayInfo[] {
   }));
 }
 
+/**
+ * What a panel is showing, so two windows carrying the same kind of panel get
+ * two saved rectangles rather than one (ISS-0015).
+ */
+function panelSubject(panel: string | null, address: string | null): string | null {
+  if (panel === null || address === null) return null;
+  const parsed = tryParseAddress(address);
+  if (!parsed.ok) return null;
+  if (panel === 'desk') return parsed.address.desk;
+  if (panel === 'note') return parsed.address.note;
+  // The Needs-you strip shows one thing per workspace; there is nothing to
+  // tell two of them apart, and two of them is not a case worth keying for.
+  return null;
+}
+
 function createWindow(role: WindowRole, address: string | null, panel: string | null): BrowserWindow {
-  const key = boundsKey(role, panel);
+  const key = boundsKey(role, panel, panelSubject(panel, address));
   const bounds = placeWindow(windowBook.get(key), displays());
   const win = new BrowserWindow({
     ...bounds,
@@ -130,9 +147,24 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
       // Promote a satellite rather than leaving Deck with no navigator.
       focusWindowId = null;
       for (const [id, info] of windowInfo) {
-        if (info.role === 'satellite') {
+        // `!shutDown` for the same reason as the line above: `app.quit()` closes
+        // every window, so without it a quit with a panel open promotes that
+        // panel and then loads a URL into a window that is being destroyed,
+        // against a host `shutdown()` has already closed.
+        if (!shutDown && info.role === 'satellite') {
           info.role = 'focus';
+          info.panel = null;
           focusWindowId = id;
+          // The renderer asks its role once, at boot, and nothing pushes a
+          // change: without this the promoted window was CALLED the focus
+          // window while still drawing no view buttons, no workspace rail and
+          // one panel's worth of the page (ISS-0020). Reloading is the whole
+          // fix, because the state lives in the main process and comes back
+          // with it; only the pinning is dropped, which is the point.
+          const promoted = BrowserWindow.fromId(id);
+          if (promoted !== null && !promoted.isDestroyed()) {
+            void promoted.loadURL(`${hostOrigin}/?${new URLSearchParams({ role: 'focus' }).toString()}`);
+          }
           break;
         }
       }
@@ -249,6 +281,7 @@ app.whenReady().then(async () => {
     console.error(`deck: could not start — ${message}`);
     dialog.showErrorBox('Deck could not start', message);
     shutdown();
+    await waitForExit(stopping);
     app.exit(1);
   }
 });
@@ -266,6 +299,8 @@ app.on('window-all-closed', () => {
  * `.cockpit/url` file (RISK-0001).
  */
 let shutDown = false;
+/** The children `stopAll` signalled, so the quit can wait for them. */
+let stopping: ChildProcess[] = [];
 function shutdown(): void {
   if (shutDown) return;
   shutDown = true;
@@ -281,17 +316,46 @@ function shutdown(): void {
     }
   }
   store.close();
-  sidecars.stopAll();
+  stopping = sidecars.stopAll();
   void host.close();
 }
 
-app.on('before-quit', shutdown);
+/**
+ * A quit that waits for the sidecars it started to actually go.
+ *
+ * SIGTERM is sent and then the quit is held open until every child has exited
+ * or the grace runs out, at which point what is left is killed outright. Doing
+ * this in `stopOne` alone does not work: its escalation is an `unref`'d timer
+ * and the main process is gone before it can fire, so a sidecar that is slow
+ * on SIGTERM kept the port and the repository's `.cockpit/url` file. That is
+ * the fifth criterion of FEAT-0002 and the doubt Edwin recorded when he walked
+ * TST-0011 on 2026-09-07.
+ */
+let quitHeld = false;
+app.on('before-quit', (event) => {
+  const first = !shutDown;
+  shutdown();
+  if (!first || quitHeld || stopping.length === 0) return;
+  quitHeld = true;
+  event.preventDefault();
+  void waitForExit(stopping).then(() => {
+    stopping = [];
+    app.quit();
+  });
+});
 app.on('will-quit', shutdown);
 process.once('exit', shutdown);
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
+    // The same wait the GUI quit does. `app.exit` never raises `before-quit`,
+    // so without this the signal path stopped the sidecars and left at once,
+    // and `stopOne`'s SIGKILL escalation is an `unref`'d timer that cannot
+    // fire from a process that has gone. A sidecar slow on SIGTERM outlived
+    // Deck on `kill -TERM`, which is how a terminal-launched Deck is stopped.
     shutdown();
-    app.exit(1);
+    void waitForExit(stopping).finally(() => {
+      app.exit(1);
+    });
   });
 }
 

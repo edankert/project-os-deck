@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0015
 aliases: ["ISS-0015"]
 title: "Four smaller things the close-out review found: a check asserting on a message the code no longer emits, two satellites sharing one saved rectangle, a quadratic row lookup, and a count that counts a note twice"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -49,3 +49,21 @@ As described above.
 ## Next Actions
 
 - [ ] Groom: these are cheap and independent, and none of them blocks anything.
+
+## Resolution, 2026-09-07
+
+All five fixed, and three of them are guarded.
+
+**One: the check asserts on the message the code emits.** `desktop/tests/sidecar-retry.test.mjs` now uses the 45-second wording, which is what a reader would actually see.
+
+**Two: window geometry is keyed by what the panel carries.** `boundsKey(role, panel, subject)` takes the desk name or the note id from the window's address, so two desks on two monitors keep two rectangles. A panel with nothing to tell two of them apart — the Needs-you strip — keeps exactly the old key, so a rectangle saved before this change is still found. Guarded in `desktop/tests/window-placement.test.mjs`.
+
+**Three: the row's index is passed rather than searched for.** `NavigatorList.render` already has it; `paintRow` takes it. Painting Your Trainer's 409 issues is no longer quadratic.
+
+**Four: the navigator counts notes.** `countDistinct` in `desktop/src/shared/search.ts` counts note ids rather than rows, so "30 of 30" for a workspace of thirty notes says what the label promises. Guarded in `desktop/tests/search.test.mjs` with a fixture where one note is deliberately in two groups, as the sidecar sends it.
+
+**Five: clicking a row opens that row's note.** The handler uses `row.card` rather than looking the id up in a map that held whichever copy painted last.
+
+## One consequence of the second fix, checked rather than assumed
+
+**Widening `boundsKey` orphans any rectangle saved under the old key**, because `WindowBook.get` is a plain lookup with no fallback: a window saved as `satellite:desk` is never found again under `satellite:desk:triage`. Rather than assert this was harmless, the actual file was read. `~/Library/Application Support/project-os-deck/deck-windows.json` holds `focus`, `satellite:status` and `satellite:needs-you` — no desk or note key exists to orphan, and `needs-you` deliberately keeps the old key because there is nothing to tell two of them apart. So the cost today is nothing, and the first desk panel popped out after this change is centred rather than placed, once.

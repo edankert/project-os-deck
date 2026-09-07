@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0011
 aliases: ["ISS-0011"]
 title: "A read from the served page kills the sidecar Deck is still waiting for, so a tablet opening a large workspace gets an empty screen and 'the sidecar exited before it answered'"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -57,3 +57,17 @@ The read is answered 502, the sidecar is killed, and the resolve that was waitin
 
 - [ ] Decide the shape of the fix: a record is not offered by `sidecarBaseFor` until it is ready, or `forget` refuses to stop a record whose readiness wait has not finished, or the proxy distinguishes "starting" from "gone".
 - [ ] Guard it with a check in `desktop/tests/sidecar-retry.test.mjs`, where the ISS-0010 coalescing check already lives.
+
+## Resolution, 2026-09-07
+
+**A sidecar that has not answered yet is not a sidecar that has died, and Deck now knows the difference.** The record carries a `ready` flag, false from the moment the child is spawned until `waitForHealth` succeeds.
+
+Two guards, because one of them could be forgotten. `SidecarSupervisor.forget` returns without stopping a record that is not ready: it belongs to the resolve still waiting on it, and that resolve cleans up its own failure. And Deck's host asks `isSidecarStarting` before it treats a connection refusal as a death — a read arriving during the wait is answered `503 the sidecar for that workspace is still starting`, which is true and is a message a person can act on, rather than `502` plus a killed process.
+
+A borrowed sidecar is ready the moment it is borrowed, because `alive` has already answered for it.
+
+**Two checks guard it.** `desktop/tests/sidecar-client.test.mjs` asserts that forgetting a starting record sends no signal and keeps the record, and that forgetting the same record once it is ready sends SIGTERM as it always did — so the fix cannot be reverted without the second half failing. `desktop/tests/host.test.mjs` asserts the 503 while starting, that `onSidecarUnreachable` is not called then, and that a sidecar which has answered and then gone still gets the old 502 and the re-resolve.
+
+## The message reaches the person too, 2026-09-07
+
+The host answered `503 the sidecar for that workspace is still starting` and the person was shown `the sidecar answered 503`. `SidecarClient.getJson` threw the status and discarded the body, so on a tablet — where a bare number is the whole of what you get — the sentence written for exactly that moment never arrived. The client now carries a short body into the error. The substance of the fix was always that the sidecar survives; this is the half that tells you why you are waiting.

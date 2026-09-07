@@ -353,3 +353,100 @@ async function rawRequest(origin, method, requestPath) {
     req.end();
   });
 }
+
+test('a traversal in the query is refused, and the sidecar never sees it', async () => {
+  // ISS-0014. /api/render takes the file it renders as a query argument, so an
+  // allow-list that reads only the path forwarded an arbitrary file request
+  // from the local network and left containment to the sidecar's own guard, in
+  // another repository, that nothing here watches (RISK-0002).
+  const { sidecar, host, origin } = await standUp();
+  try {
+    const refused = [
+      '/api/render?path=../../../../etc/passwd',
+      '/api/render?path=..%2F..%2F..%2Fetc%2Fpasswd',
+      // Double-encoded: survives one decoding and is a way out after the next.
+      '/api/render?path=%252e%252e%252fetc%252fpasswd',
+      '/api/render?path=/etc/passwd',
+      '/api/render?path=C:\\Windows\\win.ini',
+      '/api/cockpit/context?note=../../secrets',
+      // A query with no `=` parses as a KEY with an empty value, so checking
+      // values alone let the whole traversal through.
+      '/api/render?../../../../etc/passwd',
+      // Spellings a server which strips dots or path parameters collapses
+      // into `..`. Not a way out of the sidecar Deck talks to today; refused
+      // rather than reasoned about again whenever what is behind the proxy
+      // changes.
+      '/api/render?path=....//....//etc/passwd',
+      '/api/render?path=..;/..;/etc/passwd',
+      // Overlong UTF-8: the parser hands this check U+FFFD while `fetch`
+      // forwards the original bytes, so what was inspected is not what is
+      // sent — the one thing this proxy must never allow.
+      '/api/render?path=%c0%ae%c0%ae/etc/passwd',
+    ];
+    for (const suffix of refused) {
+      const before = sidecar.received.length;
+      const response = await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}${suffix}`);
+      assert.equal(response.status, 403, `${suffix} was not refused`);
+      assert.equal(sidecar.received.length, before, `${suffix} reached the sidecar`);
+    }
+
+    // And the reads Deck actually makes still go through, including a note
+    // whose own filename carries a per cent sign.
+    const ok = await fetch(
+      `${origin}/deck/sidecar/${WORKSPACE.id}/api/render?path=${encodeURIComponent('docs/issues/50% off.md')}`,
+    );
+    assert.notEqual(ok.status, 403, 'a legitimate filename with a per cent sign was refused');
+    assert.deepEqual(sidecar.received.at(-1), {
+      method: 'GET',
+      url: `/api/render?path=${encodeURIComponent('docs/issues/50% off.md')}`,
+    });
+
+    // Names that look alarming and are not. A colon is legal in a macOS
+    // filename, and a run of dots inside a name is not a segment of dots.
+    for (const fine of ['a:b.md', 'docs/issues/ISS-0001...md']) {
+      const response = await fetch(
+        `${origin}/deck/sidecar/${WORKSPACE.id}/api/render?path=${encodeURIComponent(fine)}`,
+      );
+      assert.notEqual(response.status, 403, `a legitimate path was refused: ${fine}`);
+    }
+
+  } finally {
+    await host.close();
+    await sidecar.close();
+  }
+});
+
+test('a read while the sidecar is still starting says so, and does not stop it', async () => {
+  // ISS-0011. A port nobody is listening on yet refuses a connection exactly
+  // as a dead sidecar does. Treating the two the same killed the sidecar the
+  // shell was waiting for, and only the served page could reach it: it issues
+  // reads without waiting for a sidecar the way the shell does.
+  const forgotten = [];
+  let starting = true;
+  const host = new DeckHost({
+    webRoot: WEB_ROOT,
+    capabilities: SERVED_CAPABILITIES,
+    listWorkspaces: () => [WORKSPACE],
+    // A port in the ephemeral range with nothing on it: the same refusal a
+    // sidecar that has not finished indexing gives.
+    sidecarBaseFor: () => 'http://127.0.0.1:1',
+    onSidecarUnreachable: (id) => forgotten.push(id),
+    isSidecarStarting: () => starting,
+  });
+  const { port } = await host.listen(0);
+  const origin = `http://127.0.0.1:${port}`;
+  try {
+    const early = await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}/api/cockpit/nav`);
+    assert.equal(early.status, 503);
+    assert.match(await early.text(), /still starting/);
+    assert.deepEqual(forgotten, [], 'a sidecar that was still starting was forgotten, which stops it');
+
+    // Once it has answered and then goes, the old behaviour is right again.
+    starting = false;
+    const later = await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}/api/cockpit/nav`);
+    assert.equal(later.status, 502);
+    assert.deepEqual(forgotten, [WORKSPACE.id], 'a sidecar that had died was not re-resolved');
+  } finally {
+    await host.close();
+  }
+});

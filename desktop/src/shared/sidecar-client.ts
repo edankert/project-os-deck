@@ -118,7 +118,19 @@ export class SidecarClient {
       clearTimeout(timer);
     }
     if (!response.ok) {
-      throw new SidecarError(`the sidecar answered ${response.status}`, url);
+      // The body, when there is a short one. Deck's own host answers a plain
+      // sentence — "the sidecar for that workspace is still starting" — and
+      // discarding it left the person with a bare number to act on, which on
+      // a tablet is all they get (ISS-0011, and the reason ISS-0003 was filed
+      // about a 503 in the first place).
+      let said = '';
+      try {
+        said = (await response.text()).trim();
+      } catch {
+        // A body that will not read is not worth failing differently for.
+      }
+      const detail = said !== '' && said.length <= 200 ? `: ${said}` : '';
+      throw new SidecarError(`the sidecar answered ${response.status}${detail}`, url);
     }
     try {
       return (await response.json()) as unknown;

@@ -94,3 +94,31 @@ These are read from the code and the arithmetic, not executed. Each becomes an i
 ## Maintenance
 
 This note is the record of one review on one day. It is not updated as the issues it produced are fixed; those notes carry that. It is superseded only if the review itself is redone.
+
+---
+
+# The second pass, later the same day
+
+Edwin's instruction after reading the review above: "fix them now and re-review the four features." Nine defects were fixed and a second clean-context review ran against that work. It returned **changes-requested on all four features again**, and it was right to.
+
+## What it caught that mattered
+
+**The fix for the desk creep was a regression.** Clamping every restored card to the window is stable and squeezes the desk flat: forty cards on a 900x600 desk drew 24 distinct positions, sixteen on top of another card. The review reproduced it before the change shipped. The bound is the desk's own extent now — the window unioned with the saved positions — and both wrong answers are pinned by checks ([[ISS-0017-A-Restored-Card-Creeps-Down-The-Desk-On-Every-Repaint]]).
+
+**The quit still leaked, twice.** `stopAll` runs once, so a child spawned afterwards by the port-collision retry was held by nobody; and a quit from a signal called `app.exit`, which never raises `before-quit`, so it never waited at all. Both are [[ISS-0021-A-Sidecar-Started-After-The-Quit-Began-Outlives-Deck]].
+
+**Three spellings got past the query lock** — a traversal written as the query's key, the dot-stripping `....//` and `..;/`, and overlong UTF-8 where the check inspects a different string from the one `fetch` sends. None was exploitable against today's sidecar; all three are refused now, and two false positives were removed.
+
+**And three notes claimed more than the code did.** [[ISS-0017-A-Restored-Card-Creeps-Down-The-Desk-On-Every-Repaint]] said two checks guarded a fix they do not reach; the change note said four fixes were unguarded when it was five; and [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] still described the query hole as open while [[RISK-0002-Decks-Read-Only-Guarantee-Rests-On-The-Sidecars-Own-Checks]] had been closed on the opposite claim. That is the third time a review of this phase has caught the same shape of error, which is the strongest thing anyone has said in favour of [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]].
+
+**One criterion had to be amended rather than ticked.** [[FEAT-0004-Windows-On-Any-Screen]]'s third criterion said opening a panel address again produces the same panel, and [[ISS-0019-Pasting-A-Panel-Address-Collapses-The-Focus-Window]] deliberately made that false for the focus window. It is narrowed, with the reasoning in that feature's `## Amendments`.
+
+## The mutation table, which is the useful part
+
+Every new check failed when its fix was reverted in the built output. Six mutations were invisible to all 165 checks: `stopAll` returning nothing, the one line in `drawDesk` choosing the clamp bound, and the four renderer fixes (the hidden remove control, the poll's captured view, the address panel, the promoted window's reload). Four of those six were declared unguarded in their own notes. Two were not, and both are corrected.
+
+## What still stands in the way of closing
+
+**The walks predate the build.** Every acceptance pass in the ledger is dated before these fixes, the smoke run has not been executed against them, and five fixes are invisible to continuous integration. Closing now would close on evidence gathered from a build that no longer exists. [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]] and [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]] are the two the fixes touch most directly, and TST-0011's pass still carries the doubt the quit work was meant to answer.
+
+That is a person's job and no amount of reviewing replaces it.

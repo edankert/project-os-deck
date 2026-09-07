@@ -326,6 +326,14 @@ body[data-panel="needs-you"] .reader,
 body[data-panel="needs-you"] .desk-bar .action,
 body[data-panel="needs-you"] .desk-bar select { display: none; }
 
+/*
+ * The strip is a status board with no desk behind it, so there is nothing to
+ * take a card off. The click handler refuses there; this is the other half,
+ * which was claimed as built and was not (ISS-0007, corrected by ISS-0013).
+ * Offering a control that does nothing is worse than the bug it replaced.
+ */
+body[data-panel="needs-you"] .card .remove { display: none; }
+
 body[data-panel="note"] .navigator,
 body[data-panel="note"] .desk-area { display: none; }
 body[data-panel="note"] .reader { width: 100%; max-width: none; border-left: 0; }

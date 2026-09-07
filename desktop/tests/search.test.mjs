@@ -8,7 +8,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { narrowGroups, matchesCard, statusesIn, typesIn, countCards, isNarrowed } = load('shared/search.js');
+const { narrowGroups, matchesCard, statusesIn, typesIn, countCards, countDistinct, isNarrowed } =
+  load('shared/search.js');
 
 function card(noteId, title, extra = {}) {
   return {
@@ -132,4 +133,26 @@ test('the counts a heading shows come from what survived the narrowing', () => {
 test('the filter lists offer what the view actually holds', () => {
   assert.deepEqual(statusesIn(GROUPS), ['backlog', 'doing', 'open']);
   assert.deepEqual(typesIn(GROUPS), ['feature', 'issue', 'task']);
+});
+
+test('the navigator counts notes, not rows', () => {
+  // ISS-0015. The sidecar deliberately sends a note twice: once in Needs-you
+  // and once under its own phase. Counting rows made "N of M" consistent on
+  // both sides and not a count of notes, which is what the label promises.
+  const owed = card('FEAT-0002', 'The shell', { noteType: 'feature', status: 'doing' });
+  const groups = [
+    { key: 'needs-you', label: 'Needs you', cards: [owed] },
+    {
+      key: 'phase',
+      label: 'PHASE-0001',
+      cards: [
+        card('PHASE-0001', 'Deck', {
+          noteType: 'phase',
+          children: [owed, card('TASK-0006', 'Boots', { noteType: 'task', status: 'done' })],
+        }),
+      ],
+    },
+  ];
+  assert.equal(countCards(groups[0].cards) + countCards(groups[1].cards), 4, 'rows');
+  assert.equal(countDistinct(groups), 3, 'FEAT-0002 was counted twice');
 });

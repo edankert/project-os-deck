@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0012
 aliases: ["ISS-0012"]
 title: "A filter set on one view still narrows the next one, and the dropdowns say nothing is filtered, so the navigator reads empty for no visible reason"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -54,3 +54,11 @@ The filters persist silently and the controls report no filter.
 
 - [ ] Decide which behaviour is wanted: filters are per view, or filters persist and are shown.
 - [ ] Widen `desktop/tests/store.test.mjs:33` to assert every field its title claims.
+
+## Resolution, 2026-09-07
+
+**A filter belongs to the view it was set on and is cleared when the view changes.** The search box is not, and the difference is the point rather than an inconsistency: a search string is text a person typed and can see in the box, so carrying it to the next view is useful and never invisible. A filter's values come from the view — Issues offers `issue`, Features does not — so a stored value the new view has no option for is a filter nothing on screen can show or undo.
+
+`reduce` clears `filters` on `select-view` and on `open-workspace`, in `desktop/src/shared/store-state.ts`.
+
+**The check whose title was wider than its assertions is fixed too.** `desktop/tests/store.test.mjs` has always had a check called "opening a different workspace clears what belonged to the old one" that asserted three of the fields it claimed. It now asserts every one of them, and a second check pins the filter-versus-query distinction so a later change has to argue with it.

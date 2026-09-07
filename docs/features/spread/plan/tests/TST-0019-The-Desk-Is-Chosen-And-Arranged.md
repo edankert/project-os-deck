@@ -17,7 +17,7 @@ covers: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]"]
 issues: []
 tasks: ["[[TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty]]", "[[TASK-0025-Cards-Are-Dragged-And-Removed]]"]
 artifacts: []
-adequacy: "Rebuilding every card on a move fails the identity check while every position is still correct. Saving the desk by reference rather than by copy fails the copy check. The clamp is NOT guarded: the close-out review of 2026-09-07 replaced the clamp call in the built renderer with a plain assignment and all 153 checks still passed, because no suite loads desktop/src/renderer/ ([[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]). The clamp rests on the acceptance walk alone."
+adequacy: "Rebuilding every card on a move fails the identity check while every position is still correct. Saving the desk by reference rather than by copy fails the copy check. The clamp ARITHMETIC is guarded twice and both checks fail when reverted: one drives the old content-measured bound and fails if the drift is absent, the other fails if any two of forty cards land in the same place. WHICH BOUND THE RENDERER CALLS is not guarded, because no suite loads desktop/src/renderer/: the close-out reviews of 2026-09-07 reverted that one line twice, at 153 checks and again at 165, and every check stayed green both times ([[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]). That half rests on the acceptance walk."
 mutation_score: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-07
@@ -60,12 +60,16 @@ The desk used to be whatever the flow layout produced from the whole view. That 
 
 ## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh desk-model`: 14 checks, all passing on 2026-09-07.
-- The desktop suites run 143 checks in total on that date, this one included.
+- `bash tools/scripts/run-desktop-tests.sh desk-model`: 19 checks, all passing on 2026-09-07.
+- The desktop suites run 165 checks in total on that date, this one included.
 
 ## Adequacy (who verifies this test?)
 
-Rebuilding every card on a move fails the identity check while every position is still correct, which is exactly the failure equality would miss. Saving the desk by reference rather than by copy fails the copy check, because a later move rewrites the saved arrangement. Removing the clamp fails the smaller-window check, and returning the same slot twice fails the placement check.
+Rebuilding every card on a move fails the identity check while every position is still correct, which is exactly the failure equality would miss. Saving the desk by reference rather than by copy fails the copy check, because a later move rewrites the saved arrangement. Returning the same slot twice fails the placement check.
+
+**The clamp is a different case and this section used to overclaim it.** The sentence "removing the clamp fails the smaller-window check" was here until 2026-09-07 and was false twice over. The check calls the pure function directly, so it fails only if that function is deleted; and the product change is one line in the renderer's `drawDesk`, which reverting leaves every check green, because no suite loads `desktop/src/renderer/` ([[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]).
+
+What this suite does now guard about the clamp is the ARITHMETIC, and it guards it hard: one check drives the old content-measured bound and **fails if the drift is absent**, so it cannot pass by accident; another builds forty cards down a desk taller than its window and fails if any two are drawn in the same place. Both wrong answers are pinned. Which bound the renderer actually calls is still settled by the walk.
 
 ## Notes
 
@@ -87,3 +91,11 @@ The rest of the suite guards what it says it does: the identity check would fail
 **2026-09-07, review: changes requested, and made.** The review's sharpest point about this suite: its clamp check called the pure function directly, so it passed whether or not the application ever called it, and the application did not ([[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]]). Two checks were added that assert the DEFECT as well as the fix, using the real numbers from a desk scrolled below its own window ([[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]]).
 
 **2026-09-07, close-out review: the verdict moves to approved and the `adequacy` field stops overclaiming.** The second review of the day measured what the first one argued ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]): it replaced the clamp call in the built renderer with a plain assignment and every one of the 153 checks still passed. So the sentence "Removing the clamp fails the smaller-window check" was false and is gone. What this suite does guard, it guards — the identity check and the copy check both fail when their behaviour is reverted. The clamp is covered by the acceptance walk and by nothing automated, which is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] and not a fault of this note.
+
+## 2026-09-07, the second close-out review: the clamp was fixed twice, because the first answer was wrong
+
+**The first fix removed the creep and broke the desk.** Clamping every card to the window is stable, and it squeezes a desk flat: no painted card exceeds the viewport, so the desk never grows enough to scroll to the rest. Forty cards on a 900x600 desk drew 24 distinct positions — sixteen cards on top of another card. The review reproduced it before anything shipped.
+
+**The bound is the desk's own extent**: the window unioned with every saved position. Stable, because it is a pure function of what was saved rather than a measurement of the last paint; and correct, because a card at y=2000 makes the desk 2000 tall and is reached by scrolling, which is what a desk that scrolls is for. The clamp still catches a negative coordinate.
+
+Both wrong answers are now pinned by checks in `desktop/tests/desk-model.test.mjs`, so neither can come back quietly.

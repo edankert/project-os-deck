@@ -28,7 +28,6 @@ export class NavigatorList {
   private readonly container: HTMLElement;
   private readonly handlers: NavigatorHandlers;
   private readonly pool: HTMLElement[] = [];
-  private readonly cards = new Map<string, CardModel>();
   private rows: Row[] = [];
 
   constructor(container: HTMLElement, handlers: NavigatorHandlers) {
@@ -46,7 +45,7 @@ export class NavigatorList {
         this.pool.push(element);
         this.container.appendChild(element);
       }
-      this.paintRow(element, row, paint);
+      this.paintRow(element, i, row, paint);
       element.hidden = false;
     }
     for (let i = this.rows.length; i < this.pool.length; i += 1) {
@@ -78,14 +77,19 @@ export class NavigatorList {
         this.handlers.fold(row.key, row.expanded);
         return;
       }
-      const card = this.cards.get(row.card.noteId);
-      if (card !== undefined) this.handlers.toggle(card);
+      // The row's own card, not a lookup by id: the sidecar deliberately
+      // repeats a note in more than one group (Needs-you and its phase), and
+      // the map then holds whichever of them painted last (ISS-0015).
+      this.handlers.toggle(row.card);
     });
     return element;
   }
 
-  private paintRow(element: HTMLElement, row: Row, paint: NavigatorPaint): void {
-    element.dataset['index'] = String(this.rows.indexOf(row));
+  private paintRow(element: HTMLElement, index: number, row: Row, paint: NavigatorPaint): void {
+    // The caller already has the index. Searching for the row instead made
+    // painting quadratic in the number of rows, which Your Trainer's Issues
+    // view has 409 of (ISS-0015).
+    element.dataset['index'] = String(index);
     const twist = element.querySelector('.twist') as HTMLElement | null;
     if (row.kind === 'group') {
       element.className = 'nav-group';
@@ -105,7 +109,6 @@ export class NavigatorList {
     }
 
     const { card } = row;
-    this.cards.set(card.noteId, card);
     element.className = 'nav-row';
     element.dataset['noteId'] = card.noteId;
     element.dataset['band'] = bandFor(card.status);

@@ -79,6 +79,44 @@ export function deskBounds(surface: {
 }
 
 /**
+ * How much room a RESTORED card may occupy: the desk's own extent, which is
+ * the window and every position the desk has been saved with.
+ *
+ * Three bounds have been tried here and the first two were both wrong, so the
+ * reasoning is written down rather than left to be rediscovered.
+ *
+ * The CONTENT bound (`deskBounds`) is measured from the DOM, and for a
+ * restored card the DOM is where this same clamp last put it. Each repaint
+ * moved a card a little further down — a fold, a keystroke, a change from
+ * another window (ISS-0017).
+ *
+ * The WINDOW alone is stable and squeezes the desk flat. Every card clamps
+ * inside one screenful, so a desk holding more than a screenful draws cards on
+ * top of each other and can never scroll to the rest: forty cards on a 900x600
+ * desk painted 24 distinct positions.
+ *
+ * The desk's own EXTENT is both stable and right. It is a pure function of the
+ * saved positions and the window, so painting it a hundred times changes
+ * nothing, and it grows with the arrangement, because a card at y=2000 makes
+ * the desk 2000 tall and is reached by scrolling. What the clamp still catches
+ * is a negative coordinate and a position outside the extent it helped define
+ * — which is a smaller job than "pull a big arrangement onto a small screen",
+ * and that job was never the right one: doing it piles the cards up.
+ */
+export function placementBounds(
+  surface: { clientWidth: number; clientHeight: number },
+  cards: { x: number; y: number }[],
+): { width: number; height: number } {
+  let width = surface.clientWidth;
+  let height = surface.clientHeight;
+  for (const card of cards) {
+    width = Math.max(width, card.x + CARD_WIDTH + GAP);
+    height = Math.max(height, card.y + CARD_HEIGHT + GAP);
+  }
+  return { width, height };
+}
+
+/**
  * A position that is still reachable on this surface.
  *
  * A card dragged past the edge, or restored onto a window smaller than the one

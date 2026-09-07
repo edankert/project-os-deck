@@ -3,7 +3,7 @@ type: "[[risk]]"
 id: RISK-0002
 aliases: ["RISK-0002"]
 title: "Deck's read-only guarantee rests on the sidecar's own path checks for anything carried in a query string, and Deck does not know when those change"
-status: open
+status: closed
 owner: user:edwin
 created: 2026-09-07
 updated: 2026-09-07
@@ -38,3 +38,11 @@ Low, because the sidecar's guard is old, tested upstream, and there is no reason
 ## Triggers
 
 A cockpit change note touching `_serve_render`, its traversal check or its docs-root check. Deck's host being bound beyond loopback on a network Edwin does not control. [[PHASE-0003-Vault]] opening with this still unresolved.
+
+## Closed, 2026-09-07
+
+**Deck refuses the shape itself now, so its host is a second lock here as it is everywhere else.** [[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]] is fixed: `namesAWayOut` in `desktop/src/main/host.ts` checks every query value on every forwardable path, once as the URL parser decoded it and once a decoding further, for a `..` segment, an absolute path, a drive letter or a NUL. Six spellings are refused in `desktop/tests/host.test.mjs` and the fake sidecar records none of them.
+
+**The hazard was that Deck's claim rested on a function in another repository that nothing here watched.** It no longer rests there alone. The cockpit's `_serve_render` still refuses these too, which is the right number of locks for a door facing the local network, and neither one is now load-bearing by itself.
+
+**What would reopen it.** A forwardable path added to Deck that takes its argument somewhere this check does not read — a header, or a path segment. The path rule already refuses an encoded segment, so that would have to be a deliberate loosening.

@@ -94,3 +94,23 @@ export function countCards(cards: CardModel[]): number {
   for (const card of cards) total += 1 + countCards(card.children);
   return total;
 }
+
+/**
+ * How many DISTINCT notes a set of groups holds.
+ *
+ * `countCards` counts rows, and the sidecar deliberately sends one note more
+ * than once: a note that needs a person is in the Needs-you group and again
+ * under its own phase. Counting rows made "N of M" consistent on both sides
+ * and not a count of notes, which is what the label claims (ISS-0015).
+ */
+export function countDistinct(groups: { cards: CardModel[] }[]): number {
+  const seen = new Set<string>();
+  const walk = (cards: CardModel[]): void => {
+    for (const card of cards) {
+      seen.add(card.noteId);
+      walk(card.children);
+    }
+  };
+  for (const group of groups) walk(group.cards);
+  return seen.size;
+}

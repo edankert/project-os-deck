@@ -171,7 +171,10 @@ test('what counts as the port being taken, read off what the sidecar printed', (
   assert.equal(isPortCollision(new Error('OSError: [Errno 48] Address already in use')), true);
   assert.equal(isPortCollision(new Error('listen EADDRINUSE: address already in use 127.0.0.1:8901')), true);
   assert.equal(isPortCollision(new Error('ModuleNotFoundError: No module named project_os_cockpit')), false);
-  assert.equal(isPortCollision(new Error('the sidecar did not answer within 15s')), false);
+  // The message the code actually emits today. It said 15s until the timeout
+  // was raised for a workspace that takes ten seconds to index, and a check
+  // asserting on a string nothing produces guards nothing (ISS-0015).
+  assert.equal(isPortCollision(new Error('the sidecar did not answer within 45s (using python3)')), false);
 });
 
 test('a port already tried is not offered again', async () => {

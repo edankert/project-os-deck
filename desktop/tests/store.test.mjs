@@ -31,14 +31,39 @@ test('an action that changes nothing returns the same object', () => {
 });
 
 test('opening a different workspace clears what belonged to the old one', () => {
+  // Every field the title claims, not three of them. This check asserted
+  // viewId, noteId and deskName while `filters` outlived the workspace and
+  // narrowed the next one invisibly (ISS-0012); a title wider than its
+  // assertions is why nobody saw it.
   let state = initialState();
   state = reduce(state, { type: 'open-workspace', workspaceId: 'aaaa1111' });
   state = reduce(state, { type: 'select-view', viewId: 'a-view' });
   state = reduce(state, { type: 'focus-note', noteId: 'FEAT-0002' });
+  state = reduce(state, { type: 'save-desk', name: 'triage' });
+  state = reduce(state, { type: 'set-query', text: 'ble' });
+  state = reduce(state, { type: 'set-filters', filters: { statuses: ['doing'], types: ['issue'] } });
   state = reduce(state, { type: 'open-workspace', workspaceId: 'bbbb2222' });
   assert.equal(state.viewId, null);
   assert.equal(state.noteId, null);
   assert.equal(state.deskName, null);
+  assert.equal(state.query, '');
+  assert.deepEqual(state.filters, { statuses: [], types: [] });
+});
+
+test('a filter belongs to the view it was set on; a search string does not', () => {
+  // ISS-0012. A filter's values come from the view: Issues offers `issue` and
+  // Features does not, so the select for the new view has no option matching
+  // the stored value, the DOM ignores the assignment, and the control reads
+  // "any type" while the filter is still hiding everything. A search string is
+  // text a person typed and can see, so it survives.
+  let state = initialState();
+  state = reduce(state, { type: 'open-workspace', workspaceId: 'aaaa1111' });
+  state = reduce(state, { type: 'select-view', viewId: 'issues' });
+  state = reduce(state, { type: 'set-query', text: 'ble' });
+  state = reduce(state, { type: 'set-filters', filters: { statuses: ['open'], types: ['issue'] } });
+  state = reduce(state, { type: 'select-view', viewId: 'features' });
+  assert.deepEqual(state.filters, { statuses: [], types: [] }, 'a filter outlived the view it was set on');
+  assert.equal(state.query, 'ble', 'the search box was emptied by a view change');
 });
 
 test('an action this build does not know is ignored rather than fatal', () => {

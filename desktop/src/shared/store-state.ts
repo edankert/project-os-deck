@@ -106,13 +106,24 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
         deskName: null,
         noteId: null,
         query: '',
+        filters: { statuses: [], types: [] },
       });
     }
     case 'select-view': {
       if (state.viewId === action.viewId) return state;
       // The desk is NOT touched. A desk holding notes from more than one view
       // is the point of choosing what goes on it (TASK-0024).
-      return bump({ ...state, viewId: action.viewId });
+      //
+      // The FILTERS are, and the query is not, which is a real distinction
+      // rather than an oversight (ISS-0012). A search string is text a person
+      // typed and can see in the box, so carrying it to the next view is
+      // useful and never invisible. A filter's value comes from the view it
+      // was set on: the Issues view offers `issue` and the Features view does
+      // not, so the select for the new view has no option matching the stored
+      // value, the DOM ignores the assignment, and the control reads "any
+      // type" while the filter is still narrowing. The navigator then says
+      // "0 of 30" with no control that explains it.
+      return bump({ ...state, viewId: action.viewId, filters: { statuses: [], types: [] } });
     }
     case 'focus-note': {
       if (state.noteId === action.noteId) return state;

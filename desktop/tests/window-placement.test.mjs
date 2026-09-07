@@ -61,3 +61,15 @@ test('two panels keep separate saved rectangles', () => {
   assert.notEqual(boundsKey('focus', null), boundsKey('satellite', 'status'));
   assert.equal(boundsKey('focus', null), 'focus');
 });
+
+test('two windows carrying the same kind of panel keep separate rectangles', () => {
+  // ISS-0015. Keyed on the panel TYPE alone, two `panel=desk` windows on two
+  // monitors shared one saved rectangle and came back stacked on one of them.
+  assert.notEqual(boundsKey('satellite', 'desk', 'triage'), boundsKey('satellite', 'desk', 'reading'));
+  assert.notEqual(boundsKey('satellite', 'note', 'FEAT-0002'), boundsKey('satellite', 'note', 'FEAT-0008'));
+  // A panel with nothing to tell two of them apart keeps the old key exactly,
+  // so a rectangle saved before this change is still found.
+  assert.equal(boundsKey('satellite', 'needs-you', null), 'satellite:needs-you');
+  assert.equal(boundsKey('satellite', 'desk', ''), 'satellite:desk');
+  assert.equal(boundsKey('satellite', 'desk'), 'satellite:desk');
+});

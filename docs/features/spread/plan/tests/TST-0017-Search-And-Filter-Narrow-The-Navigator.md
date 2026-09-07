@@ -56,8 +56,8 @@ The card pool draws only what is on screen, so the browser's own find command ca
 
 ## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh search`: 12 checks, all passing on 2026-09-07.
-- The desktop suites run 143 checks in total on that date, this one included.
+- `bash tools/scripts/run-desktop-tests.sh search`: 13 checks, all passing on 2026-09-07.
+- The desktop suites run 165 checks in total on that date, this one included.
 
 ## Adequacy (who verifies this test?)
 
