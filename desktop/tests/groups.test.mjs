@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { groupsFromNav, flattenGroups, severityFromGroup } = load('shared/sidecar-client.js');
+const { groupsFromNav, flattenGroups, severityFromGroup, isFinishedWork } = load('shared/sidecar-client.js');
 const { rowsFor, groupFoldKey, cardFoldKey } = load('shared/rows.js');
 
 /** The shape the client hands on, after its own parsing. */
@@ -46,7 +46,11 @@ const ISSUES = {
     group('needs-triage', 'Needs triage', [navItem('ISS-0256'), navItem('ISS-0259')], { needsHuman: true }),
     group('critical', 'Critical', [navItem('ISS-0070')]),
     group('high', 'High', [navItem('ISS-0088'), navItem('ISS-0089')]),
-    group('high:done', 'High', [navItem('ISS-0001'), navItem('ISS-0002')], { suppressed: true }),
+    // The sidecar does NOT set `suppressed` on this group. It marks finished
+    // work by repeating the band with a ":done" key, which is what Your
+    // Trainer's issues view sends, and reading only the flag left 309 finished
+    // issues drawn as rows under a heading identical to the live one.
+    group('high:done', 'High', [navItem('ISS-0001'), navItem('ISS-0002')]),
   ],
 };
 
@@ -62,7 +66,7 @@ test('every group in the payload becomes a group Deck can draw', () => {
     ],
   );
   assert.equal(groups[0].needsHuman, true, 'the group a person has to act on says so');
-  assert.equal(groups[3].suppressed, true, 'finished work stays marked as finished work');
+  assert.equal(groups[3].suppressed, true, 'a band repeated with a ":done" key is finished work');
 });
 
 test('no group loses an item and no group repeats one', () => {
@@ -120,6 +124,13 @@ test("an issue's severity is the band it arrived in, finished or not", () => {
   assert.equal(severityFromGroup('PHASE-019'), null);
   const groups = groupsFromNav(ISSUES);
   assert.equal(groups[1].cards[0].severity, 'critical');
+});
+
+test('finished work is recognised from either signal the sidecar uses', () => {
+  assert.equal(isFinishedWork({ key: 'suppressed', suppressed: true }), true, 'the features view sets the flag');
+  assert.equal(isFinishedWork({ key: 'high:done', suppressed: false }), true, 'the issues view suffixes the key');
+  assert.equal(isFinishedWork({ key: 'high', suppressed: false }), false);
+  assert.equal(isFinishedWork({ key: 'needs-triage', suppressed: false }), false);
 });
 
 test('a group of finished work arrives folded, and everything else arrives open', () => {

@@ -206,9 +206,23 @@ export function groupsFromNav(payload: NavPayload): CardGroup[] {
     key: group.key,
     label: group.label,
     needsHuman: group.needsHuman,
-    suppressed: group.suppressed,
+    suppressed: isFinishedWork(group),
     cards: cardsFromItems(group.items, group.key, new Set<string>()),
   }));
+}
+
+/**
+ * Whether a group holds work that is over, and should arrive folded.
+ *
+ * The sidecar says so in two different ways. The features view sends one group
+ * marked `suppressed`, labelled "Quiet". The issues view does not use that
+ * flag at all: it repeats each severity band for the finished issues and
+ * suffixes the key with ":done". Reading only the flag left 309 finished
+ * issues drawn as rows in Your Trainer, under headings identical to the live
+ * ones, which is the pile this was meant to remove (TASK-0023).
+ */
+export function isFinishedWork(group: { key: string; suppressed: boolean }): boolean {
+  return group.suppressed || group.key.endsWith(':done');
 }
 
 function cardsFromItems(items: NavItem[], groupKey: string, seen: Set<string>): CardModel[] {

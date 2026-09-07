@@ -57,4 +57,6 @@ This is the first of the six tasks added on 2026-09-07 and every other one is ea
 
 **2026-09-07: built.** `groupsFromNav` in the sidecar client keeps the groups, the children, the subtitle, the owed flag and the owed verb, and `shared/rows.ts` turns them into headings and rows with a fold state. A group the sidecar marks suppressed arrives folded and a note holding other notes arrives closed, so Your Trainer's Issues view opens on the 34 that need triage rather than on 409 identical cards. The severity a card shows is the band it arrived in, because the sidecar bands issues by severity rather than putting it on the item.
 
+**Corrected the same day, from the running application.** Folding read only the sidecar's `suppressed` flag, and the issues view does not use that flag: it repeats each severity band for the finished issues with a `:done` suffix on the key. So Your Trainer's 311 finished issues were still drawn as rows, under headings identical to the live ones. Deck now treats either signal as finished work, and those bands arrive as nine folded rows.
+
 The automated check is [[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
