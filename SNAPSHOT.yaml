@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-06T12:00Z"
+updated: "2026-09-07T12:00Z"
 
 template:
   replace_me: false
@@ -49,20 +49,20 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 8
-  ISS: 2
+  ISS: 4
   PHASE: 3
   REQ: 0
   RISK: 1
   REL: 0
-  TASK: 22
-  TST: 14
+  TASK: 28
+  TST: 15
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0001"
-  feature: "FEAT-0002"
-  task: "TASK-0006"
+  feature: "FEAT-0005"
+  task: "TASK-0023"
   issue: ""
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -98,21 +98,21 @@ items:
     FEAT-0004:
       file: "docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md"
       title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-      status: review
+      status: doing
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
-      tasks: ["TASK-0012", "TASK-0013", "TASK-0014"]
-      note: "Pop-out windows, bounds remembered per window and placed by display, one focus window that owns navigation and satellites that never steal it. The cockpit's window state is app-wide and carries no display identity, so a window saved on a monitor that is later unplugged restores off-screen; Deck's placement is a pure function of saved bounds and present displays, which is what makes the second exit criterion checkable without a second monitor."
+      tasks: ["TASK-0012", "TASK-0013", "TASK-0014", "TASK-0026"]
+      note: "Pop-out windows, bounds remembered per window and placed by display, one focus window that owns navigation and satellites that never steal it. The cockpit's window state is app-wide and carries no display identity, so a window saved on a monitor that is later unplugged restores off-screen; Deck's placement is a pure function of saved bounds and present displays, which is what makes the second exit criterion checkable without a second monitor. BACK TO doing 2026-09-07 with TASK-0026 in backlog: a pop-out is currently THE SAME VIEW AGAIN with no navigation, which is why the phase's second exit criterion was amended DOWN on 2026-09-06; Edwin restored the criterion instead, so a popped-out window will carry ONE PANEL (the Needs-you strip, a note, or a desk) and the panel type goes into the address."
     FEAT-0005:
       file: "docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md"
       title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-      status: review
+      status: doing
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
-      tasks: ["TASK-0015", "TASK-0016"]
-      note: "The phase's visible half: notes as cards, several at once, and a desk that saves an arrangement by name and reopens as it was left. Cards are drawn from a pool rather than one element per note, because adding pooling later means rewriting the renderer that assumed otherwise. A desk naming a note that is gone opens without it and says how many it dropped."
+      tasks: ["TASK-0015", "TASK-0016", "TASK-0023", "TASK-0024", "TASK-0025", "TASK-0027", "TASK-0028"]
+      note: "The phase's visible half: notes as cards, several at once, and a desk that saves an arrangement by name and reopens as it was left. Cards are drawn from a pool rather than one element per note, because adding pooling later means rewriting the renderer that assumed otherwise. A desk naming a note that is gone opens without it and says how many it dropped. BACK TO doing 2026-09-07 with FIVE new tasks, after Edwin accepted the review's finding that what is built is a FLAT GRID of identical cards and demonstrates Spread not at all: nothing can be arranged, grouped or searched, Your Trainer's Issues view draws 409 cards in one grid where the cockpit folds 309 finished ones away, and Deck's own state file held ZERO desks after a day of use because a desk saved wherever the flow layout had put the cards. TASK-0023 comes first and the other four are easier after it."
     FEAT-0006:
       file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
       title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
@@ -295,7 +295,69 @@ items:
       owner: user:edwin
       parent: "FEAT-0008"
       phase: PHASE-0001
+    TASK-0023:
+      file: "docs/features/spread/plan/tasks/TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn.md"
+      title: "The groups the sidecar already sends are drawn, so Needs you comes first, phases hold their features and tasks, and the quiet work folds away"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
+    TASK-0024:
+      file: "docs/features/spread/plan/tasks/TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty.md"
+      title: "A navigator panel beside a desk that starts empty, so a desk is a subset a person chose rather than whatever the flow layout produced"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
+    TASK-0025:
+      file: "docs/features/spread/plan/tasks/TASK-0025-Cards-Are-Dragged-And-Removed.md"
+      title: "Cards are dragged and removed, and where a card was left is what the desk saves"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
+    TASK-0026:
+      file: "docs/features/windows/plan/tasks/TASK-0026-A-Popped-Out-Window-Carries-One-Panel.md"
+      title: "A popped-out window carries one panel, so a second display can hold the Needs-you strip, a single note, or a desk"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0004"
+      phase: PHASE-0001
+    TASK-0027:
+      file: "docs/features/spread/plan/tasks/TASK-0027-Search-And-Filter-In-The-Renderer.md"
+      title: "Search and filter live in the renderer, because a pooled DOM means the browser's own find cannot see the notes"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
+    TASK-0028:
+      file: "docs/features/spread/plan/tasks/TASK-0028-A-Card-Face-Per-Type.md"
+      title: "A card face per type, so a phase shows progress, an issue shows severity and a test shows how stale its last walk is"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0005"
+      phase: PHASE-0001
   issues:
+    ISS-0003:
+      file: "docs/issues/ISS-0003-A-Served-Page-Cannot-Open-A-Workspace-The-Shell-Has-Not.md"
+      title: "A served page cannot open a workspace the shell has not opened, and the only thing it tells you is that the sidecar answered 503"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: []
+      note: "Found 2026-09-07 during the PHASE-0001 review. The served rail lists EVERY workspace Deck knows, but only the one the shell has opened has a sidecar behind it; the served openWorkspace in host-bridge.ts dispatches to the store and STARTS NOTHING, and host.ts answers 503 'no sidecar is running for that workspace'. What resolves a sidecar is the shell's own deck:workspaces:open handler, which a browser never reaches. A person on a tablet gets an empty desk and one 503 line, with no way to know the fix is to open that workspace on the Mac. TRIAGE DECIDES between hiding the unreachable workspaces and explaining them; either way TST-0010 gains a Setup line."
+    ISS-0004:
+      file: "docs/issues/ISS-0004-Two-Decks-Bind-The-Same-Port.md"
+      title: "Two Decks bind the same port, because the free-port probe passes on loopback while another Deck already holds the wildcard address"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: main
+      tests: []
+      note: "Found 2026-09-07: two Deck processes were listening on 7300 at the same time, one on *:7300 (started with --lan on 2026-09-06) and one on 127.0.0.1:7300 (started without it on 2026-09-07). Which one answers a browser at 127.0.0.1:7300 is UNDETERMINED. This is the MIRROR of ISS-0002, whose fix made freePort bind the same interface as the host: that stopped a wildcard host claiming a loopback-held port, and does nothing about a loopback host claiming a wildcard-held one. Starting the same fresh Deck with --lan made the probe bind 0.0.0.0, fail, and move to 7301."
     ISS-0002:
       file: "docs/issues/ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing.md"
       title: "A second Deck cannot start and says nothing — the free-port probe binds loopback while the host binds every interface, so a port another Deck already holds looks free, and the failure is an unhandled rejection with no window and no message"
@@ -472,6 +534,14 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0006-Every-State-Has-An-Address"]
       note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The claim a person settles for [[FEAT-0006-Every-State-Has-An-Address]]."
+    TST-0015:
+      file: "docs/tests/acceptance/TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit.md"
+      title: "One real task done in Deck instead of the cockpit, and a record of which Edwin would rather have used"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The seventh exit criterion, added 2026-09-07 after the review: the only criterion a flat grid cannot meet. Cannot be walked before TASK-0023 to TASK-0027 land. Either answer is a valid result; preferring the cockpit is a finding about Spread, not a failed walk."
   releases: {}
   workflows: {}
   changes:
@@ -519,13 +589,13 @@ metrics:
     features_done: 0
     phases_total: 3
     phases_done: 0
-    tasks_total: 22
+    tasks_total: 28
     tasks_done: 17
     tests_total: 8
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 0
+    issues_triage: 2
     risks_open: 1
     releases_total: 0
     decisions_total: 1

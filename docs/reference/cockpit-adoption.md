@@ -6,13 +6,14 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
 related:
   - "[[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]"
   - "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"
+  - "[[REFERENCE-PHASE-0001-REVIEW]]"
 tags: [reference, register, adoption, cockpit]
 ---
 
@@ -48,13 +49,13 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.workspaces.discovery` | adopted | 2026-09-06: the `SNAPSHOT.yaml` marker, with `.obsidian` already recognised as the vault kind so [[PHASE-0003-Vault]] adds a branch rather than a concept |
 | `shell.fleet.rollup` | not yet | |
 | `shell.nav.modes` | adopted | 2026-09-06: Deck's project-os view provider offers the same seven views, pinned to a fixture read off the cockpit's navigator; the renderer takes the list from the provider and holds no view names (Edwin, 2026-09-06) |
-| `shell.nav.needs-you` | not yet | the front plane in Glass; the owed band kept in fixed chrome in every layout |
+| `shell.nav.needs-you` | not yet | the front plane in Glass; the owed band kept in fixed chrome in every layout. 2026-09-07: [[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]] draws the Needs-you group the sidecar already sends, and [[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]] lets it be a window of its own on a second display |
 | `shell.nav.platform` | not yet | |
-| `shell.nav.hide-completed` | not yet | |
+| `shell.nav.hide-completed` | not yet | 2026-09-07: [[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]] folds the suppressed group away, which is the half of this row the sidecar already answers; a person-controlled hide-completed toggle is still owed |
 | `shell.nav.pins` | not yet | |
 | `shell.nav.library` | not yet | Files, with a hand-off to the system browser (DES-0002) |
 | `shell.stage.tabs` | replaced by | the desk: the reader group is the desk and tabs are its handles (options note, Part 2) |
-| `shell.stage.find` | not yet | the application owns search when the DOM is pooled (DES-0002) |
+| `shell.stage.find` | not yet | the application owns search when the DOM is pooled (DES-0002). 2026-09-07: [[TASK-0027-Search-And-Filter-In-The-Renderer]] builds it, after the review measured 409 cards in one grid with no search box |
 | `shell.stage.quick-switch` | not yet | |
 | `shell.stage.capture` | not yet | |
 | `shell.reader.render` | adopted | 2026-09-06: Deck shows the HTML the sidecar rendered and parses no Markdown of its own |
@@ -104,3 +105,4 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 - Re-read the cockpit register whenever `git log --since=<last read> -- docs/changes` in project-os-cockpit returns anything, and add a dated line here saying what was read and which rows changed.
 - 2026-09-06 — written against baseline `570da22`; every row `not yet` except `api.guards`, and three `replaced by`.
+- 2026-09-07 — the register was not re-read. Three rows gained a line naming the task that will build them, after the PHASE-0001 review ([[REFERENCE-PHASE-0001-REVIEW]]): `shell.nav.needs-you`, `shell.nav.hide-completed` and `shell.stage.find`. No position moved; a row moves to `adopted` when the task is done.
