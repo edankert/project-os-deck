@@ -25,9 +25,9 @@ Deck is built beside project-os-cockpit and shares its sidecar. The cockpit stay
 
 The cockpit's rule, mirrored here: a change note there that adds, changes or retires capability updates its register in the same commit. Deck's rule: when a new row appears there, it appears here as `not yet` with the date, and grooming decides.
 
-**Read against:** cockpit register at baseline `570da22`, 2026-09-06.
+**Read against:** cockpit register at baseline `c0ed9e3`, 2026-09-07.
 
-**Positions last moved 2026-09-07**, when the six tasks from [[REFERENCE-PHASE-0001-REVIEW]] landed: `shell.nav.needs-you`, `shell.nav.hide-completed` and `shell.stage.find` moved from `not yet` to `adopted`. The cockpit's register was NOT re-read that day, so no new row was looked for; the baseline below is still `570da22`.
+**Positions last moved 2026-09-07**, when the six tasks from [[REFERENCE-PHASE-0001-REVIEW]] landed: `shell.nav.needs-you`, `shell.nav.hide-completed` and `shell.stage.find` moved from `not yet` to `adopted`. The register was re-read the same day at `c0ed9e3` and two keys had arrived that this table did not carry: `shell.checks.mark-dialog` and `api.read.check-history`, both from the cockpit's acceptance-checks work of 2026-09-06. Both are `not yet`, and grooming decides.
 
 **Positions moved 2026-09-06**, when [[PHASE-0001-Deck]]'s implementation landed: twelve rows changed, and the register was re-read on the same day. The rows Spread relies on are `surface.shell`, `shell.workspaces.rail`, `shell.workspaces.discovery`, `shell.nav.modes`, `shell.reader.render`, `shell.windows`, `api.read.nav`, `api.read.note` and `api.read.record`; all nine are `adopted`.
 
@@ -67,6 +67,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.pages.overview` | not yet | the digest, the watermark and the unpushed commits have no home in DES-0002 yet (review, Part 2) |
 | `shell.pages.history` | not yet | |
 | `shell.pages.checks` | not yet | |
+| `shell.checks.mark-dialog` | not yet | new in the cockpit on 2026-09-06, read here 2026-09-07: the mark dialog renders the check's own body through `/api/render` and shows every comment on it above the verdict buttons. Deck has no checks page yet, so this arrives with `shell.pages.checks` |
 | `shell.pages.release` | not yet | |
 | `shell.pages.accept` | not yet | stepwise, not a list |
 | `shell.pages.test-run` | not yet | |
@@ -92,6 +93,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.nav` | adopted | 2026-09-06: read as is, through Deck's own host, which proxies GET and HEAD and refuses everything else. The list of views is Deck's own and the sidecar is not asked for it (Edwin, 2026-09-06) |
 | `api.read.note` | adopted | 2026-09-06: `/api/render`, read through the same proxy; its HTML goes straight into the reader |
 | `api.read.record` | adopted | 2026-09-06: the stats payload only, which is what the overview view draws |
+| `api.read.check-history` | not yet | new in the cockpit on 2026-09-06, read here 2026-09-07: every verdict ever recorded against a check, with the method that distinguishes a walker's sentence from the migration backfill. Deck reads no acceptance payload yet |
 | `api.read.obligations` | not yet | |
 | `api.read.agents` | not yet | |
 | `api.read.validation` | not yet | |
@@ -107,4 +109,4 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 - Re-read the cockpit register whenever `git log --since=<last read> -- docs/changes` in project-os-cockpit returns anything, and add a dated line here saying what was read and which rows changed.
 - 2026-09-06 — written against baseline `570da22`; every row `not yet` except `api.guards`, and three `replaced by`.
-- 2026-09-07 — three rows moved to `adopted` (`shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find`) as the work landed. The cockpit's register was not re-read; that is owed when this phase closes, which its sixth exit criterion asks for.
+- 2026-09-07 — three rows moved to `adopted` (`shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find`) as the work landed. The register was re-read at `c0ed9e3`: one cockpit change note has landed since `570da22` and it touched no capability, but the 2026-09-06 acceptance-checks work had added two keys this table never carried. `shell.checks.mark-dialog` and `api.read.check-history` are added here as `not yet`. Every one of the register's 55 keys now has a position in this table.
