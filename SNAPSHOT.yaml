@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 8
-  ISS: 4
+  ISS: 7
   PHASE: 3
   REQ: 0
   RISK: 1
@@ -358,6 +358,36 @@ items:
       component: main
       tests: []
       note: "Found 2026-09-07: two Deck processes were listening on 7300 at the same time, one on *:7300 (started with --lan on 2026-09-06) and one on 127.0.0.1:7300 (started without it on 2026-09-07). Which one answers a browser at 127.0.0.1:7300 is UNDETERMINED. This is the MIRROR of ISS-0002, whose fix made freePort bind the same interface as the host: that stopped a wildcard host claiming a loopback-held port, and does nothing about a loopback host claiming a wildcard-held one. Starting the same fresh Deck with --lan made the probe bind 0.0.0.0, fail, and move to 7301."
+    ISS-0005:
+      file: "docs/issues/ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled.md"
+      title: "A card jumps hundreds of pixels when it is dragged on a desk that has scrolled, because the clamp measures the window while the position measures the content"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: ["TST-0019"]
+      note: "FIXED 2026-09-07, found by the independent review. The drag built a position in the desk's CONTENT coordinates and clamped it against the WINDOW onto them, so a card on a desk scrolled down 500 pixels leapt about 500 pixels on the first movement. deskBounds takes the larger of the two. The check asserts the defect as well as the fix."
+    ISS-0006:
+      file: "docs/issues/ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel.md"
+      title: "A clean quit forgets every popped-out panel, and only a kill preserves them, because the window's own close handler removes it from the book"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: []
+      note: "FIXED 2026-09-07, found by the independent review reading the two quit paths against each other. app.quit() closes every window before it leaves, and the close handler forgot each panel, so the normal quit lost them and a signal kill kept them. Same guard the geometry path already had. This is the criterion TASK-0026 exists for."
+    ISS-0007:
+      file: "docs/issues/ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer.md"
+      title: "Four smaller defects in the renderer: an unclamped restored position, a count of two different things, a live remove control on a status card, and filters that do not follow a second window"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: ["TST-0019"]
+      note: "FIXED 2026-09-07. Four findings that share one cause: no automated suite loads the renderer, so four of the six tasks make claims nothing checks. The unclamped restored position was claimed as done in two notes, and the check that should have caught it called the pure function directly rather than through the application."
     ISS-0002:
       file: "docs/issues/ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing.md"
       title: "A second Deck cannot start and says nothing — the free-port probe binds loopback while the host binds every interface, so a port another Deck already holds looks free, and the failure is an unhandled rejection with no window and no message"

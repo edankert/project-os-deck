@@ -14,6 +14,9 @@ effort: ""
 due: ""
 depends: ["TASK-0023"]
 blocks: []
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
 tests: ["[[TST-0019-The-Desk-Is-Chosen-And-Arranged]]"]
 ---
@@ -56,3 +59,9 @@ This changes what [[FEAT-0005-Spread-Cards-On-A-Desk]]'s first acceptance criter
 **2026-09-07: built.** The renderer has a navigator down one side and a desk beside it, and the desk starts empty. What is on the desk lives in the store, keyed by workspace, so saving a desk reads that list rather than measuring elements with `getBoundingClientRect`. A click in the navigator puts a note on the desk and opens it in the reader; a second click takes it off. Changing the view repaints the navigator and leaves the desk alone.
 
 The automated check is [[TST-0019-The-Desk-Is-Chosen-And-Arranged]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. Every criterion is met by the code as written. The desk is an explicit list in the store keyed by workspace, `select-view` leaves it untouched by construction, `save-desk` reads the store rather than the DOM, and `reconcileDesk` opens a desk naming a vanished note without that card and reports how many it dropped, which `drawDesk` puts in the desk label.
+
+Two things the criteria do not reach, recorded as leads rather than blocking this task. `CardPool.models` and `NavigatorList.cards` are keyed by note id and never cleared, so both maps grow across every view and workspace change for the life of the window. And `NavigatorList` recovers a row's index with `this.rows.indexOf(row)` when the caller already holds it, which is quadratic in the row count; the same handler then looks the card up by id instead of using the row's own card, so when a note appears in two groups the handler receives whichever model painted last.

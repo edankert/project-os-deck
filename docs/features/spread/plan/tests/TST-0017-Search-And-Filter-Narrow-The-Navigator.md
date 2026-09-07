@@ -19,9 +19,9 @@ tasks: ["[[TASK-0027-Search-And-Filter-In-The-Renderer]]"]
 artifacts: []
 adequacy: "Returning a fresh array when nothing is typed fails the same-object check. Matching on the title alone fails the id query. Dropping a parent whose own text does not match fails the collapsed-child search."
 mutation_score: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[TASK-0027-Search-And-Filter-In-The-Renderer]]"]
 ---
 
@@ -66,3 +66,9 @@ Returning a fresh array when nothing is typed fails the first check, which is wo
 ## Notes
 
 The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sources. That is the house rule stated in `desktop/tests/helpers.mjs`: a check that reads source text survives the rename that breaks the behaviour it claims to protect.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. `narrowGroups` is tested where it matters: a child of a collapsed parent is found, the parent is kept so the child has somewhere to appear, an emptied group is dropped rather than drawn empty, and clearing restores the same groups. Reverting matching from the model to the drawn rows is not expressible here, but the check that a collapsed feature's task is still found is the closest a pure test can get, and it would fail if `narrowCards` stopped recursing.
+
+Two limits, neither blocking. A card kept because it matches keeps all of its children, including children that do not match, so with a status filter applied an expanded parent shows notes at other statuses — narrower than TASK-0027's fourth criterion reads, and deliberate per the module's own comment. And `countCards` is asserted at line 129 but is called by no production code; the counter the renderer actually prints is built differently, which is a finding on [[FEAT-0005-Spread-Cards-On-A-Desk]] rather than on this suite.

@@ -58,6 +58,27 @@ export function nextSlot(taken: DeskCard[], surfaceWidth: number): { x: number; 
 }
 
 /**
+ * How much room a card may occupy on a desk that scrolls.
+ *
+ * The clamp has to run against the CONTENT, not against the window onto it.
+ * Using the viewport meant a card dragged on a desk scrolled down 500 pixels
+ * was clamped as though the desk were 400 tall, and it jumped several hundred
+ * pixels on the first movement (ISS-0005). A desk never shrinks below its
+ * viewport, so the larger of the two is the answer.
+ */
+export function deskBounds(surface: {
+  clientWidth: number;
+  clientHeight: number;
+  scrollWidth: number;
+  scrollHeight: number;
+}): { width: number; height: number } {
+  return {
+    width: Math.max(surface.clientWidth, surface.scrollWidth),
+    height: Math.max(surface.clientHeight, surface.scrollHeight),
+  };
+}
+
+/**
  * A position that is still reachable on this surface.
  *
  * A card dragged past the edge, or restored onto a window smaller than the one

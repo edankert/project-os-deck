@@ -19,9 +19,9 @@ tasks: ["[[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]]"]
 artifacts: []
 adequacy: "Putting `status` back in the panel list fails the refusal check at both ends. Letting the formatter write a panel the parser rejects fails the agreement check. Returning the raw value from panelOrNull fails the untrusted-input check."
 mutation_score: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[TST-0005-Every-State-Round-Trips-Through-Its-Address]]"]
 ---
 
@@ -62,3 +62,9 @@ Putting `status` back in the panel list fails the refusal check and the formatte
 ## Notes
 
 The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sources. That is the house rule stated in `desktop/tests/helpers.mjs`: a check that reads source text survives the rename that breaks the behaviour it claims to protect.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. The suite is a real guard on the grammar: putting `status` back in `PANEL_TYPES` fails the refusal check at both ends, and the formatter and the parser are asserted to agree, which is the failure this grammar exists to prevent. `address.test.mjs` was also corrected so the desk-with-a-space check finds its state by content rather than by index, which is the right repair.
+
+What this suite cannot reach is the window: it tests the address, not what happens when Deck restarts. The persistence half of TASK-0026 has a defect recorded on [[FEAT-0004-Windows-On-Any-Screen]], and nothing here or in the smoke run would have caught it.

@@ -19,9 +19,9 @@ tasks: []
 artifacts: []
 adequacy: "Reverting the probe to a bind on 127.0.0.1 fails ISS-0004's check, because a loopback bind succeeds beside a wildcard listener. Reverting it to a bind on the requested interface alone fails ISS-0002's check. Returning a port when the range is exhausted fails the last check."
 mutation_score: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[FEAT-0002-Deck-Opens-A-Workspace]]"]
 ---
 
@@ -61,3 +61,11 @@ Reverting the probe to a plain bind on `127.0.0.1` fails ISS-0004's check. Rever
 These are the two halves of one probe. Binding alone cannot see a wildcard listener, because on macOS a loopback bind succeeds beside one, and two Decks then listen on one port with no way to say which a browser reaches. So the probe asks whether anything answers a connection first, and only then whether the interface Deck needs can be bound. ISS-0002 is the second half: a port held on loopback cannot be bound by a process asking for every interface, and the old probe offered it anyway.
 
 The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sources. That is the house rule stated in `desktop/tests/helpers.mjs`: a check that reads source text survives the rename that breaks the behaviour it claims to protect.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. This is the strongest of the six suites: it holds a real socket on `0.0.0.0` and asserts the probe walks past the port, which is exactly ISS-0004's repro rather than a restatement of it.
+
+I checked the premise the suite rests on rather than taking it from the comment. On this machine, binding `127.0.0.1:P` alongside a listener already holding `0.0.0.0:P` succeeds — so the pre-fix, bind-only probe would have returned that port and this check would fail. The guard guards.
+
+Two residual leads, recorded here rather than filed, because neither is what the issue reported. `answersOn` treats its 250ms timeout as "nothing is there", so a listener that accepts a connection and then stalls, or one whose backlog is full, is still offered as free. And the probe remains time-of-check-to-time-of-use: two Decks starting at the same moment both find the port unanswered, both bind and close it, and both hand the same number to their host. The issue's own Next Actions raised a lock file as the alternative that would close that.

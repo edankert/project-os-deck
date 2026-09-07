@@ -19,9 +19,9 @@ tasks: ["[[TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty]]", "[[TASK-002
 artifacts: []
 adequacy: "Rebuilding every card on a move fails the identity check while every position is still correct. Saving the desk by reference rather than by copy fails the copy check. Removing the clamp fails the smaller-window check."
 mutation_score: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: changes-requested
 related: ["[[PHASE-0001-Deck]]", "[[TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty]]", "[[TASK-0025-Cards-Are-Dragged-And-Removed]]", "[[TST-0004-A-Desk-Reopens-As-It-Was-Left]]"]
 ---
 
@@ -72,3 +72,16 @@ Rebuilding every card on a move fails the identity check while every position is
 Pointer input itself is the part a machine cannot settle here. This suite covers the model under the drag, so whether a card follows the pointer, and whether the drop lands where a person meant, is still decided by the acceptance walk in `docs/tests/acceptance/`.
 
 The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sources. That is the house rule stated in `desktop/tests/helpers.mjs`: a check that reads source text survives the rename that breaks the behaviour it claims to protect.
+
+## Independent review — 2026-09-07
+
+**Verdict: changes-requested.** Clean context, separate session. The suite is a good test of `shared/store-state.js` and `shared/desk.js`; the `adequacy` field claims more than it guards.
+
+- **"Removing the clamp fails the smaller-window check" is not true of the product.** The check at `desktop/tests/desk-model.test.mjs:153` calls `clampToSurface` directly, so it fails only if that function is deleted. The restore path never calls it: `clampToSurface` appears once in the renderer, inside the drag handler (`renderer.ts:510`), and `drawDesk` places restored cards at their raw stored coordinates. Removing the clamp from the product changes nothing this suite can see.
+- **No node suite loads anything under `desktop/src/renderer/`.** Every module the tests import is under `shared/` or `main/`, and `render.test.mjs` reads the built stylesheet as text. The renderer half of TASK-0024 and TASK-0025 — the pointer handlers, the pool, the placement — is covered only by the Electron smoke run, which drags one card on an unscrolled desk and then calls `webContents.reload()`. A renderer reload is not the "Quitting Deck and starting it again" that TASK-0025's third criterion names.
+
+The rest of the suite guards what it says it does: the identity check would fail if `move-card` rebuilt untouched cards, and the copy check would fail if `save-desk` stored the live array by reference. Reword the `adequacy` field to claim only those, and record the renderer path as walked rather than checked.
+
+## Where this stands
+
+**2026-09-07, review: changes requested, and made.** The review's sharpest point about this suite: its clamp check called the pure function directly, so it passed whether or not the application ever called it, and the application did not ([[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]]). Two checks were added that assert the DEFECT as well as the fix, using the real numbers from a desk scrolled below its own window ([[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]]).

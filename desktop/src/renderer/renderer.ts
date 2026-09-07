@@ -14,10 +14,10 @@ import type { CardGroup, CardModel, DeckView, PanelType, Workspace } from '../sh
 import { AddressError, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry } from '../shared/views.js';
 import { SidecarClient, flattenGroups, groupsFromNav } from '../shared/sidecar-client.js';
-import { CARD_WIDTH, clampToSurface, nextSlot, reconcileDesk } from '../shared/desk.js';
+import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, reconcileDesk } from '../shared/desk.js';
 import { deskCardsOf } from '../shared/store-state.js';
 import { PANEL_LABELS, PANEL_TYPES, panelOrNull } from '../shared/panels.js';
-import { narrowGroups, statusesIn, typesIn } from '../shared/search.js';
+import { countCards, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
@@ -72,6 +72,9 @@ const pool = new CardPool(el.desk, {
     void openCard(card);
   },
   remove: (card) => {
+    // A card in the Needs-you strip is not on anybody's desk, so there is
+    // nothing to take off. The control is hidden there too (ISS-0007).
+    if (panel === 'needs-you') return;
     void host.dispatch({ type: 'take-off-desk', noteId: card.noteId });
   },
   grab: (card, element, event) => {
@@ -339,21 +342,35 @@ function narrowed(): CardGroup[] {
 function drawNavigator(): void {
   const state = host.state();
   const groups = narrowed();
-  const shown = groups.reduce((n, g) => n + g.cards.length, 0);
+  // Both halves counted the same way, children included. One side counting
+  // top-level rows and the other counting flattened notes read as "230 of
+  // 1400" with nothing narrowed (ISS-0007).
+  const shown = groups.reduce((n, g) => n + countCards(g.cards), 0);
+  const held = currentGroups.reduce((n, g) => n + countCards(g.cards), 0);
   navigator.render({
     groups,
     folds: state.folds,
     onDesk: new Set(deskCardsOf(state, state.workspaceId).map((c) => c.noteId)),
     currentNoteId: state.noteId,
   });
-  el.navCount.textContent = `${shown} of ${currentCards.length}`;
+  el.navCount.textContent = `${shown} of ${held}`;
   if (el.search.value !== state.query) el.search.value = state.query;
+  syncFilters();
 }
 
 function renderFilters(): void {
   const state = host.state();
   fillSelect(el.statusFilter, 'any status', statusesIn(currentGroups), state.filters.statuses[0] ?? '');
   fillSelect(el.typeFilter, 'any type', typesIn(currentGroups), state.filters.types[0] ?? '');
+}
+
+/** The selects show what the state says, so a second window narrows with the first. */
+function syncFilters(): void {
+  const { filters } = host.state();
+  const status = filters.statuses[0] ?? '';
+  const type = filters.types[0] ?? '';
+  if (el.statusFilter.value !== status) el.statusFilter.value = status;
+  if (el.typeFilter.value !== type) el.typeFilter.value = type;
 }
 
 function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[], current: string): void {
@@ -391,7 +408,14 @@ function drawDesk(): void {
 
   const onDesk = deskCardsOf(state, state.workspaceId);
   const reconciled = reconcileDesk(onDesk, currentCards);
-  const placed: PlacedCard[] = reconciled.cards.map((c) => ({ card: c.card, x: c.x, y: c.y }));
+  // Clamped at PAINT time rather than in the store: a desk saved on a large
+  // monitor keeps the positions it was saved with, and opens on a laptop with
+  // every card reachable (ISS-0007). The saved desk is not rewritten.
+  const bounds = deskBounds(el.desk);
+  const placed: PlacedCard[] = reconciled.cards.map((c) => {
+    const at = clampToSurface({ x: c.x, y: c.y }, bounds);
+    return { card: c.card, x: at.x, y: at.y };
+  });
   let label = state.deskName ?? (placed.length === 0 ? 'the desk is empty' : 'unsaved desk');
   if (reconciled.dropped > 0) {
     const cards = reconciled.dropped === 1 ? 'card' : 'cards';
@@ -507,7 +531,7 @@ function grabCard(card: CardModel, element: HTMLElement, event: PointerEvent): v
       y: moveEvent.clientY - surface.top - grabY + el.desk.scrollTop,
     };
     if (Math.abs(raw.x - latest.x) > 3 || Math.abs(raw.y - latest.y) > 3) moved = true;
-    latest = clampToSurface(raw, { width: el.desk.clientWidth, height: el.desk.clientHeight });
+    latest = clampToSurface(raw, deskBounds(el.desk));
     element.style.left = `${latest.x}px`;
     element.style.top = `${latest.y}px`;
   };

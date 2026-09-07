@@ -119,8 +119,11 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
   win.on('close', saveBounds);
 
   win.on('closed', () => {
-    // A panel closed on purpose does not come back at the next start.
-    if (role === 'satellite' && address !== null) panelBook.remove(address);
+    // A panel closed ON PURPOSE does not come back at the next start. A panel
+    // closed BY THE QUIT does: `app.quit()` closes every window before it
+    // leaves, so without the guard a clean quit forgot every panel and only a
+    // kill preserved them, which is the wrong way round (ISS-0006).
+    if (!shutDown && role === 'satellite' && address !== null) panelBook.remove(address);
     windowInfo.get(win.id)?.unsubscribe();
     windowInfo.delete(win.id);
     if (focusWindowId === win.id) {
@@ -380,8 +383,8 @@ async function runSmoke(): Promise<void> {
       // `:not([hidden])` reported the right number throughout.
       const onScreen = `Array.from(document.querySelectorAll('.nav-row')).filter((c) => getComputedStyle(c).display !== 'none').length`;
       const afterSwitch = (await focus.webContents.executeJavaScript(
-        `({ total: document.querySelectorAll('.nav-row').length, marked: document.querySelectorAll('.nav-row:not([hidden])').length, shown: ${onScreen}, count: document.getElementById('nav-count').textContent })`,
-      )) as { total: number; marked: number; shown: number; count: string };
+        `({ total: document.querySelectorAll('.nav-row').length, marked: document.querySelectorAll('.nav-row:not([hidden])').length, shown: ${onScreen}, headings: document.querySelectorAll('.nav-group:not([hidden])').length, count: document.getElementById('nav-count').textContent })`,
+      )) as { total: number; marked: number; shown: number; headings: number; count: string };
       record(
         afterSwitch.total <= poolBefore,
         `the pool did not grow when the view changed (${poolBefore} then ${afterSwitch.total})`,
@@ -390,10 +393,25 @@ async function runSmoke(): Promise<void> {
         afterSwitch.shown === afterSwitch.marked,
         `every row the pool hid left the screen (${afterSwitch.marked} marked, ${afterSwitch.shown} shown)`,
       );
-      const claimed = Number(/^(\d+) of/.exec(afterSwitch.count.trim())?.[1] ?? '-1');
+      // The label counts NOTES the narrowing kept, children included, against
+      // the notes the view holds; the list draws the rows that are not inside
+      // something collapsed, which is a smaller number. So the check is that
+      // the two halves agree when nothing is narrowed, and that the list is
+      // never claiming to show more rows than it has (ISS-0007).
+      const claim = /^(\d+) of (\d+)/.exec(afterSwitch.count.trim());
+      const kept = Number(claim?.[1] ?? '-1');
+      const held = Number(claim?.[2] ?? '-2');
+      record(kept === held, `nothing is narrowed, so the navigator counts the same both sides (${afterSwitch.count})`);
       record(
-        claimed === afterSwitch.shown,
-        `the navigator shows what it says it shows (says ${claimed}, shows ${afterSwitch.shown})`,
+        afterSwitch.shown <= kept,
+        `the navigator draws no more rows than the notes it kept (${afterSwitch.shown} rows, ${kept} notes)`,
+      );
+      // Every issue in this repository is fixed, so this view is entirely
+      // finished work: the headings are drawn and every row is folded behind
+      // them. That is the fold doing its job rather than an empty view.
+      record(
+        afterSwitch.headings > 0,
+        `the navigator drew its headings even where every note is folded away (${afterSwitch.headings})`,
       );
       await focus.webContents.executeJavaScript(
         `document.querySelectorAll('#switcher button')[2].click()`,

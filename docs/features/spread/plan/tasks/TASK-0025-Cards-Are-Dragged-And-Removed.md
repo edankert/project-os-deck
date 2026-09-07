@@ -14,6 +14,9 @@ effort: ""
 due: ""
 depends: ["TASK-0024"]
 blocks: []
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: changes-requested
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0004-A-Desk-Reopens-As-It-Was-Left]]"]
 tests: ["[[TST-0019-The-Desk-Is-Chosen-And-Arranged]]"]
 ---
@@ -52,6 +55,19 @@ Pointer input is the part a machine check cannot settle on its own; the reducer 
 
 ## Where this stands
 
+**2026-09-07, review: changes requested, and made.** Two of this task's criteria were not met by the code. A card dragged on a scrolled desk jumped, because the clamp measured the window while the position measured the content ([[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]]). And a restored position was never clamped at all, although the paragraph above said it was ([[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]]). Both are fixed, and the check now asserts the defect as well as the fix.
+
 **2026-09-07: built.** Pointer handlers on the desk move a card and commit one `move-card` to the store when the drag ends, so a move is one change rather than sixty. A position belongs to the note and is saved with the desk. A restored position is clamped back onto the surface, so a desk saved on a large monitor still opens on a laptop.
 
 The automated check is [[TST-0019-The-Desk-Is-Chosen-And-Arranged]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
+
+## Independent review — 2026-09-07
+
+**Verdict: changes-requested.** Clean context, separate session. Two of the six criteria are not met by the code.
+
+- **"Dragging a card with the pointer moves it, and it stays where it is released"** fails on a scrolled desk. `renderer.ts:506-510` adds `el.desk.scrollLeft`/`scrollTop` to the pointer position and then clamps the result against `clientWidth`/`clientHeight`, mixing content coordinates with viewport ones. On a desk 900×400 scrolled down 500px, a card stored at y=824 computes a raw position of 825 and lands at 352 — it jumps 473px the moment the pointer moves. `.desk` is `overflow: auto` and `nextSlot` stacks rows downwards without bound, so this is reachable with about a dozen cards in a short window.
+- **"Quitting Deck and starting it again brings the desk back with each card where it was left"** is not settled by anything that runs. The smoke run calls `webContents.reload()`, which is a renderer reload, not a restart. The store does persist through `DeckStore`, so the criterion is plausible; it is untested.
+
+Also: the note's "Where this stands" says "A restored position is clamped back onto the surface, so a desk saved on a large monitor still opens on a laptop". `clampToSurface` is called once in the product, inside the drag handler; `drawDesk` places restored cards at their raw saved coordinates. The sentence describes a behaviour that is not there, and the check meant to guard it calls the pure function directly.
+
+The remaining four criteria hold. Removing a card leaves the navigator row in place, one drag commits one `move-card`, and the identity check on the reducer is a real one.

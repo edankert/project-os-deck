@@ -14,6 +14,9 @@ effort: ""
 due: ""
 depends: []
 blocks: []
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
 tests: ["[[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]]"]
 ---
@@ -60,3 +63,11 @@ This is the first of the six tasks added on 2026-09-07 and every other one is ea
 **Corrected the same day, from the running application.** Folding read only the sidecar's `suppressed` flag, and the issues view does not use that flag: it repeats each severity band for the finished issues with a `:done` suffix on the key. So Your Trainer's 311 finished issues were still drawn as rows, under headings identical to the live ones. Deck now treats either signal as finished work, and those bands arrive as nine folded rows.
 
 The automated check is [[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. The groups, children, subtitle, owed flag and owed verb all survive into the card model, the fold state has a stable key per group and per note, and [[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]] would fail if any of them were dropped.
+
+Reviewed at `9a68eac` rather than at `7a001e8`. At the commit under review, the third criterion — finished issues folded away behind one control — was not met: Deck folded on the `suppressed` flag alone, and the issues view marks finished work by suffixing the group key with `:done`. The author found and fixed that in `9a68eac`, and corrected the test fixture, which had claimed the same flag the real payload does not send.
+
+One criterion is not settled by any automated check: "the counts Deck shows for each group match the counts the cockpit shows for the same repository". `rowsFor` counts a group's top-level cards, not the notes they hold, and the suite's fixture has no children, so the check cannot tell the two apart. The walk in [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]] is the only thing that settles it.

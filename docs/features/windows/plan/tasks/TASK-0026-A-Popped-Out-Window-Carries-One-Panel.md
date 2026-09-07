@@ -14,6 +14,9 @@ effort: ""
 due: ""
 depends: ["TASK-0023", "TASK-0024"]
 blocks: []
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: changes-requested
 related: ["[[FEAT-0004-Windows-On-Any-Screen]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]]"]
 tests: ["[[TST-0020-A-Popped-Out-Window-Carries-One-Panel]]"]
 ---
@@ -54,6 +57,18 @@ The panel type belongs in the address, because every reachable Deck state has on
 
 ## Where this stands
 
+**2026-09-07, review: changes requested, and made.** The sixth criterion here, a panel that comes back after a restart, was not met: a normal quit forgot every panel and only a signal kill preserved them ([[ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel]]). Fixed the same day.
+
 **2026-09-07: built.** Pop out asks what the new window will carry, and the answer is one of three panels: what needs you, the focused note, or the desk. The panel goes into the address, the address is remembered, and a restart reopens the window carrying the same thing on the display it was left on. The address grammar refuses a panel Deck cannot draw, which is what the old `panel=status` value became.
 
 The automated check is [[TST-0020-A-Popped-Out-Window-Carries-One-Panel]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
+
+## Independent review — 2026-09-07
+
+**Verdict: changes-requested.** Clean context, separate session. Five of the seven criteria hold; the sixth is defeated by the code that was meant to satisfy it.
+
+- **"Quitting and restarting Deck reopens the popped-out window ... still carrying the same panel"** does not hold. `main.ts:120-124` removes a satellite's address from `PanelBook` in the window's `closed` handler, with no guard for a quit that is already under way. `app.quit()` closes every window before `will-quit`, so an ordinary Cmd-Q fires `closed` for each open panel and leaves `deck-panels.json` empty. The paths are inverted: a signal kill (`app.exit`, which never closes windows) preserves the panels, and a clean quit forgets them. Read from the code against Electron's documented quit sequence rather than run — this pass started no processes — and the walk in [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] settles it in one attempt.
+
+What does hold: the panel is in the address and refused when unknown, each panel type hides what it does not carry through `deck.css:319-333`, a satellite draws no rail, no switcher and no pop-out, and `showInactive` keeps the keyboard where it was. A saved address whose workspace has vanished does not stop Deck starting.
+
+One thing the criteria do not settle, noted rather than filed: a `desk` panel shows the shared live desk rather than the desk as it was at pop-out, so clearing it in the panel clears the main window too.

@@ -14,6 +14,9 @@ requirements: []
 tasks: ["[[TASK-0012-A-Panel-Opens-In-Its-Own-Window]]", "[[TASK-0013-A-Window-Reopens-Where-It-Was]]", "[[TASK-0014-Satellites-Do-Not-Steal-Focus]]", "[[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]]"]
 release: ""
 acceptance_exception: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: changes-requested
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
 ---
 
@@ -48,6 +51,8 @@ A person drags a Deck panel onto a second monitor and it is still there after a 
 
 ## Where this stands
 
+**2026-09-07, review: changes requested, and made.** An independent review found that a normal quit forgot every popped-out panel while a signal kill preserved them, which is the wrong way round and defeats the criterion this feature's task exists for ([[ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel]]). Fixed the same day with the guard the geometry path already had. Nobody had quit Deck and restarted it with a panel open; the walk that would have caught it is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] and it is still owed.
+
 **2026-09-07, later: the task is done and the status is back at `review`.** Pop out asks what the new window will carry, and it carries one thing: what needs you, the focused note, or the desk. The panel is named in the address, the address is remembered, and a restart reopens the window carrying the same panel on the display it was left on. The automated check is [[TST-0020-A-Popped-Out-Window-Carries-One-Panel]], and the smoke run opens all three panels in the real application and asserts that each carries its own thing and nothing else. What is owed is the walk that needs a second monitor, which is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]].
 
 **2026-09-07, earlier: the status went back to `doing`, because one new task was in backlog.** A feature at `review` is waiting on a walk and nothing else. This one is waiting on work again, so `review` would be a false reading of it, and `STATUSES.md` puts `doing` before `review` for exactly this. It returns to `review` when TASK-0026 is done and only the walk is owed.
@@ -55,3 +60,13 @@ A person drags a Deck panel onto a second monitor and it is still there after a 
 **Why the task was added.** A pop-out is currently the same view again with no navigation, which is a duplicate rather than a panel. That is why this phase's second exit criterion was amended on 2026-09-06 to describe what existed instead of what Edwin had asked for. The review of 2026-09-07 put the criterion back ([[REFERENCE-PHASE-0001-REVIEW]]) and [[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]] builds what it now asks for.
 
 **2026-09-06: built and tested; the acceptance walk is owed.** One criterion here can only be settled by a person doing something a machine cannot: moving a window onto a second monitor, restarting Deck, and then unplugging that monitor and restarting again. That walk is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]], and its Procedure goes back to naming a status window once TASK-0026 lands.
+
+## Independent review — 2026-09-07
+
+**Verdict: changes-requested.** Clean context, separate session, from the notes and the diff of `7a001e8`. Same model family as the author, recorded in `reviewed_by`. One finding, and it is the criterion the phase's second exit criterion was restored for.
+
+- **A normal quit empties the panel book, so a restart reopens no panels.** `desktop/src/main/main.ts:120-124` removes a satellite's address from `PanelBook` in the window's `closed` handler, with no guard for a quit in progress. `app.quit()` closes every window before `will-quit`, so `closed` fires for each open satellite on an ordinary Cmd-Q, and `deck-panels.json` is empty by the time Deck next starts. The behaviour is inverted: a kill (`app.exit`, which never closes the windows — the reason `shutdown()` saves geometry itself, per commit `df5fc95`) leaves the panels remembered, while a clean quit forgets them. This is TASK-0026's sixth acceptance criterion, "Quitting and restarting Deck reopens the popped-out window on the display it was left on, still carrying the same panel", and the same sentence in [[CHG-20260907-Spread-Becomes-Two-Surfaces]]. Not reproduced by running Deck — the instruction for this pass was to start no processes — so this is a reading of the code against Electron's documented quit sequence, and a person walking [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] settles it in one attempt. The likely fix is a `if (shutDown) return;` in the `closed` handler.
+
+Checked and cleared. A saved address whose workspace or note has since vanished cannot stop Deck starting: `normaliseAddresses` drops anything that no longer parses (`window-book.ts:93-98`), the address grammar is the only thing consulted at start-up, and a window whose workspace has gone opens and says so from `applyAddress` (`renderer.ts:559-562`) rather than throwing. Panels cannot accumulate from one address, because `add` de-duplicates on the exact string; there is no cap on the number of distinct addresses, which only matters if the removal path above is fixed. The three panel types are genuinely exclusive in the stylesheet (`deck.css:319-333` hides the navigator in all three), and a satellite draws no switcher and no rail.
+
+One observation, not blocking: a window carrying `desk` still draws the desk bar's Save, Clear and desk picker, and the desk it shows is the shared live desk rather than a snapshot, so clearing from the panel clears the main window too. TASK-0026's criterion says "shows that desk's cards where they were placed", which does not settle whether that was intended.

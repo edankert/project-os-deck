@@ -12,6 +12,9 @@ source: ["Found during the PHASE-0001 review, 2026-09-07: Chrome on Deck's serve
 severity: medium
 component: renderer
 parent: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
 tests: ["[[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]]"]
 ---
@@ -59,3 +62,9 @@ Either way [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]] gains a Setup line sayi
 **Fixed 2026-09-07. A workspace with no sidecar is now offered as unavailable rather than offered and then refused.** Deck's own host adds one field to each workspace it lists: whether a sidecar is answering for it. A served page draws those workspaces disabled, with the reason on the row, and says what to do about it. Nothing changes in the shell, where every workspace can be opened.
 
 The check is in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]]: two workspaces, one with a sidecar and one without, and the listing says `true` for the first and `false` for the second.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. The fix does what the Resolution says. `host.ts:172-176` adds `open` per workspace from `sidecarBaseFor`, the served rail draws those rows disabled with the reason on them (`renderer.ts:165-170`), and `selectWorkspace` refuses a second time (`renderer.ts:202-205`) so the address bar cannot walk around the disabled button into the same 503. `host.test.mjs` gained a check with two workspaces, one with a sidecar and one without, which fails if the mapping is reverted. Deck's host serves GET and HEAD only and exposes no dispatch route, so a served page cannot reach the shared store at all.
+
+Two things the fix does not cover, neither of them what was reported. The listing is spread whole (`{ ...workspace, open }`), and a `Workspace` carries `root`, the absolute path on disk — so any client that can reach this host, which is the whole local network when Deck runs with `--lan`, learns where each repository lives. That predates this change and this change did not narrow it. And the served rail is drawn once at boot: a workspace the shell opens afterwards stays disabled until the page is reloaded, which is what the message tells a person to do.

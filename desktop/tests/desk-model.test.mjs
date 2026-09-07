@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, deskKey, deskCardsOf, isOnDesk } = load('shared/store-state.js');
-const { nextSlot, clampToSurface, reconcileDesk, CARD_WIDTH } = load('shared/desk.js');
+const { nextSlot, clampToSurface, deskBounds, reconcileDesk, CARD_WIDTH } = load('shared/desk.js');
 
 const WORKSPACE = 'aaaa1111';
 
@@ -148,6 +148,23 @@ test('a card dragged past the edge stays reachable', () => {
   assert.deepEqual(clampToSurface({ x: 5000, y: 5000 }, surface), { x: 752, y: 552 });
   assert.deepEqual(clampToSurface({ x: -300, y: -20 }, surface), { x: 0, y: 0 });
   assert.deepEqual(clampToSurface({ x: 120.4, y: 33.6 }, surface), { x: 120, y: 34 });
+});
+
+test('a desk that scrolls is bounded by its content, not by the window onto it', () => {
+  // ISS-0005: the clamp ran against the viewport while the position was in
+  // content coordinates, so a card dragged on a desk scrolled down 500 pixels
+  // jumped hundreds of pixels up on the first movement.
+  const scrolled = { clientWidth: 900, clientHeight: 400, scrollWidth: 900, scrollHeight: 1400 };
+  assert.deepEqual(deskBounds(scrolled), { width: 900, height: 1400 });
+  const dragged = clampToSurface({ x: 300, y: 825 }, deskBounds(scrolled));
+  assert.deepEqual(dragged, { x: 300, y: 825 }, 'a card low on a scrolled desk stays where it was dragged');
+  const wrong = clampToSurface({ x: 300, y: 825 }, { width: 900, height: 400 });
+  assert.equal(wrong.y, 352, 'the viewport bound is what made the card jump');
+});
+
+test('a desk that does not scroll is bounded by the window, which is the same thing', () => {
+  const small = { clientWidth: 900, clientHeight: 400, scrollWidth: 600, scrollHeight: 200 };
+  assert.deepEqual(deskBounds(small), { width: 900, height: 400 }, 'a desk never shrinks below its viewport');
 });
 
 test('a desk restored onto a smaller window comes back on screen', () => {

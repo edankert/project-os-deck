@@ -14,6 +14,9 @@ effort: ""
 due: ""
 depends: ["TASK-0023"]
 blocks: []
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
 tests: ["[[TST-0018-A-Card-Shows-What-Its-Note-Is]]"]
 ---
@@ -53,3 +56,9 @@ Hue is left saying what a note is rather than how urgent it is, which is the dec
 **2026-09-07: built.** `shared/faces.ts` decides a card's face from the note: a phase or feature shows how much of its work is finished, an issue shows its severity, a test shows its last walk and whether it has gone stale, and anything else draws what every card has. One pooled element draws every face, so a view of four hundred cards costs what it did before.
 
 The automated check is [[TST-0018-A-Card-Shows-What-Its-Note-Is]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. `faceFor` decides from the note and nothing else, the payload's own progress is preferred over a recount, an unknown type falls back to what every card has, and [[TST-0018-A-Card-Shows-What-Its-Note-Is]] fails under each of the mutations its adequacy line names. The pool's arithmetic is unchanged: one `.face` node is repainted for every face, including the progress bar.
+
+Two criteria rest on reading rather than on a check. That a phase's fraction matches what the cockpit reports for the same phase is settled by the walk, not by the suite — the suite counts children with Deck's own status vocabulary, which is `shared/faces.ts`'s list and not the cockpit's. And "no slower than it is today" is asserted rather than measured; the code supports it.

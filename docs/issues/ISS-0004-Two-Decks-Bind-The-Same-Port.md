@@ -12,6 +12,9 @@ source: ["Found during the PHASE-0001 review, 2026-09-07: two Deck processes wer
 severity: medium
 component: main
 parent: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing]]", "[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
 tests: ["[[TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free]]"]
 ---
@@ -55,3 +58,9 @@ Both processes hold port 7300 and `lsof` shows two LISTEN rows.
 That makes one probe answer both faults. [[ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing]] was the mirror case, a port free on loopback that `0.0.0.0` could not take, and the interface argument added then is still what answers it.
 
 The check is [[TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free]], which holds a real port on `0.0.0.0` and asserts the probe walks past it.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. The reported repro is closed and the check is a real one. I verified the premise independently rather than reading it off the comment: on this machine a bind of `127.0.0.1:P` succeeds alongside a listener already holding `0.0.0.0:P`, so the old bind-only probe would have offered that port and [[TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free]] would fail. The connect probe sees the listener the bind cannot.
+
+Two residual gaps, recorded as leads rather than filed as issues, because neither is the fault reported here. The probe still checks and then binds later, so two Decks launched at the same moment both find the port unanswered, both bind and release it, and both hand the same number to their host — the lock file this note's Next Actions raised is what would close that, and the Resolution does not say the race remains. And `answersOn` treats its 250ms timeout as "nothing is there", so a process that accepts a connection and then stalls, or whose backlog is full, is still offered as free.

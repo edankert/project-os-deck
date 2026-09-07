@@ -19,9 +19,9 @@ tasks: ["[[TASK-0028-A-Card-Face-Per-Type]]"]
 artifacts: []
 adequacy: "Counting a surface's children rather than reading the progress object the sidecar sent fails the surface check. Throwing on a type with no face fails the unknown-type check, which the Vault phase meets first."
 mutation_score: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[TASK-0028-A-Card-Face-Per-Type]]"]
 ---
 
@@ -63,3 +63,9 @@ Counting a surface's children rather than reading the progress object the sideca
 ## Notes
 
 The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sources. That is the house rule stated in `desktop/tests/helpers.mjs`: a check that reads source text survives the rename that breaks the behaviour it claims to protect.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. `faceFor` and `faceText` are covered per type, the payload's own progress count is preferred over a recount, an issue with no severity falls back rather than drawing an empty band, and an unknown type draws what every card has — which is the Vault phase's case. Each check fails under the mutation the `adequacy` line names.
+
+The one criterion outside this suite is the last: "the faces are drawn by the same pooled element". That is true of `cards.ts:115-139`, which paints every face into one `.face` node, but it is read rather than tested — no node suite loads anything under `desktop/src/renderer/`.

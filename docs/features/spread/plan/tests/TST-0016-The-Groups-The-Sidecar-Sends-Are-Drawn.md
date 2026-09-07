@@ -19,9 +19,9 @@ tasks: ["[[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]"]
 artifacts: []
 adequacy: "Flattening the payload into one list fails the first check. Dropping a repeated id fails the two-groups check. Reading the band from the whole group key makes `high:done` report nothing and fails the severity check."
 mutation_score: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-07
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]"]
 ---
 
@@ -67,3 +67,11 @@ Flattening the groups into one list, which is what Deck did before this task, fa
 ## Notes
 
 The suite loads the BUILT modules under `desktop/dist`, not the TypeScript sources. That is the house rule stated in `desktop/tests/helpers.mjs`: a check that reads source text survives the rename that breaks the behaviour it claims to protect.
+
+## Independent review — 2026-09-07
+
+**Verdict: approved.** Clean context, separate session. The suite guards `groupsFromNav` and `rowsFor`: no group loses or repeats an item, a note in two groups stays in both while the flattened lookup shows it once, a `:done` band arrives folded, and a note holding others arrives closed. Each assertion fails under the mutation its `adequacy` line names.
+
+One caveat on the last check. "A heading counts what the group holds, which is what the cockpit shows" asserts `group.cards.length`, which counts top-level cards only. The fixture's cards hold no children, so the check cannot tell that counting from the counting `countCards` does. On the Features view, where a feature holds up to 136 tasks, the two differ. TASK-0023's sixth criterion — that Deck's counts match the cockpit's for the same repository — is settled by the walk in [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]] and by nothing here.
+
+Worth recording as evidence the fixture is now checked against reality: this suite's fixture claimed a `suppressed` flag the issues view never sends, and commit `9a68eac` corrected both the fixture and the code.
