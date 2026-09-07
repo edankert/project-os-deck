@@ -78,7 +78,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.agents.attention` | not yet | |
 | `shell.agents.approvals` | not yet | |
 | `shell.agents.follow` | not yet | one focus window; satellites draw no switcher at all as of 2026-09-06, so there is nothing to follow yet |
-| `shell.terminal` | not yet | several consoles; PHASE-040's control plane as the source; a context budget past sixteen |
+| `shell.terminal` | not yet | several consoles as furniture in the field, [[PHASE-0004-Parity]]. **Edwin, 2026-09-07:** before building, evaluate T3 Code's terminal (a Node server owning the PTYs with node-pty, streamed over a WebSocket to xterm.js in a web client) in place of the cockpit's IPC-only terminal; that shape fits Deck's two hosts. The choice is recorded as an ADR in that phase. Still to honour: PHASE-040's control plane as the source of sessions, and a context budget past sixteen |
 | `shell.live` | not yet | a change arriving mid-view is announced, never applied silently |
 | `shell.validation` | not yet | |
 | `shell.theme` | not yet | Glass has no light-mode form yet (review, Part 2) |
@@ -107,6 +107,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 ## Maintenance
 
+- 2026-09-07, later — no row moved. The Parity phase, [[PHASE-0004-Parity]], is now the phase that takes the `not yet` rows a working day needs; the `shell.terminal` row records Edwin's wish to evaluate T3 Code's terminal before Deck builds a console.
 - Re-read the cockpit register whenever `git log --since=<last read> -- docs/changes` in project-os-cockpit returns anything, and add a dated line here saying what was read and which rows changed.
 - 2026-09-06 — written against baseline `570da22`; every row `not yet` except `api.guards`, and three `replaced by`.
 - 2026-09-07 — three rows moved to `adopted` (`shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find`) as the work landed. The register was re-read at `c0ed9e3`: one cockpit change note has landed since `570da22` and it touched no capability, but the 2026-09-06 acceptance-checks work had added two keys this table never carried. `shell.checks.mark-dialog` and `api.read.check-history` are added here as `not yet`. Every one of the register's 55 keys now has a position in this table.

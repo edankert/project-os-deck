@@ -44,29 +44,30 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 1
+  ADR: 2
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 8
+  FEAT: 10
   ISS: 10
-  PHASE: 3
+  PHASE: 4
   REQ: 0
   RISK: 1
   REL: 0
-  TASK: 28
-  TST: 22
+  TASK: 37
+  TST: 25
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
-  phase: "PHASE-0001"
-  feature: "FEAT-0005"
+  phase: "PHASE-0002"
+  feature: "FEAT-0009"
   task: ""
   issue: ""
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
+  # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0001:
       file: "docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md"
@@ -76,7 +77,7 @@ items:
       phase: PHASE-0002
       requirements: []
       tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
-      note: "Asked for directly by Edwin 2026-09-05 off DES-0001's ORBIT plate. A Deck view, and Deck-only (Edwin 2026-09-06: the cockpit gets no orbit route), not a replacement for the reader: landing opens the note in the existing document pane and NO verb is discharged in the field (ADR-0020). The two hard tasks are not the renderer -- TASK-0002 (a layout that stays put while the corpus adds 634 notes a month) and TASK-0005 (the treatment decision, glass or blocks, which is human-only and BLOCKS the renderer). Its own design says the orphan-note query is one a table could answer; what a table cannot answer is which clusters hang by a single edge, and where a note sits two hops out."
+      note: "Re-planned 2026-09-07 with ADR-0002: no longer the GATE in front of Glass but the ORBIT ARRANGEMENT of FEAT-0009's field, drawn by the same renderer, where distance is connectedness. Its three measurements (one request for the whole edge list, layout drift when a note is added, frame rate at the corpus's size) are EXIT CRITERIA of PHASE-0002 written as numbers, and a failed number costs this arrangement and nothing else. TASK-0001's endpoint is a change in the COCKPIT repository (the sidecar is not changed for Deck): an issue is filed there when the task starts and Deck's half consumes it. Nothing else in the phase waits for it: FEAT-0010's neighbourhood reads /api/cockpit/context per held note. Order inside the feature: TASK-0001, TASK-0002, TASK-0005 (human-only, now decides only the orbit's look), TASK-0003 (inside FEAT-0009's renderer, after TASK-0031), TASK-0004. Deck-only (Edwin 2026-09-06)."
     FEAT-0002:
       file: "docs/features/shell/FEAT-0002-Deck-Opens-A-Workspace.md"
       title: "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes"
@@ -140,6 +141,24 @@ items:
       requirements: []
       tasks: ["TASK-0021", "TASK-0022"]
       note: "Deck's own HTTP host serves the renderer and proxies reads to the sidecar, allowing GET and HEAD and refusing everything else (ADR-0001). The Electron window loads from that host too, so the shell and the tablet run identical bytes over one origin and there is no second data path. Capability is detected through the preload bridge, so shell-only actions are ABSENT when served rather than disabled."
+    FEAT-0009:
+      file: "docs/features/glass-field/FEAT-0009-The-Field-Where-Depth-Carries-Priority.md"
+      title: "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034"]
+      note: "THE FOCUS from 2026-09-07 (ADR-0002, Edwin: 'glass should be the main view, so let's build glass now first'). A surface over the views the provider already returns: the three bands come from the groups the sidecar already sends and the navigator already draws (Needs you = front, the view's own groups = mid, suppressed = deep, behind you). Asks nothing new of the sidecar. Rendering is the DES-0002 review's HYBRID: near bands (about 12 front, 40 mid) are real DOM cards with Spread's faces, focusable and animated; the quiet band is tiles on ONE CANVAS; fog and detail-by-distance, never blur, no backdrop-filter over the moving field. Order: TASK-0029 band function and TASK-0030 slot geometry are pure functions written first, then TASK-0031 the renderer, TASK-0032 view switch and live changes announced, TASK-0033 the surface in the address with glass the default and the navigator as the keyboard route, TASK-0034 the measurement on Your Trainer in a FOREGROUND window with the numbers in the note. If the number fails on a laptop, Spread returns to default and the phase records it."
+    FEAT-0010:
+      file: "docs/features/glass-desk/FEAT-0010-Lifting-A-Note.md"
+      title: "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0035", "TASK-0036", "TASK-0037"]
+      note: "Answers what Edwin wrote in the ledger on 2026-09-07 walking TST-0015: relationships and dependencies are what he cannot see in Deck. A click lifts a note out of the field onto THE DESK SPREAD ALREADY HAS (one desk model, two surfaces; DES-0002's desk-survives-a-workspace-switch is NOT adopted, desks are per workspace); the slot stays ghosted; closing is three non-destructive verbs and a background click does nothing. While a note is held its links and backlinks take the front band, the front plane's label says what it now means and the owed count keeps a fixed place (the review's two desk findings). With several notes down the field marks what is joined to more than one. Data is /api/cockpit/context per held note, already allow-listed by Deck's host; no whole-graph payload needed. Depends on FEAT-0009's TASK-0031 (a field to lift from) and TASK-0030 (a held note is an obstacle). The live desk in the store is keyed by workspace, not by view; if per-view live desks are wanted that is a store change for TASK-0035 to decide."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -176,55 +195,6 @@ items:
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
-    TASK-0006:
-      file: "docs/features/shell/plan/tasks/TASK-0006-The-Application-Builds-And-Boots.md"
-      title: "The application builds and boots — one compile, a main process, a preload bridge and a renderer that draws"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0002"
-      phase: PHASE-0001
-    TASK-0007:
-      file: "docs/features/shell/plan/tasks/TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck.md"
-      title: "The sidecar starts and stops with Deck — one per workspace, on a free loopback port, waited for before it is used"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0002"
-      phase: PHASE-0001
-    TASK-0008:
-      file: "docs/features/shell/plan/tasks/TASK-0008-Workspaces-Are-Found-And-Remembered.md"
-      title: "Workspaces are found and remembered — a project-os repository is the one that carries a SNAPSHOT.yaml"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0002"
-      phase: PHASE-0001
-    TASK-0009:
-      file: "docs/features/shell/plan/tasks/TASK-0009-A-Typed-Read-Only-Client-Over-The-Sidecar.md"
-      title: "A typed read-only client over the sidecar — one method per endpoint Deck reads, and no method that writes"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0002"
-      phase: PHASE-0001
-    TASK-0010:
-      file: "docs/features/store/plan/tasks/TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It.md"
-      title: "The store holds the state and broadcasts it — one record in the main process, every window subscribed"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0003"
-      phase: PHASE-0001
-    TASK-0011:
-      file: "docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md"
-      title: "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0003"
-      phase: PHASE-0001
-    TASK-0012:
-      file: "docs/features/windows/plan/tasks/TASK-0012-A-Panel-Opens-In-Its-Own-Window.md"
-      title: "A panel opens in its own window — the same renderer, a different address, and a role that says what it is for"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0004"
-      phase: PHASE-0001
     TASK-0013:
       file: "docs/features/windows/plan/tasks/TASK-0013-A-Window-Reopens-Where-It-Was.md"
       title: "A window reopens where it was — bounds remembered per window and placed on the display it was on"
@@ -337,6 +307,69 @@ items:
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
+    TASK-0029:
+      file: "docs/features/glass-field/plan/tasks/TASK-0029-The-Band-Function.md"
+      title: "The band function: one table from the sidecar's groups to front, mid and deep, per view, and overflow is stated rather than silent"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0009"
+      phase: PHASE-0002
+    TASK-0030:
+      file: "docs/features/glass-field/plan/tasks/TASK-0030-The-Slot-Geometry.md"
+      title: "The slot geometry: a cylinder of slots dealt from the bands, a shape for a thousand quiet tiles, and an obstacle that is a sector rather than a rectangle"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0009"
+      phase: PHASE-0002
+    TASK-0031:
+      file: "docs/features/glass-field/plan/tasks/TASK-0031-The-Field-Renders-And-Turns.md"
+      title: "The field renders and turns: near bands as bound cards, the quiet band on one canvas, fog instead of blur, and a card a real pointer can hit"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0009"
+      phase: PHASE-0002
+    TASK-0032:
+      file: "docs/features/glass-field/plan/tasks/TASK-0032-A-View-Switch-Re-Arranges.md"
+      title: "A view switch re-arranges the same cards, and a change arriving mid-view is announced rather than applied"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0009"
+      phase: PHASE-0002
+    TASK-0033:
+      file: "docs/features/glass-field/plan/tasks/TASK-0033-Glass-Is-Addressed-And-Opened-First.md"
+      title: "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboard route"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0009"
+      phase: PHASE-0002
+    TASK-0034:
+      file: "docs/features/glass-field/plan/tasks/TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace.md"
+      title: "The field is measured on the largest workspace, and the numbers go in the note"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0009"
+      phase: PHASE-0002
+    TASK-0035:
+      file: "docs/features/glass-desk/plan/tasks/TASK-0035-A-Note-Is-Lifted-And-Put-Back.md"
+      title: "A note is lifted out of the field onto the desk, its slot stays ghosted, and closing is three verbs none of which destroys anything"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0010"
+      phase: PHASE-0002
+    TASK-0036:
+      file: "docs/features/glass-desk/plan/tasks/TASK-0036-The-Neighbourhood-Takes-The-Front-Band.md"
+      title: "The neighbourhood takes the front band while a note is held, the front plane says what it now means, and the owed count keeps its place"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0010"
+      phase: PHASE-0002
+    TASK-0037:
+      file: "docs/features/glass-desk/plan/tasks/TASK-0037-What-These-Share.md"
+      title: "What these share: with several notes on the desk the field marks what is joined to more than one of them, and the desk bar counts it"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0010"
+      phase: PHASE-0002
   issues:
     ISS-0003:
       file: "docs/issues/ISS-0003-A-Served-Page-Cannot-Open-A-Workspace-The-Shell-Has-Not.md"
@@ -453,18 +486,29 @@ items:
       note: "The phase that makes Deck a thing you can open, and the one that carries the foundations rather than a separate foundations phase before it. Deliberate: a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge, and the two rules that must hold from the first line of code -- one renderer with two hosts, and views taken from a provider rather than a fixed list of buttons -- would be stranded in a phase that ends before any view exists. Exit is measured, not listed: Spread opens the same notes as the cockpit, a status window survives a restart on a second display, and the same renderer served by the sidecar opens read-only on a tablet. If the phase proves too large to steer, the split point is the first criterion. Asks nothing new of the sidecar: the list of views is Deck's own (Edwin 2026-09-06), and the project-os provider matches the cockpit's navigator."
     PHASE-0002:
       file: "docs/phases/PHASE-0002-Glass.md"
-      title: "Glass — depth carries priority, built on what FEAT-0001 measures"
-      status: planned
+      title: "Glass — the main view, where depth carries priority and a held note brings its neighbourhood to the front"
+      status: active
       order: 2
       owner: user:edwin
-      features: ["FEAT-0001"]
+      features: ["FEAT-0009", "FEAT-0010", "FEAT-0001"]
       requirements: []
-      tasks: ["TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
       issues: []
-      note: "Gated on measurement, not on taste. FEAT-0001 builds the read-only field over the real link graph and produces three numbers -- whether the whole edge list arrives in one request, whether the layout stays put when the corpus grows, and what frame rate the field holds on a laptop -- and DES-0002's arrangements are built only if those pass. Depends on PHASE-0001 for the store, the address grammar and the tablet host. TWO THINGS TO KNOW: the field is DECK-ONLY (Edwin 2026-09-06, the cockpit gets no orbit route; FEAT-0001 was rewritten that day from its cockpit-era text); and the measurements can fail, in which case the phase closes with the field alone and Spread is unaffected."
+      note: "OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit; its issues are ironed out here. Was gated on FEAT-0001's three measurements; those are now EXIT CRITERIA written as numbers, not a gate. Three features: FEAT-0009 the field (the focus; bands from the groups the sidecar already sends; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band (what Edwin said he cannot see today), FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Three acceptance walks: TST-0023, TST-0024, TST-0025. Asks nothing new of the sidecar except FEAT-0001's endpoint, which is cockpit work. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk, the navigator, the addresses and the tablet host."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
       title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
+      status: planned
+      order: 4
+      owner: user:edwin
+      features: []
+      requirements: []
+      tasks: []
+      issues: []
+      note: "Point Deck at ~/Notes and the vault's own structure appears: types detected from its templates and properties, its .base files as views, its .canvas files as read-only boards, its statuses banded. Reads everything, writes none of Obsidian's files. Depends on PHASE-0001 for the seam (the view provider the renderer asks; this phase adds the one that reads .base files) and NOT on PHASE-0002; FOURTH place since 2026-09-07 (ADR-0002 put a parity phase, PHASE-0004, before it); the place is Edwin's stated order, not a technical constraint, so grooming can bring it forward. One blocker lives in the other repository: the cockpit's indexer drops a list-valued type:, which leaves 99 of the vault's 407 notes untyped, and that is project-os-cockpit ISS-0279 at triage. The cross-repo reference is kept in prose and related: only."
+    PHASE-0004:
+      file: "docs/phases/PHASE-0004-Parity.md"
+      title: "Parity — Deck carries a working day, so a real task is done in Deck instead of the cockpit"
       status: planned
       order: 3
       owner: user:edwin
@@ -472,7 +516,7 @@ items:
       requirements: []
       tasks: []
       issues: []
-      note: "Point Deck at ~/Notes and the vault's own structure appears: types detected from its templates and properties, its .base files as views, its .canvas files as read-only boards, its statuses banded. Reads everything, writes none of Obsidian's files. Depends on PHASE-0001 for the seam (the view provider the renderer asks; this phase adds the one that reads .base files) and NOT on PHASE-0002; third place is Edwin's stated order from 2026-09-06, not a technical constraint, so grooming can bring it forward. One blocker lives in the other repository: the cockpit's indexer drops a list-valued type:, which leaves 99 of the vault's 407 notes untyped, and that is project-os-cockpit ISS-0279 at triage. The cross-repo reference is kept in prose and related: only."
+      note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
     RISK-0001:
       file: "docs/risks/RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing.md"
@@ -599,9 +643,9 @@ items:
       title: "One real task done in Deck instead of the cockpit, and a record of which Edwin would rather have used"
       status: active
       owner: user:edwin
-      phase: PHASE-0001
+      phase: PHASE-0004
       covers: ["FEAT-0005"]
-      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The seventh exit criterion, added 2026-09-07 after the review: the only criterion a flat grid cannot meet. Cannot be walked before TASK-0023 to TASK-0027 land. Either answer is a valid result; preferring the cockpit is a finding about Spread, not a failed walk."
+      note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. MOVED 2026-09-07 from PHASE-0001 (its seventh criterion) to PHASE-0004 with ADR-0002. Edwin walked it that day and marked it QUESTION: it can only be answered once the functionality is there, and what he cannot see is relationships and dependencies between notes. Not before Parity has given Deck a console, the pages, the verbs and live changes; Glass should be the surface the task is done in. Either answer is a valid result; preferring the cockpit is a finding, not a failed walk."
     TST-0016:
       file: "docs/features/spread/plan/tests/TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn.md"
       title: "The groups the sidecar sends are drawn, and no note is lost or repeated on the way"
@@ -658,6 +702,30 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0002"]
       note: "Automated, so it carries no verdict: CI is the verdict. Covers ISS-0009. The stand-in interpreter is spawned by the REAL supervisor with the real arguments and refuses its first port with the traceback CPython prints, so this exercises the retry rather than describing it. Its sibling TST-0021 covers the probe; this one covers what no probe can see in advance."
+    TST-0023:
+      file: "docs/tests/acceptance/TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It.md"
+      title: "Glass opens first, and a day's notes are read in it: the owed work in front, the quiet work behind, and the same cards moving when the view changes"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0009"]
+      note: "Acceptance walk for FEAT-0009 and the first exit criterion of PHASE-0002. Open a workspace and Glass is what opens; owed notes in front; turn to the quiet band and the compass counts it; switch view and watch the same cards move; reach a card from the navigator by keyboard only; open the same address served in Safari on the tablet. Rests at active; the verdict is a ledger event."
+    TST-0024:
+      file: "docs/tests/acceptance/TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives.md"
+      title: "A note is lifted in Glass, its neighbourhood arrives at the front, two notes show what they share, and the same desk is there in Spread"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0010"]
+      note: "Acceptance walk for FEAT-0010. Lift an issue and see its feature and tests come to the front; lift a second and see what they share marked; put one back and the ghosted slot fills; esc sweeps; the same desk then shows in Spread; everything reachable from the navigator by keyboard. Rests at active; the verdict is a ledger event."
+    TST-0025:
+      file: "docs/tests/acceptance/TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible.md"
+      title: "A planted orphan and a cluster hanging by one edge are both visible in the orbit without being told where to look"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0001"]
+      note: "Acceptance walk for FEAT-0001, the orbit arrangement: in a scratch copy of this repository plant one orphan note and one cluster joined by a single edge, name the ids before looking, open the orbit arrangement and find both without search; hover the single edge and read the sentence that made it; land on the orphan and the reader opens it. Rests at active; the verdict is a ledger event."
   releases: {}
   workflows: {}
   changes:
@@ -680,6 +748,12 @@ items:
       status: accepted
       owner: user:edwin
       note: "Deck runs its own HTTP host: it serves the renderer, proxies GET and HEAD to the sidecar and answers 405 to everything else, and the Electron window loads from it too. Forced by two facts plus one decision: the sidecar's static directory is fixed to its own package at import time, its one outside-directory flag serves a single allow-listed file (renderer.css) and 404s the rest, and Edwin ruled on 2026-09-06 that the cockpit is not changed for Deck. The by-product is the bigger win -- one origin for both hosts, so the shell and the tablet share one data path instead of two."
+    ADR-0002:
+      file: "docs/decisions/ADR-0002-Glass-Is-The-Main-View.md"
+      title: "Glass is Deck's main view, built before parity with the cockpit; Spread stays a view beside it and the two share one desk"
+      status: accepted
+      owner: user:edwin
+      note: "Edwin, 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity.' Option 2 of three (keep the order; Glass now as the main view; Glass only and retire Spread). Consequences: Deck opens in Glass and the address gains a surface with glass the default; views stay the provider's; ONE DESK shown by both surfaces; FEAT-0001's measurements become exit criteria of PHASE-0002 rather than a gate; a failed frame time returns Spread to default and is recorded; TST-0015 and PHASE-0001's seventh criterion move to the new PHASE-0004 Parity, which comes before Vault. Triggered by his ledger remark on TST-0015 that relationships and dependencies are what he cannot see in Deck."
   designs:
     DES-0001:
       file: "docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md"
@@ -707,11 +781,11 @@ items:
 
 metrics:
   counts:
-    features_total: 8
+    features_total: 10
     features_done: 0
-    phases_total: 3
+    phases_total: 4
     phases_done: 0
-    tasks_total: 28
+    tasks_total: 37
     tasks_done: 23
     tests_total: 15
     tests_passing: 0
@@ -720,4 +794,4 @@ metrics:
     issues_triage: 1
     risks_open: 1
     releases_total: 0
-    decisions_total: 1
+    decisions_total: 2

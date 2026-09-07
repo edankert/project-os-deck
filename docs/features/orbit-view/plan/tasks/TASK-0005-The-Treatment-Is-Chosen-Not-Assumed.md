@@ -7,14 +7,14 @@ status: backlog
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-06
+updated: 2026-09-07
 source: ["Edwin 2026-09-05: 'this feels a little minority report like or did you have something more like (wooden) play blocks in mind'"]
 parent: "FEAT-0001"
 effort: ""
 due: ""
 depends: []
 blocks: ["TASK-0003"]
-related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[project-os-cockpit#DES-0002]]"]
+related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Cockpit]]", "[[project-os-cockpit#DES-0002]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 tests: []
 ---
 
@@ -22,9 +22,11 @@ tests: []
 
 ## Objective
 
-Decide between the three treatments [[DES-0001]] draws, and record why. A design verdict is human-only ([[project-os-cockpit#REQ-0026]]); this task ends in Edwin's decision, not in an implementation.
+Decide between the three treatments [[DES-0001]] draws for the orbit, and record why. A design verdict is human-only ([[project-os-cockpit#REQ-0026]]); this task ends in Edwin's decision, not in an implementation.
 
 ## Detail
+
+**What this decision covers narrowed on 2026-09-07.** The Glass field itself ([[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]) is built with [[DES-0002]]'s fog-and-detail treatment, which the review's measurement chose over blur: distance loses contrast and detail rather than going out of focus. This task no longer blocks the field's renderer. It decides how the orbit arrangement looks, and it blocks only [[TASK-0003]], the orbit's edge overlay.
 
 They are not three palettes. They disagree about what the view is claiming:
 

@@ -7,7 +7,12 @@
     {"check": "TST-0011", "mark": "question", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "How do I run something?"},
     {"check": "TST-0012", "mark": "question", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "Don't know how to pop out a panel."},
     {"check": "TST-0013", "mark": "pass", "date": "2026-09-06", "method": "manual", "by": "user:edwin", "reason": "I think this bit works ..."},
-    {"check": "TST-0008", "mark": "pass", "date": "2026-09-07", "method": "manual", "by": "user:edwin"}
+    {"check": "TST-0008", "mark": "pass", "date": "2026-09-07", "method": "manual", "by": "user:edwin"},
+    {"check": "TST-0009", "mark": "pass", "date": "2026-09-07", "method": "manual", "by": "user:edwin"},
+    {"check": "TST-0010", "mark": "pass", "date": "2026-09-07", "method": "manual", "by": "user:edwin"},
+    {"check": "TST-0011", "mark": "pass", "date": "2026-09-07", "method": "manual", "by": "user:edwin", "reason": "I am not sure if it doesn't leave anything running when I quit???"},
+    {"check": "TST-0012", "mark": "pass", "date": "2026-09-07", "method": "manual", "by": "user:edwin"},
+    {"check": "TST-0015", "mark": "question", "date": "2026-09-07", "method": "manual", "by": "user:edwin", "reason": "This is a little of an open ended question and can only really be answered if all functionality is implemented ... at the moment I don't know if this is better or worse, one of the thing around relationships / dependencies I think is a little bit of an issue that I don't see this at the moment but that simply requires more functonality."}
   ],
   "evidence": []
 }
