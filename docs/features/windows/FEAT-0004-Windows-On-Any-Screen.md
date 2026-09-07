@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0004
 aliases: ["FEAT-0004"]
 title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -48,7 +48,9 @@ A person drags a Deck panel onto a second monitor and it is still there after a 
 
 ## Where this stands
 
-**2026-09-07: the status went back to `doing`, because one new task is in backlog.** A feature at `review` is waiting on a walk and nothing else. This one is waiting on work again, so `review` would be a false reading of it, and `STATUSES.md` puts `doing` before `review` for exactly this. It returns to `review` when TASK-0026 is done and only the walk is owed.
+**2026-09-07, later: the task is done and the status is back at `review`.** Pop out asks what the new window will carry, and it carries one thing: what needs you, the focused note, or the desk. The panel is named in the address, the address is remembered, and a restart reopens the window carrying the same panel on the display it was left on. The automated check is [[TST-0020-A-Popped-Out-Window-Carries-One-Panel]], and the smoke run opens all three panels in the real application and asserts that each carries its own thing and nothing else. What is owed is the walk that needs a second monitor, which is [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]].
+
+**2026-09-07, earlier: the status went back to `doing`, because one new task was in backlog.** A feature at `review` is waiting on a walk and nothing else. This one is waiting on work again, so `review` would be a false reading of it, and `STATUSES.md` puts `doing` before `review` for exactly this. It returns to `review` when TASK-0026 is done and only the walk is owed.
 
 **Why the task was added.** A pop-out is currently the same view again with no navigation, which is a duplicate rather than a panel. That is why this phase's second exit criterion was amended on 2026-09-06 to describe what existed instead of what Edwin had asked for. The review of 2026-09-07 put the criterion back ([[REFERENCE-PHASE-0001-REVIEW]]) and [[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]] builds what it now asks for.
 

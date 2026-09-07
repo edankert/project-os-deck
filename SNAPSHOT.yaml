@@ -55,14 +55,14 @@ counters:
   RISK: 1
   REL: 0
   TASK: 28
-  TST: 15
+  TST: 21
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0001"
   feature: "FEAT-0005"
-  task: "TASK-0023"
+  task: ""
   issue: ""
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -98,7 +98,7 @@ items:
     FEAT-0004:
       file: "docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md"
       title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -107,7 +107,7 @@ items:
     FEAT-0005:
       file: "docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md"
       title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -298,42 +298,42 @@ items:
     TASK-0023:
       file: "docs/features/spread/plan/tasks/TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn.md"
       title: "The groups the sidecar already sends are drawn, so Needs you comes first, phases hold their features and tasks, and the quiet work folds away"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
     TASK-0024:
       file: "docs/features/spread/plan/tasks/TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty.md"
       title: "A navigator panel beside a desk that starts empty, so a desk is a subset a person chose rather than whatever the flow layout produced"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
     TASK-0025:
       file: "docs/features/spread/plan/tasks/TASK-0025-Cards-Are-Dragged-And-Removed.md"
       title: "Cards are dragged and removed, and where a card was left is what the desk saves"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
     TASK-0026:
       file: "docs/features/windows/plan/tasks/TASK-0026-A-Popped-Out-Window-Carries-One-Panel.md"
       title: "A popped-out window carries one panel, so a second display can hold the Needs-you strip, a single note, or a desk"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0004"
       phase: PHASE-0001
     TASK-0027:
       file: "docs/features/spread/plan/tasks/TASK-0027-Search-And-Filter-In-The-Renderer.md"
       title: "Search and filter live in the renderer, because a pooled DOM means the browser's own find cannot see the notes"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
     TASK-0028:
       file: "docs/features/spread/plan/tasks/TASK-0028-A-Card-Face-Per-Type.md"
       title: "A card face per type, so a phase shows progress, an issue shows severity and a test shows how stale its last walk is"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0005"
       phase: PHASE-0001
@@ -341,7 +341,7 @@ items:
     ISS-0003:
       file: "docs/issues/ISS-0003-A-Served-Page-Cannot-Open-A-Workspace-The-Shell-Has-Not.md"
       title: "A served page cannot open a workspace the shell has not opened, and the only thing it tells you is that the sidecar answered 503"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -351,7 +351,7 @@ items:
     ISS-0004:
       file: "docs/issues/ISS-0004-Two-Decks-Bind-The-Same-Port.md"
       title: "Two Decks bind the same port, because the free-port probe passes on loopback while another Deck already holds the wildcard address"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -496,7 +496,7 @@ items:
       note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. exit criterion 1, walked: the same ids, order and statuses in both applications for this repository."
     TST-0009:
       file: "docs/tests/acceptance/TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display.md"
-      title: "A popped-out window reopens on the display it was left on, across a restart"
+      title: "A status window carrying one panel reopens on the display it was left on, across a restart"
       status: active
       owner: user:edwin
       phase: PHASE-0001
@@ -542,9 +542,63 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0005"]
       note: "Acceptance, walked by a person; rests at active and its verdict is a ledger event. The seventh exit criterion, added 2026-09-07 after the review: the only criterion a flat grid cannot meet. Cannot be walked before TASK-0023 to TASK-0027 land. Either answer is a valid result; preferring the cockpit is a finding about Spread, not a failed walk."
+    TST-0016:
+      file: "docs/features/spread/plan/tests/TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn.md"
+      title: "The groups the sidecar sends are drawn, and no note is lost or repeated on the way"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers TASK-0023 -- every group drawn with its count, no item lost or repeated, an id kept in BOTH the Needs-you group and its phase (flattening used to drop the second), the owed verb kept, children read from either name the sidecar uses, severity taken from the band because the item does not carry it, and the fold defaults."
+    TST-0017:
+      file: "docs/features/spread/plan/tests/TST-0017-Search-And-Filter-Narrow-The-Navigator.md"
+      title: "Search and filter narrow the navigator, and find a note no card on screen holds"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers TASK-0027 -- matching over the whole card model rather than the drawn elements, which is the point: the pool draws only what is on screen, so the browser's own find cannot see the rest. A matching child keeps its parent so it has somewhere to appear."
+    TST-0018:
+      file: "docs/features/spread/plan/tests/TST-0018-A-Card-Shows-What-Its-Note-Is.md"
+      title: "A card shows what its note is, and a type Deck has never heard of still draws"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers TASK-0028 -- progress for anything holding work, severity for an issue, the last walk for a test, and a fallback face. The fallback is not politeness: PHASE-0003 brings a vault's own note types, and none of them will be known here."
+    TST-0019:
+      file: "docs/features/spread/plan/tests/TST-0019-The-Desk-Is-Chosen-And-Arranged.md"
+      title: "The desk is a chosen set of cards a person arranges, and it survives being saved and reopened"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0005"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers TASK-0024 and TASK-0025 -- the reducer over what is on the desk and where. 'Dragging one card moves no other' is checked by object IDENTITY rather than equality. Pointer input itself is what the acceptance walk is for."
+    TST-0020:
+      file: "docs/features/windows/plan/tests/TST-0020-A-Popped-Out-Window-Carries-One-Panel.md"
+      title: "A popped-out window carries one named panel, and an address naming a panel Deck cannot draw is refused"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0004"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers TASK-0026 -- three panels, each surviving the address round trip, and every other value REFUSED, the old `panel=status` among them. A window carrying something other than what its address names is the silent fallback this grammar exists to prevent."
+    TST-0021:
+      file: "docs/features/shell/plan/tests/TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free.md"
+      title: "A port another process is listening on is never offered as free"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0002"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers ISS-0002 and ISS-0004, which are two halves of one probe: a bind on loopback cannot see a process holding the port on every interface, so the probe asks whether anything ANSWERS there first. The check holds a real port on 0.0.0.0 and asserts the probe walks past it."
   releases: {}
   workflows: {}
   changes:
+    CHG-20260907-Spread-Becomes-Two-Surfaces:
+      file: "docs/changes/CHG-20260907-Spread-Becomes-Two-Surfaces.md"
+      title: ""
+      status: merged
+      owner: user:edwin
+      note: "The six tasks from the 2026-09-07 review. Spread is a NAVIGATOR plus a DESK now: the navigator keeps the sidecar's groups (owed first, finished folded, children under their parent) and the desk starts empty and holds what a person put there, where they dragged it. Search runs over the model, not the drawn elements. A card's face depends on its type. Pop out asks what the window carries, and the answer is one of three panels named in the address. BREAKING: panel= takes only needs-you, note or desk, so an address with panel=status is refused; save-desk names a desk instead of carrying one. Fixes ISS-0003 and ISS-0004."
     CHG-20260906-Deck-Runs:
       file: "docs/changes/CHG-20260906-Deck-Runs.md"
       title: ""
@@ -590,12 +644,12 @@ metrics:
     phases_total: 3
     phases_done: 0
     tasks_total: 28
-    tasks_done: 17
-    tests_total: 8
+    tasks_done: 23
+    tests_total: 14
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 2
+    issues_triage: 0
     risks_open: 1
     releases_total: 0
     decisions_total: 1

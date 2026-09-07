@@ -7,7 +7,8 @@
  * The cockpit's navigator does fall back — an unknown mode silently becomes
  * `features` — and that hid a broken Tests view for thirty-three hours.
  */
-import type { DeckAddress } from './types.js';
+import type { DeckAddress, PanelType } from './types.js';
+import { PANEL_TYPES, isPanelType } from './panels.js';
 
 const SCHEME = 'deck://';
 const WORKSPACE_RE = /^[a-z0-9]{4,64}$/;
@@ -19,7 +20,6 @@ const VIEW_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 // nothing, or something absurdly long.
 const NOTE_RE = /^[^\u0000-\u001f\u007f]{1,200}$/;
 const DESK_RE = /^[^\u0000-\u001f\u007f]{1,64}$/;
-const PANEL_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
 const QUERY_KEYS = new Set(['desk', 'note', 'panel']);
 
 export class AddressError extends Error {
@@ -45,8 +45,11 @@ export function formatAddress(address: DeckAddress): string {
   if (address.note !== null && !NOTE_RE.test(address.note)) {
     throw new AddressError(`not a note id: "${address.note}"`);
   }
-  if (address.panel !== null && !PANEL_RE.test(address.panel)) {
-    throw new AddressError(`not a panel id: "${address.panel}"`);
+  // A panel is one of three things Deck can actually draw. An address naming
+  // a fourth would open a window carrying something else, which is the silent
+  // fallback this grammar exists to refuse.
+  if (address.panel !== null && !isPanelType(address.panel)) {
+    throw new AddressError(`not a panel: "${String(address.panel)}" (one of ${PANEL_TYPES.join(', ')})`);
   }
   const query: string[] = [];
   if (address.desk !== null) query.push(`desk=${encodeURIComponent(address.desk)}`);
@@ -104,8 +107,10 @@ export function parseAddress(raw: string): DeckAddress {
         if (!NOTE_RE.test(value)) throw new AddressError(`not a note id: "${value}"`);
         out.note = value;
       } else {
-        if (!PANEL_RE.test(value)) throw new AddressError(`not a panel id: "${value}"`);
-        out.panel = value;
+        if (!isPanelType(value)) {
+          throw new AddressError(`not a panel: "${value}" (one of ${PANEL_TYPES.join(', ')})`);
+        }
+        out.panel = value as PanelType;
       }
     }
   }

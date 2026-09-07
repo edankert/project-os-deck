@@ -85,10 +85,8 @@ test('the state survives a restart', () => {
   first.dispatch({ type: 'open-workspace', workspaceId: 'aaaa1111' });
   first.dispatch({ type: 'select-view', viewId: 'a-view' });
   first.dispatch({ type: 'focus-note', noteId: 'FEAT-0002' });
-  first.dispatch({
-    type: 'save-desk',
-    desk: { name: 'triage', workspaceId: 'aaaa1111', cards: [{ noteId: 'FEAT-0002', x: 10, y: 20 }] },
-  });
+  first.dispatch({ type: 'put-on-desk', noteId: 'FEAT-0002', x: 10, y: 20 });
+  first.dispatch({ type: 'save-desk', name: 'triage' });
   first.close();
 
   const second = new DeckStore({ file, writeDelayMs: 1 });

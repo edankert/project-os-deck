@@ -12,8 +12,9 @@ const STATES = [
   { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: null, panel: null },
   { workspaceId: WORKSPACE, viewId: 'cards', desk: 'triage', note: null, panel: null },
   { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: 'FEAT-0002', panel: null },
-  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: null, panel: 'status' },
-  { workspaceId: WORKSPACE, viewId: 'a-view', desk: 'my desk', note: 'CHG-20260906-A', panel: 'status' },
+  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: null, panel: 'needs-you' },
+  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: 'FEAT-0002', panel: 'note' },
+  { workspaceId: WORKSPACE, viewId: 'a-view', desk: 'my desk', note: 'CHG-20260906-A', panel: 'desk' },
 ];
 
 test('format then parse is the identity over every reachable state', () => {
@@ -24,7 +25,9 @@ test('format then parse is the identity over every reachable state', () => {
 });
 
 test('a desk name with a space survives the round trip', () => {
-  const address = formatAddress(STATES[4]);
+  // Found by what it is rather than by where it sits in the table: a state
+  // added to the table above should not move this check onto another one.
+  const address = formatAddress(STATES.find((state) => state.desk === 'my desk'));
   assert.ok(address.includes('desk=my%20desk'), `expected the space to be encoded, got ${address}`);
   assert.equal(parseAddress(address).desk, 'my desk');
 });
@@ -103,6 +106,11 @@ test('formatting refuses every field parsing would refuse, not just the two in t
     ['note', 'x'.repeat(201)],
     ['panel', 'Not A Panel'],
     ['panel', ''],
+    // A panel Deck cannot draw is refused rather than opened as something
+    // else: a window carrying a surprise is the silent fallback this grammar
+    // exists to prevent (TASK-0026).
+    ['panel', 'status'],
+    ['panel', 'terminal'],
   ];
   for (const [field, value] of cases) {
     assert.throws(
@@ -119,7 +127,7 @@ test('anything format produces, parse accepts', () => {
   const values = ["Edwin's desk", 'deja vu', 'a=b&c', '100%', 'a/b', 'FEAT-0002', 'x'.repeat(64)];
   for (const desk of values) {
     for (const note of values) {
-      const address = formatAddress({ workspaceId: WORKSPACE, viewId: 'cards', desk, note, panel: 'status' });
+      const address = formatAddress({ workspaceId: WORKSPACE, viewId: 'cards', desk, note, panel: 'desk' });
       const parsed = parseAddress(address);
       assert.equal(parsed.desk, desk);
       assert.equal(parsed.note, note);

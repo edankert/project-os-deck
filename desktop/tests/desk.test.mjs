@@ -18,7 +18,7 @@ test('a saved desk restores exactly', () => {
     { noteId: 'FEAT-0002', x: 10, y: 20 },
     { noteId: 'TASK-0006', x: 300, y: 40 },
   ]);
-  const reconciled = reconcileDesk(desk, CARDS);
+  const reconciled = reconcileDesk(desk.cards, CARDS);
   assert.equal(reconciled.dropped, 0);
   assert.deepEqual(
     reconciled.cards.map((c) => [c.noteId, c.x, c.y]),
@@ -35,7 +35,7 @@ test('a desk naming a note that is gone opens with the rest, and counts what it 
     { noteId: 'FEAT-9999', x: 100, y: 200 },
     { noteId: 'ISS-9999', x: 100, y: 200 },
   ]);
-  const reconciled = reconcileDesk(desk, CARDS);
+  const reconciled = reconcileDesk(desk.cards, CARDS);
   assert.equal(reconciled.dropped, 2);
   assert.deepEqual(reconciled.cards.map((c) => c.noteId), ['FEAT-0002']);
 });
@@ -43,7 +43,7 @@ test('a desk naming a note that is gone opens with the rest, and counts what it 
 test("a card's status comes from the current list, never from what the desk saved", () => {
   const desk = deskFrom('triage', 'aaaa1111', [{ noteId: 'FEAT-0002', x: 0, y: 0 }]);
   const moved = CARDS.map((c) => (c.noteId === 'FEAT-0002' ? { ...c, status: 'done' } : c));
-  const reconciled = reconcileDesk(desk, moved);
+  const reconciled = reconcileDesk(desk.cards, moved);
   assert.equal(reconciled.cards[0].card.status, 'done');
 });
 
@@ -60,13 +60,24 @@ test('a card is built from the payload the sidecar returned', () => {
     item('TASK-0006', 'It boots', 'backlog', 'task'),
   ]);
   const cards = cardsFromNav({ mode: raw.mode, groups: raw.groups.map(normalise) });
-  assert.deepEqual(cards[0], {
-    noteId: 'FEAT-0002',
-    title: 'The shell',
-    noteType: 'feature',
-    status: 'doing',
-    rel: 'docs/FEAT-0002.md',
-  });
+  assert.deepEqual(
+    {
+      noteId: cards[0].noteId,
+      title: cards[0].title,
+      noteType: cards[0].noteType,
+      status: cards[0].status,
+      rel: cards[0].rel,
+      owed: cards[0].owed,
+    },
+    {
+      noteId: 'FEAT-0002',
+      title: 'The shell',
+      noteType: 'feature',
+      status: 'doing',
+      rel: 'docs/FEAT-0002.md',
+      owed: true,
+    },
+  );
   // The needs-you group repeats the first item; a card appears once.
   assert.equal(cards.length, 2);
 });
@@ -95,6 +106,11 @@ function normalise(group) {
     subtitle: i.subtitle ?? null,
     noteType: i.type ?? '',
     owed: i.owed === true,
+    owedVerb: i.owed_verb ?? null,
+    mark: i.mark ?? null,
+    stale: i.stale === true,
+    lastVerified: i.last_verified ?? null,
+    progress: i.progress ?? null,
     children: (i.children ?? []).map(walk),
   });
   return { key: group.key, label: group.label, status: null, needsHuman: false, suppressed: false, items: group.items.map(walk) };

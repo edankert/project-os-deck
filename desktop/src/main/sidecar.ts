@@ -265,25 +265,51 @@ function delay(ms: number): Promise<void> {
  * another process holds on every interface is still free on loopback, so a
  * probe that asks about `127.0.0.1` hands back a port that `0.0.0.0` cannot
  * listen on, and the failure arrives later as EADDRINUSE (ISS-0002).
+ *
+ * Binding is not the whole question either. A bind on loopback SUCCEEDS while
+ * another process holds the same port on every interface, so two Decks both
+ * end up listening on 7300 and which one a browser reaches is undetermined
+ * (ISS-0004). So a port is offered only when nothing answers a connection to
+ * it AND this process can bind it: the first question catches the listener the
+ * second one cannot see.
  */
-export function freePort(
+export async function freePort(
   start = PORT_RANGE_START,
   end = PORT_RANGE_END,
   bind = '127.0.0.1',
 ): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const tryPort = (port: number): void => {
-      if (port > end) {
-        reject(new Error(`no free port between ${start} and ${end} on ${bind}`));
-        return;
-      }
-      const server = net.createServer();
-      server.once('error', () => tryPort(port + 1));
-      server.once('listening', () => {
-        server.close(() => resolve(port));
-      });
-      server.listen(port, bind);
+  for (let port = start; port <= end; port += 1) {
+    if (await answersOn(port)) continue;
+    if (await canBind(port, bind)) return port;
+  }
+  throw new Error(`no free port between ${start} and ${end} on ${bind}`);
+}
+
+/** Whether something accepts a connection here, whatever interface it bound. */
+function answersOn(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: '127.0.0.1' });
+    let settled = false;
+    const done = (answer: boolean): void => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(answer);
     };
-    tryPort(start);
+    socket.setTimeout(250);
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+  });
+}
+
+function canBind(port: number, bind: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, bind);
   });
 }

@@ -24,18 +24,31 @@
         <span class="host-mark" id="host-mark" title="which host is serving this page"></span>
         <button type="button" class="action" id="copy-address" title="Copy this state's address">Copy address</button>
         <button type="button" class="action" id="open-address" title="Open a pasted address">Open address…</button>
-        <button type="button" class="action" id="pop-out" title="Open this panel in its own window" hidden>Pop out</button>
+        <button type="button" class="action" id="pop-out" title="Open one panel in its own window" hidden>Pop out…</button>
       </div>
     </header>
 
     <div class="body">
       <aside class="rail" id="rail" aria-label="Workspaces"></aside>
 
-      <main class="desk-area">
+      <section class="navigator" id="navigator" aria-label="Notes in this view">
+        <div class="nav-bar">
+          <input type="search" id="search" placeholder="search this view" aria-label="Search this view" />
+          <div class="nav-filters">
+            <select id="status-filter" aria-label="Filter by status"></select>
+            <select id="type-filter" aria-label="Filter by type"></select>
+            <span id="nav-count" class="count"></span>
+          </div>
+        </div>
+        <div class="nav-list" id="nav-list" role="list"></div>
+      </section>
+
+      <main class="desk-area" id="desk-area">
         <div class="desk-bar">
-          <span id="desk-name" class="desk-name">no desk</span>
+          <span id="desk-name" class="desk-name">the desk is empty</span>
           <button type="button" class="action" id="save-desk">Save desk…</button>
           <select id="desk-list" aria-label="Saved desks"></select>
+          <button type="button" class="action" id="clear-desk" title="Take every card off the desk">Clear</button>
           <span class="spacer"></span>
           <span id="count" class="count"></span>
         </div>
@@ -43,7 +56,7 @@
       </main>
 
       <section class="reader" id="reader" aria-label="Reader">
-        <div class="reader-empty">Open a card to read its note.</div>
+        <div class="reader-empty">Click a note in the list to put it on the desk and read it here.</div>
       </section>
     </div>
 

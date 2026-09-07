@@ -1,4 +1,4 @@
-/** Desks: an arrangement of cards with a name, and what happens when a note it names is gone. */
+/** Desks: an arrangement of cards with a name, where a new card lands, and what happens when a note it names is gone. */
 import type { CardModel, Desk, DeskCard } from './types.js';
 
 export interface ReconciledDesk {
@@ -8,29 +8,71 @@ export interface ReconciledDesk {
 }
 
 /**
- * Join a saved desk to the notes the workspace has now.
+ * Join what is on the desk to the notes the workspace has now.
  *
  * A desk that refuses to open because one note was renamed is worse than a
  * desk that opens with one card missing and says so. The card's status comes
  * from the CURRENT list, never from what the desk saved, so a desk cannot
  * show a status that is no longer true.
  */
-export function reconcileDesk(desk: Desk, available: CardModel[]): ReconciledDesk {
+export function reconcileDesk(cards: DeskCard[], available: CardModel[]): ReconciledDesk {
   const byId = new Map(available.map((c) => [c.noteId, c]));
-  const cards: Array<DeskCard & { card: CardModel }> = [];
+  const out: Array<DeskCard & { card: CardModel }> = [];
   let dropped = 0;
-  for (const saved of desk.cards) {
+  for (const saved of cards) {
     const card = byId.get(saved.noteId);
     if (card === undefined) {
       dropped += 1;
       continue;
     }
-    cards.push({ noteId: saved.noteId, x: saved.x, y: saved.y, card });
+    out.push({ noteId: saved.noteId, x: saved.x, y: saved.y, card });
   }
-  return { cards, dropped };
+  return { cards: out, dropped };
 }
 
-/** A desk built from what is currently on screen. */
+/** A desk built from what is on the desk now. */
 export function deskFrom(name: string, workspaceId: string, cards: DeskCard[]): Desk {
   return { name, workspaceId, cards: cards.map((c) => ({ noteId: c.noteId, x: c.x, y: c.y })) };
+}
+
+export const CARD_WIDTH = 210;
+export const CARD_HEIGHT = 104;
+const GAP = 12;
+
+/**
+ * Where a card just added to the desk goes.
+ *
+ * Left to right, then down, in the first slot nothing already occupies. A
+ * person who adds six notes gets six cards they can read, not a pile in one
+ * corner, and the first thing they do with one is drag it anyway.
+ */
+export function nextSlot(taken: DeskCard[], surfaceWidth: number): { x: number; y: number } {
+  const columns = Math.max(1, Math.floor((surfaceWidth - GAP) / (CARD_WIDTH + GAP)));
+  const occupied = new Set(taken.map((c) => `${c.x},${c.y}`));
+  for (let index = 0; index < taken.length + columns * 2 + 1; index += 1) {
+    const x = GAP + (index % columns) * (CARD_WIDTH + GAP);
+    const y = GAP + Math.floor(index / columns) * (CARD_HEIGHT + GAP);
+    if (!occupied.has(`${x},${y}`)) return { x, y };
+  }
+  return { x: GAP, y: GAP };
+}
+
+/**
+ * A position that is still reachable on this surface.
+ *
+ * A card dragged past the edge, or restored onto a window smaller than the one
+ * it was saved on, has to come back far enough to be grabbed again. Enough of
+ * the card is kept on screen to take hold of it.
+ */
+export function clampToSurface(
+  position: { x: number; y: number },
+  surface: { width: number; height: number },
+): { x: number; y: number } {
+  const grabbable = 48;
+  const maxX = Math.max(0, surface.width - grabbable);
+  const maxY = Math.max(0, surface.height - grabbable);
+  return {
+    x: Math.min(Math.max(0, Math.round(position.x)), maxX),
+    y: Math.min(Math.max(0, Math.round(position.y)), maxY),
+  };
 }

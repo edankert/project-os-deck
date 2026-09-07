@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0003
 aliases: ["ISS-0003"]
 title: "A served page cannot open a workspace the shell has not opened, and the only thing it tells you is that the sidecar answered 503"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -13,7 +13,7 @@ severity: medium
 component: renderer
 parent: ""
 related: ["[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
-tests: []
+tests: ["[[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]]"]
 ---
 
 # A served page cannot open a workspace the shell has not opened
@@ -53,3 +53,9 @@ Either way [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]] gains a Setup line sayi
 
 ## Next Actions
 - [ ] Triage: pick between hiding the unreachable workspaces and explaining them.
+
+## Resolution
+
+**Fixed 2026-09-07. A workspace with no sidecar is now offered as unavailable rather than offered and then refused.** Deck's own host adds one field to each workspace it lists: whether a sidecar is answering for it. A served page draws those workspaces disabled, with the reason on the row, and says what to do about it. Nothing changes in the shell, where every workspace can be opened.
+
+The check is in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]]: two workspaces, one with a sidecar and one without, and the listing says `true` for the first and `false` for the second.

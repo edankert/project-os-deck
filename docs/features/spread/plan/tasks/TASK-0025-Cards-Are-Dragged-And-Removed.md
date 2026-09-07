@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0025
 aliases: ["TASK-0025"]
 title: "Cards are dragged and removed, and where a card was left is what the desk saves"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0024"]
 blocks: []
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0004-A-Desk-Reopens-As-It-Was-Left]]"]
-tests: []
+tests: ["[[TST-0019-The-Desk-Is-Chosen-And-Arranged]]"]
 ---
 
 # Cards are dragged and removed
@@ -41,11 +41,17 @@ Keep the pool. A card that is dragged is a pooled element whose position moved, 
 
 ## Steps
 
-- [ ] Add pointer handlers to the desk surface, with the position held in the store per note and per desk.
-- [ ] Add a remove control to the card, wired to the take-off-desk action from TASK-0024.
-- [ ] Persist positions with the desk, and clamp a restored position that falls outside the current window.
-- [ ] Add a check over the position model that a move changes one card and no other.
+- [x] Add pointer handlers to the desk surface, with the position held in the store per note and per desk.
+- [x] Add a remove control to the card, wired to the take-off-desk action from TASK-0024.
+- [x] Persist positions with the desk, and clamp a restored position that falls outside the current window.
+- [x] Add a check over the position model that a move changes one card and no other.
 
 ## Notes
 
 Pointer input is the part a machine check cannot settle on its own; the reducer that holds positions can be tested without Electron, the same way the window placement decision already is.
+
+## Where this stands
+
+**2026-09-07: built.** Pointer handlers on the desk move a card and commit one `move-card` to the store when the drag ends, so a move is one change rather than sixty. A position belongs to the note and is saved with the desk. A restored position is clamped back onto the surface, so a desk saved on a large monitor still opens on a laptop.
+
+The automated check is [[TST-0019-The-Desk-Is-Chosen-And-Arranged]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.

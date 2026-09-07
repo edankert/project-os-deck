@@ -9,6 +9,7 @@
   --accent: #7aa2f7;
   --owed: #e0af68;
   --done: #6fbf73;
+  --alarm: #f7768e;
 }
 
 * { box-sizing: border-box; }
@@ -69,7 +70,7 @@ body {
 .body { display: flex; flex: 1 1 auto; min-height: 0; }
 
 .rail {
-  width: 190px;
+  width: 180px;
   flex: 0 0 auto;
   background: var(--panel);
   border-right: 1px solid var(--line);
@@ -90,9 +91,91 @@ body {
   cursor: pointer;
 }
 .rail button[aria-current="true"] { background: var(--panel-2); border-color: var(--line); }
+.rail button:disabled { cursor: default; color: var(--ink-dim); }
 .rail .kind { display: block; color: var(--ink-dim); font-size: 11px; }
 
-.desk-area { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+/* The navigator: what the view holds, in the groups the sidecar sent. */
+.navigator {
+  width: 264px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+
+.nav-bar {
+  flex: 0 0 auto;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nav-bar input[type="search"] {
+  width: 100%;
+  background: var(--ground);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+}
+.nav-filters { display: flex; align-items: center; gap: 6px; }
+.nav-filters select { flex: 1 1 auto; min-width: 0; }
+
+.nav-list { flex: 1 1 auto; overflow-y: auto; padding-bottom: 12px; }
+
+.nav-group,
+.nav-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  cursor: pointer;
+  border: 0;
+  text-align: left;
+}
+
+.nav-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  color: var(--ink);
+}
+.nav-group[data-needs-human="true"] { color: var(--owed); }
+.nav-group .label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-group .mark { color: var(--ink-dim); font-variant-numeric: tabular-nums; font-weight: 400; }
+
+.nav-row:hover { background: var(--panel-2); }
+.nav-row[aria-current="true"] { background: var(--panel-2); }
+.nav-row[data-on-desk="true"] { box-shadow: inset 2px 0 0 var(--accent); }
+.nav-row .id { color: var(--ink-dim); font-size: 11px; flex: 0 0 auto; letter-spacing: 0.03em; }
+.nav-row .label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-row .mark { flex: 0 0 auto; color: var(--owed); font-size: 11px; }
+.nav-row[data-band="done"] .id { color: var(--done); }
+.nav-row[data-band="owed"] .id { color: var(--owed); }
+
+.twist {
+  flex: 0 0 auto;
+  width: 14px;
+  background: none;
+  border: 0;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+/* The desk gets the room. It is the half of Spread a person arranges, so it
+ * is the half that grows when the window does. */
+.desk-area { flex: 1 1 auto; min-width: 320px; display: flex; flex-direction: column; }
 
 .desk-bar {
   display: flex;
@@ -101,24 +184,42 @@ body {
   padding: 6px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
+.desk-bar .action,
+.desk-bar .desk-name,
+.desk-bar .count { white-space: nowrap; }
+.desk-bar .desk-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .desk-bar .spacer { flex: 1 1 auto; }
 .desk-name { color: var(--ink-dim); }
-.count { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
-select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+.count { color: var(--ink-dim); font-variant-numeric: tabular-nums; font-size: 11px; }
+select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font: inherit; }
 
+/*
+ * The desk. Cards are placed, not flowed: a position belongs to the note and
+ * is what the desk saves. The strip a status window draws is the exception,
+ * and it flows.
+ */
 .desk {
   flex: 1 1 auto;
   overflow: auto;
-  padding: 12px;
+  position: relative;
+  padding: 0;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0) 0 0 / 24px 24px;
+}
+.desk.flow {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
   gap: 10px;
-  position: relative;
+  padding: 12px;
+  background-image: none;
 }
 
 .card {
+  position: absolute;
   width: 210px;
   min-height: 96px;
   background: var(--panel-2);
@@ -126,29 +227,64 @@ select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--
   border-left: 3px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   flex-direction: column;
   gap: 4px;
   text-align: left;
   color: inherit;
   font: inherit;
+  user-select: none;
+  touch-action: none;
 }
+.desk.flow .card { position: static; }
 .card:hover { border-color: var(--accent); }
+.card:focus-visible { outline: 2px solid var(--accent); }
 .card[aria-current="true"] { outline: 2px solid var(--accent); }
+.card.dragging { cursor: grabbing; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); z-index: 2; }
 .card .id { color: var(--ink-dim); font-size: 11px; letter-spacing: 0.04em; }
 .card .title { font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
-.card .meta { margin-top: auto; color: var(--ink-dim); font-size: 11px; }
+.card .face { margin-top: auto; color: var(--ink-dim); font-size: 11px; }
+.card .owed { color: var(--owed); font-size: 11px; }
+.card .owed:empty { display: none; }
 .card[data-band="owed"] { border-left-color: var(--owed); }
 .card[data-band="done"] { border-left-color: var(--done); }
 .card[data-band="doing"] { border-left-color: var(--accent); }
 
-.desk.placed { display: block; }
-.desk.placed .card { position: absolute; }
+.card .remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: none;
+  border: 0;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  opacity: 0;
+}
+.card:hover .remove { opacity: 1; }
+.card .remove:hover { background: var(--line); color: var(--ink); }
+
+/* The faces: how much is done, how bad it is, when it was last walked. */
+.card .bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.card .bar .fill { display: block; height: 100%; background: var(--done); }
+.card[data-face="severity"] .face { color: var(--alarm); text-transform: uppercase; letter-spacing: 0.06em; }
+.card[data-face="verified"] .face { color: var(--ink-dim); }
 
 .reader {
-  width: 40%;
-  max-width: 620px;
+  width: 32%;
+  min-width: 320px;
+  max-width: 520px;
   flex: 0 0 auto;
   border-left: 1px solid var(--line);
   overflow: auto;
@@ -170,16 +306,41 @@ select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--
   color: var(--ink-dim);
   min-height: 24px;
   font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.status.error { color: #f7768e; }
+.status.error { color: var(--alarm); }
 
 /* A satellite shows its own address and offers no way to navigate away. */
 body.pinned .rail,
 body.pinned #pop-out { display: none; }
-body.pinned .reader { width: 100%; max-width: none; }
 
-@media (max-width: 900px) {
-  .rail { width: 130px; }
-  .reader { width: 100%; max-width: none; border-left: 0; border-top: 1px solid var(--line); }
+/*
+ * A popped-out window carries ONE panel. What it does not carry is absent
+ * rather than disabled, the same rule the served host follows for the actions
+ * it cannot offer.
+ */
+body[data-panel="needs-you"] .navigator,
+body[data-panel="needs-you"] .reader,
+body[data-panel="needs-you"] .desk-bar .action,
+body[data-panel="needs-you"] .desk-bar select { display: none; }
+
+body[data-panel="note"] .navigator,
+body[data-panel="note"] .desk-area { display: none; }
+body[data-panel="note"] .reader { width: 100%; max-width: none; border-left: 0; }
+
+body[data-panel="desk"] .navigator,
+body[data-panel="desk"] .reader { display: none; }
+
+@media (max-width: 1180px) {
+  .rail { width: 128px; }
+  .navigator { width: 232px; }
+  .reader { width: 300px; min-width: 260px; }
+}
+
+@media (max-width: 860px) {
   .body { flex-wrap: wrap; }
+  .navigator { width: 100%; max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  .reader { width: 100%; max-width: none; border-left: 0; border-top: 1px solid var(--line); }
 }

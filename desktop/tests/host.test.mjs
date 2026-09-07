@@ -279,7 +279,36 @@ test('the served host reports reading capability and nothing only the shell can 
     assert.equal(SHELL_CAPABILITIES.popOutWindows, true, 'the shell should still offer what the served host cannot');
 
     const list = await (await fetch(`${origin}/deck/workspaces`)).json();
-    assert.deepEqual(list.workspaces, [WORKSPACE]);
+    // Each workspace says whether a sidecar is answering for it, because a
+    // served page cannot start one (ISS-0003).
+    assert.deepEqual(list.workspaces, [{ ...WORKSPACE, open: true }]);
+  } finally {
+    await host.close();
+    await sidecar.close();
+  }
+});
+
+test('a workspace with no sidecar is offered as unavailable, not as openable (ISS-0003)', async () => {
+  // A served page cannot start a sidecar; only the shell can. Without this the
+  // rail offers a workspace that cannot open, and the reason arrives as "the
+  // sidecar answered 503" from a read the person did not know they made.
+  const sidecar = await fakeSidecar({ '/healthz': HEALTH });
+  const host = new DeckHost({
+    webRoot: path.join(desktopRoot, 'dist', 'web'),
+    capabilities: SERVED_CAPABILITIES,
+    listWorkspaces: () => [WORKSPACE, { id: 'bbbb2222', root: '/other', name: 'not opened', kind: 'project-os' }],
+    sidecarBaseFor: (id) => (id === WORKSPACE.id ? sidecar.base : null),
+  });
+  const { port } = await host.listen(0, '127.0.0.1');
+  try {
+    const list = await (await fetch(`http://127.0.0.1:${port}/deck/workspaces`)).json();
+    assert.deepEqual(
+      list.workspaces.map((w) => [w.id, w.open]),
+      [
+        [WORKSPACE.id, true],
+        ['bbbb2222', false],
+      ],
+    );
   } finally {
     await host.close();
     await sidecar.close();

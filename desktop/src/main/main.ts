@@ -16,7 +16,7 @@ import { DeckHost } from './host.js';
 import { DeckStore } from './store.js';
 import { SidecarSupervisor, freePort } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
-import { WindowBook } from './window-book.js';
+import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
 
 // Pinned before anything reads it: Electron derives this from the app name,
@@ -38,6 +38,7 @@ const PRELOAD = path.join(__dirname, '..', 'preload.js');
 const store = new DeckStore({ file: path.join(app.getPath('userData'), 'deck-state.json') });
 const workspaces = new WorkspaceBook(path.join(app.getPath('userData'), 'deck-workspaces.json'));
 const windowBook = new WindowBook(path.join(app.getPath('userData'), 'deck-windows.json'));
+const panelBook = new PanelBook(path.join(app.getPath('userData'), 'deck-panels.json'));
 const sidecars = new SidecarSupervisor();
 
 const host = new DeckHost({
@@ -118,6 +119,8 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
   win.on('close', saveBounds);
 
   win.on('closed', () => {
+    // A panel closed on purpose does not come back at the next start.
+    if (role === 'satellite' && address !== null) panelBook.remove(address);
     windowInfo.get(win.id)?.unsubscribe();
     windowInfo.delete(win.id);
     if (focusWindowId === win.id) {
@@ -194,6 +197,9 @@ function registerIpc(): void {
   handle('deck:window:open-panel', (_e, address: string) => {
     const parsed = tryParseAddress(address);
     if (!parsed.ok) return { ok: false, error: parsed.reason };
+    // Remembered by address, which already names the panel: a restart brings
+    // the window back carrying the same thing (TASK-0026).
+    panelBook.add(address);
     createWindow('satellite', address, parsed.address.panel);
     return { ok: true };
   });
@@ -224,6 +230,10 @@ app.whenReady().then(async () => {
       return;
     }
     createWindow('focus', null, null);
+    for (const address of panelBook.list()) {
+      const parsed = tryParseAddress(address);
+      if (parsed.ok) createWindow('satellite', address, parsed.address.panel);
+    }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow('focus', null, null);
     });
@@ -323,10 +333,20 @@ async function runSmoke(): Promise<void> {
       await untilBooted(focus);
       await delay(1500);
       const drawn = (await focus.webContents.executeJavaScript(
-        `({ cards: Array.from(document.querySelectorAll('.card:not([hidden]) .id')).map((e) => e.textContent), views: Array.from(document.querySelectorAll('#switcher button')).map((e) => e.textContent), status: document.getElementById('status').textContent })`,
-      )) as { cards: string[]; views: string[]; status: string };
-      drawnCards = drawn.cards;
-      record(drawn.cards.length > 0, 'the desk drew cards from the real workspace');
+        `({
+          rows: Array.from(document.querySelectorAll('.nav-row:not([hidden]) .id')).map((e) => e.textContent),
+          groups: Array.from(document.querySelectorAll('.nav-group:not([hidden]) .label')).map((e) => e.textContent),
+          cards: Array.from(document.querySelectorAll('.card:not([hidden]) .id')).map((e) => e.textContent),
+          views: Array.from(document.querySelectorAll('#switcher button')).map((e) => e.textContent),
+          status: document.getElementById('status').textContent
+        })`,
+      )) as { rows: string[]; groups: string[]; cards: string[]; views: string[]; status: string };
+      drawnCards = drawn.rows;
+      record(drawn.rows.length > 0, 'the navigator listed the notes in the view');
+      record(drawn.groups.length > 0, "the navigator drew the sidecar's own groups as headings");
+      // The desk is a chosen subset now. A view that fills it is the thing
+      // TASK-0024 removed, so an empty desk here is the check, not a failure.
+      record(drawn.cards.length === 0, `the desk starts empty (${drawn.cards.length} cards)`);
       record(drawn.views.length > 0, 'the switcher drew the views the provider returned');
       console.log(
         JSON.stringify(
@@ -336,18 +356,20 @@ async function runSmoke(): Promise<void> {
             borrowedFromTheCockpit: opened.borrowed === true,
             itemsInTheProxiedPayload: items,
             viewsFromTheProvider: drawn.views,
+            groupsInTheNavigator: drawn.groups.slice(0, 6),
+            rowsInTheNavigator: drawn.rows.length,
             cardsOnTheDesk: drawn.cards.length,
-            firstCards: drawn.cards.slice(0, 10),
             status: drawn.status,
           },
           null,
           2,
         ),
       );
-      // Cards come from a pool. Switching to a smaller view must not create a
+
+      // Rows come from a pool. Switching to a smaller view must not create a
       // second set of elements, and switching back must not grow the pool.
       const poolBefore = (await focus.webContents.executeJavaScript(
-        `document.querySelectorAll('.card').length`,
+        `document.querySelectorAll('.nav-row').length`,
       )) as number;
       await focus.webContents.executeJavaScript(
         `document.querySelectorAll('#switcher button')[3].click()`,
@@ -355,64 +377,94 @@ async function runSmoke(): Promise<void> {
       await delay(2000);
       // What the browser DISPLAYS, not what the DOM is marked as. ISS-0001 hid
       // its cards correctly and left them on the screen, and a count of
-      // `.card:not([hidden])` reported the right number throughout.
-      const onScreen = `Array.from(document.querySelectorAll('.card')).filter((c) => getComputedStyle(c).display !== 'none').length`;
+      // `:not([hidden])` reported the right number throughout.
+      const onScreen = `Array.from(document.querySelectorAll('.nav-row')).filter((c) => getComputedStyle(c).display !== 'none').length`;
       const afterSwitch = (await focus.webContents.executeJavaScript(
-        `({ total: document.querySelectorAll('.card').length, marked: document.querySelectorAll('.card:not([hidden])').length, shown: ${onScreen}, status: document.getElementById('status').textContent })`,
-      )) as { total: number; marked: number; shown: number; status: string };
+        `({ total: document.querySelectorAll('.nav-row').length, marked: document.querySelectorAll('.nav-row:not([hidden])').length, shown: ${onScreen}, count: document.getElementById('nav-count').textContent })`,
+      )) as { total: number; marked: number; shown: number; count: string };
       record(
         afterSwitch.total <= poolBefore,
         `the pool did not grow when the view changed (${poolBefore} then ${afterSwitch.total})`,
       );
       record(
         afterSwitch.shown === afterSwitch.marked,
-        `every card the pool hid left the screen (${afterSwitch.marked} marked, ${afterSwitch.shown} shown)`,
+        `every row the pool hid left the screen (${afterSwitch.marked} marked, ${afterSwitch.shown} shown)`,
       );
-      const claimed = Number(/· (\d+) cards$/.exec(afterSwitch.status)?.[1] ?? '-1');
+      const claimed = Number(/^(\d+) of/.exec(afterSwitch.count.trim())?.[1] ?? '-1');
       record(
         claimed === afterSwitch.shown,
-        `the screen shows what the view says it has (says ${claimed}, shows ${afterSwitch.shown})`,
+        `the navigator shows what it says it shows (says ${claimed}, shows ${afterSwitch.shown})`,
       );
       await focus.webContents.executeJavaScript(
         `document.querySelectorAll('#switcher button')[2].click()`,
       );
       await delay(2000);
 
-      // Open a card: the reader has to fill from the sidecar's rendered note.
-      await focus.webContents.executeJavaScript(`document.querySelector('.card:not([hidden])').click()`);
+      // A click in the list puts one card on the desk and opens the note.
+      await focus.webContents.executeJavaScript(`document.querySelector('.nav-row:not([hidden])').click()`);
       await delay(1500);
-      const readerText = (await focus.webContents.executeJavaScript(
-        `document.getElementById('reader').textContent.trim().slice(0, 80)`,
-      )) as string;
-      record(readerText.length > 20, `the reader filled from the note (saw: ${readerText.slice(0, 40)})`);
+      const afterClick = (await focus.webContents.executeJavaScript(
+        `({ cards: document.querySelectorAll('.card:not([hidden])').length, reader: document.getElementById('reader').textContent.trim().length, onDesk: document.querySelectorAll('.nav-row[data-on-desk="true"]').length })`,
+      )) as { cards: number; reader: number; onDesk: number };
+      record(afterClick.cards === 1, `clicking a row put one card on the desk (${afterClick.cards})`);
+      record(afterClick.onDesk === 1, 'the navigator marked the row as being on the desk');
+      record(afterClick.reader > 20, `the reader filled from the note (${afterClick.reader} characters)`);
 
-      // The address round trip, in the running application rather than a test.
-      await focus.webContents.executeJavaScript(`document.getElementById('copy-address').click()`);
-      await delay(400);
-      const copied = clipboard.readText();
-      const parsed = tryParseAddress(copied);
-      record(parsed.ok, `the copied address parses (${copied})`);
-      if (parsed.ok) {
-        record(parsed.address.workspaceId === prepared.id, 'the address names the open workspace');
-        record(parsed.address.note !== null, 'the address carries the focused note');
-      }
+      // Search narrows the list to notes that match, and clearing restores it.
+      const searched = (await focus.webContents.executeJavaScript(
+        `(async () => {
+          const box = document.getElementById('search');
+          const all = document.querySelectorAll('.nav-row:not([hidden])').length;
+          box.value = 'zzzznothingmatchesthis';
+          box.dispatchEvent(new Event('input'));
+          await new Promise((r) => setTimeout(r, 600));
+          const none = document.querySelectorAll('.nav-row:not([hidden])').length;
+          box.value = '';
+          box.dispatchEvent(new Event('input'));
+          await new Promise((r) => setTimeout(r, 600));
+          return { all, none, restored: document.querySelectorAll('.nav-row:not([hidden])').length };
+        })()`,
+      )) as { all: number; none: number; restored: number };
+      record(searched.none === 0, `a search that matches nothing empties the list (${searched.none} rows)`);
+      record(
+        searched.restored === searched.all,
+        `clearing the search restores the list (${searched.all} then ${searched.restored})`,
+      );
 
-      // The note a person left open comes back with the state that named it.
+      // Dragging is a pointer gesture, so the smoke moves the card the way the
+      // renderer does and checks the position survives a reload.
+      const movedTo = (await focus.webContents.executeJavaScript(
+        `(async () => {
+          const card = document.querySelector('.card:not([hidden])');
+          const box = card.getBoundingClientRect();
+          const opts = { bubbles: true, pointerId: 1, button: 0, clientX: box.left + 20, clientY: box.top + 20 };
+          card.dispatchEvent(new PointerEvent('pointerdown', opts));
+          card.dispatchEvent(new PointerEvent('pointermove', { ...opts, clientX: box.left + 260, clientY: box.top + 190 }));
+          card.dispatchEvent(new PointerEvent('pointerup', { ...opts, clientX: box.left + 260, clientY: box.top + 190 }));
+          await new Promise((r) => setTimeout(r, 500));
+          return { left: card.style.left, top: card.style.top };
+        })()`,
+      )) as { left: string; top: string };
+      record(movedTo.left !== '' && movedTo.left !== '12px', `the card moved when it was dragged (${movedTo.left})`);
+
+      // The note a person left open comes back with the state that named it,
+      // and so does the card, at the position it was dragged to.
       focus.webContents.reload();
       await once(focus.webContents, 'did-finish-load');
       await untilBooted(focus);
       await delay(1500);
       const afterRestart = (await focus.webContents.executeJavaScript(
-        `({ reader: document.getElementById('reader').textContent.trim().length, current: (document.querySelector('.card[aria-current="true"] .id') || {}).textContent || null })`,
-      )) as { reader: number; current: string | null };
+        `({ reader: document.getElementById('reader').textContent.trim().length, cards: document.querySelectorAll('.card:not([hidden])').length, left: (document.querySelector('.card:not([hidden])') || {}).style?.left || '' })`,
+      )) as { reader: number; cards: number; left: string };
       record(afterRestart.reader > 20, 'the note that was open came back after a reload');
-      record(afterRestart.current !== null, 'the card that was open is still marked as current');
+      record(afterRestart.cards === 1, `the card on the desk came back after a reload (${afterRestart.cards})`);
+      record(
+        afterRestart.left === movedTo.left,
+        `the card came back where it was dragged to (${movedTo.left} then ${afterRestart.left})`,
+      );
 
       // A desk saved in the main process reaches the window that is drawing.
-      store.dispatch({
-        type: 'save-desk',
-        desk: { name: 'smoke', workspaceId: prepared.id, cards: [{ noteId: drawn.cards[0] ?? '', x: 12, y: 34 }] },
-      });
+      store.dispatch({ type: 'save-desk', name: 'smoke' });
       await delay(400);
       const deskNames = (await focus.webContents.executeJavaScript(
         `Array.from(document.getElementById('desk-list').options).map((o) => o.value)`,
@@ -437,15 +489,28 @@ async function runSmoke(): Promise<void> {
     const refused = await fetch(`${hostOrigin}/deck/capabilities`, { method: 'POST' });
     record(refused.status === 405, 'the host refuses a POST with 405');
 
-    const satellite = createWindow('satellite', null, 'status');
+    // A popped-out window carries ONE panel, named in its address.
+    const panelAddress = `deck://${prepared?.id ?? 'deadbeef'}/features?panel=desk`;
+    const satellite = createWindow('satellite', panelAddress, 'desk');
     await once(satellite.webContents, 'did-finish-load');
     await untilBooted(satellite);
     record(!satellite.isFocused(), 'the satellite did not take focus');
     const satelliteChrome = (await satellite.webContents.executeJavaScript(
-      `({ views: document.querySelectorAll('#switcher button').length, rail: getComputedStyle(document.getElementById('rail')).display, popOut: getComputedStyle(document.getElementById('pop-out')).display })`,
-    )) as { views: number; rail: string; popOut: string };
+      `({
+        views: document.querySelectorAll('#switcher button').length,
+        rail: getComputedStyle(document.getElementById('rail')).display,
+        navigator: getComputedStyle(document.getElementById('navigator')).display,
+        reader: getComputedStyle(document.getElementById('reader')).display,
+        panel: document.body.dataset.panel
+      })`,
+    )) as { views: number; rail: string; navigator: string; reader: string; panel: string };
     record(satelliteChrome.views === 0, 'the satellite drew no switcher, so it owns no navigation');
     record(satelliteChrome.rail === 'none', 'the satellite drew no workspace rail');
+    record(satelliteChrome.panel === 'desk', `the satellite carries the panel its address named (${satelliteChrome.panel})`);
+    record(
+      satelliteChrome.navigator === 'none' && satelliteChrome.reader === 'none',
+      'a desk panel carries the desk and nothing else',
+    );
 
     // What a person sees, not what the window was told. Reading the state a
     // window holds passes while the cards on it never move.
@@ -459,16 +524,17 @@ async function runSmoke(): Promise<void> {
         `document.querySelectorAll('.card:not([hidden])').length`,
       )) as number;
 
-    // The satellite opened on the desk saved earlier, which holds one card.
-    // Closing that desk in the main process has to reach it.
+    // The desk holds one card. Putting a second one on it in the main process
+    // has to reach the window that is drawing the desk.
     const onDesk = await visible(satellite);
-    store.dispatch({ type: 'open-desk', name: null });
+    const second = drawnCards.find((id) => id !== null && id !== '') ?? 'FEAT-0002';
+    store.dispatch({ type: 'put-on-desk', noteId: String(drawnCards[2] ?? second), x: 24, y: 240 });
     await delay(800);
-    const offDesk = await visible(satellite);
-    record(onDesk === 1 && offDesk > 1, `closing the desk redrew the satellite (${onDesk} card then ${offDesk})`);
+    const afterPut = await visible(satellite);
+    record(afterPut === onDesk + 1, `a card added elsewhere reached the satellite (${onDesk} then ${afterPut})`);
 
     const before = await highlighted(satellite);
-    const target = (drawnCards[3] ?? drawnCards[0]) ?? 'FEAT-0002';
+    const target = String(drawnCards[2] ?? second);
     store.dispatch({ type: 'focus-note', noteId: target });
     await delay(800);
     const after = await highlighted(satellite);
@@ -476,6 +542,48 @@ async function runSmoke(): Promise<void> {
       after === target && after !== before,
       `the satellite REDREW when the focused note changed (${before} then ${after}, wanted ${target})`,
     );
+
+    // The other two panels: what each one carries, and what it does not.
+    for (const [type, wanted] of [
+      ['needs-you', { navigator: 'none', reader: 'none' }],
+      ['note', { navigator: 'none', deskArea: 'none' }],
+    ] as const) {
+      const noteBit = type === 'note' ? `&note=${encodeURIComponent(String(drawnCards[0] ?? 'FEAT-0002'))}` : '';
+      const address = `deck://${prepared?.id ?? 'deadbeef'}/features?panel=${type}${noteBit}`;
+      const window_ = createWindow('satellite', address, type);
+      await once(window_.webContents, 'did-finish-load');
+      await untilBooted(window_);
+      await delay(1200);
+      const seen = (await window_.webContents.executeJavaScript(
+        `({
+          panel: document.body.dataset.panel,
+          navigator: getComputedStyle(document.getElementById('navigator')).display,
+          reader: getComputedStyle(document.getElementById('reader')).display,
+          deskArea: getComputedStyle(document.getElementById('desk-area')).display,
+          views: document.querySelectorAll('#switcher button').length,
+          readerText: document.getElementById('reader').textContent.trim().length,
+          cards: document.querySelectorAll('.card:not([hidden])').length,
+          label: document.getElementById('desk-name').textContent
+        })`,
+      )) as Record<string, unknown>;
+      record(seen['panel'] === type, `the ${type} window carries the panel its address named (${String(seen['panel'])})`);
+      record(seen['views'] === 0, `the ${type} window draws no view buttons`);
+      for (const [region, display] of Object.entries(wanted)) {
+        record(seen[region] === display, `the ${type} window does not carry the ${region} (it is ${String(seen[region])})`);
+      }
+      if (type === 'note') {
+        record(Number(seen['readerText']) > 20, 'the note window shows the note its address named');
+      } else {
+        // This repository owes nothing today, so the strip is empty and says
+        // so. Either label proves the panel drew rather than sat blank.
+        record(
+          seen['label'] === 'nothing is owed' || seen['label'] === 'what needs you',
+          `the needs-you window drew its strip (it says "${String(seen['label'])}")`,
+        );
+      }
+      window_.close();
+      await delay(300);
+    }
 
     // Closing the window that owns navigation must not leave Deck without one.
     focus.close();

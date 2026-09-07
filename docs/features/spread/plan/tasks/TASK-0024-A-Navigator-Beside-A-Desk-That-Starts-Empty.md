@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0024
 aliases: ["TASK-0024"]
 title: "A navigator panel beside a desk that starts empty, so a desk is a subset a person chose rather than whatever the flow layout produced"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0023"]
 blocks: []
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
-tests: []
+tests: ["[[TST-0019-The-Desk-Is-Chosen-And-Arranged]]"]
 ---
 
 # A navigator beside a desk that starts empty
@@ -41,12 +41,18 @@ Once the desk is a chosen subset, saving one means something: it names which not
 
 ## Steps
 
-- [ ] Split the renderer's card pool into a navigator list and a desk surface.
-- [ ] Move the desk's contents into the store as an explicit list of note ids, rather than reading it back off the DOM.
-- [ ] Add put-on-desk and take-off-desk actions, and mark navigator rows that are on the desk.
-- [ ] Make a view change repaint the navigator only.
-- [ ] Update the desk save and open paths to read the store's list instead of `getBoundingClientRect` over every card.
+- [x] Split the renderer's card pool into a navigator list and a desk surface.
+- [x] Move the desk's contents into the store as an explicit list of note ids, rather than reading it back off the DOM.
+- [x] Add put-on-desk and take-off-desk actions, and mark navigator rows that are on the desk.
+- [x] Make a view change repaint the navigator only.
+- [x] Update the desk save and open paths to read the store's list instead of `getBoundingClientRect` over every card.
 
 ## Notes
 
 This changes what [[FEAT-0005-Spread-Cards-On-A-Desk]]'s first acceptance criterion means: a view no longer shows all its notes as cards on the desk. The feature's Acceptance section is updated with this task, and [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]] needs its Procedure reworded, because it currently tells a person to open a view and watch the desk fill.
+
+## Where this stands
+
+**2026-09-07: built.** The renderer has a navigator down one side and a desk beside it, and the desk starts empty. What is on the desk lives in the store, keyed by workspace, so saving a desk reads that list rather than measuring elements with `getBoundingClientRect`. A click in the navigator puts a note on the desk and opens it in the reader; a second click takes it off. Changing the view repaints the navigator and leaves the desk alone.
+
+The automated check is [[TST-0019-The-Desk-Is-Chosen-And-Arranged]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0026
 aliases: ["TASK-0026"]
 title: "A popped-out window carries one panel, so a second display can hold the Needs-you strip, a single note, or a desk"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0023", "TASK-0024"]
 blocks: []
 related: ["[[FEAT-0004-Windows-On-Any-Screen]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]]"]
-tests: []
+tests: ["[[TST-0020-A-Popped-Out-Window-Carries-One-Panel]]"]
 ---
 
 # A popped-out window carries one panel
@@ -42,12 +42,18 @@ The panel type belongs in the address, because every reachable Deck state has on
 
 ## Steps
 
-- [ ] Add a panel type to the address grammar, alongside workspace, view, desk and focused note.
-- [ ] Turn Pop out into a choice, and pass the chosen panel type through to the new window.
-- [ ] Render each panel type from the same renderer, with the rail and the view buttons absent as they already are for a satellite.
-- [ ] Persist the panel type with the window's bounds so a restart restores both.
-- [ ] Extend the address round-trip checks to cover each panel type and to refuse an unknown one.
+- [x] Add a panel type to the address grammar, alongside workspace, view, desk and focused note.
+- [x] Turn Pop out into a choice, and pass the chosen panel type through to the new window.
+- [x] Render each panel type from the same renderer, with the rail and the view buttons absent as they already are for a satellite.
+- [x] Persist the panel type with the window's bounds so a restart restores both.
+- [x] Extend the address round-trip checks to cover each panel type and to refuse an unknown one.
 
 ## Notes
 
 [[TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display]] was reworded on 2026-09-06 to describe the duplicate window that exists. When this task lands, its Procedure goes back to naming a status window, and the phase's second exit criterion is walked against that.
+
+## Where this stands
+
+**2026-09-07: built.** Pop out asks what the new window will carry, and the answer is one of three panels: what needs you, the focused note, or the desk. The panel goes into the address, the address is remembered, and a restart reopens the window carrying the same thing on the display it was left on. The address grammar refuses a panel Deck cannot draw, which is what the old `panel=status` value became.
+
+The automated check is [[TST-0020-A-Popped-Out-Window-Carries-One-Panel]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.

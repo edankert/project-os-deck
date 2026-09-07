@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0028
 aliases: ["TASK-0028"]
 title: "A card face per type, so a phase shows progress, an issue shows severity and a test shows how stale its last walk is"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0023"]
 blocks: []
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
-tests: []
+tests: ["[[TST-0018-A-Card-Shows-What-Its-Note-Is]]"]
 ---
 
 # A card face per type
@@ -39,11 +39,17 @@ Every card today shows id, title, type and a status band, which is `desktop/src/
 
 ## Steps
 
-- [ ] Carry adequacy, stale, last_verified and the child counts through the client into the card model.
-- [ ] Add a face per type to the card renderer, with one default face for the types that have none.
-- [ ] Keep every face in one pooled element so the pool's arithmetic is unchanged.
-- [ ] Add a check that each type draws its own face and that an unknown type falls back rather than failing.
+- [x] Carry adequacy, stale, last_verified and the child counts through the client into the card model.
+- [x] Add a face per type to the card renderer, with one default face for the types that have none.
+- [x] Keep every face in one pooled element so the pool's arithmetic is unchanged.
+- [x] Add a check that each type draws its own face and that an unknown type falls back rather than failing.
 
 ## Notes
 
 Hue is left saying what a note is rather than how urgent it is, which is the decision DES-0002 records. Priority is carried by the Needs-you group in TASK-0023, not by colour.
+
+## Where this stands
+
+**2026-09-07: built.** `shared/faces.ts` decides a card's face from the note: a phase or feature shows how much of its work is finished, an issue shows its severity, a test shows its last walk and whether it has gone stale, and anything else draws what every card has. One pooled element draws every face, so a view of four hundred cards costs what it did before.
+
+The automated check is [[TST-0018-A-Card-Shows-What-Its-Note-Is]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.

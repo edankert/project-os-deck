@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0005
 aliases: ["FEAT-0005"]
 title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -54,7 +54,9 @@ Deck's first view shows notes as cards a person arranges, rather than as a list 
 
 ## Where this stands
 
-**2026-09-07: the status went back to `doing`, because five new tasks are in backlog.** A feature at `review` is waiting on a walk and nothing else. This one is waiting on work again, so `review` would be a false reading of it, and `STATUSES.md` puts `doing` before `review` for exactly this. It returns to `review` when TASK-0023, TASK-0024, TASK-0025, TASK-0027 and TASK-0028 are done and only the walks are owed.
+**2026-09-07, later: the five tasks are done and the status is back at `review`.** Spread now has two halves. The navigator lists what a view holds, in the groups the sidecar sent, with what needs a person at the top and finished work folded away. The desk beside it starts empty and holds what a person put there, where they put it, and saving a desk records that list. Search narrows the navigator over the whole model, so a note the pool never drew is still findable, and a card's face is chosen by what the note is. The automated checks are [[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]], [[TST-0017-Search-And-Filter-Narrow-The-Navigator]], [[TST-0018-A-Card-Shows-What-Its-Note-Is]] and [[TST-0019-The-Desk-Is-Chosen-And-Arranged]]; the Electron smoke run drives the real application, clicks a row onto the desk, drags the card and reloads to find it where it was left. What is owed is the walk a person makes, which is [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]].
+
+**2026-09-07, earlier: the status went back to `doing`, because five new tasks were in backlog.** A feature at `review` is waiting on a walk and nothing else. This one is waiting on work again, so `review` would be a false reading of it, and `STATUSES.md` puts `doing` before `review` for exactly this. It returns to `review` when TASK-0023, TASK-0024, TASK-0025, TASK-0027 and TASK-0028 are done and only the walks are owed.
 
 **Why the tasks were added.** A review on 2026-09-07 found that what Spread shows is a flat grid of identical cards with a reader beside it, and that nothing on the desk can be arranged, grouped or searched ([[REFERENCE-PHASE-0001-REVIEW]]). Deck's own state file held zero saved desks after a day of use, because a desk saved wherever the flow layout had put the cards. Edwin accepted the finding the same day.
 

@@ -5,14 +5,21 @@
  * provider returns for the current workspace's kind, which is what lets a
  * vault's own saved views become Deck views in a later phase without touching
  * this file.
+ *
+ * The window has two halves. The navigator lists what a view holds, in the
+ * groups the sidecar sent. The desk holds the notes a person put there, where
+ * they put them. A popped-out window carries one panel and nothing else.
  */
-import type { CardModel, DeckView, Workspace } from '../shared/types.js';
+import type { CardGroup, CardModel, DeckView, PanelType, Workspace } from '../shared/types.js';
 import { AddressError, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry } from '../shared/views.js';
-import { SidecarClient, cardsFromNav } from '../shared/sidecar-client.js';
-import { deskFrom, reconcileDesk } from '../shared/desk.js';
-import { deskKey } from '../shared/store-state.js';
+import { SidecarClient, flattenGroups, groupsFromNav } from '../shared/sidecar-client.js';
+import { CARD_WIDTH, clampToSurface, nextSlot, reconcileDesk } from '../shared/desk.js';
+import { deskCardsOf } from '../shared/store-state.js';
+import { PANEL_LABELS, PANEL_TYPES, panelOrNull } from '../shared/panels.js';
+import { narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { CardPool, type PlacedCard } from './cards.js';
+import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
 
 const host = new Host();
@@ -21,7 +28,14 @@ const registry = new ViewRegistry();
 const el = {
   switcher: must('switcher'),
   rail: must('rail'),
+  navigator: must('navigator'),
+  navList: must('nav-list'),
+  search: must('search') as HTMLInputElement,
+  statusFilter: must('status-filter') as HTMLSelectElement,
+  typeFilter: must('type-filter') as HTMLSelectElement,
+  navCount: must('nav-count'),
   desk: must('desk'),
+  deskArea: must('desk-area'),
   deskName: must('desk-name'),
   deskList: must('desk-list') as HTMLSelectElement,
   reader: must('reader'),
@@ -32,6 +46,7 @@ const el = {
   openAddress: must('open-address') as HTMLButtonElement,
   popOut: must('pop-out') as HTMLButtonElement,
   saveDesk: must('save-desk') as HTMLButtonElement,
+  clearDesk: must('clear-desk') as HTMLButtonElement,
 };
 
 let workspaces: Workspace[] = [];
@@ -43,11 +58,34 @@ let workspaces: Workspace[] = [];
  */
 let pinned = false;
 let currentViews: DeckView[] = [];
+/** The view as it arrived, in groups, before anything is narrowed. */
+let currentGroups: CardGroup[] = [];
+/** Every card in the view, children flattened, for the desk and the address. */
 let currentCards: CardModel[] = [];
-let panel: string | null = null;
+let panel: PanelType | null = null;
+/** A note panel stays on the note its address named, whatever the focus window does. */
+let pinnedNoteId: string | null = null;
+let queryTimer: ReturnType<typeof setTimeout> | null = null;
 
-const pool = new CardPool(el.desk, (card) => {
-  void openCard(card);
+const pool = new CardPool(el.desk, {
+  open: (card) => {
+    void openCard(card);
+  },
+  remove: (card) => {
+    void host.dispatch({ type: 'take-off-desk', noteId: card.noteId });
+  },
+  grab: (card, element, event) => {
+    grabCard(card, element, event);
+  },
+});
+
+const navigator = new NavigatorList(el.navList, {
+  toggle: (card) => {
+    void toggleOnDesk(card);
+  },
+  fold: (key, folded) => {
+    void host.dispatch({ type: 'set-fold', key, folded });
+  },
 });
 
 function must(id: string): HTMLElement {
@@ -73,13 +111,13 @@ function clientFor(workspaceId: string): SidecarClient {
 async function boot(): Promise<void> {
   await host.start();
   const role = await host.windowRole();
-  panel = role.panel;
+  panel = panelOrNull(role.panel);
   pinned = role.role === 'satellite';
   (globalThis as unknown as { __deckRole?: string }).__deckRole = String(role.role);
   document.body.classList.toggle('pinned', pinned);
+  document.body.dataset['panel'] = panel ?? '';
   el.hostMark.textContent = host.isShell() ? 'shell' : 'served · read only';
   el.popOut.hidden = !host.capabilities().popOutWindows;
-  el.saveDesk.disabled = false;
 
   workspaces = await host.workspaces();
   renderRail();
@@ -88,6 +126,7 @@ async function boot(): Promise<void> {
   if (requested !== null) {
     const parsed = tryParseAddress(requested);
     if (parsed.ok) {
+      pinnedNoteId = parsed.address.note;
       await applyAddress(requested);
     } else {
       say(`that address was refused: ${parsed.reason}`, true);
@@ -105,9 +144,11 @@ async function boot(): Promise<void> {
     // drawDesk, not just the chrome: it is the only thing that repaints the
     // cards, so leaving it out means a window receives a change from another
     // window and shows nothing.
+    drawNavigator();
     drawDesk();
   });
   wireControls();
+  if (panel === 'needs-you') startNeedsYouPoll();
 }
 
 function renderRail(): void {
@@ -121,7 +162,12 @@ function renderRail(): void {
     name.textContent = workspace.name;
     const kind = document.createElement('span');
     kind.className = 'kind';
-    kind.textContent = workspace.kind;
+    // A served page cannot start a sidecar, so a workspace the shell has not
+    // opened is shown as unavailable rather than offered and then refused with
+    // "the sidecar answered 503" (ISS-0003).
+    const unopened = workspace.open === false;
+    kind.textContent = unopened ? `${workspace.kind} · open it in the shell first` : workspace.kind;
+    button.disabled = unopened;
     button.append(name, kind);
     button.addEventListener('click', () => {
       void selectWorkspace(workspace.id);
@@ -151,6 +197,10 @@ async function selectWorkspace(id: string): Promise<void> {
   const workspace = workspaceById(id);
   if (workspace === null) {
     say(`no workspace with id ${id}`, true);
+    return;
+  }
+  if (workspace.open === false) {
+    say(`${workspace.name} has no sidecar running — open it in the Deck shell first, then reload this page`, true);
     return;
   }
   say(`opening ${workspace.name}…`);
@@ -225,29 +275,48 @@ async function loadView(workspace: Workspace, view: DeckView): Promise<void> {
   try {
     if (view.source.kind === 'nav') {
       const payload = await client.nav(view.source.mode);
-      currentCards = cardsFromNav(payload).map((c) => ({
-        noteId: c.noteId,
-        title: c.title,
-        noteType: c.noteType,
-        status: c.status,
-        rel: c.rel,
-      }));
+      currentGroups = groupsFromNav(payload);
     } else {
       const payload = await client.stats();
-      currentCards = Object.entries(payload.hero).map(([key, value]) => ({
-        noteId: key,
-        title: describe(value),
-        noteType: 'count',
-        status: '',
-        rel: null,
-      }));
+      currentGroups = [
+        {
+          key: 'hero',
+          label: 'This repository',
+          needsHuman: false,
+          suppressed: false,
+          cards: Object.entries(payload.hero).map(([key, value]) => blankCard(key, describe(value), 'count')),
+        },
+      ];
     }
-    say(`${workspace.name} · ${view.label} · ${currentCards.length} cards`);
+    currentCards = flattenGroups(currentGroups);
+    say(`${workspace.name} · ${view.label} · ${currentCards.length} notes`);
   } catch (err) {
+    currentGroups = [];
     currentCards = [];
     say(err instanceof Error ? err.message : String(err), true);
   }
+  renderFilters();
+  drawNavigator();
   drawDesk();
+}
+
+function blankCard(noteId: string, title: string, noteType: string): CardModel {
+  return {
+    noteId,
+    title,
+    noteType,
+    status: '',
+    rel: null,
+    subtitle: null,
+    owed: false,
+    owedVerb: null,
+    groupKey: 'hero',
+    severity: null,
+    lastVerified: null,
+    stale: false,
+    progress: null,
+    children: [],
+  };
 }
 
 function describe(value: unknown): string {
@@ -260,25 +329,76 @@ function describe(value: unknown): string {
   return String(value);
 }
 
+/** The groups as they are drawn now: what the view holds, narrowed by the search. */
+function narrowed(): CardGroup[] {
+  const state = host.state();
+  const groups = panel === 'needs-you' ? currentGroups.filter((g) => g.needsHuman) : currentGroups;
+  return narrowGroups(groups, { query: state.query, filters: state.filters });
+}
+
+function drawNavigator(): void {
+  const state = host.state();
+  const groups = narrowed();
+  const shown = groups.reduce((n, g) => n + g.cards.length, 0);
+  navigator.render({
+    groups,
+    folds: state.folds,
+    onDesk: new Set(deskCardsOf(state, state.workspaceId).map((c) => c.noteId)),
+    currentNoteId: state.noteId,
+  });
+  el.navCount.textContent = `${shown} of ${currentCards.length}`;
+  if (el.search.value !== state.query) el.search.value = state.query;
+}
+
+function renderFilters(): void {
+  const state = host.state();
+  fillSelect(el.statusFilter, 'any status', statusesIn(currentGroups), state.filters.statuses[0] ?? '');
+  fillSelect(el.typeFilter, 'any type', typesIn(currentGroups), state.filters.types[0] ?? '');
+}
+
+function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[], current: string): void {
+  select.replaceChildren();
+  const any = document.createElement('option');
+  any.value = '';
+  any.textContent = anyLabel;
+  select.appendChild(any);
+  for (const value of values) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  }
+  select.value = values.includes(current) ? current : '';
+}
+
 function drawDesk(): void {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
-  let placed: PlacedCard[] = currentCards.map((card) => ({ card, x: null, y: null }));
-  let label = 'no desk';
 
-  if (workspace !== null && state.deskName !== null) {
-    const desk = state.desks[deskKey(workspace.id, state.deskName)];
-    if (desk !== undefined) {
-      const reconciled = reconcileDesk(desk, currentCards);
-      placed = reconciled.cards.map((c) => ({ card: c.card, x: c.x, y: c.y }));
-      label =
-        reconciled.dropped === 0
-          ? state.deskName
-          : `${state.deskName} — ${reconciled.dropped} card${reconciled.dropped === 1 ? '' : 's'} dropped, their notes are gone`;
-    }
+  if (panel === 'needs-you') {
+    // The strip is what is owed, drawn as cards that flow rather than as an
+    // arrangement: this window is a status board, not a desk.
+    const owed = narrowed().flatMap((g) => g.cards);
+    pool.render(
+      owed.map((card) => ({ card, x: 0, y: 0 })),
+      state.noteId,
+      true,
+    );
+    el.deskName.textContent = owed.length === 0 ? 'nothing is owed' : 'what needs you';
+    el.count.textContent = `${owed.length}`;
+    return;
   }
-  el.deskName.textContent = label;
-  el.count.textContent = `${placed.length} of ${currentCards.length}`;
+
+  const onDesk = deskCardsOf(state, state.workspaceId);
+  const reconciled = reconcileDesk(onDesk, currentCards);
+  const placed: PlacedCard[] = reconciled.cards.map((c) => ({ card: c.card, x: c.x, y: c.y }));
+  let label = state.deskName ?? (placed.length === 0 ? 'the desk is empty' : 'unsaved desk');
+  if (reconciled.dropped > 0) {
+    const cards = reconciled.dropped === 1 ? 'card' : 'cards';
+    label = `${label} — ${reconciled.dropped} ${cards} not in this view`;
+  }
+  el.deskName.textContent = workspace === null ? 'no workspace' : label;
+  el.count.textContent = `${placed.length} on the desk`;
   pool.render(placed, state.noteId);
   renderDeskList();
 }
@@ -288,7 +408,7 @@ function drawDesk(): void {
  * Without this the card is marked as current and the reader stays empty.
  */
 async function reopenFocusedNote(): Promise<void> {
-  const noteId = host.state().noteId;
+  const noteId = pinnedNoteId ?? host.state().noteId;
   if (noteId === null) return;
   const card = currentCards.find((c) => c.noteId === noteId);
   if (card !== undefined) await openCard(card);
@@ -297,7 +417,12 @@ async function reopenFocusedNote(): Promise<void> {
 function renderDeskList(): void {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
-  const names = workspace === null ? [] : Object.values(state.desks).filter((d) => d.workspaceId === workspace.id).map((d) => d.name);
+  const names =
+    workspace === null
+      ? []
+      : Object.values(state.desks)
+          .filter((d) => d.workspaceId === workspace.id)
+          .map((d) => d.name);
   const current = el.deskList.value;
   el.deskList.replaceChildren();
   const none = document.createElement('option');
@@ -313,11 +438,28 @@ function renderDeskList(): void {
   el.deskList.value = state.deskName ?? (names.includes(current) ? current : '');
 }
 
+/** A click in the navigator puts a note on the desk, or takes it off again. */
+async function toggleOnDesk(card: CardModel): Promise<void> {
+  const state = host.state();
+  const cards = deskCardsOf(state, state.workspaceId);
+  if (cards.some((c) => c.noteId === card.noteId)) {
+    await host.dispatch({ type: 'take-off-desk', noteId: card.noteId });
+    drawNavigator();
+    drawDesk();
+    return;
+  }
+  const slot = nextSlot(cards, Math.max(CARD_WIDTH * 2, el.desk.clientWidth));
+  await host.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: slot.x, y: slot.y });
+  await openCard(card);
+}
+
 async function openCard(card: CardModel): Promise<void> {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
   if (workspace === null) return;
-  await host.dispatch({ type: 'focus-note', noteId: card.noteId });
+  // A note panel stays on its own note; it is what that window is for.
+  if (panel !== 'note') await host.dispatch({ type: 'focus-note', noteId: card.noteId });
+  drawNavigator();
   drawDesk();
   if (card.rel === null) {
     el.reader.replaceChildren(text('this card has no note behind it'));
@@ -341,6 +483,56 @@ function text(message: string): HTMLElement {
   return div;
 }
 
+/**
+ * A card is dragged with the pointer, and where it lands is what the desk
+ * saves. The element moves during the drag and the store hears about it once,
+ * at the end: a move is one change, not sixty.
+ */
+function grabCard(card: CardModel, element: HTMLElement, event: PointerEvent): void {
+  if (event.button !== 0) return;
+  if (panel === 'needs-you') return;
+  const surface = el.desk.getBoundingClientRect();
+  const box = element.getBoundingClientRect();
+  const grabX = event.clientX - box.left;
+  const grabY = event.clientY - box.top;
+  let latest = { x: box.left - surface.left + el.desk.scrollLeft, y: box.top - surface.top + el.desk.scrollTop };
+  let moved = false;
+
+  element.setPointerCapture(event.pointerId);
+  element.classList.add('dragging');
+
+  const move = (moveEvent: PointerEvent): void => {
+    const raw = {
+      x: moveEvent.clientX - surface.left - grabX + el.desk.scrollLeft,
+      y: moveEvent.clientY - surface.top - grabY + el.desk.scrollTop,
+    };
+    if (Math.abs(raw.x - latest.x) > 3 || Math.abs(raw.y - latest.y) > 3) moved = true;
+    latest = clampToSurface(raw, { width: el.desk.clientWidth, height: el.desk.clientHeight });
+    element.style.left = `${latest.x}px`;
+    element.style.top = `${latest.y}px`;
+  };
+
+  const up = (): void => {
+    element.removeEventListener('pointermove', move);
+    element.removeEventListener('pointerup', up);
+    element.removeEventListener('pointercancel', up);
+    element.classList.remove('dragging');
+    try {
+      element.releasePointerCapture(event.pointerId);
+    } catch {
+      // The pointer may already be gone; the drag is over either way.
+    }
+    if (!moved) return;
+    // Marked so the click this pointer release also fires does not open the note.
+    element.dataset['dragged'] = 'true';
+    void host.dispatch({ type: 'move-card', noteId: card.noteId, x: latest.x, y: latest.y });
+  };
+
+  element.addEventListener('pointermove', move);
+  element.addEventListener('pointerup', up);
+  element.addEventListener('pointercancel', up);
+}
+
 function currentAddress(): string | null {
   const state = host.state();
   if (state.workspaceId === null || state.viewId === null) return null;
@@ -349,7 +541,7 @@ function currentAddress(): string | null {
       workspaceId: state.workspaceId,
       viewId: state.viewId,
       desk: state.deskName,
-      note: state.noteId,
+      note: panel === 'note' ? pinnedNoteId : state.noteId,
       panel,
     });
   } catch (err) {
@@ -373,20 +565,22 @@ async function applyAddress(raw: string): Promise<void> {
     say(`that address names a view this workspace does not have: ${address.viewId}`, true);
     return;
   }
-  if (address.desk !== null && host.state().desks[deskKey(workspace.id, address.desk)] === undefined) {
+  if (address.desk !== null && host.state().desks[`${workspace.id}:${address.desk}`] === undefined) {
     say(`that address names a desk this workspace does not have: ${address.desk}`, true);
     return;
   }
 
   panel = address.panel;
+  document.body.dataset['panel'] = panel ?? '';
   await selectWorkspace(workspace.id);
   await selectView(address.viewId);
-  await host.dispatch({ type: 'open-desk', name: address.desk });
+  if (address.desk !== null) await host.dispatch({ type: 'open-desk', name: address.desk });
   if (address.note !== null) {
     const card = currentCards.find((c) => c.noteId === address.note);
     if (card === undefined) say(`that address names a note this view does not show: ${address.note}`, true);
     else await openCard(card);
   }
+  drawNavigator();
   drawDesk();
 }
 
@@ -417,6 +611,37 @@ function askText(label: string, initial = ''): Promise<string | null> {
     });
     el.status.appendChild(form);
     input.focus();
+  });
+}
+
+/** The same asking place, for a choice between named things. */
+function askChoice<T extends string>(label: string, options: Array<{ value: T; label: string }>): Promise<T | null> {
+  return new Promise((resolve) => {
+    el.status.classList.remove('error');
+    el.status.replaceChildren();
+    const caption = document.createElement('span');
+    caption.textContent = `${label} `;
+    el.status.appendChild(caption);
+    for (const option of options) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'action';
+      button.textContent = option.label;
+      button.addEventListener('click', () => {
+        say('');
+        resolve(option.value);
+      });
+      el.status.appendChild(button);
+    }
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'action';
+    cancel.textContent = 'cancel';
+    cancel.addEventListener('click', () => {
+      say('');
+      resolve(null);
+    });
+    el.status.appendChild(cancel);
   });
 }
 
@@ -453,15 +678,32 @@ function wireControls(): void {
         say('open a view before popping one out', true);
         return;
       }
+      // Popping out asks what the new window will carry. A window that carries
+      // one thing is a status window; a window that carries the view again is
+      // a duplicate, which is what this used to be (TASK-0026).
+      const chosen = await askChoice(
+        'what should the new window carry?',
+        PANEL_TYPES.map((type) => ({ value: type, label: PANEL_LABELS[type] })),
+      );
+      if (chosen === null) return;
+      if (chosen === 'note' && state.noteId === null) {
+        say('open a note before popping one out', true);
+        return;
+      }
+      if (chosen === 'desk' && deskCardsOf(state, state.workspaceId).length === 0) {
+        say('put something on the desk before popping it out', true);
+        return;
+      }
       const address = formatAddress({
         workspaceId: state.workspaceId,
         viewId: state.viewId,
         desk: state.deskName,
         note: state.noteId,
-        panel: 'status',
+        panel: chosen,
       });
       const result = await host.openPanel(address);
       if (!result.ok) say(result.error ?? 'that window did not open', true);
+      else say(`opened a window carrying ${PANEL_LABELS[chosen].toLowerCase()}`);
     })();
   });
 
@@ -470,29 +712,30 @@ function wireControls(): void {
       const state = host.state();
       const workspace = workspaceById(state.workspaceId);
       if (workspace === null) return;
+      const cards = deskCardsOf(state, workspace.id);
+      if (cards.length === 0) {
+        say('there is nothing on the desk to save', true);
+        return;
+      }
       const name = await askText('desk name:', state.deskName ?? '');
       if (name === null) return;
       if (!isDeskName(name)) {
         // Refused here, where the person can retype it, rather than later when
         // they copy the address and Deck rejects its own string.
-        say(`that name cannot go in an address: up to 64 characters, and no control characters`, true);
+        say('that name cannot go in an address: up to 64 characters, and no control characters', true);
         return;
       }
-      const origin = el.desk.getBoundingClientRect();
-      const cards = Array.from(el.desk.querySelectorAll<HTMLElement>('.card'))
-        .filter((element) => !element.hidden)
-        .map((element) => {
-          const box = element.getBoundingClientRect();
-          return {
-            noteId: element.dataset['noteId'] ?? '',
-            x: Math.round(box.left - origin.left + el.desk.scrollLeft),
-            y: Math.round(box.top - origin.top + el.desk.scrollTop),
-          };
-        })
-        .filter((c) => c.noteId !== '');
-      await host.dispatch({ type: 'save-desk', desk: deskFrom(name, workspace.id, cards) });
+      await host.dispatch({ type: 'save-desk', name });
       drawDesk();
       say(`saved the desk "${name}" with ${cards.length} cards`);
+    })();
+  });
+
+  el.clearDesk.addEventListener('click', () => {
+    void (async () => {
+      await host.dispatch({ type: 'clear-desk' });
+      drawNavigator();
+      drawDesk();
     })();
   });
 
@@ -500,9 +743,53 @@ function wireControls(): void {
     void (async () => {
       const value = el.deskList.value;
       await host.dispatch({ type: 'open-desk', name: value === '' ? null : value });
+      drawNavigator();
       drawDesk();
     })();
   });
+
+  el.search.addEventListener('input', () => {
+    // Typed a letter at a time, dispatched once the typing pauses: every
+    // window shares this state, and a keystroke is not a state change worth
+    // broadcasting.
+    if (queryTimer !== null) clearTimeout(queryTimer);
+    const text_ = el.search.value;
+    queryTimer = setTimeout(() => {
+      void host.dispatch({ type: 'set-query', text: text_ });
+    }, 120);
+  });
+
+  const applyFilters = (): void => {
+    void host.dispatch({
+      type: 'set-filters',
+      filters: {
+        statuses: el.statusFilter.value === '' ? [] : [el.statusFilter.value],
+        types: el.typeFilter.value === '' ? [] : [el.typeFilter.value],
+      },
+    });
+  };
+  el.statusFilter.addEventListener('change', applyFilters);
+  el.typeFilter.addEventListener('change', applyFilters);
+}
+
+/**
+ * A status window has to notice when the record changes underneath it.
+ *
+ * Nothing pushes from the sidecar, so the panel asks again on a slow beat. It
+ * is the only window that polls, and it polls one endpoint.
+ */
+function startNeedsYouPoll(): void {
+  const beat = 30_000;
+  setInterval(() => {
+    void (async () => {
+      const state = host.state();
+      const workspace = workspaceById(state.workspaceId);
+      if (workspace === null || state.viewId === null) return;
+      const view = registry.resolve(workspace, state.viewId);
+      if (view === null) return;
+      await loadView(workspace, view);
+    })();
+  }, beat);
 }
 
 // The smoke run reads this to check that a satellite saw the state change.

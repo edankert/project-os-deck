@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0004
 aliases: ["ISS-0004"]
 title: "Two Decks bind the same port, because the free-port probe passes on loopback while another Deck already holds the wildcard address"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -13,7 +13,7 @@ severity: medium
 component: main
 parent: ""
 related: ["[[ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing]]", "[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
-tests: []
+tests: ["[[TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free]]"]
 ---
 
 # Two Decks bind the same port
@@ -47,3 +47,11 @@ Both processes hold port 7300 and `lsof` shows two LISTEN rows.
 
 ## Next Actions
 - [ ] Triage: decide whether a loopback probe should also test the wildcard address, or whether Deck should hold a lock file naming the port it took.
+
+## Resolution
+
+**Fixed 2026-09-07. The probe asks whether anything answers on a port before it tries to bind it.** Binding alone cannot see the problem: a bind on loopback succeeds while another process holds the same port on every interface, which is how two Decks came to listen on 7300. A connection to the port does see it. So a port is offered only when nothing accepts a connection there and this process can bind it.
+
+That makes one probe answer both faults. [[ISS-0002-A-Second-Deck-Cannot-Start-And-Says-Nothing]] was the mirror case, a port free on loopback that `0.0.0.0` could not take, and the interface argument added then is still what answers it.
+
+The check is [[TST-0021-A-Port-In-Use-Is-Never-Offered-As-Free]], which holds a real port on `0.0.0.0` and asserts the probe walks past it.

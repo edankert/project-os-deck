@@ -165,7 +165,15 @@ export class DeckHost {
       return;
     }
     if (pathname === '/deck/workspaces') {
-      json(res, 200, { workspaces: this.options.listWorkspaces() });
+      // Each workspace says whether a sidecar is answering for it. A page this
+      // host serves cannot start one, so without this the rail offers a
+      // workspace that cannot open and the reason arrives as a 503 from a
+      // read the person did not know they were making (ISS-0003).
+      json(res, 200, {
+        workspaces: this.options
+          .listWorkspaces()
+          .map((workspace) => ({ ...workspace, open: this.options.sidecarBaseFor(workspace.id) !== null })),
+      });
       return;
     }
     if (rawPathname.startsWith(SIDECAR_PREFIX)) {

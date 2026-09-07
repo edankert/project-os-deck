@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0023
 aliases: ["TASK-0023"]
 title: "The groups the sidecar already sends are drawn, so Needs you comes first, phases hold their features and tasks, and the quiet work folds away"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: []
 blocks: []
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
-tests: []
+tests: ["[[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]]"]
 ---
 
 # The groups the sidecar sends are drawn
@@ -43,12 +43,18 @@ This is the adoption table's `shell.nav.needs-you` row and part of its `shell.na
 
 ## Steps
 
-- [ ] Keep groups, children, subtitle, owed and owed_verb in the client's card model instead of discarding them.
-- [ ] Give the card pool a group heading element and a fold control, both pooled the way cards are.
-- [ ] Draw a suppressed group folded by default, and remember whether a person unfolded it.
-- [ ] Show the owed verb on a card that carries one.
-- [ ] Add a check that a view with groups draws headings, and that no group's items are lost or duplicated.
+- [x] Keep groups, children, subtitle, owed and owed_verb in the client's card model instead of discarding them.
+- [x] Give the card pool a group heading element and a fold control, both pooled the way cards are.
+- [x] Draw a suppressed group folded by default, and remember whether a person unfolded it.
+- [x] Show the owed verb on a card that carries one.
+- [x] Add a check that a view with groups draws headings, and that no group's items are lost or duplicated.
 
 ## Notes
 
 This is the first of the six tasks added on 2026-09-07 and every other one is easier after it, because the other five all need to know which cards belong together.
+
+## Where this stands
+
+**2026-09-07: built.** `groupsFromNav` in the sidecar client keeps the groups, the children, the subtitle, the owed flag and the owed verb, and `shared/rows.ts` turns them into headings and rows with a fold state. A group the sidecar marks suppressed arrives folded and a note holding other notes arrives closed, so Your Trainer's Issues view opens on the 34 that need triage rather than on 409 identical cards. The severity a card shows is the band it arrived in, because the sidecar bands issues by severity rather than putting it on the item.
+
+The automated check is [[TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.

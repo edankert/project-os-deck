@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0027
 aliases: ["TASK-0027"]
 title: "Search and filter live in the renderer, because a pooled DOM means the browser's own find cannot see the notes"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0023"]
 blocks: []
 related: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
-tests: []
+tests: ["[[TST-0017-Search-And-Filter-Narrow-The-Navigator]]"]
 ---
 
 # Search and filter in the renderer
@@ -39,11 +39,17 @@ The card pool draws only the elements that are on screen, so the browser's own f
 
 ## Steps
 
-- [ ] Hold the current query and filters in the store, so a second window sees the same narrowing.
-- [ ] Match against the full card model rather than the drawn elements.
-- [ ] Recompute group counts from what survives the filter.
-- [ ] Add checks over the matching function, including a note that is outside the drawn window.
+- [x] Hold the current query and filters in the store, so a second window sees the same narrowing.
+- [x] Match against the full card model rather than the drawn elements.
+- [x] Recompute group counts from what survives the filter.
+- [x] Add checks over the matching function, including a note that is outside the drawn window.
 
 ## Notes
 
 This moves the adoption table's `shell.stage.find` row toward `adopted`; the row is not moved until the task is done and the walk is made.
+
+## Where this stands
+
+**2026-09-07: built.** The query and the filters live in the store, so a second window narrows with the first. Matching runs over the whole card model rather than over the drawn elements, which is why a note the pool never drew is still findable. Clearing the search brings back the same groups with the same fold states.
+
+The automated check is [[TST-0017-Search-And-Filter-Narrow-The-Navigator]], and the whole suite passes: 143 checks across the desktop suites on 2026-09-07.
