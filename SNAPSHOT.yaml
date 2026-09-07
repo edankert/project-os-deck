@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 8
-  ISS: 7
+  ISS: 8
   PHASE: 3
   REQ: 0
   RISK: 1
@@ -358,6 +358,16 @@ items:
       component: main
       tests: []
       note: "Found 2026-09-07: two Deck processes were listening on 7300 at the same time, one on *:7300 (started with --lan on 2026-09-06) and one on 127.0.0.1:7300 (started without it on 2026-09-07). Which one answers a browser at 127.0.0.1:7300 is UNDETERMINED. This is the MIRROR of ISS-0002, whose fix made freePort bind the same interface as the host: that stopped a wildcard host claiming a loopback-held port, and does nothing about a loopback host claiming a wildcard-held one. Starting the same fresh Deck with --lan made the probe bind 0.0.0.0, fail, and move to 7301."
+    ISS-0008:
+      file: "docs/issues/ISS-0008-Nothing-In-CI-Exercises-The-Renderer.md"
+      title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "The independent review's STRUCTURAL finding, 2026-09-07, and the reason three of its six defects existed. No suite loads desktop/src/renderer/; the smoke run does drive it, and the smoke run is not in CI because it needs Electron's binary. Three ways out and they are not the same size: a document stand-in (a first dependency), a headless Electron job (a 100MB download per run), or moving yet more logic into shared/ (already done for rows, search, faces and desk; the drag and the pool cannot leave). Which one is worth it is Edwin's call, which is why this rests at triage."
     ISS-0005:
       file: "docs/issues/ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled.md"
       title: "A card jumps hundreds of pixels when it is dragged on a desk that has scrolled, because the clamp measures the window while the position measures the content"
@@ -679,7 +689,7 @@ metrics:
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 0
+    issues_triage: 1
     risks_open: 1
     releases_total: 0
     decisions_total: 1
