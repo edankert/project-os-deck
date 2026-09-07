@@ -31,6 +31,20 @@ interface Record_ extends SidecarHandle {
 const PORT_RANGE_START = 8900;
 const PORT_RANGE_END = 8999;
 const READY_TIMEOUT_MS = 15_000;
+/** How many ports Deck will try before it gives up on starting a sidecar. */
+const START_ATTEMPTS = 4;
+
+/**
+ * Whether a sidecar died because the port was taken.
+ *
+ * Read off what Python printed, because that is where the truth is: the
+ * process Deck spawned is the one that tried to bind. `Errno 48` is macOS and
+ * `EADDRINUSE` is what node and Linux say.
+ */
+export function isPortCollision(err: unknown): boolean {
+  const text = err instanceof Error ? err.message : String(err);
+  return /address already in use/i.test(text) || /EADDRINUSE/.test(text) || /errno 48/i.test(text);
+}
 
 export class SidecarSupervisor {
   private readonly records = new Map<string, Record_>();
@@ -76,8 +90,39 @@ export class SidecarSupervisor {
     return { ...record };
   }
 
+  /**
+   * Start a sidecar, and try another port when the one Deck offered turns out
+   * not to be free.
+   *
+   * No probe can settle this on its own. Node sets `SO_REUSEADDR` on every
+   * socket it binds and the sidecar's Python server does not, so a port whose
+   * previous listener has gone but whose socket is still lingering binds here
+   * and is refused there: Deck offers 8901, Python answers `[Errno 48]
+   * Address already in use` and exits before it ever serves (ISS-0009). A race
+   * with any other process has the same shape. So the answer is not a better
+   * probe, it is trying the next port.
+   */
   private async start(workspace: Workspace): Promise<SidecarHandle> {
-    const port = await freePort();
+    const tried: number[] = [];
+    for (let attempt = 1; attempt <= START_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.startOnce(workspace, tried);
+      } catch (err) {
+        const last = attempt === START_ATTEMPTS;
+        if (last || !isPortCollision(err)) throw err;
+        // Said out loud: a person watching the console should see why Deck
+        // took a second run at it rather than wonder about the pause.
+        console.log(
+          `deck: port ${tried[tried.length - 1] ?? '?'} was taken when the sidecar tried to bind it; trying another`,
+        );
+      }
+    }
+    throw new Error(`the sidecar for ${workspace.name} could not find a free port in ${START_ATTEMPTS} attempts`);
+  }
+
+  private async startOnce(workspace: Workspace, tried: number[]): Promise<SidecarHandle> {
+    const port = await freePort(PORT_RANGE_START, PORT_RANGE_END, '127.0.0.1', tried);
+    tried.push(port);
     const base = `http://127.0.0.1:${port}`;
     const child = spawn(
       this.python,
@@ -277,8 +322,12 @@ export async function freePort(
   start = PORT_RANGE_START,
   end = PORT_RANGE_END,
   bind = '127.0.0.1',
+  skip: readonly number[] = [],
 ): Promise<number> {
   for (let port = start; port <= end; port += 1) {
+    // A port already tried and refused by whoever had to bind it is not
+    // offered again, however free it looks from here.
+    if (skip.includes(port)) continue;
     if (await answersOn(port)) continue;
     if (await canBind(port, bind)) return port;
   }

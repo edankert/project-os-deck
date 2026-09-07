@@ -49,13 +49,13 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 8
-  ISS: 8
+  ISS: 9
   PHASE: 3
   REQ: 0
   RISK: 1
   REL: 0
   TASK: 28
-  TST: 21
+  TST: 22
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -358,6 +358,16 @@ items:
       component: main
       tests: []
       note: "Found 2026-09-07: two Deck processes were listening on 7300 at the same time, one on *:7300 (started with --lan on 2026-09-06) and one on 127.0.0.1:7300 (started without it on 2026-09-07). Which one answers a browser at 127.0.0.1:7300 is UNDETERMINED. This is the MIRROR of ISS-0002, whose fix made freePort bind the same interface as the host: that stopped a wildcard host claiming a loopback-held port, and does nothing about a loopback host claiming a wildcard-held one. Starting the same fresh Deck with --lan made the probe bind 0.0.0.0, fail, and move to 7301."
+    ISS-0009:
+      file: "docs/issues/ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It.md"
+      title: "A sidecar Deck starts can be refused the port Deck offered it, because Deck's probe sets a socket option the sidecar's Python server does not, and the workspace then will not open"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: ["TST-0022"]
+      note: "Edwin hit this on 2026-09-07 restarting Deck for the panel walk: both windows empty, and the sidecar's own traceback saying Errno 48. Node sets SO_REUSEADDR on what it binds and CPython's socketserver does not, so a port whose previous listener has gone but whose socket lingers is bindable by Deck's probe and refused to the sidecar. NO probe can fix it: the question is asked in a different process at a different moment. Deck retries on the next port instead."
     ISS-0008:
       file: "docs/issues/ISS-0008-Nothing-In-CI-Exercises-The-Renderer.md"
       title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
@@ -630,6 +640,14 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0002"]
       note: "Automated, so it carries no verdict: CI is the verdict. Covers ISS-0002 and ISS-0004, which are two halves of one probe: a bind on loopback cannot see a process holding the port on every interface, so the probe asks whether anything ANSWERS there first. The check holds a real port on 0.0.0.0 and asserts the probe walks past it."
+    TST-0022:
+      file: "docs/features/shell/plan/tests/TST-0022-A-Refused-Port-Is-Not-The-End-Of-It.md"
+      title: "A sidecar refused the port Deck offered is started on another one, and a sidecar that fails for any other reason is not retried"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0002"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers ISS-0009. The stand-in interpreter is spawned by the REAL supervisor with the real arguments and refuses its first port with the traceback CPython prints, so this exercises the retry rather than describing it. Its sibling TST-0021 covers the probe; this one covers what no probe can see in advance."
   releases: {}
   workflows: {}
   changes:
@@ -685,7 +703,7 @@ metrics:
     phases_done: 0
     tasks_total: 28
     tasks_done: 23
-    tests_total: 14
+    tests_total: 15
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
