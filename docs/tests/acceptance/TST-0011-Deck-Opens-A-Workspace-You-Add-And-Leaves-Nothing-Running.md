@@ -62,6 +62,7 @@ Deck runs from this repository; there is no installed application yet.
 - The workspace appears in the rail with its name and kind, and its notes are drawn as cards.
 - The folder that is neither is refused, and the message names what Deck was looking for.
 - Opening a repository the cockpit already has open reuses that sidecar rather than starting a second one, and the status line says so.
+  - **Known broken for one shape, as of 2026-09-08**: when Deck and the cockpit spell the same path differently — `/Users/Edwin/...` against `/Users/edwin/...` — Deck starts a second sidecar and rewrites the repository's `.cockpit/url` to its own port ([[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]]). This repository is not one of those, so the claim can still be walked here.
 - **After the window quit, every process id Deck started has gone from the list.** An id that was there before Deck started, because the cockpit started it, is still there afterwards, and that is correct: it is not Deck's to stop. If Deck reused the cockpit's sidecar, nothing should disappear at all.
 - **After the signal quit, the same holds.** This is the path that used to leave a sidecar behind every time: `kill -TERM` and Ctrl+C both reached Deck, and Deck went without waiting for its children.
 - Any id that is in the before list, is not the cockpit's, and is still there after five seconds is a fail, whichever quit produced it.

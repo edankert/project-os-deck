@@ -3,16 +3,16 @@ type: "[[risk]]"
 id: RISK-0001
 aliases: ["RISK-0001"]
 title: "A second sidecar on the same repository takes over the cockpit's focus routing"
-status: closed
+status: open
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-08
 source: ["[[TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck]]"]
 phase: "[[PHASE-0001-Deck]]"
 likelihood: high
 impact: medium
 mitigation: ["[[TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck]]"]
-related: ["[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[PHASE-0001-Deck]]", "[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]", "[[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]", "[[TST-0001-The-Sidecar-Client-Reads-And-Never-Writes]]"]
+related: ["[[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]]", "[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[PHASE-0001-Deck]]", "[[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]", "[[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]", "[[TST-0001-The-Sidecar-Client-Reads-And-Never-Writes]]"]
 ---
 
 # A second sidecar on the same repository takes over the cockpit's focus routing
@@ -44,3 +44,11 @@ Two checks in `desktop/tests/sidecar-client.test.mjs` guard it, under the headin
 **Two faults found later were about starting a sidecar, not about capturing the cockpit's routing**, and both are fixed: a port Deck offered that Python could not bind ([[ISS-0009-A-Sidecar-Cannot-Bind-The-Port-Deck-Offered-It]]), and two Deck windows opening one workspace at the same moment and killing each other's sidecar ([[ISS-0010-Two-Windows-Opening-One-Workspace-Kill-Each-Others-Sidecar]]). Neither was a case of Deck taking over a sidecar the cockpit owned.
 
 **What would reopen it.** The trigger stated above still holds: if `cockpit focus` ever moves a window that is not the cockpit's while Deck is running, this note comes back to `open`.
+
+## Reopened, 2026-09-08
+
+**It happened.** Deck started a second sidecar on `your-trainer` while the cockpit was serving it, and `your-trainer/.cockpit/url` was rewritten to Deck's port — the routing file with two owners this note is about. Deck then exited and left the file naming a port nobody is listening on, with the cockpit's own sidecar still running and nothing pointing at it.
+
+The mitigation above is real and it has a hole: `alive()` compares `path.resolve(identity.root)` with `path.resolve(root)` as strings, and macOS's filesystem is case-insensitive, so one directory reached as `/Users/edwin/...` and as `/Users/Edwin/...` reads as two. The guard refused a sidecar that was serving exactly the workspace Deck was opening. Both checks in `desktop/tests/sidecar-client.test.mjs` pass, because both spell their paths the same way.
+
+[[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]] carries the evidence and the two decisions it needs. This note goes back to `closed` when a check exists that would have caught it.

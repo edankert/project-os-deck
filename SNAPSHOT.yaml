@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 10
-  ISS: 22
+  ISS: 23
   PHASE: 4
   REQ: 0
   RISK: 2
@@ -371,6 +371,16 @@ items:
       parent: "FEAT-0010"
       phase: PHASE-0002
   issues:
+    ISS-0023:
+      file: "docs/issues/ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case.md"
+      title: "Deck starts a second sidecar for a repository the cockpit already has open when the two spell the home directory differently, and that sidecar rewrites the repository's discovery file to its own port"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: []
+      note: "Observed 2026-09-08 while starting Deck for the reopened TST-0011: the cockpit served your-trainer on 8766, Deck started its own on 8901 for the same directory, and .cockpit/url was rewritten to 8901 and left there dead when Deck went. Cause: alive() compares path.resolve(identity.root) with path.resolve(root) as STRINGS, and macOS is case-insensitive -- the cockpit launched with /Users/edwin/... and Deck holds /Users/Edwin/..., so the guard called one directory two. Reopens RISK-0001, whose mitigation is that comparison; both guarding checks pass because both spell their paths the same way. This repository is unaffected (both hold /Users/Edwin/Dev/repos/project-os-deck), which is why it went unseen. Two decisions: compare real paths rather than strings, and whether a stale discovery file naming a dead port belongs upstream in the cockpit."
     ISS-0022:
       file: "docs/issues/ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card.md"
       title: "The smoke run's popped-out desk window shows no cards at all: one put on the desk from another window never appears, and the focused note is never highlighted there"
@@ -648,7 +658,7 @@ items:
     RISK-0001:
       file: "docs/risks/RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing.md"
       title: "A second sidecar on the same repository takes over the cockpit's focus routing"
-      status: closed
+      status: open
       owner: user:edwin
       phase: PHASE-0001
       note: "The sidecar writes .cockpit/url into the repository and the cockpit command follows it, so a second sidecar on one repository silently captures that routing -- and Deck and the cockpit are meant to be open together during this phase, because exit criterion 1 is a side-by-side comparison. Mitigated in TASK-0007 by reusing a running sidecar after verifying its identity, and starting one only when none answers."
@@ -924,7 +934,7 @@ metrics:
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 3
-    risks_open: 0
+    issues_triage: 4
+    risks_open: 1
     releases_total: 0
     decisions_total: 2
