@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 10
-  ISS: 21
+  ISS: 22
   PHASE: 4
   REQ: 0
   RISK: 2
@@ -371,6 +371,16 @@ items:
       parent: "FEAT-0010"
       phase: PHASE-0002
   issues:
+    ISS-0022:
+      file: "docs/issues/ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card.md"
+      title: "The smoke run's popped-out desk window shows no cards at all: one put on the desk from another window never appears, and the focused note is never highlighted there"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: []
+      note: "Found 2026-09-08 by running `npm run smoke` for the first time against the build of 2026-09-07; the close-out commit records that the smoke run could not be executed then. Two of its checks fail and every other one passes, as do the 165 unit tests. The satellite on deck://<ws>/features?panel=desk drew ZERO cards BEFORE the dispatch as well as after, so this is not only a change that failed to arrive. Two candidates, undiagnosed: the desk drops every card not in the pinned view because that view loaded empty in the satellite (drawDesk -> reconcileDesk over currentCards), or a satellite does not repaint on a change from another window, which is FEAT-0003's whole claim and what ISS-0018 touched last. Filed at triage so the reopened walks are not held up; the cheap diagnosis is to pop a desk out by hand and watch the count."
     ISS-0021:
       file: "docs/issues/ISS-0021-A-Sidecar-Started-After-The-Quit-Began-Outlives-Deck.md"
       title: "A sidecar spawned after the quit began, or any quit that came from a signal, still left a Python process running after Deck was gone"
@@ -914,7 +924,7 @@ metrics:
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 2
+    issues_triage: 3
     risks_open: 0
     releases_total: 0
     decisions_total: 2
