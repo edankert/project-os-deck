@@ -11,12 +11,12 @@
  * they put them. A popped-out window carries one panel and nothing else.
  */
 import type { CardGroup, CardModel, DeckView, PanelType, Workspace } from '../shared/types.js';
-import { AddressError, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
+import { AddressError, addressFor, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry } from '../shared/views.js';
 import { SidecarClient, flattenGroups, groupsFromNav } from '../shared/sidecar-client.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { deskCardsOf } from '../shared/store-state.js';
-import { PANEL_LABELS, PANEL_TYPES, panelOrNull } from '../shared/panels.js';
+import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
@@ -577,13 +577,13 @@ function currentAddress(): string | null {
   const state = host.state();
   if (state.workspaceId === null || state.viewId === null) return null;
   try {
-    return formatAddress({
-      workspaceId: state.workspaceId,
-      viewId: state.viewId,
-      desk: state.deskName,
-      note: panel === 'note' ? pinnedNoteId : state.noteId,
-      panel,
-    });
+    return formatAddress(
+      addressFor(state.workspaceId, state.viewId, {
+        desk: state.deskName,
+        note: panel === 'note' ? pinnedNoteId : state.noteId,
+        panel,
+      }),
+    );
   } catch (err) {
     say(err instanceof AddressError ? err.message : String(err), true);
     return null;
@@ -732,7 +732,7 @@ function wireControls(): void {
       // a duplicate, which is what this used to be (TASK-0026).
       const chosen = await askChoice(
         'what should the new window carry?',
-        PANEL_TYPES.map((type) => ({ value: type, label: PANEL_LABELS[type] })),
+        panelKinds.all().map((kind) => ({ value: kind.id, label: kind.label })),
       );
       if (chosen === null) return;
       if (chosen === 'note' && state.noteId === null) {
@@ -743,16 +743,16 @@ function wireControls(): void {
         say('put something on the desk before popping it out', true);
         return;
       }
-      const address = formatAddress({
-        workspaceId: state.workspaceId,
-        viewId: state.viewId,
-        desk: state.deskName,
-        note: state.noteId,
-        panel: chosen,
-      });
+      const address = formatAddress(
+        addressFor(state.workspaceId, state.viewId, {
+          desk: state.deskName,
+          note: state.noteId,
+          panel: chosen,
+        }),
+      );
       const result = await host.openPanel(address);
       if (!result.ok) say(result.error ?? 'that window did not open', true);
-      else say(`opened a window carrying ${PANEL_LABELS[chosen].toLowerCase()}`);
+      else say(`opened a window carrying ${panelLabel(chosen).toLowerCase()}`);
     })();
   });
 

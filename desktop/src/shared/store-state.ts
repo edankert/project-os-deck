@@ -71,6 +71,7 @@ export function initialState(): DeckState {
     filters: { statuses: [], types: [] },
     folds: {},
     revision: 0,
+    flowCursor: null,
   };
 }
 
@@ -288,6 +289,11 @@ export function normaliseState(value: unknown): DeckState {
     filters: normaliseFilters(raw['filters']),
     folds,
     revision: typeof raw['revision'] === 'number' && Number.isFinite(raw['revision']) ? raw['revision'] : 0,
+    // Always null, and deliberately not read back from the file: nothing
+    // writes it, so there is nothing on disk that could be there honestly.
+    // The slot exists so that a flow, when one is built, has somewhere to put
+    // the one piece of state that is not in the record (TASK-0052).
+    flowCursor: null,
   };
 }
 

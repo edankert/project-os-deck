@@ -86,8 +86,16 @@ export interface Desk {
   cards: DeskCard[];
 }
 
-/** What a popped-out window carries. One thing, named in its address. */
-export type PanelType = 'needs-you' | 'note' | 'desk';
+/**
+ * What a popped-out window carries. One thing, named in its address.
+ *
+ * A string rather than a union of three, because the kinds come from a
+ * registry each phase adds to (`shared/panels.ts`, TASK-0052). The guarantee
+ * is unchanged and is enforced where it belongs: the address grammar refuses a
+ * panel nothing has registered, so an address still cannot name something Deck
+ * cannot draw.
+ */
+export type PanelType = string;
 
 export interface Filters {
   statuses: string[];
@@ -117,6 +125,17 @@ export interface DeckState {
   folds: Record<string, boolean>;
   /** Rises on every accepted change; lets a subscriber drop a stale broadcast. */
   revision: number;
+  /**
+   * Where a person is in a flow. RESERVED by TASK-0052; nothing writes it and
+   * nothing reads it, and `normaliseState` does not read it back off disk
+   * either, because nothing could have put it there honestly.
+   *
+   * A flow's steps and their done-states are read from the record, so this
+   * cursor is the only piece of a flow that is not already somewhere else —
+   * which is why the slot is worth reserving before a flow is designed.
+   * `docs/ARCHITECTURE.md`, "Flows", carries the concept in words.
+   */
+  flowCursor: FlowCursor | null;
 }
 
 /** What a host can do. The renderer asks rather than testing for Electron. */
@@ -139,4 +158,29 @@ export interface DeckAddress {
   desk: string | null;
   note: string | null;
   panel: PanelType | null;
+  /** Which surface draws the view: the list, cards on a desk, or the field. */
+  surface: string | null;
+  /** A whole screen that is not a view of notes: the acceptance checks, a release. */
+  page: string | null;
+  /** An ordered list of steps a person is working through. */
+  flow: string | null;
+  /** Where in that flow they are. Refused without a `flow`, which it names nothing without. */
+  step: string | null;
+}
+
+/**
+ * Where a person is in a flow.
+ *
+ * RESERVED by TASK-0052 and written by nothing. A flow is an ordered list of
+ * steps whose done-state is read from the record and whose verb comes from the
+ * registry, so the only state outside the record is this cursor —
+ * `docs/ARCHITECTURE.md`, "Flows", carries the concept. Edwin said on
+ * 2026-09-08 that he does not yet know what flows should look like and wants
+ * them considered now and fleshed out over time, so the slot exists and
+ * nothing fills it. The acceptance runner's position, which the cockpit loses
+ * when its window closes, is what it is for.
+ */
+export interface FlowCursor {
+  flow: string;
+  step: string;
 }

@@ -9,28 +9,22 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { PANEL_TYPES, PANEL_LABELS, isPanelType, panelOrNull } = load('shared/panels.js');
-const { formatAddress, parseAddress, tryParseAddress, AddressError } = load('shared/address.js');
+const { panelKinds, panelLabel, isPanelType, panelOrNull } = load('shared/panels.js');
+const { addressFor, formatAddress, parseAddress, tryParseAddress, AddressError } = load('shared/address.js');
 
 const WORKSPACE = '3f2a1b0c9d8e7f60';
 
 test('a window carries one of three things, each with a name a person reads', () => {
-  assert.deepEqual([...PANEL_TYPES], ['needs-you', 'note', 'desk']);
-  for (const type of PANEL_TYPES) {
-    assert.equal(typeof PANEL_LABELS[type], 'string');
-    assert.ok(PANEL_LABELS[type].length > 0, `${type} has no label to offer`);
+  assert.deepEqual(panelKinds.ids(), ['needs-you', 'note', 'desk']);
+  for (const type of panelKinds.ids()) {
+    assert.equal(typeof panelLabel(type), 'string');
+    assert.ok(panelLabel(type).length > 0, `${type} has no label to offer`);
   }
 });
 
 test('every panel survives being written into an address and read back', () => {
-  for (const panel of PANEL_TYPES) {
-    const address = formatAddress({
-      workspaceId: WORKSPACE,
-      viewId: 'issues',
-      desk: 'triage',
-      note: 'ISS-0256',
-      panel,
-    });
+  for (const panel of panelKinds.ids()) {
+    const address = formatAddress(addressFor(WORKSPACE, 'issues', { desk: 'triage', note: 'ISS-0256', panel }));
     const parsed = parseAddress(address);
     assert.equal(parsed.panel, panel, `${address} did not come back carrying ${panel}`);
     assert.equal(parsed.desk, 'triage');
@@ -47,7 +41,7 @@ test('a panel Deck cannot draw is refused rather than opened as something else',
 
 test('the two ends agree: what formatting refuses, parsing refuses too', () => {
   assert.throws(
-    () => formatAddress({ workspaceId: WORKSPACE, viewId: 'issues', desk: null, note: null, panel: 'status' }),
+    () => formatAddress(addressFor(WORKSPACE, 'issues', { panel: 'status' })),
     AddressError,
     'formatting wrote a panel that parsing would refuse',
   );
@@ -63,7 +57,7 @@ test('a panel read from somewhere untrusted is a panel or nothing', () => {
 });
 
 test('a window with no panel is the whole application, which is still addressable', () => {
-  const address = formatAddress({ workspaceId: WORKSPACE, viewId: 'issues', desk: null, note: null, panel: null });
+  const address = formatAddress(addressFor(WORKSPACE, 'issues'));
   assert.equal(address, `deck://${WORKSPACE}/issues`);
   assert.equal(parseAddress(address).panel, null);
 });

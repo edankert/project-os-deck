@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0006
 aliases: ["FEAT-0006"]
 title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-status: doing
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[PHASE-0001-Deck]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 goal: "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside."
 requirements: []
@@ -52,6 +52,12 @@ Any state a person can reach in Deck can be written down as a short string, and 
 - Plan: `docs/features/addresses/plan/PLAN.md`
 
 ## Where this stands
+
+**2026-09-09: the task is done and the feature is at `review`, waiting on a review and nothing else.** [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]] landed. An address now carries `surface`, `page`, `flow` and `step` beside the five it had, each refusing a value it does not know by name. The panel kinds come from a registry (`desktop/src/shared/registry.ts`) that a phase adds to, so the guarantee is unchanged — an address cannot name something Deck cannot draw — and the direction is reversed: whoever builds a kind registers it, rather than editing a list in the parser.
+
+Two of the four vocabularies are deliberately empty. Deck draws no page and runs no flow, so `?page=release` is refused today and parses the day something draws one. The refusal says "no page is registered", which is the state of the program rather than a list somebody forgot to fill in.
+
+Nothing a person has already copied stops working: the six states [[TST-0005-Every-State-Round-Trips-Through-Its-Address]] names round-trip to the same states, their written form is byte-for-byte what it was, and the twelve malformed addresses are still refused. Both tables moved into one file that both suites read, so the claim is a measurement rather than a copy. [[TST-0034-The-Grammar-Carries-The-New-Keys-And-The-Panel-Registry-Refuses-Strangers]] is 15 checks.
 
 **2026-09-08: back to `doing`, with one new task and three new criteria.** [[PHASE-0001-Deck]] widened on Edwin's decision, and four kinds of state arriving in the next three phases have no written form: a Glass surface, a page such as the acceptance checks or the release page, an editor over a note, and a flow at a step ([[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]], Part 5). The rule this feature exists to keep — every reachable state has an address — stops being true the moment one of those ships without a key. [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]] adds the four keys and turns the closed three-item panel list into a registry, keeping the guarantee that an address cannot name something Deck cannot draw.
 

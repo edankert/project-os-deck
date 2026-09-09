@@ -3,19 +3,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
+// The table lives beside this suite rather than in it, because TST-0034 runs
+// the same one to prove the grammar opened without changing what it means.
+import { BAD, STATES, WORKSPACE } from './address-table.mjs';
 
 const { formatAddress, parseAddress, tryParseAddress, AddressError, isDeskName } = load('shared/address.js');
-
-const WORKSPACE = '3f2a1b0c9d8e7f60';
-
-const STATES = [
-  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: null, panel: null },
-  { workspaceId: WORKSPACE, viewId: 'cards', desk: 'triage', note: null, panel: null },
-  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: 'FEAT-0002', panel: null },
-  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: null, panel: 'needs-you' },
-  { workspaceId: WORKSPACE, viewId: 'cards', desk: null, note: 'FEAT-0002', panel: 'note' },
-  { workspaceId: WORKSPACE, viewId: 'a-view', desk: 'my desk', note: 'CHG-20260906-A', panel: 'desk' },
-];
 
 test('format then parse is the identity over every reachable state', () => {
   for (const state of STATES) {
@@ -32,20 +24,6 @@ test('a desk name with a space survives the round trip', () => {
   assert.equal(parseAddress(address).desk, 'my desk');
 });
 
-const BAD = [
-  ['', 'empty'],
-  ['   ', 'blank'],
-  ['https://example.com/x', 'another scheme'],
-  ['deck://', 'no workspace'],
-  ['deck://only-one-segment', 'no view'],
-  ['deck://ws/view/extra', 'too many segments'],
-  ['deck://WS!/view', 'a workspace id that is not one'],
-  ['deck://3f2a1b0c9d8e7f60/Not A View', 'a view id that is not one'],
-  ['deck://3f2a1b0c9d8e7f60/view?mode=features', 'a key that is not part of an address'],
-  ['deck://3f2a1b0c9d8e7f60/view?note=', 'a key with no value'],
-  ['deck://3f2a1b0c9d8e7f60/view?note', 'a key with no value at all'],
-  ['deck://3f2a1b0c9d8e7f60/view?note=%E0%A4%A', 'text that will not decode'],
-];
 
 test('every malformed address is refused, and says why', () => {
   for (const [raw, why] of BAD) {

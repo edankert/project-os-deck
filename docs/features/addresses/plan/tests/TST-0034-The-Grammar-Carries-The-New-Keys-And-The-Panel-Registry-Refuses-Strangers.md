@@ -6,7 +6,7 @@ title: "The grammar carries surface, page, flow and step, every old address stil
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0006-Every-State-Has-An-Address]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -53,10 +53,12 @@ Every reachable Deck state has an address, which is what makes a pop-out window,
 - Nothing a person has already copied out of Deck stops working.
 - An address still cannot name something Deck cannot draw, and now the guarantee comes from a registry a phase adds to rather than from a list somebody has to remember to edit.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh panel-registry`: the check count and the date.
-- The count of addresses in the round-trip table, before and after, which should be the same plus the new keys.
+- `bash tools/scripts/run-desktop-tests.sh panel-registry`: 15 checks pass, 2026-09-09.
+- The round-trip table holds the same six states before and after, and the malformed table the same twelve addresses. Both moved to `desktop/tests/address-table.mjs` and are now run by this suite and by [[TST-0005-Every-State-Round-Trips-Through-Its-Address]], so the two cannot drift into two tables.
+- The six states gained four parts each — `surface`, `page`, `flow`, `step` — absent in every one of them, and their WRITTEN form is byte-for-byte what it was, which is what a person who copied an address yesterday actually depends on.
+- Whole desktop suite: 190 checks, 2026-09-09. `electron . --smoke`: `ok: true`.
 
 ## Adequacy (who verifies this test?)
 

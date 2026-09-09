@@ -61,9 +61,9 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0001"
-  feature: "FEAT-0003"
-  task: ""
-  issue: "ISS-0022"
+  feature: "FEAT-0006"
+  task: "TASK-0052"
+  issue: ""
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -117,7 +117,7 @@ items:
     FEAT-0006:
       file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
       title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -428,7 +428,7 @@ items:
     TASK-0052:
       file: "docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md"
       title: "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0006"
       phase: PHASE-0001
@@ -1089,7 +1089,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 52
-    tasks_done: 23
+    tasks_done: 24
     tests_total: 23
     tests_passing: 0
     tests_failing: 0
