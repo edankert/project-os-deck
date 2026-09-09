@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 52
+  ISS: 55
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -653,6 +653,36 @@ items:
       component: docs
       tests: []
       note: "Fifth review, 2026-09-09, finding 6. TST-0026's corrected 201/2,704/386 is 207/2,705/386 today, off by the six notes that commit added — a pre-commit count in a post-commit note, twice running. records.ts says 3,351 where HEAD gives 3,358. Three mutation counts say 2 or 3 where a re-run gives 4. TST-0028's step table has two rows numbered 7. Three rules have each been followed and failed; the new one is to stop writing corpus counts at all."
+    ISS-0053:
+      file: "docs/issues/ISS-0053-Deck-Can-Stop-Offering-A-Tick-And-Nothing-Notices.md"
+      title: "Deck can stop offering a tick control on every note in the application and every check stays green, which is the one thing the feature is named after"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: []
+      note: "Sixth review, 2026-09-09, finding 3, and the most useful thing six rounds have found. Making attachTicks return immediately leaves npm test at 321/321, run-smoke.sh at exit 0 and check-write-round-trip.mjs at 18/18 - with Deck offering no tick control anywhere. The round-trip script ticks through client.tick, the route with no interface on it, which is ISS-0040's gap for verbs repeated for ticks. TST-0028 has an empty last_verified so there is no walk either. Every round chased the finding it was given; none asked which controls the feature offers and whether each is pressed."
+    ISS-0054:
+      file: "docs/issues/ISS-0054-The-Smoke-Runner-Cannot-Start-Where-It-Must.md"
+      title: "The smoke runner re-execs itself by a path that no longer resolves, the gate that must run it cannot give it a sidecar, and a failed install now empties a working checkout"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Sixth review, 2026-09-09, findings 1, 2 and 4. run-smoke.sh cds to desktop/ then re-execs the script by a RELATIVE path taken from the repo root, which after the cd does not exist, so both CI jobs die at 127 on the no-display branch that GitHub runners always take. The smoke also needs the SIDECAR, which validate-docs.yml cannot provide and which makes the run fail rather than be unrunnable. ISS-0049's first conclusion was right and its second was wrong: provisioning two of three things did not make the command belong in the shared gate. And npm ci empties node_modules before fetching, so a failed install now destroys a working checkout."
+    ISS-0055:
+      file: "docs/issues/ISS-0055-Two-Re-Measured-Numbers-Still-Disagree-With-Themselves.md"
+      title: "A ticked criterion says two where the evidence four lines below it says four, and one date nobody can read would expire five exemptions for good"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: docs
+      tests: []
+      note: "Sixth review, 2026-09-09, findings 5 and 6. ISS-0052's re-measurement corrected the prose and not the evidence stamped on the checkbox, so ISS-0045 says 2 in the criterion and 4 in the Evidence section four lines below; 4 is right. ISS-0051 says a datetime expires two exemptions where it expires three, and two was impossible because all five share one memoised condition. Latent: a single unreadable date would expire all five permanently and the summary calls that 'expired', which reads as somebody scheduling something."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"
@@ -1387,7 +1417,7 @@ metrics:
     tasks_total: 52
     tasks_done: 38
     tests_total: 24
-    tests_passing: 0
+    tests_passing: 1
     tests_failing: 0
     issues_open: 0
     issues_triage: 1

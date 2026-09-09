@@ -238,3 +238,26 @@ The same pattern reached the source this time. `desktop/src/shared/records.ts` s
 - **Nothing makes the digest change without the file changing.** It is computed once per read from the text as `readFileSync(..., 'utf-8')` returns it, so a BOM, a line ending or a clock cannot move it; two walks of the same tree produce identical digests. The widening cannot raise a revision that the old digest would not have raised, because the comparison is an OR with the modification time.
 - **The new check guards both routes.** Reverting `digestOf` to the frontmatter and the title fails `a BODY change under an unchanged modification time raises the revision`; with its first assertion removed, the same mutation fails the second one, `the same, on the full-rebuild route`. Both halves are live. In the vocabulary the other notes use, that is one check with two assertions, not "two checks".
 - `check-counts-live.py` reports 0 disagreements over three corpora — the per-corpus figures are in finding 1 — and it still names cockpit ISS-0279's 92 list-typed vault notes as the one deliberate difference. `npm test` is 321/321 and `validate-docs.sh --as-committed` exits 0.
+
+## Independent review — 2026-09-09 (sixth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+**This feature's own defect is discharged and I found no new one in it.** Nothing is held against the index; it is held by the repository-wide CI findings recorded on [[FEAT-0013-The-First-Write]], because a feature cannot close while every push turns the mandatory job red.
+
+**The fifth round's finding 1 is fixed, and the new rule works.** [[TST-0026-Decks-Index-Counts-What-The-Cockpit-Counts]] no longer states a size for this repository: it states the shape — no note the two programs read as different types, no type whose totals differ — and points at the script. `desktop/src/shared/records.ts`'s digest comment cites `check-counts-live.py`'s corpora instead of a count. Run today:
+
+```
+../project-os-cockpit/.venv/bin/python3 tools/scripts/check-counts-live.py
+  project-os-deck:  211 notes counted by Deck, 211 by the cockpit, 19 template(s) dropped by both
+  your-trainer:    2706 notes counted by Deck, 2706 by the cockpit, 20 template(s) dropped by both
+  vault:            386 notes counted by Deck,  386 by the cockpit, 21 template(s) dropped by both
+  92 note(s) the cockpit gave no type and Deck did ...
+  3 corpus(es) compared, 0 disagreement(s) between the two programs
+```
+
+The count here has moved twice during this session alone — 207 earlier today, 211 now — which is the evidence that dropping it was right rather than a dodge.
+
+**Every number the notes still carry reproduces.** TST-0026's "92 of 386 notes" in `~/Notes` with a list-valued `type:` is exactly what the script printed. `records.ts:84`'s "Your Trainer's 2,726 notes and 9MB" measures 2,726 notes and 9.07 MB at HEAD, walked with Deck's own `walkNotes`. Both are counts of other repositories, which is what the rule permits.
+
+**Finding 1 (high, repository-wide, recorded in full on [[FEAT-0013-The-First-Write]]):** `run-smoke.sh` re-execs itself under `xvfb-run` using a relative path from the wrong directory, so it exits 127 on every Linux runner; and the smoke needs the sidecar, which `validate-docs.yml` does not install, so a smoke that gets past the first problem fails rather than skipping. Both CI jobs go red on the first push. Not this feature's code; it gates this feature's close-out.

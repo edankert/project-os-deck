@@ -19,7 +19,7 @@ import { SidecarSupervisor, freePort, waitForExit } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
-import { NoteIndex, docsRootFor, pathPrefixFor } from './note-index.js';
+import { NoteIndex, docsRootFor, pathPrefixFor, walkNotes } from './note-index.js';
 import {
   SidecarWriteClient,
   WriteRefused,
@@ -1011,7 +1011,7 @@ async function recordScriptInANoteDoesNotRun(record: (ok: boolean, what: string)
 async function recordEveryVerbAsksWhy(
   record: (ok: boolean, what: string) => void,
   skip: (why: string) => void,
-  prepared: { id: string } | null,
+  prepared: PreparedWorkspace | null,
 ): Promise<void> {
   if (prepared === null) {
     skip('the verb controls: no workspace was opened, so no note could be focused');
@@ -1027,19 +1027,32 @@ async function recordEveryVerbAsksWhy(
   // handler is Deck's own code replacing Deck's own code, and it is the only
   // thing standing between this run and a real write to the repository.
   const sent: Array<Record<string, unknown>> = [];
-  const real = smokeHandlers.get('deck:write:transition');
-  const intercept = (_e: Electron.IpcMainInvokeEvent, request: Record<string, unknown>): unknown => {
-    sent.push(request);
-    return { ok: true, result: {} };
-  };
-  ipcMain.removeHandler('deck:write:transition');
-  ipcMain.handle('deck:write:transition', intercept);
-  smokeHandlers.set('deck:write:transition', intercept as InvokeHandler);
+  const ticked: Array<Record<string, unknown>> = [];
+  const held = new Map<string, InvokeHandler | undefined>();
+  const catcher = (into: Array<Record<string, unknown>>) =>
+    ((_e: Electron.IpcMainInvokeEvent, request: Record<string, unknown>): unknown => {
+      into.push(request);
+      return { ok: true, result: {} };
+    }) as InvokeHandler;
+  // Both write channels, because BOTH are things a person presses. Ticks were
+  // not intercepted before, and nothing pressed one either (ISS-0053).
+  for (const [channel, into] of [
+    ['deck:write:transition', sent],
+    ['deck:write:tick', ticked],
+  ] as Array<[string, Array<Record<string, unknown>>]>) {
+    held.set(channel, smokeHandlers.get(channel));
+    const stub = catcher(into);
+    ipcMain.removeHandler(channel);
+    ipcMain.handle(channel, stub);
+    smokeHandlers.set(channel, stub);
+  }
   const putItBack = (): void => {
-    ipcMain.removeHandler('deck:write:transition');
-    if (real !== undefined) {
-      ipcMain.handle('deck:write:transition', real);
-      smokeHandlers.set('deck:write:transition', real);
+    for (const [channel, original] of held) {
+      ipcMain.removeHandler(channel);
+      if (original !== undefined) {
+        ipcMain.handle(channel, original);
+        smokeHandlers.set(channel, original);
+      }
     }
   };
 
@@ -1150,6 +1163,92 @@ async function recordEveryVerbAsksWhy(
         request['id'] === withVerbs && typeof request['to'] === 'string' && request['to'] !== '',
         `carrying the note and the status the row named (${String(request['to'])})`,
       );
+    }
+
+    // **The tick control, pressed** (ISS-0053). Six rounds hardened the verb
+    // row and nobody pressed a tick — so `attachTicks` could be deleted,
+    // leaving Deck unable to resolve a criterion anywhere, with the node
+    // suite, this run and the round-trip script all green. That script ticks
+    // through `client.tick`, which is the route with no interface on it.
+    //
+    // The note is CHOSEN by reading the workspace — see
+    // `notesWithAnUntickedCriterion` — and OPENED by clicking its row in the
+    // navigator, which is the route a person takes and the one this window
+    // has already proved works.
+    const candidates = notesWithAnUntickedCriterion(prepared.root);
+    record(candidates.length > 0, 'this workspace has notes with unticked criteria, so this measures something');
+    const tick = (await win.webContents.executeJavaScript(`
+      (async () => {
+        const wanted = ${JSON.stringify(candidates)};
+        const probe = {wanted: wanted.length, tried: []};
+        // **Unfold the groups first.** The navigator renders a folded group's
+        // rows nowhere, so every route this check tried — clicking a row, the
+        // search box, addressing the window at the note — failed for the same
+        // reason and looked like four different faults.
+        for (const twist of [...document.querySelectorAll('#nav-list .twist')]) twist.click();
+        await new Promise((r) => setTimeout(r, 600));
+        probe.rows = document.querySelectorAll('#nav-list [data-note-id]').length;
+        for (const id of wanted) {
+          const row = document.querySelector('#nav-list [data-note-id="' + id + '"]');
+          if (row === null) continue;
+          row.click();
+          await new Promise((r) => setTimeout(r, 900));
+          const control = document.querySelector('#reader button.tick');
+          probe.tried.push({id, control: control !== null});
+          if (control === null) continue;
+          control.click();
+          await new Promise((r) => setTimeout(r, 250));
+          const form = document.querySelector('#status form');
+          const label = form === null ? '' : (form.textContent || '').trim();
+          if (form !== null) {
+            form.querySelector('input').value = 'the smoke run pressed it';
+            form.dispatchEvent(new Event('submit', {cancelable: true}));
+            await new Promise((r) => setTimeout(r, 400));
+          }
+          // **And once more with the box left empty**, which is the refusal a
+          // person meets most often: an empty answer is treated as no answer,
+          // so nothing should be sent and Deck should say why. (No backtick may
+          // appear in this comment — it is inside a template literal.)
+          let refusedEmpty = null;
+          const second = document.querySelector('#reader button.tick');
+          if (second !== null) {
+            second.click();
+            await new Promise((r) => setTimeout(r, 250));
+            const box = document.querySelector('#status form');
+            if (box !== null) {
+              box.querySelector('input').value = '';
+              box.dispatchEvent(new Event('submit', {cancelable: true}));
+              await new Promise((r) => setTimeout(r, 350));
+              refusedEmpty = (document.querySelector('#status') || {}).textContent || '';
+            }
+          }
+          return {found: id, asked: form !== null, label, refusedEmpty, probe};
+        }
+        return {found: null, probe};
+      })()
+    `)) as { found: string | null; asked?: boolean; label?: string; refusedEmpty?: string | null; probe?: unknown };
+    // Printed only when it found nothing, which is the case a person has to
+    // diagnose; on success it is noise.
+    if (tick.found === null) console.log(JSON.stringify({ tickProbe: tick }));
+
+    record(tick.found !== null, `a note with an unticked criterion offers a tick control in this view (tried ${candidates.length})`);
+    if (tick.found !== null) {
+      record(tick.asked === true && /^evidence for /i.test(tick.label ?? ''), 'pressing it asks for evidence');
+      const wrote = ticked.at(-1) ?? {};
+      record(
+        ticked.length === 1 && wrote['evidence'] === 'the smoke run pressed it',
+        'and the evidence a person typed reaches the shell',
+      );
+      record(
+        typeof wrote['criterion'] === 'string' && (wrote['criterion'] as string) !== '',
+        `naming the criterion the sidecar addressed (${String(wrote['criterion']).slice(0, 40)}…)`,
+      );
+      record(wrote['id'] === tick.found, 'on the note that was open');
+      record(
+        typeof tick.refusedEmpty === 'string' && /nothing was ticked/i.test(tick.refusedEmpty),
+        `a tick with no evidence is refused before it is sent (${String(tick.refusedEmpty).slice(0, 60)})`,
+      );
+      record(ticked.length === 1, 'and nothing more reached the shell');
     }
   } finally {
     win.destroy();
@@ -1412,6 +1511,8 @@ function alivePid(pid: number): boolean {
 interface PreparedWorkspace {
   id: string;
   name: string;
+  /** Where it is on disk, so the smoke run can choose a note by reading it. */
+  root: string;
 }
 
 /**
@@ -1423,6 +1524,45 @@ interface PreparedWorkspace {
  * cause was nowhere in the output (ISS-0022). Two commands that differ by a
  * flag should not run two different smoke runs.
  */
+/**
+ * A note in this workspace that still has an unticked criterion.
+ *
+ * Chosen HERE rather than by walking the navigator in the page, because the
+ * page can only see one view's rows and the answer moved underneath the check
+ * the first time it ran: closing out six issues ticked every box in the Issues
+ * view, and a check that had passed all afternoon went red for a reason that
+ * had nothing to do with Deck (ISS-0053). This reads the workspace and names
+ * the note, so the run addresses a window straight at it.
+ *
+ * Returns null when the workspace genuinely has no unticked criterion, which
+ * the caller reports as a failure rather than passing over: it means this
+ * check measured nothing.
+ */
+function notesWithAnUntickedCriterion(root: string, most = 500): string[] {
+  const docsRoot = docsRootFor(root);
+  const found: string[] = [];
+  for (const record of walkNotes(docsRoot).records) {
+    if (record.relPath.startsWith('__templates__/')) continue;
+    let text: string;
+    try {
+      text = fs.readFileSync(path.join(docsRoot, record.relPath), 'utf-8');
+    } catch {
+      continue;
+    }
+    // A blank line before the list, because the sidecar addresses no checkbox
+    // on a note whose rendered and source counts disagree, and a list opening
+    // straight after a paragraph is what causes that.
+    if (/\n\n- \[ \] /.test(text)) found.push(record.id);
+    if (found.length >= most) break;
+  }
+  // ALL of them, not the first few. Whether a checkbox gets an address is the
+  // sidecar's judgement about the rendered document, and whether a note has a
+  // row is the view's — neither is readable from the source. Capping this at
+  // ten returned ten notes that no view lists, so the check reported that no
+  // note in the workspace could be ticked while five in the open view could.
+  return found;
+}
+
 function prepareWorkspace(): PreparedWorkspace | null {
   const wanted = argValue('--workspace') ?? defaultWorkspacePath(__dirname);
   const added = workspaces.add(wanted);
@@ -1430,7 +1570,7 @@ function prepareWorkspace(): PreparedWorkspace | null {
     console.log(JSON.stringify({ workspaceRefused: added.reason, path: wanted }));
     return null;
   }
-  return { id: added.workspace.id, name: added.workspace.name };
+  return { id: added.workspace.id, name: added.workspace.name, root: added.workspace.root };
 }
 
 function argValue(flag: string): string | null {

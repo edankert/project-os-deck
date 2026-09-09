@@ -1376,6 +1376,20 @@ boot()
     // the capability set, the workspaces and the first view all arrive after.
     // Anything driving Deck from outside waits for this rather than for load.
     (globalThis as unknown as { __deckReady?: boolean }).__deckReady = true;
+    // **A seam for the smoke run, beside the one it already waits on.**
+    // Opening a note in the reader is what a person does by clicking a row,
+    // and reaching that from outside meant either fighting the navigator's
+    // folding and filters or reimplementing the click. This is the same
+    // shape as `openOutside` in `main.ts`: the check drives Deck's own path
+    // rather than a copy of it (ISS-0053).
+    (globalThis as unknown as { __deckOpenNote?: (id: string) => Promise<boolean> }).__deckOpenNote = async (
+      id: string,
+    ): Promise<boolean> => {
+      const card = currentCards.find((c) => c.noteId === id);
+      if (card === undefined) return false;
+      await openCard(card);
+      return true;
+    };
   })
   .catch((err: unknown) => {
     say(err instanceof Error ? err.message : String(err), true);

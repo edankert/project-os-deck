@@ -253,3 +253,45 @@ The note's own preceding sentence says three exemptions hold with nothing dated 
 - The `source.filter` prefix rule holds in both directions. Two synthetic base files identical but for a formula named `filterHelper` and `plainHelper` now get the same verdict, both failing with the same sentence; under the substring rule the first was silently excused.
 - The live run reproduces exactly what [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] claims: 19 base files, 46 views, 21 selecting nothing, 16 explained by their own filter, 5 exempt, 0 expired, 0 unexplained, 0 failures, and the latest date of either kind is 2026-03-17.
 - The five exempted views really do filter on `due`/`scheduled` at or after today, so the condition names the right two properties. `This Week's Tasks` would stay empty for a date beyond the week and the condition expires it anyway, which errs towards asking a person to look — the safe direction.
+
+## Independent review — 2026-09-09 (sixth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+The fifth round's finding 1 is genuinely fixed: all five date shapes now expire the exemption, and I drove each one. The evidence line written for that fix contains a number that does not reproduce, which is the fifth round running.
+
+**Finding 1 (low): [[ISS-0051-Three-Checks-That-Can-No-Longer-Fail]] says `scheduled: 2026-12-01T09:00:00` expires two exemptions; it expires three.**
+
+Against a temporary vault holding the real `__bases__/Tasks/Tasks Base.base` and one note:
+
+```
+node tools/scripts/check-bases-live.mjs <temp vault>
+  6 view(s) selected nothing: 0 explained by their own filter, 0 exempt under a
+  condition that still holds, 3 whose exemption has expired, 3 unexplained
+  FAIL ... / Today's Tasks: ... no longer true (latest due or scheduled anywhere: 2026-12-01)
+  FAIL ... / This Week's Tasks: ...
+  FAIL ... / Future Tasks: ...
+```
+
+Two cannot happen. All three rows share one `DATED_AHEAD` object and `exemption()` memoises by that object, so the condition is computed once for the whole vault and every row gets the same answer. The other four shapes in that evidence line — `2026-12-01`, `[2026-12-01]`, the block list, `"01/12/2026"` — each expire three, exactly as written. This is the same "two where it is three" the fifth round corrected in [[ISS-0046-An-Empty-View-Is-Excused-By-A-Name-Somebody-Chose]], reappearing in the note that corrected it.
+
+**Finding 2 (low, latent): one unreadable date anywhere in a vault expires all five exemptions permanently, and the summary line does not distinguish that from a real future date.**
+
+`take()` sends any value that does not start with `YYYY-MM-DD` to `unreadable`, and `unreadable.length > 0` returns `holds: false` regardless of what the dates say. A note carrying `due: TBD` — or a Templater placeholder, or a number — turns five views into failures that no editing of the base files can clear:
+
+```
+# a temp vault with one note carrying `due: TBD`
+node tools/scripts/check-bases-live.mjs <temp vault>
+  3 whose exemption has expired
+  FAIL ... / Today's Tasks: ... no longer true (1 date(s) this cannot read, so the
+       exemption cannot be confirmed: TBD) — look at this view again
+```
+
+I checked whether this is live and it is not: over all 407 notes in `~/Notes` there are 67 `due:`/`scheduled:` values in 29 distinct shapes, and **none** fails the pattern. The failure names the value it could not read, so a person can act on it, and erring towards asking someone to look is the safe direction. Recorded as a lead rather than a defect. The one thing worth changing is the counter: an exemption withdrawn because a date could not be parsed is counted under "whose exemption has expired", which reads as "somebody scheduled something".
+
+**Finding 3 (high, repository-wide, recorded in full on [[FEAT-0013-The-First-Write]]):** `run-smoke.sh` re-execs itself under `xvfb-run` using a relative path resolved from the wrong directory, so it exits 127 on every Linux runner; and the smoke needs the sidecar, which `validate-docs.yml` does not install, so it fails rather than skipping there. Both CI jobs go red on the first push. Not this feature's code; it gates this feature's close-out.
+
+**What I attacked and could not break.**
+
+- The live run reproduces [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] exactly: 19 base files, 46 views, 21 selecting nothing, 16 explained by their own filter, 5 exempt, 0 expired, 0 unexplained, 0 failures, latest date 2026-03-17.
+- The list handling is real. `due: [2026-12-01]` and the same value written as a block sequence both reach the comparison, which is the shape [[project-os-cockpit#ISS-0279]] is about.

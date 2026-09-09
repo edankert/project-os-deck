@@ -89,8 +89,13 @@ const DATED_AHEAD = {
     if (unreadable.length > 0) {
       return {
         holds: false,
-        detail: `${unreadable.length} date(s) this cannot read, so the exemption cannot be confirmed: ` +
-          `${[...new Set(unreadable)].slice(0, 3).join(', ')}`,
+        // **Told apart from "expired"** (ISS-0055). One `due: TBD` anywhere in
+        // the vault withdraws every exemption, and calling that expired reads
+        // as "somebody scheduled something" and sends a person to the views.
+        // The fault is in a note, and the message says so.
+        unconfirmable: true,
+        detail: `${unreadable.length} date(s) this cannot read, so the exemption cannot be confirmed — fix the ` +
+          `note, not the view: ${[...new Set(unreadable)].slice(0, 3).join(', ')}`,
       };
     }
     const latest = dates.sort().at(-1);
@@ -126,6 +131,7 @@ let explainedEmpty = 0;
 let knownEmpty = 0;
 let silentEmpty = 0;
 let expiredEmpty = 0;
+let unconfirmableEmpty = 0;
 const today = new Date().toISOString().slice(0, 10);
 const checked = new Map();
 /** A row's condition, computed once. */
@@ -191,10 +197,15 @@ for (const rel of files) {
         knownEmpty += 1;
         console.log(`        (empty on purpose: ${known.why}; ${exemption(known).detail})`);
       } else if (known !== undefined) {
-        expiredEmpty += 1;
+        const state = exemption(known);
+        if (state.unconfirmable === true) unconfirmableEmpty += 1;
+        else expiredEmpty += 1;
         failures.push(
-          `${rel} / ${view.name}: exempted because "${known.why}", and that is no longer true ` +
-            `(${exemption(known).detail}) — look at this view again`,
+          state.unconfirmable === true
+            ? `${rel} / ${view.name}: exempted because "${known.why}", and that cannot be confirmed ` +
+              `(${state.detail})`
+            : `${rel} / ${view.name}: exempted because "${known.why}", and that is no longer true ` +
+              `(${state.detail}) — look at this view again`,
         );
       } else {
         silentEmpty += 1;
@@ -217,7 +228,7 @@ for (const rel of files) {
 console.log(`${files.length} base file(s) read, ${views} view(s) across them`);
 console.log(`${drawnEmpty} view(s) selected nothing: ${explainedEmpty} explained by their own filter, ` +
   `${knownEmpty} exempt under a condition that still holds, ${expiredEmpty} whose exemption has expired, ` +
-  `${silentEmpty} unexplained`);
+  `${unconfirmableEmpty} whose exemption cannot be confirmed because a date will not read, ${silentEmpty} unexplained`);
 console.log(`${drewSilently} view(s) drew a list and reported nothing — where a difference from Obsidian would be silent`);
 for (const failure of failures) console.log(`FAIL ${failure}`);
 console.log(`${failures.length} failure(s)`);

@@ -315,3 +315,91 @@ The last row is finding 2. The three that are merely off are the fourth consecut
 - The write path is never reached by the smoke: the interception probe fires before any control is pressed, and `git status` was clean after every run I made.
 - The Electron-presence test in `run-smoke.sh` reads as a confusing `||`/`&&` chain, and I could not make it wrong: `(require fails || no dist) && the resolved path is missing` is false whenever the binary is genuinely there and true in each of the three ways it can be absent.
 - The 127 story holds where the notes claim it: unrunnable locally, red in CI. Finding 1 is that the red lands on the wrong job.
+
+## Independent review — 2026-09-09 (sixth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. What is independent here is the context, not the weights.
+
+Four of the fifth round's six findings are properly discharged and I could not defeat them. The two CI findings are not: `run-smoke.sh` still cannot run in either GitHub job, for two reasons neither ISS-0049 nor `deck-smoke.yml` names. And the write this feature is named after — ticking a criterion — can be deleted from the interface entirely with every gate still green.
+
+**Finding 1 (high): `run-smoke.sh` cannot start on any Linux machine with no display, because the re-exec under `xvfb-run` looks for the script in the wrong directory. Both CI jobs go red at exit 127.**
+
+The script does `cd "$DESKTOP"` at line 24 and then, at the display check, `exec env DECK_SMOKE_UNDER_XVFB=1 xvfb-run --auto-servernum bash "${BASH_SOURCE[0]}" "$WHICH"`. `${BASH_SOURCE[0]}` is the path the script was invoked with. [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]'s `command:` is `bash tools/scripts/run-smoke.sh both`, `run-tests.py` runs it with `cwd` at the repository root, and `.github/workflows/deck-smoke.yml` runs the same relative string from the same place. So `BASH_SOURCE[0]` is `tools/scripts/run-smoke.sh`, and by the time the re-exec happens the working directory is `desktop/`, where no such path exists.
+
+Reproduced with a copy of the script whose only edits are the platform test (forced true, since this machine is macOS) and the build line (replaced by an echo), invoked exactly as CI invokes it, with a stub `xvfb-run` on `PATH`:
+
+```
+PATH=<stub>:$PATH bash tools/scripts/zz-run-smoke-probe.sh both
+  fake xvfb-run invoked with: --auto-servernum bash tools/scripts/zz-run-smoke-probe.sh both
+  bash: tools/scripts/zz-run-smoke-probe.sh: No such file or directory
+  EXIT=127
+```
+
+Neither edit touches path handling. GitHub's ubuntu runners set no `DISPLAY` and no `WAYLAND_DISPLAY` — which is why `deck-smoke.yml` installs xvfb at all — so this branch is taken on every push. In `deck-smoke.yml` the script is the step, so 127 fails the step. In `validate-docs.yml`, `run-tests.py` calls 127 `unrunnable`, and `CI` is set, so the run returns 1. The fix is one line: resolve the script to an absolute path before the `cd`, and re-exec that.
+
+**Finding 2 (high): the smoke needs the sidecar, `validate-docs.yml` does not provide it, and a smoke that runs without one FAILS rather than skipping. `PROJECT_OS_ALLOW_UNRUNNABLE` cannot excuse it.**
+
+`.github/workflows/deck-smoke.yml` clones `../project-os-cockpit` and `pip install -e`s it, because `sidecar.ts` runs `python -m project_os_cockpit` and the package has to be importable. `.github/workflows/validate-docs.yml` does neither — its steps are checkout, `validate-docs.sh`, `run-tests.py`, `sync-snapshot.py`, `generate-adapters.py`. It runs the same `run-tests.py`, which runs the same TST-0037 `command:`.
+
+Reproduced by giving the smoke a workspace with no `.cockpit/url` and an interpreter that cannot import the package, which is what that job has:
+
+```
+git archive HEAD | tar -x -C <tmp>/cirepo          # no .cockpit, as a fresh clone
+cd desktop && DECK_PYTHON=/usr/bin/python3 npx electron . --smoke --workspace <tmp>/cirepo
+  EXIT=1
+  {
+    "ok": false,
+    "failures": [
+      "the workspace opened: the sidecar for project-os-deck exited before it answered (using /usr/bin/python3):
+       ... No module named project_os_cockpit",
+      "SyntaxError: Unexpected token 'o', \"no sidecar \"... is not valid JSON"
+    ],
+    "skipped": [],
+    "notApplicable": []
+  }
+```
+
+That is `failing`, not `unrunnable`, so `run-tests.py` returns 1 whether or not `PROJECT_OS_ALLOW_UNRUNNABLE` is set (`tools/scripts/run-tests.py:124-129` gates only the unrunnable count). ISS-0049's fix taught the script to provision Electron and a screen; it never considered the third thing the smoke needs, and [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]'s "What it needs" section names only "Electron's binary and a display".
+
+**This answers the question about the two workflows directly.** `deck-smoke.yml` is not cargo and not a duplicate: it supplies the sidecar and xvfb, and `validate-docs.yml` supplies neither. But the justification written into both files — that the second job exists so the `xvfb-run` assumption does not land on the template-owned one — is wrong about which job can run the smoke at all. The template-owned job cannot, on any push, for a reason no amount of provisioning inside `run-smoke.sh` can fix from inside this repository. TST-0037's `command:` and `validate-docs.yml`'s test loop are incompatible, which is what ISS-0049 concluded before the fix was replaced.
+
+**Finding 3 (high): `attachTicks` can be deleted and nothing anywhere goes red. The write this feature is named after has no automated check on the interface at all.**
+
+`desktop/src/renderer/renderer.ts:884` draws the tick control beside every addressed checkbox, and `tickCriterion` at line 920 collects the evidence and sends it. Making `attachTicks` return immediately — Deck then offers no tick control on any note — leaves every gate green:
+
+```
+# desktop/src/renderer/renderer.ts, first line of attachTicks body:
+#   return; // Deck offers no tick control at all
+cd desktop && npm test                        -> tests 321  pass 321  fail 0
+bash tools/scripts/run-smoke.sh loopback      -> EXIT=0
+node tools/scripts/check-write-round-trip.mjs -> 18 of 18 passed
+```
+
+This is [[ISS-0044-The-Renderer-Guards-Run-In-No-Gate]]'s exact shape, in the half of the feature nobody extended the smoke to cover. Six rounds have hardened the verb controls — ISS-0038, ISS-0039, ISS-0040, ISS-0044, ISS-0045, ISS-0050 — and the smoke run still never presses a tick. `grep -n "tick" desktop/src/main/main.ts` finds the IPC handler and nothing in `runSmoke`. `check-write-round-trip.mjs` does tick a criterion, but through `client.tick` — the sidecar client — so it measures the route without the interface on it, which is the same gap ISS-0040 was filed about for verbs ("a check drives `applyVerb` itself rather than the mapping underneath it").
+
+The human cover is also absent: [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] carries `last_verified: ""`, so this feature's first acceptance criterion — "A criterion ticked in Deck is ticked in the file, carries the evidence and the actor Deck sent" — has been verified by neither a walk nor a check that touches the control a person presses.
+
+**Finding 4 (medium): a failed `npm ci` inside `run-smoke.sh` destroys the developer's `node_modules` and the retry only rescues one cause.**
+
+The new install block runs `npm ci` whenever `have_electron` is false, and `npm ci` empties `node_modules` before it fetches anything. The retry with a private cache covers a cache this user cannot write, which is the cause ISS-0049 hit; every other cause — no network, a registry outage, a full disk — leaves the checkout stripped and the script at 127. Reproduced in a scratch directory holding Deck's own `package.json` and lockfile:
+
+```
+mkdir node_modules/marker && echo hi > node_modules/marker/file.txt
+npm ci --no-audit --no-fund --registry http://127.0.0.1:1
+  npm ci EXIT=1
+  after: node_modules exists? yes; marker? NO
+```
+
+The trigger is ordinary: any machine where `run-desktop-tests.sh` installed first sets `ELECTRON_SKIP_BINARY_DOWNLOAD=1`, so the binary is absent, so the next `run-smoke.sh` wipes and re-downloads a working tree. `run-desktop-tests.sh` guards its own install with `if [ ! -d node_modules ]` and never does this. Install into a temporary prefix, or refuse when `node_modules` is already populated and only the binary is missing.
+
+**Finding 5 (low, the fifth consecutive round): a re-measured number that was not carried into the note the reader checks.** [[ISS-0045-A-Dead-Verb-Is-Drawn-Exactly-Like-A-Working-One]]'s Evidence section says hard-wiring every row to `confirm: true` "fails 4 ... the second was written as 2 before the checks around it grew". Its acceptance criterion, four lines above, still reads "evidence: 2 checks red when every row claims to confirm". The note now contradicts itself, and the stale half is in the ticked box. Measured today: 4 red.
+
+**What I attacked and could not break.**
+
+- **ISS-0050's fix is real, and both of its checks are live.** Deleting `applyVerb`'s refusal fails 2 checks by name, as claimed. I then wrote a subtler mutation to test whether "and sends nothing" is merely riding on the box-count check — a guard that refuses in words and posts the transition anyway — and it died alone: `FAILED smoke loopback: and sends nothing — with the button forced back on, so this is about Deck`. Forcing `button.disabled = false` from the page is a fair stand-in here, because the drawn-state checks two lines above measure what a person actually meets and this one measures the layer behind it.
+- **All six mutation counts in the a729559 sweep reproduce at HEAD**, driven one at a time through `run-smoke.sh loopback`: the CSP meta tag deleted 2; `canPerform` true for every row 5; `applyVerb`'s refusal deleted 2; the dead verb left enabled 1; every row hard-wired to confirm 4; the reason box back inside the confirmation 2. Four rounds of numbers that did not reproduce, and this sweep does — naming the commit was the right fix.
+- **ISS-0051's first two halves hold.** Appending to DES-0001 alongside the transition now fails "and that refusal changed no file" (17 of 18); replacing it outright fails two lines (16 of 18). A planted verdict pair — a failing block then a passing one, exit 0 — now gives `FAILED smoke loopback: a planted failure`, exit 1.
+- **`have_electron` detects every way the package can be half-installed**: `path.txt` missing, `path.txt` empty, and `dist/` removed with `path.txt` intact. Present is detected as present.
+- **The re-exec cannot loop.** `DECK_SMOKE_UNDER_XVFB` is set on the exec and checked before it, so a second pass with still no display exits 127. The `both` argument is preserved. Wrapping the whole script rather than each command leaves the LAN run's network binding alone.
+- **`run-tests.py` runs the tests sequentially** (`tools/scripts/run-tests.py:112`), so two `npm ci` invocations cannot race in `desktop/`.
+- Local state: `npm test` 321/321, `run-tests.py` `passing=24 failing=0 unrunnable=0`, `run-smoke.sh both` exit 0, `check-write-round-trip.mjs` 18 of 18 with `working tree after: ""`, `validate-docs.sh --as-committed` "HEAD passes the full CI step set". `git status --short` was empty after every run.

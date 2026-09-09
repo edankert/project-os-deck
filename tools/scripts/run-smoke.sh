@@ -19,6 +19,12 @@
 set -euo pipefail
 
 WHICH="${1:-both}"
+# Resolved BEFORE the `cd`, because this script re-execs itself and is invoked
+# by a relative path from the repository root. Taking `$0` after changing
+# directory resolved it against `desktop/`, where it does not exist, so every
+# machine with no display — which is every CI runner — died at 127 on the one
+# branch the change was written for (ISS-0054).
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DESKTOP="$(cd "$SCRIPT_DIR/../../desktop" && pwd)"
 cd "$DESKTOP"
@@ -29,37 +35,24 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 # **The binary, not the package.** `run-desktop-tests.sh` installs with
-# ELECTRON_SKIP_BINARY_DOWNLOAD=1, because the 321 node checks never need a
-# ~100MB download — which leaves `node_modules/electron` present and its
-# executable absent, and the failure that produces is a stack trace rather than
-# a sentence. `path.txt` is the file the package writes to say where its binary
+# ELECTRON_SKIP_BINARY_DOWNLOAD=1, because the node checks never need a ~100MB
+# download — which leaves `node_modules/electron` present and its executable
+# absent, and the failure that produces is a stack trace rather than a
+# sentence. `path.txt` is the file the package writes to say where its binary
 # went, so its presence is the question.
 have_electron() {
   [ -s node_modules/electron/path.txt ] \
     && [ -e "node_modules/electron/dist/$(cat node_modules/electron/path.txt)" ]
 }
 
+# **This script installs nothing** (ISS-0054). An earlier version ran `npm ci`
+# to make itself work in a gate that could not host it anyway, and `npm ci`
+# empties `node_modules` before fetching — so a failed install destroyed a
+# working checkout, and the trigger was ordinary: any tree installed by
+# `run-desktop-tests.sh` has no Electron binary. Nothing a test invokes should
+# be able to do that.
 if [ ! -d node_modules ] || ! have_electron; then
-  # Fetch it rather than refusing. This script is TST-0037's `command:`, so it
-  # runs in whatever environment `run-tests.py` runs in — including the
-  # template-owned CI job, which installs nothing itself (ISS-0049).
-  #
-  # The retry with a cache of our own is `run-desktop-tests.sh`'s, for the same
-  # reason: a shared npm cache this user cannot write is a setup problem rather
-  # than a test failure. Without it, the first `npm ci` had already removed
-  # `node_modules` before failing, which left the checkout worse than it found
-  # it.
-  if ! npm ci --no-audit --no-fund >/dev/null 2>&1; then
-    tmp_cache="$(mktemp -d)"
-    if ! npm ci --no-audit --no-fund --cache "$tmp_cache" >/dev/null; then
-      echo "run-smoke: could not install Deck's dependencies" >&2
-      exit 127
-    fi
-  fi
-fi
-
-if ! have_electron; then
-  echo "run-smoke: Electron's binary is not installed and could not be fetched" >&2
+  echo "run-smoke: Electron's binary is not here. Run: cd desktop && npm install" >&2
   exit 127
 fi
 
@@ -73,7 +66,7 @@ if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPL
     exit 127
   fi
   if command -v xvfb-run >/dev/null 2>&1; then
-    exec env DECK_SMOKE_UNDER_XVFB=1 xvfb-run --auto-servernum bash "${BASH_SOURCE[0]}" "$WHICH"
+    exec env DECK_SMOKE_UNDER_XVFB=1 xvfb-run --auto-servernum bash "$SELF" "$WHICH"
   fi
   echo "run-smoke: no display and no xvfb-run; install xvfb, or run this where there is a screen" >&2
   exit 127

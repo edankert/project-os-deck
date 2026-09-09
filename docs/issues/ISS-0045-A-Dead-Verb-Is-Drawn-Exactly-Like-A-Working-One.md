@@ -38,7 +38,7 @@ Disable the button, and assert on the button. Return what was actually pressed �
 
 - [x] A verb Deck cannot perform is `disabled` in the page, not merely titled — evidence: the smoke run reads disabled per row on DES-0001 (user:edwin, 2026-09-09)
 - [x] Reverting the drawn half turns a check red — evidence: 1 check red, naming both rows and their state (user:edwin, 2026-09-09)
-- [x] The verb check reports which verb it pressed and its `confirm`, and fails when it did not press a non-confirming one — evidence: 2 checks red when every row claims to confirm; the first reports pressed: null (user:edwin, 2026-09-09)
+- [x] The verb check reports which verb it pressed and its `confirm`, and fails when it did not press a non-confirming one — evidence: 4 checks red when every row claims to confirm, re-measured at commit a729559; the first reports pressed: null (user:edwin, 2026-09-09)
 
 ## Fixed, 2026-09-09
 
