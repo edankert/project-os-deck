@@ -696,7 +696,7 @@ items:
     ISS-0057:
       file: "docs/issues/ISS-0057-Both-CI-Jobs-Failed-On-Their-First-Run.md"
       title: "The first push turned both CI jobs red: a fixture check that cannot pass on a fresh checkout, and Electron refusing to start without its sandbox configured"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high
@@ -1439,7 +1439,7 @@ metrics:
     tests_total: 24
     tests_passing: 1
     tests_failing: 0
-    issues_open: 1
+    issues_open: 0
     issues_triage: 2
     risks_open: 0
     releases_total: 0

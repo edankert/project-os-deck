@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0057
 aliases: ["ISS-0057"]
 title: "The first push turned both CI jobs red: a fixture check that cannot pass on a fresh checkout, and Electron refusing to start without its sandbox configured"
-status: open
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-09
@@ -38,8 +38,8 @@ Both scripts were written and reasoned on a machine where neither failure is pos
 
 - [x] `TST-0029` passes on a checkout whose file timestamps are all the checkout time — evidence: every note touched, then 45 of 45 pass (user:edwin, 2026-09-09)
 - [x] The staleness skip still skips a note that really was edited — evidence: editing a note passes; corrupting every digest fires the floor (user:edwin, 2026-09-09)
-- [ ] `deck-smoke` runs the smoke checks to a verdict
-- [ ] Both jobs are green on `main`
+- [x] `deck-smoke` runs the smoke checks to a verdict — evidence: run 34401449516, success in 2m3s (user:edwin, 2026-09-09)
+- [x] Both jobs are green on `main` — evidence: runs 34401449463 and 34401449516, both success at b674998 (user:edwin, 2026-09-09)
 
 ## Half fixed, 2026-09-09; the CI half is unproved until it runs
 
@@ -50,3 +50,11 @@ Both scripts were written and reasoned on a machine where neither failure is pos
 **The sandbox is disabled in the workflow and not in the application**, so somebody running the smoke locally keeps the sandbox they have. A CI container is already an isolated machine.
 
 **That half is unproved.** I cannot run GitHub Actions, so whether `ELECTRON_DISABLE_SANDBOX` is enough for this runner is what the next push finds out — which is the same position [[ISS-0044-The-Renderer-Guards-Run-In-No-Gate]] was in, and the reason the first run was worth having.
+
+## Both jobs green, 2026-09-09
+
+Runs `34401449463` (validate-docs, 1m53s) and `34401449516` (deck-smoke, 2m3s), both success at commit `b674998`. **`deck-smoke` ran the smoke checks to a verdict for the first time**, on a real Linux machine, under xvfb, against a sidecar it cloned and installed itself — which is what [[ISS-0056-What-The-Last-Review-Found-And-Nobody-Fixed]] said the four renderer guards were waiting for.
+
+`ELECTRON_DISABLE_SANDBOX` was enough; that half is no longer unproved.
+
+**One thing to look at rather than fix here.** The CI log shows nothing at all between the command and the next step, because `run-smoke.sh` prints only when something is wrong. Silence plus exit 0 is the verdict, and silence as evidence is the failure this whole phase's review rounds kept finding. A reader of that log cannot tell what passed. Making the runner print its verdict on success as well would cost one line, and it belongs in grooming rather than in the commit that turned the jobs green.
