@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0002
 aliases: ["FEAT-0002"]
 title: "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06

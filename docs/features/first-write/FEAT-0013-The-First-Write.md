@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0013
 aliases: ["FEAT-0013"]
 title: "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
@@ -16,7 +16,7 @@ release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-09
-review_verdict: changes-requested
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0004-Parity]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]", "[[project-os-cockpit#ADR-0010]]", "[[project-os-cockpit#REQ-0026]]", "[[project-os-cockpit#REQ-0027]]"]
 ---
 
@@ -418,3 +418,78 @@ The trigger is ordinary: any machine where `run-desktop-tests.sh` installed firs
 - **The re-exec cannot loop.** `DECK_SMOKE_UNDER_XVFB` is set on the exec and checked before it, so a second pass with still no display exits 127. The `both` argument is preserved. Wrapping the whole script rather than each command leaves the LAN run's network binding alone.
 - **`run-tests.py` runs the tests sequentially** (`tools/scripts/run-tests.py:112`), so two `npm ci` invocations cannot race in `desktop/`.
 - Local state: `npm test` 321/321, `run-tests.py` `passing=24 failing=0 unrunnable=0`, `run-smoke.sh both` exit 0, `check-write-round-trip.mjs` 18 of 18 with `working tree after: ""`, `validate-docs.sh --as-committed` "HEAD passes the full CI step set". `git status --short` was empty after every run.
+
+## Independent review — 2026-09-09 (seventh pass)
+
+**Verdict: approved.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. What is independent here is the context, not the weights.
+
+**Nothing I found would hurt a person using Deck.** The five findings below are all about gates and about prose. The write path itself survived everything I aimed at it, and the sixth round's fix — the smoke run pressing a real tick — is real, not a formality.
+
+**The tick check is genuine, and I drove three mutations to prove it.**
+
+```
+# desktop/src/renderer/renderer.ts, first line of attachTicks: return;
+bash tools/scripts/run-smoke.sh loopback
+  FAILED smoke loopback: a note with an unticked criterion offers a tick
+  control in this view (tried 18)                                    EXIT=1
+
+# tickCriterion sends `evidence ?? ''` instead of refusing a null answer
+bash tools/scripts/run-smoke.sh loopback
+  FAILED smoke loopback: and the evidence a person typed reaches the shell;
+  a tick with no evidence is refused before it is sent (...); and nothing
+  more reached the shell                                             EXIT=1
+
+# notesWithAnUntickedCriterion returns [] — the workspace stops having one
+bash tools/scripts/run-smoke.sh loopback
+  FAILED smoke loopback: this workspace has notes with unticked criteria, so
+  this measures something; a note with an unticked criterion offers a tick
+  control in this view (tried 0)                                     EXIT=1
+```
+
+That third one answers the question this check most needed answering. When the repository stops holding a note the check can use, the check **fails loudly and names the reason**; it does not pass over.
+
+**Finding 1 (medium, and the only one that changes what anybody should believe): the smoke run is gated by nothing that has ever executed.** `run-tests.py` skips a note with an empty `command:` outright — `if not cmd: continue` at `tools/scripts/run-tests.py:62` — so [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]] is not merely unrun there, it is not listed, not counted, and not reported as an environment gap. The only job that would run it is `.github/workflows/deck-smoke.yml`, and that workflow does not exist on the remote:
+
+```
+gh run list --workflow deck-smoke.yml --limit 5
+  HTTP 404: workflow deck-smoke.yml not found on the default branch
+
+git rev-list --left-right --count origin/main...HEAD
+  0	26
+```
+
+Twenty-six commits are unpushed and the last CI run of any kind was 2026-09-07. So four guards — the content policy, the reason box, the refused design verdict and now the tick — rest on `last_verified: 2026-09-09` and on a person remembering one command. That record is *honest* under `STATUSES.md`: a test with no `command:` records its own verdict and goes stale, `automation:` is a declaration the validator recognises (`validate-docs.py:862`), and I re-ran `bash tools/scripts/run-smoke.sh both` today at exit 0, so the date is true. It is honest and it is thin, and TST-0037 is now the only note in this repository that is `passing` on a person's word rather than on a command.
+
+**Finding 2 (low): `deck-smoke.yml`'s own justification describes a world ISS-0054 abolished, in the one file that is now the sole gate.** Its header says "`run-smoke.sh` is TST-0037's `command:`, so `run-tests.py` runs it in both workflows", that the script "fetches Electron ... by itself", and that "the cost is that Electron is downloaded twice per push". None of the three is true any more. A maintainer reading that file could delete it believing the template-owned job still covers the smoke; nothing would go red, because nothing currently runs it.
+
+**Finding 3 (low): `window.__deckOpenNote` is dead code, and its comment says otherwise.** It is defined at `desktop/src/renderer/renderer.ts:1385` and referenced nowhere else in the repository — `grep -rn "__deckOpenNote"` returns exactly that one line. Its comment calls it "a seam for the smoke run"; the smoke reaches the reader by clicking a navigator row instead. The doc comment on `notesWithAnUntickedCriterion` has the matching stale half — "so the run addresses a window straight at it" — where the run in fact unfolds the navigator and clicks. Not a hazard: it is inert for a real user, it is read-only (`openCard`), and the page's `script-src 'self'` is what stops anything calling it. It ships in `dist/web/renderer/renderer.js`, so it is on the served page too, offering a tablet nothing it does not already have.
+
+**Finding 4 (low): the line that says "unfold the groups first" folds them.** `main.ts:1188` clicks every `.twist` in the navigator, and a group's click handler toggles (`navigator.ts:69`). Instrumented at HEAD, the issues view opens with two of five groups already open, and the loop closes one of them:
+
+```
+before: {groups:5, expanded:["true","false","false","false","true"], rows:10}
+after:  {groups:4, expanded:["false","true","true","true"],          rows:54}
+```
+
+It found `ISS-0011` anyway. The risk is a confusing red, not a false green — every downstream assertion compares against the note that was actually open — and the tick block is the last thing in that window, so nothing after it is affected.
+
+**Finding 5 (low): the fifth acceptance criterion is guarded by nothing.** "A tick is refused with a stated reason when the rendered checkbox carries no `data-raw`" is the branch at `renderer.ts:889-901`. No suite mentions `data-raw` or `no-tick` — `grep -rn "no-tick\|data-raw" desktop/tests/` returns one unrelated line about note ids — and the smoke cannot reach it, because `notesWithAnUntickedCriterion` selects for `\n\n- [ ] `, which is the shape that *does* get addressed. Deleting the block leaves Deck silently drawing no controls, with no sentence saying why, and every gate green:
+
+```
+# desktop/src/renderer/renderer.ts, the `if (addressed.length === 0)` block removed
+cd desktop && npm test               -> tests 322  pass 322  fail 0
+bash tools/scripts/run-smoke.sh loopback                          EXIT=0
+```
+
+The claim in "Where this stands" that both branches were seen on real notes — `TASK-0052` with five addresses, `PHASE-0001` with none — is true and was made by a person on 2026-09-09. It is a walk, not a gate.
+
+**A related seam, for the record.** No suite imports `main/main` — `grep -rln "from '.*main/main" desktop/tests/` returns nothing — so the four-line bodies of the `deck:write:transition` and `deck:write:tick` IPC handlers are exercised by nothing automated: the smoke replaces them, `check-write-round-trip.mjs` bypasses them through `client.tick`, and node cannot load them. The mapping either side is well covered (`write-channel.test.mjs` for `tickRequestFrom`/`transitionRequestFrom`, the smoke for the interface). This is a two-line strip, it was exercised by hand against the real sidecar on 2026-09-09, and it is the shape a seventh round of fixes would chase. Recorded rather than filed.
+
+**What I attacked and could not break.**
+
+- **`npm test` is 322 of 322**, exactly as claimed, and `validate-docs.sh` exits OK.
+- **The re-exec fix is real.** Driven from the repository root with a stub `uname` reporting Linux, `DISPLAY` and `WAYLAND_DISPLAY` unset, and a stub `xvfb-run`: `xvfb-run stub got: bash /Users/Edwin/Dev/repos/project-os-deck/tools/scripts/run-smoke.sh both`. An absolute path, and the `both` argument preserved.
+- **The smoke touches no real state.** `app.setPath('userData', ...)` is redirected to a fresh `mkdtemp` whenever `--smoke` is present (`main.ts:37-44`), so the twist loop's fold and desk writes land in a temporary store. `git status --short` was empty after every run of mine.
+- **The CI shape of the smoke works here.** On a `git archive HEAD` copy with no `.cockpit/url`, the run started its own sidecar and passed every check including the tick: `"sidecar": "http://127.0.0.1:8901", "borrowedFromTheCockpit": false`, then `{"ok": true, "failures": [], "skipped": []}`. Port 8901 was gone afterwards and the sidecar this repository was already running on 8765 was untouched. What has never been exercised is the GitHub job's own clone-and-`pip install` of the sidecar, because the workflow has never run.
+- **The changed-under-you mark no longer fires when nothing changed.** The third finding of the first review is properly discharged twice over: `noticed()` returns early on an excluded path (`note-index.ts:249`), and `build()` raises only when `sameRecords` says the records moved (`note-index.ts:205`), so even a non-Markdown write under `docs/` produces no banner.
+- **ISS-0055's corrections all landed.** ISS-0045's ticked criterion now reads "4 checks red ... re-measured at commit `a729559`"; ISS-0051 now says three and explains why two was impossible; and `check-bases-live.mjs:92-97` separates *the exemption expired* from *a date will not read*, with its own counter at line 231.

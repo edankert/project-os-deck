@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0008
 aliases: ["FEAT-0008"]
 title: "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06

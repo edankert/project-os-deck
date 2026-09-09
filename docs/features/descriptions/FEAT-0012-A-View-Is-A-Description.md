@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0012
 aliases: ["FEAT-0012"]
 title: "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
@@ -16,7 +16,7 @@ release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-09
-review_verdict: changes-requested
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[FEAT-0007-Views-Come-From-A-Provider]]", "[[FEAT-0011-Decks-Own-Index]]", "[[TASK-0029-The-Band-Function]]", "[[RISK-0003-Two-Evaluators-Of-The-Bases-Language]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 ---
 
@@ -310,3 +310,38 @@ I checked whether this is live and it is not: over all 407 notes in `~/Notes` th
 
 - The live run reproduces [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] exactly: 19 base files, 46 views, 21 selecting nothing, 16 explained by their own filter, 5 exempt, 0 expired, 0 unexplained, 0 failures, latest date 2026-03-17.
 - The list handling is real. `due: [2026-12-01]` and the same value written as a block sequence both reach the comparison, which is the shape [[project-os-cockpit#ISS-0279]] is about.
+
+## Independent review — 2026-09-09 (seventh pass)
+
+**Verdict: approved.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+**Both of the sixth pass's findings against this feature are discharged in the code, and I read the fixes rather than taking them on the note's word.** `tools/scripts/check-bases-live.mjs:92-97` now marks a withdrawn exemption `unconfirmable` when a date will not read, names the value, and tells a person to fix the note rather than the view; line 231 counts the two states separately. [[ISS-0051-Three-Checks-That-Can-No-Longer-Fail]] now says all five date shapes expire three exemptions and says why two was impossible — the five rows share one memoised condition.
+
+**Finding 1 (medium, latent): the fifth acceptance criterion names the navigator and only the model underneath it is asserted.** Replacing the whole body of `loadQueryView` (`desktop/src/renderer/renderer.ts:365-397`) with `return { groups: [], refusals: [] };` — a query-sourced view drawing an empty list and saying nothing, which is the single thing ADR-0004 and this feature's Scope exist to prevent — leaves `npm test` at 322 of 322 and `run-smoke.sh loopback` at exit 0. Two reasons compound: `node --test` cannot load the renderer ([[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]), and no shipped view is query-sourced — six of the seven are mode-sourced and Overview is stats — so the smoke never enters the branch at `renderer.ts:337`. What `evaluator.test.mjs:257` asserts is that `runQuery` and `rowsFor` produce the right groups, which is one layer below what the criterion claims. **Nobody can reach this today**, because the branch is dead in production until [[PHASE-0003-Vault]] supplies a provider that returns a query-sourced description. It goes live in that phase, and it should be gated before it does.
+
+**Finding 2 (low): `check-bases-live.mjs` is blind to the parser half of the guarantee it is cited for.** Deleting the push in `query.ts`'s `compileOne` catch removes every parse refusal from the live vault run — 4 "an empty expression" and 10 "has no meaning here" lines vanish — and the script still prints `0 failure(s)` with a byte-identical summary. [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] leans on this script for steps 4 to 7. Mitigating: two node checks in `npm test` do kill that mutation, so the gate holds; it is the live script's verdict that is weaker than its use.
+
+**Finding 3 (low): `desktop/fixtures/cockpit-statuses.json` cannot fail in the direction the fourth criterion claims.** The criterion says the bands are "pinned to the cockpit's `statuses.py` by a fixture that fails when they drift". The fixture is a hand-recorded snapshot (`tools/scripts/record-sidecar-fixture.py:306-324`); nothing in `npm test`, `run-tests.py` or CI re-reads `statuses.py`. It fires when Deck drifts from the snapshot, never when the cockpit moves. Compared directly today the bands, completed set and legacy map are all equal, and the cockpit is at `9851598` against the `44845e8` the fixture records — so no live drift, and no watcher.
+
+**Finding 4 (low, the same class this feature keeps producing): two mutation counts in the note's own "what was checked and found sound" paragraph are stale in the present tense.** "Removing `report()` … fails 6 checks" fails **7**; "breaking `same()`'s link normalisation fails 10" fails **12**. Both drifted because checks were added after the sentences were written.
+
+**Finding 5 (low): the discharge table above is the seventh pass's, not this feature's.** All three features carry the same three rows, and the first — a tick control Deck can stop offering — is [[FEAT-0013-The-First-Write]]'s and has nothing to do with descriptions. What actually held this feature at the sixth pass was [[ISS-0055-Two-Re-Measured-Numbers-Still-Disagree-With-Themselves]] and the repository-wide [[ISS-0054-The-Smoke-Runner-Cannot-Start-Where-It-Must]].
+
+**The live run reproduces, and the corrected counter is visibly live in it.**
+
+```
+node tools/scripts/check-bases-live.mjs
+  19 base file(s) read, 46 view(s) across them
+  21 view(s) selected nothing: 16 explained by their own filter, 5 exempt under a
+  condition that still holds, 0 whose exemption has expired, 0 whose exemption
+  cannot be confirmed because a date will not read, 0 unexplained
+  0 failure(s)
+```
+
+That is the number [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] states, and the two states ISS-0055 asked to be told apart are now two separate counters in the summary line rather than one.
+
+**What I attacked and could not break.**
+
+- `check-counts-live.py` reports 0 disagreements over three corpora, so the index this evaluator runs over agrees with the sidecar note by note.
+- `npm test` 322 of 322; `validate-docs.sh` OK.
+- The repository-wide CI finding this feature carried is fixed at the script — the `xvfb-run` re-exec passes an absolute path, driven from the repository root with stub `uname` and `xvfb-run`. The remaining half, that the job which would run the smoke has never executed, is recorded in full on [[FEAT-0013-The-First-Write]], seventh pass, finding 1. It is not this feature's code and it is not about descriptions.

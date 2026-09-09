@@ -20,6 +20,16 @@ tags: [phase, deck, spread, shell]
 
 # Deck
 
+## Where PHASE-0001 stands, 2026-09-09
+
+**All ten features are `done` and approved.** Seven independent review passes ran on 2026-09-09; the last one approved FEAT-0011, FEAT-0012 and FEAT-0013 and closed the loop. Across those passes, eighteen findings were reproduced, filed and fixed, every one of them with a mutation that goes red — [[ISS-0024-The-Yaml-Reader-Abandons-A-Document]] through [[ISS-0055-Two-Re-Measured-Numbers-Still-Disagree-With-Themselves]].
+
+**The phase does not close, and what holds it open needs a person rather than a fix.** Four exit criteria are unticked and each names a walk nobody has made: Deck on a real tablet in Safari, a `.base` file read as a description and compared against Obsidian, a criterion ticked in Deck with the cockpit open beside it, and the tablet showing no verb at all. Every machine-answerable half of those walks was turned into a measurement on 2026-09-09 — `tools/scripts/check-write-round-trip.mjs`, `check-counts-live.py` and `check-bases-live.mjs` — and each acceptance note records which half still needs somebody and why.
+
+**Two things are owed that no review can settle.** The 26 commits of this work have never been pushed, so no continuous-integration run has seen any of it and `.github/workflows/deck-smoke.yml` has never executed once. And [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] is still at `triage` in [[PHASE-0002-Glass]]: four of Deck's guards live only in a command a person runs. [[ISS-0056-What-The-Last-Review-Found-And-Nobody-Fixed]] carries the eighth finding and seven smaller ones, filed rather than fixed by Edwin's decision that the seventh review would be the last.
+
+**What the review rounds looked like, because it is the argument for stopping.** Rounds three to six found defects in shipped code. The seventh found gaps in gates and errors in prose, and nothing a person using Deck can reach. That is what a converged review looks like.
+
 ## Goal
 
 **This phase makes Deck a thing you can open.** When it opened, the repository held two designs, one feature and an architecture note, and no code. At the end of this phase a person launches Deck, sees this repository's notes listed as the cockpit lists them, puts the ones they are working on onto a desk, drags a panel onto a second monitor, and picks the same notes up on a tablet over the LAN.

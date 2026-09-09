@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0004
 aliases: ["FEAT-0004"]
 title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06

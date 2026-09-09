@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 55
+  ISS: 56
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -81,7 +81,7 @@ items:
     FEAT-0002:
       file: "docs/features/shell/FEAT-0002-Deck-Opens-A-Workspace.md"
       title: "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -99,7 +99,7 @@ items:
     FEAT-0004:
       file: "docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md"
       title: "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -108,7 +108,7 @@ items:
     FEAT-0005:
       file: "docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md"
       title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -135,7 +135,7 @@ items:
     FEAT-0008:
       file: "docs/features/two-hosts/FEAT-0008-One-Renderer-Two-Hosts.md"
       title: "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -162,7 +162,7 @@ items:
     FEAT-0011:
       file: "docs/features/index/FEAT-0011-Decks-Own-Index.md"
       title: "Deck's own index: the main process reads the workspace's Markdown itself, so a view can arrange notes the sidecar does not arrange"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -171,7 +171,7 @@ items:
     FEAT-0012:
       file: "docs/features/descriptions/FEAT-0012-A-View-Is-A-Description.md"
       title: "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -180,7 +180,7 @@ items:
     FEAT-0013:
       file: "docs/features/first-write/FEAT-0013-The-First-Write.md"
       title: "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -683,6 +683,16 @@ items:
       component: docs
       tests: []
       note: "Sixth review, 2026-09-09, findings 5 and 6. ISS-0052's re-measurement corrected the prose and not the evidence stamped on the checkbox, so ISS-0045 says 2 in the criterion and 4 in the Evidence section four lines below; 4 is right. ISS-0051 says a datetime expires two exemptions where it expires three, and two was impossible because all five share one memoised condition. Latent: a single unreadable date would expire all five permanently and the summary calls that 'expired', which reads as somebody scheduling something."
+    ISS-0056:
+      file: "docs/issues/ISS-0056-What-The-Last-Review-Found-And-Nobody-Fixed.md"
+      title: "The seventh review approved all three features and found eight things nobody fixed, the largest being that the smoke run is gated by a workflow that has never executed"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "Filed rather than fixed, by Edwin's decision on 2026-09-09 that the seventh review would be the last and its findings reported. Nothing in it is a behaviour a person can reach, which is why all three features were approved. The largest: four renderer guards live only in npm run smoke, TST-0037 carries no command: so run-tests.py skips it outright without reporting a gap, and deck-smoke.yml has never executed because 26 commits are unpushed. Pushing settles it. Seven smaller findings are listed in the note; grooming decides."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"
@@ -1411,7 +1421,7 @@ items:
 metrics:
   counts:
     features_total: 13
-    features_done: 3
+    features_done: 10
     phases_total: 4
     phases_done: 0
     tasks_total: 52
@@ -1420,7 +1430,7 @@ metrics:
     tests_passing: 1
     tests_failing: 0
     issues_open: 0
-    issues_triage: 1
+    issues_triage: 2
     risks_open: 0
     releases_total: 0
     decisions_total: 4

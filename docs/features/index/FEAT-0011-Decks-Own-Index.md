@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0011
 aliases: ["FEAT-0011"]
 title: "Deck's own index: the main process reads the workspace's Markdown itself, so a view can arrange notes the sidecar does not arrange"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
@@ -16,7 +16,7 @@ release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-09
-review_verdict: changes-requested
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[FEAT-0012-A-View-Is-A-Description]]", "[[RISK-0004-Decks-Index-Duplicates-The-Sidecars-Indexer]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]", "[[project-os-cockpit#ISS-0279]]"]
 ---
 
@@ -276,3 +276,37 @@ The count here has moved twice during this session alone — 207 earlier today, 
 **Every number the notes still carry reproduces.** TST-0026's "92 of 386 notes" in `~/Notes` with a list-valued `type:` is exactly what the script printed. `records.ts:84`'s "Your Trainer's 2,726 notes and 9MB" measures 2,726 notes and 9.07 MB at HEAD, walked with Deck's own `walkNotes`. Both are counts of other repositories, which is what the rule permits.
 
 **Finding 1 (high, repository-wide, recorded in full on [[FEAT-0013-The-First-Write]]):** `run-smoke.sh` re-execs itself under `xvfb-run` using a relative path from the wrong directory, so it exits 127 on every Linux runner; and the smoke needs the sidecar, which `validate-docs.yml` does not install, so a smoke that gets past the first problem fails rather than skipping. Both CI jobs go red on the first push. Not this feature's code; it gates this feature's close-out.
+
+## Independent review — 2026-09-09 (seventh pass)
+
+**Verdict: approved.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+**The index is sound and I found nothing against its code.** The repository-wide finding that held it at the sixth pass is discharged: `run-smoke.sh` resolves itself before changing directory, and TST-0037 no longer promises a gate that cannot host it. The two remaining points are about this note's own prose.
+
+**The comparison with the sidecar reproduces.**
+
+```
+../project-os-cockpit/.venv/bin/python3 tools/scripts/check-counts-live.py
+  project-os-deck:  214 notes counted by Deck, 214 by the cockpit, 19 template(s) dropped by both
+  your-trainer:    2707 notes counted by Deck, 2707 by the cockpit, 20 template(s) dropped by both
+  vault:            386 notes counted by Deck,  386 by the cockpit, 21 template(s) dropped by both
+  3 corpus(es) compared, 0 disagreement(s) between the two programs
+```
+
+**Finding 1 (low, the sixth consecutive round of this): the rule the fifth pass adopted was applied to TST-0026 and not to this note.** "Where this stands" still says "all 199 notes in this repository" and "Your Trainer's 2715 notes"; [[PHASE-0001-Deck]] says 199 and 2716. Measured today: 214 and 2707. The sixth-pass section above quotes 211 and 2706, taken hours ago, in the paragraph arguing that a frozen count is the wrong thing to write down. `desktop/src/shared/records.ts:84` says "Your Trainer's 2,726 notes and 9MB"; walking it today gives 2,727 notes and 9.07 MB, and the digest costs 11.25 ms against the note's 12 ms — so the size and the timing stand and the count was stale before its own commit landed. `note-index.ts:16` and `:352` still say 2715. The claim underneath — that the two programs disagree about nothing — is true and is what matters; the frozen sizes are the thing five reviews have now asked notes to stop stating, and the correction reached the test note and `records.ts` but not the feature note or the phase note.
+
+**Finding 2 (low): the discharge table above is the seventh pass's, not this feature's.** It is the same three rows on all three features, and its first row — a tick control Deck can stop offering — belongs to [[FEAT-0013-The-First-Write]] and has nothing to do with the index. The sixth pass held this feature on one finding only, the repository-wide CI one, which is [[ISS-0054-The-Smoke-Runner-Cannot-Start-Where-It-Must]]. A reader of this note alone would conclude the index had a defect about ticking criteria. Related: the table sits at line 87 with four later review sections below it, so the newest verdict is not where a reader looks first.
+
+**Finding 3 (low): `typeCounts` is the mechanism the first acceptance criterion names, and nothing calls it.** `desktop/src/shared/records.ts:230` is reached from no file in `desktop/src` — only from one synthetic assertion at `index.test.mjs:140`. Deleting its template rule, which the function's own comment says is "what the sidecar's `type_counts` does by default, so the two numbers are about the same set of files", leaves `npm test` at 322 of 322. The criterion is in fact met by `check-counts-live.py`, which asks the cockpit's own `Index` and is the stronger check; the note credits the weaker one.
+
+**Finding 4 (low, latent): the walk's "a file is never excluded by its own name" rule is asserted about `isExcluded` and not about the walk.** Adding `if (entry.name.startsWith('.')) continue;` to `note-index.ts:109` leaves 322 of 322 green. The cockpit indexes such files (`index.py:155-161` excludes on parents only), so this would be a silent divergence. No file matching `.*.md` exists in any of the three corpora today, which is why the fixture comparison stays green either way.
+
+**Finding 5 (low): the fixture has decayed by exactly the notes these reviews wrote.** `desktop/fixtures/sidecar-types.json` records 213 paths for this repository against 233 on disk; the 20 unrecorded are `ISS-0037` through `ISS-0055` and `TST-0037`. Your Trainer: 2,727 on disk, 2,719 recorded. Expected drift rather than a defect — the second pass called it and asked for a re-record cadence — and worth saying that the guard covering the gap, `check-counts-live.py`, is hand-run: it needs the cockpit's virtual environment, so no gate in this repository can host it.
+
+**What I attacked and could not break.**
+
+- **The reader's guarantees are mutation-guarded.** Turning `sameRecords`' OR into an AND fails 2 by name (`a BODY change under an unchanged modification time raises the revision`, `a FULL REBUILD notices a change that left the modification time alone`). Reintroducing cockpit ISS-0279 in `normaliseTypes` fails 2, as the note claims — though only one of those reads a real corpus and it is the one that skips when Your Trainer is absent. Hiding `issues/` and `reference/` from the walk fails 3, so ISS-0026's fix holds.
+- `check-bases-live.mjs` reproduces exactly: 19 base files, 46 views, 0 failures. `run-tests.py` reports `passing=23 failing=0 unrunnable=0`. `validate-docs.sh --as-committed` prints "HEAD passes the full CI step set".
+- `noticed()` returns early on an excluded path, and `build()` raises only when `sameRecords` reports a difference — so a write under `.obsidian/`, and a non-Markdown write anywhere under `docs/`, produce no revision and no banner. The first review's non-blocking finding is fully discharged, on both routes.
+- `npm test` 322 of 322; `validate-docs.sh` OK.
+- The repository-wide CI finding is genuinely fixed at the script: the `xvfb-run` re-exec now passes an absolute path, driven from the repository root with stub `uname` and `xvfb-run`. What is *not* fixed is that the job which would run it has never executed — recorded in full on [[FEAT-0013-The-First-Write]], seventh pass, finding 1.

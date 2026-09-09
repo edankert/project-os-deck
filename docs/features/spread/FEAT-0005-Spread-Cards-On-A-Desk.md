@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0005
 aliases: ["FEAT-0005"]
 title: "Spread: notes as cards on a desk, and a desk you can save and come back to"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
