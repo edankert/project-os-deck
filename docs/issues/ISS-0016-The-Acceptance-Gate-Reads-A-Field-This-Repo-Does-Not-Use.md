@@ -7,12 +7,12 @@ status: triage
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-09
 source: ["Close-out of [[PHASE-0001-Deck]], 2026-09-07: three features reached done and each raised a VERIFY-ACCEPTANCE warning naming a walk Edwin had already passed"]
 severity: medium
 component: tools
 parent: ""
-related: ["[[FEAT-0003-One-Store-In-The-Main-Process]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[FEAT-0007-Views-Come-From-A-Provider]]", "[[PHASE-0001-Deck]]"]
+related: ["[[project-os-dev#ISS-0060]]", "[[FEAT-0003-One-Store-In-The-Main-Process]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[FEAT-0007-Views-Come-From-A-Provider]]", "[[PHASE-0001-Deck]]"]
 tests: []
 ---
 
@@ -53,7 +53,22 @@ It reads a note field the ledger model replaced, using a vocabulary the taxonomy
 - `grep -n "ledger" tools/scripts/validate-docs.py` returns only comments about `tools/GRANDFATHERED.yaml`.
 - `tools/instructions/TAXONOMY.md`, "Acceptance outcomes (the ledger's vocabulary)".
 
+## Filed upstream, 2026-09-09
+
+**[[project-os-dev#ISS-0060]]**, at `triage`, carrying the same evidence and the two things a fix has to decide: where the verdict lives (read the ledger where a repository has one, and keep reading `mark:` where it does not, since both models are live across the fleet), and which vocabulary settles it (the message names words `TAXONOMY.md` retired, so it sends a reader looking for a field they were told never to write).
+
+`project-os-dev` rather than `project-os` because that is where the template's own work is tracked; `project-os` holds no issues of its own.
+
+**Nothing was patched here**, deliberately. `tools/scripts/` is template-owned and `sync-project-os.sh` overwrites a local patch, so a fix in this repository would last until the next sync.
+
+## What this costs PHASE-0001
+
+**A phase may not be `done` while a note naming it in `phase:` is unresolved** (`STATUSES.md`, validator PHASE-CHILDREN), and this note names it. So [[PHASE-0001-Deck]] cannot close while this sits at `triage`, and the fix is not Deck's to make.
+
+**Two ways out, and the choice is Edwin's.** Either this becomes `declined` here — a deliberate no-action, with the reason being that the fix is upstream and is filed — or the phase waits for [[project-os-dev#ISS-0060]]. Nothing is gained by guessing; the phase owes four acceptance walks anyway, and this can be settled alongside them.
+
 ## Next Actions
 
-- [ ] The fix belongs upstream: `tools/scripts/` is template-owned and is pulled from `../project-os` by `tools/scripts/sync-project-os.sh`. File it there rather than patching the copy here, which the next sync would overwrite.
-- [ ] Until then, the three IDs can go in `tools/GRANDFATHERED.yaml` if the November promotion arrives before the upstream fix.
+- [x] The fix belongs upstream — filed as [[project-os-dev#ISS-0060]], 2026-09-09
+- [ ] Decide whether this note is `declined` here or waits for the upstream fix, since PHASE-0001 cannot close while it is unresolved
+- [ ] Until then, the affected IDs can go in `tools/GRANDFATHERED.yaml` if the November promotion arrives before the upstream fix
