@@ -72,6 +72,16 @@ Steps 4–7 are measured. Step 8 is the one that matters and only Obsidian can a
 
 ## Recording what you find
 
-Each walk's verdict goes in the release ledger, not on the note — `docs/releases/ledgers/WORKING-app.json`, which is what `ADR-0037` decided. Then the matching exit criterion in [[PHASE-0001-Deck]] is ticked with the date.
+Each walk's verdict goes in the release ledger, not on the note — `docs/releases/ledgers/WORKING-app.json`. Append one object per walk to `entries`:
+
+```json
+{"check": "TST-0011", "mark": "pass", "date": "2026-09-09", "method": "manual", "by": "user:edwin"}
+```
+
+`mark` is `pass`, `fail` or `question`, and anything but a bare `pass` takes a `reason` in your own words — the two most useful entries in that file are a `question` reading "How do I run this?" and a `pass` carrying "I am not sure if it doesn't leave anything running when I quit???", and the doubt in the second one turned out to be right.
+
+**The tablet walk belongs in a ledger of its own.** The README says `WORKING-ipados.json`, because the tablet is a different surface rather than a different build, and that file does not exist yet — TST-0010's verdict is the one that creates it.
+
+Then tick the matching exit criterion in [[PHASE-0001-Deck]] with the date. I have deliberately not pre-filled any of this: a ledger entry asserting a walk that did not happen is the one thing the whole mechanism exists to prevent.
 
 **A fail is a result, not a setback.** Two of these were walked on 2026-09-07 and reopened on 2026-09-08 because the fixes underneath them changed what the claim meant, and that reopening is why the phase is in the state it is rather than in a worse one nobody had noticed.
