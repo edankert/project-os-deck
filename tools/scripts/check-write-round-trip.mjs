@@ -36,7 +36,7 @@ if (git('status', '--short', 'docs').trim() !== '') {
 
 const base = fs.readFileSync(path.join(REPO, '.cockpit', 'url'), 'utf-8').trim();
 const require_ = (await import('node:module')).createRequire(import.meta.url);
-const { SidecarWriteClient, transitionRequestFrom } = require_(
+const { SidecarWriteClient, actuatorRows, canPerform, elsewhere, transitionRequestFrom } = require_(
   path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'),
 );
 const { walkNotes } = require_(path.join(REPO, 'desktop', 'dist', 'main', 'note-index.js'));
@@ -105,7 +105,6 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
 // this script asked about a note at `declined` and reported two green lines
 // that had measured nothing.
 {
-  const { actuatorRows, canPerform, elsewhere } = require_(path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'));
   const id = 'ISS-0008';
   const rel = 'docs/issues/ISS-0008-Nothing-In-CI-Exercises-The-Renderer.md';
   const payload = await (await fetch(`${base}/api/notes/actions?id=${encodeURIComponent(id)}`)).json();
@@ -163,7 +162,6 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
 // endpoint, so drawing the row right and acting on it wrong was invisible
 // (ISS-0039). A design at `proposed` is the case that has one.
 {
-  const { canPerform, elsewhere } = require_(path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'));
   const id = 'DES-0001';
   const payload = await (await fetch(`${base}/api/notes/actions?id=${encodeURIComponent(id)}`)).json();
   const rows = actuatorRows(payload);
