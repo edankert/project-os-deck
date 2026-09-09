@@ -83,6 +83,21 @@ Two words are used throughout. A **record** is what Deck knows about one note: i
 **What is owed is [[TST-0026-Decks-Index-Counts-What-The-Cockpit-Counts]]**, the live comparison a fixture cannot make: Deck and the cockpit open side by side, and a person reads the counts off both screens.
 
 
+
+## The sixth pass's findings, discharged 2026-09-09
+
+The verdict above was recorded before the fixes. All six findings are `fixed` and each was reproduced before being acted on; the verdict itself is stale and a seventh pass has not been run.
+
+| finding | note | how it was settled |
+| --- | --- | --- |
+| Deck can stop offering a tick control and nothing notices | [[ISS-0053-Deck-Can-Stop-Offering-A-Tick-And-Nothing-Notices]] | the smoke run presses a real tick and a real refusal; deleting `attachTicks` fails 1 check, accepting a tick with no evidence fails 3 |
+| the smoke runner cannot start where it must | [[ISS-0054-The-Smoke-Runner-Cannot-Start-Where-It-Must]] | it resolves its own path before changing directory, installs nothing, and TST-0037 declares how it is invoked instead of promising a gate that cannot host it |
+| two re-measured numbers still disagree with themselves | [[ISS-0055-Two-Re-Measured-Numbers-Still-Disagree-With-Themselves]] | corrected in the criterion as well as the prose, and an unreadable date is now reported as unconfirmable rather than expired |
+
+**Measured at commit `d0a148e`:** 322 node checks passing, 23 of 23 commanded tests, both smoke configurations `ok` with nothing skipped, `check-write-round-trip.mjs` 18 of 18 with a clean tree, `check-counts-live.py` no disagreements across three corpora, `check-bases-live.mjs` no failures across 46 views, `validate-docs --as-committed` passing the full CI step set.
+
+**What is not settled.** Six review rounds have each found real defects, and each round's fix produced the next round's finding. That is a fact about the process, not a defect in this feature, and whether to run a seventh pass is Edwin's call.
+
 ## Independent review, 2026-09-09: changes requested, and made
 
 **The review found the claim above wider than the check underneath it, and it was right.** "Deck agrees with the sidecar about all 199 notes, path by path" described a comparison that read the TYPE only and skipped any note Deck had failed to index. A mutation hiding `issues/` and `reference/` left Deck indexing 169 of 200 and the check still passed ([[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]).

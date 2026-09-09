@@ -104,6 +104,21 @@ Both branches of the no-address rule happen on real notes here: `TASK-0052` rend
 
 **One verb Deck deliberately does not offer.** A design's verdict goes to `/api/design/verdict` and must name the revision it judged; Deck has no design surface and no revision history, so the row is drawn disabled and says the decision belongs in the cockpit ([[ISS-0039-Deck-Draws-Two-Verbs-On-A-Design-Note-That-It-Cannot-Perform]], [[ISS-0045-A-Dead-Verb-Is-Drawn-Exactly-Like-A-Working-One]]).
 
+
+## The sixth pass's findings, discharged 2026-09-09
+
+The verdict above was recorded before the fixes. All six findings are `fixed` and each was reproduced before being acted on; the verdict itself is stale and a seventh pass has not been run.
+
+| finding | note | how it was settled |
+| --- | --- | --- |
+| Deck can stop offering a tick control and nothing notices | [[ISS-0053-Deck-Can-Stop-Offering-A-Tick-And-Nothing-Notices]] | the smoke run presses a real tick and a real refusal; deleting `attachTicks` fails 1 check, accepting a tick with no evidence fails 3 |
+| the smoke runner cannot start where it must | [[ISS-0054-The-Smoke-Runner-Cannot-Start-Where-It-Must]] | it resolves its own path before changing directory, installs nothing, and TST-0037 declares how it is invoked instead of promising a gate that cannot host it |
+| two re-measured numbers still disagree with themselves | [[ISS-0055-Two-Re-Measured-Numbers-Still-Disagree-With-Themselves]] | corrected in the criterion as well as the prose, and an unreadable date is now reported as unconfirmable rather than expired |
+
+**Measured at commit `d0a148e`:** 322 node checks passing, 23 of 23 commanded tests, both smoke configurations `ok` with nothing skipped, `check-write-round-trip.mjs` 18 of 18 with a clean tree, `check-counts-live.py` no disagreements across three corpora, `check-bases-live.mjs` no failures across 46 views, `validate-docs --as-committed` passing the full CI step set.
+
+**What is not settled.** Six review rounds have each found real defects, and each round's fix produced the next round's finding. That is a fact about the process, not a defect in this feature, and whether to run a seventh pass is Edwin's call.
+
 ## Independent review, 2026-09-09: changes requested, and made
 
 **The verification gate was failing and nobody had run the thing that says so.** [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] named a suite called `writes`; the file is `write-channel.test.mjs`. `npm test` runs every file in `desktop/tests/` and was green throughout, so only `python3 tools/scripts/run-tests.py` — which reads each note's own `command:` — could see it, and it was not run at close-out ([[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]). It now reports `passing=23 failing=0`.
