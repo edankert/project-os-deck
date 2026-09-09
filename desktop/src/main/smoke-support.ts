@@ -26,17 +26,29 @@ export interface SmokeVerdict {
   ok: boolean;
   failures: string[];
   skipped: string[];
+  notApplicable: string[];
 }
 
 /**
  * Whether the run may be called ok.
  *
- * A skipped check counts against it, exactly as a failed one does. The
- * alternative — a run that checks half of Deck and prints `ok: true` — is what
- * hid the workspace half of the smoke run for a day: every check that needed a
- * workspace was quietly not run, and the two that did run without one failed
- * for a reason nothing in the output named.
+ * **A SKIPPED check counts against it, exactly as a failed one does.** A run
+ * that checks half of Deck and prints `ok: true` is what hid the workspace half
+ * of the smoke run for a day: every check that needed a workspace was quietly
+ * not run, and the two that did run without one failed for a reason nothing in
+ * the output named (ISS-0022).
+ *
+ * **A NOT-APPLICABLE check does not**, and the distinction is real rather than
+ * a loophole. `skipped` means a check that should have run and could not — no
+ * workspace, no interpreter for a sidecar. `notApplicable` means a check that
+ * belongs to a configuration this run is not: the tablet-shaped checks need
+ * `--lan`, and a loopback run has not failed to make them, it has made a
+ * different run. Both are printed, so neither hides.
+ *
+ * The line to hold: a reason may only be `notApplicable` when running the check
+ * would require a DIFFERENT INVOCATION, not when it would require fixing
+ * something.
  */
-export function smokeVerdict(failures: string[], skipped: string[]): SmokeVerdict {
-  return { ok: failures.length === 0 && skipped.length === 0, failures, skipped };
+export function smokeVerdict(failures: string[], skipped: string[], notApplicable: string[] = []): SmokeVerdict {
+  return { ok: failures.length === 0 && skipped.length === 0, failures, skipped, notApplicable };
 }

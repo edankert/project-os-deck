@@ -27,11 +27,25 @@ test('the default workspace is this repository, and it really is a workspace', (
 });
 
 test('a run with no failures and nothing skipped is ok', () => {
-  assert.deepEqual(smokeVerdict([], []), { ok: true, failures: [], skipped: [] });
+  assert.deepEqual(smokeVerdict([], []), { ok: true, failures: [], skipped: [], notApplicable: [] });
 });
 
 test('a failure is not ok', () => {
   assert.equal(smokeVerdict(['the desk stayed empty'], []).ok, false);
+});
+
+test('a check belonging to ANOTHER CONFIGURATION does not count against the run', () => {
+  // The tablet-shaped checks need `--lan`. A loopback run has not failed to
+  // make them; it has made a different run. Calling that a skip would either
+  // turn the ordinary smoke run red or make a skip mean nothing — and a skip
+  // meaning nothing is the defect this whole distinction exists to keep fixed.
+  const verdict = smokeVerdict([], [], ['the tablet-shaped checks: this run is on loopback']);
+  assert.equal(verdict.ok, true);
+  assert.deepEqual(verdict.notApplicable, ['the tablet-shaped checks: this run is on loopback']);
+  // And it is PRINTED, so it hides nothing.
+  assert.ok('notApplicable' in verdict);
+  // A real skip still counts, even beside one of these.
+  assert.equal(smokeVerdict([], ['no workspace was opened'], ['on loopback']).ok, false);
 });
 
 test('a SKIPPED check is not ok either, which is the whole lesson', () => {

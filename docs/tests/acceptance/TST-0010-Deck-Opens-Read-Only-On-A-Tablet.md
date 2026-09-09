@@ -6,7 +6,7 @@ title: "Deck served over the local network opens on a tablet, reads the notes an
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[PHASE-0001-Deck]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -59,6 +59,14 @@ Deck runs from this repository; there is no installed application yet.
 - From the tablet, send a `POST` to `http://<address>:<port>/deck/workspaces` and read the status code.
 - **A workspace that is still indexing.** In the Mac window, add `/Users/Edwin/Dev/repos/your-trainer` and click it. Go straight to the tablet and open that same workspace there while the Mac window is still filling. Read whatever line the tablet shows. Wait half a minute, reload the tablet, and open the workspace again.
 - **A way out of an allowed path.** You need the workspace's id, which is sixteen characters of hex and not something to guess: in the Mac window press **Copy address** and read what sits between `deck://` and the next `/`. From the tablet, ask for `http://<address>:<port>/deck/sidecar/<id>/api/render?file=../../../../etc/passwd`, and again with the dots written as `%252e%252e%252f`, which is one encoding deeper. Read the status code for each. Then open a note whose name has a space or a percent sign in it, if the workspace has one, and check it still renders.
+
+## What a machine now answers, 2026-09-09
+
+**`npm run smoke:lan` makes the checks that are a status code**, from this machine's own network address rather than from loopback — because a request from loopback is not the request a tablet makes, and what the allow-list does to a request that came from somewhere else is the whole point.
+
+It asserts: the renderer is served over the network; a page reached that way is given no `write`, no `popOutWindows` and no `manageWorkspaces`; a `POST` is refused with 405; a way out of an allowed path is refused with 403 by DECK's host in both spellings, written plainly and encoded one level deeper; and an ordinary read still answers, so the lock is not simply refusing everything.
+
+**What still needs a person, and it is the half this note was written for.** Safari rendering the page on a real tablet. Reading the top bar and the rail and seeing that **Pop out** and **+ add a workspace** are ABSENT rather than greyed out — a machine can read a capability set, and only a person can see that nothing is there. And the still-indexing case, which needs a workspace added through the folder dialog while the tablet watches.
 
 ## Expected results
 

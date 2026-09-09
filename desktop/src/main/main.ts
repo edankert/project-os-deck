@@ -111,6 +111,8 @@ interface WindowInfo {
 
 const windowInfo = new Map<number, WindowInfo>();
 let hostOrigin = '';
+/** The port Deck's host is listening on, for a check that must not use loopback. */
+let hostPort = 0;
 let focusWindowId: number | null = null;
 
 function displays(): DisplayInfo[] {
@@ -382,6 +384,7 @@ async function startHost(): Promise<void> {
   const port = await freePort(7300, 7399, bind);
   const listening = await host.listen(port, bind);
   hostOrigin = `http://127.0.0.1:${listening.port}`;
+  hostPort = listening.port;
   console.log(`deck: serving ${WEB_ROOT} on ${listening.address}:${listening.port}`);
 }
 
@@ -531,12 +534,23 @@ async function runSmoke(): Promise<void> {
    * so, by name, and is never counted as a pass either.
    */
   const skipped: string[] = [];
+  /**
+   * Checks belonging to a configuration this run is not.
+   *
+   * The tablet-shaped ones need `--lan`. A loopback run has not failed to make
+   * them; it has made a different run, and calling that a skip would either
+   * turn the ordinary smoke run red or make a skip mean nothing.
+   */
+  const notApplicable: string[] = [];
   let drawnCards: string[] = [];
   const record = (ok: boolean, what: string): void => {
     if (!ok) failures.push(what);
   };
   const skip = (what: string): void => {
     skipped.push(what);
+  };
+  const notHere = (what: string): void => {
+    notApplicable.push(what);
   };
   try {
     // The workspace has to exist before the first window boots: the rail is
@@ -897,6 +911,12 @@ async function runSmoke(): Promise<void> {
     }
 
 
+    // **What a tablet actually gets**, from the machine's own network address
+    // rather than from loopback, which is the only way to exercise the path a
+    // tablet takes (TST-0010). Safari and the visual absence of a control stay
+    // a walk; the status codes do not have to.
+    await recordFromTheNetwork(record, skip, notHere, prepared);
+
     // **The quit, measured against a REAL sidecar Deck started** (TST-0011's
     // last two steps, and the doubt Edwin recorded when he walked it on
     // 2026-09-07: "I am not sure if it doesn't leave anything running when I
@@ -906,15 +926,90 @@ async function runSmoke(): Promise<void> {
     // Deck owns and is therefore Deck's to stop.
     await recordQuit(record, skip);
 
-    console.log(JSON.stringify(smokeVerdict(failures, skipped), null, 2));
+    console.log(JSON.stringify(smokeVerdict(failures, skipped, notApplicable), null, 2));
   } catch (err) {
-    console.log(JSON.stringify(smokeVerdict([...failures, String(err)], skipped), null, 2));
+    console.log(JSON.stringify(smokeVerdict([...failures, String(err)], skipped, notApplicable), null, 2));
     failures.push('threw');
   }
   shutdown();
   // Give SIGTERM a moment to reach the children before the process goes.
   await delay(400);
-  app.exit(smokeVerdict(failures, skipped).ok ? 0 : 1);
+  app.exit(smokeVerdict(failures, skipped, notApplicable).ok ? 0 : 1);
+}
+
+/**
+ * The checks a person otherwise makes from a tablet, made from the network.
+ *
+ * Deck's host is bound beyond loopback only with `--lan`, so this runs when it
+ * is and says so when it is not. What it drives is the half of TST-0010 that is
+ * a status code rather than a judgement: the refusal of a write, both spellings
+ * of a traversal, and the capability set a served page is given. What it cannot
+ * drive is Safari rendering the page and a person seeing that a control is
+ * ABSENT rather than greyed out.
+ *
+ * The address is this machine's own, not `127.0.0.1`: a request from loopback
+ * is not the request a tablet makes, and the whole point of the allow-list is
+ * what it does to a request that came from somewhere else.
+ */
+async function recordFromTheNetwork(
+  record: (ok: boolean, what: string) => void,
+  skip: (what: string) => void,
+  notHere: (what: string) => void,
+  prepared: PreparedWorkspace | null,
+): Promise<void> {
+  if (!process.argv.includes('--lan')) {
+    notHere('the tablet-shaped checks: this run is on loopback; `npm run smoke:lan` makes them');
+    return;
+  }
+  const address = lanAddress();
+  if (address === null) {
+    skip('the tablet-shaped checks: this machine has no network address to be reached at');
+    return;
+  }
+  const origin = `http://${address}:${hostPort}`;
+
+  const page = await fetch(`${origin}/`);
+  record(page.status === 200, `the renderer is served over the network (${origin} answered ${page.status})`);
+
+  const caps = (await (await fetch(`${origin}/deck/capabilities`)).json()) as Record<string, unknown>;
+  record(caps['write'] === false, 'a page reached over the network is given no write capability');
+  record(caps['popOutWindows'] === false, 'and no pop-out capability');
+  record(caps['manageWorkspaces'] === false, 'and cannot add a workspace');
+
+  const posted = await fetch(`${origin}/deck/workspaces`, { method: 'POST' });
+  record(posted.status === 405, `a POST from the network is refused with 405 (it answered ${posted.status})`);
+
+  if (prepared === null) {
+    skip('the traversal checks: no workspace was opened, so there is no sidecar to try to reach past');
+    return;
+  }
+  // Both spellings, because one is a decoding deeper than the other and a
+  // single check on the written form is what let a double-encoded traversal
+  // through before (ISS-0014, and the hole ADR-0001 closed).
+  for (const [spelling, tail] of [
+    ['written plainly', '../../../../etc/passwd'],
+    ['encoded once more', '%252e%252e%252f%252e%252e%252fetc/passwd'],
+  ] as const) {
+    const response = await fetch(`${origin}/deck/sidecar/${prepared.id}/api/render?file=${tail}`);
+    record(
+      response.status === 403,
+      `a way out of an allowed path, ${spelling}, is refused by DECK's host with 403 (it answered ${response.status})`,
+    );
+  }
+  // And an ordinary read still works, so the lock is not simply refusing
+  // everything: a note whose name carries a space is the awkward case.
+  const nav = await fetch(`${origin}/deck/sidecar/${prepared.id}/api/cockpit/nav?mode=features`);
+  record(nav.status === 200, `an ordinary read from the network still answers (${nav.status})`);
+}
+
+/** This machine's own network address, or null when it has none. */
+function lanAddress(): string | null {
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries ?? []) {
+      if (entry.family === 'IPv4' && !entry.internal) return entry.address;
+    }
+  }
+  return null;
 }
 
 /**

@@ -11,7 +11,8 @@
     "start": "npm run build && electron .",
     "start:lan": "npm run build && electron . --lan",
     "test": "npm run build && node --test --test-timeout 30000 tests/*.test.mjs",
-    "smoke": "npm run build && electron . --smoke"
+    "smoke": "npm run build && electron . --smoke",
+    "smoke:lan": "npm run build && electron . --smoke --lan"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
