@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0052
 aliases: ["ISS-0052"]
 title: "A fourth consecutive round of numbers that do not reproduce, including the count written to replace the last one, so the rule changes from re-run it to do not write it"
-status: open
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-09
@@ -35,7 +35,15 @@ tests: []
 
 ## Acceptance
 
-- [ ] No note in this repository states a count of this repository's notes as a standing fact
-- [ ] The three mutation counts match a re-run
-- [ ] `records.ts` cites the script rather than a number
-- [ ] TST-0028's step table numbers each row once
+- [x] No note in this repository states a count of this repository's notes as a standing fact — evidence: TST-0026 and records.ts now cite the script (user:edwin, 2026-09-09)
+- [x] The three mutation counts match a re-run — evidence: one sweep at a729559; three of six differed and were rewritten (user:edwin, 2026-09-09)
+- [x] `records.ts` cites the script rather than a number — evidence: it names check-counts-live.py's corpora (user:edwin, 2026-09-09)
+- [x] TST-0028's step table numbers each row once — evidence: the design row reads 7, again (user:edwin, 2026-09-09)
+
+## Corrected, 2026-09-09
+
+**No note in this repository states a count of this repository's notes as a standing fact.** TST-0026 says what the script asserts — no note read as different types, no type whose totals differ — and points at the script for figures. `records.ts` cites the corpora rather than a number. The counts that stay are ones that do not move: how many views a base file has, how many checks a mutation kills.
+
+**Why the rule changed rather than being repeated.** Three rules were written and each was followed: read the number from a script, make the script print every number quoted, lead with the shape not the size. The numbers were wrong all three times, because a count of a growing corpus measured before a commit and read after it is stale by the length of that commit — and twice the stale number was the one written to replace the last stale number. The rule that works is not to write it.
+
+**The mutation counts are re-measured**, in one sweep at commit `a729559`, and TST-0037's `adequacy` names the commit so a later reader can tell whether the checks have changed shape underneath the numbers. Six mutations, six killed: the content policy deleted (2 red), `canPerform` true for every row (5), `applyVerb`'s refusal deleted (2), the dead verb left enabled (1), every row claiming to confirm (4), the reason box back inside the confirmation (2). Three of those six differ from what the close-outs said before this, which is why they were re-run rather than copied. **TST-0028's step table numbers each row once.**

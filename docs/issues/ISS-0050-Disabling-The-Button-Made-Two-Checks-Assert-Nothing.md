@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0050
 aliases: ["ISS-0050"]
 title: "Disabling the button left the guard that stops the request with no check at all, and turned two smoke checks into assertions about a disabled button rather than about Deck"
-status: open
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-09
@@ -38,6 +38,14 @@ Drive the guard directly. Re-enable the button in the page, click it, and assert
 
 ## Acceptance
 
-- [ ] Deleting `applyVerb`'s refusal turns a check red
-- [ ] The check that says "sends nothing" would fail if `applyVerb` sent something
-- [ ] The drawn-state checks still fail when the button is not disabled
+- [x] Deleting `applyVerb`'s refusal turns a check red — evidence: 2 checks red at commit a729559 (user:edwin, 2026-09-09)
+- [x] The check that says "sends nothing" would fail if `applyVerb` sent something — evidence: the button is forced back on before the press (user:edwin, 2026-09-09)
+- [x] The drawn-state checks still fail when the button is not disabled — evidence: 1 check red, naming both rows (user:edwin, 2026-09-09)
+
+## Fixed, 2026-09-09
+
+**The check re-enables the button and presses it**, which asks `applyVerb` the question rather than asking the DOM whether a disabled button dispatches events. What it asserts now: that Deck put no box on the screen, that nothing reached the shell, and that the status bar carries the sentence about the revision and the cockpit.
+
+**Both layers keep their own check.** The drawn-state checks read `disabled` and the title off each row; this one drives the refusal behind them. That is what "two layers" has to mean — the fix for the first layer had quietly removed the only check on the second.
+
+**Evidence.** Deleting `applyVerb`'s refusal fails 2 checks, naming both. Before this, deleting it left `run-smoke.sh` at exit 0 and the node suite at 321 of 321.

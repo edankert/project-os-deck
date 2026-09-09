@@ -616,7 +616,7 @@ items:
     ISS-0049:
       file: "docs/issues/ISS-0049-The-Smoke-Test-Turns-The-Mandatory-CI-Job-Red.md"
       title: "Naming the smoke run as a test put it in the gate that has no Electron, so the non-bypassable CI job now fails on every push"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high
@@ -626,7 +626,7 @@ items:
     ISS-0050:
       file: "docs/issues/ISS-0050-Disabling-The-Button-Made-Two-Checks-Assert-Nothing.md"
       title: "Disabling the button left the guard that stops the request with no check at all, and turned two smoke checks into assertions about a disabled button rather than about Deck"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high
@@ -636,7 +636,7 @@ items:
     ISS-0051:
       file: "docs/issues/ISS-0051-Three-Checks-That-Can-No-Longer-Fail.md"
       title: "Three checks cannot fail any more: one reads the working tree after reverting it, one takes the last verdict when an earlier one failed, and one asks a date question that a list-valued date answers wrongly"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -646,7 +646,7 @@ items:
     ISS-0052:
       file: "docs/issues/ISS-0052-A-Fourth-Round-Of-Numbers-That-Do-Not-Reproduce.md"
       title: "A fourth consecutive round of numbers that do not reproduce, including the count written to replace the last one, so the rule changes from re-run it to do not write it"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: low
@@ -1389,7 +1389,7 @@ metrics:
     tests_total: 24
     tests_passing: 0
     tests_failing: 0
-    issues_open: 4
+    issues_open: 0
     issues_triage: 1
     risks_open: 0
     releases_total: 0

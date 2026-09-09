@@ -48,4 +48,4 @@ Disable the button, and assert on the button. Return what was actually pressed â
 
 **The verb check says what it pressed.** The `?? verbs[0]` fallback is gone and the result carries the pressed verb, its `confirm` and its `disabled`. A run that cannot find a non-confirming verb fails saying so rather than pressing whatever is first â€” it was landing correctly only by luck of ordering.
 
-**Evidence.** Two mutations, two killed. Leaving the button enabled fails 1 check naming both rows and their state; hard-wiring every row to `confirm: true` fails 2, the first of them reporting `pressed: null`.
+**Evidence.** Two mutations, two killed. Leaving the button enabled fails 1 check naming both rows and their state; hard-wiring every row to `confirm: true` fails 4, the first of them reporting `pressed: null`. Both re-measured at commit `a729559`; the second was written as 2 before the checks around it grew.

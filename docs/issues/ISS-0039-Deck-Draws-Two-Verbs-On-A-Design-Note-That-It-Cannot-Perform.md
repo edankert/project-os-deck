@@ -56,4 +56,4 @@ Draw the row and refuse to pretend. A verb whose `endpoint` Deck does not implem
 
 **The check now asks about a note that HAS an endpoint.** Every check before this asked about `ISS-0008`, whose rows carry an empty one, so drawing the row right and acting on it wrong was invisible to all of them. `check-write-round-trip.mjs` asks about `DES-0001` as well, and the smoke run presses the control in a real window.
 
-**Evidence.** Making `canPerform` return true for everything fails 3 checks in the smoke run.
+**Evidence.** Making `canPerform` return true for everything fails 5 checks in the smoke run, re-measured at commit `a729559`.

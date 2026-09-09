@@ -5,13 +5,17 @@
 # a change to it belongs upstream in `../project-os`, where it would be run by
 # every project the template serves — most of which have no Electron.
 #
-# Why it is separate from the suite. `run-desktop-tests.sh` sets
-# ELECTRON_SKIP_BINARY_DOWNLOAD=1 because the 320 node checks never need a
-# ~100MB download. The smoke run does, and it needs a screen, so it gets a job
-# with both. Without this, three guards existed that nothing ran: the content
-# policy that stops a note running script in the window that can write, the
-# reason box on every verb, and the design verdict Deck refuses to fake
-# (ISS-0044).
+# Why it exists when the template's job also runs this. `run-smoke.sh` is
+# TST-0037's `command:`, so `run-tests.py` runs it in both workflows, and it
+# fetches Electron and re-execs under `xvfb-run` by itself. That leaves one
+# assumption: that `xvfb-run` is on the runner image. This job installs xvfb
+# explicitly, so a change in that image turns THIS job red with a one-line fix
+# available here, instead of turning the template-owned backstop red with the
+# fix only available upstream (ISS-0049).
+#
+# The cost is that Electron is downloaded twice per push. That is the price of
+# not betting the non-bypassable job on an assumption about somebody else's
+# machine image, and it is deliberate.
 name: deck-smoke
 
 on:

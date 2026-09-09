@@ -17,8 +17,8 @@ covers: ["[[FEAT-0013-The-First-Write]]", "[[FEAT-0008-One-Renderer-Two-Hosts]]"
 issues: ["[[ISS-0038-Nothing-Checks-The-Tag-That-Stops-A-Note-Running-Script]]", "[[ISS-0039-Deck-Draws-Two-Verbs-On-A-Design-Note-That-It-Cannot-Perform]]", "[[ISS-0040-The-Reason-Is-Asked-For-Only-On-A-Verb-That-Confirms]]", "[[ISS-0044-The-Renderer-Guards-Run-In-No-Gate]]", "[[ISS-0045-A-Dead-Verb-Is-Drawn-Exactly-Like-A-Working-One]]"]
 tasks: []
 artifacts: ["tools/scripts/run-smoke.sh"]
-adequacy: "Deleting the Content-Security-Policy meta tag fails 2 checks; leaving it in place but permitting inline script fails the driven half, which a check reading the file would not. Putting the reason box back inside the confirmation fails 2. Letting canPerform return true for every row fails 3. Drawing a verb Deck cannot perform without disabling it fails 1. Naming a verb in Deck's own source fails TST-0033 instead, which is where that rule lives."
-mutation_score: "5 mutations, 5 killed (2026-09-09)"
+adequacy: "Measured at commit a729559, six mutations and six killed. Deleting the Content-Security-Policy meta tag fails 2; a policy present but permitting inline script fails the driven half, which a check reading the file would not. Letting canPerform return true for every row fails 5. Deleting applyVerb's own refusal fails 2 — the layer behind the disabled button, which had no check at all until ISS-0050. Drawing a verb Deck cannot perform without disabling it fails 1. Hard-wiring every row to confirm fails 4. Putting the reason box back inside the confirmation fails 2. Naming a verb in Deck's own source fails TST-0033 instead, which is where that rule lives."
+mutation_score: "6 mutations, 6 killed (2026-09-09, at commit a729559)"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
