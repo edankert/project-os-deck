@@ -7,14 +7,14 @@ status: active
 order: 2
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-08
 goal: "Deck opens in Glass: a field where a note's distance says how much it needs you, a view switch re-arranges the same cards, and lifting a note brings what it is joined to into the front band. Built now, on the store, the desk and the addresses PHASE-0001 made, with FEAT-0001's three measurements written down as numbers at the end rather than demanded at the start."
 features: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 requirements: []
 tasks: ["[[TASK-0029-The-Band-Function]]", "[[TASK-0030-The-Slot-Geometry]]", "[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0002-The-Layout-Is-Computed-Once-And-Kept]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[TASK-0005-The-Treatment-Is-Chosen-Not-Assumed]]"]
 issues: ["[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 depends: ["[[PHASE-0001-Deck]]"]
-related: ["[[ADR-0002-Glass-Is-The-Main-View]]", "[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]]", "[[TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives]]", "[[TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible]]", "[[PHASE-0001-Deck]]", "[[PHASE-0004-Parity]]", "[[PHASE-0003-Vault]]"]
+related: ["[[ADR-0002-Glass-Is-The-Main-View]]", "[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]]", "[[TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives]]", "[[TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible]]", "[[PHASE-0001-Deck]]", "[[PHASE-0004-Parity]]", "[[PHASE-0003-Vault]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[FEAT-0012-A-View-Is-A-Description]]"]
 tags: [phase, glass, field, deck]
 ---
 
@@ -63,13 +63,17 @@ Three words mean one thing each. The **field** is every note of the current view
 
 ## Where this stands
 
+**2026-09-08: Glass starts after the description feature, and [[TASK-0029-The-Band-Function]] is now that feature's table rather than a module of its own.** An architecture review before the build asked whether Deck's vocabulary was large enough to carry Glass ([[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]), and Edwin reopened [[PHASE-0001-Deck]] the same day to widen it. Three things land there first: Deck keeps its own index of the workspace's notes ([[FEAT-0011-Decks-Own-Index]]), a view becomes a description rather than three fields of code ([[FEAT-0012-A-View-Is-A-Description]], [[ADR-0004-A-View-Is-A-Description]]), and Deck writes for the first time ([[FEAT-0013-The-First-Write]], [[ADR-0003-Deck-Writes-Through-The-Shell]]). The address grammar also gains the `surface` key [[TASK-0033-Glass-Is-Addressed-And-Opened-First]] needs, in [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]].
+
+**What this phase gains for the wait.** [[TASK-0029-The-Band-Function]] is amended: its table moves into the `band` section of every view description and the function that applies it is written in [[TASK-0044-Band-And-Face-Come-From-The-Description]], so the navigator's folding, Spread's grouping and Glass's banding are one rule instead of three. Its acceptance criteria are unchanged. The `surfaces` list [[TASK-0033-Glass-Is-Addressed-And-Opened-First]] reads is the description's, so a view no design has drawn in Glass is not offered there. Nothing else in this phase changes: the features, the other tasks and the exit criteria all stand.
+
 **2026-09-07: opened, planned, nothing built.** Three features, fourteen tasks and three acceptance walks. The order inside the phase is the band function and the slot geometry first, because they are pure functions the renderer is written against; the renderer; the view switch and the address; then lifting, the neighbourhood and what-these-share; the orbit arrangement last, behind an issue in the cockpit repository for its payload. The measurement task closes the phase.
 
 **What the DES-0002 review said must change before a build, and where each lands.** The founding count is six views with a Needs-you group, not eleven: the band function says what each of Deck's seven views does. The degree-of-interest function is written down as one table: [[TASK-0029-The-Band-Function]]. The state has an address before a renderer exists: [[TASK-0033-Glass-Is-Addressed-And-Opened-First]], on the grammar PHASE-0001 built. The bench is replaced by a measurement on the real thing in a foreground window: [[TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace]]. Blur over the field is out and `will-change` is scoped: [[TASK-0031-The-Field-Renders-And-Turns]]. The list panel is the accessible primary surface: the navigator, already built, in TASK-0033. The geometry model is fixed and overflow is never silent: [[TASK-0030-The-Slot-Geometry]] and TASK-0029.
 
 ## Notes
 
-**Depends on [[PHASE-0001-Deck]].** Glass is a client of the store, the desk, the navigator and the address grammar that phase built, and it is served to the tablet by the two-host rule that phase established. PHASE-0001's remaining walks were made on 2026-09-07 and it closes through the ordinary close-out; its seventh criterion moved to [[PHASE-0004-Parity]] with [[ADR-0002-Glass-Is-The-Main-View]].
+**Depends on [[PHASE-0001-Deck]], and as of 2026-09-08 on more of it.** That phase reopened to add Deck's own index, view descriptions and the first write, and Glass now waits on [[FEAT-0012-A-View-Is-A-Description]] before it starts. Glass is a client of the store, the desk, the navigator and the address grammar that phase built, and it is served to the tablet by the two-host rule that phase established. PHASE-0001's remaining walks were made on 2026-09-07 and it closes through the ordinary close-out; its seventh criterion moved to [[PHASE-0004-Parity]] with [[ADR-0002-Glass-Is-The-Main-View]].
 
 **FEAT-0001 was the gate and is now an arrangement.** Its note was written on 2026-09-05 for the cockpit, rewritten on 2026-09-06 for Deck, and on 2026-09-07 rewritten again as the orbit arrangement of FEAT-0009's field. Its measurements are the last three exit criteria above.
 

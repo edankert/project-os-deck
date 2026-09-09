@@ -15,6 +15,7 @@ import net from 'node:net';
 import path from 'node:path';
 import type { Workspace } from '../shared/types.js';
 import { SidecarClient } from '../shared/sidecar-client.js';
+import { sameDirectory } from './paths.js';
 
 export interface SidecarHandle {
   workspaceId: string;
@@ -398,14 +399,23 @@ export function defaultPython(): string {
   return 'python3';
 }
 
-/** The sidecar at this base is running AND serving the workspace we mean. */
+/**
+ * The sidecar at this base is running AND serving the workspace we mean.
+ *
+ * The comparison is between two DIRECTORIES, not two strings. `identity.root`
+ * is spelled by whoever launched that sidecar, and on macOS one directory has
+ * more than one spelling: the cockpit launched with `/Users/edwin/...` while
+ * Deck held `/Users/Edwin/...`, this guard called one directory two, and Deck
+ * started a second sidecar on a repository the cockpit was already serving
+ * (ISS-0023).
+ */
 async function alive(base: string, root: string): Promise<boolean> {
   try {
     const client = new SidecarClient(base, { timeoutMs: 1500 });
     const health = await client.health();
     if (health.service !== 'project-os-cockpit') return false;
     const identity = await client.identity();
-    return path.resolve(identity.root) === path.resolve(root);
+    return sameDirectory(identity.root, root);
   } catch {
     return false;
   }

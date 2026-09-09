@@ -3,21 +3,21 @@ type: "[[feature]]"
 id: FEAT-0006
 aliases: ["FEAT-0006"]
 title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-status: done
+status: doing
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
-source: ["[[PHASE-0001-Deck]]"]
+updated: 2026-09-08
+source: ["[[PHASE-0001-Deck]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 goal: "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside."
 requirements: []
-tasks: ["[[TASK-0017-The-Address-Grammar]]", "[[TASK-0018-Copy-The-Address-And-Open-One]]"]
+tasks: ["[[TASK-0017-The-Address-Grammar]]", "[[TASK-0018-Copy-The-Address-And-Open-One]]", "[[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]]"]
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-07
 review_verdict: approved
-related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
+related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]"]
 ---
 
 # Every state has an address
@@ -39,13 +39,23 @@ Any state a person can reach in Deck can be written down as a short string, and 
 - An address naming a view or desk that does not exist reports what it could not resolve and leaves Deck where it was.
 - A malformed address is refused with the reason, and never resolves to a default view.
 
+**Added 2026-09-08**, with [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]].
+
+- The grammar names four more kinds of state — `surface`, `page`, `flow` and `step` — and each refuses a value it does not know, the way `panel` does. A `step` with no `flow` is refused.
+- Panel kinds come from a registry a phase adds to, not from a literal set. An address naming an unregistered kind is refused, and registering that kind makes the same address parse.
+- Every address that parsed before 2026-09-08 still parses to the same state, and the twelve malformed addresses that were refused are still refused.
+
 ## Links
 
 - Phase: [[PHASE-0001-Deck]]
-- Tasks: [[TASK-0017-The-Address-Grammar]], [[TASK-0018-Copy-The-Address-And-Open-One]]
+- Tasks: [[TASK-0017-The-Address-Grammar]], [[TASK-0018-Copy-The-Address-And-Open-One]], [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]]
 - Plan: `docs/features/addresses/plan/PLAN.md`
 
 ## Where this stands
+
+**2026-09-08: back to `doing`, with one new task and three new criteria.** [[PHASE-0001-Deck]] widened on Edwin's decision, and four kinds of state arriving in the next three phases have no written form: a Glass surface, a page such as the acceptance checks or the release page, an editor over a note, and a flow at a step ([[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]], Part 5). The rule this feature exists to keep — every reachable state has an address — stops being true the moment one of those ships without a key. [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]] adds the four keys and turns the closed three-item panel list into a registry, keeping the guarantee that an address cannot name something Deck cannot draw.
+
+This is new work inside the feature, not a defect in what was built. The approvals below stand for what they reviewed, and the feature needs a review again before it returns to `done`. The same move was made for [[FEAT-0004-Windows-On-Any-Screen]] and [[FEAT-0005-Spread-Cards-On-A-Desk]] on 2026-09-07.
 
 **2026-09-07: done.** The walk is made and the second independent review approved this feature. [[TST-0013-An-Address-Survives-Being-Written-Down]] passed — Edwin walked it on 2026-09-06 and marked it pass in the release ledger, with the remark "I think this bit works". A second clean-context review, run at the close-out of [[PHASE-0001-Deck]], read this feature's code and criteria again and approved it with no findings against it ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]).
 

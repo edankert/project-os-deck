@@ -11,9 +11,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Workspace, WorkspaceKind } from '../shared/types.js';
 import { readJsonFile, writeJsonFileAtomic } from './atomic-json.js';
+import { realDirectory } from './paths.js';
 
+/**
+ * Stable per machine, and one id per DIRECTORY rather than per path string:
+ * the hash is taken over the spelling the file system uses, so a workspace
+ * reached as `/Users/edwin/...` and as `/Users/Edwin/...` is one workspace
+ * with one desk and one sidecar (ISS-0023).
+ */
 export function workspaceIdFor(root: string): string {
-  return crypto.createHash('sha1').update(path.resolve(root)).digest('hex').slice(0, 16);
+  return crypto.createHash('sha1').update(realDirectory(root)).digest('hex').slice(0, 16);
 }
 
 /** The kind of workspace at this path, or null when it is neither. */
@@ -24,7 +31,12 @@ export function detectKind(root: string): WorkspaceKind | null {
 }
 
 export function describeWorkspace(root: string): Workspace | null {
-  const resolved = path.resolve(root);
+  // The spelling the file system uses, not the one the caller typed. A folder
+  // picked through Deck's dialog can arrive as `/Users/Edwin/...` while the
+  // same directory was reached as `/Users/edwin/...` a moment earlier, and two
+  // spellings would give one directory two workspace ids, two saved desks and
+  // two sidecars (ISS-0023).
+  const resolved = realDirectory(root);
   const kind = detectKind(resolved);
   if (kind === null) return null;
   return { id: workspaceIdFor(resolved), root: resolved, name: nameFor(resolved, kind), kind };
@@ -101,7 +113,7 @@ export class WorkspaceBook {
   }
 
   add(root: string): { ok: true; workspace: Workspace } | { ok: false; reason: string } {
-    const resolved = path.resolve(root);
+    const resolved = realDirectory(root);
     const workspace = describeWorkspace(resolved);
     if (workspace === null) {
       return { ok: false, reason: `${resolved} carries neither a SNAPSHOT.yaml nor an .obsidian directory` };
@@ -133,7 +145,7 @@ function normaliseRoots(value: unknown): string[] {
   const out: string[] = [];
   for (const entry of raw) {
     if (typeof entry === 'string' && entry !== '') {
-      const resolved = path.resolve(entry);
+      const resolved = realDirectory(entry);
       if (!out.includes(resolved)) out.push(resolved);
     }
   }

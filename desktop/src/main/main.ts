@@ -19,6 +19,7 @@ import { SidecarSupervisor, freePort, waitForExit } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
+import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 
 // Pinned before anything reads it: Electron derives this from the app name,
 // and a later rename would strand the settings written under the old one.
@@ -367,9 +368,24 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
  */
 async function runSmoke(): Promise<void> {
   const failures: string[] = [];
+  /**
+   * Checks that need a workspace and did not get one.
+   *
+   * A run without `--workspace` used to skip the workspace half and then make
+   * the assertions that depend on it anyway: the satellite drew nothing
+   * because there was nothing to draw, and putting a card on the desk changed
+   * a state with no workspace in it, so two checks failed and the reason was
+   * nowhere in the output. Two people then spent a day looking for a defect in
+   * the renderer that was never there (ISS-0022). A check that cannot run says
+   * so, by name, and is never counted as a pass either.
+   */
+  const skipped: string[] = [];
   let drawnCards: string[] = [];
   const record = (ok: boolean, what: string): void => {
     if (!ok) failures.push(what);
+  };
+  const skip = (what: string): void => {
+    skipped.push(what);
   };
   try {
     // The workspace has to exist before the first window boots: the rail is
@@ -571,118 +587,128 @@ async function runSmoke(): Promise<void> {
     const refused = await fetch(`${hostOrigin}/deck/capabilities`, { method: 'POST' });
     record(refused.status === 405, 'the host refuses a POST with 405');
 
-    // A popped-out window carries ONE panel, named in its address.
-    const panelAddress = `deck://${prepared?.id ?? 'deadbeef'}/features?panel=desk`;
-    const satellite = createWindow('satellite', panelAddress, 'desk');
-    await once(satellite.webContents, 'did-finish-load');
-    await untilBooted(satellite);
-    record(!satellite.isFocused(), 'the satellite did not take focus');
-    const satelliteChrome = (await satellite.webContents.executeJavaScript(
-      `({
-        views: document.querySelectorAll('#switcher button').length,
-        rail: getComputedStyle(document.getElementById('rail')).display,
-        navigator: getComputedStyle(document.getElementById('navigator')).display,
-        reader: getComputedStyle(document.getElementById('reader')).display,
-        panel: document.body.dataset.panel
-      })`,
-    )) as { views: number; rail: string; navigator: string; reader: string; panel: string };
-    record(satelliteChrome.views === 0, 'the satellite drew no switcher, so it owns no navigation');
-    record(satelliteChrome.rail === 'none', 'the satellite drew no workspace rail');
-    record(satelliteChrome.panel === 'desk', `the satellite carries the panel its address named (${satelliteChrome.panel})`);
-    record(
-      satelliteChrome.navigator === 'none' && satelliteChrome.reader === 'none',
-      'a desk panel carries the desk and nothing else',
-    );
-
-    // What a person sees, not what the window was told. Reading the state a
-    // window holds passes while the cards on it never move.
-    const highlighted = async (win: BrowserWindow): Promise<string | null> =>
-      (await win.webContents.executeJavaScript(
-        `(document.querySelector('.card[aria-current="true"]:not([hidden]) .id') || {}).textContent || null`,
-      )) as string | null;
-
-    const visible = async (win: BrowserWindow): Promise<number> =>
-      (await win.webContents.executeJavaScript(
-        `document.querySelectorAll('.card:not([hidden])').length`,
-      )) as number;
-
-    // The desk holds one card. Putting a second one on it in the main process
-    // has to reach the window that is drawing the desk.
-    const onDesk = await visible(satellite);
-    const second = drawnCards.find((id) => id !== null && id !== '') ?? 'FEAT-0002';
-    store.dispatch({ type: 'put-on-desk', noteId: String(drawnCards[2] ?? second), x: 24, y: 240 });
-    await delay(800);
-    const afterPut = await visible(satellite);
-    record(afterPut === onDesk + 1, `a card added elsewhere reached the satellite (${onDesk} then ${afterPut})`);
-
-    const before = await highlighted(satellite);
-    const target = String(drawnCards[2] ?? second);
-    store.dispatch({ type: 'focus-note', noteId: target });
-    await delay(800);
-    const after = await highlighted(satellite);
-    record(
-      after === target && after !== before,
-      `the satellite REDREW when the focused note changed (${before} then ${after}, wanted ${target})`,
-    );
-
-    // The other two panels: what each one carries, and what it does not.
-    for (const [type, wanted] of [
-      ['needs-you', { navigator: 'none', reader: 'none' }],
-      ['note', { navigator: 'none', deskArea: 'none' }],
-    ] as const) {
-      const noteBit = type === 'note' ? `&note=${encodeURIComponent(String(drawnCards[0] ?? 'FEAT-0002'))}` : '';
-      const address = `deck://${prepared?.id ?? 'deadbeef'}/features?panel=${type}${noteBit}`;
-      const window_ = createWindow('satellite', address, type);
-      await once(window_.webContents, 'did-finish-load');
-      await untilBooted(window_);
-      await delay(1200);
-      const seen = (await window_.webContents.executeJavaScript(
+    // Every check below needs a workspace: a satellite draws a workspace's
+    // desk, and putting a card on that desk changes a workspace's state. They
+    // used to run regardless, so a run without `--workspace` reported "a card
+    // added elsewhere reached the satellite (0 then 0)" and sent two people
+    // looking for a defect in the renderer that was never there (ISS-0022).
+    if (prepared === null) {
+      skip('the panel windows, the cross-window change and the promotion: no workspace was opened');
+    } else {
+      // A popped-out window carries ONE panel, named in its address.
+      const panelAddress = `deck://${prepared.id}/features?panel=desk`;
+      const satellite = createWindow('satellite', panelAddress, 'desk');
+      await once(satellite.webContents, 'did-finish-load');
+      await untilBooted(satellite);
+      record(!satellite.isFocused(), 'the satellite did not take focus');
+      const satelliteChrome = (await satellite.webContents.executeJavaScript(
         `({
-          panel: document.body.dataset.panel,
+          views: document.querySelectorAll('#switcher button').length,
+          rail: getComputedStyle(document.getElementById('rail')).display,
           navigator: getComputedStyle(document.getElementById('navigator')).display,
           reader: getComputedStyle(document.getElementById('reader')).display,
-          deskArea: getComputedStyle(document.getElementById('desk-area')).display,
-          views: document.querySelectorAll('#switcher button').length,
-          readerText: document.getElementById('reader').textContent.trim().length,
-          cards: document.querySelectorAll('.card:not([hidden])').length,
-          label: document.getElementById('desk-name').textContent
+          panel: document.body.dataset.panel
         })`,
-      )) as Record<string, unknown>;
-      record(seen['panel'] === type, `the ${type} window carries the panel its address named (${String(seen['panel'])})`);
-      record(seen['views'] === 0, `the ${type} window draws no view buttons`);
-      for (const [region, display] of Object.entries(wanted)) {
-        record(seen[region] === display, `the ${type} window does not carry the ${region} (it is ${String(seen[region])})`);
+      )) as { views: number; rail: string; navigator: string; reader: string; panel: string };
+      record(satelliteChrome.views === 0, 'the satellite drew no switcher, so it owns no navigation');
+      record(satelliteChrome.rail === 'none', 'the satellite drew no workspace rail');
+      record(satelliteChrome.panel === 'desk', `the satellite carries the panel its address named (${satelliteChrome.panel})`);
+      record(
+        satelliteChrome.navigator === 'none' && satelliteChrome.reader === 'none',
+        'a desk panel carries the desk and nothing else',
+      );
+
+      // What a person sees, not what the window was told. Reading the state a
+      // window holds passes while the cards on it never move.
+      const highlighted = async (win: BrowserWindow): Promise<string | null> =>
+        (await win.webContents.executeJavaScript(
+          `(document.querySelector('.card[aria-current="true"]:not([hidden]) .id') || {}).textContent || null`,
+        )) as string | null;
+
+      const visible = async (win: BrowserWindow): Promise<number> =>
+        (await win.webContents.executeJavaScript(
+          `document.querySelectorAll('.card:not([hidden])').length`,
+        )) as number;
+
+      // The desk holds one card. Putting a second one on it in the main process
+      // has to reach the window that is drawing the desk.
+      const onDesk = await visible(satellite);
+      const second = drawnCards.find((id) => id !== null && id !== '') ?? 'FEAT-0002';
+      store.dispatch({ type: 'put-on-desk', noteId: String(drawnCards[2] ?? second), x: 24, y: 240 });
+      await delay(800);
+      const afterPut = await visible(satellite);
+      record(afterPut === onDesk + 1, `a card added elsewhere reached the satellite (${onDesk} then ${afterPut})`);
+
+      const before = await highlighted(satellite);
+      const target = String(drawnCards[2] ?? second);
+      store.dispatch({ type: 'focus-note', noteId: target });
+      await delay(800);
+      const after = await highlighted(satellite);
+      record(
+        after === target && after !== before,
+        `the satellite REDREW when the focused note changed (${before} then ${after}, wanted ${target})`,
+      );
+
+      // The other two panels: what each one carries, and what it does not.
+      for (const [type, wanted] of [
+        ['needs-you', { navigator: 'none', reader: 'none' }],
+        ['note', { navigator: 'none', deskArea: 'none' }],
+      ] as const) {
+        const noteBit = type === 'note' ? `&note=${encodeURIComponent(String(drawnCards[0] ?? 'FEAT-0002'))}` : '';
+        const address = `deck://${prepared.id}/features?panel=${type}${noteBit}`;
+        const window_ = createWindow('satellite', address, type);
+        await once(window_.webContents, 'did-finish-load');
+        await untilBooted(window_);
+        await delay(1200);
+        const seen = (await window_.webContents.executeJavaScript(
+          `({
+            panel: document.body.dataset.panel,
+            navigator: getComputedStyle(document.getElementById('navigator')).display,
+            reader: getComputedStyle(document.getElementById('reader')).display,
+            deskArea: getComputedStyle(document.getElementById('desk-area')).display,
+            views: document.querySelectorAll('#switcher button').length,
+            readerText: document.getElementById('reader').textContent.trim().length,
+            cards: document.querySelectorAll('.card:not([hidden])').length,
+            label: document.getElementById('desk-name').textContent
+          })`,
+        )) as Record<string, unknown>;
+        record(seen['panel'] === type, `the ${type} window carries the panel its address named (${String(seen['panel'])})`);
+        record(seen['views'] === 0, `the ${type} window draws no view buttons`);
+        for (const [region, display] of Object.entries(wanted)) {
+          record(seen[region] === display, `the ${type} window does not carry the ${region} (it is ${String(seen[region])})`);
+        }
+        if (type === 'note') {
+          record(Number(seen['readerText']) > 20, 'the note window shows the note its address named');
+        } else {
+          // This repository owes nothing today, so the strip is empty and says
+          // so. Either label proves the panel drew rather than sat blank.
+          record(
+            seen['label'] === 'nothing is owed' || seen['label'] === 'what needs you',
+            `the needs-you window drew its strip (it says "${String(seen['label'])}")`,
+          );
+        }
+        window_.close();
+        await delay(300);
       }
-      if (type === 'note') {
-        record(Number(seen['readerText']) > 20, 'the note window shows the note its address named');
-      } else {
-        // This repository owes nothing today, so the strip is empty and says
-        // so. Either label proves the panel drew rather than sat blank.
-        record(
-          seen['label'] === 'nothing is owed' || seen['label'] === 'what needs you',
-          `the needs-you window drew its strip (it says "${String(seen['label'])}")`,
-        );
-      }
-      window_.close();
-      await delay(300);
+
+      // Closing the window that owns navigation must not leave Deck without one.
+      focus.close();
+      await delay(500);
+      const promoted = windowInfo.get(satellite.id)?.role;
+      record(promoted === 'focus', `a satellite was promoted when the focus window closed (it is now ${promoted})`);
+      record(focusWindowId === satellite.id, 'the promoted window owns navigation');
     }
 
-    // Closing the window that owns navigation must not leave Deck without one.
-    focus.close();
-    await delay(500);
-    const promoted = windowInfo.get(satellite.id)?.role;
-    record(promoted === 'focus', `a satellite was promoted when the focus window closed (it is now ${promoted})`);
-    record(focusWindowId === satellite.id, 'the promoted window owns navigation');
 
-    console.log(JSON.stringify({ ok: failures.length === 0, failures }, null, 2));
+    console.log(JSON.stringify(smokeVerdict(failures, skipped), null, 2));
   } catch (err) {
-    console.log(JSON.stringify({ ok: false, failures: [String(err)] }, null, 2));
+    console.log(JSON.stringify(smokeVerdict([...failures, String(err)], skipped), null, 2));
     failures.push('threw');
   }
   shutdown();
   // Give SIGTERM a moment to reach the children before the process goes.
   await delay(400);
-  app.exit(failures.length === 0 ? 0 : 1);
+  app.exit(smokeVerdict(failures, skipped).ok ? 0 : 1);
 }
 
 interface PreparedWorkspace {
@@ -690,13 +716,20 @@ interface PreparedWorkspace {
   name: string;
 }
 
-/** Add the workspace named on the command line, before any window opens. */
+/**
+ * Add the workspace the smoke run drives, before any window opens.
+ *
+ * `--workspace` names it, and this repository is the default. The default is
+ * not a convenience: without it `npm run smoke` opened no workspace, ran the
+ * panel checks against one that did not exist, and reported two failures whose
+ * cause was nowhere in the output (ISS-0022). Two commands that differ by a
+ * flag should not run two different smoke runs.
+ */
 function prepareWorkspace(): PreparedWorkspace | null {
-  const wanted = argValue('--workspace');
-  if (wanted === null) return null;
+  const wanted = argValue('--workspace') ?? defaultWorkspacePath(__dirname);
   const added = workspaces.add(wanted);
   if (!added.ok) {
-    console.log(JSON.stringify({ workspaceRefused: added.reason }));
+    console.log(JSON.stringify({ workspaceRefused: added.reason, path: wanted }));
     return null;
   }
   return { id: added.workspace.id, name: added.workspace.name };

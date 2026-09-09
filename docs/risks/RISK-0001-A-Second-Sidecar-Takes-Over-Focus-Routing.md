@@ -3,10 +3,10 @@ type: "[[risk]]"
 id: RISK-0001
 aliases: ["RISK-0001"]
 title: "A second sidecar on the same repository takes over the cockpit's focus routing"
-status: open
+status: closed
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck]]"]
 phase: "[[PHASE-0001-Deck]]"
 likelihood: high
@@ -52,3 +52,11 @@ Two checks in `desktop/tests/sidecar-client.test.mjs` guard it, under the headin
 The mitigation above is real and it has a hole: `alive()` compares `path.resolve(identity.root)` with `path.resolve(root)` as strings, and macOS's filesystem is case-insensitive, so one directory reached as `/Users/edwin/...` and as `/Users/Edwin/...` reads as two. The guard refused a sidecar that was serving exactly the workspace Deck was opening. Both checks in `desktop/tests/sidecar-client.test.mjs` pass, because both spell their paths the same way.
 
 [[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]] carries the evidence and the two decisions it needs. This note goes back to `closed` when a check exists that would have caught it.
+
+## Closed again, 2026-09-09
+
+**The check that would have caught it exists, and the hole is filled.** Deck now compares two DIRECTORIES rather than two path strings: `realDirectory` in `desktop/src/main/paths.ts` asks the file system for the spelling that is on disk, so `/Users/edwin/...` and `/Users/Edwin/...` reach one answer. The three places that decide "is this the same repository" — the sidecar reuse guard, the workspace id, and the workspace book — all read it.
+
+`desktop/tests/workspace-paths.test.mjs` is the check this note was waiting on ([[TST-0035-One-Directory-Is-One-Workspace-However-Its-Path-Is-Spelled]]). Its load-bearing case runs a sidecar that reports the other spelling of the workspace's own path and asserts Deck borrows it; reverting the fix fails that case and three others. The refusal case beside it asserts a sidecar on a different repository is still refused, so the fix cannot be "borrow anything".
+
+**The trigger is unchanged.** If `cockpit focus` ever moves a window that is not the cockpit's while Deck is running, this note comes back to `open` a third time.

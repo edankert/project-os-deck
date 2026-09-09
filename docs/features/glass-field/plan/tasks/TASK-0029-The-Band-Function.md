@@ -2,27 +2,29 @@
 type: "[[task]]"
 id: TASK-0029
 aliases: ["TASK-0029"]
-title: "The band function: one table from the sidecar's groups to front, mid and deep, per view, and overflow is stated rather than silent"
+title: "The band section of every description, and the function that applies it: front, mid and deep per view, with overflow stated rather than silent"
 status: backlog
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
-source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
+updated: 2026-09-08
+source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 parent: "FEAT-0009"
 effort: ""
 due: ""
-depends: []
+depends: ["TASK-0044"]
 blocks: ["TASK-0030", "TASK-0031"]
-related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]"]
-tests: []
+related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]", "[[FEAT-0012-A-View-Is-A-Description]]", "[[TASK-0044-Band-And-Face-Come-From-The-Description]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
+tests: ["[[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]]"]
 ---
 
-# The band function
+# The band section of every description, and the function that applies it
 
 ## Objective
 
-One function decides which of the three bands a note stands in, for every view, from the groups the sidecar already sends. It is written as a table a person can read, it lives in `desktop/src/shared/` with the other pure modules, and it says what happens when a band is full instead of quietly putting a note further back.
+One function decides which of the three bands a note stands in, for every view, from the groups the sidecar already sends. The table it applies is the `band` section of each view description, not a module of Glass's own. The function lives in `desktop/src/shared/` with the other pure modules, and it says what happens when a band is full instead of quietly putting a note further back.
+
+**Amended 2026-09-08.** This task was "one table from the sidecar's groups to front, mid and deep, per view", in a module Glass owned. [[ADR-0004-A-View-Is-A-Description]] made a view a description, and the band rule is one of its five sections. The acceptance below is unchanged; what changed is where the table lives and who else reads it. **This task now depends on [[FEAT-0012-A-View-Is-A-Description]]**, whose [[TASK-0044-Band-And-Face-Come-From-The-Description]] moves the table into the description and writes the function. What is left here is Glass's use of it: the field bands by the same rule the navigator folds by and Spread groups by.
 
 ## Detail
 
@@ -42,11 +44,11 @@ The front band holds about twelve cards and the mid band about forty. Your Train
 
 ## Steps
 
-- [ ] Write the table: inputs (owed, in subject, suppressed, held, joined to desk) against the band, per view, in one file under `desktop/src/shared/`.
+- [ ] Write the table as the `band` section of each of the seven descriptions: inputs (owed, in subject, suppressed, held, joined to desk) against the band, per view.
 - [ ] Implement the function over the card model the navigator already builds, returning the three bands and the two overflow counts.
 - [ ] Build fixtures from the real payloads for this repository and for Your Trainer's Issues and Features views.
 - [ ] Add the suite: every view, every band, both overflow counts, and the rule that an owed note never leaves the front band.
-- [ ] Write the automated test note and link it from `tests:`.
+- [ ] Link [[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]], which covers the table and the function, and add whatever Glass's own use needs on top.
 
 ## Notes
 

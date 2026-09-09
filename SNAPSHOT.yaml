@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-07T18:00Z"
+updated: "2026-09-08T12:00Z"
 
 template:
   replace_me: false
@@ -44,26 +44,26 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 2
+  ADR: 4
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 10
+  FEAT: 13
   ISS: 23
   PHASE: 4
   REQ: 0
-  RISK: 2
+  RISK: 4
   REL: 0
-  TASK: 37
-  TST: 25
+  TASK: 52
+  TST: 36
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
-  phase: "PHASE-0002"
-  feature: "FEAT-0009"
+  phase: "PHASE-0001"
+  feature: "FEAT-0003"
   task: ""
-  issue: ""
+  issue: "ISS-0022"
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -117,12 +117,12 @@ items:
     FEAT-0006:
       file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
       title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-      status: done
+      status: doing
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
-      tasks: ["TASK-0017", "TASK-0018"]
-      note: "One grammar covering workspace, view, desk and focused note, with a formatter and a strict parser. It is what makes a layout serialisable and a window restorable. The parser REFUSES what it cannot read rather than falling back to a default: the cockpit's silent fallback for an unknown nav mode made the Tests view look broken for thirty-three hours."
+      tasks: ["TASK-0017", "TASK-0018", "TASK-0052"]
+      note: "BACK TO doing 2026-09-08 with TASK-0052: four kinds of state arriving in the next three phases have no written form (a Glass surface, a page, an editor, a flow at a step), so the grammar gains surface, page, flow and step, each REFUSING an unknown value, and the closed three-item panel list becomes a REGISTRY each phase adds to -- keeping the guarantee that an address cannot name what Deck cannot draw. New work inside the feature, not a defect in what was built, so it needs a review again before it returns to done. The store also reserves a FLOW CURSOR slot that nothing writes. One grammar covering workspace, view, desk and focused note, with a formatter and a strict parser. It is what makes a layout serialisable and a window restorable. The parser REFUSES what it cannot read rather than falling back to a default: the cockpit's silent fallback for an unknown nav mode made the Tests view look broken for thirty-three hours."
     FEAT-0007:
       file: "docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md"
       title: "Views come from a provider: the renderer holds no fixed set of view buttons"
@@ -159,6 +159,33 @@ items:
       requirements: []
       tasks: ["TASK-0035", "TASK-0036", "TASK-0037"]
       note: "Answers what Edwin wrote in the ledger on 2026-09-07 walking TST-0015: relationships and dependencies are what he cannot see in Deck. A click lifts a note out of the field onto THE DESK SPREAD ALREADY HAS (one desk model, two surfaces; DES-0002's desk-survives-a-workspace-switch is NOT adopted, desks are per workspace); the slot stays ghosted; closing is three non-destructive verbs and a background click does nothing. While a note is held its links and backlinks take the front band, the front plane's label says what it now means and the owed count keeps a fixed place (the review's two desk findings). With several notes down the field marks what is joined to more than one. Data is /api/cockpit/context per held note, already allow-listed by Deck's host; no whole-graph payload needed. Depends on FEAT-0009's TASK-0031 (a field to lift from) and TASK-0030 (a held note is an obstacle). The live desk in the store is keyed by workspace, not by view; if per-view live desks are wanted that is a store change for TASK-0035 to decide."
+    FEAT-0011:
+      file: "docs/features/index/FEAT-0011-Decks-Own-Index.md"
+      title: "Deck's own index: the main process reads the workspace's Markdown itself, so a view can arrange notes the sidecar does not arrange"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0038", "TASK-0039", "TASK-0040"]
+      note: "ADDED 2026-09-08 when PHASE-0001 reopened. Edwin, answering the architecture review: 'Decks own index, the Decks application are individual applications/views'. Deck's main process walks the workspace's Markdown, parses frontmatter into a record per note, watches for changes and raises a revision. NO RECORDS ENDPOINT is asked of the cockpit -- the review's proposal to file one is WITHDRAWN by that answer. The sidecar is still the authority on obligations, render, context, stats and every write; Deck's index answers only which notes a query selects. The hazard is RISK-0004: two indexers over one corpus drift, so a FIXTURE recorded from the sidecar's own library groups pins Deck's typed counts, and every deliberate difference is a NAMED ROW with its reason -- the first being that Deck must NOT reproduce cockpit ISS-0279, which drops a note whose type: is a list."
+    FEAT-0012:
+      file: "docs/features/descriptions/FEAT-0012-A-View-Is-A-Description.md"
+      title: "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0041", "TASK-0042", "TASK-0043", "TASK-0044", "TASK-0045", "TASK-0046"]
+      note: "THE FOCUS from 2026-09-08 (ADR-0004). A view stops being an id, a label and a sidecar mode with every other decision in code. Five sections: source (kind mode = the sidecar's groups are the arrangement, or kind query = filters/sort/groupBy over FEAT-0011's index), band (TASK-0029's table moves here), face (property names, not code), surfaces (which of list/spread/glass may draw it), verbs: registry (NEVER a restated verb list, cockpit REQ-0026). The language is DECK'S OWN, seeded with the Bases subset measured in ~/Notes so every base file already reads as a description, and carrying a VERSION and an EXTENSION NAMESPACE from version one -- Edwin 2026-09-08: the subset 'cannot represent everything ... we will need to be able to extend it probably significantly'. The three type spellings are normalised. An unsupported construct is REPORTED BY NAME, never an empty list, because an empty view and a broken view look identical. TASK-0042 lands early and changes NOTHING a person sees: seven mode-sourced descriptions pinned by the existing cockpit-navigator fixture. PHASE-0002 starts after this feature. Hazard: RISK-0003, two evaluators of one language."
+    FEAT-0013:
+      file: "docs/features/first-write/FEAT-0013-The-First-Write.md"
+      title: "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0001
+      requirements: []
+      tasks: ["TASK-0047", "TASK-0048", "TASK-0049", "TASK-0050", "TASK-0051"]
+      note: "ADDED 2026-09-08 with ADR-0003, which REVERSES PHASE-0001's 'Deck adds no write path of its own' and ARCHITECTURE.md's 'reads and never writes'. It does NOT reverse ADR-0001: Deck's host still answers 405 to every method that is not a read. The route is renderer -> preload bridge -> main process -> LOOPBACK request to the sidecar's existing guarded endpoint; the capability set gains write, FALSE when served, so a tablet is offered no verb AT ALL -- absent, not disabled. Edwin 2026-09-08: 'the tablet does not write', a RULE with no condition, not a wait on the cockpit's REQ-0034. TWO VERBS ONLY: tick a criterion with evidence (addressed by the data-raw the sidecar stamps; mtime sent; no data-raw means no tick offered) and one transition read from GET /api/notes/actions. The actor is a STORE SETTING, because the cockpit's hard-coded user:edwin is a literal that cannot be copied. A write makes other windows stale, so the changed-under-you mark is built here -- the seam PHASE-0002 and PHASE-0004 both need. Everything else the cockpit can do stays PHASE-0004's, adopted a register row at a time. Adoption: api.write.notes moved not applicable -> not yet."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -195,76 +222,6 @@ items:
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
-    TASK-0013:
-      file: "docs/features/windows/plan/tasks/TASK-0013-A-Window-Reopens-Where-It-Was.md"
-      title: "A window reopens where it was — bounds remembered per window and placed on the display it was on"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0004"
-      phase: PHASE-0001
-    TASK-0014:
-      file: "docs/features/windows/plan/tasks/TASK-0014-Satellites-Do-Not-Steal-Focus.md"
-      title: "Satellites do not steal focus — one window owns navigation and the others watch"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0004"
-      phase: PHASE-0001
-    TASK-0015:
-      file: "docs/features/spread/plan/tasks/TASK-0015-Notes-Become-Cards.md"
-      title: "Notes become cards — the sidecar's list, drawn as several cards at once, each carrying its status band"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0005"
-      phase: PHASE-0001
-    TASK-0016:
-      file: "docs/features/spread/plan/tasks/TASK-0016-A-Desk-Is-Saved-And-Reopened.md"
-      title: "A desk is saved and reopened — an arrangement with a name, and a card whose note is gone does not break it"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0005"
-      phase: PHASE-0001
-    TASK-0017:
-      file: "docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md"
-      title: "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0006"
-      phase: PHASE-0001
-    TASK-0018:
-      file: "docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md"
-      title: "Copy the address and open one — the round trip a person can actually perform"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0006"
-      phase: PHASE-0001
-    TASK-0019:
-      file: "docs/features/views/plan/tasks/TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider.md"
-      title: "The provider interface, and the project-os provider whose views match the cockpit's"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0007"
-      phase: PHASE-0001
-    TASK-0020:
-      file: "docs/features/views/plan/tasks/TASK-0020-The-Switcher-Draws-What-The-Provider-Returned.md"
-      title: "The switcher draws what the provider returned — and the renderer holds no list of view names"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0007"
-      phase: PHASE-0001
-    TASK-0021:
-      file: "docs/features/two-hosts/plan/tasks/TASK-0021-Decks-Own-Read-Only-Host.md"
-      title: "Deck's own read-only host — it serves the renderer and proxies reads, and refuses every method that is not a read"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0008"
-      phase: PHASE-0001
-    TASK-0022:
-      file: "docs/features/two-hosts/plan/tasks/TASK-0022-Capability-Is-Detected-Not-Assumed.md"
-      title: "Capability is detected, not assumed — the renderer asks its host what it can do, and shell-only capability is absent when served"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0008"
-      phase: PHASE-0001
     TASK-0023:
       file: "docs/features/spread/plan/tasks/TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn.md"
       title: "The groups the sidecar already sends are drawn, so Needs you comes first, phases hold their features and tasks, and the quiet work folds away"
@@ -309,7 +266,7 @@ items:
       phase: PHASE-0001
     TASK-0029:
       file: "docs/features/glass-field/plan/tasks/TASK-0029-The-Band-Function.md"
-      title: "The band function: one table from the sidecar's groups to front, mid and deep, per view, and overflow is stated rather than silent"
+      title: "The band section of every description, and the function that applies it: front, mid and deep per view, with overflow stated rather than silent"
       status: backlog
       owner: user:edwin
       parent: "FEAT-0009"
@@ -370,11 +327,116 @@ items:
       owner: user:edwin
       parent: "FEAT-0010"
       phase: PHASE-0002
+    TASK-0038:
+      file: "docs/features/index/plan/tasks/TASK-0038-Records-From-The-Workspaces-Markdown.md"
+      title: "Records from the workspace's Markdown: frontmatter parsed, a list-valued type counted under each value, and the sidecar's normalisation mirrored rather than guessed"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0011"
+      phase: PHASE-0001
+    TASK-0039:
+      file: "docs/features/index/plan/tasks/TASK-0039-The-Index-Watches-And-Carries-A-Revision.md"
+      title: "The index watches the workspace and carries a revision, so a view knows its picture is old"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0011"
+      phase: PHASE-0001
+    TASK-0040:
+      file: "docs/features/index/plan/tasks/TASK-0040-The-Records-Reach-The-Renderer-Read-Only.md"
+      title: "The records reach the renderer through Deck's own host, read-only, on both hosts"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0011"
+      phase: PHASE-0001
+    TASK-0041:
+      file: "docs/features/descriptions/plan/tasks/TASK-0041-The-Description-Shape-And-Its-Parser.md"
+      title: "The description shape, its version and its extension namespace, and a parser that refuses what it cannot read by name"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0012"
+      phase: PHASE-0001
+    TASK-0042:
+      file: "docs/features/descriptions/plan/tasks/TASK-0042-Seven-Descriptions-Equal-To-Todays-Views.md"
+      title: "The project-os provider emits seven mode-sourced descriptions, and nothing a person sees changes"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0012"
+      phase: PHASE-0001
+    TASK-0043:
+      file: "docs/features/descriptions/plan/tasks/TASK-0043-The-Evaluator-Over-The-Index.md"
+      title: "The evaluator for the seeded language over Deck's index: filters, functions, sort and grouping, with anything unsupported named rather than silently empty"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0012"
+      phase: PHASE-0001
+    TASK-0044:
+      file: "docs/features/descriptions/plan/tasks/TASK-0044-Band-And-Face-Come-From-The-Description.md"
+      title: "Band and face are read from the description: faces.ts becomes a reader, and the vocabularies it still copies are pinned to the cockpit by fixture"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0012"
+      phase: PHASE-0001
+    TASK-0045:
+      file: "docs/features/descriptions/plan/tasks/TASK-0045-The-Navigator-Draws-Any-Description.md"
+      title: "The navigator draws any description, whether its notes came from a sidecar mode or from a query over Deck's index"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0012"
+      phase: PHASE-0001
+    TASK-0046:
+      file: "docs/features/descriptions/plan/tasks/TASK-0046-A-Base-File-Reads-As-A-Description.md"
+      title: "A base file reads as a description — the parser half only, so the Vault phase inherits a language instead of inventing one"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0012"
+      phase: PHASE-0001
+    TASK-0047:
+      file: "docs/features/first-write/plan/tasks/TASK-0047-The-Write-Channel.md"
+      title: "The write channel: bridge, IPC and a loopback call, with the write capability false when Deck is served"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0013"
+      phase: PHASE-0001
+    TASK-0048:
+      file: "docs/features/first-write/plan/tasks/TASK-0048-The-Actor-Is-A-Setting.md"
+      title: "The actor is a setting in Deck's store, because the cockpit's hard-coded name cannot be copied into a second application"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0013"
+      phase: PHASE-0001
+    TASK-0049:
+      file: "docs/features/first-write/plan/tasks/TASK-0049-The-Actuator-Row-And-One-Transition.md"
+      title: "The actuator rows come from the sidecar, and one transition is wired end to end"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0013"
+      phase: PHASE-0001
+    TASK-0050:
+      file: "docs/features/first-write/plan/tasks/TASK-0050-Ticking-A-Criterion-With-Evidence.md"
+      title: "Ticking a criterion with evidence, addressed by the data-raw the sidecar stamped, with the modification time sent and no tick offered when the address is missing"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0013"
+      phase: PHASE-0001
+    TASK-0051:
+      file: "docs/features/first-write/plan/tasks/TASK-0051-The-Changed-Under-You-Mark.md"
+      title: "The changed-under-you mark: a write makes every other window stale, and the change is announced rather than applied"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0013"
+      phase: PHASE-0001
+    TASK-0052:
+      file: "docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md"
+      title: "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0006"
+      phase: PHASE-0001
   issues:
     ISS-0023:
       file: "docs/issues/ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case.md"
       title: "Deck starts a second sidecar for a repository the cockpit already has open when the two spell the home directory differently, and that sidecar rewrites the repository's discovery file to its own port"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high
@@ -384,7 +446,7 @@ items:
     ISS-0022:
       file: "docs/issues/ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card.md"
       title: "The smoke run's popped-out desk window shows no cards at all: one put on the desk from another window never appears, and the focused note is never highlighted there"
-      status: triage
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high
@@ -609,11 +671,11 @@ items:
       status: active
       order: 1
       owner: user:edwin
-      features: []
+      features: ["FEAT-0002", "FEAT-0003", "FEAT-0004", "FEAT-0005", "FEAT-0006", "FEAT-0007", "FEAT-0008", "FEAT-0011", "FEAT-0012", "FEAT-0013"]
       requirements: []
-      tasks: []
+      tasks: ["TASK-0038", "TASK-0039", "TASK-0040", "TASK-0041", "TASK-0042", "TASK-0043", "TASK-0044", "TASK-0045", "TASK-0046", "TASK-0047", "TASK-0048", "TASK-0049", "TASK-0050", "TASK-0051", "TASK-0052"]
       issues: []
-      note: "The phase that makes Deck a thing you can open, and the one that carries the foundations rather than a separate foundations phase before it. Deliberate: a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge, and the two rules that must hold from the first line of code -- one renderer with two hosts, and views taken from a provider rather than a fixed list of buttons -- would be stranded in a phase that ends before any view exists. Exit is measured, not listed: Spread opens the same notes as the cockpit, a status window survives a restart on a second display, and the same renderer served by the sidecar opens read-only on a tablet. If the phase proves too large to steer, the split point is the first criterion. Asks nothing new of the sidecar: the list of views is Deck's own (Edwin 2026-09-06), and the project-os provider matches the cockpit's navigator."
+      note: "WIDENED 2026-09-08 and still active. Edwin, asked whether to reopen this phase or insert a design step before Glass: 'happy to reopen phase-0001 to implement this'. Three features added -- FEAT-0011 Deck's own index, FEAT-0012 a view is a description, FEAT-0013 the first write -- plus TASK-0052 under FEAT-0006 (the grammar gains surface/page/flow/step, panel kinds come from a registry, a flow cursor slot is reserved), two decisions (ADR-0003 the shell writes and the served host never does; ADR-0004 a view is a description over Deck's own index), two hazards (RISK-0003, RISK-0004) and five exit criteria. ONE SCOPE BULLET REVERSED: 'Reads only. Deck adds no write path of its own' is struck on 2026-09-08. FEAT-0006 went from done back to doing for TASK-0052, the same move FEAT-0004 and FEAT-0005 made on 2026-09-07. The tasks list here is the NEW work only; the 23 completed ones are in the note. COST TO GLASS: PHASE-0002 starts after FEAT-0012, and TASK-0029's band table moves into the description. NONE OF THIS DISCHARGES what the phase already owed: two reopened walks, ISS-0022 undiagnosed, ISS-0023 with RISK-0001 back at open, and four features at review. The phase that makes Deck a thing you can open, and the one that carries the foundations rather than a separate foundations phase before it. Deliberate: a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge, and the two rules that must hold from the first line of code -- one renderer with two hosts, and views taken from a provider rather than a fixed list of buttons -- would be stranded in a phase that ends before any view exists. Exit is measured, not listed: Spread opens the same notes as the cockpit, a status window survives a restart on a second display, and the same renderer served by the sidecar opens read-only on a tablet. If the phase proves too large to steer, the split point is the first criterion. Asks nothing new of the sidecar: the list of views is Deck's own (Edwin 2026-09-06), and the project-os provider matches the cockpit's navigator."
     PHASE-0002:
       file: "docs/phases/PHASE-0002-Glass.md"
       title: "Glass — the main view, where depth carries priority and a held note brings its neighbourhood to the front"
@@ -658,10 +720,24 @@ items:
     RISK-0001:
       file: "docs/risks/RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing.md"
       title: "A second sidecar on the same repository takes over the cockpit's focus routing"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0001
       note: "The sidecar writes .cockpit/url into the repository and the cockpit command follows it, so a second sidecar on one repository silently captures that routing -- and Deck and the cockpit are meant to be open together during this phase, because exit criterion 1 is a side-by-side comparison. Mitigated in TASK-0007 by reusing a running sidecar after verifying its identity, and starting one only when none answers."
+    RISK-0003:
+      file: "docs/risks/RISK-0003-Two-Evaluators-Of-The-Bases-Language.md"
+      title: "Obsidian and Deck both evaluate the Bases language over the same base files, and the same file can show two different lists"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      note: "Risk scan for FEAT-0012, 2026-09-08. Deck seeds its description language from the Bases subset measured across ten live base files in ~/Notes, so Obsidian and Deck now evaluate the SAME FILE with two engines. Three ways they diverge: Deck does not implement a construct (most likely); Deck implements one differently (date arithmetic, string-versus-wikilink coercion, what an absent property compares equal to -- none of Obsidian's answers are written down anywhere Deck can read); or Obsidian changes, with no signal to Deck. Impact MEDIUM not high: nothing is written and no note is lost, but a view is how a person decides what to work on and a view quietly missing four notes is worse than a view that fails. MITIGATION, and it is the whole design: the seed is NAMED and the suite ENUMERATES it, and anything outside it is REPORTED BY NAME above the list, so a divergence looks like a message rather than a shorter list. Twelve real base files are fixtures. Trigger to watch: a count differing from Obsidian's with NO unsupported-construct report -- that means the evaluator was confidently wrong."
+    RISK-0004:
+      file: "docs/risks/RISK-0004-Decks-Index-Duplicates-The-Sidecars-Indexer.md"
+      title: "Deck's index and the sidecar's index read the same notes and can disagree about them, so two applications show different counts of the same corpus"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      note: "Risk scan for FEAT-0011, 2026-09-08, from Edwin's decision that Deck keeps its own index. Same shape as RISK-0002: Deck depends on behaviour in ANOTHER REPOSITORY and nothing in Deck watches it. The visible failure is two applications disagreeing about a number in front of one person -- the cockpit says 34 issues need triage and Deck says 31 -- after which he trusts neither. Three drifts: a rule mirrored wrongly at the start (the type spelling is the obvious one), a sidecar change nobody notices, and a DELIBERATE difference nobody wrote down. The third is the trap: cockpit ISS-0279 drops a note whose type: is a list, Deck must not reproduce it, so Deck's count will be right and the equality test will fail for a GOOD reason -- and somebody will loosen the assertion instead of recording it. MITIGATION: mirror with a citation to the upstream rule; pin the RESULT (a fixture of the sidecar's own library groups, with its date and commit) rather than the implementation; record every deliberate difference as a NAMED ROW; keep Deck's index claiming only which notes a query selects, with obligations, render, context and writes left to the sidecar."
   tests:
     TST-0001:
       file: "docs/features/shell/plan/tests/TST-0001-The-Sidecar-Client-Reads-And-Never-Writes.md"
@@ -863,6 +939,78 @@ items:
       phase: PHASE-0002
       covers: ["FEAT-0001"]
       note: "Acceptance walk for FEAT-0001, the orbit arrangement: in a scratch copy of this repository plant one orphan note and one cluster joined by a single edge, name the ids before looking, open the orbit arrangement and find both without search; hover the single edge and read the sentence that made it; land on the orphan and the reader opens it. Rests at active; the verdict is a ledger event."
+    TST-0026:
+      file: "docs/tests/acceptance/TST-0026-Decks-Index-Counts-What-The-Cockpit-Counts.md"
+      title: "Deck's own index counts what the cockpit counts, on a project-os repository and on the vault, and a note edited on disk changes without a restart"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0011"]
+      note: "Acceptance walk for FEAT-0011. The type counts in Deck's Library and the cockpit's, side by side, on this repository and on Your Trainer; then ~/Notes, where Deck showing MORE than the cockpit is the expected result because the cockpit drops a list-valued type: (ISS-0279); then a note edited, added, deleted and broken on disk while Deck runs. Rests at ready; the verdict is a ledger event. The automated half is TST-0029, which pins Deck against a fixture -- a fixture cannot notice that the sidecar itself moved."
+    TST-0027:
+      file: "docs/tests/acceptance/TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged.md"
+      title: "The seven project-os views look exactly as they did, and a base file from the vault reads as a description whose unsupported constructs are named on screen"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0012"]
+      note: "Acceptance walk for FEAT-0012, two halves. First: all seven views unchanged against the cockpit, view by view -- a difference that LOOKS LIKE AN IMPROVEMENT is still a fail. Second: three base files of different shapes from ~/Notes (a Comic card view, the sidebar base whose filters are relative to an embedding note Deck does not have, a TaskNotes file using the plugin's own view types) read as descriptions with every unsupported construct NAMED, then compared against what Obsidian draws for the same file. A silently different list is the fail this check exists to catch (RISK-0003). Rests at ready; the verdict is a ledger event."
+    TST-0028:
+      file: "docs/tests/acceptance/TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit.md"
+      title: "A criterion ticked in Deck is ticked in the file and in the cockpit, one transition moves a status, and the tablet is offered no verb at all"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0013"]
+      note: "Acceptance walk for FEAT-0013 and the human half of ADR-0003. Tick a real criterion with evidence and read the change out of `git diff` rather than off two screens; check the cockpit shows it; compare Deck's verb list against the cockpit's on the same note verb by verb; apply one transition; watch a second window announce the change instead of redrawing. Then the tablet: NO VERB OF ANY KIND, and a disabled control is a FAIL. Needs the cockpit open, a terminal, two Deck windows and a real tablet on the LAN. Rests at ready; the verdict is a ledger event."
+    TST-0029:
+      file: "docs/features/index/plan/tests/TST-0029-The-Index-Reads-What-Is-On-Disk.md"
+      title: "The index reads what is on disk, counts types the way the sidecar does, follows a change, and is served read-only"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0011"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0011. The load-bearing part is the fixture recorded from the SIDECAR'S OWN library groups rather than from Deck's output, so a mirrored rule that is subtly wrong fails here; every deliberate difference is a named row, because a suite that passes because somebody loosened an assertion tests nothing. Also: one file's change re-reads one file, a burst rebuilds once, the revision never falls, and the records path answers 405 to everything that is not a read."
+    TST-0030:
+      file: "docs/features/descriptions/plan/tests/TST-0030-A-Description-Parses-Or-Says-Why-Not.md"
+      title: "A description parses or says why not, the seven project-os views still match the cockpit, and twelve real base files come back with their unsupported constructs named"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0012"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0012. The malformed table is the guard -- a parser that starts DEFAULTING instead of refusing fails it, which is the failure FEAT-0006 learned from when the cockpit's silent fallback made the Tests view look broken for thirty-three hours. Twelve real base-file fixtures (ten from ~/Notes, two from the cockpit's docs/__bases__) are the second guard, because nobody wrote them for this suite."
+    TST-0031:
+      file: "docs/features/descriptions/plan/tests/TST-0031-The-Evaluator-Runs-The-Seeded-Language.md"
+      title: "The evaluator runs the seeded language over Deck's index, the three type spellings agree, and nothing unsupported returns an empty list without saying so"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0012"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0012. The suite ENUMERATES the named seed rather than the implementation, so a function nobody implemented is a failure instead of an untested case. The check that no selection path returns an empty list without a report beside it is the one that guards RISK-0003. Also draws a query-sourced description through the navigator's group model and asserts it is indistinguishable from a mode-sourced one."
+    TST-0032:
+      file: "docs/features/descriptions/plan/tests/TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit.md"
+      title: "Band and face follow the description rather than the code, and the status vocabulary Deck copies still equals the cockpit's"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0012"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0012 and carries TASK-0029's acceptance, which moved here from PHASE-0002. Two guards: the status-band fixture is recorded from the cockpit's OWN statuses.py, so it fails when the cockpit changes rather than when Deck does -- that drift already happened once within two days with nothing to catch it; and the overflow checks, because a band function that silently demotes an owed note passes everything else and defeats the front plane's purpose."
+    TST-0033:
+      file: "docs/features/first-write/plan/tests/TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served.md"
+      title: "The write channel exists in the shell and not when served, the verbs come from the sidecar, and every refusal is reported in the sidecar's own words"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0013"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0013. The 405 check runs over REAL HTTP including methods a browser will not send, because the equivalent check is what caught the traversal hole in Deck's host on 2026-09-06. The literal-name and verb-table searches read the BUILT OUTPUT, so a table that moved modules is still caught. What it cannot prove is that a real tablet in Safari shows no control -- that is TST-0028, and it is the half Edwin decided on."
+    TST-0034:
+      file: "docs/features/addresses/plan/tests/TST-0034-The-Grammar-Carries-The-New-Keys-And-The-Panel-Registry-Refuses-Strangers.md"
+      title: "The grammar carries surface, page, flow and step, every old address still round-trips, and the panel registry refuses a kind nobody registered"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0001
+      covers: ["FEAT-0006"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0006 for TASK-0052. The register-then-parse pair is load-bearing: a parser that quietly accepts every panel kind passes a refusal test with a typo but fails this one. Carrying TST-0005's round-trip and malformed tables UNCHANGED is what makes 'nothing regressed' a measurement rather than a claim."
   releases: {}
   workflows: {}
   changes:
@@ -897,6 +1045,18 @@ items:
       status: accepted
       owner: user:edwin
       note: "Edwin, 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity.' Option 2 of three (keep the order; Glass now as the main view; Glass only and retire Spread). Consequences: Deck opens in Glass and the address gains a surface with glass the default; views stay the provider's; ONE DESK shown by both surfaces; FEAT-0001's measurements become exit criteria of PHASE-0002 rather than a gate; a failed frame time returns Spread to default and is recorded; TST-0015 and PHASE-0001's seventh criterion move to the new PHASE-0004 Parity, which comes before Vault. Triggered by his ledger remark on TST-0015 that relationships and dependencies are what he cannot see in Deck."
+    ADR-0003:
+      file: "docs/decisions/ADR-0003-Deck-Writes-Through-The-Shell.md"
+      title: "Deck writes through the shell to the loopback sidecar, and the host it serves a tablet never writes"
+      status: accepted
+      owner: user:edwin
+      note: "Edwin, 2026-09-08, answering the architecture review: 'the tablet does not write', and earlier the same day 'The deck needs to have the same functionality as the cockpit, so it needs to be able to write'. Option 3 of three (stay read-only everywhere; forward writes once the cockpit's REQ-0034 defines a proof; the shell writes and the served host never does). The route is renderer -> preload bridge -> IPC -> LOOPBACK request to the sidecar's existing guarded endpoint; nothing about the sidecar changes. Deck's HTTP host still answers 405 to everything that is not a read, because forwarding a write would launder a tablet's address into loopback -- the hole ADR-0001 closed for the inbox reads. Capability gains write, false when served: a tablet sees NO VERB, absent not disabled. A RULE, not a wait: no condition names REQ-0034. Verbs come from GET /api/notes/actions (cockpit REQ-0026); the actor is a store setting. REVERSES PHASE-0001's 'Reads only' bullet and ARCHITECTURE.md's 'reads and never writes'; does NOT reverse ADR-0001. Adoption row api.write.notes: not applicable -> not yet."
+    ADR-0004:
+      file: "docs/decisions/ADR-0004-A-View-Is-A-Description.md"
+      title: "A view is a description, evaluated over Deck's own index, in a language Deck owns and seeds from Obsidian Bases"
+      status: accepted
+      owner: user:edwin
+      note: "Edwin, 2026-09-08: 'Decks own index, the Decks application are individual applications/views', and 'the issue with using the bases subset is that it is a subset which we know cannot represent everything, it might be possible to use it as an initial definition but we will need to be able to extend it probably significantly'. Option 4 of four for evaluation (mode source only; a cockpit records endpoint; the sidecar evaluates bases; Deck's own index -- chosen), plus a language of Deck's own rather than Obsidian's. Five sections: source, band, face, surfaces, verbs: registry. VERSION and EXTENSION NAMESPACE from version one; the three type spellings normalised; an unsupported construct REPORTED BY NAME, never an empty list. WITHDRAWS the review's proposal to file a records-endpoint issue in the cockpit. Consequences: RISK-0003 and RISK-0004; TASK-0029's table moves into the band section so the navigator, Spread and Glass read one rule; faces.ts becomes a reader; PHASE-0002 starts after the description feature; PHASE-0003 inherits a query language instead of inventing one. A VOCABULARY PAYLOAD is still owed by the cockpit and is filed there the day TASK-0044 starts."
   designs:
     DES-0001:
       file: "docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md"
@@ -924,17 +1084,17 @@ items:
 
 metrics:
   counts:
-    features_total: 10
-    features_done: 3
+    features_total: 13
+    features_done: 2
     phases_total: 4
     phases_done: 0
-    tasks_total: 37
+    tasks_total: 52
     tasks_done: 23
-    tests_total: 15
+    tests_total: 23
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 4
-    risks_open: 1
+    issues_triage: 2
+    risks_open: 2
     releases_total: 0
-    decisions_total: 2
+    decisions_total: 4

@@ -3,17 +3,17 @@ type: "[[issue]]"
 id: ISS-0023
 aliases: ["ISS-0023"]
 title: "Deck starts a second sidecar for a repository the cockpit already has open when the two spell the home directory differently, and that sidecar rewrites the repository's discovery file to its own port"
-status: triage
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["Observed 2026-09-08 while starting Deck for the reopened walk of [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]]"]
 severity: high
 component: main
 parent: ""
 related: ["[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]]", "[[TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck]]", "[[RISK-0001-Deck-And-The-Cockpit-Compete-For-One-Sidecar]]"]
-tests: []
+tests: ["[[TST-0035-One-Directory-Is-One-Workspace-However-Its-Path-Is-Spelled]]"]
 ---
 
 # Two sidecars for one repository, because one path says `Edwin` and the other says `edwin`
@@ -62,6 +62,24 @@ The same check succeeds for this repository, where both hold `/Users/Edwin/Dev/r
 1. **The comparison.** Comparing resolved real paths (`fs.realpathSync.native`) answers what is actually being asked — is this the same directory — and is right on a case-sensitive volume too, where lowercasing would be wrong.
 2. **The discovery file after a clobber.** A stale `.cockpit/url` naming a dead port is worse than none: the next Deck run reads it, finds nothing alive and starts another sidecar. Whether the file should be left alone by a second sidecar is a question for the cockpit repository, since the sidecar writes it.
 
+## Fixed, 2026-09-09
+
+**Deck now compares directories rather than path strings, in all three places it compares them.** `desktop/src/main/paths.ts` carries one function, `realDirectory`, which asks the file system for the spelling that is on disk (`fs.realpathSync.native` follows every symbolic link and returns the real case). Three callers use it:
+
+- `alive()` in `sidecar.ts` decides whether a running sidecar is serving this repository. This is the defect itself: the cockpit reports `/Users/edwin/...`, Deck holds `/Users/Edwin/...`, and both now canonicalise to the one directory, so Deck borrows the running sidecar and never touches `.cockpit/url`.
+- `describeWorkspace` and `workspaceIdFor` in `workspaces.ts`, so one directory has one workspace id whichever spelling reached it. Without this half, a folder picked through Deck's own dialog could sit in the rail twice, with two desks and two sidecars.
+- `WorkspaceBook.add` and the roots read back from the settings file, so adding the same directory twice adds it once.
+
+A path that will not resolve — a workspace on an unplugged drive — falls back to `path.resolve`, which is what every one of these comparisons did before, so nothing that worked stops working.
+
+**The guard is not loosened.** A sidecar serving a different repository is refused exactly as before, and [[TST-0035-One-Directory-Is-One-Workspace-However-Its-Path-Is-Spelled]] asserts that alongside the borrow, so a fix of the shape "borrow anything" would fail.
+
+**Evidence.** Six checks in `desktop/tests/workspace-paths.test.mjs`, driving real directories on the real file system because the defect lives in the difference between a string and a directory. Reverting the canonical spelling to `path.resolve` fails four of the six, including the borrow.
+
+## The second decision: the stale discovery file
+
+**Left where it is, and it belongs upstream in the cockpit.** A `.cockpit/url` naming a dead port is written by the sidecar, not by Deck, and Deck already survives one: `borrow()` calls `alive()` first and starts its own sidecar when nothing answers there. What the file costs today is a wasted health check. The change worth making — a second sidecar leaving another sidecar's discovery file alone — is a change to the cockpit's own start-up, and this issue does not make it here.
+
 ## Next Actions
-- [ ] Decide the comparison (real path, or something narrower)
-- [ ] Decide whether the stale discovery file is Deck's problem or belongs upstream in the cockpit
+- [x] Decide the comparison — real paths, resolved through the file system (`realDirectory`), 2026-09-09
+- [x] Decide whether the stale discovery file is Deck's problem — it is the cockpit's, and Deck already survives one, 2026-09-09

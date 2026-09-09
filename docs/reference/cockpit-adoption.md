@@ -6,7 +6,7 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-08
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
@@ -14,6 +14,8 @@ related:
   - "[[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]"
   - "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"
   - "[[REFERENCE-PHASE-0001-REVIEW]]"
+  - "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"
+  - "[[ADR-0003-Deck-Writes-Through-The-Shell]]"
 tags: [reference, register, adoption, cockpit]
 ---
 
@@ -61,7 +63,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.stage.quick-switch` | not yet | |
 | `shell.stage.capture` | not yet | |
 | `shell.reader.render` | adopted | 2026-09-06: Deck shows the HTML the sidecar rendered and parses no Markdown of its own |
-| `shell.reader.actuators` | not yet | same verbs, same guards |
+| `shell.reader.actuators` | not yet | same verbs, same guards. 2026-09-08: [[FEAT-0013-The-First-Write]] is the feature that adopts this row. It reads the legal verbs from `GET /api/notes/actions` and draws the rows returned, restating no verb table (the cockpit's REQ-0026), and wires one transition end to end. The row moves to `adopted` when that transition is walked in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] |
 | `shell.reader.design` | not yet | |
 | `shell.context.pane` | replaced by | the neighbourhood in Glass; a context panel in Spread |
 | `shell.pages.overview` | not yet | the digest, the watermark and the unpushed commits have no home in DES-0002 yet (review, Part 2) |
@@ -98,7 +100,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.agents` | not yet | |
 | `api.read.validation` | not yet | |
 | `api.read.state` | not yet | needs a Deck address grammar first |
-| `api.write.notes` | not applicable | 2026-09-06: Deck adds no write path at all. The client has no method that writes, and Deck's host answers 405 to every method that is not a read |
+| `api.write.notes` | not yet | **Moved from `not applicable` on 2026-09-08.** The old position said "Deck adds no write path at all". [[ADR-0003-Deck-Writes-Through-The-Shell]] reverses that: Deck's shell writes through its main process to the sidecar on loopback, using these endpoints unchanged. [[FEAT-0013-The-First-Write]] adopts two of them — a tick with evidence and one status transition — and the rest wait for [[PHASE-0004-Parity]]. Deck's host still answers 405 to every method that is not a read, and the served page is offered no verb at all, which is a rule and not a wait |
 | `api.write.design` | not yet | |
 | `api.write.agents` | not yet | |
 | `api.write.inbox` | not yet | |
@@ -107,6 +109,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 ## Maintenance
 
+- 2026-09-08 — **two rows changed position because a decision changed, not because the register did.** The cockpit is still at `c0ed9e3` and no key arrived. `api.write.notes` moved from `not applicable` to `not yet`: Edwin decided on 2026-09-08 that Deck must be able to write, and [[ADR-0003-Deck-Writes-Through-The-Shell]] put that write in the shell's main process over loopback, so the reason the row gave for "not applicable" no longer holds. `shell.reader.actuators` stays `not yet` and now names [[FEAT-0013-The-First-Write]] as the feature that adopts it. Nothing else moved, and the served host still refuses every write, which keeps `api.guards` and `api.infra` as they were.
 - 2026-09-07, closing day — the re-read [[PHASE-0001-Deck]]'s last exit criterion asks for, made on the day that phase closed. The cockpit is still at `c0ed9e3` and has landed no change note since the previous read, so no key arrived and no row moved. The keys were compared mechanically rather than by eye: the register lists 55 and this table carries 55, with no key on either side that the other lacks. The nine rows Spread relies on — `surface.shell`, `shell.workspaces.rail`, `shell.workspaces.discovery`, `shell.nav.modes`, `shell.reader.render`, `shell.windows`, `api.read.nav`, `api.read.note` and `api.read.record` — are all `adopted`, as are `shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find` and `api.guards`.
 - 2026-09-07, later — no row moved. The Parity phase, [[PHASE-0004-Parity]], is now the phase that takes the `not yet` rows a working day needs; the `shell.terminal` row records Edwin's wish to evaluate T3 Code's terminal before Deck builds a console.
 - Re-read the cockpit register whenever `git log --since=<last read> -- docs/changes` in project-os-cockpit returns anything, and add a dated line here saying what was read and which rows changed.
