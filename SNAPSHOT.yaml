@@ -1014,6 +1014,12 @@ items:
   releases: {}
   workflows: {}
   changes:
+    CHG-20260909-Deck-Reads-Describes-And-Writes:
+      file: "docs/changes/CHG-20260909-Deck-Reads-Describes-And-Writes.md"
+      title: ""
+      status: merged
+      owner: user:edwin
+      note: "The eighteen tasks PHASE-0001 gained on 2026-09-08, all of them, plus the two open defects. THREE NEW CAPABILITIES: Deck's own index of the workspace's Markdown, watched and served read-only on both hosts (FEAT-0011); a view as a five-section document with a version and an extension namespace (FEAT-0012); and a write path from the shell to the sidecar over loopback, with NO verb at all on the tablet (FEAT-0013). The address grammar gained surface, page, flow and step, and its panel kinds come from a registry (TASK-0052). NOTHING A PERSON SEES CHANGED in the seven views, which is what the cockpit-navigator fixture is for. Both defects were MIS-DIAGNOSED in their own notes: ISS-0023 was a path string compared where a directory was meant, and ISS-0022 was not the renderer at all but `npm run smoke` asserting against a workspace it had never opened. Six things found rather than assumed, including a note in THIS repository whose invalid YAML had the cockpit showing 22 issues where there are 23, and Deck's status vocabulary having drifted from statuses.py within two days. Suites 165 -> 291. What is owed is four walks and a review, all a person's job."
     CHG-20260907-Nine-Defects-Before-The-Phase-Closes:
       file: "docs/changes/CHG-20260907-Nine-Defects-Before-The-Phase-Closes.md"
       title: ""
