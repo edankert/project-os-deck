@@ -93,6 +93,8 @@ Three words mean one thing each. A **description** is a view written as data. Th
 
 ## Where this stands
 
+**`done` means the work is sound, not that it has been walked.** [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] has never been performed — its `last_verified:` is empty — and this feature is `done` with that walk outstanding. The seventh review said so plainly when the status changed under it: an approval is about whether the code holds up, and moving a status discharges no walk. Five features in this phase already sit at `done` under the same warning, so this is the practice here rather than an exception, and the validator reports it as `VERIFY-ACCEPTANCE` on every run. Whether a walk should gate `done` for these three is Edwin's to decide.
+
 **2026-09-09: built, and at `review` waiting on the walk a person makes.** All six tasks are `done`. A view is a document with five sections; the project-os provider emits seven of them and nothing a person sees changed. `faces.ts` holds no note type. One band function serves every surface. A query-sourced description runs over Deck's own index and draws through the same group model a mode-sourced one does. Every base file Edwin has written reads as a description, and where the seed stops it says so by name.
 
 **Three things this found rather than assumed.**

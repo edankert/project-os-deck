@@ -74,6 +74,8 @@ Two words are used throughout. A **record** is what Deck knows about one note: i
 
 ## Where this stands
 
+**`done` means the work is sound, not that it has been walked.** [[TST-0026-Decks-Index-Counts-What-The-Cockpit-Counts]] has never been performed — its `last_verified:` is empty — and this feature is `done` with that walk outstanding. The seventh review said so plainly when the status changed under it: an approval is about whether the code holds up, and moving a status discharges no walk. Five features in this phase already sit at `done` under the same warning, so this is the practice here rather than an exception, and the validator reports it as `VERIFY-ACCEPTANCE` on every run. Whether a walk should gate `done` for these three is Edwin's to decide.
+
 **2026-09-09: built, and at `review` waiting on the walk a person makes.** All three tasks are `done`. Deck's main process walks a workspace's Markdown, keeps a record per note with every frontmatter key under its own name, watches for changes, raises one number per workspace when anything moves, and serves the records read-only on both hosts.
 
 **The comparison with the sidecar is real rather than a formality.** `desktop/fixtures/sidecar-types.json` is recorded from the cockpit's own `Index`, by `tools/scripts/record-sidecar-fixture.py`, which imports it. Deck agrees with the sidecar about all 199 notes in this repository, path by path. On Your Trainer's 2715 notes the two agree to within eleven differences the fixture names one by one: one is [[project-os-cockpit#ISS-0279]], the list-valued `type:` Deck must not reproduce, and ten are files whose frontmatter PyYAML refuses outright and whose notes therefore vanish from the cockpit's own views.

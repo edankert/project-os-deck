@@ -83,6 +83,8 @@ Two verbs is the whole scope. This feature is not parity with the cockpit's thir
 
 ## Where this stands
 
+**`done` means the work is sound, not that it has been walked.** [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] has never been performed — its `last_verified:` is empty — and this feature is `done` with that walk outstanding. The seventh review said so plainly when the status changed under it: an approval is about whether the code holds up, and moving a status discharges no walk. Five features in this phase already sit at `done` under the same warning, so this is the practice here rather than an exception, and the validator reports it as `VERIFY-ACCEPTANCE` on every run. Whether a walk should gate `done` for these three is Edwin's to decide.
+
 **2026-09-09: built, and at `review` waiting on the walk a person makes.** All five tasks are `done`. A write travels renderer → preload bridge → IPC → main process → loopback POST to the sidecar's existing guarded endpoint, and nothing about it touches Deck's HTTP host, which still answers 405 to every method that is not a read on every path.
 
 **It was proved against the real sidecar, not only against a fake one.** `ISS-0016` moved `triage` → `deferred` in the file with the decision callout appended; a criterion was ticked as `- [x] ... — evidence: ... (user:deck-live-check, 2026-09-09)`, which is the sidecar's own template exactly; a tick whose modification time had gone stale was refused; and a criterion matching nothing was refused. Everything was reverted with `git checkout` and the working tree left clean.
