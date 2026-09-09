@@ -729,13 +729,13 @@ async function runSmoke(): Promise<void> {
     record(caps?.['write'] === true, 'the shell reports the write capability');
     const writeControls = (await focus.webContents.executeJavaScript(
       `({
-        actuators: document.getElementById('actuators').hidden,
+        actuatorsHidden: document.getElementById('actuators').hidden,
         actor: document.getElementById('actor').textContent,
-        stale: document.getElementById('stale').hidden
+        staleHidden: document.getElementById('stale').hidden
       })`,
-    )) as { actuators: boolean; actor: string; stale: boolean };
+    )) as { actuatorsHidden: boolean; actor: string; staleHidden: boolean };
     record(/^writing as /.test(writeControls.actor), `the shell shows the name it writes with ("${writeControls.actor}")`);
-    record(writeControls.stale, 'nothing has changed under this window yet');
+    record(writeControls.staleHidden, 'no mark until something has actually changed under this window');
 
     // The mark, driven the way the index drives it: one number, and a window
     // drawing from an older one says so rather than re-arranging itself.
