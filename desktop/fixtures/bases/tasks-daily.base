@@ -1,0 +1,98 @@
+formulas:
+  Untitled: ""
+views:
+  - type: table
+    name: Overdue Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - due < date(this.file.ctime)
+        - status != ["done"]
+    order:
+      - due
+      - file.name
+      - scheduled
+      - domain
+      - project
+      - priority
+      - status
+    sort:
+      - property: due
+        direction: ASC
+    columnSize:
+      note.due: 128
+      file.name: 481
+      note.scheduled: 127
+  - type: table
+    name: This Week's Scheduled Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - status != ["closed"]
+        - and:
+            - scheduled > this.file.ctime
+            - scheduled < this.file.ctime + "1 week"
+    order:
+      - file.name
+      - project
+      - scheduled
+      - priority
+      - status
+      - created
+      - modified
+    sort: []
+    columnSize:
+      file.name: 481
+      note.scheduled: 150
+      note.created: 137
+      note.modified: 133
+  - type: table
+    name: Future Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - status != ["closed"]
+        - and:
+            - scheduled >= this.file.ctime + "1 week"
+    order:
+      - file.name
+      - project
+      - due
+      - scheduled
+      - priority
+      - status
+    sort: []
+    columnSize:
+      file.name: 481
+      note.scheduled: 150
+      note.created: 137
+      note.modified: 133
+  - type: table
+    name: Today's Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - status != ["closed"]
+        - or:
+            - scheduled == this.file.ctime
+            - due == this.file.ctime
+    order:
+      - priority
+      - file.name
+      - domain
+      - project
+      - due
+      - scheduled
+      - status
+      - created
+      - modified
+      - formula.Untitled
+    sort:
+      - property: due
+        direction: ASC
+    columnSize:
+      file.name: 429
+      note.due: 138
+      note.scheduled: 150
+      note.created: 137
+      note.modified: 133

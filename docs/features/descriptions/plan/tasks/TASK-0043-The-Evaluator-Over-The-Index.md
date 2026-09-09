@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0043
 aliases: ["TASK-0043"]
 title: "The evaluator for the seeded language over Deck's index: filters, functions, sort and grouping, with anything unsupported named rather than silently empty"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 parent: "FEAT-0012"
 effort: ""
@@ -47,14 +47,34 @@ A description whose source is a query returns a list of notes, grouped and sorte
 
 ## Steps
 
-- [ ] Write the seed's grammar down in one place, as the list the suite enumerates.
-- [ ] Implement the filter tree, the comparisons and the property namespaces over the record shape.
-- [ ] Implement the functions the ten measured base files use; report the rest.
-- [ ] Write the type-spelling normalisation as one named function and test all three spellings against it.
-- [ ] Implement sort and `groupBy`.
-- [ ] Build the fixture indexes and the unsupported-construct cases.
-- [ ] Write [[TST-0031-The-Evaluator-Runs-The-Seeded-Language]] and link it from `tests:`.
+- [x] Write the seed's grammar down in one place — `SEED_FUNCTIONS` in `shared/expression.ts`, which the suite walks
+- [x] Implement the filter tree, the comparisons and the property namespaces over the record shape
+- [x] Implement the functions the measured base files use; report the rest
+- [x] Write the type-spelling normalisation as one named function — `same()` — and test all three spellings against it
+- [x] Implement sort and `groupBy`
+- [x] Build the fixture indexes and the unsupported-construct cases
+- [x] Write [[TST-0031-The-Evaluator-Runs-The-Seeded-Language]] and link it from `tests:` — written at planning time; its evidence is filled in
 
 ## Notes
 
 **Two programs now evaluate this language over the same files**, Obsidian and Deck, and they can disagree. That is [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]]. The mitigation is exactly the two rules above: the seed is named rather than assumed, and what falls outside it is reported instead of quietly producing a different answer.
+
+
+## Done, 2026-09-09
+
+**The seed is a list in the code, and the suite walks THAT list.** `SEED_FUNCTIONS` names every function the twelve measured base files call. For each one the suite asserts either that it evaluates or that it reports itself unsupported by name — so a function nobody implemented cannot pass by being absent from the suite as well as from the evaluator. Twenty-six evaluate; eleven are named and not implemented, and each says "is in the measured language and this build does not evaluate it".
+
+**What is not implemented, and why it is worth leaving so.** `map`, `filter`, `reduce`, `format`, `image`, `icon`, `sort`, `unique`, `slice`, `split`, `join` — the list pipeline and the date formatting the TaskNotes plugin's forty-formula block uses. They belong to a plugin's own views, not to the four Comic views or the two Tasks bases, and implementing a `reduce` before anything draws its result would be guessing at what it should produce.
+
+**The three type spellings are ONE function.** `type.contains(link("Chapter"))`, `type == link("Task")` and `note.type == "[[Task]]"` all reach `same()`, which reduces a link to its target on both sides and compares case-insensitively. The suite asserts the three select identical notes over the same fixture, including a note whose `type:` is a list.
+
+**`this.` is a named unsupported case, not an empty answer.** The vault's sidebar base filters relative to the note it is embedded in and Deck has no such note. Selecting nothing quietly would be a view that looks empty for a reason nobody can read; it reports `this.` with the sentence "a `this.`-relative filter names the note a view is embedded in, and no Deck surface has one yet".
+
+**Nothing sorts last, whichever way round the sort was asked for.** A note with no due date is not the most urgent one, and reversing the order must not make it so, so presence is decided outside the direction flip. That was a real defect the suite caught: descending order put every missing value first.
+
+**Obligations stay the sidecar's.** A query decides which notes a view holds; owed and suppressed are read from a navigation payload for a mode the description NAMES, in Deck's own namespace. The mode is in the description and not in the renderer, which holds no view name at all — the check that enforces that caught the first version of this, which read `features` from a literal.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh evaluator`: 20 checks, 2026-09-09.
+- A query over this repository's REAL index — 199 records, walked by Deck's own walk — selects its issues and its fixed issues, and the cards carry their records so a face can read a property by name.

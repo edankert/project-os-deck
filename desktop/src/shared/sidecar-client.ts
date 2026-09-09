@@ -162,15 +162,7 @@ export class SidecarClient {
 
   async nav(mode: string): Promise<NavPayload> {
     const url = `${this.base}/api/cockpit/nav?mode=${encodeURIComponent(mode)}`;
-    const obj = requireObject(await this.getJson(`/api/cockpit/nav?mode=${encodeURIComponent(mode)}`), url);
-    const rawGroups = obj['groups'];
-    if (!Array.isArray(rawGroups)) {
-      throw new SidecarError('the nav payload has no "groups"', url);
-    }
-    return {
-      mode: typeof obj['mode'] === 'string' ? obj['mode'] : mode,
-      groups: rawGroups.map((g) => toGroup(g, url)),
-    };
+    return navFromPayload(await this.getJson(`/api/cockpit/nav?mode=${encodeURIComponent(mode)}`), mode, url);
   }
 
   async note(relPath: string): Promise<NotePayload> {
@@ -199,6 +191,26 @@ export class SidecarClient {
       hero: typeof obj['hero'] === 'object' && obj['hero'] !== null ? (obj['hero'] as Record<string, unknown>) : {},
     };
   }
+}
+
+/**
+ * Read a navigation payload into the shape Deck uses.
+ *
+ * Separate from the fetch so a recorded payload can be read the same way a
+ * live one is: the band function is measured over the sidecar's own answers
+ * for this repository and for Your Trainer, and a fixture that went through a
+ * different reader would be measuring the fixture.
+ */
+export function navFromPayload(raw: unknown, mode: string, url = 'a recorded payload'): NavPayload {
+  const obj = requireObject(raw, url);
+  const rawGroups = obj['groups'];
+  if (!Array.isArray(rawGroups)) {
+    throw new SidecarError('the nav payload has no "groups"', url);
+  }
+  return {
+    mode: typeof obj['mode'] === 'string' ? obj['mode'] : mode,
+    groups: rawGroups.map((g) => toGroup(g, url)),
+  };
 }
 
 /**
@@ -260,6 +272,9 @@ function cardsFromItems(items: NavItem[], groupKey: string, seen: Set<string>): 
       // same row as the same task under another, and a parent that repeats a
       // child of its own is what the dedup is for.
       children: cardsFromItems(item.children, groupKey, new Set<string>()),
+      // The navigation payload carries the fields the cockpit chose, not the
+      // note's own frontmatter. A card built from Deck's index carries that.
+      frontmatter: null,
     });
   }
   return out;

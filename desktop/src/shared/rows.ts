@@ -7,10 +7,13 @@
  * that holds a hundred tasks arrives closed, and a note a person opened stays
  * open. The renderer paints what this returns.
  */
+import type { FaceSection } from './description.js';
 import type { CardGroup, CardModel } from './types.js';
 
 export interface NavigatorPaint {
   groups: CardGroup[];
+  /** The face section of the view being drawn, which decides each row's mark. */
+  faces: FaceSection;
   folds: Record<string, boolean>;
   onDesk: Set<string>;
   currentNoteId: string | null;

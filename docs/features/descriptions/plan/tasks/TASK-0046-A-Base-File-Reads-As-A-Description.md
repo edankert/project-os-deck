@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0046
 aliases: ["TASK-0046"]
 title: "A base file reads as a description — the parser half only, so the Vault phase inherits a language instead of inventing one"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 parent: "FEAT-0012"
 effort: ""
@@ -46,11 +46,38 @@ Given the text of an Obsidian `.base` file, Deck produces a description and a li
 
 ## Steps
 
-- [ ] Copy or reduce the twelve files into fixtures under `desktop/fixtures/`, with the date they were read.
-- [ ] Implement the reader from base YAML to a description, over [[TASK-0041-The-Description-Shape-And-Its-Parser]]'s parser and [[TASK-0043-The-Evaluator-Over-The-Index]]'s grammar.
-- [ ] Run it over all twelve and record, in this note's Notes, what each one could not read.
-- [ ] Extend [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] with the fixture files.
+- [x] Copy the files into fixtures under `desktop/fixtures/bases/`, with the date they were read — thirteen, not twelve; `desktop/fixtures/bases/README.md` names where each came from
+- [x] Implement the reader from base YAML to a description — `shared/base-file.ts`
+- [x] Run it over all thirteen and record what each could not read — below
+- [x] Extend [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] with the fixture files
 
 ## Notes
 
 The list of unsupported constructs this task produces is the input to [[PHASE-0003-Vault]]'s scope. It says, with names, how far the seed gets on a real vault and what the extension will have to cover — which is Edwin's point on 2026-09-08 that the subset "cannot represent everything".
+
+
+## Done, 2026-09-09
+
+**Thirteen files, not twelve.** Eleven live in `~/Notes` — four under `__bases__/`, one beside a project, six the TaskNotes plugin wrote — and two in the cockpit's `docs/__bases__/`. All thirteen are copied into `desktop/fixtures/bases/` so the suite does not depend on `~/Notes` being present, and so a change to one of Edwin's live files cannot quietly change what a test asserts.
+
+**Every one of them yields at least one description.** Each view becomes a `query`-sourced description whose filter is the view's own filters combined with the file's, whose sort is the view's `sort`, and whose face names the picture and the columns the file named. Nothing is thrown away over a key the reader does not know.
+
+## What each file could not be read as
+
+**The four Comic views and the Galway one read completely.** Their filters, their orders, their sorts and their images all land. `Novel Base`'s four card views name `note.portrait`, `note.cover`, `note.scene` and `note.image` as their faces, which is exactly what the file says.
+
+**The sidebar base's `or`-of-`and` parses**, as a filter tree with three `and` branches under one `or`. What it cannot EVALUATE is the four `this.`-relative filters inside it, and those are reported by name at evaluation time rather than at parse time — which is the right place, because the filter is readable and it is Deck that has no embedding note.
+
+**The two Tasks bases read completely**, including `!status.containsAny("done", "cancelled")`, `scheduled < today() + "1 week"` and `status != ["done"]`.
+
+**The six TaskNotes files are the honest test of the extension namespace, and they pass it.** Their four view types — `kanban`, `agenda`, `calendar`, `miniCalendar` — come back as named unsupported constructs, one per view, each saying which types Deck draws and that the view is drawn as a list instead. Their per-view keys that Obsidian does not define come back the same way. The rest of each file parses: the filters, the formulas and the orders all land, and a file whose plugin Deck has never heard of still produces working views.
+
+**The two cockpit bases read completely**, filters and formulas included.
+
+**What this says about the seed.** It reaches every construct in the files Edwin actually wrote, with two named exceptions: `this.`-relative filters, which need a surface that gives `this.` a meaning, and the TaskNotes formula block's list pipeline (`map`, `filter`, `reduce`, `format`). Those two are [[PHASE-0003-Vault]]'s input, which is what this task exists to produce.
+
+**Nothing writes to a base file**, and the suite asserts it by reading the fixtures' modification times before and after.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh descriptions`: 17 checks, 2026-09-09, five of them over the fixtures.

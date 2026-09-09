@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { load, desktopRoot } from './helpers.mjs';
 
-const { ViewRegistry, projectOsProvider, DEFAULT_VIEW_ID } = load('shared/views.js');
+const { ViewRegistry, projectOsProvider, DEFAULT_VIEW_ID, sourceOf } = load('shared/views.js');
 
 const fixture = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'cockpit-views.json'), 'utf-8'));
 const WORKSPACE = { id: 'aaaa1111', root: '/repo', name: 'a repo', kind: 'project-os' };
@@ -22,9 +22,16 @@ test("the project-os provider offers exactly the cockpit's views, in the cockpit
 });
 
 test('a view carries where its contents come from, so the renderer names no route', () => {
+  // A view is a DESCRIPTION now (FEAT-0012), and `sourceOf` is what turns its
+  // source section into the route the renderer follows. The claim is
+  // unchanged: the renderer asks, and never names a sidecar path itself.
   for (const view of projectOsProvider.views(WORKSPACE)) {
-    assert.ok(view.source.kind === 'nav' || view.source.kind === 'stats', `${view.id} has no source`);
-    if (view.source.kind === 'nav') assert.equal(typeof view.source.mode, 'string');
+    const source = sourceOf(view);
+    assert.ok(
+      source.kind === 'nav' || source.kind === 'stats' || source.kind === 'query',
+      `${view.id} has no source`,
+    );
+    if (source.kind === 'nav') assert.equal(typeof source.mode, 'string');
   }
 });
 
@@ -38,7 +45,19 @@ test('a second provider changes the views with no change to the renderer', () =>
   const registry = new ViewRegistry();
   registry.register({
     kind: 'vault',
-    views: () => [{ id: 'characters', label: 'Characters', source: { kind: 'nav', mode: 'base:characters' } }],
+    views: () => [
+      {
+        version: '1',
+        id: 'characters',
+        label: 'Characters',
+        source: { kind: 'mode', mode: 'base:characters' },
+        band: { rows: [{ when: {}, band: 'mid' }], frontCapacity: 12, midCapacity: 40, gathersOwed: false },
+        face: { default: { title: 'title', subtitle: null, image: null, fields: [], measure: 'none' }, byType: {} },
+        surfaces: ['list'],
+        verbs: 'registry',
+        extensions: {},
+      },
+    ],
   });
   const vault = { id: 'bbbb2222', root: '/vault', name: 'Notes', kind: 'vault' };
   assert.deepEqual(registry.viewsFor(vault).views.map((v) => v.id), ['characters']);

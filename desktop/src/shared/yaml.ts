@@ -336,6 +336,15 @@ class Reader {
       this.problems.push({ construct: flagged, line: line.number, text });
       return null;
     }
+    // A flow collection that will not parse comes back as the TEXT it was,
+    // which is the safe answer and a silent one. Saying so is the point: a
+    // note in Your Trainer has `tasks: ["[[A, "[[B]]"]]", ...]` — one quote in
+    // the wrong place — and read as text it becomes a list of no tasks with
+    // nothing to read about why.
+    const trimmed = text.trim();
+    if ((trimmed.startsWith('[') || trimmed.startsWith('{')) && typeof parseScalarOrFlow(trimmed) === 'string') {
+      this.problems.push({ construct: 'a list or map that will not parse', line: line.number, text: trimmed });
+    }
     return parseScalarOrFlow(text);
   }
 }

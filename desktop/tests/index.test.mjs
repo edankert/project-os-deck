@@ -161,30 +161,90 @@ test('one unreadable file costs one record, never the walk', () => {
 
 // ---- the comparison with the sidecar ----
 
-test('Deck calls every note in this repository what the sidecar calls it', () => {
-  const recorded = FIXTURE.thisRepository.types;
-  const mine = new Map(walkNotes(path.join(REPO, 'docs')).records.map((r) => [r.relPath, r.types]));
-  const differences = new Map(
-    FIXTURE.expectedDifferences.filter((d) => d.workspace === 'thisRepository').map((d) => [d.relPath, d]),
+/**
+ * Compare Deck's answer with the sidecar's, note by note, for one workspace.
+ *
+ * Two claims, and they are not the same strength.
+ *
+ * A CONTRADICTION — the sidecar says a note is a feature and Deck says it is
+ * anything else — fails with no tolerance at all. That is the correctness
+ * claim RISK-0004 is about, and it cannot go stale.
+ *
+ * Deck KNOWING SOMETHING THE SIDECAR DOES NOT is allowed under the two rules
+ * the fixture states, and each is checked live on the Deck side rather than
+ * against a list of paths: a list goes stale, and Your Trainer produced a
+ * twelfth such file within an hour of the first recording. Anything else is
+ * reported by name.
+ *
+ * Only the paths the fixture names and that are still on disk are compared, so
+ * a note added since is not a failure. A fixture that lost its content cannot
+ * pass either: the caller says how many notes it expects to compare.
+ */
+function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
+  const walked = walkNotes(docsRoot);
+  const mine = new Map(walked.records.map((r) => [r.relPath, r]));
+  const reported = new Set(walked.problems.map((p) => p.relPath));
+  const named = new Map(
+    FIXTURE.expectedDifferences.filter((d) => d.workspace === workspace).map((d) => [d.relPath, d]),
   );
-
   let compared = 0;
-  const disagreements = [];
+  const contradictions = [];
+  const unexplained = [];
   for (const [relPath, sidecarType] of Object.entries(recorded)) {
-    // A note deleted since the fixture was recorded is not a disagreement.
-    const types = mine.get(relPath);
-    if (types === undefined) continue;
+    const record = mine.get(relPath);
+    if (record === undefined) continue;
     compared += 1;
-    if (differences.has(relPath)) continue;
-    const wanted = sidecarType === null ? [] : [sidecarType];
-    if (JSON.stringify(types) !== JSON.stringify(wanted)) {
-      disagreements.push(`${relPath}: deck ${JSON.stringify(types)}, sidecar ${JSON.stringify(wanted)}`);
+    const types = record.types;
+    if (sidecarType !== null) {
+      if (JSON.stringify(types) !== JSON.stringify([sidecarType])) {
+        contradictions.push(`${relPath}: deck ${JSON.stringify(types)}, sidecar ${JSON.stringify(sidecarType)}`);
+      }
+      continue;
     }
+    if (types.length === 0) continue;
+    // The sidecar has no opinion and Deck does. One of the two rules has to
+    // cover it, or somebody has to look at it.
+    const listValued = Array.isArray(record.frontmatter.type);
+    if (listValued || reported.has(relPath) || named.has(relPath)) continue;
+    unexplained.push(`${relPath}: deck ${JSON.stringify(types)} where the sidecar had no opinion`);
   }
-  assert.deepEqual(disagreements, [], 'Deck and the sidecar disagree about what these notes are');
-  // A fixture that lost its content would pass every assertion above by
-  // comparing nothing at all.
-  assert.ok(compared > 150, `only ${compared} notes were compared; the fixture has lost its content`);
+  assert.deepEqual(contradictions, [], `Deck and the sidecar CONTRADICT each other about these notes in ${workspace}`);
+  assert.deepEqual(unexplained, [], `no rule in the fixture explains these differences in ${workspace}`);
+  assert.ok(compared > atLeast, `only ${compared} notes were compared; the fixture has lost its content`);
+  // Every named instance still has to reproduce. A row that quietly stopped
+  // being true is an excuse, and this is what stops the list becoming a list
+  // of them.
+  for (const [relPath, row] of named) {
+    const record = mine.get(relPath);
+    if (record === undefined) continue;
+    assert.deepEqual(record.types, row.deck, `the named difference for ${relPath} no longer describes what Deck does`);
+  }
+  return compared;
+}
+
+test('Deck calls every note in this repository what the sidecar calls it', () => {
+  compareWithSidecar(FIXTURE.thisRepository.types, path.join(REPO, 'docs'), 'thisRepository', 150);
+});
+
+test('Deck calls every note in Your Trainer what the sidecar calls it', (t) => {
+  const trainer = FIXTURE.yourTrainer;
+  if (trainer === null || !fs.existsSync(trainer.docsRoot)) {
+    // Absent in CI. Said out loud rather than passed quietly: this is the
+    // large-workspace half of the comparison and it did not run.
+    t.skip('your-trainer is not on this machine, so the large-workspace comparison did not run');
+    return;
+  }
+  compareWithSidecar(trainer.types, trainer.docsRoot, 'yourTrainer', 2000);
+});
+
+test('the fixture states the RULES a difference has to fall under, not just a list', () => {
+  const rules = FIXTURE.differenceRules;
+  assert.equal(rules.length, 2);
+  assert.deepEqual(rules.map((r) => r.id).sort(), ['frontmatter-deck-reports', 'list-valued-type']);
+  for (const rule of rules) {
+    assert.ok(rule.when.length > 20, `${rule.id} does not say when it applies`);
+    assert.ok(rule.reason.length > 80, `${rule.id} does not say why`);
+  }
 });
 
 test('the fixture says where it came from, so a reader can re-record it', () => {
@@ -195,28 +255,6 @@ test('the fixture says where it came from, so a reader can re-record it', () => 
     assert.ok(row.relPath.length > 0);
     assert.ok(row.reason.length > 40, `${row.relPath} has no reason worth reading`);
   }
-});
-
-test('Deck agrees with the sidecar about Your Trainer, difference by named difference', (t) => {
-  const trainer = FIXTURE.yourTrainer;
-  const docsRoot = trainer === null ? null : trainer.docsRoot;
-  if (docsRoot === null || !fs.existsSync(docsRoot)) {
-    // Absent in CI. Said out loud rather than passed quietly: this is the
-    // large-workspace half of the comparison and it did not run.
-    t.skip(`your-trainer is not on this machine (${docsRoot}), so the large-workspace comparison did not run`);
-    return;
-  }
-  const mine = typeCounts(walkNotes(docsRoot).records);
-  const wanted = { ...trainer.typeCounts };
-  for (const row of FIXTURE.expectedDifferences) {
-    if (row.workspace !== 'yourTrainer') continue;
-    for (const type of row.deck) wanted[type] = (wanted[type] ?? 0) + 1;
-  }
-  assert.deepEqual(
-    mine,
-    wanted,
-    'Deck and the sidecar disagree about Your Trainer beyond the differences the fixture names',
-  );
 });
 
 // ---- changes on disk ----

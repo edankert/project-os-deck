@@ -6,7 +6,7 @@ title: "Band and face follow the description rather than the code, and the statu
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -53,11 +53,13 @@ related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[TASK-0028-A-Card-Fac
 - One band function serves the navigator, Spread and Glass, so folding and banding are the same decision.
 - A vocabulary Deck cannot ask the sidecar for is a vocabulary a test checks.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh band-and-face`: the check count and the date.
-- The cockpit commit and date the status-band fixture was read from `statuses.py`.
-- The id of the cockpit issue filed for a vocabulary payload.
+- `bash tools/scripts/run-desktop-tests.sh band-and-face`: 15 checks pass, 2026-09-09.
+- The status-band fixture was read from `statuses.py` on 2026-09-09 at cockpit commit `11ded07`, by `tools/scripts/record-sidecar-fixture.py`.
+- The cockpit issue for a vocabulary payload is [[project-os-cockpit#ISS-0292]], filed 2026-09-09 at `triage`.
+- The band function runs over THREE real navigation payloads recorded from the sidecar's own `nav_payload`: this repository's Features, and Your Trainer's Features and Issues. Your Trainer's Issues overflows both bands, so the "nothing is lost" checks are not passing on data that never tests them.
+- One defect the fixtures caught: a view that gathers its own obligations marks the GROUP `needs_human` and marks no item `owed`, so reading the item alone left forty issues waiting for triage with nothing in the front band.
 
 ## Adequacy (who verifies this test?)
 

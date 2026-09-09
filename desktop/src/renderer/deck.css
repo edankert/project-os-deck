@@ -159,8 +159,13 @@ body {
 .nav-row .id { color: var(--ink-dim); font-size: 11px; flex: 0 0 auto; letter-spacing: 0.03em; }
 .nav-row .label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-row .mark { flex: 0 0 auto; color: var(--owed); font-size: 11px; }
-.nav-row[data-band="done"] .id { color: var(--done); }
-.nav-row[data-band="owed"] .id { color: var(--owed); }
+/* The status bands are the cockpit's own six, not a second set of Deck names
+   mapped onto them: two vocabularies for one idea is what drifted once
+   already (shared/statuses.ts). */
+.nav-row[data-band="done"] .id,
+.nav-row[data-band="archived"] .id { color: var(--done); }
+.nav-row[data-band="pending"] .id,
+.nav-row[data-band="blocked"] .id { color: var(--owed); }
 
 .twist {
   flex: 0 0 auto;
@@ -247,9 +252,11 @@ select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--
 .card .face { margin-top: auto; color: var(--ink-dim); font-size: 11px; }
 .card .owed { color: var(--owed); font-size: 11px; }
 .card .owed:empty { display: none; }
-.card[data-band="owed"] { border-left-color: var(--owed); }
+.card[data-band="pending"] { border-left-color: var(--owed); }
+.card[data-band="blocked"] { border-left-color: var(--owed); }
 .card[data-band="done"] { border-left-color: var(--done); }
-.card[data-band="doing"] { border-left-color: var(--accent); }
+.card[data-band="archived"] { border-left-color: var(--done); }
+.card[data-band="active"] { border-left-color: var(--accent); }
 
 .card .remove {
   position: absolute;
@@ -352,3 +359,18 @@ body[data-panel="desk"] .reader { display: none; }
   .navigator { width: 100%; max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--line); }
   .reader { width: 100%; max-width: none; border-left: 0; border-top: 1px solid var(--line); }
 }
+
+/* A view that could not be fully read says so, above the notes it could still
+   select. Never an empty list with no explanation (FEAT-0012). */
+.refusals {
+  margin: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--owed) 12%, transparent);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.refusals .refusal-heading { margin: 0 0 4px; font-weight: 600; }
+.refusals ul { margin: 0; padding-left: 16px; }
+.refusals code { font-size: 11px; }
+.refusals .refusal-where { opacity: 0.65; }

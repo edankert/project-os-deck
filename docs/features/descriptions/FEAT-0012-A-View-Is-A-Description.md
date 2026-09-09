@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0012
 aliases: ["FEAT-0012"]
 title: "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns"
-status: planned
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[PHASE-0001-Deck]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 goal: "A Deck view stops being an id, a label and a sidecar mode with every other decision in code. It becomes a document with a source, a band rule, a card face, a list of surfaces and the registry as its verbs. The project-os provider emits seven of them that draw exactly what Deck draws today, and a base file from a vault reads as one."
 requirements: []
@@ -66,3 +66,18 @@ Three words mean one thing each. A **description** is a view written as data. Th
 - Risk: [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]]
 - Plan: `docs/features/descriptions/plan/PLAN.md`
 - Acceptance walk: [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]]
+
+
+## Where this stands
+
+**2026-09-09: built, and at `review` waiting on the walk a person makes.** All six tasks are `done`. A view is a document with five sections; the project-os provider emits seven of them and nothing a person sees changed. `faces.ts` holds no note type. One band function serves every surface. A query-sourced description runs over Deck's own index and draws through the same group model a mode-sourced one does. Every base file Edwin has written reads as a description, and where the seed stops it says so by name.
+
+**Three things this found rather than assumed.**
+
+Deck's copy of the status vocabulary had drifted from the cockpit's within two days of being written — `draft`, `proposed` and `ready` in a "doing" band where `statuses.py` puts all three in `pending`. It is now the cockpit's own six band names, pinned by a fixture recorded from that file, and [[project-os-cockpit#ISS-0292]] asks for it to be served so no client has to copy it.
+
+A view that gathers its own obligations marks the GROUP rather than each item, so reading the item alone put nothing in Your Trainer's front band while forty issues waited for triage. The real payload fixture is what showed it.
+
+Overview is the one view the shape cannot carry, and the extension namespace is where that fact is written rather than a branch in the renderer. It is not a view of notes; it should be a page, and the address grammar already has the key waiting ([[TASK-0042-Seven-Descriptions-Equal-To-Todays-Views]]).
+
+**What is owed is [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]]**, which a person walks against three base files of different shapes.

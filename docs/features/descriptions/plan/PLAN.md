@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — a view is a description"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 implements: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[ADR-0004-A-View-Is-A-Description]]"]

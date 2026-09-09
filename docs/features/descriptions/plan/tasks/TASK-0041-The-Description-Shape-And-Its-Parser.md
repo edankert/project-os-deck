@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0041
 aliases: ["TASK-0041"]
 title: "The description shape, its version and its extension namespace, and a parser that refuses what it cannot read by name"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 parent: "FEAT-0012"
 effort: ""
@@ -44,12 +44,30 @@ Write down what a Deck view is, as a record with five sections, and a parser tha
 
 ## Steps
 
-- [ ] Write the record type in `desktop/src/shared/`, beside `views.ts`.
-- [ ] Choose the namespace prefix and the version format, and record why in this note's Notes.
-- [ ] Implement the parser, collecting refusals rather than throwing on the first.
-- [ ] Build the malformed table: a missing section, a third source kind, a restated verb list, an unknown version, an unknown bare key, and several at once.
-- [ ] Write [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] and link it from `tests:`.
+- [x] Write the record type in `desktop/src/shared/description.ts`, beside `views.ts`
+- [x] Choose the namespace prefix and the version format, and record why — Notes below
+- [x] Implement the parser, collecting refusals rather than throwing on the first
+- [x] Build the malformed table: a missing section, a third source kind, a restated verb list, an unknown version, an unknown bare key, and several at once
+- [x] Write [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] and link it from `tests:` — written at planning time; its evidence is filled in
 
 ## Notes
 
 **The strict-parser rule is not new here.** [[FEAT-0006-Every-State-Has-An-Address]] refuses an address it cannot read rather than falling back to a default, because the cockpit's silent fallback for an unknown navigation mode made the Tests view look broken for thirty-three hours. A description parser that defaults is the same bug in a new place.
+
+
+## Done, 2026-09-09
+
+**A description is five sections, a version, an id and a label.** `source` is `mode` or `query`; `band` is a table of rows; `face` is a default face and a face per note type; `surfaces` is a list from the same vocabulary the address grammar reads; `verbs` is the single word `registry`.
+
+**The namespace prefix is `deck:`, and the reason is a measurement.** No `.base` file in the twelve measured uses a colon in a top-level key, so a Deck extension can never collide with something Obsidian adds later. A bare key nobody recognises is REFUSED rather than ignored: it is far more likely to be a typo than an extension, and a silently ignored key is how a view comes out subtly wrong with nothing to read.
+
+**The version format is a single integer, `1`.** A description declares one and the parser knows which it can read. Semantic versioning would promise compatibility rules nobody has decided yet; a number the parser either knows or refuses promises exactly what it delivers, and the refusal says which versions it can read.
+
+**Refusal is a result.** The parser returns the description it could build AND every refusal it met, each naming the construct and where in the document it was. It never throws on the first: a person fixing a description wants the list, not one item of it at a time. Five malformed things in one document come back as five refusals with five locations.
+
+**A parsed description re-parses to itself.** The parser gathers Deck's own keys into `extensions`, and it accepts that object back, so the shape is stable through a round trip. This is what lets the provider's seven be checked with the same parser a base file goes through.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh descriptions`: 17 checks, 2026-09-09.
+- Every one of the five sections refused BY NAME when absent; a third source kind, a restated verb list, an unknown version, an unknown bare key and a surface nothing draws each refused with the reason naming what it read.

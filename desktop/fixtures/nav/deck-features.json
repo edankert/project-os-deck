@@ -1,0 +1,689 @@
+{
+ "schema_version": 4,
+ "mode": "features",
+ "platform": "all",
+ "available_platforms": [],
+ "groups": [
+  {
+   "key": "PHASE-0001",
+   "label": "PHASE-0001 · Deck — one store, windows on any screen, and Spread as the first view",
+   "url": "/docs/phases/PHASE-0001-Deck.md",
+   "status": "active",
+   "type": "phase",
+   "items": [
+    {
+     "id": "FEAT-0002",
+     "title": "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes",
+     "status": "review",
+     "url": "/docs/features/shell/FEAT-0002-Deck-Opens-A-Workspace.md",
+     "subtitle": "A person launches Deck, picks a workspace and sees that workspace's notes. This feature is the application itself: the Electron shell, the discovery that finds a project-os repository on disk, the sidecar process started for it, and a typed client that reads the sidecar over HTTP.",
+     "type": "feature",
+     "review_verdict": "changes-requested",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — deck opens a workspace",
+       "status": "active",
+       "url": "/docs/features/shell/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0006",
+       "title": "The application builds and boots — one compile, a main process, a preload bridge and a renderer that draws",
+       "status": "done",
+       "url": "/docs/features/shell/plan/tasks/TASK-0006-The-Application-Builds-And-Boots.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0007",
+       "title": "The sidecar starts and stops with Deck — one per workspace, on a free loopback port, waited for before it is used",
+       "status": "done",
+       "url": "/docs/features/shell/plan/tasks/TASK-0007-The-Sidecar-Starts-And-Stops-With-Deck.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0008",
+       "title": "Workspaces are found and remembered — a project-os repository is the one that carries a SNAPSHOT.yaml",
+       "status": "done",
+       "url": "/docs/features/shell/plan/tasks/TASK-0008-Workspaces-Are-Found-And-Remembered.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0009",
+       "title": "A typed read-only client over the sidecar — one method per endpoint Deck reads, and no method that writes",
+       "status": "done",
+       "url": "/docs/features/shell/plan/tasks/TASK-0009-A-Typed-Read-Only-Client-Over-The-Sidecar.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0004",
+     "title": "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus",
+     "status": "review",
+     "url": "/docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md",
+     "subtitle": "A person drags a Deck panel onto a second monitor and it is still there after a restart. One window owns navigation and the others watch, so a satellite window showing status never pulls the keyboard away from the window being typed in.",
+     "type": "feature",
+     "review_verdict": "changes-requested",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — windows on any screen",
+       "status": "active",
+       "url": "/docs/features/windows/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0012",
+       "title": "A panel opens in its own window — the same renderer, a different address, and a role that says what it is for",
+       "status": "done",
+       "url": "/docs/features/windows/plan/tasks/TASK-0012-A-Panel-Opens-In-Its-Own-Window.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0013",
+       "title": "A window reopens where it was — bounds remembered per window and placed on the display it was on",
+       "status": "done",
+       "url": "/docs/features/windows/plan/tasks/TASK-0013-A-Window-Reopens-Where-It-Was.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0014",
+       "title": "Satellites do not steal focus — one window owns navigation and the others watch",
+       "status": "done",
+       "url": "/docs/features/windows/plan/tasks/TASK-0014-Satellites-Do-Not-Steal-Focus.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0026",
+       "title": "A popped-out window carries one panel, so a second display can hold the Needs-you strip, a single note, or a desk",
+       "status": "done",
+       "url": "/docs/features/windows/plan/tasks/TASK-0026-A-Popped-Out-Window-Carries-One-Panel.md",
+       "subtitle": "",
+       "type": "task",
+       "review_verdict": "approved"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0005",
+     "title": "Spread: notes as cards on a desk, and a desk you can save and come back to",
+     "status": "review",
+     "url": "/docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md",
+     "subtitle": "Deck's first view shows notes as cards a person arranges, rather than as a list they scroll. An arrangement is a desk; a desk has a name, is saved, and reopens as it was left.",
+     "type": "feature",
+     "review_verdict": "changes-requested",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — spread",
+       "status": "active",
+       "url": "/docs/features/spread/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0015",
+       "title": "Notes become cards — the sidecar's list, drawn as several cards at once, each carrying its status band",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0015-Notes-Become-Cards.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0016",
+       "title": "A desk is saved and reopened — an arrangement with a name, and a card whose note is gone does not break it",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0016-A-Desk-Is-Saved-And-Reopened.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0023",
+       "title": "The groups the sidecar already sends are drawn, so Needs you comes first, phases hold their features and tasks, and the quiet work folds away",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn.md",
+       "subtitle": "",
+       "type": "task",
+       "review_verdict": "approved"
+      },
+      {
+       "id": "TASK-0024",
+       "title": "A navigator panel beside a desk that starts empty, so a desk is a subset a person chose rather than whatever the flow layout produced",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0024-A-Navigator-Beside-A-Desk-That-Starts-Empty.md",
+       "subtitle": "",
+       "type": "task",
+       "review_verdict": "approved"
+      },
+      {
+       "id": "TASK-0025",
+       "title": "Cards are dragged and removed, and where a card was left is what the desk saves",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0025-Cards-Are-Dragged-And-Removed.md",
+       "subtitle": "",
+       "type": "task",
+       "review_verdict": "changes-requested"
+      },
+      {
+       "id": "TASK-0027",
+       "title": "Search and filter live in the renderer, because a pooled DOM means the browser's own find cannot see the notes",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0027-Search-And-Filter-In-The-Renderer.md",
+       "subtitle": "",
+       "type": "task",
+       "review_verdict": "changes-requested"
+      },
+      {
+       "id": "TASK-0028",
+       "title": "A card face per type, so a phase shows progress, an issue shows severity and a test shows how stale its last walk is",
+       "status": "done",
+       "url": "/docs/features/spread/plan/tasks/TASK-0028-A-Card-Face-Per-Type.md",
+       "subtitle": "",
+       "type": "task",
+       "review_verdict": "approved"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0006",
+     "title": "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry",
+     "status": "review",
+     "url": "/docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md",
+     "subtitle": "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — every state has an address",
+       "status": "active",
+       "url": "/docs/features/addresses/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0017",
+       "title": "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0018",
+       "title": "Copy the address and open one — the round trip a person can actually perform",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0052",
+       "title": "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0008",
+     "title": "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet",
+     "status": "review",
+     "url": "/docs/features/two-hosts/FEAT-0008-One-Renderer-Two-Hosts.md",
+     "subtitle": "The same renderer runs in two places. The shell hosts it locally through the preload bridge. Deck's own small HTTP host serves it over the local network for a tablet, reading only. Capability that only the shell can offer is detected rather than assumed, and is simply absent when Deck is served.",
+     "type": "feature",
+     "review_verdict": "changes-requested",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — one renderer, two hosts",
+       "status": "active",
+       "url": "/docs/features/two-hosts/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0021",
+       "title": "Deck's own read-only host — it serves the renderer and proxies reads, and refuses every method that is not a read",
+       "status": "done",
+       "url": "/docs/features/two-hosts/plan/tasks/TASK-0021-Decks-Own-Read-Only-Host.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0022",
+       "title": "Capability is detected, not assumed — the renderer asks its host what it can do, and shell-only capability is absent when served",
+       "status": "done",
+       "url": "/docs/features/two-hosts/plan/tasks/TASK-0022-Capability-Is-Detected-Not-Assumed.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0011",
+     "title": "Deck's own index: the main process reads the workspace's Markdown itself, so a view can arrange notes the sidecar does not arrange",
+     "status": "review",
+     "url": "/docs/features/index/FEAT-0011-Decks-Own-Index.md",
+     "subtitle": "Deck's main process reads every Markdown file in the open workspace, parses its frontmatter, and keeps one record per note that it updates when the file changes. A view described as a query has something to run over, and Deck stops depending on the cockpit growing an endpoint that returns the notes.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — Deck's own index",
+       "status": "active",
+       "url": "/docs/features/index/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0038",
+       "title": "Records from the workspace's Markdown: frontmatter parsed, a list-valued type counted under each value, and the sidecar's normalisation mirrored rather than guessed",
+       "status": "done",
+       "url": "/docs/features/index/plan/tasks/TASK-0038-Records-From-The-Workspaces-Markdown.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0039",
+       "title": "The index watches the workspace and carries a revision, so a view knows its picture is old",
+       "status": "done",
+       "url": "/docs/features/index/plan/tasks/TASK-0039-The-Index-Watches-And-Carries-A-Revision.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0040",
+       "title": "The records reach the renderer through Deck's own host, read-only, on both hosts",
+       "status": "done",
+       "url": "/docs/features/index/plan/tasks/TASK-0040-The-Records-Reach-The-Renderer-Read-Only.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0012",
+     "title": "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns",
+     "status": "planned",
+     "url": "/docs/features/descriptions/FEAT-0012-A-View-Is-A-Description.md",
+     "subtitle": "A Deck view stops being an id, a label and a sidecar mode with every other decision in code. It becomes a document with a source, a band rule, a card face, a list of surfaces and the registry as its verbs. The project-os provider emits seven of them that draw exactly what Deck draws today, and a base file from a vault reads as one.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — a view is a description",
+       "status": "draft",
+       "url": "/docs/features/descriptions/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0041",
+       "title": "The description shape, its version and its extension namespace, and a parser that refuses what it cannot read by name",
+       "status": "backlog",
+       "url": "/docs/features/descriptions/plan/tasks/TASK-0041-The-Description-Shape-And-Its-Parser.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0042",
+       "title": "The project-os provider emits seven mode-sourced descriptions, and nothing a person sees changes",
+       "status": "backlog",
+       "url": "/docs/features/descriptions/plan/tasks/TASK-0042-Seven-Descriptions-Equal-To-Todays-Views.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0043",
+       "title": "The evaluator for the seeded language over Deck's index: filters, functions, sort and grouping, with anything unsupported named rather than silently empty",
+       "status": "backlog",
+       "url": "/docs/features/descriptions/plan/tasks/TASK-0043-The-Evaluator-Over-The-Index.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0044",
+       "title": "Band and face are read from the description: faces.ts becomes a reader, and the vocabularies it still copies are pinned to the cockpit by fixture",
+       "status": "backlog",
+       "url": "/docs/features/descriptions/plan/tasks/TASK-0044-Band-And-Face-Come-From-The-Description.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0045",
+       "title": "The navigator draws any description, whether its notes came from a sidecar mode or from a query over Deck's index",
+       "status": "backlog",
+       "url": "/docs/features/descriptions/plan/tasks/TASK-0045-The-Navigator-Draws-Any-Description.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0046",
+       "title": "A base file reads as a description — the parser half only, so the Vault phase inherits a language instead of inventing one",
+       "status": "backlog",
+       "url": "/docs/features/descriptions/plan/tasks/TASK-0046-A-Base-File-Reads-As-A-Description.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0013",
+     "title": "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb",
+     "status": "planned",
+     "url": "/docs/features/first-write/FEAT-0013-The-First-Write.md",
+     "subtitle": "One verb goes end to end. In the shell, a person ticks an acceptance criterion with evidence and makes one status transition, and the change is in the note on disk and visible in the cockpit. The served page offers no verb at all. This proves the write path ADR-0003 decided, and it is the smallest thing that can.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — the first write",
+       "status": "draft",
+       "url": "/docs/features/first-write/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0047",
+       "title": "The write channel: bridge, IPC and a loopback call, with the write capability false when Deck is served",
+       "status": "backlog",
+       "url": "/docs/features/first-write/plan/tasks/TASK-0047-The-Write-Channel.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0048",
+       "title": "The actor is a setting in Deck's store, because the cockpit's hard-coded name cannot be copied into a second application",
+       "status": "backlog",
+       "url": "/docs/features/first-write/plan/tasks/TASK-0048-The-Actor-Is-A-Setting.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0049",
+       "title": "The actuator rows come from the sidecar, and one transition is wired end to end",
+       "status": "backlog",
+       "url": "/docs/features/first-write/plan/tasks/TASK-0049-The-Actuator-Row-And-One-Transition.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0050",
+       "title": "Ticking a criterion with evidence, addressed by the data-raw the sidecar stamped, with the modification time sent and no tick offered when the address is missing",
+       "status": "backlog",
+       "url": "/docs/features/first-write/plan/tasks/TASK-0050-Ticking-A-Criterion-With-Evidence.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0051",
+       "title": "The changed-under-you mark: a write makes every other window stale, and the change is announced rather than applied",
+       "status": "backlog",
+       "url": "/docs/features/first-write/plan/tasks/TASK-0051-The-Changed-Under-You-Mark.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0003",
+     "title": "One store in the main process: every window reads the same state and watches it change",
+     "status": "done",
+     "url": "/docs/features/store/FEAT-0003-One-Store-In-The-Main-Process.md",
+     "subtitle": "Deck keeps its state in one place, the Electron main process, and every window subscribes to it. Open two windows, change the focused note in one, and the other shows the change immediately.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — one store in the main process",
+       "status": "done",
+       "url": "/docs/features/store/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0010",
+       "title": "The store holds the state and broadcasts it — one record in the main process, every window subscribed",
+       "status": "done",
+       "url": "/docs/features/store/plan/tasks/TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0011",
+       "title": "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad",
+       "status": "done",
+       "url": "/docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0007",
+     "title": "Views come from a provider: the renderer holds no fixed set of view buttons",
+     "status": "done",
+     "url": "/docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md",
+     "subtitle": "Deck asks a view provider which views the current workspace has and draws whatever comes back. For a project-os repository the built-in provider offers the same views the cockpit's navigator does. A vault's `.base` files can become views later by adding a provider, without touching the renderer.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — views come from a provider",
+       "status": "done",
+       "url": "/docs/features/views/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0019",
+       "title": "The provider interface, and the project-os provider whose views match the cockpit's",
+       "status": "done",
+       "url": "/docs/features/views/plan/tasks/TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0020",
+       "title": "The switcher draws what the provider returned — and the renderer holds no list of view names",
+       "status": "done",
+       "url": "/docs/features/views/plan/tasks/TASK-0020-The-Switcher-Draws-What-The-Provider-Returned.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "PHASE-0002",
+   "label": "PHASE-0002 · Glass — the main view, where depth carries priority and a held note brings its neighbourhood to the front",
+   "url": "/docs/phases/PHASE-0002-Glass.md",
+   "status": "active",
+   "type": "phase",
+   "items": [
+    {
+     "id": "FEAT-0001",
+     "title": "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck",
+     "status": "planned",
+     "url": "/docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md",
+     "subtitle": "Give Deck a view of the link graph as a whole — 16148 edges over 1537 notes, coloured by status band, entered by flying rather than by listing — so the structural questions the reader cannot currently ask (what does nothing link to, which clusters hang by one edge) have somewhere to be asked.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — the orbit view",
+       "status": "draft",
+       "url": "/docs/features/orbit-view/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0001",
+       "title": "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it",
+       "status": "backlog",
+       "url": "/docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0002",
+       "title": "The layout is computed once and kept — and a new note takes a place without moving its neighbours",
+       "status": "backlog",
+       "url": "/docs/features/orbit-view/plan/tasks/TASK-0002-The-Layout-Is-Computed-Once-And-Kept.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0003",
+       "title": "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop",
+       "status": "backlog",
+       "url": "/docs/features/orbit-view/plan/tasks/TASK-0003-The-Field-Renders-And-Flies.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0004",
+       "title": "Landing opens the note in the reader that already exists, so the field never becomes a second document pane",
+       "status": "backlog",
+       "url": "/docs/features/orbit-view/plan/tasks/TASK-0004-Landing-Opens-The-Note.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0005",
+       "title": "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks",
+       "status": "backlog",
+       "url": "/docs/features/orbit-view/plan/tasks/TASK-0005-The-Treatment-Is-Chosen-Not-Assumed.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0009",
+     "title": "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front",
+     "status": "planned",
+     "url": "/docs/features/glass-field/FEAT-0009-The-Field-Where-Depth-Carries-Priority.md",
+     "subtitle": "Deck opens on Glass: the notes of the current view arranged in a field where distance says how much a note needs you, with what is owed in front, the view's own subject in the middle and the quiet work behind you. Switching view moves the same cards rather than loading a page, and the navigator beside the field stays the route for the keyboard and the screen reader.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — the Glass field",
+       "status": "draft",
+       "url": "/docs/features/glass-field/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0029",
+       "title": "The band section of every description, and the function that applies it: front, mid and deep per view, with overflow stated rather than silent",
+       "status": "backlog",
+       "url": "/docs/features/glass-field/plan/tasks/TASK-0029-The-Band-Function.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0030",
+       "title": "The slot geometry: a cylinder of slots dealt from the bands, a shape for a thousand quiet tiles, and an obstacle that is a sector rather than a rectangle",
+       "status": "backlog",
+       "url": "/docs/features/glass-field/plan/tasks/TASK-0030-The-Slot-Geometry.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0031",
+       "title": "The field renders and turns: near bands as bound cards, the quiet band on one canvas, fog instead of blur, and a card a real pointer can hit",
+       "status": "backlog",
+       "url": "/docs/features/glass-field/plan/tasks/TASK-0031-The-Field-Renders-And-Turns.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0032",
+       "title": "A view switch re-arranges the same cards, and a change arriving mid-view is announced rather than applied",
+       "status": "backlog",
+       "url": "/docs/features/glass-field/plan/tasks/TASK-0032-A-View-Switch-Re-Arranges.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0033",
+       "title": "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboard route",
+       "status": "backlog",
+       "url": "/docs/features/glass-field/plan/tasks/TASK-0033-Glass-Is-Addressed-And-Opened-First.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0034",
+       "title": "The field is measured on the largest workspace, and the numbers go in the note",
+       "status": "backlog",
+       "url": "/docs/features/glass-field/plan/tasks/TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0010",
+     "title": "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it",
+     "status": "planned",
+     "url": "/docs/features/glass-desk/FEAT-0010-Lifting-A-Note.md",
+     "subtitle": "In Glass a click lifts a note out of the field onto the desk Deck already has, and while it is held the notes joined to it take the front band, so the relationships a person cannot see today are the first thing they see.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — lifting a note",
+       "status": "draft",
+       "url": "/docs/features/glass-desk/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0035",
+       "title": "A note is lifted out of the field onto the desk, its slot stays ghosted, and closing is three verbs none of which destroys anything",
+       "status": "backlog",
+       "url": "/docs/features/glass-desk/plan/tasks/TASK-0035-A-Note-Is-Lifted-And-Put-Back.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0036",
+       "title": "The neighbourhood takes the front band while a note is held, the front plane says what it now means, and the owed count keeps its place",
+       "status": "backlog",
+       "url": "/docs/features/glass-desk/plan/tasks/TASK-0036-The-Neighbourhood-Takes-The-Front-Band.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0037",
+       "title": "What these share: with several notes on the desk the field marks what is joined to more than one of them, and the desk bar counts it",
+       "status": "backlog",
+       "url": "/docs/features/glass-desk/plan/tasks/TASK-0037-What-These-Share.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

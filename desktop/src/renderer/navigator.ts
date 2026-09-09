@@ -121,7 +121,7 @@ export class NavigatorList {
     }
     setText(element, '.id', card.noteId);
     setText(element, '.label', card.title);
-    element.title = `${card.noteId} — ${card.title}\n${faceText(card)}`;
+    element.title = `${card.noteId} — ${card.title}\n${faceText(card, paint.faces)}`;
     const mark = card.owed ? (card.owedVerb ?? 'needs you') : paint.onDesk.has(card.noteId) ? 'on desk' : '';
     setText(element, '.mark', mark);
   }

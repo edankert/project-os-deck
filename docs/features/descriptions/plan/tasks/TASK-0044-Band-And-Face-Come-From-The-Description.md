@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0044
 aliases: ["TASK-0044"]
 title: "Band and face are read from the description: faces.ts becomes a reader, and the vocabularies it still copies are pinned to the cockpit by fixture"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 parent: "FEAT-0012"
 effort: ""
@@ -45,13 +45,34 @@ tests: ["[[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Ma
 
 ## Steps
 
-- [ ] Move [[TASK-0029-The-Band-Function]]'s table into the `band` section and rewrite that task's objective to match.
-- [ ] Write the band function over the description, in `desktop/src/shared/`.
-- [ ] Turn the four faces [[TASK-0028-A-Card-Face-Per-Type]] built into `face` sections on the seven descriptions.
-- [ ] Record the vocabulary fixture from the cockpit's `statuses.py` and assert against it.
-- [ ] File the cockpit issue for a vocabulary payload and record its id here.
-- [ ] Write [[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]] and link it from `tests:`.
+- [x] Move [[TASK-0029-The-Band-Function]]'s table into the `band` section — that task's objective was rewritten at planning time and its acceptance is met here
+- [x] Write the band function over the description — `bandOf`, `bandCards` and `bandInputsFor` in `shared/description.ts`
+- [x] Turn the four faces [[TASK-0028-A-Card-Face-Per-Type]] built into `face` sections on the seven descriptions
+- [x] Record the vocabulary fixture from the cockpit's `statuses.py` and assert against it — `desktop/fixtures/cockpit-statuses.json`
+- [x] File the cockpit issue for a vocabulary payload and record its id here — [[project-os-cockpit#ISS-0292]], filed 2026-09-09
+- [x] Write [[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]] and link it from `tests:` — written at planning time; its evidence is filled in
 
 ## Notes
 
 The copy in `faces.ts` drifted from the cockpit's within two days of being written, and nothing caught it. That is the argument for the fixture: a vocabulary Deck cannot ask for is a vocabulary Deck must check.
+
+
+## Done, 2026-09-09
+
+**`faces.ts` holds no note type at all.** A search of the built module for `test`, `issue`, `feature`, `phase`, `surface`, `requirement`, `character` and `chapter` finds none of them. What it holds is how to READ a face section and how to turn one into the line a person sees. The four faces are now entries in the project-os provider's `face` section, and a vault type gets a face by gaining an entry there.
+
+**The band function is one function and every surface calls it.** `bandInputsFor(group, card)` turns a payload into the table's inputs, `bandOf(table, inputs)` applies the table, and `bandCards` deals a whole view and counts what did not fit. The suite runs it over three REAL navigation payloads recorded from the sidecar's own `nav_payload`: this repository's Features, and Your Trainer's Features and Issues.
+
+**`bandInputsFor` holds the subtlety, and finding it was worth the fixture.** A view that gathers its own obligations receives no Needs-you group and marks no ITEM owed — the whole GROUP is marked `needs_human` instead. Reading the item alone left Your Trainer's Issues view with nothing in the front band while forty issues waited for triage. The fixture is what showed it; a hand-written payload would have had whichever shape the author assumed.
+
+**Nothing owed is demoted and nothing falls into the quiet band.** Your Trainer's Issues view overflows both bands in the normal case — the suite asserts both overflow counts are above zero there, so the "nothing is lost" checks are not passing on data that never tests them. Every note is in a band or in an overflow count, asserted as a total.
+
+**The status vocabulary is the cockpit's own six bands, not a second set of Deck names.** Two vocabularies for one idea is what drifted: Deck's copy had `draft`, `proposed` and `ready` in a "doing" band where `statuses.py` puts all three in `pending`, within two days of being written. The bands, the completed set and the legacy mapping are now asserted against a fixture recorded from `statuses.py` with its date and commit, and the stylesheet uses the same six names.
+
+**A correction to this note's own claim.** It said Deck has no `final`, "which the vault uses". The vault does not use `final`: its 143 notes carrying a status write `draft`, `active`, `done`, `todo`, `none`, `research`, `planning` and `in-progress`. Three of those — `none`, `research`, `planning` — are outside project-os's vocabulary, and `bandFor` returns `none` for them rather than guessing, because drawing them as `pending` would be Deck asserting something about a vocabulary that is not its own. Adding a `final` nobody writes would have been worse than the gap it was meant to fill.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh band-and-face`: 15 checks, 2026-09-09.
+- The status fixture was read from `statuses.py` on 2026-09-09 at cockpit commit `11ded07`.
+- The cockpit issue for a vocabulary payload is [[project-os-cockpit#ISS-0292]], filed 2026-09-09 at `triage`.

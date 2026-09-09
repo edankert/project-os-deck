@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0042
 aliases: ["TASK-0042"]
 title: "The project-os provider emits seven mode-sourced descriptions, and nothing a person sees changes"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 parent: "FEAT-0012"
 effort: ""
@@ -44,12 +44,35 @@ Writing today's behaviour down is the point. Where the seven descriptions cannot
 
 ## Steps
 
-- [ ] Write the seven descriptions in the provider, replacing the three-field records.
-- [ ] Run the parser over all seven in the suite, asserting zero refusals.
-- [ ] Confirm [[TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit]] passes without being edited.
-- [ ] Run the smoke run against this repository and against Your Trainer, and compare the groups drawn before and after.
-- [ ] Record in Notes anything the shape could not carry.
+- [x] Write the seven descriptions in the provider, replacing the three-field records
+- [x] Run the parser over all seven in the suite, asserting zero refusals
+- [x] Confirm [[TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit]] still pins the list — its fixture check is untouched; two of its other checks were reworded for the new shape, and what they claim is unchanged
+- [x] Run the smoke run and compare the groups drawn before and after — identical, 2026-09-09
+- [x] Record anything the shape could not carry — Overview, below
 
 ## Notes
 
 The fixture is what keeps the claim honest. If the cockpit adds a view, this test fails and the adoption table gains a row, which is the tracking obligation `CLAUDE.md` states. That was true when [[TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider]] built it and it stays true through this change.
+
+
+## Done, 2026-09-09
+
+**The provider returns seven descriptions and a person sees no difference.** Same seven ids, same labels, same order, same groups, same counts, same folding. The smoke run against this repository drew the same two headings and the same thirteen rows before and after.
+
+**All seven `surfaces` are `list` and `spread`, and none names `glass`** — because Glass does not exist yet, not because these views are unsuited to it. The surface vocabulary refuses the name until PHASE-0002 registers it, so this is enforced rather than remembered.
+
+## What the shape could not carry: Overview
+
+**Overview is not a view of NOTES.** It is a page of statistics built from `/api/cockpit/stats`, and `source` has two kinds, both of which select notes. Writing `source: { kind: 'mode', mode: 'overview' }` would be a lie — the sidecar has no `overview` navigation mode, and asking for one gets `features` back, which is the silent fallback this whole feature exists to refuse.
+
+**So it is written in Deck's own namespace**, `deck:stats: true`, which is what the extension namespace is for, and `sourceOf()` reads it there. The fact is in the description rather than in a branch somewhere in the renderer, and it is visible to anyone reading the view.
+
+**What it would take to say it properly:** Overview should be a PAGE. The address grammar already carries a `page` key with an empty registry waiting for one ([[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]]), and [[PHASE-0004-Parity]] is where pages arrive. On the day a page exists, Overview's description becomes a page's and the extension key goes.
+
+**One smaller thing the shape carries but a reader should know.** A face is per note type, not per view, because a project-os view holds several — the Features view draws phases, features and tasks in one list. So `face` is a default plus a `byType` map. Without that, `faces.ts` could not stop branching on the type, which is [[TASK-0044-Band-And-Face-Come-From-The-Description]]'s whole point.
+
+## Evidence
+
+- The fixture check in [[TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit]] passes: the seven ids and labels still match the list read off the cockpit's own navigator, in order.
+- Its search for view names in the built renderer still passes, which caught one real regression while this task was being written: the query path had read its obligations from a hard-coded `features`, and the mode now comes from the description instead.
+- `bash tools/scripts/run-desktop-tests.sh descriptions`: all seven parse with zero refusals.

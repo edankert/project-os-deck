@@ -1,0 +1,85 @@
+formulas:
+  character.summary: summary
+properties:
+  file.name:
+    displayName: Title
+  note.number:
+    displayName: Number
+  note.summary:
+    displayName: Summary
+views:
+  - type: cards
+    name: Characters
+    filters:
+      and:
+        - type.contains(link("@Character"))
+        - file.name != "@Character"
+    order:
+      - name
+      - role
+      - archetype
+      - formula.character.summary
+      - age
+      - gender
+    image: note.portrait
+    imageFit: contain
+    imageAspectRatio: 1
+  - type: cards
+    name: Chapters
+    filters:
+      and:
+        - type.contains(link("Chapter"))
+        - file.name != "Chapter"
+    order:
+      - file.name
+      - number
+      - summary
+    sort:
+      - property: number
+        direction: ASC
+    cardSize: 240
+    imageAspectRatio: 1
+    columnSize:
+      note.number: 30
+      note.cover: 100
+      file.name: 174
+    rowHeight: tall
+    image: note.cover
+  - type: cards
+    name: Locations
+    filters:
+      and:
+        - type.contains(link("Location"))
+        - file.name != "Location"
+    order:
+      - name
+      - events
+      - history
+      - features
+      - characters
+      - population
+    image: note.scene
+    imageFit: contain
+    imageAspectRatio: 1
+  - type: cards
+    name: Pages
+    filters:
+      and:
+        - type.contains(link("Page"))
+        - chapter.contains(this.file.name)
+    order:
+      - file.name
+      - number
+      - summary
+      - status
+      - chapter
+    sort:
+      - property: number
+        direction: ASC
+    image: note.image
+    imageAspectRatio: 1.2
+    rowHeight: medium
+    columnSize:
+      note.number: 5
+      note.summary: 335
+    cardSize: 240

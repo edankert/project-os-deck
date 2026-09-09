@@ -24,6 +24,8 @@ export interface Workspace {
 /** Where a view's contents come from. The renderer never names a sidecar route. */
 export type ViewSource =
   | { kind: 'nav'; mode: string }
+  /** Evaluated over Deck's own index, rather than fetched as groups. */
+  | { kind: 'query' }
   | { kind: 'stats' };
 
 export interface DeckView {
@@ -61,6 +63,15 @@ export interface CardModel {
   progress: Progress | null;
   /** The notes this one holds: a feature's tasks, a surface's tests. */
   children: CardModel[];
+  /**
+   * The note's own frontmatter, when the card came from Deck's index.
+   *
+   * A face names the properties it shows, and a vault's character shows its
+   * role and its archetype without anything in the renderer knowing what those
+   * are. Null for a card built from the sidecar's navigation payload, which
+   * carries the fields the cockpit chose rather than the note's own.
+   */
+  frontmatter: Record<string, unknown> | null;
 }
 
 /** One heading in a view, with the cards under it. */

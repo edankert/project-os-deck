@@ -9,8 +9,9 @@
  * the same pooled element draws every face, so four hundred cards cost what
  * they always did.
  */
+import type { FaceSection } from '../shared/description.js';
 import type { CardModel } from '../shared/types.js';
-import { bandFor, faceFor, faceText } from '../shared/faces.js';
+import { bandFor, faceFor, faceText, fieldsFor, specFor } from '../shared/faces.js';
 
 export { bandFor };
 
@@ -32,10 +33,23 @@ export class CardPool {
   private readonly handlers: CardHandlers;
   private readonly pool: HTMLElement[] = [];
   private readonly models = new Map<string, CardModel>();
+  /**
+   * The face section of the view being drawn.
+   *
+   * A card's face is a property of the VIEW, not of this class: the pool paints
+   * what the description says. Until a view is chosen there is nothing to say,
+   * so a card shows what every card has.
+   */
+  private faces: FaceSection = PLAIN_FACES;
 
   constructor(container: HTMLElement, handlers: CardHandlers) {
     this.container = container;
     this.handlers = handlers;
+  }
+
+  /** Draw with this view's faces from here on. */
+  useFaces(faces: FaceSection): void {
+    this.faces = faces;
   }
 
   /** Absolute positions on a desk, or a flowing strip when `flow` is set. */
@@ -118,12 +132,17 @@ export class CardPool {
     element.dataset['noteId'] = card.noteId;
     element.dataset['band'] = bandFor(card.status);
     element.dataset['type'] = card.noteType;
-    const face = faceFor(card);
+    const spec = specFor(this.faces, card);
+    const face = faceFor(card, this.faces);
     element.dataset['face'] = face.kind;
     element.setAttribute('aria-current', String(card.noteId === currentNoteId));
 
     setText(element, '.id', card.noteId);
     setText(element, '.title', card.title);
+    // The fields the description asked for, read off the note by name. Empty
+    // for every project-os view today; a vault's character shows its role and
+    // its archetype here without anything in this file knowing what those are.
+    element.dataset['fields'] = fieldsFor(spec, card.frontmatter).map((f) => f.value).join(' · ');
     setText(element, '.owed', card.owed ? (card.owedVerb ?? 'needs you') : '');
     const faceElement = element.querySelector('.face');
     if (faceElement !== null) {
@@ -132,9 +151,9 @@ export class CardPool {
         faceElement.innerHTML = '<span class="bar"><span class="fill"></span></span><span class="count"></span>';
         const fill = faceElement.querySelector('.fill') as HTMLElement | null;
         if (fill !== null) fill.style.width = `${pct}%`;
-        setText(faceElement as HTMLElement, '.count', faceText(card));
+        setText(faceElement as HTMLElement, '.count', faceText(card, this.faces));
       } else {
-        faceElement.textContent = faceText(card);
+        faceElement.textContent = faceText(card, this.faces);
       }
     }
 
@@ -146,6 +165,12 @@ export class CardPool {
     }
   }
 }
+
+/** What a card wears before a view has said anything: what every card has. */
+const PLAIN_FACES: FaceSection = {
+  default: { title: 'title', subtitle: 'subtitle', image: null, fields: [], measure: 'none' },
+  byType: {},
+};
 
 function setText(root: HTMLElement, selector: string, value: string): void {
   const node = root.querySelector(selector);

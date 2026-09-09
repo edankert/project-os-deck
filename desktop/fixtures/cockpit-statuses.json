@@ -1,0 +1,93 @@
+{
+  "recordedFrom": "project-os-cockpit/src/project_os_cockpit/statuses.py",
+  "recordedOn": "2026-09-09",
+  "cockpitCommit": "11ded07",
+  "why": "Deck colours a status and folds finished work away, and the vocabulary that decides both is the cockpit's. Until the sidecar serves it as data (the issue filed for that is named in TASK-0044), this fixture is what stops the copy drifting.",
+  "bands": {
+    "active": [
+      "accepted",
+      "active",
+      "approved",
+      "doing",
+      "mitigating",
+      "next",
+      "review"
+    ],
+    "archived": [
+      "abandoned",
+      "cancelled",
+      "declined",
+      "deprecated",
+      "obsolete",
+      "reconciled",
+      "retired",
+      "reverted",
+      "superseded"
+    ],
+    "blocked": [
+      "blocked",
+      "failing",
+      "reopened"
+    ],
+    "done": [
+      "closed",
+      "complete",
+      "done",
+      "fixed",
+      "fulfilled",
+      "implemented",
+      "merged",
+      "met",
+      "passing",
+      "published",
+      "released",
+      "resolved",
+      "verified"
+    ],
+    "pending": [
+      "backlog",
+      "draft",
+      "open",
+      "pending",
+      "planned",
+      "proposed",
+      "ready",
+      "todo",
+      "triage"
+    ],
+    "reference": [
+      "deferred",
+      "reference"
+    ]
+  },
+  "completed": [
+    "abandoned",
+    "cancelled",
+    "closed",
+    "complete",
+    "declined",
+    "deprecated",
+    "done",
+    "fixed",
+    "fulfilled",
+    "implemented",
+    "merged",
+    "met",
+    "obsolete",
+    "passing",
+    "published",
+    "reconciled",
+    "released",
+    "resolved",
+    "retired",
+    "reverted",
+    "superseded",
+    "verified"
+  ],
+  "legacy": {
+    "in-progress": "active",
+    "in-review": "active",
+    "rolled-back": "archived",
+    "wont-fix": "archived"
+  }
+}

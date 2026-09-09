@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0045
 aliases: ["TASK-0045"]
 title: "The navigator draws any description, whether its notes came from a sidecar mode or from a query over Deck's index"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 parent: "FEAT-0012"
 effort: ""
@@ -43,12 +43,52 @@ The navigator draws a view from its description and does not care where the note
 
 ## Steps
 
-- [ ] Route both source kinds into the one group model the navigator already draws.
-- [ ] Read owed and suppressed from the navigation payload for a query-sourced view's notes.
-- [ ] Draw the unsupported report above the list.
-- [ ] Extend the groups and views suites with a query-sourced fixture.
-- [ ] Walk the running application on this repository with one query-sourced view added by hand, and record what it drew.
+- [x] Route both source kinds into the one group model the navigator already draws
+- [x] Read owed and suppressed from the navigation payload for a query-sourced view's notes
+- [x] Draw the unsupported report above the list
+- [x] Extend the suites with a query-sourced fixture — `desktop/tests/evaluator.test.mjs`
+- [x] Walk the running application with one query-sourced view added by hand, and record what it drew — below, 2026-09-09
 
 ## Notes
 
 This task is where the feature becomes visible, and it is therefore where the acceptance walk [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] can be made.
+
+
+## Done, 2026-09-09
+
+**There is one drawing path and it takes groups.** `runQuery` returns the same `CardGroup[]` the sidecar's payload becomes, so the navigator cannot tell the two apart: same headings, same counts, same folding, same children.
+
+**The unsupported report is drawn ABOVE the list**, in its own strip, with the construct in monospace and its location beside it. Never instead of the notes: a view that could not read one filter still shows what it could select. That is the visible half of the rule that a broken view must not look like an empty one.
+
+## The walk, 2026-09-09
+
+A query-sourced view was added to the provider by hand — every issue in this repository, from Deck's own index, grouped by `severity`, sorted by `id` descending — and the real application was booted on it twice.
+
+**First, with the obligations read from the `features` payload:**
+
+```
+groups:   high (9), low (2), medium (13)
+rows:     24        count: "24 of 24"
+firstRow: ISS-0023 (the id sort is descending, and it is the newest issue)
+refusals: what is owed — the sidecar tracks none of the notes this view holds,
+          so it has no obligations to report and this view shows no Needs-you group
+```
+
+That refusal line is correct and it is a finding: the `features` payload for this repository carries phases, features and tasks, and none of the 24 issues is in it. **The mode a query-sourced view reads its marks from has to be the one whose payload covers the notes the query selects.** Nothing enforces that, and nothing can — but the view says so on screen instead of showing an empty Needs-you heading, which is exactly what the `untracked` rule is for.
+
+**Then, with the marks read from the `issues` payload:**
+
+```
+groups:   medium (3), Quiet (21)
+rows:     3           count: "24 of 24"
+refusals: none
+```
+
+Twenty-one of the twenty-four are `fixed`, so the sidecar marks them suppressed and they fold into Quiet exactly as they do in a mode-sourced view. The three that are live are drawn. The count still reads 24 of 24, because the label counts the notes the view holds and the list draws the rows that are not inside something collapsed.
+
+The hand-added view was removed afterwards; the seven a person sees are unchanged, which is what [[TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit]] pins.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh evaluator`: the group model, the owed group read from the sidecar, the untracked case, and the same headings and counts both ways.
+- The walk above, run through `electron . --smoke` on 2026-09-09.

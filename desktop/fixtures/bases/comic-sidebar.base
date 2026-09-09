@@ -1,0 +1,167 @@
+formulas:
+  character.summary: summary
+  Image: image(portrait)
+  page.image: "if(image, image(image), if(cover, image(cover))) "
+  Scene: image(scene)
+  color.status: image(color)
+properties:
+  file.name:
+    displayName: Title
+  note.number:
+    displayName: Number
+  note.summary:
+    displayName: Summary
+  formula.page.image:
+    displayName: Image
+  formula.Image:
+    displayName: Portrait
+views:
+  - type: table
+    name: Characters
+    filters:
+      and:
+        - type.contains(link("@Character"))
+        - this.file.properties.characters.contains(file)
+    order:
+      - file.name
+      - formula.Image
+      - formula.character.summary
+      - role
+      - archetype
+      - age
+      - gender
+    image: note.portrait
+    imageFit: contain
+    imageAspectRatio: 1
+    rowHeight: tall
+    columnSize:
+      file.name: 135
+      formula.Image: 126
+  - type: cards
+    name: Chapters
+    filters:
+      and:
+        - type.contains(link("Chapter"))
+        - story.contains(this.file.name)
+    order:
+      - file.name
+      - number
+      - summary
+    sort:
+      - property: number
+        direction: ASC
+    cardSize: 240
+    imageAspectRatio: 1
+    columnSize:
+      note.number: 30
+      note.cover: 100
+      file.name: 174
+    rowHeight: tall
+    image: note.cover
+  - type: table
+    name: Locations
+    filters:
+      and:
+        - type.contains(link("Location"))
+        - this.file.properties.locations.contains(file)
+    order:
+      - file.name
+      - formula.Scene
+      - events
+      - history
+      - features
+      - characters
+      - population
+    sort:
+      - property: events
+        direction: ASC
+      - property: name
+        direction: DESC
+      - property: formula.page.image
+        direction: ASC
+      - property: scene
+        direction: DESC
+    image: note.scene
+    imageFit: contain
+    imageAspectRatio: 1
+    columnSize:
+      file.name: 146
+      formula.Scene: 127
+    rowHeight: tall
+  - type: table
+    name: Pages
+    filters:
+      and:
+        - type.contains(link("Page"))
+        - chapter == this.file
+    order:
+      - file.name
+      - formula.page.image
+      - number
+      - summary
+      - status
+      - chapter
+    sort:
+      - property: number
+        direction: ASC
+    image: note.image
+    imageAspectRatio: 1.2
+    rowHeight: tall
+    columnSize:
+      formula.page.image: 106
+      note.number: 5
+      note.summary: 335
+    cardSize: 240
+  - type: table
+    name: Panels
+    filters:
+      and:
+        - type.contains(link("Panel"))
+        - page.contains(this.file.name)
+    order:
+      - file.name
+      - number
+      - summary
+      - status
+    sort:
+      - property: number
+        direction: ASC
+    image: note.image
+    imageAspectRatio: 1.2
+    rowHeight: tall
+    columnSize:
+      note.number: 1
+      note.summary: 516
+    cardSize: 240
+  - type: table
+    name: Details (Panels/Pages/Chapters)
+    filters:
+      or:
+        - and:
+            - type.contains(link("Panel"))
+            - page == this.file
+        - and:
+            - type.contains(link("Page"))
+            - chapter == this.file
+        - and:
+            - type.contains(link("Chapter"))
+            - story == this.file
+    order:
+      - file.name
+      - number
+      - formula.page.image
+      - summary
+      - status
+    sort:
+      - property: file.path
+        direction: ASC
+      - property: formula.color.status
+        direction: ASC
+    image: note.image
+    imageAspectRatio: 1.2
+    rowHeight: tall
+    columnSize:
+      formula.page.image: 99
+      note.number: 1
+      note.summary: 335
+    cardSize: 240

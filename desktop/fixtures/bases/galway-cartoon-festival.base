@@ -1,0 +1,12 @@
+views:
+  - type: cards
+    name: Collaborators
+    filters:
+      and:
+        - type.contains(link("@Author"))
+        - this.file.properties.collaborators.contains(file)
+    order:
+      - name
+      - genres
+      - nationality
+    image: note.portrait

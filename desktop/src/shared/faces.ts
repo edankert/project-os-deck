@@ -1,25 +1,27 @@
 /**
- * What a card shows, decided from the note rather than from its element.
+ * What a card shows, READ from the view's description rather than decided here.
  *
  * Every card used to show id, title, type and a status stripe, whatever it
- * held, which is the cockpit's row with rounded corners (TASK-0028). A phase
- * or a feature has work inside it, an issue has a severity, and a test has a
- * last walk that can go stale. The decision is a pure function so it can be
- * checked without opening a window; the renderer only paints what comes back.
+ * held, which is the cockpit's row with rounded corners (TASK-0028). Four
+ * faces were then written as branches on a note's TYPE — `if noteType ===
+ * 'test'`, `if noteType === 'issue'` — and that is the version this module
+ * replaces (TASK-0044).
+ *
+ * **The branch was wrong in a way that only showed up outside project-os.** A
+ * vault's character with a portrait, a page with a number and a chapter that
+ * orders its pages all arrived as plain cards, because none of them is one of
+ * the four types somebody thought of. A face is now a section of the view's
+ * description: a title, a subtitle, an image, a list of fields and a measure,
+ * all by property name. A vault type gets a face by writing one.
+ *
+ * This module holds no note type at all. What it holds is how to READ a face
+ * section and how to turn one into the line a person sees.
  */
+import type { FaceSection, FaceSpec } from './description.js';
 import type { CardModel, Progress } from './types.js';
+import { bandFor, isCompleted } from './statuses.js';
 
-const DONE = new Set(['done', 'fixed', 'implemented', 'passing', 'released', 'merged', 'accepted', 'closed', 'retired', 'pass']);
-const DOING = new Set(['doing', 'review', 'active', 'draft', 'proposed', 'ready']);
-
-/** The band a status belongs to. Deck defines no vocabulary of its own here. */
-export function bandFor(status: string): string {
-  const value = status.trim().toLowerCase();
-  if (value === '') return 'none';
-  if (DONE.has(value)) return 'done';
-  if (DOING.has(value)) return 'doing';
-  return 'owed';
-}
+export { bandFor, isCompleted };
 
 export type Face =
   | { kind: 'progress'; done: number; total: number; stale: number }
@@ -37,34 +39,43 @@ export type Face =
 export function progressOf(card: CardModel): Progress | null {
   if (card.progress !== null) return card.progress;
   if (card.children.length === 0) return null;
-  const done = card.children.filter((c) => bandFor(c.status) === 'done').length;
+  const done = card.children.filter((c) => isCompleted(c.status)).length;
   const stale = card.children.filter((c) => c.stale).length;
   return { done, total: card.children.length, stale };
 }
 
+/** The face spec this card is drawn with: its type's, or the section's default. */
+export function specFor(section: FaceSection, card: CardModel): FaceSpec {
+  return section.byType[card.noteType] ?? section.default;
+}
+
 /**
- * A type Deck has no face for still draws, with what every card has.
+ * The face a card wears, from the spec the description gave it.
  *
- * That is the rule for the Vault phase as much as for today: a vault's own
- * note types arrive without Deck knowing any of them.
+ * A measure the note cannot actually supply falls back to `plain` rather than
+ * drawing an empty band: an issue with no severity, a note with no children.
+ * That is a property of the DATA, not of the type, so it stays here.
  */
-export function faceFor(card: CardModel): Face {
-  const progress = progressOf(card);
-  if (progress !== null && progress.total > 0) {
-    return { kind: 'progress', done: progress.done, total: progress.total, stale: progress.stale };
+export function faceFor(card: CardModel, section: FaceSection): Face {
+  const spec = specFor(section, card);
+  switch (spec.measure) {
+    case 'progress': {
+      const progress = progressOf(card);
+      if (progress === null || progress.total === 0) return { kind: 'plain' };
+      return { kind: 'progress', done: progress.done, total: progress.total, stale: progress.stale };
+    }
+    case 'severity':
+      return card.severity === null ? { kind: 'plain' } : { kind: 'severity', severity: card.severity };
+    case 'verified':
+      return { kind: 'verified', lastVerified: card.lastVerified, stale: card.stale };
+    default:
+      return { kind: 'plain' };
   }
-  if (card.noteType === 'test') {
-    return { kind: 'verified', lastVerified: card.lastVerified, stale: card.stale };
-  }
-  if (card.noteType === 'issue' && card.severity !== null) {
-    return { kind: 'severity', severity: card.severity };
-  }
-  return { kind: 'plain' };
 }
 
 /** The line under a card's title, in words a person reads. */
-export function faceText(card: CardModel): string {
-  const face = faceFor(card);
+export function faceText(card: CardModel, section: FaceSection): string {
+  const face = faceFor(card, section);
   switch (face.kind) {
     case 'progress':
       return `${face.done} of ${face.total} done`;
@@ -76,4 +87,40 @@ export function faceText(card: CardModel): string {
     default:
       return `${card.noteType || 'note'} · ${card.status || 'no status'}`;
   }
+}
+
+/**
+ * What a card shows beside its title, read off the record by property name.
+ *
+ * This is what makes a face a DESCRIPTION rather than a shape: a base file
+ * naming `note.portrait` as its image, or `role` and `archetype` as its
+ * fields, reaches the card without anything here knowing what a character is.
+ */
+export function fieldsFor(
+  spec: FaceSpec,
+  record: Record<string, unknown> | null,
+): Array<{ property: string; value: string }> {
+  if (record === null) return [];
+  const out: Array<{ property: string; value: string }> = [];
+  for (const property of spec.fields) {
+    const value = readProperty(record, property);
+    if (value === null) continue;
+    out.push({ property, value });
+  }
+  return out;
+}
+
+/**
+ * One property of a record, by the name a description uses.
+ *
+ * `note.x` and a bare `x` are the same frontmatter key — the namespace is how
+ * a base file disambiguates, not a second place to look — and `file.name` and
+ * `file.path` name the file rather than its frontmatter.
+ */
+export function readProperty(record: Record<string, unknown>, property: string): string | null {
+  const name = property.startsWith('note.') ? property.slice(5) : property;
+  const value = record[name];
+  if (value === null || value === undefined || value === '') return null;
+  if (Array.isArray(value)) return value.length === 0 ? null : value.map((v) => String(v)).join(', ');
+  return String(value);
 }

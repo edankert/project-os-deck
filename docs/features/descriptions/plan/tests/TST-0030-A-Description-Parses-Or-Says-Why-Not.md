@@ -6,7 +6,7 @@ title: "A description parses or says why not, the seven project-os views still m
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -56,10 +56,13 @@ A view is now a document, and the parser that reads it must refuse what it canno
 - The seven views Deck already draws are expressible in the new shape with nothing left over.
 - Every base file Edwin has actually written reads as a description as far as the seed reaches, and says by name where it stopped.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh descriptions`: the check count and the date.
-- The date the twelve base-file fixtures were copied, and from where.
+- `bash tools/scripts/run-desktop-tests.sh descriptions`: 17 checks pass, 2026-09-09.
+- THIRTEEN base-file fixtures, not twelve: eleven from `~/Notes` and two from the cockpit's `docs/__bases__/`, copied 2026-09-09. `desktop/fixtures/bases/README.md` names where each came from.
+- All seven provider descriptions parse with zero refusals; each names `list` and `spread` and none names `glass`.
+- Every one of the thirteen yields at least one description. The TaskNotes plugin's four view types come back as named unsupported constructs and stop nothing; the four Comic card views name `note.portrait`, `note.cover`, `note.scene` and `note.image`; the sidebar base's `or`-of-`and` parses as three `and` branches under one `or`.
+- Nothing writes to a base file, asserted by their modification times before and after.
 
 ## Adequacy (who verifies this test?)
 

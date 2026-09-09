@@ -10,10 +10,13 @@
  * groups the sidecar sent. The desk holds the notes a person put there, where
  * they put them. A popped-out window carries one panel and nothing else.
  */
-import type { CardGroup, CardModel, DeckView, PanelType, Workspace } from '../shared/types.js';
+import type { CardGroup, CardModel, PanelType, Workspace } from '../shared/types.js';
+import type { Description, Refusal } from '../shared/description.js';
 import { AddressError, addressFor, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
-import { DEFAULT_VIEW_ID, ViewRegistry } from '../shared/views.js';
-import { SidecarClient, flattenGroups, groupsFromNav } from '../shared/sidecar-client.js';
+import { DEFAULT_VIEW_ID, ViewRegistry, marksModeFor, sourceOf } from '../shared/views.js';
+import { SidecarClient, flattenGroups, groupsFromNav, isFinishedWork } from '../shared/sidecar-client.js';
+import { runQuery } from '../shared/query.js';
+import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { deskCardsOf } from '../shared/store-state.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
@@ -30,6 +33,7 @@ const el = {
   rail: must('rail'),
   navigator: must('navigator'),
   navList: must('nav-list'),
+  refusals: must('refusals'),
   search: must('search') as HTMLInputElement,
   statusFilter: must('status-filter') as HTMLSelectElement,
   typeFilter: must('type-filter') as HTMLSelectElement,
@@ -57,9 +61,19 @@ let workspaces: Workspace[] = [];
  * click or an address load calls `selectView`.
  */
 let pinned = false;
-let currentViews: DeckView[] = [];
+let currentViews: Description[] = [];
 /** The view as it arrived, in groups, before anything is narrowed. */
 let currentGroups: CardGroup[] = [];
+/** The description Deck is drawing: its faces, its bands, its source. */
+let currentView: Description | null = null;
+/**
+ * What the current view's description or its query could not be read.
+ *
+ * Drawn ABOVE the list rather than swallowed. An empty view and a broken view
+ * look identical on screen and only one of them is a bug, which is the rule
+ * this whole feature is written against.
+ */
+let currentRefusals: Refusal[] = [];
 /** Every card in the view, children flattened, for the desk and the address. */
 let currentCards: CardModel[] = [];
 let panel: PanelType | null = null;
@@ -91,6 +105,12 @@ const navigator = new NavigatorList(el.navList, {
     void host.dispatch({ type: 'set-fold', key, folded });
   },
 });
+
+/** What a card wears before a view has been chosen: what every card has. */
+const PLAIN_FACES = {
+  default: { title: 'title', subtitle: 'subtitle', image: null, fields: [], measure: 'none' as const },
+  byType: {},
+};
 
 function must(id: string): HTMLElement {
   const found = document.getElementById(id);
@@ -274,12 +294,20 @@ async function selectView(viewId: string): Promise<void> {
   await loadView(workspace, view);
 }
 
-async function loadView(workspace: Workspace, view: DeckView): Promise<void> {
+async function loadView(workspace: Workspace, view: Description): Promise<void> {
   const client = clientFor(workspace.id);
+  currentView = view;
+  currentRefusals = [];
+  pool.useFaces(view.face);
+  const source = sourceOf(view);
   try {
-    if (view.source.kind === 'nav') {
-      const payload = await client.nav(view.source.mode);
+    if (source.kind === 'nav') {
+      const payload = await client.nav(source.mode);
       currentGroups = groupsFromNav(payload);
+    } else if (source.kind === 'query') {
+      const evaluated = await loadQueryView(workspace, view);
+      currentGroups = evaluated.groups;
+      currentRefusals = evaluated.refusals;
     } else {
       const payload = await client.stats();
       currentGroups = [
@@ -304,6 +332,85 @@ async function loadView(workspace: Workspace, view: DeckView): Promise<void> {
   drawDesk();
 }
 
+/**
+ * A query-sourced view: Deck's own records, filtered, sorted and grouped.
+ *
+ * The marks — owed, its verb, suppressed — come from the sidecar's navigation
+ * payload rather than from the query, because whether a note needs a person is
+ * the cockpit's judgement from its own obligations registry. A workspace whose
+ * notes the sidecar does not track simply has no marks, and the navigator says
+ * so instead of drawing an empty "Needs you" heading.
+ */
+async function loadQueryView(
+  workspace: Workspace,
+  view: Description,
+): Promise<{ groups: CardGroup[]; refusals: Refusal[] }> {
+  const records = await readRecords(workspace.id);
+  const marks = await readMarks(workspace.id, marksModeFor(view));
+  const result = runQuery(view, records, { marks });
+  return {
+    groups: result.groups,
+    refusals: [
+      ...result.unsupported.map((u) => ({ construct: u.construct, where: u.where, reason: u.reason })),
+      ...(result.untracked
+        ? [
+            {
+              construct: 'what is owed',
+              where: 'source',
+              reason:
+                'the sidecar tracks none of the notes this view holds, so it has no obligations to report and this view shows no Needs-you group',
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+async function readRecords(workspaceId: string): Promise<NoteRecord[]> {
+  const response = await fetch(`/deck/records/${encodeURIComponent(workspaceId)}`);
+  if (!response.ok) throw new Error(`Deck's own index answered ${response.status}`);
+  const payload = (await response.json()) as { building?: boolean; records?: NoteRecord[] };
+  if (payload.building === true) throw new Error('Deck is still reading this workspace');
+  return payload.records ?? [];
+}
+
+/**
+ * What the sidecar says about the notes it tracks, by note id.
+ *
+ * Read from the navigation payload Deck already fetches, in the mode whose
+ * obligations cover the whole repository. A workspace with no sidecar opinion
+ * comes back empty rather than as a failure: a vault has none.
+ */
+async function readMarks(
+  workspaceId: string,
+  mode: string | null,
+): Promise<Map<string, { owed: boolean; owedVerb: string | null; suppressed: boolean }>> {
+  const marks = new Map<string, { owed: boolean; owedVerb: string | null; suppressed: boolean }>();
+  if (mode === null) return marks;
+  try {
+    const payload = await clientFor(workspaceId).nav(mode);
+    for (const group of payload.groups) {
+      const suppressed = isFinishedWork(group);
+      const walk = (items: typeof group.items): void => {
+        for (const item of items) {
+          const existing = marks.get(item.id);
+          marks.set(item.id, {
+            owed: item.owed || (existing?.owed ?? false),
+            owedVerb: item.owedVerb ?? existing?.owedVerb ?? null,
+            suppressed: suppressed && (existing?.suppressed ?? true),
+          });
+          if (item.children.length > 0) walk(item.children);
+        }
+      };
+      walk(group.items);
+    }
+  } catch {
+    // No sidecar opinion is a fact about the workspace, not a failure of the
+    // view. `untracked` is what says so on screen.
+  }
+  return marks;
+}
+
 function blankCard(noteId: string, title: string, noteType: string): CardModel {
   return {
     noteId,
@@ -320,6 +427,7 @@ function blankCard(noteId: string, title: string, noteType: string): CardModel {
     stale: false,
     progress: null,
     children: [],
+    frontmatter: null,
   };
 }
 
@@ -359,13 +467,51 @@ function drawNavigator(): void {
   const held = countDistinct(currentGroups);
   navigator.render({
     groups,
+    faces: currentView?.face ?? PLAIN_FACES,
     folds: state.folds,
     onDesk: new Set(deskCardsOf(state, state.workspaceId).map((c) => c.noteId)),
     currentNoteId: state.noteId,
   });
   el.navCount.textContent = `${shown} of ${held}`;
+  drawRefusals();
   if (el.search.value !== state.query) el.search.value = state.query;
   syncFilters();
+}
+
+/**
+ * What this view could not be read as, above the list rather than instead of it.
+ *
+ * An empty view and a broken view look identical on screen and only one of
+ * them is a bug. So a construct the parser or the evaluator could not read is
+ * NAMED here, above whatever notes the view could still select — never a
+ * silent empty list, and never an error page instead of the notes.
+ */
+function drawRefusals(): void {
+  el.refusals.replaceChildren();
+  el.refusals.hidden = currentRefusals.length === 0;
+  if (currentRefusals.length === 0) return;
+  const heading = document.createElement('p');
+  heading.className = 'refusal-heading';
+  heading.textContent =
+    currentRefusals.length === 1
+      ? 'One thing in this view could not be read:'
+      : `${currentRefusals.length} things in this view could not be read:`;
+  el.refusals.appendChild(heading);
+  const list = document.createElement('ul');
+  for (const refusal of currentRefusals) {
+    const item = document.createElement('li');
+    const what = document.createElement('code');
+    what.textContent = refusal.construct;
+    item.append(what, document.createTextNode(` — ${refusal.reason}`));
+    if (refusal.where !== '') {
+      const where = document.createElement('span');
+      where.className = 'refusal-where';
+      where.textContent = ` (${refusal.where})`;
+      item.appendChild(where);
+    }
+    list.appendChild(item);
+  }
+  el.refusals.appendChild(list);
 }
 
 function renderFilters(): void {

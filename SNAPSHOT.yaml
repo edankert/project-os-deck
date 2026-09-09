@@ -171,7 +171,7 @@ items:
     FEAT-0012:
       file: "docs/features/descriptions/FEAT-0012-A-View-Is-A-Description.md"
       title: "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -351,42 +351,42 @@ items:
     TASK-0041:
       file: "docs/features/descriptions/plan/tasks/TASK-0041-The-Description-Shape-And-Its-Parser.md"
       title: "The description shape, its version and its extension namespace, and a parser that refuses what it cannot read by name"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0012"
       phase: PHASE-0001
     TASK-0042:
       file: "docs/features/descriptions/plan/tasks/TASK-0042-Seven-Descriptions-Equal-To-Todays-Views.md"
       title: "The project-os provider emits seven mode-sourced descriptions, and nothing a person sees changes"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0012"
       phase: PHASE-0001
     TASK-0043:
       file: "docs/features/descriptions/plan/tasks/TASK-0043-The-Evaluator-Over-The-Index.md"
       title: "The evaluator for the seeded language over Deck's index: filters, functions, sort and grouping, with anything unsupported named rather than silently empty"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0012"
       phase: PHASE-0001
     TASK-0044:
       file: "docs/features/descriptions/plan/tasks/TASK-0044-Band-And-Face-Come-From-The-Description.md"
       title: "Band and face are read from the description: faces.ts becomes a reader, and the vocabularies it still copies are pinned to the cockpit by fixture"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0012"
       phase: PHASE-0001
     TASK-0045:
       file: "docs/features/descriptions/plan/tasks/TASK-0045-The-Navigator-Draws-Any-Description.md"
       title: "The navigator draws any description, whether its notes came from a sidecar mode or from a query over Deck's index"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0012"
       phase: PHASE-0001
     TASK-0046:
       file: "docs/features/descriptions/plan/tasks/TASK-0046-A-Base-File-Reads-As-A-Description.md"
       title: "A base file reads as a description — the parser half only, so the Vault phase inherits a language instead of inventing one"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0012"
       phase: PHASE-0001
@@ -1089,7 +1089,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 52
-    tasks_done: 27
+    tasks_done: 33
     tests_total: 23
     tests_passing: 0
     tests_failing: 0

@@ -6,7 +6,7 @@ title: "The evaluator runs the seeded language over Deck's index, the three type
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -56,10 +56,13 @@ A description whose source is a query selects notes by running over Deck's index
 - Where Deck cannot evaluate something, a person is told what and where.
 - A query-sourced view is indistinguishable from a mode-sourced one to the code that draws it.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh evaluator`: the check count and the date.
-- The seed's function list as it stood on that date, and how many of them evaluate rather than report.
+- `bash tools/scripts/run-desktop-tests.sh evaluator`: 20 checks pass, 2026-09-09.
+- The seed held 37 functions on that date. 26 evaluate; 11 are named and report themselves unsupported — `map`, `filter`, `reduce`, `format`, `image`, `icon`, `sort`, `unique`, `slice`, `split`, `join`, which is the TaskNotes plugin's list pipeline and its date formatting.
+- The suite walks `SEED_FUNCTIONS` itself, so a function nobody implemented cannot pass by being absent from the suite as well as from the evaluator.
+- A query runs over this repository's real index, walked by Deck's own walk, and selects its issues and its fixed issues.
+- One defect the suite caught while it was being written: a descending sort put every missing value FIRST, because presence was decided inside the direction flip.
 
 ## Adequacy (who verifies this test?)
 

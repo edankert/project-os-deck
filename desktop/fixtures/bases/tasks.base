@@ -1,0 +1,161 @@
+formulas:
+  Status: if(priority==high, "color-red", "color-green")
+views:
+  - type: table
+    name: Overdue Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - '!status.containsAny("done", "cancelled")'
+        - or:
+            - due < today()
+            - scheduled < today()
+    order:
+      - due
+      - file.name
+      - scheduled
+      - domain
+      - project
+      - priority
+      - status
+      - formula.Status
+    sort:
+      - property: file.name
+        direction: ASC
+      - property: due
+        direction: ASC
+      - property: scheduled
+        direction: DESC
+      - property: status
+        direction: DESC
+      - property: formula.Status
+        direction: ASC
+    columnSize:
+      note.due: 123
+      file.name: 417
+      note.scheduled: 127
+  - type: table
+    name: Today's Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - '!status.containsAny("done", "cancelled")'
+        - or:
+            - scheduled == today()
+            - due == today()
+    order:
+      - file.name
+      - priority
+      - domain
+      - project
+      - due
+      - scheduled
+      - status
+      - created
+      - modified
+    sort:
+      - property: status
+        direction: ASC
+      - property: priority
+        direction: ASC
+    columnSize:
+      file.name: 391
+      note.due: 122
+      note.scheduled: 150
+      note.created: 137
+      note.modified: 133
+  - type: table
+    name: This Week's Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - '!status.containsAny("done", "cancelled")'
+        - and:
+            - scheduled > today()
+            - scheduled < today() + "1 week"
+            - scheduled != today()
+    order:
+      - scheduled
+      - file.name
+      - domain
+      - project
+      - priority
+      - status
+      - created
+      - modified
+    sort:
+      - property: scheduled
+        direction: ASC
+    columnSize:
+      note.scheduled: 119
+      file.name: 481
+      note.created: 137
+      note.modified: 133
+  - type: table
+    name: Future Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - '!status.containsAny("done", "cancelled")'
+        - or:
+            - scheduled >= today() + "1 week"
+    order:
+      - scheduled
+      - file.name
+      - domain
+      - project
+      - priority
+      - status
+    sort:
+      - property: scheduled
+        direction: ASC
+      - property: file.name
+        direction: DESC
+    columnSize:
+      note.scheduled: 117
+      file.name: 481
+  - type: table
+    name: Unscheduled Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - scheduled.isEmpty()
+        - '!status.containsAny("cancelled", "done")'
+    order:
+      - file.name
+      - domain
+      - project
+      - priority
+      - status
+      - due
+    sort: []
+    columnSize:
+      note.due: 113
+      file.name: 481
+      note.scheduled: 130
+  - type: table
+    name: Completed Tasks
+    filters:
+      and:
+        - type == link("Task")
+        - status.containsAny("cancelled", "done")
+        - '!status.containsAny("in progress", "todo")'
+    order:
+      - completed
+      - file.name
+      - project
+      - domain
+      - status
+      - priority
+      - due
+    sort:
+      - property: completed
+        direction: DESC
+      - property: due
+        direction: ASC
+    columnSize:
+      note.completed: 126
+      file.name: 450
+      note.status: 90
+      note.priority: 94
+      note.due: 113
