@@ -131,17 +131,51 @@ def main() -> int:
 
         print(f"\n{name}: {len(deck_paths)} notes counted by Deck, {len(cockpit_paths)} by the cockpit, "
               f"{len(templates)} template(s) dropped by both")
+
+        # **The comparison is PER NOTE first.** Comparing per-type totals lets
+        # two notes exchange `feature` and `task` and still add up, which the
+        # third review demonstrated: the script printed "0 disagreements" while
+        # two notes were wrong. The recorded fixture catches a swap in this
+        # repository and in Your Trainer; the vault is in no fixture, so for
+        # the vault nothing else would.
+        contradictions: list[str] = []
+        for record in index._records.values():
+            rel = record.rel_path
+            if rel in templates or rel.startswith("__templates__/") or rel in licensed:
+                continue
+            theirs_type = (record.note_type or "").strip().lower()
+            ours_types = [str(v).strip().lower() for v in deck_types.get(rel, [])]
+            if theirs_type == "" and ours_types == []:
+                continue
+            if theirs_type not in ours_types:
+                contradictions.append(
+                    f"{name}: `{rel}` — the cockpit reads it as "
+                    f"{theirs_type or '(no type)'}, Deck reads it as {ours_types or '(no type)'}"
+                )
+        failures.extend(contradictions)
+        print(f"  {len(cockpit_paths) - len(licensed) - len(contradictions)} note(s) read as the same type by both, "
+              f"{len(contradictions)} contradiction(s)")
+
         for rel in sorted(deck_paths - cockpit_paths):
             failures.append(f"{name}: Deck has `{rel}` and the cockpit does not")
         for rel in sorted(cockpit_paths - deck_paths):
             failures.append(f"{name}: the cockpit has `{rel}` and Deck does not")
         if licensed:
-            print(f"  {len(licensed)} note(s) the cockpit gave no type and Deck did, left out of the count "
-                  f"comparison BY PATH and listed here:")
+            print(f"  {len(licensed)} note(s) the cockpit gave no type and Deck did, left out of the comparison "
+                  f"BY PATH and listed here:")
             for rel in sorted(licensed)[:6]:
                 print(f"      {rel} — {licensed[rel]}; Deck reads it as {deck_types.get(rel)}")
             if len(licensed) > 6:
                 print(f"      ... and {len(licensed) - 6} more")
+
+        # **A comparison that covers no notes is a failure, not a pass.** With
+        # `isTemplate` returning true for everything this script compared zero
+        # notes in all three corpora and exited 0.
+        compared = len(cockpit_paths) - len(licensed)
+        if compared <= 0:
+            failures.append(f"{name}: the comparison covered NO notes, which is not the same as agreeing")
+        elif len(templates) >= len(deck_types):
+            failures.append(f"{name}: every note was treated as a template, so nothing was compared")
 
         keys = sorted(set(theirs) | set(ours))
         width = max((len(k) for k in keys), default=4)

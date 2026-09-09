@@ -15,8 +15,8 @@ tasks: ["[[TASK-0015-Notes-Become-Cards]]", "[[TASK-0016-A-Desk-Is-Saved-And-Reo
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-07
-review_verdict: changes-requested
+review_date: 2026-09-09
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
@@ -67,6 +67,16 @@ Deck's first view shows notes as cards a person arranges, rather than as a list 
 
 **2026-09-06: built and tested; the acceptance walk is owed.** One criterion here can only be settled by a person doing something a machine cannot: opening this repository in the cockpit and in Deck side by side and comparing the ids, the order and the statuses. That walk is [[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]], and its Procedure needs rewording once TASK-0024 lands, because it tells a person to open a view and watch the desk fill.
 
+
+**How the close-out pass's findings were discharged, 2026-09-09.** Recorded here because the third review found this section still describing the state before the fixes.
+
+| finding | note | where it stands |
+| --- | --- | --- |
+| a card jumps when the desk has scrolled | [[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]] | `fixed` |
+| four smaller defects in the renderer | [[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]] | `fixed` |
+| the remove control does nothing | [[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]] | `fixed` |
+| nothing in CI exercises the renderer | [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] | **still `triage`**, and it is the phase's largest open question. The smoke run reaches the renderer and CI does not run it |
+
 ## Independent review — 2026-09-07
 
 **Verdict: changes-requested.** Clean context, separate session, working from the notes and the diff of `7a001e8` (re-read at `9a68eac`, which is one commit further on). Same model family as the author, recorded in `reviewed_by`. Four findings, the first two of them defects in the drag and the restore.
@@ -87,3 +97,13 @@ Two smaller observations, not blocking. `NavigatorList.paintRow` recovers the ro
 - **A filter set on one view still narrows the next one, and the dropdowns then say nothing is filtered** ([[ISS-0012-A-Filter-Survives-The-View-It-Was-Set-On]]). The reducer clears the search box on a workspace change and never clears the filters; a view change clears neither.
 - **The clamp fix from [[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]] is guarded by nothing.** Replacing the clamp call in the built renderer with a plain assignment left all 153 checks green. That is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] with a number on it, and [[TST-0019-The-Desk-Is-Chosen-And-Arranged]]'s `adequacy` field, which claimed the opposite, is corrected.
 - **A lead**: `deskBounds` measures `scrollHeight` before the pool renders, so it reads the previous paint. A card restored below the desk's height would then creep down by about 56 pixels on every repaint until it is off-screen again. Read from the arithmetic, not run.
+
+## Independent review — 2026-09-09 (third pass)
+
+**Verdict: approved.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+The close-out pass left one defect, one measurement and one lead. The defect is [[ISS-0012-A-Filter-Survives-The-View-It-Was-Set-On]], `fixed`. The lead — a restored card creeping down the desk because `deskBounds` reads the previous paint — was turned into [[ISS-0017-A-Restored-Card-Creeps-Down-The-Desk-On-Every-Repaint]] and is `fixed`; the renderer now calls `placementBounds` on content that already exists (`desktop/src/renderer/renderer.ts:608`).
+
+**The measurement stands unanswered and it is not this feature's to answer.** "Replacing the clamp call in the built renderer with a plain assignment left all checks green" is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]], still at `triage`. I confirmed the shape is unchanged: no check in `desktop/tests/` loads the renderer, and `grep -rn "applyVerb\|askText" desktop/tests/` returns nothing.
+
+**This note records no discharge either.** Nothing after the close-out review says its three points were answered. A reader has to go to `docs/issues/` to find out.

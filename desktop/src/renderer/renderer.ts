@@ -21,7 +21,7 @@ import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reco
 import { deskCardsOf } from '../shared/store-state.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
-import { type ActuatorRow, actuatorRows, wordRefusal } from '../shared/write-client.js';
+import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } from '../shared/write-client.js';
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
@@ -778,17 +778,27 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
     button.type = 'button';
     button.className = 'verb';
     button.textContent = row.verb;
+    // The row's own answer to "does this stop to ask", carried into the page.
+    // Deck decides nothing by it; it is what lets a check press a verb that
+    // does NOT confirm without naming one, which Deck may not do (TST-0033:
+    // no verb name or transition rule exists in Deck).
+    button.dataset['confirm'] = String(row.confirm);
+    // Shown rather than hidden, and unavailable rather than silent. A design
+    // at `proposed` really does owe somebody a decision, so removing the row
+    // would say it does not; pressing it says where the decision is recorded
+    // (ISS-0039).
     button.disabled = row.disabled;
-    if (row.reason !== '') button.title = row.reason;
+    const why = canPerform(row) ? row.reason : elsewhere(row);
+    if (why !== '') button.title = why;
     button.addEventListener('click', () => {
       void applyVerb(workspaceId, noteId, row, triaging);
     });
     el.actuators.appendChild(button);
-    if (row.disabled && row.reason !== '') {
-      const why = document.createElement('span');
-      why.className = 'why';
-      why.textContent = row.reason;
-      el.actuators.appendChild(why);
+    if ((row.disabled || !canPerform(row)) && why !== '') {
+      const said = document.createElement('span');
+      said.className = 'why';
+      said.textContent = why;
+      el.actuators.appendChild(said);
     }
   }
 }
@@ -810,16 +820,30 @@ async function applyVerb(
   row: ActuatorRow,
   triaging = false,
 ): Promise<void> {
+  // **A verb Deck cannot perform is shown and refused, not sent** (ISS-0039).
+  // The row names its own endpoint when the verdict does not go through the
+  // generic transition, and a design's does: `/api/design/verdict` requires
+  // the revision the verdict judged, and Deck has no design surface and no
+  // revision history, so it has nothing honest to send. Pressing it used to
+  // post a transition and collect the sidecar's refusal.
+  if (!canPerform(row)) {
+    say(elsewhere(row), true);
+    return;
+  }
   // Deck decides nothing about which verbs are dangerous; the row does.
-  let reason: string | null = null;
   if (row.confirm) {
     const chosen = await askChoice(`${row.verb} ${noteId}?`, [{ value: 'yes' as const, label: `Yes, ${row.verb}` }]);
     if (chosen === null) return;
-    // Escape or an empty box here means "no reason", not "cancel" — the
-    // decision was confirmed a moment ago and unwinding it now would be a
-    // second question about a settled thing.
-    reason = await askText(`why? (recorded in the note; blank for none)`);
   }
+  // **Asked for EVERY verb, not only the ones that stop to confirm**
+  // (ISS-0040). ISS-0037 put the box inside the confirmation, which left
+  // Accept, Defer and every other forward move recording no grounds — the
+  // same silence ISS-0037 was filed about, on three verbs out of five.
+  // Deferring an issue is exactly the decision somebody wants the reason for
+  // six months later. Escape or an empty box means "no reason", not "cancel":
+  // for a confirm verb the decision was settled a moment ago, and for the rest
+  // there was nothing to unwind.
+  const reason = await askText(`why ${row.verb.toLowerCase()} ${noteId}? (recorded in the note; blank for none)`);
   // **Severity is free text, not a picker, deliberately.** The four values are
   // the cockpit's and the sidecar serves no list of them, so a picker here
   // would be Deck restating a table it does not own — the drift that put

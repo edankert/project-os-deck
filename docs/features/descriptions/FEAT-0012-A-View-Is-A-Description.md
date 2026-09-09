@@ -134,3 +134,34 @@ Overview is the one view the shape cannot carry, and the extension namespace is 
 **What I could not break.** `containsOne` on a list of links is right for both a `link("X")` and a `"X"` receiver, and consistently case-sensitive. `pathPrefixFor` is correct for a vault: `~/Notes` has no `docs/`, `path.relative` gives `''`, and the evaluator's `file.path` is then the vault-relative path a base file expects. The `groupBy`-as-a-map fix and the empty-formula report are both real. The 150-view sweep over three corpora found no other behavioural change between the two builds. `npm test` 306/0, `run-tests.py` `passing=23 failing=0`, `electron . --smoke` `ok: true`.
 
 **Which build this was measured on.** The review ran against `c57f723`..`b2292df`. Two further commits landed while it was in progress (`883e880`, `8fff003`), both touching `desktop/src/main/main.ts`. Every blocking finding was re-driven against `8fff003`, where the suite is 307 checks: the three navigation-guard mutations and the `pathPrefixFor` mutation each still leave 307 passing and 0 failing.
+
+## Independent review — 2026-09-09 (third pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. The four evaluator fixes hold under mutation. The findings are all about `tools/scripts/check-bases-live.mjs` and the section it added to [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]], which together claim more than they measure.
+
+**Finding 1 (medium): the script excuses an empty view on the strength of a report that says nothing about why it is empty.** Its rule is `selected === 0 && said.length === 0`, and `said` is every refusal from anywhere in the view. In `TaskNotes/Views/tasks-default.base`, the views "Today" and "This Week" select nothing and are passed because two unrelated things were reported: that `tasknotesTaskList` is a plugin's own view type, and that a `%` appears in a formula. Neither is about the filter. The identical emptiness in `__bases__/Tasks/Tasks Base.base / Today's Tasks` — same vault, same cause, no date on or after today — needed a hand-written `KNOWN_EMPTY` exemption. Two views, one cause, opposite treatment, which is the sign that the rule is not measuring what it says.
+
+**Finding 2 (medium): the script cannot see a view selecting the wrong notes, which is the failure [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]] is about.** It counts what each view selects and never asks whether those are the right notes. Reproduced by making every filter select everything — `if (filter(context) || true)` at `desktop/src/shared/query.ts:99`:
+
+```
+node tools/scripts/check-bases-live.mjs
+  46 view(s) read across the vault's base files
+  0 view(s) drew nothing and said nothing
+  0 failure(s)                                    (exit 0)
+```
+
+All 46 views then draw all 407 notes and the script is green. The suite catches this blunt mutation (six checks red), so the script is a supplement rather than the guard — worth saying in TST-0027, which currently reads as though it settles steps 4 to 7.
+
+**Finding 3 (low): three numbers in TST-0027's new section do not reproduce, which is [[ISS-0036-Notes-Quote-Measurements-That-Do-Not-Reproduce]] recurring in prose written the same day it was closed.**
+
+- "46 views across 21 base files": the script prints 19 file names, and `find ~/Notes -name '*.base' -not -path '*/.*' | wc -l` is 19. Counting the vault's dot directories gives 27. No reading gives 21.
+- "`Novel Base - Side Bar.base` has four views ... Four empty lists, four explanations": it has six — Characters, Chapters, Locations, Pages, Panels, and Details (Panels/Pages/Chapters).
+- "there are nine of them", of views where a difference would be silent: 17 views draw a list with nothing said. The nine silently drops the eight `01 Inbox/Untitled*.base` views, each of which draws all 407 notes and says nothing.
+
+**Finding 4 (low): `KNOWN_EMPTY` never expires and its own comment says it should.** The three rows say to re-check them when the vault's data moves, and nothing enforces that. A row stays a permanent exemption for a named view, so a real defect emptying "Today's Tasks" is excused for ever. Its stated reason does reproduce today: the latest `scheduled:` or `due:` date anywhere in `~/Notes` is 2026-03-17.
+
+**What I attacked and could not break.**
+
+- `pathPrefixFor` returning `''`, which is [[ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded]]'s own mutation: two checks red, exactly the number the issue claims.
+- The vault's own numbers reproduce: 46 views, 19 base files, 0 failures, Characters 10, Chapters 2, Locations 8, Pages 0 with `this.` named as the reason.
+- [[ISS-0033-Haslink-Answers-From-Frontmatter-And-Does-Not-Say-So]]'s report is present and worded as the note says (`desktop/src/shared/expression.ts:570-571`).

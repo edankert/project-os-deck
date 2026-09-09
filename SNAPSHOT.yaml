@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 37
+  ISS: 43
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -63,7 +63,7 @@ focus:
   phase: "PHASE-0001"
   feature: "FEAT-0006"
   task: "TASK-0052"
-  issue: ""
+  issue: "ISS-0038"
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -503,6 +503,66 @@ items:
       component: main
       tests: []
       note: "Found 2026-09-09 by the round-trip check written for TST-0028, which drove Accept on ISS-0008 and expected the cockpit's decision callout. The sidecar writes the callout only when the request carries prose (_append_decision_record: if not text: return body). Deck's deck:write:transition handler builds the request from an allow-list of id/to/mtime/option, so note and severity never leave the shell, and applyVerb never collects prose in the first place. Decline in the cockpit records why; Decline in Deck records nothing, silently. Deck's own TransitionRequest already has both fields."
+    ISS-0038:
+      file: "docs/issues/ISS-0038-Nothing-Checks-The-Tag-That-Stops-A-Note-Running-Script.md"
+      title: "One meta tag stops a note's own markup running script in the window that can write to the repository, and deleting it leaves every check green"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: []
+      note: "Third review, 2026-09-09, finding 1. renderer.ts:689 is article.innerHTML = note.html, and Python-Markdown passes raw HTML through, so the CSP meta tag in index.html is the only thing stopping a note running script in the window that holds window.deck.write.*. Deleting it leaves 316 checks passing and the smoke run ok:true. FEAT-0008's first pass named it on 2026-09-07 when the window could only read; the write path landed the next day and nothing revisited it. Assert it by driving a real window, not by grepping the file."
+    ISS-0039:
+      file: "docs/issues/ISS-0039-Deck-Draws-Two-Verbs-On-A-Design-Note-That-It-Cannot-Perform.md"
+      title: "Deck draws Accept and Decline on every proposed design and both are dead, because it ignores the field saying that verb posts somewhere else"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: []
+      note: "Third review, 2026-09-09, finding 2. applyVerb ignores ActuatorRow.endpoint, the field write-client.ts documents as the path a verb posts to when it is not the generic transition. DES-0001 and DES-0002 are proposed here today and their rows carry /api/design/verdict; posting as a transition is refused. Both the suite check and check-write-round-trip.mjs compare rows on ISS-0008, whose endpoint is empty, so drawing the row right and acting on it wrong is invisible. Deck cannot post the verdict — it needs the revision judged and Deck has no revision history — so the fix is to draw the row unavailable and say where the decision is recorded."
+    ISS-0040:
+      file: "docs/issues/ISS-0040-The-Reason-Is-Asked-For-Only-On-A-Verb-That-Confirms.md"
+      title: "Deck asks why only for a verb that stops to confirm, so accepting an issue still records no reason, and the check that proved the fix drives the verb the interface never asks about"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: []
+      note: "Third review, 2026-09-09, finding 3. ISS-0037 was fixed at the shell and half fixed at the screen: applyVerb collects a reason only if row.confirm, and the sidecar marks only Decline and Supersede as confirm, so Accept, Defer and every forward move still send nothing. check-write-round-trip.mjs drives offered[0] = Accept and passes note/severity itself, so its green line measures the shell mapping on a verb the interface sends neither field for. grep for applyVerb/drawActuators/askText in desktop/tests returns nothing."
+    ISS-0041:
+      file: "docs/issues/ISS-0041-A-Change-That-Leaves-The-Modification-Time-Alone-Raises-No-Revision.md"
+      title: "A change that leaves a note's modification time alone updates Deck's records and raises no revision, so every window keeps a stale picture it believes is current"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: main
+      tests: []
+      note: "Second review finding 4, reproduced unchanged by the third and filed in no ISS until now — six issues came out of that pass and this was not one of them. sameRecords compares path and mtime only. With a frozen-mtime io a status moved triage->fixed, revision stayed 1 and onChange fired once. git checkout, git stash pop, a restore and rsync --times all write content under a timestamp that is not now."
+    ISS-0042:
+      file: "docs/issues/ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-Is-Wrong.md"
+      title: "Each of the three scripts written to settle an acceptance walk reports success while the thing it measures is wrong, in a different way for each script"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "Third review, 2026-09-09, findings 4/5/6. check-counts-live.py compares per-type totals, so two notes exchanging feature and task gives 0 disagreements; the fixture catches that for two corpora and the vault is in no fixture. It also passes having compared zero notes if isTemplate returns true for everything. check-bases-live.mjs excuses an empty view on a report about something else entirely. Neither can see a view selecting the WRONG notes: filter||true makes all 46 views draw all 407 notes and the script still exits 0. First two are fixable; the third is a limit to state in TST-0027."
+    ISS-0043:
+      file: "docs/issues/ISS-0043-Three-Numbers-Written-The-Day-ISS-0036-Closed-Do-Not-Reproduce.md"
+      title: "Three counts in the section added to TST-0027 do not reproduce, written on the day the issue about counts that do not reproduce was closed"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: docs
+      tests: []
+      note: "Third review, 2026-09-09, finding 8. 21 base files is 19 (the extra two are in .trash). The sidebar base has six views, not four. Nine views drawing a list with nothing said is 17 — the nine dropped the eight 01 Inbox/Untitled*.base views, which are exactly the case a person should look at. ISS-0036's answer was that the script prints the number and it is re-run rather than remembered; the next note written did not follow it."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"

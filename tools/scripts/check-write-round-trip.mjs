@@ -36,7 +36,9 @@ if (git('status', '--short', 'docs').trim() !== '') {
 
 const base = fs.readFileSync(path.join(REPO, '.cockpit', 'url'), 'utf-8').trim();
 const require_ = (await import('node:module')).createRequire(import.meta.url);
-const { SidecarWriteClient } = require_(path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'));
+const { SidecarWriteClient, transitionRequestFrom } = require_(
+  path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'),
+);
 const { walkNotes } = require_(path.join(REPO, 'desktop', 'dist', 'main', 'note-index.js'));
 const client = new SidecarWriteClient(base);
 
@@ -103,7 +105,7 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
 // this script asked about a note at `declined` and reported two green lines
 // that had measured nothing.
 {
-  const { actuatorRows } = require_(path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'));
+  const { actuatorRows, canPerform, elsewhere } = require_(path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'));
   const id = 'ISS-0008';
   const rel = 'docs/issues/ISS-0008-Nothing-In-CI-Exercises-The-Renderer.md';
   const payload = await (await fetch(`${base}/api/notes/actions?id=${encodeURIComponent(id)}`)).json();
@@ -125,8 +127,18 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
     const original = fs.readFileSync(path.join(REPO, rel), 'utf-8');
     try {
       const fresh = noteFor(id);
+      // **Built the way the renderer builds it, not by hand** (ISS-0040). The
+      // first version passed `note:` and `severity:` itself, so its green line
+      // measured the shell's mapping on a route the interface did not take —
+      // and at the time the interface sent neither field for this verb. What
+      // goes over the wire here is `transitionRequestFrom` applied to what a
+      // window sends, which is the same function `main.ts` calls.
       const reason = 'Driven by the round-trip check, so the callout has prose to carry.';
-      await client.transition({ id, to: row.to, actor: ACTOR, mtime: fresh.mtimeMs / 1000, note: reason, severity: 'high' });
+      const asTheWindowSendsIt = transitionRequestFrom(
+        { workspaceId: 'x', id, to: row.to, mtime: fresh.mtimeMs / 1000, note: reason, severity: 'high' },
+        ACTOR,
+      );
+      await client.transition(asTheWindowSendsIt);
       const after = fs.readFileSync(path.join(REPO, rel), 'utf-8');
       record(new RegExp(`^status: "?${row.to}"?\\s*$`, 'm').test(after), `"${row.verb}" moved the file's status to ${row.to}`);
       // ISS-0037. The sidecar writes this callout only when the request
@@ -143,6 +155,40 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
       git('checkout', '--', rel);
     }
   }
+}
+
+// ---- a verb whose verdict belongs somewhere Deck has no surface for ----
+//
+// Every check here used to ask about a note whose rows carry an EMPTY
+// endpoint, so drawing the row right and acting on it wrong was invisible
+// (ISS-0039). A design at `proposed` is the case that has one.
+{
+  const { canPerform, elsewhere } = require_(path.join(REPO, 'desktop', 'dist', 'shared', 'write-client.js'));
+  const id = 'DES-0001';
+  const payload = await (await fetch(`${base}/api/notes/actions?id=${encodeURIComponent(id)}`)).json();
+  const rows = actuatorRows(payload);
+  record(rows.length > 0, `the sidecar offers verbs on ${id}, so this measures something`, payload.status);
+  record(
+    rows.every((row) => row.endpoint !== ''),
+    `and they name an endpoint of their own: ${[...new Set(rows.map((r) => r.endpoint))].join(', ')}`,
+  );
+  record(rows.every((row) => !canPerform(row)), 'Deck says it cannot perform them');
+  record(
+    rows.every((row) => /revision/i.test(elsewhere(row)) && /cockpit/i.test(elsewhere(row))),
+    'and says where the decision is recorded instead',
+    elsewhere(rows[0] ?? { verb: '', endpoint: '' }),
+  );
+  // The sidecar's own refusal, which is what a person used to collect by
+  // pressing the button.
+  const fresh = noteFor(id);
+  let refused = '';
+  try {
+    await client.transition({ id, to: rows[0]?.to ?? 'accepted', actor: ACTOR, mtime: fresh.mtimeMs / 1000 });
+  } catch (error) {
+    refused = String(error);
+  }
+  record(/revision/i.test(refused), 'and posting it as a transition really is refused, in those words', refused.slice(0, 140));
+  record(git('status', '--short', 'docs').trim() === '', 'and that refusal changed no file');
 }
 
 // ---- a stale mtime is refused, which is the guard the walk cannot see ----

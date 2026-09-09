@@ -35,7 +35,7 @@ What can be asserted about those files, and is not: that Deck REPORTS a problem 
 ## Next Actions
 - [ ] Compare values, not only names
 - [ ] Assert Deck reports a problem for every file the sidecar could not read
-- [ ] Record what Deck reads from the eight `REQ-019x` notes, since it is not everything
+- [x] Record what Deck reads from the eight `REQ-019x` notes, since it is not everything — evidence: measured 2026-09-09: ten notes, six PyYAML refuses, and Deck loses only the acceptance list items, named by line (user:edwin, 2026-09-09)
 
 ## Fixed, 2026-09-09
 
@@ -48,3 +48,15 @@ What can be asserted about those files, and is not: that Deck REPORTS a problem 
 **What the wider comparison says.** Every value of every note across three corpora — 213 here, 2,719 in Your Trainer, 407 in `~/Notes`, **3,339 notes** — read identically by Deck and by PyYAML. The vault is the only corpus with block scalars, and it is not in the fixture, which is how [[ISS-0035-Two-New-Block-Scalar-Misreads]] survived; the block-scalar shapes are written out as checks now.
 
 **Evidence.** Reverting the value comparison fails 1 check; reverting the silent-read check fails 1. Both survived everything before.
+
+## The third Next Action, answered 2026-09-09
+
+It said "Record what Deck reads from the eight `REQ-019x` notes, since it is not everything", and it stayed open through two reviews while those notes sat permanently exempt from the key and value comparison. Measured today, so the exemption is a known quantity rather than a blank.
+
+**Ten `REQ-019x` notes exist in Your Trainer. Four read cleanly; six do not** — `REQ-0194` through `REQ-0199`. PyYAML refuses all six outright, so the sidecar indexes them with empty frontmatter and they appear in the cockpit under no type at all.
+
+**What Deck reads from the six, and it is nearly everything.** Every one gives up `type`, `id`, `aliases`, `title`, `status`, `phase`, `platform`, `owner`, `created`, `updated`, `tags` and `priority`, correctly: all six come out as `requirement` at `implemented`, which is what the file says.
+
+**What it loses is the items of one list.** Each note has an `acceptance:` whose entries are unquoted prose containing a colon — `- "Each rider/user can favorite ...` — which is not a YAML list item. Deck reports each one by line and by text: *"a line the document has no place for"*, between six and nine of them per note. So the loss is bounded, named, and visible on screen; it is not a note read wrong in silence.
+
+**They stay out of the key and value comparison** because there is nothing on the other side to compare against — PyYAML produced no keys and no values for these files. That is the exemption, and this is what it costs.

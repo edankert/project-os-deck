@@ -64,6 +64,14 @@ function baseFiles(dir, prefix = '') {
  * moment a task is scheduled for a future date.
  */
 const KNOWN_EMPTY = {
+  // The same cause as the three below, in a different file. Both filter on
+  // `date(due) == today()` / `date(scheduled) == today()`, and both were
+  // wrongly EXCUSED before this script started asking whether the thing it was
+  // told was about the filter (ISS-0042).
+  'TaskNotes/Views/tasks-default.base / Today':
+    'it filters on due or scheduled being today, and nothing in the vault is dated 2026-09-09',
+  'TaskNotes/Views/tasks-default.base / This Week':
+    'it filters on the week ahead, and the latest date of either kind anywhere in the vault is 2026-03-17',
   '__bases__/Tasks/Tasks Base.base / Today\'s Tasks':
     'nothing in the vault is scheduled or due on 2026-09-09; the latest date of either kind is 2026-03-17',
   "__bases__/Tasks/Tasks Base.base / This Week's Tasks":
@@ -74,9 +82,17 @@ const KNOWN_EMPTY = {
 
 const failures = [];
 let views = 0;
-let drawnEmptyAndSilent = 0;
+let drawnEmpty = 0;
+let explainedEmpty = 0;
+let knownEmpty = 0;
+let silentEmpty = 0;
+// A view that draws a list and reports nothing is where a difference from
+// Obsidian would be SILENT. This script cannot tell whether such a list is
+// right — only Obsidian can — so it counts them and says where to look.
+let drewSilently = 0;
 
-for (const rel of baseFiles(VAULT).sort()) {
+const files = baseFiles(VAULT).sort();
+for (const rel of files) {
   const text = fs.readFileSync(path.join(VAULT, rel), 'utf-8');
   const file = fromBaseFile(text, rel);
   console.log(`${rel}`);
@@ -101,29 +117,49 @@ for (const rel of baseFiles(VAULT).sort()) {
       selected = result.groups.reduce((sum, group) => sum + group.cards.length, 0);
       unsupported = result.unsupported;
     }
-    const said = [...named.map((r) => `${r.construct} — ${r.reason}`), ...unsupported.map((u) => `${u.construct} — ${u.reason}`)];
+    const said = [...named, ...unsupported];
     console.log(`    view "${view.name}": ${selected === null ? 'no description built' : `${selected} note(s)`}`);
-    for (const line of said) console.log(`        says: ${line}`);
+    for (const one of said) console.log(`        says: ${one.construct} — ${one.reason}`);
     if (view.description === null && named.length === 0) {
       failures.push(`${rel} / ${view.name}: no description and nothing said about why`);
     }
-    if (selected === 0 && said.length === 0) {
-      drawnEmptyAndSilent += 1;
+    if (selected === 0) {
+      drawnEmpty += 1;
+      // **What excuses an empty view is something said about ITS FILTER**, not
+      // about the file. The first version asked whether anything at all had
+      // been reported, so "Today" in tasks-default.base was excused by a
+      // complaint about a plugin's view type and a `%` in an unrelated
+      // formula — while the identical emptiness in Tasks Base.base needed a
+      // hand-written exemption. One cause, two views, opposite treatment.
+      const aboutTheFilter = said.filter((one) => /filter/i.test(one.where ?? ''));
       const known = KNOWN_EMPTY[`${rel} / ${view.name}`];
-      if (known === undefined) {
-        failures.push(
-          `${rel} / ${view.name}: selects NOTHING and names no unsupported construct — an empty view and a broken view look identical on screen`,
-        );
-      } else {
+      if (aboutTheFilter.length > 0) {
+        explainedEmpty += 1;
+      } else if (known !== undefined) {
+        knownEmpty += 1;
         console.log(`        (empty on purpose: ${known})`);
+      } else {
+        silentEmpty += 1;
+        failures.push(
+          `${rel} / ${view.name}: selects NOTHING and names nothing about its own filter — ` +
+            `an empty view and a broken view look identical on screen` +
+            (said.length === 0 ? '' : ` (it did report ${said.length} thing(s), none about the filter)`),
+        );
       }
+    } else if (said.length === 0) {
+      drewSilently += 1;
     }
   }
   console.log();
 }
 
-console.log(`${views} view(s) read across the vault's base files`);
-console.log(`${drawnEmptyAndSilent} view(s) drew nothing and said nothing`);
+// Every number the notes quote is printed here, so a sentence can be copied
+// rather than counted. Three counts written by hand into TST-0027 on the day
+// ISS-0036 closed were wrong (ISS-0043).
+console.log(`${files.length} base file(s) read, ${views} view(s) across them`);
+console.log(`${drawnEmpty} view(s) selected nothing: ${explainedEmpty} explained by their own filter, ` +
+  `${knownEmpty} verified empty by hand, ${silentEmpty} unexplained`);
+console.log(`${drewSilently} view(s) drew a list and reported nothing — where a difference from Obsidian would be silent`);
 for (const failure of failures) console.log(`FAIL ${failure}`);
 console.log(`${failures.length} failure(s)`);
 process.exit(failures.length === 0 ? 0 : 1);

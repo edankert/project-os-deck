@@ -126,3 +126,41 @@ The third is the sharpest: the assertion is satisfied by a comment. `desktop/tes
 **What I could not break, and tried to.** `sameOriginAs` is right on all twelve adversarial inputs I gave it, including `http://127.0.0.1:7300.example.test/` (the prefix trap the note names), a scheme change to `https`, a port change, `javascript:`, `file:`, `about:blank`, a protocol-relative `//evil.test`, an uppercase scheme, `mailto:` and a string that is not a URL. Denying every `setWindowOpenHandler` is the right call and I checked why: there is no `window.open`, no `target="_blank"` and no `_blank` anywhere in `desktop/src/`, the single `new BrowserWindow` is at `main.ts:144`, and a popped-out panel goes through `deck:window:open-panel` (`preload.ts:40` → `main.ts:307`), which never touches the open handler. The verification gate is genuinely closed: `python3 tools/scripts/run-tests.py` reports `passing=23 failing=0 unrunnable=0`, TST-0033 among them, and `bash tools/scripts/validate-docs.sh` is OK. `electron . --smoke` reports `ok: true` with nothing skipped. `npm test` 306/0.
 
 **Which build this was measured on.** The review ran against `c57f723`..`b2292df`. Two further commits landed while it was in progress (`883e880`, `8fff003`), both touching `desktop/src/main/main.ts`. Every blocking finding was re-driven against `8fff003`, where the suite is 307 checks: the three navigation-guard mutations and the `pathPrefixFor` mutation each still leave 307 passing and 0 failing.
+
+## Independent review — 2026-09-09 (third pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. The shell hop is now well guarded and [[ISS-0032-The-Navigation-Guards-Are-Checked-By-Grep]]'s fix is real. Two findings, both in the half of the write path no check can reach.
+
+**Finding 1 (high): Deck draws two verbs on every design note that cannot work, because the renderer ignores the endpoint the row carries.** `ActuatorRow.endpoint` is documented in `desktop/src/shared/write-client.ts:48-55` as "the path this verb posts to, when it is not the generic transition", and `actuatorRows` reads it faithfully. `applyVerb` (`desktop/src/renderer/renderer.ts:807-835`) then posts every row to `transition` and never looks at it. Two notes in this repository are at `proposed` today, so this is reachable now:
+
+```
+curl -s 'http://127.0.0.1:8765/api/notes/actions?id=DES-0001'
+  ... {"verb": "Accept", "to": "accepted", ..., "endpoint": "/api/design/verdict", "verdict": "approved"}
+
+# driving Deck's own write client with that row, the way applyVerb would:
+REFUSED: WriteRefused: a design verdict must name the revision it judged;
+         use /api/design/verdict rather than a status transition (ISS-0056)
+```
+
+Nothing is corrupted — the sidecar refuses and the file is untouched — but a person clicking Accept on DES-0001 in Deck gets a sentence about an endpoint they cannot reach and a cockpit issue id. The check that should have caught it is the one that passes: `desktop/tests/write-channel.test.mjs` asserts "the rows Deck draws are exactly the rows the sidecar returned, in order", and `tools/scripts/check-write-round-trip.mjs` asserts the same thing against the live sidecar on `ISS-0008`, a note whose rows have an empty `endpoint`. Drawing the row correctly and acting on it wrongly is invisible to both. The two honest fixes are to post to the row's endpoint, or to draw no button for a row Deck cannot perform and say why.
+
+**Finding 2 (high): [[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]] is fixed at the shell and only half fixed at the screen, and its own round-trip check drives the half that is still broken.** `applyVerb` collects a reason only inside `if (row.confirm)`. For `ISS-0008` the sidecar marks only `Decline` as `confirm`; `Accept` and `Defer` are not. So an issue accepted or deferred through Deck still moves its status and records no grounds, which is this issue's title.
+
+Reproduced by building the request exactly as `applyVerb` does for a non-confirming row and posting it to the running sidecar, then reverting with git:
+
+```
+request applyVerb would send for Accept: {"id":"ISS-0008","to":"open","actor":"...","mtime":...}
+status line: status: "open"
+has ## Decision record: false
+```
+
+`tools/scripts/check-write-round-trip.mjs` takes `offered[0]`, which is `Accept`, and passes `note:` and `severity:` itself. Its green line — *"the reason Deck sent is IN the file, under the cockpit's own `## Decision record` heading"* — therefore measures the shell mapping on a verb whose interface sends neither. The line is true of the script and not of the application, and [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]]'s new table repeats it as settled for step 8.
+
+**Nothing at all covers the renderer half of the fix.** `grep -rn "applyVerb\|drawActuators\|triaging\|askText" desktop/tests/` returns nothing. That is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]], still at `triage`, and it now hides a defect in the fix filed against this feature two commits ago.
+
+**What I attacked and could not break.**
+
+- The `triaging` condition. `drawActuators` asks for a severity when the payload says `type: issue` and `status: triage`, and the sidecar's gate in `note_writes.py:582-589` is `note_type != "issue" or current != "triage"`. They match exactly, and the live payload for `ISS-0008` carries both fields.
+- The navigation guards. Replacing the `will-navigate` refusal with a no-op makes `npm run smoke` report `ok: false` with three named failures. ISS-0032's move of the decision into `navigationFor` and its assertion in the smoke run is a real fix, not a relabelled grep.
+- The round-trip check's tick assertion is not vacuous: run against the unticked render of the same note, its "ticked" regexp returns `false`, and `/api/render` answers freshly rather than from a cache.
+- `check-write-round-trip.mjs` reproduces at 12 of 12 and leaves the working tree clean.

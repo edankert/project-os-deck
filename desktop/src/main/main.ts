@@ -912,6 +912,13 @@ async function runSmoke(): Promise<void> {
 
     await recordNavigationGuard(record);
 
+    // **The renderer's own guards, driven in a real window.** Neither of these
+    // can be a node check: `node --test` cannot load the renderer at all
+    // (ISS-0008), which is how a deletable Content-Security-Policy tag and a
+    // half-fixed reason box both survived a full green suite.
+    await recordScriptInANoteDoesNotRun(record);
+    await recordEveryVerbAsksWhy(record, skip, prepared);
+
     // **What a tablet actually gets**, from the machine's own network address
     // rather than from loopback, which is the only way to exercise the path a
     // tablet takes (TST-0010). Safari and the visual absence of a control stay
@@ -936,6 +943,230 @@ async function runSmoke(): Promise<void> {
   // Give SIGTERM a moment to reach the children before the process goes.
   await delay(400);
   app.exit(smokeVerdict(failures, skipped, notApplicable).ok ? 0 : 1);
+}
+
+/**
+ * A script inside a note's markup does not run (ISS-0038).
+ *
+ * `renderer.ts` sets `article.innerHTML` from the sidecar's rendered Markdown,
+ * and Python-Markdown passes raw HTML straight through, so a `<script>` in a
+ * note arrives as a script tag. The only thing stopping it is the
+ * Content-Security-Policy meta tag in `index.html` — and that tag is markup,
+ * so nothing in a suite of TypeScript checks ever had an opinion about it.
+ * Deleting it left 316 checks green and the smoke run `ok: true`.
+ *
+ * The stakes are the write bridge: since ADR-0003 this window holds
+ * `window.deck.write.*`, with the actor read from Deck's own store, and a note
+ * is a file anybody can put in a vault.
+ *
+ * Driven rather than read. A check that searched `index.html` for the string
+ * is the shape ISS-0032 was filed against, and it survives a policy that is
+ * present and wrong.
+ */
+async function recordScriptInANoteDoesNotRun(record: (ok: boolean, what: string) => void): Promise<void> {
+  const win = createWindow('satellite', null, null);
+  try {
+    await once(win.webContents, 'did-finish-load');
+    await untilBooted(win);
+    const ran = await win.webContents.executeJavaScript(`
+      (() => {
+        window.__scriptInANoteRan = false;
+        const host = document.createElement('div');
+        // The exact route a note takes: innerHTML on the reader's article.
+        host.innerHTML = '<script>window.__scriptInANoteRan = true;<\\/script>' +
+          '<img src="x" onerror="window.__scriptInANoteRan = true">';
+        document.body.appendChild(host);
+        return new Promise((resolve) => setTimeout(() => resolve(window.__scriptInANoteRan), 300));
+      })()
+    `);
+    record(ran === false, "a script tag inside a note's markup does not run in a Deck window");
+
+    // And the policy is actually the reason, rather than the markup having
+    // been rewritten on the way in.
+    const policy = await win.webContents.executeJavaScript(
+      `(document.querySelector('meta[http-equiv="Content-Security-Policy"]') || {}).content || ''`,
+    );
+    record(
+      typeof policy === 'string' && policy.includes("script-src 'self'"),
+      "the window's content policy names `script-src 'self'`",
+    );
+  } finally {
+    win.destroy();
+  }
+}
+
+/**
+ * Every verb asks why, and a verb Deck cannot perform is refused (ISS-0040,
+ * ISS-0039).
+ *
+ * `applyVerb` is renderer code, so no node check reaches it — `grep applyVerb
+ * desktop/tests/` found nothing on the day ISS-0040 was filed, which is how
+ * ISS-0037 came to be fixed at the shell and half fixed at the screen.
+ *
+ * The control is PRESSED, the way a person presses it, in a window opened at
+ * an address that focuses a note the sidecar offers verbs on. The write bridge
+ * is replaced for the duration, so what is asserted is what the shell was
+ * asked for and no note is touched.
+ */
+async function recordEveryVerbAsksWhy(
+  record: (ok: boolean, what: string) => void,
+  skip: (why: string) => void,
+  prepared: { id: string } | null,
+): Promise<void> {
+  if (prepared === null) {
+    skip('the verb controls: no workspace was opened, so no note could be focused');
+    return;
+  }
+  const withVerbs = 'ISS-0008';
+  const withEndpoint = 'DES-0001';
+
+  // **The write is intercepted in the MAIN process, not in the page.**
+  // `window.deck` comes through `contextBridge`, which freezes it, so an
+  // assignment in the page is refused silently — the first version of this
+  // check believed it had replaced the bridge and had not. Replacing the IPC
+  // handler is Deck's own code replacing Deck's own code, and it is the only
+  // thing standing between this run and a real write to the repository.
+  const sent: Array<Record<string, unknown>> = [];
+  const real = smokeHandlers.get('deck:write:transition');
+  const intercept = (_e: Electron.IpcMainInvokeEvent, request: Record<string, unknown>): unknown => {
+    sent.push(request);
+    return { ok: true, result: {} };
+  };
+  ipcMain.removeHandler('deck:write:transition');
+  ipcMain.handle('deck:write:transition', intercept);
+  smokeHandlers.set('deck:write:transition', intercept as InvokeHandler);
+  const putItBack = (): void => {
+    ipcMain.removeHandler('deck:write:transition');
+    if (real !== undefined) {
+      ipcMain.handle('deck:write:transition', real);
+      smokeHandlers.set('deck:write:transition', real);
+    }
+  };
+
+  /** Click a note's row in the navigator, which is how a person opens one. */
+  const openTheNote = `
+    (async () => {
+      const row = document.querySelector('#nav-list [data-note-id="ID"]');
+      if (row === null) return {found: false, verbs: 0};
+      row.click();
+      await new Promise((r) => setTimeout(r, 1500));
+      return {found: true, verbs: document.querySelectorAll('#actuators button.verb').length};
+    })()
+  `;
+  /**
+   * Answer every box Deck puts in the status bar.
+   *
+   * It asks more than once: the reason, and then — for an issue leaving
+   * `triage` — the severity. Answering only the first leaves the verb waiting
+   * and reads as "the reason never arrived", which is not the same fault.
+   */
+  const pressAndAnswer = `
+    (async () => {
+      const verbs = [...document.querySelectorAll('#actuators button.verb')];
+      const names = verbs.map((b) => b.textContent);
+      // Picked by what the ROW says, never by a verb name: Deck restates no
+      // part of the sidecar's table and neither does this check.
+      const target = verbs.find((b) => b.dataset.confirm === 'CONFIRM') ?? verbs[0];
+      if (target === undefined) return {names, asked: 0, said: ''};
+      target.click();
+      await new Promise((r) => setTimeout(r, 200));
+      let asked = 0;
+      // The LABELS, not just the count. Deck asks twice for an issue leaving
+      // triage — the reason, then the severity — so "a box appeared" is
+      // satisfied by the severity box alone, and a check that counted boxes
+      // survived putting the reason back inside the confirmation.
+      const labels = [];
+      for (let i = 0; i < 4; i += 1) {
+        const form = document.querySelector('#status form');
+        if (form === null) break;
+        labels.push((form.textContent || '').trim());
+        form.querySelector('input').value = asked === 0 ? 'REASON' : '';
+        form.dispatchEvent(new Event('submit', {cancelable: true}));
+        asked += 1;
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      await new Promise((r) => setTimeout(r, 300));
+      return {names, asked, labels, said: (document.querySelector('#status') || {}).textContent || ''};
+    })()
+  `;
+  const reason = 'because the smoke run pressed it';
+  let skippedForSafety = false;
+
+  const win = createWindow('satellite', `deck://${prepared.id}/issues?note=${withVerbs}`, null);
+  try {
+    await once(win.webContents, 'did-finish-load');
+    await untilBooted(win);
+    await delay(1200);
+
+    // **Prove the interception took BEFORE pressing anything.** The first
+    // version of this check replaced `window.deck.write` from inside the page.
+    // `contextBridge` freezes that object, so the assignment was refused in
+    // silence, the run pressed Accept for real, and ISS-0008 moved from
+    // `triage` to `open` in this repository with a decision callout reading
+    // "because the smoke run said so". A smoke run must never write to the
+    // repository it is checking; this is the line that makes sure.
+    const probe = (await win.webContents.executeJavaScript(
+      `window.deck.write.transition({workspaceId: 'x', id: '__smoke_probe__', to: 'x'})`,
+    )) as { ok?: boolean };
+    const intercepted = sent.length === 1 && sent[0]?.['id'] === '__smoke_probe__' && probe?.ok === true;
+    record(intercepted, 'the write path is intercepted, so nothing below can reach a note');
+    if (!intercepted) {
+      skip('the verb controls: the write path was NOT intercepted and driving them would write to this repository');
+      skippedForSafety = true;
+      return;
+    }
+    sent.length = 0;
+    const opened = (await win.webContents.executeJavaScript(openTheNote.replace('ID', withVerbs))) as { found: boolean; verbs: number };
+    record(opened.verbs > 0, `${withVerbs} opened in the reader with verbs on it, so this measures something`);
+    if (opened.verbs > 0) {
+      const seen = (await win.webContents.executeJavaScript(
+        pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason),
+      )) as { names: string[]; asked: number; labels: string[]; said: string };
+      record(seen.names.length > 0, `the verbs drawn are the sidecar's: ${seen.names.join(', ')}`);
+      // ISS-0040: the reason used to be asked for only inside a confirmation,
+      // and Accept does not confirm.
+      record(
+        seen.labels.some((label) => /^why /i.test(label)),
+        'pressing a verb that does NOT stop to confirm still asks why',
+      );
+      const request = sent.at(-1) ?? {};
+      record(request['note'] === reason, 'and the reason a person typed reaches the shell, on that same verb');
+      record(
+        request['id'] === withVerbs && typeof request['to'] === 'string' && request['to'] !== '',
+        `carrying the note and the status the row named (${String(request['to'])})`,
+      );
+    }
+  } finally {
+    win.destroy();
+    if (skippedForSafety) putItBack();
+  }
+  if (skippedForSafety) return;
+
+  // A verb whose verdict belongs to a surface Deck does not have is drawn,
+  // refused, and explained (ISS-0039). In a window of its own.
+  const other = createWindow('satellite', `deck://${prepared.id}/intent?note=${withEndpoint}`, null);
+  try {
+    await once(other.webContents, 'did-finish-load');
+    await untilBooted(other);
+    await delay(1200);
+    const before = sent.length;
+    const opened = (await other.webContents.executeJavaScript(openTheNote.replace('ID', withEndpoint))) as { found: boolean; verbs: number };
+    record(opened.verbs > 0, `${withEndpoint} opened with verbs on it, so this measures something too`);
+    if (opened.verbs > 0) {
+      const seen = (await other.webContents.executeJavaScript(
+        pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason),
+      )) as { names: string[]; asked: number; labels: string[]; said: string };
+      record(seen.asked === 0, 'a design verdict asks nothing, because Deck cannot record one');
+      record(sent.length === before, 'and sends nothing');
+      record(
+        /revision/i.test(seen.said) && /cockpit/i.test(seen.said),
+        'and says the verdict must name a revision and belongs in the cockpit',
+      );
+    }
+  } finally {
+    other.destroy();
+    putItBack();
+  }
 }
 
 /**

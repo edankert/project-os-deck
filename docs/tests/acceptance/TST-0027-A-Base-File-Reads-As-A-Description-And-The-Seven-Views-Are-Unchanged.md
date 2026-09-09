@@ -72,21 +72,25 @@ The second half is the one that decides whether the language was seeded correctl
 
 **Run `node tools/scripts/check-bases-live.mjs` before walking this.** It reads every `.base` file in the vault the way Deck reads it and prints, per view, how many notes it selects and every construct it refuses to guess at. Reads only; nothing is started and nothing is written.
 
-**On 2026-09-09: 46 views across 21 base files, and no view drew a list with nothing said about what it could not read.** That silence is the failure [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]] is about, and it is the thing the walk's step 8 goes to Obsidian to catch.
+**On 2026-09-09: 19 base files, 46 views, and no view that selects nothing without saying something about its own filter.** Every number in this section is one the script prints; none of them is counted by hand. Three that were counted by hand were wrong ([[ISS-0043-Three-Numbers-Written-The-Day-ISS-0036-Closed-Do-Not-Reproduce]]).
 
 What it settles, step by step:
 
 - **Step 4, the Comic card bases.** `Novel Base.base` draws Characters (10 notes), Chapters (2) and Locations (8) with no unsupported construct at all. Pages selects nothing and names `this.` as the reason.
-- **Step 5, the sidebar base.** `Novel Base - Side Bar.base` has four views, every one of them filtered relative to the note it is embedded in, and every one says so: *"a `this.`-relative filter names the note a view is embedded in, and no Deck surface has one yet"*. Four empty lists, four explanations, which is the expected result written out.
+- **Step 5, the sidebar base.** `Novel Base - Side Bar.base` has six views, every one of them filtered relative to the note it is embedded in, and every one says so: *"a `this.`-relative filter names the note a view is embedded in, and no Deck surface has one yet"*. Six empty lists, six explanations, which is the expected result written out.
 - **Step 6, the TaskNotes bases.** Six files, and they are the interesting case: `tasknotesCalendar`, `tasknotesKanban`, `tasknotesMiniCalendar` and `tasknotesTaskList` are all named as the plugin's own view types, each one drawn as a list instead of refused — and the views still select 38 and 39 notes. Deck reads the parts it understands and names `options`, `calendarView`, `startDateProperty`, `listDayCount`, `titleProperty`, `columnOrder` and `dateProperty` as keys it keeps unread. One formula is reported for a real gap: `%` has no meaning in Deck's evaluator, at the character where it appears.
 - **Step 7, the messages.** Every one names the construct. There is no "could not read this view" anywhere in the output.
 
-**A view that draws nothing and says nothing is a failure, and three of them are exempted by name.** `Tasks Base.base` has Today's, This Week's and Future Tasks selecting no notes and reporting no problem, and each was checked by hand: nothing in the vault is scheduled or due on or after 2026-09-09, and the latest date of either kind anywhere in it is 2026-03-17. So they are correctly empty. They are written into the script by file and view with that reason rather than the rule being softened — the moment a task is scheduled for a future date those rows should be removed.
+**What excuses an empty view is something said about ITS OWN FILTER.** The first version of this asked whether the file had reported anything at all, which is not the same question: "Today" and "This Week" in `TaskNotes/Views/tasks-default.base` were excused by a complaint about a plugin's view type and a `%` in an unrelated formula, while the identical emptiness in `Tasks Base.base` needed a hand-written exemption. One cause, two views, opposite treatment ([[ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-Is-Wrong]]).
+
+Of the 21 views that select nothing: **16 are explained by a refusal in their own filter**, and **5 are verified empty by hand** and named in the script with the reason. All five filter on a date at or after today, and the latest `due:` or `scheduled:` anywhere in the vault is 2026-03-17. The exemptions are written by file and view rather than the rule being softened, and they come out the moment a task is scheduled for a future date.
 
 **What still needs a person:**
 
 - **Steps 1 and 2, the seven project-os views.** "Looks exactly as it did" is a judgement about a screen and `TST-0006` pins only the view list.
-- **Step 8, the comparison with Obsidian.** This script says what Deck selects. Only Obsidian can say what Obsidian selects for the same file, and the two lists differing while Deck stays silent is the failure this walk exists for. The script narrows where to look: the views it lists with no unsupported construct are the ones where a difference would be silent, and there are nine of them.
+- **Step 8, the comparison with Obsidian, and it is the important one.** **This script cannot see a view selecting the WRONG notes.** It checks that a view which selects nothing said why; it has no opinion about a view that selects a list. Make every filter match — `if (filter(context) || true)` in `query.ts` — and all 46 views draw all 407 notes while the script still reports no failure. That mutation is caught by the suite, which goes red in six places, and the suite is where a wrong list is caught in general.
+
+  What no automated check here catches is a list that is wrong in a way Deck's evaluator and Obsidian's disagree about, since Deck's answer is the only one this machine can compute. That is the failure [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]] names and the reason step 8 exists. The script narrows where to look: **14 views draw a list and report nothing**, and those are exactly the ones where a difference from Obsidian would be silent.
 
 ## Adequacy (who verifies this test?)
 

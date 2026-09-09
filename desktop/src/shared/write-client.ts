@@ -76,6 +76,40 @@ export interface TickRequest {
 }
 
 /**
+ * The endpoints Deck knows how to post to.
+ *
+ * A row with an empty `endpoint` is the generic transition, which Deck does.
+ * Anything else is a verb whose verdict belongs to a surface of its own, and
+ * today Deck has none of them.
+ */
+export const IMPLEMENTED_ENDPOINTS: readonly string[] = [''];
+
+/** Whether Deck can actually carry out the verb this row names (ISS-0039). */
+export function canPerform(row: Pick<ActuatorRow, 'endpoint'>): boolean {
+  return IMPLEMENTED_ENDPOINTS.includes(row.endpoint ?? '');
+}
+
+/**
+ * Where a verb Deck cannot perform is recorded instead.
+ *
+ * A sentence rather than a silent missing button. A design at `proposed`
+ * really does owe somebody a decision, so a person needs to be told where to
+ * make it — not shown a control that posts a request the sidecar refuses.
+ *
+ * The refusal is the sidecar's own reasoning, said before the request rather
+ * than after it: `/api/design/verdict` requires the revision the verdict
+ * judged, because a verdict given to v3 says nothing about v6. Deck has no
+ * design surface and no revision history, so it cannot name one.
+ */
+export function elsewhere(row: Pick<ActuatorRow, 'verb' | 'endpoint'>): string {
+  if (canPerform(row)) return '';
+  if (row.endpoint === '/api/design/verdict') {
+    return `${row.verb} is a design verdict, and a verdict has to name the revision it judged. Deck holds no design revisions, so this decision is recorded in the cockpit.`;
+  }
+  return `${row.verb} is recorded through ${row.endpoint}, which Deck does not have a surface for yet; make this decision in the cockpit.`;
+}
+
+/**
  * Build one transition request out of what a window sent.
  *
  * **A function rather than an object literal in the IPC handler, because the

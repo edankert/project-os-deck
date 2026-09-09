@@ -453,6 +453,106 @@ test('editing a note changes its record and raises the revision, with no restart
   index.close();
 });
 
+test('a change that leaves the modification time alone still raises the revision', () => {
+  // **ISS-0041.** `sameRecords` compared the path and the modification time,
+  // so a rebuild that found the same timestamps concluded nothing had changed
+  // — and stored the new content anyway. Every window then held a stale
+  // picture with no reason to ask again.
+  //
+  // Not a hypothetical timestamp: `git checkout`, `git stash pop`, a restore
+  // from a backup and `rsync --times` all write content under a time that is
+  // not now. It was finding 4 of the second review, and the third review
+  // reproduced it unchanged because no issue was ever filed for it.
+  const root = tempWorkspace();
+  const nodeIo = load('main/note-index.js').nodeIo;
+  const frozen = {
+    readDir: nodeIo.readDir,
+    readFile: nodeIo.readFile,
+    // Every note, always, at the same instant.
+    mtimeMs: () => 1_757_000_000_000,
+  };
+  const seen = [];
+  const index = new NoteIndex({
+    workspaceId: 'w',
+    docsRoot: root,
+    io: frozen,
+    onChange: (r) => seen.push(r),
+    quietMs: 0,
+  });
+  index.build();
+  const first = index.snapshot();
+  assert.equal(first.records.find((r) => r.relPath === 'a.md').status, 'open');
+
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: fixed\n---\n# A\n');
+  index.noticed('a.md');
+  index.settle();
+
+  const second = index.snapshot();
+  assert.equal(second.records.find((r) => r.relPath === 'a.md').status, 'fixed', 'the record did not take the change');
+  assert.ok(
+    second.revision > first.revision,
+    `the revision stayed at ${second.revision} while the record changed underneath every window`,
+  );
+  assert.deepEqual(seen, [1, 2], 'the windows were not told');
+  index.close();
+});
+
+test('a FULL REBUILD notices a change that left the modification time alone', () => {
+  // The same defect on the other route. `noticed('a.md')` re-reads one file;
+  // `noticed(null)` — which is what a renamed directory, an excluded-path
+  // event or a platform without recursive watching produces — walks the whole
+  // tree and asks `sameRecords`. Both had to be fixed, and a check that drove
+  // only the one-file path left the rebuild path's comparison unguarded: the
+  // first version of this suite reverted it with nothing going red.
+  const root = tempWorkspace();
+  const nodeIo = load('main/note-index.js').nodeIo;
+  const frozen = { readDir: nodeIo.readDir, readFile: nodeIo.readFile, mtimeMs: () => 1_757_000_000_000 };
+  const seen = [];
+  const index = new NoteIndex({ workspaceId: 'w', docsRoot: root, io: frozen, onChange: (r) => seen.push(r), quietMs: 0 });
+  index.build();
+  const first = index.snapshot().revision;
+
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: fixed\n---\n# A\n');
+  index.noticed(null);
+  index.settle();
+
+  const after = index.snapshot();
+  assert.equal(after.records.find((r) => r.relPath === 'a.md').status, 'fixed');
+  assert.ok(after.revision > first, 'a full rebuild took the change and told nobody');
+  index.close();
+});
+
+test('a full rebuild that finds nothing changed still raises nothing', () => {
+  const root = tempWorkspace();
+  const nodeIo = load('main/note-index.js').nodeIo;
+  const frozen = { readDir: nodeIo.readDir, readFile: nodeIo.readFile, mtimeMs: () => 1_757_000_000_000 };
+  const seen = [];
+  const index = new NoteIndex({ workspaceId: 'w', docsRoot: root, io: frozen, onChange: (r) => seen.push(r), quietMs: 0 });
+  index.build();
+  index.noticed(null);
+  index.settle();
+  assert.deepEqual(seen, [1], 'a full rebuild that found no change told the windows anyway');
+  index.close();
+});
+
+test('a rebuild that finds nothing changed still raises nothing, timestamps frozen or not', () => {
+  // The other side of ISS-0041, which is ISS-0030: a no-op rebuild must stay
+  // silent. A digest that changed run to run would raise a revision on every
+  // file-system event and undo that fix.
+  const root = tempWorkspace();
+  const nodeIo = load('main/note-index.js').nodeIo;
+  const frozen = { readDir: nodeIo.readDir, readFile: nodeIo.readFile, mtimeMs: () => 1_757_000_000_000 };
+  const seen = [];
+  const index = new NoteIndex({ workspaceId: 'w', docsRoot: root, io: frozen, onChange: (r) => seen.push(r), quietMs: 0 });
+  index.build();
+  index.noticed('a.md');
+  index.settle();
+  index.noticed('a.md');
+  index.settle();
+  assert.deepEqual(seen, [1], 'a rebuild that found no change told the windows anyway');
+  index.close();
+});
+
 test('a single file changing re-reads that file and nothing else', () => {
   const root = tempWorkspace();
   const { reads, io } = countingIo();

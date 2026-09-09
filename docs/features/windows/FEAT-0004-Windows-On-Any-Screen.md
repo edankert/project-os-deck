@@ -15,8 +15,8 @@ tasks: ["[[TASK-0012-A-Panel-Opens-In-Its-Own-Window]]", "[[TASK-0013-A-Window-R
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-07
-review_verdict: changes-requested
+review_date: 2026-09-09
+review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
 ---
 
@@ -94,3 +94,11 @@ One observation, not blocking: a window carrying `desk` still draws the desk bar
 *Who decided:* recorded here at the close-out rather than asked, because the alternative reading traps the person in a window they cannot get out of. If the wider reading is wanted, the way to have it is a pasted panel address opening a NEW popped-out window, which is more work than this phase has left and is a reasonable [[PHASE-0004-Parity]] item.
 
 [[TST-0020-A-Popped-Out-Window-Carries-One-Panel]] carries the same narrowing.
+
+## Independent review — 2026-09-09 (third pass)
+
+**Verdict: approved.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+The close-out pass left one defect and two leads. All three are now `ISS-*` notes at `fixed`: [[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]], [[ISS-0020-A-Promoted-Satellite-Draws-No-Navigation]] and [[ISS-0019-Pasting-A-Panel-Address-Collapses-The-Focus-Window]], the last of which is also what the Amendments section above narrows the third criterion for. Turning a lead into an issue with a name is the behaviour the review process asks for and it happened here.
+
+**The one thing still owed is not this feature's to fix.** The close-out pass noted that [[ISS-0006-A-Clean-Quit-Forgets-Every-Popped-Out-Panel]]'s fix is guarded by nothing automated, and rode that on [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]. `ISS-0008` is still at `triage` two days later, and it is now carrying findings from four of this phase's seven features. That is a phase-level decision rather than a reason to hold this feature.

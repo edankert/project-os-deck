@@ -88,6 +88,10 @@ Three things it had to get right before the comparison meant anything, each foun
 - **A note the cockpit gave no type is left out by PATH, never by loosening the comparison.** The two rules are the ones `tools/scripts/record-sidecar-fixture.py` states: a list-valued `type:`, and frontmatter PyYAML refuses outright. Both turn on the sidecar assigning *no* type, so neither can excuse a contradiction — the sidecar saying `feature` and Deck saying anything else stays a failure with no tolerance.
 - **Every licensed difference is printed with its path, its reason and what Deck read instead**, so the exemption cannot quietly widen.
 
+**The comparison is per note before it is per type**, because a total can be right while the notes under it are wrong. The third review made exactly two notes exchange `feature` and `task`: the totals still balanced and the script reported no disagreement. It now prints a contradiction per path — *"the cockpit reads it as feature, Deck reads it as task"* — and the type totals are a summary underneath. **And a comparison that covers no notes is a failure**, not a pass: with `isTemplate` returning true for everything the script used to compare nothing in all three corpora and exit 0.
+
+Four mutations, four caught: two notes exchanging types (2 contradictions, both paths named), every note treated as a template (3 failures, one per corpus), a whole-corpus rotation of types (1,095 contradictions), and the two `pathPrefix` reverts the suite already covered.
+
 **A number worth carrying to the Vault phase.** In `~/Notes`, **92 of 386 notes** — most of the Daily Notes — have a list-valued `type:` and so appear in the cockpit's Library under no type at all. That is project-os-cockpit#ISS-0279 measured rather than described, and it is close to a quarter of the vault.
 
 **What still needs a person:**

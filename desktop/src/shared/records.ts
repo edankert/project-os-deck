@@ -66,6 +66,19 @@ export interface NoteRecord {
   types: string[];
   status: string | null;
   aliases: string[];
+  /**
+   * A digest of everything this record holds, for telling a rebuild that found
+   * a change from one that found none.
+   *
+   * The modification time is not enough. `git checkout`, `git stash pop`, a
+   * restore from a backup and `rsync --times` all put content back under a
+   * timestamp that is not now, and the index then stored the new content and
+   * raised no revision — so every window kept a stale picture it believed was
+   * current (ISS-0041). Computed once while the note is being parsed, so
+   * comparing is a string comparison per note rather than a walk of every
+   * frontmatter value.
+   */
+  digest: string;
 }
 
 /** A file the walk could not read, named with the reason. */
@@ -159,8 +172,27 @@ export function recordFrom(
     types: normaliseTypes(fm['type']),
     status: normaliseStatus(fm['status']),
     aliases: stringList(fm['aliases']),
+    digest: digestOf(fm, declaredTitle ?? firstHeading(parsed.body)),
   };
   return { record, problems: parsed.problems.map((p) => toProblem(relPath, p)) };
+}
+
+/**
+ * A short digest of the frontmatter and the title.
+ *
+ * Those two ARE the record: everything else on it is derived from them, and a
+ * change to the body that does not move the first heading changes nothing Deck
+ * can show. FNV-1a because it is four lines and this runs once per note per
+ * rebuild; the question is "did this change", not "is this authentic".
+ */
+function digestOf(frontmatter: Record<string, unknown>, title: string | null): string {
+  const text = `${JSON.stringify(frontmatter)}\u0000${title ?? ''}`;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0') + text.length.toString(16);
 }
 
 function toProblem(relPath: string, problem: YamlProblem): RecordProblem {

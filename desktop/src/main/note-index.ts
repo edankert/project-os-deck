@@ -287,9 +287,18 @@ export class NoteIndex {
         if (existsUnder(this.docsRoot, rel)) this.problems.push(...one.problems);
         continue;
       }
+      // **Compared, not assumed** (ISS-0041). This path used to set `changed`
+      // for every event it was handed, so a save that wrote the same bytes —
+      // and an editor's atomic write, which arrives as more than one event —
+      // told every window its picture was old. That is ISS-0030's complaint on
+      // the one-file route, which ISS-0030's fix never reached: it guarded the
+      // full rebuild and this walks past it.
+      const before = this.byPath.get(rel);
+      const moved =
+        before === undefined || before.mtimeMs !== one.record.mtimeMs || before.digest !== one.record.digest;
       this.byPath.set(rel, one.record);
       this.problems.push(...one.problems);
-      changed = true;
+      changed = changed || moved;
     }
     if (changed) this.raise();
   }
@@ -313,15 +322,25 @@ export class NoteIndex {
 /**
  * Whether a fresh walk found what the index already holds.
  *
- * Compared by path and modification time, which is what a change to a note
- * moves. Comparing the whole record would be comparing every frontmatter value
- * of 2715 notes to answer a question the file system already answered.
+ * Compared by path, modification time AND the record's own digest.
+ *
+ * **The modification time alone was not enough** (ISS-0041). It answers
+ * whether the file was written, and Deck needs to know whether what it holds
+ * changed — a different question the moment a timestamp is preserved, which
+ * `git checkout`, `git stash pop`, a restore and `rsync --times` all do. The
+ * index took those changes, stored them, and raised no revision, so every
+ * window kept a stale picture it believed was current.
+ *
+ * The digest is computed once while the note is parsed, so this stays a string
+ * comparison per note rather than the walk of every frontmatter value of 2715
+ * notes that the first version of this was written to avoid.
  */
 function sameRecords(held: Map<string, NoteRecord>, found: NoteRecord[]): boolean {
   if (held.size !== found.length) return false;
   for (const record of found) {
     const existing = held.get(record.relPath);
-    if (existing === undefined || existing.mtimeMs !== record.mtimeMs) return false;
+    if (existing === undefined) return false;
+    if (existing.mtimeMs !== record.mtimeMs || existing.digest !== record.digest) return false;
   }
   return true;
 }

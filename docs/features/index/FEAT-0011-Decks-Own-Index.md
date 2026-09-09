@@ -121,3 +121,39 @@ Two words are used throughout. A **record** is what Deck knows about one note: i
 **What I could not break.** The reader against real data, hardest of all: 3,333 notes, keys and values, three corpora, against PyYAML — clean. The nested-sequence fix and the `folded()` fix are both improvements PyYAML agrees with. Mutations that hide two directories from the walk, that put the `- ` break back, that revert the scan, that revert `unquote`, that drop the last key of every note, that freeze the revision, and that remove the excluded-path early return are each caught. `npm test` 306/0, `run-tests.py` `passing=23 failing=0`, `validate-docs.sh` OK.
 
 **Which build this was measured on.** The review ran against `c57f723`..`b2292df`. Two further commits landed while it was in progress (`883e880`, `8fff003`), both touching `desktop/src/main/main.ts`. Every blocking finding was re-driven against `8fff003`, where the suite is 307 checks: the three navigation-guard mutations and the `pathPrefixFor` mutation each still leave 307 passing and 0 failing.
+
+## Independent review — 2026-09-09 (third pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. The reader and the comparison are in good shape; every fix I mutated held. The findings are one defect the second pass reproduced and nobody filed, and one written claim that is wider than the script under it.
+
+**Finding 1 (medium): the second pass's own Finding 4 is reproduced, unfixed, and recorded in no `ISS-*`.** A content change that does not move `mtime` updates the records and does not raise the revision, so every open window keeps believing a stale picture is current. `sameRecords` (`desktop/src/main/note-index.ts:320-327`) compares path and modification time and nothing else. Driven with an injected `io` whose `mtimeMs` is frozen:
+
+```
+after first build: revision 1 status triage
+after a content change with the SAME mtime: revision 1 status fixed
+onChange fired at: [1]
+```
+
+`tools/skills/independent-review/SKILL.md` step 5 says a reproduced finding becomes an `ISS-*` at `triage` carrying its command and output. Six issues were filed from the second pass ([[ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded]] through [[ISS-0036-Notes-Quote-Measurements-That-Do-Not-Reproduce]]) and this was not among them, so it exists only as a paragraph in a review section nobody re-reads. Either file it or write down why it is declined.
+
+**Finding 2 (medium): `check-counts-live.py` compares per-type totals, not per-note types, and [[TST-0026-Decks-Index-Counts-What-The-Cockpit-Counts]] claims otherwise.** That note says "the sidecar saying `feature` and Deck saying anything else stays a failure with no tolerance". Two notes exchanging their types is exactly that contradiction, twice, and it is invisible:
+
+```
+# in walkNotes, make one `feature` record read `task` and one `task` record read `feature`
+../project-os-cockpit/.venv/bin/python3 tools/scripts/check-counts-live.py
+  3 corpus(es) compared, 0 disagreement(s) between the two programs   (exit 0)
+```
+
+`desktop/fixtures/` catches it for this repository and for Your Trainer, so the claim survives for those two corpora by a different mechanism than the one the note credits. `~/Notes` is in no fixture, so for the vault a per-note contradiction is caught by nothing at all. The fix is small: `deck_types` is already keyed by path and `index._records` already holds `record.note_type`, so the comparison can be per-path instead of per-total.
+
+**Also inside the same script: `isTemplate` returning `true` for everything makes it compare zero notes and still exit 0.** Both sides drop a note the other calls a template, so the sets empty together, every count is zero and no disagreement is reported. The printed line says `0 notes counted by Deck, 0 by the cockpit`, which a person would notice and an exit code does not. The suite catches this particular mutation (one check red), so it is a note about the script's verdict rather than a live hole.
+
+**Finding 3 (low): [[ISS-0034-The-Sidecar-Comparison-Compares-No-Values]]'s third Next Action is neither done nor withdrawn.** "Record what Deck reads from the eight `REQ-019x` notes, since it is not everything" is unticked, and the issue's Fixed section does not mention it. Those notes stay permanently exempt from the key and value comparison, and what Deck actually reads from them is written down nowhere.
+
+**What I attacked and could not break.**
+
+- Replacing every non-`type` string frontmatter value at index time: eight checks red, including both fixture comparisons. [[ISS-0034-The-Sidecar-Comparison-Compares-No-Values]]'s fix holds.
+- Emptying the `problems` array, so an unreadable file is read silently: two checks red, including the Your Trainer fixture. The second half of ISS-0034 holds.
+- Ignoring the chomping indicator in `yaml.ts`: one check red, exactly as [[ISS-0035-Two-New-Block-Scalar-Misreads]] claims.
+- Rotating every note's types by one position across the whole walk — a permutation, which leaves per-type totals nearly intact — is caught: 18 disagreements across the three corpora, in all three.
+- `check-counts-live.py` itself reproduces its written result: 3 corpora, 0 disagreements, 195 + 2,699 + 386 = 3,280 notes, 92 of the vault's 386 with a list-valued `type:`. Every number in TST-0026's new section reproduces.
