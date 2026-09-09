@@ -897,6 +897,15 @@ async function runSmoke(): Promise<void> {
     }
 
 
+    // **The quit, measured against a REAL sidecar Deck started** (TST-0011's
+    // last two steps, and the doubt Edwin recorded when he walked it on
+    // 2026-09-07: "I am not sure if it doesn't leave anything running when I
+    // quit???"). ISS-0021 exists to answer that, and until now only a person
+    // could. A temporary workspace with no `.cockpit/url` forces Deck to start
+    // its own child rather than borrow one, so what is measured is a process
+    // Deck owns and is therefore Deck's to stop.
+    await recordQuit(record, skip);
+
     console.log(JSON.stringify(smokeVerdict(failures, skipped), null, 2));
   } catch (err) {
     console.log(JSON.stringify(smokeVerdict([...failures, String(err)], skipped), null, 2));
@@ -906,6 +915,82 @@ async function runSmoke(): Promise<void> {
   // Give SIGTERM a moment to reach the children before the process goes.
   await delay(400);
   app.exit(smokeVerdict(failures, skipped).ok ? 0 : 1);
+}
+
+/**
+ * Start a sidecar Deck owns, then run the production quit path and look for it.
+ *
+ * The quit path is `shutdown()` — which is what `before-quit`, `will-quit`, the
+ * signal handlers and `process.exit` all call — followed by the wait
+ * `before-quit` performs. Nothing here is a stand-in: the same functions run,
+ * against the same supervisor, holding a real Python process.
+ *
+ * The pid is checked with `process.kill(pid, 0)`, which sends no signal and
+ * only asks whether the process is there. Deck stops what Deck started and
+ * nothing else, so a sidecar the cockpit is running is never touched.
+ */
+async function recordQuit(
+  record: (ok: boolean, what: string) => void,
+  skip: (what: string) => void,
+): Promise<void> {
+  let root: string;
+  try {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-quit-'));
+    fs.mkdirSync(path.join(root, 'docs'));
+    fs.writeFileSync(path.join(root, 'SNAPSHOT.yaml'), 'project:\n  name: "the quit check"\n');
+    fs.writeFileSync(path.join(root, 'docs', 'note.md'), '---\ntype: "[[issue]]"\nid: ISS-0001\n---\n# A note\n');
+  } catch (err) {
+    skip(`the quit check: a temporary workspace could not be made (${String(err)})`);
+    return;
+  }
+
+  const added = workspaces.add(root);
+  if (!added.ok) {
+    skip(`the quit check: ${added.reason}`);
+    return;
+  }
+  let handle;
+  try {
+    handle = await sidecars.resolve(added.workspace);
+  } catch (err) {
+    // A machine with no interpreter for the sidecar cannot run this check, and
+    // that is a fact about the machine rather than a failure of the quit.
+    skip(`the quit check: no sidecar could be started (${err instanceof Error ? err.message : String(err)})`);
+    workspaces.remove(added.workspace.id);
+    return;
+  }
+  const child = sidecars.processOf(added.workspace.id);
+  if (!handle.ownedByDeck || child === null) {
+    skip('the quit check: Deck borrowed a sidecar rather than starting one, so there is nothing of its own to stop');
+    workspaces.remove(added.workspace.id);
+    return;
+  }
+  const pid = child.pid ?? 0;
+  record(pid > 0 && alivePid(pid), `Deck started a sidecar of its own (pid ${pid})`);
+
+  // The production quit, whole: `shutdown()` is what every quit path calls,
+  // and the wait is what `before-quit` performs before letting the app go.
+  shutdown();
+  await waitForExit(stopping);
+  stopping = [];
+
+  record(!alivePid(pid), `the sidecar Deck started is gone after the quit (pid ${pid})`);
+  workspaces.remove(added.workspace.id);
+  try {
+    fs.rmSync(root, { recursive: true, force: true });
+  } catch {
+    // A temporary directory left behind is not worth failing the run for.
+  }
+}
+
+/** Whether this process exists. Signal 0 asks and does not touch it. */
+function alivePid(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 interface PreparedWorkspace {

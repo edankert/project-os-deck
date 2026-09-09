@@ -3,10 +3,10 @@ type: "[[risk]]"
 id: RISK-0003
 aliases: ["RISK-0003"]
 title: "Obsidian and Deck both evaluate the Bases language over the same base files, and the same file can show two different lists"
-status: open
+status: closed
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[ADR-0004-A-View-Is-A-Description]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 phase: "[[PHASE-0001-Deck]]"
 likelihood: high
@@ -49,3 +49,18 @@ The impact is medium rather than high because the failure is a wrong list rather
 - An Obsidian release note mentions a change to Bases filters, functions or comparisons.
 - A new function or view key appears in a file under `~/Notes/__bases__/` that the fixtures do not carry.
 - [[PHASE-0003-Vault]] opens, at which point the number of base files Deck reads goes from a fixture set to whatever the vault holds.
+
+
+## Closed, 2026-09-09 — and it materialised first, which is the reason to trust the mitigation
+
+**The serious trigger this note named fired within a day of the evaluator being written.** "A base file shows a different number of notes in Obsidian and in Deck, with no unsupported-construct report on Deck's side. That is the serious one: it means the evaluator was confidently wrong."
+
+It was confidently wrong in four places, found by the independent review ([[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]). `contains` on a string tested equality rather than substring. `hasLink` ignored its receiver. `==` was case-insensitive where Obsidian's is not. And `file.path` was docs-root-relative while a base file's `inFolder` is written against the vault root — so the cockpit's own `NAVIGATION.base` selected fourteen features over this repository where the cockpit shows thirteen, and its `docs/__templates__` exclusion had never matched anything.
+
+**All four are fixed, and the check that would have caught them now exists**: the cockpit's own base file is run over this repository's real index and the counts are asserted view by view.
+
+**What the review showed about the mitigations, and it is worth being exact.** The two that were built worked as written — the seed is named and the suite walks it, and what falls outside is reported. Neither could have caught these, because every one of them was a SUPPORTED construct returning the wrong answer. The suite asked whether an unsupported construct was reported; it never asked whether a supported one selected the right notes. That gap is now closed, and it is the thing to remember: naming the boundary of a language does nothing about being wrong inside it.
+
+**Closed on the mitigations being real rather than on the risk being gone.** Two programs still evaluate this language over the same files and can still disagree. What has changed is that a disagreement is now measured against Edwin's own thirteen base files rather than against invented ones, and that the measurement caught four real divergences the first time it was pointed at them.
+
+**What would reopen it.** The triggers above, unchanged. [[PHASE-0003-Vault]] is the likeliest: the number of base files Deck reads goes from a fixture set to whatever the vault holds.

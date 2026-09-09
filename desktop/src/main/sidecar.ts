@@ -289,6 +289,18 @@ export class SidecarSupervisor {
   }
 
   /** Whether a sidecar for this workspace is started and has not answered yet. */
+  /**
+   * The child Deck spawned for this workspace, or null when it borrowed one.
+   *
+   * Exposed so the quit can be MEASURED against a real process rather than
+   * against the supervisor's own bookkeeping: `stopAll` returning an empty
+   * array passed every check while a sidecar was still running, which is how
+   * ISS-0021 survived a fix.
+   */
+  processOf(workspaceId: string): ChildProcess | null {
+    return this.records.get(workspaceId)?.process ?? null;
+  }
+
   isStarting(workspaceId: string): boolean {
     const record = this.records.get(workspaceId);
     return record !== undefined && !record.ready;

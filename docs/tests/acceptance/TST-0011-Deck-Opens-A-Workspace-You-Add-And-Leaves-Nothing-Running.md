@@ -6,7 +6,7 @@ title: "Deck opens a workspace you add, and leaves nothing running when you quit
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[PHASE-0001-Deck]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -67,6 +67,17 @@ Deck runs from this repository; there is no installed application yet.
 - **After the signal quit, the same holds.** This is the path that used to leave a sidecar behind every time: `kill -TERM` and Ctrl+C both reached Deck, and Deck went without waiting for its children.
 - Any id that is in the before list, is not the cockpit's, and is still there after five seconds is a fail, whichever quit produced it.
 
+## What a machine now answers, 2026-09-09
+
+**The last two steps carried the whole doubt, and they are measured now.** Edwin's pass on 2026-09-07 came with "I am not sure if it doesn't leave anything running when I quit???", which is what [[ISS-0021-A-Sidecar-Started-After-The-Quit-Began-Outlives-Deck]] exists to answer. Until now only a person could.
+
+The smoke run makes a temporary project-os workspace with no `.cockpit/url`, so Deck must START a sidecar rather than borrow one; records the child's process id; runs the production quit path — `shutdown()`, which is what `before-quit`, `will-quit`, the signal handlers and `process.exit` all call, followed by the wait `before-quit` performs; and then asks whether that process is still there with `process.kill(pid, 0)`, which sends no signal.
+
+Nothing in it is a stand-in: the same functions run, against the same supervisor, holding a real Python process. `electron . --smoke` reports both checks passing.
+
+**What still needs a person, and why.** Adding a workspace opens a native folder dialog, so the first three steps of the Procedure are a walk. The refusal message for a folder that is neither is a walk. And a person quitting from the menu, or with Ctrl+C in their own terminal, is what this note asks for — the smoke run drives the same code, not the same gesture.
+
 ## Evidence (fill after running)
 
 - The walk's verdict is a dated event in the release ledger, not a status on this note.
+- The quit half, measured 2026-09-09: `electron . --smoke`, the two lines beginning "Deck started a sidecar of its own" and "the sidecar Deck started is gone after the quit".

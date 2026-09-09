@@ -3,10 +3,10 @@ type: "[[risk]]"
 id: RISK-0004
 aliases: ["RISK-0004"]
 title: "Deck's index and the sidecar's index read the same notes and can disagree about them, so two applications show different counts of the same corpus"
-status: open
+status: closed
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[ADR-0004-A-View-Is-A-Description]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 phase: "[[PHASE-0001-Deck]]"
 likelihood: high
@@ -52,3 +52,22 @@ This is the same shape as [[RISK-0002-Decks-Read-Only-Guarantee-Rests-On-The-Sid
 - A person reports that Deck and the cockpit show different counts for the same view.
 - [[PHASE-0003-Vault]] opens: a vault's type rules are the vault's, not project-os's, and both indexers meet them for the first time.
 - [[project-os-cockpit#ISS-0279]] is fixed, at which point one named difference in the fixture stops being expected.
+
+
+## Closed, 2026-09-09
+
+**Every mitigation above is in shipped code, and the pin is stronger than the one this note asked for.**
+
+The rules are mirrored with citations: `desktop/src/shared/records.ts` names the four it takes from `index.py` — the excluded directories, `_normalise_type`, `_normalise_status` and `_extract_h1` — at the line that mirrors each.
+
+The result is pinned by `desktop/fixtures/sidecar-types.json`, recorded by `tools/scripts/record-sidecar-fixture.py`, which IMPORTS the cockpit's own `Index` rather than re-reading its rules. It carries the date and the cockpit commit.
+
+**What it pins is more than this note asked for, because the first version was not enough.** The note asked for typed counts. Counts went stale within the hour — Your Trainer gained a task while the fixture was being written — so it became per note path. Then the independent review showed that a per-path TYPE comparison skipped any note Deck had failed to index, and that hiding a sixth of this repository still passed it ([[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]). It now compares the frontmatter KEY SET as well, and a fixture path that is on disk with no record fails by name.
+
+**The claim it supports today:** Deck's frontmatter keys are identical to the sidecar's for every one of the 2924 notes across both corpora, with no note indexed by one and not the other, and no contradiction about any note's type.
+
+**The deliberate differences are RULES, not a list of paths**, because a list goes stale on a repository somebody is working in. Two: a list-valued `type:`, which is [[project-os-cockpit#ISS-0279]] and which Deck must not reproduce; and a file whose frontmatter PyYAML refuses outright, where Deck reads what it can and reports the rest. Both are checked live on the Deck side, so a file nobody has seen yet is covered.
+
+**The triggers stand unchanged**, and two of them fired during the work that closed this: the fixture failed and the first question was which side was right (it was Deck's, twice), and the reader was found to be losing keys on twenty-two notes. That is the mitigation doing its job rather than an argument against it.
+
+**What would reopen it.** Any of the triggers above. The likeliest is [[PHASE-0003-Vault]] opening, where a vault's type rules are the vault's and both indexers meet them for the first time.

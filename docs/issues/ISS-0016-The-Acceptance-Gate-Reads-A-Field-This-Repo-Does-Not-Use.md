@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0016
 aliases: ["ISS-0016"]
 title: "The validator's acceptance gate reads a mark: field on the test note and never the release ledger, so it can never be satisfied here, and on 2026-11-20 it turns this repository red"
-status: triage
+status: declined
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
@@ -67,8 +67,20 @@ It reads a note field the ledger model replaced, using a vocabulary the taxonomy
 
 **Two ways out, and the choice is Edwin's.** Either this becomes `declined` here — a deliberate no-action, with the reason being that the fix is upstream and is filed — or the phase waits for [[project-os-dev#ISS-0060]]. Nothing is gained by guessing; the phase owes four acceptance walks anyway, and this can be settled alongside them.
 
+## Declined here, 2026-09-09
+
+**`declined` means a deliberate no-action, and that is exactly the state.** `tools/scripts/` is template-owned and `sync-project-os.sh` overwrites a local patch, so there is no version of this where Deck fixes it. Leaving the note open would not have been a decision, only the absence of one — and it would have held [[PHASE-0001-Deck]] open against another repository's schedule, since a phase may not close while a note naming it is unresolved.
+
+**What was actually done, so the decline is not just a status change.**
+
+The fix is filed where the code lives, as [[project-os-dev#ISS-0060]], carrying the same evidence and the two things a fix has to decide.
+
+`tools/GRANDFATHERED.yaml` now names the ten features this gate will hit, with the reason on each row. Without it, every feature this repository closes would fail the build from 2026-11-20 for a rule its notes are designed not to satisfy. The file says to delete the whole block when the upstream issue lands, and says that a list needing extension is the argument for fixing it rather than extending the list.
+
+**This is a judgement, and it is reversible in one line.** If Deck should instead wait for the upstream fix, set this note back to `open`, delete the grandfather block, and the phase waits with it.
+
 ## Next Actions
 
 - [x] The fix belongs upstream — filed as [[project-os-dev#ISS-0060]], 2026-09-09
-- [ ] Decide whether this note is `declined` here or waits for the upstream fix, since PHASE-0001 cannot close while it is unresolved
-- [ ] Until then, the affected IDs can go in `tools/GRANDFATHERED.yaml` if the November promotion arrives before the upstream fix
+- [x] Decide whether this is `declined` here or waits for upstream — declined, 2026-09-09, with the reasoning above
+- [x] Grandfather the affected ids so the November promotion does not turn this repository red — `tools/GRANDFATHERED.yaml`, 2026-09-09

@@ -1,0 +1,40 @@
+# Items exempted from a validator gate at its promotion date.
+#
+# `tools/scripts/validate-docs.py` reads `gates: {GATE: {ID: reason}}` and
+# reports a warning instead of an error for a named id once that gate's
+# PROMOTIONS date has passed. Everything here is a temporary answer to a
+# question somebody else owns; a permanent entry is a rule nobody is enforcing.
+
+gates:
+  # **The gate reads a field this repository does not use.**
+  #
+  # `_acceptance_is_settled` looks for a `mark:` in the acceptance test note's
+  # frontmatter. Deck keeps its verdicts in `docs/releases/ledgers/WORKING-app.json`
+  # (ADR-0037), so its acceptance tests rest at `status: active` with no mark,
+  # and the word "ledger" appears nowhere in the validator. The message also
+  # asks for `done`/`incomplete`/`canceled`, which `TAXONOMY.md` lists as
+  # legacy and never written.
+  #
+  # This is a WARNING today and an ERROR from 2026-11-20. Without these entries
+  # every feature this repository closes would fail the build on that date, for
+  # a rule its notes are designed not to satisfy.
+  #
+  # **`tools/scripts/` is template-owned**, so a fix here would last until the
+  # next `sync-project-os.sh`. It is filed upstream as project-os-dev#ISS-0060
+  # and Deck's own note is ISS-0016, declined on 2026-09-09 as a deliberate
+  # no-action rather than left open against a phase.
+  #
+  # **Delete this whole block when that issue lands.** If it has not landed by
+  # 2026-11-20 the list will need the features closed since; that recurring
+  # cost is the argument for fixing it rather than extending this.
+  VERIFY-ACCEPTANCE:
+    FEAT-0002: "walked as TST-0008; the verdict is a pass in WORKING-app.json, where this gate does not look — ISS-0016"
+    FEAT-0003: "walked as TST-0012; the verdict is a pass in WORKING-app.json — ISS-0016"
+    FEAT-0004: "walked as TST-0009; the verdict is a pass in WORKING-app.json — ISS-0016"
+    FEAT-0005: "walked as TST-0008; the verdict is a pass in WORKING-app.json — ISS-0016"
+    FEAT-0006: "walked as TST-0013; the verdict is a pass in WORKING-app.json — ISS-0016"
+    FEAT-0007: "walked as TST-0008; the verdict is a pass in WORKING-app.json — ISS-0016"
+    FEAT-0008: "walked as TST-0010; the verdict lives in WORKING-app.json — ISS-0016"
+    FEAT-0011: "walked as TST-0026; the verdict will live in WORKING-app.json — ISS-0016"
+    FEAT-0012: "walked as TST-0027; the verdict will live in WORKING-app.json — ISS-0016"
+    FEAT-0013: "walked as TST-0028; the verdict will live in WORKING-app.json — ISS-0016"

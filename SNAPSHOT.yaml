@@ -576,7 +576,7 @@ items:
     ISS-0016:
       file: "docs/issues/ISS-0016-The-Acceptance-Gate-Reads-A-Field-This-Repo-Does-Not-Use.md"
       title: "The validator's acceptance gate reads a mark: field on the test note and never the release ledger, so it can never be satisfied here, and on 2026-11-20 it turns this repository red"
-      status: triage
+      status: declined
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -797,14 +797,14 @@ items:
     RISK-0003:
       file: "docs/risks/RISK-0003-Two-Evaluators-Of-The-Bases-Language.md"
       title: "Obsidian and Deck both evaluate the Bases language over the same base files, and the same file can show two different lists"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0001
       note: "Risk scan for FEAT-0012, 2026-09-08. Deck seeds its description language from the Bases subset measured across ten live base files in ~/Notes, so Obsidian and Deck now evaluate the SAME FILE with two engines. Three ways they diverge: Deck does not implement a construct (most likely); Deck implements one differently (date arithmetic, string-versus-wikilink coercion, what an absent property compares equal to -- none of Obsidian's answers are written down anywhere Deck can read); or Obsidian changes, with no signal to Deck. Impact MEDIUM not high: nothing is written and no note is lost, but a view is how a person decides what to work on and a view quietly missing four notes is worse than a view that fails. MITIGATION, and it is the whole design: the seed is NAMED and the suite ENUMERATES it, and anything outside it is REPORTED BY NAME above the list, so a divergence looks like a message rather than a shorter list. Twelve real base files are fixtures. Trigger to watch: a count differing from Obsidian's with NO unsupported-construct report -- that means the evaluator was confidently wrong."
     RISK-0004:
       file: "docs/risks/RISK-0004-Decks-Index-Duplicates-The-Sidecars-Indexer.md"
       title: "Deck's index and the sidecar's index read the same notes and can disagree about them, so two applications show different counts of the same corpus"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0001
       note: "Risk scan for FEAT-0011, 2026-09-08, from Edwin's decision that Deck keeps its own index. Same shape as RISK-0002: Deck depends on behaviour in ANOTHER REPOSITORY and nothing in Deck watches it. The visible failure is two applications disagreeing about a number in front of one person -- the cockpit says 34 issues need triage and Deck says 31 -- after which he trusts neither. Three drifts: a rule mirrored wrongly at the start (the type spelling is the obvious one), a sidecar change nobody notices, and a DELIBERATE difference nobody wrote down. The third is the trap: cockpit ISS-0279 drops a note whose type: is a list, Deck must not reproduce it, so Deck's count will be right and the equality test will fail for a GOOD reason -- and somebody will loosen the assertion instead of recording it. MITIGATION: mirror with a citation to the upstream rule; pin the RESULT (a fixture of the sidecar's own library groups, with its date and commit) rather than the implementation; record every deliberate difference as a NAMED ROW; keep Deck's index claiming only which notes a query selects, with obligations, render, context and writes left to the sidecar."
@@ -1170,7 +1170,7 @@ metrics:
     tests_passing: 0
     tests_failing: 0
     issues_open: 0
-    issues_triage: 2
-    risks_open: 2
+    issues_triage: 1
+    risks_open: 0
     releases_total: 0
     decisions_total: 4
