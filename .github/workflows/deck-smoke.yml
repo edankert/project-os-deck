@@ -59,4 +59,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
       - name: The renderer guards, in a real window
+        # **Electron's sandbox needs a setuid helper this runner does not
+        # configure.** Its first run died with
+        # `FATAL:setuid_sandbox_host.cc(163)` before printing a verdict
+        # (ISS-0057). Disabled HERE and not in the application, so a person
+        # running the smoke locally keeps the sandbox they have; a CI container
+        # is already an isolated machine.
+        env:
+          ELECTRON_DISABLE_SANDBOX: '1'
         run: bash tools/scripts/run-smoke.sh both

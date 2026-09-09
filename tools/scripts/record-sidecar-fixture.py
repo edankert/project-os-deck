@@ -209,12 +209,19 @@ def notes_of(index) -> dict:
         notes[record.rel_path] = {
             "type": record.note_type,
             "shape": by_shape[keys],
-            # When this file was last written. A note edited since the fixture
-            # was recorded has different content, so its keys and values are not
-            # comparable and the suite skips them — otherwise the value check
-            # would go red on every commit that touches a note, which is most of
-            # them in this repository.
-            "mtime": round(record.path.stat().st_mtime, 3),
+            # **The note's BYTES, which is how the suite tells an edited note
+            # from an unchanged one.** It recorded the modification time until
+            # 2026-09-09, and that check could not pass on a fresh checkout at
+            # all: `git clone` stamps every file with the checkout time, so on
+            # CI all 213 notes looked edited, nothing was compared, and the
+            # floor assertion fired (ISS-0057). It passed on a developer's
+            # machine every time, because local timestamps are real.
+            #
+            # A digest of the content answers the same question — has this note
+            # changed since the fixture was recorded — and answers it the same
+            # way everywhere. When it matches, the same file is being read by
+            # two parsers, which is the comparison this fixture exists for.
+            "source": hashlib.sha256(record.path.read_bytes()).hexdigest()[:16],
             # The VALUES, as a digest. Comparing key names alone left a check
             # that passed after every frontmatter value in 2,926 notes was
             # replaced with the same string (ISS-0034). A digest is sixteen

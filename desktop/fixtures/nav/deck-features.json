@@ -14,11 +14,11 @@
     {
      "id": "FEAT-0002",
      "title": "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and shows its notes",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/shell/FEAT-0002-Deck-Opens-A-Workspace.md",
      "subtitle": "A person launches Deck, picks a workspace and sees that workspace's notes. This feature is the application itself: the Electron shell, the discovery that finds a project-os repository on disk, the sidecar process started for it, and a typed client that reads the sidecar over HTTP.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -63,13 +63,48 @@
      ]
     },
     {
+     "id": "FEAT-0003",
+     "title": "One store in the main process: every window reads the same state and watches it change",
+     "status": "done",
+     "url": "/docs/features/store/FEAT-0003-One-Store-In-The-Main-Process.md",
+     "subtitle": "Deck keeps its state in one place, the Electron main process, and every window subscribes to it. Open two windows, change the focused note in one, and the other shows the change immediately.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — one store in the main process",
+       "status": "done",
+       "url": "/docs/features/store/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0010",
+       "title": "The store holds the state and broadcasts it — one record in the main process, every window subscribed",
+       "status": "done",
+       "url": "/docs/features/store/plan/tasks/TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0011",
+       "title": "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad",
+       "status": "done",
+       "url": "/docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
      "id": "FEAT-0004",
      "title": "Windows on any screen: a panel pops out, remembers the display it was on, and never steals focus",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/windows/FEAT-0004-Windows-On-Any-Screen.md",
      "subtitle": "A person drags a Deck panel onto a second monitor and it is still there after a restart. One window owns navigation and the others watch, so a satellite window showing status never pulls the keyboard away from the window being typed in.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -117,11 +152,11 @@
     {
      "id": "FEAT-0005",
      "title": "Spread: notes as cards on a desk, and a desk you can save and come back to",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/spread/FEAT-0005-Spread-Cards-On-A-Desk.md",
      "subtitle": "Deck's first view shows notes as cards a person arranges, rather than as a list they scroll. An arrangement is a desk; a desk has a name, is saved, and reopens as it was left.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -195,13 +230,91 @@
      ]
     },
     {
+     "id": "FEAT-0006",
+     "title": "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry",
+     "status": "done",
+     "url": "/docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md",
+     "subtitle": "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — every state has an address",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0017",
+       "title": "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0018",
+       "title": "Copy the address and open one — the round trip a person can actually perform",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0052",
+       "title": "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0007",
+     "title": "Views come from a provider: the renderer holds no fixed set of view buttons",
+     "status": "done",
+     "url": "/docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md",
+     "subtitle": "Deck asks a view provider which views the current workspace has and draws whatever comes back. For a project-os repository the built-in provider offers the same views the cockpit's navigator does. A vault's `.base` files can become views later by adding a provider, without touching the renderer.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — views come from a provider",
+       "status": "done",
+       "url": "/docs/features/views/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0019",
+       "title": "The provider interface, and the project-os provider whose views match the cockpit's",
+       "status": "done",
+       "url": "/docs/features/views/plan/tasks/TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0020",
+       "title": "The switcher draws what the provider returned — and the renderer holds no list of view names",
+       "status": "done",
+       "url": "/docs/features/views/plan/tasks/TASK-0020-The-Switcher-Draws-What-The-Provider-Returned.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
      "id": "FEAT-0008",
      "title": "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/two-hosts/FEAT-0008-One-Renderer-Two-Hosts.md",
      "subtitle": "The same renderer runs in two places. The shell hosts it locally through the preload bridge. Deck's own small HTTP host serves it over the local network for a tablet, reading only. Capability that only the shell can offer is detected rather than assumed, and is simply absent when Deck is served.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -232,11 +345,11 @@
     {
      "id": "FEAT-0011",
      "title": "Deck's own index: the main process reads the workspace's Markdown itself, so a view can arrange notes the sidecar does not arrange",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/index/FEAT-0011-Decks-Own-Index.md",
      "subtitle": "Deck's main process reads every Markdown file in the open workspace, parses its frontmatter, and keeps one record per note that it updates when the file changes. A view described as a query has something to run over, and Deck stops depending on the cockpit growing an endpoint that returns the notes.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -275,11 +388,11 @@
     {
      "id": "FEAT-0012",
      "title": "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/descriptions/FEAT-0012-A-View-Is-A-Description.md",
      "subtitle": "A Deck view stops being an id, a label and a sidecar mode with every other decision in code. It becomes a document with a source, a band rule, a card face, a list of surfaces and the registry as its verbs. The project-os provider emits seven of them that draw exactly what Deck draws today, and a base file from a vault reads as one.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -342,11 +455,11 @@
     {
      "id": "FEAT-0013",
      "title": "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb",
-     "status": "review",
+     "status": "done",
      "url": "/docs/features/first-write/FEAT-0013-The-First-Write.md",
      "subtitle": "One verb goes end to end. In the shell, a person ticks an acceptance criterion with evidence and makes one status transition, and the change is in the note on disk and visible in the cockpit. The served page offers no verb at all. This proves the write path ADR-0003 decided, and it is the smallest thing that can.",
      "type": "feature",
-     "review_verdict": "changes-requested",
+     "review_verdict": "approved",
      "children": [
       {
        "id": "",
@@ -393,119 +506,6 @@
        "title": "The changed-under-you mark: a write makes every other window stale, and the change is announced rather than applied",
        "status": "done",
        "url": "/docs/features/first-write/plan/tasks/TASK-0051-The-Changed-Under-You-Mark.md",
-       "subtitle": "",
-       "type": "task"
-      }
-     ]
-    },
-    {
-     "id": "FEAT-0003",
-     "title": "One store in the main process: every window reads the same state and watches it change",
-     "status": "done",
-     "url": "/docs/features/store/FEAT-0003-One-Store-In-The-Main-Process.md",
-     "subtitle": "Deck keeps its state in one place, the Electron main process, and every window subscribes to it. Open two windows, change the focused note in one, and the other shows the change immediately.",
-     "type": "feature",
-     "review_verdict": "approved",
-     "children": [
-      {
-       "id": "",
-       "title": "Plan — one store in the main process",
-       "status": "done",
-       "url": "/docs/features/store/plan/PLAN.md",
-       "subtitle": "",
-       "type": "plan"
-      },
-      {
-       "id": "TASK-0010",
-       "title": "The store holds the state and broadcasts it — one record in the main process, every window subscribed",
-       "status": "done",
-       "url": "/docs/features/store/plan/tasks/TASK-0010-The-Store-Holds-The-State-And-Broadcasts-It.md",
-       "subtitle": "",
-       "type": "task"
-      },
-      {
-       "id": "TASK-0011",
-       "title": "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad",
-       "status": "done",
-       "url": "/docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md",
-       "subtitle": "",
-       "type": "task"
-      }
-     ]
-    },
-    {
-     "id": "FEAT-0006",
-     "title": "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry",
-     "status": "done",
-     "url": "/docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md",
-     "subtitle": "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside.",
-     "type": "feature",
-     "review_verdict": "approved",
-     "children": [
-      {
-       "id": "",
-       "title": "Plan — every state has an address",
-       "status": "active",
-       "url": "/docs/features/addresses/plan/PLAN.md",
-       "subtitle": "",
-       "type": "plan"
-      },
-      {
-       "id": "TASK-0017",
-       "title": "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly",
-       "status": "done",
-       "url": "/docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md",
-       "subtitle": "",
-       "type": "task"
-      },
-      {
-       "id": "TASK-0018",
-       "title": "Copy the address and open one — the round trip a person can actually perform",
-       "status": "done",
-       "url": "/docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md",
-       "subtitle": "",
-       "type": "task"
-      },
-      {
-       "id": "TASK-0052",
-       "title": "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor",
-       "status": "done",
-       "url": "/docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md",
-       "subtitle": "",
-       "type": "task"
-      }
-     ]
-    },
-    {
-     "id": "FEAT-0007",
-     "title": "Views come from a provider: the renderer holds no fixed set of view buttons",
-     "status": "done",
-     "url": "/docs/features/views/FEAT-0007-Views-Come-From-A-Provider.md",
-     "subtitle": "Deck asks a view provider which views the current workspace has and draws whatever comes back. For a project-os repository the built-in provider offers the same views the cockpit's navigator does. A vault's `.base` files can become views later by adding a provider, without touching the renderer.",
-     "type": "feature",
-     "review_verdict": "approved",
-     "children": [
-      {
-       "id": "",
-       "title": "Plan — views come from a provider",
-       "status": "done",
-       "url": "/docs/features/views/plan/PLAN.md",
-       "subtitle": "",
-       "type": "plan"
-      },
-      {
-       "id": "TASK-0019",
-       "title": "The provider interface, and the project-os provider whose views match the cockpit's",
-       "status": "done",
-       "url": "/docs/features/views/plan/tasks/TASK-0019-The-Provider-Interface-And-The-Project-Os-Provider.md",
-       "subtitle": "",
-       "type": "task"
-      },
-      {
-       "id": "TASK-0020",
-       "title": "The switcher draws what the provider returned — and the renderer holds no list of view names",
-       "status": "done",
-       "url": "/docs/features/views/plan/tasks/TASK-0020-The-Switcher-Draws-What-The-Provider-Returned.md",
        "subtitle": "",
        "type": "task"
       }

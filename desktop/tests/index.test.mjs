@@ -31,6 +31,19 @@ const REPO = path.resolve(desktopRoot, '..');
  * as, which `shared/yaml.ts` records as a decision — a record crosses a JSON
  * boundary and a date would be a string on the far side anyway.
  */
+/**
+ * The first sixteen characters of a file's SHA-256, matching what
+ * `record-sidecar-fixture.py` wrote. A file that cannot be read is reported as
+ * a digest nothing equals, so it counts as edited rather than as unchanged.
+ */
+function sourceDigest(file) {
+  try {
+    return createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 16);
+  } catch {
+    return 'unreadable';
+  }
+}
+
 function valueDigest(frontmatter) {
   const canon = (v) => {
     if (typeof v === 'string') return v.replace(/(\.\d*?)0+(?=[+Z-]|$)/, (_m, head) => head.replace(/\.$/, ''));
@@ -246,7 +259,14 @@ function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
     // question above applies. Without this the value check would go red on
     // every commit that touches a note, which is most of them here — and a
     // check that is red for an ordinary reason is a check nobody reads.
-    const unchanged = typeof note.mtime !== 'number' || Math.abs(record.mtimeMs / 1000 - note.mtime) < 0.01;
+    //
+    // Told by the note's BYTES, not by its modification time (ISS-0057). The
+    // timestamp version could not pass on a fresh checkout at all: `git clone`
+    // stamps every file with the checkout time, so on CI all 213 notes looked
+    // edited, nothing was compared and the floor assertion fired. It passed on
+    // a developer's machine every time, because local timestamps are real.
+    const unchanged =
+      typeof note.source !== 'string' || sourceDigest(path.join(docsRoot, relPath)) === note.source;
     if (!unchanged) {
       edited += 1;
       continue;

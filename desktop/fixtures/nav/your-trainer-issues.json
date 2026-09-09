@@ -310,11 +310,11 @@
      "type": "issue"
     },
     {
-     "id": "ISS-0425",
-     "title": "Free ride still shows the gear control on a trainer the app cannot drive — TASK-0835 ticked a criterion covering both branches and only the Route branch was written",
+     "id": "ISS-0429",
+     "title": "The paywall is a dead end on a device with no Play Billing — the products list comes back empty, the purchase buttons vanish, and nothing tells the rider why",
      "status": "triage",
-     "url": "/docs/issues/ISS-0425-FreeRideKeepsTheGearOnADataOnlyTrainer.md",
-     "subtitle": "On a data-only trainer, free ride still offers [− GEAR n / m +]. Route mode does not.",
+     "url": "/docs/issues/ISS-0429-PaywallSaysNothingWhenBillingIsUnavailable.md",
+     "subtitle": "On a device where Google Play Billing cannot connect — microG, or any de-Googled Android — the paywall renders with no way to buy anything and no statement that buying is impossible here.",
      "type": "issue"
     },
     {
@@ -2422,6 +2422,14 @@
      "status": "fixed",
      "url": "/docs/issues/ISS-0424-TwoControlsCalledUseMockTrainer.md",
      "subtitle": "Developer Options now carries two controls whose labels both begin Use mock trainer:",
+     "type": "issue"
+    },
+    {
+     "id": "ISS-0425",
+     "title": "Free ride still shows the gear control on a trainer the app cannot drive — TASK-0835 ticked a criterion covering both branches and only the Route branch was written",
+     "status": "fixed",
+     "url": "/docs/issues/ISS-0425-FreeRideKeepsTheGearOnADataOnlyTrainer.md",
+     "subtitle": "On a data-only trainer, free ride still offers [− GEAR n / m +]. Route mode does not.",
      "type": "issue"
     },
     {

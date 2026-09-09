@@ -2015,6 +2015,23 @@
    ]
   },
   {
+   "key": "PHASE-022",
+   "label": "PHASE-022 · Selling outside Play",
+   "url": "/docs/phases/PHASE-022-SellingOutsidePlay.md",
+   "status": "planned",
+   "type": "phase",
+   "items": [
+    {
+     "id": "FEAT-0116",
+     "title": "Paying without Play — a rider on a de-Googled Android wants to buy PRO and has no mechanism to, because Google Play Billing is the only entitlement path the app has",
+     "status": "backlog",
+     "url": "/docs/features/FEAT-0116-PayingWithoutPlay.md",
+     "subtitle": "A rider running Android without Google Play can buy PRO and use it. Today they cannot: entitlement comes only from Play Billing, microG does not implement it, and there is no path — not even a manual one — by which a willing buyer becomes a paying rider.",
+     "type": "feature"
+    }
+   ]
+  },
+  {
    "key": "PHASE-999",
    "label": "PHASE-999 · Future",
    "url": "/docs/phases/PHASE-999-Future.md",
@@ -10015,6 +10032,30 @@
      "title": "The pacer is visible again on every trainer, and it finally draws the ghost that has been built and never used",
      "status": "done",
      "url": "/docs/features/pacer-ghost/plan/tasks/TASK-0874-ThePacerIsVisibleAgainAndItDrawsAGhost.md",
+     "subtitle": "",
+     "type": "task"
+    },
+    {
+     "id": "TASK-0875",
+     "title": "A rider created from today rides with a pacer; every rider who already exists is left exactly as they were",
+     "status": "done",
+     "url": "/docs/features/pacer-ghost/plan/tasks/TASK-0875-NewRidersGetAPacer.md",
+     "subtitle": "",
+     "type": "task"
+    },
+    {
+     "id": "TASK-0876",
+     "title": "Free ride loses the gear it cannot use on a data-only trainer, and keeps the SLOPE ± it can",
+     "status": "done",
+     "url": "/docs/features/ride-by-hand-cockpit/plan/tasks/TASK-0876-FreeRideLosesTheGearItCannotUse.md",
+     "subtitle": "",
+     "type": "task"
+    },
+    {
+     "id": "TASK-0877",
+     "title": "The HR-Zone cockpit joins the shared target readout — the ± buttons, the delta pill and the word SUGGEST all go, because none of them had anything left to do",
+     "status": "done",
+     "url": "/docs/features/ride-by-hand-cockpit/plan/tasks/TASK-0877-TheHrZonePillDropsTheWord.md",
      "subtitle": "",
      "type": "task"
     }
