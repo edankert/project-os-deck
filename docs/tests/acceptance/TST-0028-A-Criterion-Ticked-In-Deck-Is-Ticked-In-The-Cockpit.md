@@ -88,7 +88,7 @@ What the script measures, against notes in this repository, reverting every chan
 | 4 | the sidecar's render of that note changes and shows the box ticked, with nothing reloaded and nothing restarted |
 | 7 | Deck's verbs are the sidecar's rows, in order, with the same `confirm` flags — checked on a note that HAS verbs, and failing if it turns out to have none |
 | 8 | the transition moves the status, the reason Deck sent is under `## Decision record`, and the severity is in the frontmatter |
-| 7 | on a note whose verbs Deck CANNOT perform — a proposed design — that the rows name their own endpoint, that Deck says it cannot perform them, and that posting one as a transition really is refused |
+| 7, again | on a note whose verbs Deck CANNOT perform — a proposed design — that the rows name their own endpoint, that Deck says it cannot perform them, and that posting one as a transition really is refused |
 | — | a write carrying a stale modification time is refused, and changes no file |
 
 **The script found a real defect the first time it ran**, which is the argument for having written it: [[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]]. A decision made in Deck moved the status and recorded no grounds, because the field carrying them was dropped between the renderer and the shell. Nine months of walking this test by eye would not have caught it, because the walk's own expected result — "appends the decision callout" — is exactly what a person confirms by seeing a status change.

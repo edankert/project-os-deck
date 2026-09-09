@@ -187,15 +187,21 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
   const rel = 'docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md';
   const fresh = noteFor(id);
   let refused = '';
+  // **The tree is read BEFORE it is reverted** (ISS-0051). Putting the revert
+  // in a `finally` and the assertion after it made "changed no file" a
+  // statement about `git checkout`: appending to the note for real still gave
+  // a green line.
+  let treeAfterTheRefusal = '';
   try {
     await client.transition({ id, to: rows[0]?.to ?? 'accepted', actor: ACTOR, mtime: fresh.mtimeMs / 1000 });
   } catch (error) {
     refused = String(error);
   } finally {
+    treeAfterTheRefusal = git('status', '--short', 'docs').trim();
     git('checkout', '--', rel);
   }
   record(/revision/i.test(refused), 'and posting it as a transition really is refused, in those words', refused.slice(0, 140));
-  record(git('status', '--short', 'docs').trim() === '', 'and that refusal changed no file');
+  record(treeAfterTheRefusal === '', 'and that refusal changed no file', treeAfterTheRefusal);
 }
 
 // ---- a stale mtime is refused, which is the guard the walk cannot see ----

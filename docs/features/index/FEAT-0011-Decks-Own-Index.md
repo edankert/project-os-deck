@@ -206,3 +206,35 @@ git commit; sleep; echo two > f.md; git checkout -- f.md
 - The digest itself is sound. Over 3,351 notes in three corpora — 220 here, 2,724 in Your Trainer, 407 in `~/Notes` — there is **not one collision between different frontmatter-plus-title**, and two walks of the same tree produce identical digests, so nothing depends on map ordering or a clock.
 - `check-counts-live.py`'s zero-note guard reproduces its stated number: `isTemplate` returning true for everything gives **3 failures, one per corpus**, exactly as [[ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-Is-Wrong]] claims. A single note's type swapped inside `recordFrom` prints the contradiction with the path and both readings, plus the two type totals.
 - [[ISS-0034-The-Sidecar-Comparison-Compares-No-Values]]'s third Next Action is answered with a measurement, not a wave.
+
+## Independent review — 2026-09-09 (fifth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+The index is the strongest of the three features under review and the code survived everything I threw at it. Both of the fourth round's medium findings are properly discharged, and the widened digest is a better answer than the caveat that was on the table. The one remaining defect is the low finding, repeated: the corrected corpus count was stale before the commit that carried it finished.
+
+**Finding 1 (low, but the fourth occurrence): [[TST-0026-Decks-Index-Counts-What-The-Cockpit-Counts]]'s corrected numbers do not reproduce on the day they are dated, for exactly the cause [[ISS-0048-Six-More-Statements-In-The-Notes-Do-Not-Reproduce]] diagnoses.**
+
+The note now says "A run on 2026-09-09 compared 3,291 notes — 201 here, 2,704 in Your Trainer, 386 in `~/Notes`". Run today, 2026-09-09:
+
+```
+../project-os-cockpit/.venv/bin/python3 tools/scripts/check-counts-live.py
+  project-os-deck: 207 notes counted by Deck, 207 by the cockpit, 19 template(s) dropped by both
+  your-trainer:   2705 notes counted by Deck, 2705 by the cockpit, 20 template(s) dropped by both
+  vault:           386 notes counted by Deck, 386 by the cockpit, 21 template(s) dropped by both
+  3 corpus(es) compared, 0 disagreement(s) between the two programs
+```
+
+207 - 201 = 6, which is exactly the six notes the same commit added under `docs/`: TST-0037 and ISS-0044 through ISS-0048. So the replacement number was the *pre-commit* count written into a post-commit note — the identical mistake, one round later, in the note whose whole purpose was to stop it. ISS-0048's ticked criterion "The six statements match what running the thing prints today" therefore does not hold as committed.
+
+The same pattern reached the source this time. `desktop/src/shared/records.ts` says the digest was "measured over 3,351 notes in three corpora"; walking the three corpora at HEAD gives 3,358 (226 here, 2,725 in Your Trainer, 407 in `~/Notes`). The claim it supports is fine — see below — but the number in it is a pre-commit measurement again. The fix ISS-0048 already wrote down is the right one and was applied to only half the sentence: keep the shape, drop the frozen size, or name the commit the count was taken at.
+
+**Finding 2 (high, repository-wide, recorded in full on [[FEAT-0013-The-First-Write]]):** the commit adds a test needing Electron to `run-tests.py`, which the template-owned `validate-docs.yml` runs on a machine with neither Electron nor a display, so that job fails on every push. Not this feature's code; it gates this feature's close-out.
+
+**What I attacked and could not break.**
+
+- **Both corrected timestamp claims are true.** In a scratch repository: `git checkout -- f.md`, `git stash` and `git stash pop` each set the modification time to the second the command ran, from a file whose time had been forced to 2020. The corrected list — `rsync --times`, `cp -p`, a restore — is the right one.
+- **The widened digest costs what the note says.** Hashing every one of Your Trainer's 2,726 notes — 9.04 MB — takes 11.1 ms, best of five, against the note's 12 ms. There are no collisions between different files: over all three corpora, 24 digest values are shared by more than one file and in every case the file texts are byte-identical. The appended length makes a collision between files of different sizes impossible, as claimed, because the hash half is always exactly eight hex characters.
+- **Nothing makes the digest change without the file changing.** It is computed once per read from the text as `readFileSync(..., 'utf-8')` returns it, so a BOM, a line ending or a clock cannot move it; two walks of the same tree produce identical digests. The widening cannot raise a revision that the old digest would not have raised, because the comparison is an OR with the modification time.
+- **The new check guards both routes.** Reverting `digestOf` to the frontmatter and the title fails `a BODY change under an unchanged modification time raises the revision`; with its first assertion removed, the same mutation fails the second one, `the same, on the full-rebuild route`. Both halves are live. In the vocabulary the other notes use, that is one check with two assertions, not "two checks".
+- `check-counts-live.py` reports 0 disagreements over three corpora — the per-corpus figures are in finding 1 — and it still names cockpit ISS-0279's 92 list-typed vault notes as the one deliberate difference. `npm test` is 321/321 and `validate-docs.sh --as-committed` exits 0.

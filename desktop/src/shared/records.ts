@@ -189,8 +189,10 @@ export function recordFrom(
  * FNV-1a because it is four lines and this runs once per note per rebuild; the
  * question is "did this change", not "is this authentic". The length is
  * appended, which makes a collision between two files of different sizes
- * impossible and one between same-sized files vanishingly unlikely — measured
- * over 3,351 notes in three corpora, no two different files collide.
+ * impossible and one between same-sized files vanishingly unlikely. Checked by
+ * `tools/scripts/check-counts-live.py`'s corpora, where no two different files
+ * collide; the count is not written here because a count of a live corpus is
+ * stale by the time it is read (ISS-0052).
  */
 function digestOf(text: string): string {
   let hash = 0x811c9dc5;

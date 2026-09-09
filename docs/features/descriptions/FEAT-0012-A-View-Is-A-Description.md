@@ -205,3 +205,51 @@ That is [[ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-I
 - Every number in TST-0027's new section reproduces from the script's own output: 19 base files, 46 views, 21 empty (16 explained by their filter, 5 by hand, 0 unexplained), 14 views that draw a list and say nothing, `Novel Base.base` Characters 10 / Chapters 2 / Locations 8 with Pages naming `this.`, and `Novel Base - Side Bar.base` with **six** views and six explanations. ISS-0043 is properly closed.
 - The step-8 limit is stated honestly rather than papered over, and it is the right thing to have written down.
 - `npm test` 320/0, `run-tests.py` `passing=23 failing=0`, `validate-docs.sh --as-committed` OK, `check-bases-live.mjs` 0 failures over 46 views.
+
+## Independent review — 2026-09-09 (fifth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`.
+
+ISS-0046's first half is genuinely fixed and I could not defeat it. Its second half — the exemption that expires by itself — misses three of the shapes a date is written in, and its own evidence line does not reproduce.
+
+**Finding 1 (medium): `DATED_AHEAD.stillTrue` reports "still true" for a vault that holds a future date, when that date is a list or is not written as ISO.**
+
+The condition keeps only values where `typeof v === 'string'`, then compares `v.slice(0, 10)` as text. Driven against a temporary vault holding the real `__bases__/Tasks/Tasks Base.base` and one extra note:
+
+| the note's `due:` | exemptions that expire |
+| --- | --- |
+| `2026-12-01` | 3 — correct |
+| `2026-12-01T09:00:00` | 3 — correct |
+| `[2026-12-01]` | **0** |
+| a block list of one date | **0** |
+| `01/12/2026` | **0** |
+
+```
+node tools/scripts/check-bases-live.mjs <temp vault>
+  # with due: [2026-12-01]
+  6 view(s) selected nothing: 0 explained by their own filter, 3 exempt under a
+  condition that still holds, 0 whose exemption has expired, 3 unexplained
+```
+
+A list-valued frontmatter field is not a hypothetical in this repository: [[project-os-cockpit#ISS-0279]] is that exact defect in the cockpit's indexer, and [[FEAT-0011-Decks-Own-Index]] exists partly so Deck does not repeat it. The condition drops the same shape silently. I checked `~/Notes` and no `due:` or `scheduled:` there is a list today, so this is latent rather than live — which is the wording ISS-0046 itself uses about the defect it was filed for. Reuse the record's own list handling (`stringList`) and refuse a value that is not a date rather than skipping it.
+
+**Finding 2 (low): ISS-0046's evidence says two exemptions expire; three do.**
+
+```
+# a temporary vault holding the same base file, plus one note with scheduled: 2027-01-01
+node tools/scripts/check-bases-live.mjs <temp vault>
+  0 exempt under a condition that still holds, 3 whose exemption has expired
+  FAIL ... / Today's Tasks: exempted because "...", and that is no longer true
+  FAIL ... / This Week's Tasks: ...
+  FAIL ... / Future Tasks: ...
+```
+
+The note's own preceding sentence says three exemptions hold with nothing dated ahead, so "two of them expire" contradicts it as well as the run.
+
+**Finding 3 (high, repository-wide, recorded in full on [[FEAT-0013-The-First-Write]]):** the commit puts a test needing Electron into `run-tests.py`, which the template-owned `validate-docs.yml` job runs on a machine with no Electron and no display, so that job fails on every push. It is not this feature's code, but it gates this feature's close-out.
+
+**What I attacked and could not break.**
+
+- The `source.filter` prefix rule holds in both directions. Two synthetic base files identical but for a formula named `filterHelper` and `plainHelper` now get the same verdict, both failing with the same sentence; under the substring rule the first was silently excused.
+- The live run reproduces exactly what [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] claims: 19 base files, 46 views, 21 selecting nothing, 16 explained by their own filter, 5 exempt, 0 expired, 0 unexplained, 0 failures, and the latest date of either kind is 2026-03-17.
+- The five exempted views really do filter on `due`/`scheduled` at or after today, so the condition names the right two properties. `This Week's Tasks` would stay empty for a date beyond the week and the condition expires it anyway, which errs towards asking a person to look — the safe direction.

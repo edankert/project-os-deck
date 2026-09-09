@@ -76,7 +76,7 @@ It closes the exact gap this note's Adequacy section names. `TST-0029` measures 
 
 **The claim that carries weight is the shape, not the size: across three corpora there is no note the two programs read as different types, and no type whose totals differ.**
 
-The size moves. A run on 2026-09-09 compared 3,291 notes — 201 here, 2,704 in Your Trainer, 386 in `~/Notes`. An earlier run the same day said 3,280, and the difference is mostly the six issue notes filed by the commit that recorded the number: a count of this repository written into this repository is a measurement of a moving thing ([[ISS-0048-Six-More-Statements-In-The-Notes-Do-Not-Reproduce]]). Run the script for today's figure; it prints all of them.
+**The size is not written down here.** Twice running, a count of this repository was measured before a commit and read after it, and was wrong by exactly the notes that commit added — including the count written to replace the last wrong one ([[ISS-0052-A-Fourth-Round-Of-Numbers-That-Do-Not-Reproduce]]). A note in this repository counting this repository's notes is a measurement of a moving thing, and the answer is to stop writing it rather than to keep correcting it. The script prints the figures; run it for today's.
 
 Three things it had to get right before the comparison meant anything, each found by the comparison failing:
 

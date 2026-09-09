@@ -64,12 +64,36 @@ function baseFiles(dir, prefix = '') {
 const DATED_AHEAD = {
   why: 'it filters on a date at or after today, and nothing in the vault is dated that late',
   stillTrue: (records, today) => {
-    const latest = records
-      .flatMap((r) => [r.frontmatter?.due, r.frontmatter?.scheduled])
-      .filter((v) => typeof v === 'string' && v !== '')
-      .map((v) => v.slice(0, 10))
-      .sort()
-      .at(-1);
+    // **Every date-ish value, list members included, and an unreadable one
+    // expires the exemption** (ISS-0051). The first version kept only strings
+    // and sliced ten characters, so `due: [2026-12-01]` and `01/12/2026` both
+    // reported "still true" when they were false — and a list-valued
+    // frontmatter field is exactly the shape of project-os-cockpit#ISS-0279,
+    // the difference Deck exists to preserve.
+    const dates = [];
+    const unreadable = [];
+    const take = (value) => {
+      if (value === undefined || value === null || value === '') return;
+      if (Array.isArray(value)) return void value.forEach(take);
+      const text = String(value).trim();
+      const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+      if (iso === null) unreadable.push(text);
+      else dates.push(iso[0]);
+    };
+    for (const record of records) {
+      take(record.frontmatter?.due);
+      take(record.frontmatter?.scheduled);
+    }
+    // An exemption that cannot prove itself does not hold. A date this cannot
+    // read might be next month.
+    if (unreadable.length > 0) {
+      return {
+        holds: false,
+        detail: `${unreadable.length} date(s) this cannot read, so the exemption cannot be confirmed: ` +
+          `${[...new Set(unreadable)].slice(0, 3).join(', ')}`,
+      };
+    }
+    const latest = dates.sort().at(-1);
     return { holds: latest === undefined || latest < today, detail: `latest due or scheduled anywhere: ${latest}` };
   },
 };

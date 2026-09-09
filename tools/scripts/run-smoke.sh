@@ -28,22 +28,54 @@ if ! command -v node >/dev/null 2>&1; then
   exit 127
 fi
 
-if [ ! -d node_modules ]; then
-  npm ci --no-audit --no-fund >/dev/null
+# **The binary, not the package.** `run-desktop-tests.sh` installs with
+# ELECTRON_SKIP_BINARY_DOWNLOAD=1, because the 321 node checks never need a
+# ~100MB download — which leaves `node_modules/electron` present and its
+# executable absent, and the failure that produces is a stack trace rather than
+# a sentence. `path.txt` is the file the package writes to say where its binary
+# went, so its presence is the question.
+have_electron() {
+  [ -s node_modules/electron/path.txt ] \
+    && [ -e "node_modules/electron/dist/$(cat node_modules/electron/path.txt)" ]
+}
+
+if [ ! -d node_modules ] || ! have_electron; then
+  # Fetch it rather than refusing. This script is TST-0037's `command:`, so it
+  # runs in whatever environment `run-tests.py` runs in — including the
+  # template-owned CI job, which installs nothing itself (ISS-0049).
+  #
+  # The retry with a cache of our own is `run-desktop-tests.sh`'s, for the same
+  # reason: a shared npm cache this user cannot write is a setup problem rather
+  # than a test failure. Without it, the first `npm ci` had already removed
+  # `node_modules` before failing, which left the checkout worse than it found
+  # it.
+  if ! npm ci --no-audit --no-fund >/dev/null 2>&1; then
+    tmp_cache="$(mktemp -d)"
+    if ! npm ci --no-audit --no-fund --cache "$tmp_cache" >/dev/null; then
+      echo "run-smoke: could not install Deck's dependencies" >&2
+      exit 127
+    fi
+  fi
 fi
 
-# The binary, not the package. `npm ci` under ELECTRON_SKIP_BINARY_DOWNLOAD=1
-# installs the package and no executable, and the failure that produces is a
-# stack trace rather than a sentence.
-if ! node -e 'require("electron")' >/dev/null 2>&1 \
-  || [ ! -e "node_modules/electron/dist" ] && [ ! -e "$(node -p 'try{require("electron")}catch(e){""}' 2>/dev/null)" ]; then
-  echo "run-smoke: Electron's binary is not installed here; the smoke run needs it and a display" >&2
+if ! have_electron; then
+  echo "run-smoke: Electron's binary is not installed and could not be fetched" >&2
   exit 127
 fi
 
-# A display, on Linux. macOS always has one.
+# **A display, on Linux.** macOS always has one. Rather than refuse, put one
+# there: `xvfb-run` is on GitHub's ubuntu images and on most desktop Linux.
+# Re-exec rather than wrap each command, so both configurations share one
+# server and the LAN run's network binding is unaffected.
 if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
-  echo "run-smoke: no display; run this under xvfb-run" >&2
+  if [ -n "${DECK_SMOKE_UNDER_XVFB:-}" ]; then
+    echo "run-smoke: still no display under xvfb-run" >&2
+    exit 127
+  fi
+  if command -v xvfb-run >/dev/null 2>&1; then
+    exec env DECK_SMOKE_UNDER_XVFB=1 xvfb-run --auto-servernum bash "${BASH_SOURCE[0]}" "$WHICH"
+  fi
+  echo "run-smoke: no display and no xvfb-run; install xvfb, or run this where there is a screen" >&2
   exit 127
 fi
 
@@ -66,9 +98,19 @@ one() {
     const text = fs.readFileSync(process.argv[1], "utf-8");
     const blocks = text.match(/\{\s*"ok":[\s\S]*?\n\}/g) || [];
     if (blocks.length === 0) { console.log("NOVERDICT"); process.exit(0); }
-    const v = JSON.parse(blocks[blocks.length - 1]);
-    const bad = [...(v.failures || []), ...(v.skipped || [])];
-    console.log(v.ok && bad.length === 0 ? "OK" : "BAD " + bad.join("; "));
+    // **EVERY block, not the last one** (ISS-0051). Reading only the final
+    // verdict meant a failing one followed by any later object beginning "ok"
+    // exited 0 in silence — and parsing the JSON at all was because the exit
+    // code was not enough.
+    const bad = [];
+    let ok = true;
+    for (const block of blocks) {
+      let v;
+      try { v = JSON.parse(block); } catch { ok = false; bad.push("a verdict that will not parse"); continue; }
+      if (v.ok !== true) ok = false;
+      bad.push(...(v.failures || []), ...(v.skipped || []));
+    }
+    console.log(ok && bad.length === 0 ? "OK" : "BAD " + bad.join("; "));
   ' "$out")"
   if [ "$verdict" = "OK" ] && [ "$status" -eq 0 ]; then
     rm -f "$out"

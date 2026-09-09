@@ -49,6 +49,10 @@ Electron's binary and a display. `run-desktop-tests.sh` skips that download deli
 
 **It reads this repository's own notes**, so it depends on `ISS-0008` being at `triage` and `DES-0001` at `proposed`. Both dependencies fail loudly rather than passing quietly: a note with no verbs on it is a named failure.
 
-## Verdict
+## Where this test's verdict comes from
 
-Recorded by running it, not written here ([[project-os-cockpit#ADR-0025]] downstream: a test with a `command:` records no verdict on its note). `bash tools/scripts/run-smoke.sh both` exits 0 only when both configurations report `ok` with nothing failed and nothing skipped.
+**`bash tools/scripts/run-smoke.sh both`**, run by `run-tests.py` like every other executable test. It exits 0 only when both configurations report `ok` with nothing failed and nothing skipped, and it reads EVERY verdict block rather than the last, because a failing verdict followed by a passing one used to exit 0 in silence.
+
+**The script provisions what it needs, rather than refusing.** `run-tests.py` is invoked by two workflows with different environments, and the template-owned `validate-docs.yml` installs nothing — so giving this note a `command:` first turned that job red on every push ([[ISS-0049-The-Smoke-Test-Turns-The-Mandatory-CI-Job-Red]]). It now installs Electron's binary when only the package is there, which is what `run-desktop-tests.sh` leaves behind, and re-execs itself under `xvfb-run` on a Linux machine with no display.
+
+**The one assumption left.** `xvfb-run` has to exist on the runner. It is on GitHub's ubuntu images and on most desktop Linux; where it is not, this exits 127 saying so, `run-tests.py` calls that an environment gap locally and a failure in CI, and the fix is to install `xvfb`. `.github/workflows/deck-smoke.yml` installs it explicitly, so that job does not rest on the assumption.

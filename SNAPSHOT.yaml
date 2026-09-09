@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 48
+  ISS: 52
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -613,6 +613,46 @@ items:
       component: docs
       tests: []
       note: "Fourth review, 2026-09-09, findings 7 and 8-12. TST-0026 says 3,280 notes; today the script says 3,291, and most of the gap is the six ISS-004x notes filed one commit later — a number invalidated by the commit series recording it. ISS-0037 still states the rule ISS-0040 reversed. 'Twelve of twelve' is 18 of 18 in two places. ISS-0040's evidence says 1 red where it is 2. The DES-0001 block in check-write-round-trip.mjs posts a real transition with no revert. TST-0028's Adequacy carries two overlapping paragraphs. The cause has changed: this is a measurement of a moving thing written inside the commit that moves it."
+    ISS-0049:
+      file: "docs/issues/ISS-0049-The-Smoke-Test-Turns-The-Mandatory-CI-Job-Red.md"
+      title: "Naming the smoke run as a test put it in the gate that has no Electron, so the non-bypassable CI job now fails on every push"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Fifth review, 2026-09-09, finding 1. ISS-0044 gave TST-0037 a command:, so run-tests.py runs the smoke — and run-tests.py is what the template's validate-docs.yml runs, in a job with no Electron and no display. run-smoke.sh exits 127, run-tests.py fails the run on an unrunnable test when CI is set. Nothing caught it because this branch is 22 commits ahead of origin/main and no Actions run has happened. ISS-0044 reconciled whether the NEW job passes and said nothing about the old one."
+    ISS-0050:
+      file: "docs/issues/ISS-0050-Disabling-The-Button-Made-Two-Checks-Assert-Nothing.md"
+      title: "Disabling the button left the guard that stops the request with no check at all, and turned two smoke checks into assertions about a disabled button rather than about Deck"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Fifth review, 2026-09-09, finding 2. Deleting applyVerb's canPerform refusal leaves run-smoke.sh at exit 0 and npm test at 321/321. Because the button is now disabled, target.click() dispatches nothing, so 'pressing one asks nothing' and 'and sends nothing' assert a property of <button disabled> and would hold on any page. ISS-0044's own headline reintroduced by the commit that closed it."
+    ISS-0051:
+      file: "docs/issues/ISS-0051-Three-Checks-That-Can-No-Longer-Fail.md"
+      title: "Three checks cannot fail any more: one reads the working tree after reverting it, one takes the last verdict when an earlier one failed, and one asks a date question that a list-valued date answers wrongly"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "Fifth review, 2026-09-09, findings 3, 4 and 5. ISS-0048's finally{git checkout} runs before the assertion that reads git status, so appending to DES-0001 still gives 'changed no file' and 18/18. run-smoke.sh reads the LAST {"ok": block, so a failing verdict followed by any later ok-first object exits 0 silently. DATED_AHEAD.stillTrue keeps only string dates and slices 10 chars: a list-valued or non-ISO due: expires nothing, and a list-valued field is exactly cockpit ISS-0279's shape."
+    ISS-0052:
+      file: "docs/issues/ISS-0052-A-Fourth-Round-Of-Numbers-That-Do-Not-Reproduce.md"
+      title: "A fourth consecutive round of numbers that do not reproduce, including the count written to replace the last one, so the rule changes from re-run it to do not write it"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: docs
+      tests: []
+      note: "Fifth review, 2026-09-09, finding 6. TST-0026's corrected 201/2,704/386 is 207/2,705/386 today, off by the six notes that commit added — a pre-commit count in a post-commit note, twice running. records.ts says 3,351 where HEAD gives 3,358. Three mutation counts say 2 or 3 where a re-run gives 4. TST-0028's step table has two rows numbered 7. Three rules have each been followed and failed; the new one is to stop writing corpus counts at all."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"
@@ -1349,7 +1389,7 @@ metrics:
     tests_total: 24
     tests_passing: 0
     tests_failing: 0
-    issues_open: 0
+    issues_open: 4
     issues_triage: 1
     risks_open: 0
     releases_total: 0

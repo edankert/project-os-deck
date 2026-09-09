@@ -225,3 +225,93 @@ A design verdict is drawn exactly like a working verb, full opacity and a pointe
 - The interception is real, and the probe that proves it is the right shape. I could find no second write channel the check drives: `applyVerb` is the only caller of `host.write('transition')`, and nothing in the run touches a tick control.
 - **Both of the run's dependencies on this repository's own state fail loudly, not quietly.** Setting `ISS-0008` to `open` gives `"failures": ["ISS-0008 opened in the reader with verbs on it, so this measures something"]`; setting `DES-0001` to `accepted` gives the equivalent for the design half. (The first message is slightly wrong — `openTheNote` computes `found` and discards it, so a row that is missing from the navigator reports as "no verbs".) Both reverted with `git checkout`; tree clean.
 - `check-write-round-trip.mjs` 18/18 with a clean tree after; `npm run smoke` and `npm run smoke:lan` both `ok: true`, the LAN run with nothing skipped and nothing not-applicable; `npm test` 320/0; `run-tests.py` 23/0; `validate-docs.sh --as-committed` says HEAD passes the full CI step set.
+
+## Independent review — 2026-09-09 (fifth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. What is independent here is the context, not the weights.
+
+The fourth round's twelve findings are, in substance, discharged: I reproduced every corrected statement about the digest and the git timestamps, and five of the eight mutations I drove died naming the right check. Two new defects are worse than anything the fourth round found, and one of them is a direct consequence of the fix for ISS-0045.
+
+**Finding 1 (high): this commit turns the repository's mandatory CI job red on every push, and it has never been pushed.**
+
+`.github/workflows/validate-docs.yml` — the job its own header calls the "non-bypassable backstop" — runs `python3 tools/scripts/run-tests.py`. That job installs no Electron binary and has no display, because `run-desktop-tests.sh` sets `ELECTRON_SKIP_BINARY_DOWNLOAD=1` on purpose. [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]] now puts `bash tools/scripts/run-smoke.sh both` into that run, and `run-smoke.sh` exits 127 on a machine with neither. `run-tests.py` fails the whole run on an unrunnable test when `CI` is set — which GitHub always sets. The new `deck-smoke.yml` job gives Electron and a screen to *itself*; it gives nothing to `validate-docs`.
+
+Reproduced by hiding the Electron binary's path file and running the two halves:
+
+```
+mv desktop/node_modules/electron/path.txt desktop/node_modules/electron/path.txt.hidden
+bash tools/scripts/run-smoke.sh loopback
+  run-smoke: Electron's binary is not installed here; the smoke run needs it and a display
+  run-smoke EXIT=127
+CI=true python3 tools/scripts/run-tests.py --filter TST-0037
+  TST-0037     unrunnable bash tools/scripts/run-smoke.sh both
+  passing=0 failing=0 unrunnable=1
+  run-tests EXIT=1          <- validate-docs goes red
+python3 tools/scripts/run-tests.py --filter TST-0037
+  run-tests EXIT=0          <- which is why nothing noticed locally
+```
+
+`git status -sb` says `main...origin/main [ahead 22]`, so no Actions run has happened and the notes' "the first push settles it" is still true — but what the first push settles is not the question ISS-0044 asked. ISS-0044's `[~]` criterion reconciles *whether the new job passes*. It says nothing about the old job failing, and that is the outcome the code produces. Either `validate-docs.yml` has to skip this one test (it is template-owned, so that decision belongs upstream in `../project-os`), or `run-smoke.sh` has to distinguish "CI that was meant to run me" from "CI that was not", or `PROJECT_OS_ALLOW_UNRUNNABLE` has to be set for that job.
+
+**Finding 2 (high): the fix for ISS-0045 left the guard that stops the request with no gate at all, and the smoke checks that used to measure it are now vacuous.**
+
+ISS-0045's close-out says "`applyVerb`'s guard stays as well: two layers, because the drawn state is what a person reads and the guard is what stops a request." Only the first layer is measured. Deleting the second entirely leaves everything green:
+
+```
+# desktop/src/renderer/renderer.ts, applyVerb: delete
+#   if (!canPerform(row)) { say(elsewhere(row), true); return; }
+bash tools/scripts/run-smoke.sh loopback   -> EXIT=0
+cd desktop && npm test                     -> tests 321  pass 321  fail 0
+```
+
+The mechanism is the fix itself. Before it, the button was clickable, so `target.click()` reached `applyVerb` and the two checks *"pressing one asks nothing"* and *"and sends nothing"* really did exercise the refusal. Now `button.disabled` is true, a click on a disabled button dispatches nothing, and those two checks pass because the browser swallowed the event. They assert a property of `<button disabled>`, not a property of Deck. This is ISS-0044's own headline — a guard nothing runs — reintroduced by the commit that closed it.
+
+**Finding 3 (medium): `check-write-round-trip.mjs`'s "that refusal changed no file" can no longer fail, because ISS-0048's revert runs first.**
+
+The `finally { git('checkout', '--', rel) }` added to the DES-0001 block restores the note before `record(git('status','--short','docs').trim() === '', 'and that refusal changed no file')` reads the tree. Driven by replacing the transition with a real append to the note:
+
+```
+# in the DES-0001 block, instead of client.transition(...):
+#   fs.appendFileSync(path.join(REPO, rel), '\nA WRITE THAT SHOULD HAVE BEEN REFUSED\n');
+node tools/scripts/check-write-round-trip.mjs
+  ok    and posting it as a transition really is refused, in those words
+  ok    and that refusal changed no file        <- the file WAS changed
+  18 of 18 passed
+```
+
+The revert was the right instinct; the ordering is wrong. Read `git status --short docs` inside the `try`, before reverting, and assert on that captured value. The sibling block at `ISS-0008` (the stale-mtime refusal) has no revert and its identical assertion is still live, so the two now disagree about what they measure.
+
+**Finding 4 (medium): `run-smoke.sh` reads the LAST `{"ok": ...}` block in the output, so a second one masks a real failing verdict.**
+
+The extraction is `text.match(/\{\s*"ok":[\s\S]*?\n\}/g)` followed by `blocks[blocks.length - 1]`. Fed a run that prints a true failing verdict and then any later object with `ok` as its first key, and exits 0:
+
+```
+# desktop/package.json scripts.smoke replaced with a node one-liner that prints
+#   {"ok":false,"failures":["a real failure"],...} then {"ok":true,"failures":[]} and exits 0
+bash tools/scripts/run-smoke.sh loopback   -> EXIT=0, no output
+```
+
+Today only the exit-code half saves it, and the script's own comment says the exit code is not the verdict. Two other shapes I fed it behave correctly and are worth recording as negative results: a crash with no verdict at all reports `the run printed no verdict` and exits 1 even when the process exited 0, and a verdict written only to stderr is read fine because the runner redirects `2>&1`. Take the FIRST matching block, or refuse when there is more than one.
+
+**Finding 5 (low): three of the six mutation counts in these notes do not reproduce.** Measured, one mutation at a time, each through `bash tools/scripts/run-smoke.sh loopback`:
+
+| mutation | the note's number | measured |
+| --- | --- | --- |
+| the CSP meta tag deleted | 2 (ISS-0044) | 2 |
+| the CSP kept but permitting inline script | "the driven half" (TST-0037) | 1 |
+| the reason box back inside the confirmation | 2 (ISS-0044, ISS-0048) | 2 |
+| the dead verb not disabled | 1 (ISS-0044, ISS-0045) | 1 |
+| a verb Deck cannot perform offered anyway | 2 (ISS-0044) | **4** |
+| `canPerform` returning true for every row | 3 (TST-0037 `adequacy`) | **4** |
+| every row hard-wired to `data-confirm: true` | 2 (ISS-0044, ISS-0045) | **4** |
+| `applyVerb`'s `canPerform` guard deleted | claimed as a live second layer | **0 — survives** |
+
+The last row is finding 2. The three that are merely off are the fourth consecutive round in which a number written into a close-out does not reproduce.
+
+**What I attacked and could not break.**
+
+- The three guards themselves are real and the smoke run names them accurately. Every failure message printed the check by name and the row's drawn state, which is what makes them actionable.
+- `run-tests.py` runs 24 of 24, TST-0037 included, so the smoke genuinely runs in that gate locally. `npm test` is 321/321. `check-write-round-trip.mjs` is 18 of 18 and leaves `working tree after: ""`. `validate-docs.sh --as-committed` exits 0.
+- The write path is never reached by the smoke: the interception probe fires before any control is pressed, and `git status` was clean after every run I made.
+- The Electron-presence test in `run-smoke.sh` reads as a confusing `||`/`&&` chain, and I could not make it wrong: `(require fails || no dist) && the resolved path is missing` is false whenever the binary is genuinely there and true in each of the three ways it can be absent.
+- The 127 story holds where the notes claim it: unrunnable locally, red in CI. Finding 1 is that the red lands on the wrong job.

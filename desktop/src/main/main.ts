@@ -1182,8 +1182,36 @@ async function recordEveryVerbAsksWhy(
         seen.drawn.every((row) => /revision/i.test(row.title) && /cockpit/i.test(row.title)),
         'and each one says the verdict must name a revision and belongs in the cockpit',
       );
-      record(seen.asked === 0, 'pressing one asks nothing, because Deck cannot record the verdict');
-      record(sent.length === before, 'and sends nothing');
+      // **The guard is driven, not inferred from the button** (ISS-0050).
+      // Clicking a disabled button dispatches nothing, so "it asked nothing"
+      // and "it sent nothing" were true of `<button disabled>` and would hold
+      // on any page at all — while deleting `applyVerb`'s refusal, the layer
+      // that actually stops the request, changed nothing any check could see.
+      // Re-enabling the button in the page and pressing it asks Deck the
+      // question instead of asking the DOM.
+      const forced = (await other.webContents.executeJavaScript(`
+        (async () => {
+          const sent = [];
+          const button = document.querySelector('#actuators button.verb');
+          if (button === null) return {ran: false};
+          button.disabled = false;
+          button.click();
+          await new Promise((r) => setTimeout(r, 400));
+          const form = document.querySelector('#status form');
+          return {
+            ran: true,
+            askedAnything: form !== null,
+            said: (document.querySelector('#status') || {}).textContent || '',
+          };
+        })()
+      `)) as { ran: boolean; askedAnything?: boolean; said?: string };
+      record(forced.ran, 'the refusal inside applyVerb could be driven');
+      record(forced.askedAnything === false, 'pressing it asks nothing, because Deck cannot record the verdict');
+      record(sent.length === before, 'and sends nothing — with the button forced back on, so this is about Deck');
+      record(
+        /revision/i.test(forced.said ?? '') && /cockpit/i.test(forced.said ?? ''),
+        'and Deck says the verdict must name a revision and belongs in the cockpit',
+      );
     }
   } finally {
     other.destroy();

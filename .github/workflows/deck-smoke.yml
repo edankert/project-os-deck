@@ -41,8 +41,13 @@ jobs:
         run: |
           git clone --depth 1             "https://${{ secrets.COCKPIT_TOKEN || github.token }}@github.com/${{ github.repository_owner }}/project-os-cockpit.git"             ../project-os-cockpit
           python3 -m pip install --quiet -e ../project-os-cockpit
-      - name: Run the smoke checks under a virtual screen
+      - name: A screen for the windows to open on
+        # `run-smoke.sh` re-execs itself under `xvfb-run` when it finds no
+        # display, so this job's only job is to make sure `xvfb-run` is there.
+        # Installing it explicitly is what keeps this job off the one
+        # assumption TST-0037 records — that the runner image already has it.
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
-          xvfb-run --auto-servernum bash tools/scripts/run-smoke.sh both
+      - name: The renderer guards, in a real window
+        run: bash tools/scripts/run-smoke.sh both
