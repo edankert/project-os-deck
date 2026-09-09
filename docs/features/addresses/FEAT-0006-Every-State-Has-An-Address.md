@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0006
 aliases: ["FEAT-0006"]
 title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-status: review
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
@@ -53,7 +53,13 @@ Any state a person can reach in Deck can be written down as a short string, and 
 
 ## Where this stands
 
-**2026-09-09: the task is done and the feature is at `review`, waiting on a review and nothing else.** [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]] landed. An address now carries `surface`, `page`, `flow` and `step` beside the five it had, each refusing a value it does not know by name. The panel kinds come from a registry (`desktop/src/shared/registry.ts`) that a phase adds to, so the guarantee is unchanged — an address cannot name something Deck cannot draw — and the direction is reversed: whoever builds a kind registers it, rather than editing a list in the parser.
+**2026-09-09: done.** All three tasks are `done`, the independent review of that day returned `approved` with no findings against this feature, and its acceptance walk stands.
+
+**Why the walk's pass survives [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]], which is a question worth answering rather than assuming.** [[TST-0013-An-Address-Survives-Being-Written-Down]] was walked on 2026-09-06 and marked `pass` in the release ledger — before the grammar gained four keys. This repository invalidated two other passes on 2026-09-08 for exactly that shape of reason, so the burden is on keeping this one.
+
+It stands because what the walk asked is what [[TST-0034-The-Grammar-Carries-The-New-Keys-And-The-Panel-Registry-Refuses-Strangers]] proves. A person copied an address and pasted it back; the suite asserts the six states round-trip to the same states, that the WRITTEN FORM of an address with none of the new keys is byte-for-byte what it was, and that the twelve malformed addresses are still refused — all over the same table, moved into one file so the two suites cannot drift into two tables. There is no address a person could have copied before 2026-09-08 that behaves differently now, and that is a measurement rather than a claim.
+
+**2026-09-09, earlier: the task was done and the feature was at `review`, waiting on a review and nothing else.** [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]] landed. An address now carries `surface`, `page`, `flow` and `step` beside the five it had, each refusing a value it does not know by name. The panel kinds come from a registry (`desktop/src/shared/registry.ts`) that a phase adds to, so the guarantee is unchanged — an address cannot name something Deck cannot draw — and the direction is reversed: whoever builds a kind registers it, rather than editing a list in the parser.
 
 Two of the four vocabularies are deliberately empty. Deck draws no page and runs no flow, so `?page=release` is refused today and parses the day something draws one. The refusal says "no page is registered", which is the state of the program rather than a list somebody forgot to fill in.
 

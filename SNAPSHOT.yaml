@@ -117,7 +117,7 @@ items:
     FEAT-0006:
       file: "docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md"
       title: "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -1161,7 +1161,7 @@ items:
 metrics:
   counts:
     features_total: 13
-    features_done: 2
+    features_done: 3
     phases_total: 4
     phases_done: 0
     tasks_total: 52
