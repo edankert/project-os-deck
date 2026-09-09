@@ -67,16 +67,22 @@ export interface NoteRecord {
   status: string | null;
   aliases: string[];
   /**
-   * A digest of everything this record holds, for telling a rebuild that found
-   * a change from one that found none.
+   * A digest of the FILE, for telling a rebuild that found a change from one
+   * that found none.
    *
-   * The modification time is not enough. `git checkout`, `git stash pop`, a
-   * restore from a backup and `rsync --times` all put content back under a
-   * timestamp that is not now, and the index then stored the new content and
-   * raised no revision — so every window kept a stale picture it believed was
-   * current (ISS-0041). Computed once while the note is being parsed, so
-   * comparing is a string comparison per note rather than a walk of every
-   * frontmatter value.
+   * The modification time is not enough. `rsync --times`, `cp -p` and a
+   * restore from a backup all put content back under a timestamp that is not
+   * now, and the index then stored the new content and raised no revision — so
+   * every window kept a stale picture it believed was current (ISS-0041).
+   * (`git checkout` and `git stash` do NOT: both set the time to now. The list
+   * of causes in ISS-0041 was wrong about that and is corrected there.)
+   *
+   * **The whole text, not the frontmatter.** The first version hashed the
+   * frontmatter and the title, which left one hole: Deck also shows the
+   * rendered BODY, so a body edit under a preserved timestamp changed what a
+   * person reads and told no window it was stale (ISS-0047). Hashing the file
+   * costs 12ms across Your Trainer's 2,726 notes and 9MB, on a full rebuild
+   * only, which is not worth a caveat.
    */
   digest: string;
 }
@@ -172,21 +178,21 @@ export function recordFrom(
     types: normaliseTypes(fm['type']),
     status: normaliseStatus(fm['status']),
     aliases: stringList(fm['aliases']),
-    digest: digestOf(fm, declaredTitle ?? firstHeading(parsed.body)),
+    digest: digestOf(text),
   };
   return { record, problems: parsed.problems.map((p) => toProblem(relPath, p)) };
 }
 
 /**
- * A short digest of the frontmatter and the title.
+ * A short digest of a note's whole text.
  *
- * Those two ARE the record: everything else on it is derived from them, and a
- * change to the body that does not move the first heading changes nothing Deck
- * can show. FNV-1a because it is four lines and this runs once per note per
- * rebuild; the question is "did this change", not "is this authentic".
+ * FNV-1a because it is four lines and this runs once per note per rebuild; the
+ * question is "did this change", not "is this authentic". The length is
+ * appended, which makes a collision between two files of different sizes
+ * impossible and one between same-sized files vanishingly unlikely — measured
+ * over 3,351 notes in three corpora, no two different files collide.
  */
-function digestOf(frontmatter: Record<string, unknown>, title: string | null): string {
-  const text = `${JSON.stringify(frontmatter)}\u0000${title ?? ''}`;
+function digestOf(text: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {
     hash ^= text.charCodeAt(i);

@@ -74,13 +74,9 @@ Deck runs from this repository; there is no installed application yet.
 
 It closes the exact gap this note's Adequacy section names. `TST-0029` measures Deck against a fixture recorded from the sidecar, and a recording cannot notice that the sidecar itself moved. This imports the cockpit's indexer as it stands this minute, so a change over there shows up here the same day.
 
-**On 2026-09-09: 3,280 notes across three corpora, and not one type where the two programs disagree.**
+**The claim that carries weight is the shape, not the size: across three corpora there is no note the two programs read as different types, and no type whose totals differ.**
 
-| corpus | notes | result |
-| --- | --- | --- |
-| project-os-deck | 195 | every type equal |
-| your-trainer | 2,699 | every type equal |
-| `~/Notes` | 386 | every type equal |
+The size moves. A run on 2026-09-09 compared 3,291 notes — 201 here, 2,704 in Your Trainer, 386 in `~/Notes`. An earlier run the same day said 3,280, and the difference is mostly the six issue notes filed by the commit that recorded the number: a count of this repository written into this repository is a measurement of a moving thing ([[ISS-0048-Six-More-Statements-In-The-Notes-Do-Not-Reproduce]]). Run the script for today's figure; it prints all of them.
 
 Three things it had to get right before the comparison meant anything, each found by the comparison failing:
 

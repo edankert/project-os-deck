@@ -165,3 +165,43 @@ All 46 views then draw all 407 notes and the script is green. The suite catches 
 - `pathPrefixFor` returning `''`, which is [[ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded]]'s own mutation: two checks red, exactly the number the issue claims.
 - The vault's own numbers reproduce: 46 views, 19 base files, 0 failures, Characters 10, Chapters 2, Locations 8, Pages 0 with `this.` named as the reason.
 - [[ISS-0033-Haslink-Answers-From-Frontmatter-And-Does-Not-Say-So]]'s report is present and worded as the note says (`desktop/src/shared/expression.ts:570-571`).
+
+## Independent review — 2026-09-09 (fourth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. Every number TST-0027 now quotes reproduces, which is [[ISS-0043-Three-Numbers-Written-The-Day-ISS-0036-Closed-Do-Not-Reproduce]] properly closed. The findings are that the third pass's Finding 1 is narrowed rather than closed, and that its Finding 4 was dropped without a note while the thing it was about grew.
+
+**Finding 1 (medium): an empty view is still excused by a report about something else — the word "filter" only has to appear in a name a vault author chose.**
+
+The rule is `/filter/i.test(one.where ?? '')`, and `where` for a description-level formula is `source.formulas.<the author's name for it>`. Two base files identical but for that name, in a throwaway vault holding one note:
+
+```yaml
+formulas:
+  filterHelper: "%%%"          # nothing to do with the view's filter
+views:
+  - type: table
+    name: Nothing Here
+    filters: {and: ['title == "no such title anywhere"']}
+```
+
+```
+node tools/scripts/check-bases-live.mjs <vault>
+  view "Nothing Here": 0 note(s)
+      says: %%% — "%" has no meaning here (at character 0)
+  1 view(s) selected nothing: 1 explained by their own filter, 0 unexplained
+  0 failure(s)                                                    (exit 0)
+
+# rename filterHelper -> plainHelper. Same file, same complaint, same emptiness:
+  1 view(s) selected nothing: 0 explained by their own filter, 1 unexplained
+  FAIL probe.base / Nothing Here: selects NOTHING and names nothing about its own filter
+  1 failure(s)                                                    (exit 1)
+```
+
+That is [[ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-Is-Wrong]]'s own defect — "excused by a `%` in an unrelated formula" — surviving its own fix, because a substring test over an author-controlled string is not a test of what the refusal is about. It is latent rather than live: I instrumented the script over `~/Notes` and all 16 excuses today come from genuine `source.filter...` locations. The fix is small — the refusal already carries a structured `where`, so match the *prefix* `source.filter` rather than the substring `filter`.
+
+**Finding 2 (medium): the third pass's Finding 4 — "`KNOWN_EMPTY` never expires and its own comment says it should" — is in no `ISS-*`, and the list grew from three rows to five while nobody owned it.** ISS-0042 was filed for findings 4, 5 and 6 of that pass and ISS-0043 for finding 8; none of them carries this. Its own comment still says "Re-check a row when the vault's data moves" and nothing enforces it, so a real defect that empties `Today's Tasks` is excused permanently by name. [[ISS-0041-A-Change-That-Leaves-The-Modification-Time-Alone-Raises-No-Revision]] exists precisely because a reproduced finding with no note is a finding nobody owns, and this is the next one. The stated reason for all five rows does reproduce today — the latest `due:` or `scheduled:` anywhere in `~/Notes` is 2026-03-17, six months behind.
+
+**What I attacked and could not break.**
+
+- Every number in TST-0027's new section reproduces from the script's own output: 19 base files, 46 views, 21 empty (16 explained by their filter, 5 by hand, 0 unexplained), 14 views that draw a list and say nothing, `Novel Base.base` Characters 10 / Chapters 2 / Locations 8 with Pages naming `this.`, and `Novel Base - Side Bar.base` with **six** views and six explanations. ISS-0043 is properly closed.
+- The step-8 limit is stated honestly rather than papered over, and it is the right thing to have written down.
+- `npm test` 320/0, `run-tests.py` `passing=23 failing=0`, `validate-docs.sh --as-committed` OK, `check-bases-live.mjs` 0 failures over 46 views.

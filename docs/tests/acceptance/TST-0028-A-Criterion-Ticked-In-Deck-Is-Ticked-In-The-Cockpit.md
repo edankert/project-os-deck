@@ -76,7 +76,7 @@ Deck writes for the first time. [[ADR-0003-Deck-Writes-Through-The-Shell]] decid
 
 ## Steps 1 to 9 are now measured, and steps 10 and 11 are not
 
-**Run `node tools/scripts/check-write-round-trip.mjs` before walking this.** It drives Deck's write channel against the running sidecar and asks the sidecar what the cockpit would show, which settles most of what a person was going to squint at. Twelve checks, twelve passing on 2026-09-09.
+**Run `node tools/scripts/check-write-round-trip.mjs` before walking this.** It drives Deck's write channel against the running sidecar and asks the sidecar what the cockpit would show, which settles most of what a person was going to squint at. Eighteen checks, eighteen passing on 2026-09-09.
 
 It can settle them because Deck and the cockpit are not two readers of one file — they are two surfaces over ONE sidecar. "What the cockpit shows" is what `/api/render` returns, so asking the sidecar *is* asking the cockpit, and the answer is a string a check can read instead of a screen a person has to compare.
 
@@ -88,6 +88,7 @@ What the script measures, against notes in this repository, reverting every chan
 | 4 | the sidecar's render of that note changes and shows the box ticked, with nothing reloaded and nothing restarted |
 | 7 | Deck's verbs are the sidecar's rows, in order, with the same `confirm` flags — checked on a note that HAS verbs, and failing if it turns out to have none |
 | 8 | the transition moves the status, the reason Deck sent is under `## Decision record`, and the severity is in the frontmatter |
+| 7 | on a note whose verbs Deck CANNOT perform — a proposed design — that the rows name their own endpoint, that Deck says it cannot perform them, and that posting one as a transition really is refused |
 | — | a write carrying a stale modification time is refused, and changes no file |
 
 **The script found a real defect the first time it ran**, which is the argument for having written it: [[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]]. A decision made in Deck moved the status and recorded no grounds, because the field carrying them was dropped between the renderer and the shell. Nine months of walking this test by eye would not have caught it, because the walk's own expected result — "appends the decision callout" — is exactly what a person confirms by seeing a status change.
@@ -103,6 +104,6 @@ What the script measures, against notes in this repository, reverting every chan
 
 ## Adequacy (who verifies this test?)
 
-A person, for the tablet and the gestures. The rest is measured — see the section above.
+A person, for the tablet and the gestures; everything else is measured, and the section above says which is which.
 
-A person for the tablet, because the claim spans two applications, a file on disk and a second device. The automated half is [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]], which proves the channel against a fake sidecar and asserts the capability is false when served; it cannot prove that a real tablet shows nothing, and that is the part of [[ADR-0003-Deck-Writes-Through-The-Shell]] Edwin decided on.
+The automated halves are [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]], which proves the channel against a fake sidecar and asserts the capability is false when served, and [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]], which presses the controls in a real Electron window. Neither can prove that a real tablet shows nothing, and that is the part of [[ADR-0003-Deck-Writes-Through-The-Shell]] Edwin decided on.

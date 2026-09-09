@@ -157,3 +157,52 @@ onChange fired at: [1]
 - Ignoring the chomping indicator in `yaml.ts`: one check red, exactly as [[ISS-0035-Two-New-Block-Scalar-Misreads]] claims.
 - Rotating every note's types by one position across the whole walk — a permutation, which leaves per-type totals nearly intact — is caught: 18 disagreements across the three corpora, in all three.
 - `check-counts-live.py` itself reproduces its written result: 3 corpora, 0 disagreements, 195 + 2,699 + 386 = 3,280 notes, 92 of the vault's 386 with a list-valued `type:`. Every number in TST-0026's new section reproduces.
+
+## Independent review — 2026-09-09 (fourth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. Both of the third pass's findings against this feature are genuinely discharged and every mutation I tried was killed. The findings are that [[ISS-0041-A-Change-That-Leaves-The-Modification-Time-Alone-Raises-No-Revision]]'s written justification does not survive being run, and that TST-0026's headline numbers were stale within the hour.
+
+**Finding 1 (medium): three of the four things ISS-0041 says the digest fixes are not fixed, and one of them is not a real scenario.**
+
+`sameRecords` and the one-file path both compute `moved = mtime differs || digest differs`. Every save moves the modification time, so the digest can only ever *add* changes, never suppress one. Driven against the built `NoteIndex` on a temporary vault:
+
+```
+after build:                                   revision 1
+1) identical bytes rewritten (mtime moved):    revision 2   <- the "save that wrote the same bytes"
+2) identical bytes, full rebuild:              revision 3
+3) touch only, no content change at all:       revision 4
+4) BODY-only change, mtime preserved:          revision 4   <- unchanged, on both routes
+5) frontmatter change, mtime preserved:        revision 5   <- the fix working
+```
+
+So the sentence at `note-index.ts` in `settle()` — "a save that wrote the same bytes, and an editor's atomic write, told every window its picture was old" — describes a benefit the fix does not deliver, and ISS-0041's Fixed section repeats it. Line 3 is worse: `touch` alone still marks every window stale, which is the same complaint [[ISS-0030-A-Non-Markdown-Change-Rebuilds-The-Index]] was filed about.
+
+And the motivating list is half wrong. ISS-0041 says "`git checkout`, `git stash pop`, a restore from a backup and `rsync --times` all put content back under a timestamp that is not now", and both docstrings repeat it. Git does not:
+
+```
+git commit; sleep; echo two > f.md; git checkout -- f.md
+  mtime after checkout 1788972806 = now 1788972806
+```
+
+`rsync --times`, `cp -p`, `tar -p` and a restore do preserve it. Two of the four named examples are the two a reader would recognise, and neither one occurs.
+
+**Finding 2 (medium): the digest covers the frontmatter and the title, and ISS-0041 says it is "exact for everything Deck can show".** Deck shows the note's rendered body in the reader. Line 4 above is a body-only change under a preserved timestamp: the record is updated, no revision rises, and [[TASK-0051-The-Changed-Under-You-Mark]]'s banner — "These notes changed on disk since this window drew them" — does not appear, which is ISS-0041's own problem statement on the half the digest does not reach. Narrow, because only a timestamp-preserving restore gets there; but the claim is written wider than the code, which is the shape three reviews have now found.
+
+**Finding 3 (low): TST-0026's headline numbers do not reproduce, and the commit that closed [[ISS-0043-Three-Numbers-Written-The-Day-ISS-0036-Closed-Do-Not-Reproduce]] is what broke them.**
+
+```
+../project-os-cockpit/.venv/bin/python3 tools/scripts/check-counts-live.py
+  project-os-deck: 201 notes ...    (the note's table says 195)
+  your-trainer:   2704 notes ...    (the note's table says 2,699)
+  vault:           386 notes ...    (386, correct)
+  3 corpus(es) compared, 0 disagreement(s)
+```
+
+201 + 2,704 + 386 = 3,291, not the 3,280 in the heading — on the same day the heading is dated. The six `ISS-004x` notes filed one commit later are most of the difference. This is [[ISS-0036-Six-Numbers-In-The-Close-Out-Notes-Do-Not-Reproduce]] a fourth time, and the answer ISS-0043 already wrote down applies: quote the script's line, or name the commit it was run at, rather than freezing a count of a growing corpus into prose.
+
+**What I attacked and could not break.**
+
+- ISS-0041's four claimed mutations reproduce **exactly**: rebuild comparison dropping the digest (1 red), one-file path assuming a change (1), a constant digest (2), a rebuild that always raises (2). `npm test` 320/0 clean.
+- The digest itself is sound. Over 3,351 notes in three corpora — 220 here, 2,724 in Your Trainer, 407 in `~/Notes` — there is **not one collision between different frontmatter-plus-title**, and two walks of the same tree produce identical digests, so nothing depends on map ordering or a clock.
+- `check-counts-live.py`'s zero-note guard reproduces its stated number: `isTemplate` returning true for everything gives **3 failures, one per corpus**, exactly as [[ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-Is-Wrong]] claims. A single note's type swapped inside `recordFrom` prints the contradiction with the path and both readings, plus the two type totals.
+- [[ISS-0034-The-Sidecar-Comparison-Compares-No-Values]]'s third Next Action is answered with a measurement, not a wave.

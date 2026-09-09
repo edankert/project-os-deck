@@ -787,7 +787,12 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
     // at `proposed` really does owe somebody a decision, so removing the row
     // would say it does not; pressing it says where the decision is recorded
     // (ISS-0039).
-    button.disabled = row.disabled;
+    // **Disabled, not merely titled** (ISS-0045). ISS-0039's close-out said a
+    // verb Deck cannot perform was "drawn unavailable"; it was drawn with a
+    // tooltip and was otherwise a working button — same colour, same cursor,
+    // `disabled: false` — so a person found out by pressing it. `deck.css`
+    // greys `:disabled`, and this is what makes it apply.
+    button.disabled = row.disabled || !canPerform(row);
     const why = canPerform(row) ? row.reason : elsewhere(row);
     if (why !== '') button.title = why;
     button.addEventListener('click', () => {

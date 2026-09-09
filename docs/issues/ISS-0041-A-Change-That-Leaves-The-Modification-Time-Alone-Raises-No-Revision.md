@@ -24,7 +24,7 @@ tests: ["[[TST-0029-The-Index-Reads-What-Is-On-Disk]]"]
 
 The review drove it with an `io` whose timestamps are frozen: a note's `status` moved from `triage` to `fixed`, the index's `revision` stayed at 1, and `onChange` fired once for the file event and never for the content. Every window is then showing the old status and has no reason to ask again.
 
-It is not a hypothetical timestamp. `git checkout`, `git stash pop`, a restore from a backup and `rsync --times` all put content back under a timestamp that is not now.
+It is not a hypothetical timestamp: `rsync --times`, `cp -p` and a restore from a backup all put content back under a timestamp that is not now.
 
 ## Why it was not fixed the first time
 
@@ -48,8 +48,18 @@ Give each record a digest of what Deck actually holds — its frontmatter and it
 
 **Each record carries a digest of what Deck holds** — its frontmatter and its title, hashed once while the note is parsed. `sameRecords` compares the path, the modification time and that digest, so a change under a preserved timestamp is a change. It is a string comparison per note, not the walk of every frontmatter value the original comment was written to avoid.
 
-**A second defect came out of fixing this one, on the other route.** The index has two: a full rebuild, and a re-read of the one file a watcher named. The one-file path set `changed = true` for every event it was handed, without comparing anything — so an editor's atomic write, which arrives as more than one event, told every window its picture was old. That is [[ISS-0030-A-Non-Markdown-Change-Rebuilds-The-Index]]'s complaint on a route ISS-0030's fix never reached. Both paths now compare.
+**A second defect came out of fixing this one, on the other route.** The index has two: a full rebuild, and a re-read of the one file a watcher named. The one-file path set `changed = true` for every event it was handed, without comparing anything — so a second event for a file that had not moved since the first told every window its picture was old. That is [[ISS-0030-A-Non-Markdown-Change-Rebuilds-The-Index]]'s complaint on a route ISS-0030's fix never reached. Both paths now compare.
 
 **And the first check written for this was on the wrong route.** `noticed('a.md')` takes the one-file path, so reverting the rebuild path's digest comparison went red nowhere. Four checks now, one per route per direction.
 
 **Evidence.** Four mutations, four killed: the rebuild comparison dropping the digest (1 red), the one-file path assuming a change (1), a constant digest (2), and a rebuild that always raises (2).
+
+## Two corrections and a widening, 2026-09-09
+
+The fourth review drove this rather than reading it, and three sentences above did not survive ([[ISS-0047-The-Digest-Note-Claims-More-Than-The-Digest-Does]]).
+
+**`git checkout` and `git stash` do not preserve a modification time.** Both set it to now, measured. The causes that really preserve one are `rsync --times`, `cp -p` and a restore from a backup, and the list above is corrected. The defect is real and fires less often than this note first claimed.
+
+**The comparison can only add changes, never subtract one.** An earlier version of this close-out said the one-file fix stops "a save that wrote the same bytes" raising a revision. It does not: `moved` is an OR over the time and the digest, and rewriting a file moves the time. What the one-file fix stops is a second event for a file that has not moved since the first — which is what an editor's atomic write produces, and which is why the fix is worth having, but it is a smaller claim.
+
+**And the digest now covers the whole file, not the frontmatter and title.** That was the third correction: Deck shows the rendered body, so a prose edit under a preserved timestamp changed what a person reads and told no window it was stale. Hashing the file instead costs 12 milliseconds across Your Trainer's 2,726 notes and 9MB, on a full rebuild only. Two more checks drive it, one per route.

@@ -497,6 +497,32 @@ test('a change that leaves the modification time alone still raises the revision
   index.close();
 });
 
+test('a BODY change under an unchanged modification time raises the revision', () => {
+  // The hole the first digest left (ISS-0047). It hashed the frontmatter and
+  // the title, and Deck also shows the rendered body — so editing prose under
+  // a preserved timestamp changed what a person reads and told no window it
+  // was stale. The digest is over the whole file now.
+  const root = tempWorkspace();
+  const nodeIo = load('main/note-index.js').nodeIo;
+  const frozen = { readDir: nodeIo.readDir, readFile: nodeIo.readFile, mtimeMs: () => 1_757_000_000_000 };
+  const index = new NoteIndex({ workspaceId: 'w', docsRoot: root, io: frozen, quietMs: 0 });
+  index.build();
+  const first = index.snapshot().revision;
+
+  // Same frontmatter, same first heading, different prose.
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: open\n---\n# A\n\nThis paragraph is new.\n');
+  index.noticed('a.md');
+  index.settle();
+  assert.ok(index.snapshot().revision > first, 'a body edit under a frozen timestamp told nobody');
+
+  const second = index.snapshot().revision;
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: open\n---\n# A\n\nAnd this replaces it.\n');
+  index.noticed(null);
+  index.settle();
+  assert.ok(index.snapshot().revision > second, 'the same, on the full-rebuild route');
+  index.close();
+});
+
 test('a FULL REBUILD notices a change that left the modification time alone', () => {
   // The same defect on the other route. `noticed('a.md')` re-reads one file;
   // `noticed(null)` — which is what a renamed directory, an excluded-path

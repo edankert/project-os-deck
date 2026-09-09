@@ -36,6 +36,10 @@ paths:
   # never overwritten, meaning validator/CI changes stopped at the template (TASK-0072).
   ".github/workflows/validate-docs.yml": template
   ".github/workflows/link-check.yml": seed
+  # Project-owned. Runs the checks that need a real Electron window, which the
+  # template's own workflow cannot: most projects it serves have no Electron
+  # (ISS-0044).
+  ".github/workflows/deck-smoke.yml": project
   ".prettierrc": seed
   ".markdownlint.jsonc": seed
   ".yamllint.yml": seed

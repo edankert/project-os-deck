@@ -7,14 +7,14 @@ status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-09
 source: ["[[PHASE-0001-Deck]]"]
 goal: "The same renderer runs in two places. The shell hosts it locally through the preload bridge. Deck's own small HTTP host serves it over the local network for a tablet, reading only. Capability that only the shell can offer is detected rather than assumed, and is simply absent when Deck is served."
 requirements: []
 tasks: ["[[TASK-0021-Decks-Own-Read-Only-Host]]", "[[TASK-0022-Capability-Is-Detected-Not-Assumed]]"]
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-09
-review_verdict: changes-requested
+review_verdict: approved
 release: ""
 acceptance_exception: ""
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]"]
@@ -98,3 +98,29 @@ The injection point is unchanged: `desktop/src/renderer/renderer.ts:689` is `art
 **What I attacked and could not break.** The host itself. Every method that is not a read still answers 405 on every path, the forwarding allow-list refuses a sidecar path Deck does not read, and the served capability set reports `write: false`. `npm run smoke:lan` reports `ok: true` with nothing skipped and nothing not-applicable, which is the tablet-shaped half of the run.
 
 **Still owed regardless of this finding:** [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]], the walk on a real tablet, which no script here replaces.
+
+## Independent review — 2026-09-09 (fourth pass)
+
+**Verdict: approved.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. [[ISS-0038-Nothing-Checks-The-Tag-That-Stops-A-Note-Running-Script]] is genuinely discharged and the check is the strongest new thing in the phase. What is left is a limit this note already names.
+
+**The content-policy check is driven, and it catches a policy that is present and wrong.** Two mutations, both killed:
+
+```
+# ISS-0038's own stated mutation: rename the tag so the policy no longer applies
+sed -i '' 's/http-equiv="Content-Security-Policy"/http-equiv="Content-Security-Policy-X"/' desktop/src/renderer/index.html
+npm run build && npx electron . --smoke
+  "failures": ["a script tag inside a note's markup does not run in a Deck window",
+               "the window's content policy names `script-src 'self'`"]        # 2, exactly as claimed
+
+# the sharper one: keep the tag and the asserted string, permit inline handlers
+script-src 'self' 'unsafe-inline'
+  "failures": ["a script tag inside a note's markup does not run in a Deck window"]   # the driven half alone
+```
+
+The second is the one that matters: a check that read `index.html` for the string would have passed it. This one does not, because the `<img onerror>` actually fires and the page is asked afterwards.
+
+**The limit, and it is the same one row three of the table above names.** The check lives in `electron . --smoke`. No `TST-*` note's `command:` runs the smoke — `grep -rn "^command:" docs --include='TST-*.md' | grep -i smoke` finds only TST-0036, which is a unit suite over the verdict helper — and `.github/workflows/validate-docs.yml` runs `run-tests.py` and nothing else. So deleting the tag still leaves CI green; what changed is that a person running `npm run smoke` now sees it. That is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]], still `triage`, and this note says so.
+
+**What I attacked and could not break.** The served host is unchanged and still refuses every method that is not a read; `npm run smoke:lan` reports `ok: true` with nothing skipped and nothing not-applicable, which is the tablet-shaped half. `npm test` 320/0, `run-tests.py` `passing=23 failing=0`, `validate-docs.sh --as-committed` says HEAD passes the full CI step set.
+
+**Still owed regardless:** [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]].

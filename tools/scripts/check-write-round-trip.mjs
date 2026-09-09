@@ -178,12 +178,21 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
   );
   // The sidecar's own refusal, which is what a person used to collect by
   // pressing the button.
+  //
+  // **Reverted like every other write in this script**, even though the
+  // sidecar is expected to refuse it. Relying on somebody else's refusal to
+  // keep a file unchanged is relying on the behaviour this block exists to
+  // observe: if it ever stops refusing, this would be the one write here that
+  // left a note edited (ISS-0048).
+  const rel = 'docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md';
   const fresh = noteFor(id);
   let refused = '';
   try {
     await client.transition({ id, to: rows[0]?.to ?? 'accepted', actor: ACTOR, mtime: fresh.mtimeMs / 1000 });
   } catch (error) {
     refused = String(error);
+  } finally {
+    git('checkout', '--', rel);
   }
   record(/revision/i.test(refused), 'and posting it as a transition really is refused, in those words', refused.slice(0, 140));
   record(git('status', '--short', 'docs').trim() === '', 'and that refusal changed no file');

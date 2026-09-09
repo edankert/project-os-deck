@@ -288,11 +288,14 @@ export class NoteIndex {
         continue;
       }
       // **Compared, not assumed** (ISS-0041). This path used to set `changed`
-      // for every event it was handed, so a save that wrote the same bytes —
-      // and an editor's atomic write, which arrives as more than one event —
-      // told every window its picture was old. That is ISS-0030's complaint on
-      // the one-file route, which ISS-0030's fix never reached: it guarded the
-      // full rebuild and this walks past it.
+      // for every event it was handed, so a second event for a file that had
+      // not moved since the first told every window its picture was old. That
+      // is ISS-0030's complaint on the one-file route, which ISS-0030's fix
+      // never reached: it guarded the full rebuild and this walks past it.
+      //
+      // It does NOT stop a save that rewrote the same bytes, because that
+      // moves the modification time. Only a write that preserves the time is
+      // decided by the digest.
       const before = this.byPath.get(rel);
       const moved =
         before === undefined || before.mtimeMs !== one.record.mtimeMs || before.digest !== one.record.digest;
@@ -327,11 +330,14 @@ export class NoteIndex {
  * **The modification time alone was not enough** (ISS-0041). It answers
  * whether the file was written, and Deck needs to know whether what it holds
  * changed — a different question the moment a timestamp is preserved, which
- * `git checkout`, `git stash pop`, a restore and `rsync --times` all do. The
- * index took those changes, stored them, and raised no revision, so every
- * window kept a stale picture it believed was current.
+ * `rsync --times`, `cp -p` and a restore from a backup all do.
  *
- * The digest is computed once while the note is parsed, so this stays a string
+ * **What this comparison can and cannot do.** It can only ADD changes, never
+ * subtract one: the two conditions are an OR, so rewriting a file with
+ * identical bytes still raises the revision, because rewriting moves the time.
+ * The digest catches the case the time misses and not the other way round.
+ *
+ * It is computed once while the note is parsed, so this stays a string
  * comparison per note rather than the walk of every frontmatter value of 2715
  * notes that the first version of this was written to avoid.
  */

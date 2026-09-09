@@ -51,6 +51,30 @@ function baseFiles(dir, prefix = '') {
 }
 
 /**
+ * The one reason an empty view is currently excused, as a CONDITION rather
+ * than a sentence.
+ *
+ * All five exemptions say the same thing: the view filters on a date at or
+ * after today, and the vault holds no such date. That stops being true the day
+ * somebody schedules a task, and a sentence in a comment would go on excusing
+ * a view that had become genuinely broken (ISS-0046). So the script checks it:
+ * if any note is dated today or later, the exemption is withdrawn and the
+ * empty views under it become failures a person has to look at again.
+ */
+const DATED_AHEAD = {
+  why: 'it filters on a date at or after today, and nothing in the vault is dated that late',
+  stillTrue: (records, today) => {
+    const latest = records
+      .flatMap((r) => [r.frontmatter?.due, r.frontmatter?.scheduled])
+      .filter((v) => typeof v === 'string' && v !== '')
+      .map((v) => v.slice(0, 10))
+      .sort()
+      .at(-1);
+    return { holds: latest === undefined || latest < today, detail: `latest due or scheduled anywhere: ${latest}` };
+  },
+};
+
+/**
  * Views that draw nothing, say nothing, and are RIGHT to.
  *
  * A view selecting no notes with no unsupported construct named is the shape
@@ -64,20 +88,11 @@ function baseFiles(dir, prefix = '') {
  * moment a task is scheduled for a future date.
  */
 const KNOWN_EMPTY = {
-  // The same cause as the three below, in a different file. Both filter on
-  // `date(due) == today()` / `date(scheduled) == today()`, and both were
-  // wrongly EXCUSED before this script started asking whether the thing it was
-  // told was about the filter (ISS-0042).
-  'TaskNotes/Views/tasks-default.base / Today':
-    'it filters on due or scheduled being today, and nothing in the vault is dated 2026-09-09',
-  'TaskNotes/Views/tasks-default.base / This Week':
-    'it filters on the week ahead, and the latest date of either kind anywhere in the vault is 2026-03-17',
-  '__bases__/Tasks/Tasks Base.base / Today\'s Tasks':
-    'nothing in the vault is scheduled or due on 2026-09-09; the latest date of either kind is 2026-03-17',
-  "__bases__/Tasks/Tasks Base.base / This Week's Tasks":
-    'the same: no note is scheduled between today and a week from today, so the filter is true of nothing',
-  '__bases__/Tasks/Tasks Base.base / Future Tasks':
-    'the same: no note is scheduled after today at all',
+  'TaskNotes/Views/tasks-default.base / Today': DATED_AHEAD,
+  'TaskNotes/Views/tasks-default.base / This Week': DATED_AHEAD,
+  "__bases__/Tasks/Tasks Base.base / Today's Tasks": DATED_AHEAD,
+  "__bases__/Tasks/Tasks Base.base / This Week's Tasks": DATED_AHEAD,
+  '__bases__/Tasks/Tasks Base.base / Future Tasks': DATED_AHEAD,
 };
 
 const failures = [];
@@ -86,6 +101,14 @@ let drawnEmpty = 0;
 let explainedEmpty = 0;
 let knownEmpty = 0;
 let silentEmpty = 0;
+let expiredEmpty = 0;
+const today = new Date().toISOString().slice(0, 10);
+const checked = new Map();
+/** A row's condition, computed once. */
+const exemption = (row) => {
+  if (!checked.has(row)) checked.set(row, row.stillTrue(index.records, today));
+  return checked.get(row);
+};
 // A view that draws a list and reports nothing is where a difference from
 // Obsidian would be SILENT. This script cannot tell whether such a list is
 // right — only Obsidian can — so it counts them and says where to look.
@@ -131,13 +154,24 @@ for (const rel of files) {
       // complaint about a plugin's view type and a `%` in an unrelated
       // formula — while the identical emptiness in Tasks Base.base needed a
       // hand-written exemption. One cause, two views, opposite treatment.
-      const aboutTheFilter = said.filter((one) => /filter/i.test(one.where ?? ''));
+      // **The PREFIX `source.filter`, not the substring `filter`** (ISS-0046).
+      // A refusal's `where` is a path into the document and a formula's name is
+      // part of it, so a formula called `filterHelper` used to excuse an empty
+      // view that a formula called `plainHelper` did not — same emptiness, same
+      // complaint, opposite verdict.
+      const aboutTheFilter = said.filter((one) => /^source\.filter\b/.test(one.where ?? ''));
       const known = KNOWN_EMPTY[`${rel} / ${view.name}`];
       if (aboutTheFilter.length > 0) {
         explainedEmpty += 1;
-      } else if (known !== undefined) {
+      } else if (known !== undefined && exemption(known).holds) {
         knownEmpty += 1;
-        console.log(`        (empty on purpose: ${known})`);
+        console.log(`        (empty on purpose: ${known.why}; ${exemption(known).detail})`);
+      } else if (known !== undefined) {
+        expiredEmpty += 1;
+        failures.push(
+          `${rel} / ${view.name}: exempted because "${known.why}", and that is no longer true ` +
+            `(${exemption(known).detail}) — look at this view again`,
+        );
       } else {
         silentEmpty += 1;
         failures.push(
@@ -158,7 +192,8 @@ for (const rel of files) {
 // ISS-0036 closed were wrong (ISS-0043).
 console.log(`${files.length} base file(s) read, ${views} view(s) across them`);
 console.log(`${drawnEmpty} view(s) selected nothing: ${explainedEmpty} explained by their own filter, ` +
-  `${knownEmpty} verified empty by hand, ${silentEmpty} unexplained`);
+  `${knownEmpty} exempt under a condition that still holds, ${expiredEmpty} whose exemption has expired, ` +
+  `${silentEmpty} unexplained`);
 console.log(`${drewSilently} view(s) drew a list and reported nothing — where a difference from Obsidian would be silent`);
 for (const failure of failures) console.log(`FAIL ${failure}`);
 console.log(`${failures.length} failure(s)`);

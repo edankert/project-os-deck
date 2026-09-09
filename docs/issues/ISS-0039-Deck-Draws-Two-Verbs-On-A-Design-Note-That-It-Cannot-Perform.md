@@ -13,7 +13,7 @@ severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0013-The-First-Write]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]]"]
-tests: ["[[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]]"]
+tests: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]"]
 ---
 
 # Two buttons on a design note, and pressing either one fails

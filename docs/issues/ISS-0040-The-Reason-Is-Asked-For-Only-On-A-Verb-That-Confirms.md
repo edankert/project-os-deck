@@ -13,7 +13,7 @@ severity: high
 component: renderer
 parent: ""
 related: ["[[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]]", "[[FEAT-0013-The-First-Write]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
-tests: ["[[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]]"]
+tests: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]"]
 ---
 
 # The fix was proved on the one verb it does not apply to
@@ -52,4 +52,4 @@ Ask on every verb, not only the ones that confirm. The reason stays optional and
 - **The LABEL is asserted, not the count.** Deck asks twice for an issue leaving `triage` — the reason, then the severity — so "a box appeared" is satisfied by the severity box alone, and the first version survived putting the reason back inside the confirmation.
 - **The verb is picked by what the row says, never by its name.** `TST-0033` refuses to let any verb name exist in Deck's source, and it caught `'Accept'` written into the smoke run. The button now carries the row's own `confirm` value, and the check presses a row that does not confirm without knowing what it is called.
 
-**Evidence.** Putting the reason back inside `if (row.confirm)` fails 1 check; it failed nothing before.
+**Evidence.** Putting the reason back inside `if (row.confirm)` fails 2 checks; it failed nothing before.

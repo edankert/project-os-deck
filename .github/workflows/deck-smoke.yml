@@ -1,0 +1,48 @@
+# Run the checks that need a real Electron window.
+#
+# Project-owned, deliberately beside the template's `validate-docs.yml` rather
+# than inside it: that file is template-owned (`tools/sync/MANIFEST.yaml`) and
+# a change to it belongs upstream in `../project-os`, where it would be run by
+# every project the template serves — most of which have no Electron.
+#
+# Why it is separate from the suite. `run-desktop-tests.sh` sets
+# ELECTRON_SKIP_BINARY_DOWNLOAD=1 because the 320 node checks never need a
+# ~100MB download. The smoke run does, and it needs a screen, so it gets a job
+# with both. Without this, three guards existed that nothing ran: the content
+# policy that stops a note running script in the window that can write, the
+# reason box on every verb, and the design verdict Deck refuses to fake
+# (ISS-0044).
+name: deck-smoke
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install, with Electron's binary
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+      - name: The sidecar this reads through
+        # Deck consumes the sidecar from a SIBLING checkout and never vendors
+        # it (CLAUDE.md). `sidecar.ts` runs `python -m project_os_cockpit`, so
+        # the package has to be importable, not merely present.
+        #
+        # A private sibling needs a token: set `COCKPIT_TOKEN` in this
+        # repository's secrets if the clone fails with a 404.
+        run: |
+          git clone --depth 1             "https://${{ secrets.COCKPIT_TOKEN || github.token }}@github.com/${{ github.repository_owner }}/project-os-cockpit.git"             ../project-os-cockpit
+          python3 -m pip install --quiet -e ../project-os-cockpit
+      - name: Run the smoke checks under a virtual screen
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb
+          xvfb-run --auto-servernum bash tools/scripts/run-smoke.sh both

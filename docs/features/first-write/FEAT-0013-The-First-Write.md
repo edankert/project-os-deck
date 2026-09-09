@@ -100,6 +100,10 @@ Both branches of the no-address rule happen on real notes here: `TASK-0052` rend
 **What is owed is [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]]**, walked with `git diff` beside it so the claim is about the file and not about two screens — and on a real tablet, for the half that says the served page offers no verb at all. `shell.reader.actuators` moves to `adopted` on that walk, which is what its own row in the adoption table says.
 
 
+**The renderer guards have a gate, from 2026-09-09.** Three things this feature relies on live only in a real Electron window — the content policy that stops a note running script in the window that writes, the reason box on every verb, and the design verdict Deck refuses to fake. Until [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]] existed, nothing ran them and reverting any of the three left every check green ([[ISS-0044-The-Renderer-Guards-Run-In-No-Gate]]). `run-tests.py` now runs `tools/scripts/run-smoke.sh both` as a named test, and a project-owned CI job runs it under a virtual screen.
+
+**One verb Deck deliberately does not offer.** A design's verdict goes to `/api/design/verdict` and must name the revision it judged; Deck has no design surface and no revision history, so the row is drawn disabled and says the decision belongs in the cockpit ([[ISS-0039-Deck-Draws-Two-Verbs-On-A-Design-Note-That-It-Cannot-Perform]], [[ISS-0045-A-Dead-Verb-Is-Drawn-Exactly-Like-A-Working-One]]).
+
 ## Independent review, 2026-09-09: changes requested, and made
 
 **The verification gate was failing and nobody had run the thing that says so.** [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] named a suite called `writes`; the file is `write-channel.test.mjs`. `npm test` runs every file in `desktop/tests/` and was green throughout, so only `python3 tools/scripts/run-tests.py` — which reads each note's own `command:` — could see it, and it was not run at close-out ([[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]). It now reports `passing=23 failing=0`.
@@ -164,3 +168,60 @@ has ## Decision record: false
 - The navigation guards. Replacing the `will-navigate` refusal with a no-op makes `npm run smoke` report `ok: false` with three named failures. ISS-0032's move of the decision into `navigationFor` and its assertion in the smoke run is a real fix, not a relabelled grep.
 - The round-trip check's tick assertion is not vacuous: run against the unticked render of the same note, its "ticked" regexp returns `false`, and `/api/render` answers freshly rather than from a cache.
 - `check-write-round-trip.mjs` reproduces at 12 of 12 and leaves the working tree clean.
+
+## Independent review — 2026-09-09 (fourth pass)
+
+**Verdict: changes-requested.** Fresh context and a separate session, with no memory of authoring any of this; the same model family as the author, recorded in `reviewed_by`. Both of the third pass's findings are discharged at the code — I mutated each fix and each went red — and the smoke run's main-process interception is sound. The findings are about what the new checks measure and where they run.
+
+**Finding 1 (high): the three guards this round added run in a command nothing gates, and only one of the three notes says so.**
+
+`grep -rn "canPerform\|elsewhere(\|applyVerb\|drawActuators\|Content-Security\|data-confirm" desktop/tests/` returns **nothing**. No `TST-*` note's `command:` runs the smoke — the only one whose title mentions it, TST-0036, runs `run-desktop-tests.sh smoke-support`, a unit suite over the verdict helper — and `.github/workflows/validate-docs.yml` runs `run-tests.py` and nothing else. So:
+
+```
+python3 tools/scripts/run-tests.py     passing=23 failing=0 unrunnable=0   # TST-0033 among them
+```
+
+closes `QUALITY.md`'s verification gate for this feature on a suite that contains none of the guards for [[ISS-0038-Nothing-Checks-The-Tag-That-Stops-A-Note-Running-Script]], [[ISS-0039-Deck-Draws-Two-Verbs-On-A-Design-Note-That-It-Cannot-Perform]] or [[ISS-0040-The-Reason-Is-Asked-For-Only-On-A-Verb-That-Confirms]] — all three of which name TST-0033 in `tests:`. Revert any of the three and CI is green. ISS-0038 states this plainly about itself; ISS-0039, ISS-0040, TST-0033 and this note do not, and a reader of those four would conclude the fixes are gated. It is [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] with three more things behind it.
+
+**Finding 2 (high): the check that proves ISS-0040 never verifies it pressed a verb that does not confirm, and passes when the attribute it selects on is wholly wrong.**
+
+`recordEveryVerbAsksWhy` picks `verbs.find((b) => b.dataset.confirm === 'false') ?? verbs[0]` and returns `names`, `asked`, `labels` and `said` — never which button it chose or what that button's `confirm` was. Hard-wire the attribute so the selector can never match:
+
+```
+# desktop/src/renderer/renderer.ts
+-    button.dataset['confirm'] = String(row.confirm);
++    button.dataset['confirm'] = 'true';
+npm run build && npx electron . --smoke
+  {"ok": true, "failures": [], "skipped": []}
+```
+
+The check *"pressing a verb that does NOT stop to confirm still asks why"* stays green while the fact it names is unmeasured. Today it lands on a correct verb by accident: `/api/notes/actions?id=ISS-0008` returns Accept first and Accept is `confirm: false`, so `verbs[0]` is what the selector would have chosen anyway. The moment the sidecar reorders its rows or marks Accept confirm, the headline claim becomes untrue with nothing red. ISS-0040's third bullet — "the verb is picked by what the row says, never by its name" — is the right rule; what is missing is one `record()` saying the row it pressed said `confirm: false`.
+
+**Finding 3 (medium): the drawn half of ISS-0039 is guarded by nothing, and "drawn unavailable" is not what the code draws.**
+
+Reverting `drawActuators` to the pre-fix shape — `const why = row.reason` and `if (row.disabled && why !== '')`, so an unperformable verb gets no tooltip and no sentence beside it — leaves **320 of 320 checks passing and `npm run smoke` `ok: true`**. The three smoke checks read `#status` after the press, and `#actuators` is a sibling of `#status`, so nothing observes what was drawn. ISS-0039's first acceptance criterion is "drawn unavailable, with a sentence naming where the decision is recorded", evidenced by that run.
+
+And "unavailable" overstates it. `button.disabled = row.disabled`, the sidecar returns `"disabled": false` for both of DES-0001's rows, and `deck.css` greys only `:disabled`. Probed in the real window:
+
+```
+[{"verb":"Accept","disabled":false,"opacity":"1","cursor":"pointer","title":"Accept is a design verdict, ..."},
+ {"verb":"Decline","disabled":false,"opacity":"1","cursor":"pointer","title":"Decline is a design verdict, ..."}]
+```
+
+A design verdict is drawn exactly like a working verb, full opacity and a pointer cursor; the explanation is a tooltip and a `.why` span. That may be the right design, but ISS-0039's Fix section says "it is shown as unavailable", which is not what a person sees.
+
+**Finding 4 (low): [[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]] is `fixed` and documents the rule ISS-0040 reversed one commit later.** Its Fixed section still reads "A verb that stops to ask now also asks why. `Decline` and `Supersede` are the verbs the sidecar's row marks `confirm` ... the reason box goes in the interruption that is already happening." That is exactly the behaviour ISS-0040 was filed against and removed. ISS-0037 is linked from this note and from TST-0028, so a reader arrives at the superseded rule with nothing saying it moved.
+
+**Finding 5 (low): "twelve of twelve" is eighteen of eighteen, in two notes.** `node tools/scripts/check-write-round-trip.mjs` prints `18 of 18 passed` and leaves the tree clean; ISS-0037's Fixed section and TST-0028's new section both say twelve, and TST-0028's step table lists none of the six DES-0001 checks ISS-0039's third acceptance criterion credits it for.
+
+**Finding 6 (low): the DES-0001 block in `check-write-round-trip.mjs` posts a real transition with no `try`/`finally` revert.** Every other write in that script restores the file in a `finally`; this one relies on the sidecar refusing. If that refusal ever stops — which is the upstream behaviour the block exists to observe — the script leaves `DES-0001` modified. The `record(git status === '')` line notices, but the file stays changed.
+
+**Finding 7 (low): TST-0028's Adequacy section carries two overlapping paragraphs**, the new one-liner and the old one it was meant to replace.
+
+**What I attacked and could not break.**
+
+- ISS-0040's fix: putting `askText` back inside `if (row.confirm)` fails **2** checks (its own evidence line says 1).
+- ISS-0039's fix at `applyVerb`: `canPerform` returning true for everything fails **3**, exactly as claimed; removing the guard from `applyVerb` alone fails the same 3.
+- The interception is real, and the probe that proves it is the right shape. I could find no second write channel the check drives: `applyVerb` is the only caller of `host.write('transition')`, and nothing in the run touches a tick control.
+- **Both of the run's dependencies on this repository's own state fail loudly, not quietly.** Setting `ISS-0008` to `open` gives `"failures": ["ISS-0008 opened in the reader with verbs on it, so this measures something"]`; setting `DES-0001` to `accepted` gives the equivalent for the design half. (The first message is slightly wrong — `openTheNote` computes `found` and discards it, so a row that is missing from the navigator reports as "no verbs".) Both reverted with `git checkout`; tree clean.
+- `check-write-round-trip.mjs` 18/18 with a clean tree after; `npm run smoke` and `npm run smoke:lan` both `ok: true`, the LAN run with nothing skipped and nothing not-applicable; `npm test` 320/0; `run-tests.py` 23/0; `validate-docs.sh --as-committed` says HEAD passes the full CI step set.

@@ -13,7 +13,7 @@ severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[FEAT-0013-The-First-Write]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
-tests: ["[[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]]"]
+tests: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]"]
 ---
 
 # Delete one line from index.html and 316 checks still pass

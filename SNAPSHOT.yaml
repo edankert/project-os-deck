@@ -49,13 +49,13 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 43
+  ISS: 48
   PHASE: 4
   REQ: 0
   RISK: 4
   REL: 0
   TASK: 52
-  TST: 36
+  TST: 37
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -563,6 +563,56 @@ items:
       component: docs
       tests: []
       note: "Third review, 2026-09-09, finding 8. 21 base files is 19 (the extra two are in .trash). The sidebar base has six views, not four. Nine views drawing a list with nothing said is 17 — the nine dropped the eight 01 Inbox/Untitled*.base views, which are exactly the case a person should look at. ISS-0036's answer was that the script prints the number and it is re-run rather than remembered; the next note written did not follow it."
+    ISS-0044:
+      file: "docs/issues/ISS-0044-The-Renderer-Guards-Run-In-No-Gate.md"
+      title: "The three guards added to close the third review run only in a command nobody's gate runs, and the notes claiming them name a test that does not cover them"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Fourth review, 2026-09-09, finding 1. The content policy, the reason box and the refused design verdict are guarded only in npm run smoke, which no TST note names and no CI step runs; reverting any of the three leaves CI green. Worse, ISS-0038/0039/0040 all cite TST-0033, which runs a node suite that cannot load the renderer — so the verification gate closed on a test measuring something else. run-desktop-tests.sh sets ELECTRON_SKIP_BINARY_DOWNLOAD=1 on purpose, so CI has no Electron and no display. Narrows ISS-0008 rather than closing it."
+    ISS-0045:
+      file: "docs/issues/ISS-0045-A-Dead-Verb-Is-Drawn-Exactly-Like-A-Working-One.md"
+      title: "A verb Deck cannot perform is drawn identical to one it can — same colour, same cursor, not disabled — and the check that was supposed to prove otherwise reads a different element"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: renderer
+      tests: []
+      note: "Fourth review, 2026-09-09, findings 2 and 3. ISS-0039's close-out says the row is 'drawn unavailable'; drawActuators sets a title and leaves button.disabled = row.disabled, which the sidecar returns false. Probed live: DES-0001's rows are disabled:false, opacity:1, cursor:pointer. Reverting the drawn half leaves 320/320 and smoke ok:true, because the smoke checks read #status and never the button. Same shape in recordEveryVerbAsksWhy: it picks a verb with `?? verbs[0]` and never reports which branch it took, so hard-wiring data-confirm to true leaves the run green with the fact unmeasured."
+    ISS-0046:
+      file: "docs/issues/ISS-0046-An-Empty-View-Is-Excused-By-A-Name-Somebody-Chose.md"
+      title: "An empty view is excused when the word filter appears anywhere in a location, so naming a formula filterHelper silences the check, and the five hand-written exemptions never expire"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "Fourth review, 2026-09-09, findings 4 and 6. ISS-0042's fix tests /filter/i against a refusal's `where`, which is a document path containing author-chosen names: a formula called filterHelper excuses an empty view, plainHelper does not, same emptiness. Latent — all 16 of today's excuses are real source.filter locations. Separately KNOWN_EMPTY grew to five rows whose stated reason ('nothing is dated at or after today') nothing rechecks; it was the third review's finding 4 and was filed in no issue."
+    ISS-0047:
+      file: "docs/issues/ISS-0047-The-Digest-Note-Claims-More-Than-The-Digest-Does.md"
+      title: "The note explaining why records carry a digest names two causes that do not happen, claims a benefit the code does not deliver, and says the digest covers everything Deck shows when it does not cover the body"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: docs
+      tests: []
+      note: "Fourth review, 2026-09-09, finding 5. The code survives every mutation; the prose does not survive being run. git checkout and git stash both set mtime to NOW, so two of the four named causes do not fire. Rewriting identical bytes still raises the revision, because `moved` is an OR and rewriting moves the time — so the claimed benefit is not delivered. And the digest covers frontmatter and title; Deck shows the rendered body, so a body edit under a preserved timestamp leaves a second window stale and untold."
+    ISS-0048:
+      file: "docs/issues/ISS-0048-Six-More-Statements-In-The-Notes-Do-Not-Reproduce.md"
+      title: "Six statements across the close-out notes do not reproduce: a count invalidated by its own commit, a rule reversed the next day and still stated as current, and four smaller ones"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: docs
+      tests: []
+      note: "Fourth review, 2026-09-09, findings 7 and 8-12. TST-0026 says 3,280 notes; today the script says 3,291, and most of the gap is the six ISS-004x notes filed one commit later — a number invalidated by the commit series recording it. ISS-0037 still states the rule ISS-0040 reversed. 'Twelve of twelve' is 18 of 18 in two places. ISS-0040's evidence says 1 red where it is 2. The DES-0001 block in check-write-round-trip.mjs posts a real transition with no revert. TST-0028's Adequacy carries two overlapping paragraphs. The cause has changed: this is a measurement of a moving thing written inside the commit that moves it."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"
@@ -1296,7 +1346,7 @@ metrics:
     phases_done: 0
     tasks_total: 52
     tasks_done: 38
-    tests_total: 23
+    tests_total: 24
     tests_passing: 0
     tests_failing: 0
     issues_open: 0

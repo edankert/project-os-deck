@@ -57,6 +57,12 @@ Forward `note` and `severity` from the shell, and give the renderer somewhere to
 
 **Severity is a text box and not a picker, on purpose.** The four values are `critical`, `high`, `medium`, `low`, they live in the sidecar's `SEVERITIES`, and no endpoint serves them. A picker here would be Deck restating a table it does not own, which is exactly how `draft`, `proposed` and `ready` ended up in Deck's status bands within two days of the real vocabulary changing. A value this project does not use comes back refused in the sidecar's own words. Deck asks for it only when the payload says the note is an issue at `triage`, because the sidecar refuses one anywhere else rather than ignoring it.
 
-**Proved end to end against the running sidecar.** `tools/scripts/check-write-round-trip.mjs` drives `Accept` on [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] with prose and a severity, then reads the file: the status moved, the prose is under the cockpit's own `## Decision record` heading, `severity: "high"` is in the frontmatter, and `git checkout` puts it all back. Twelve of twelve on 2026-09-09.
+**Proved end to end against the running sidecar.** `tools/scripts/check-write-round-trip.mjs` drives `Accept` on [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] with prose and a severity, then reads the file: the status moved, the prose is under the cockpit's own `## Decision record` heading, `severity: "high"` is in the frontmatter, and `git checkout` puts it all back. Eighteen of eighteen on 2026-09-09, once the design-verdict case was added.
 
 **Evidence.** Three mutations, three killed. Dropping `note` fails 1 check; dropping `severity` fails 1; letting the request name its own actor instead of the shell fails 1. All three survived every check before this note existed.
+
+## Superseded in part, 2026-09-09
+
+**The rule this note gives for WHERE the reason is asked was reversed the next commit.** It says "the box belongs in the question that is already being asked rather than in a new one", which put the reason inside the confirmation — and the sidecar marks only `Decline` and `Supersede` as confirming, so accepting or deferring an issue went on recording nothing. That is [[ISS-0040-The-Reason-Is-Asked-For-Only-On-A-Verb-That-Confirms]], and every verb asks now.
+
+The rest of this note stands: the field was dropped between the renderer and the shell, and forwarding it is what fixed that.

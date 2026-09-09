@@ -1064,10 +1064,21 @@ async function recordEveryVerbAsksWhy(
     (async () => {
       const verbs = [...document.querySelectorAll('#actuators button.verb')];
       const names = verbs.map((b) => b.textContent);
+      // How each row was DRAWN, which a tooltip-only "unavailable" hid.
+      const drawn = verbs.map((b) => ({
+        verb: b.textContent, confirm: b.dataset.confirm, disabled: b.disabled, title: b.title,
+      }));
       // Picked by what the ROW says, never by a verb name: Deck restates no
       // part of the sidecar's table and neither does this check.
-      const target = verbs.find((b) => b.dataset.confirm === 'CONFIRM') ?? verbs[0];
-      if (target === undefined) return {names, asked: 0, said: ''};
+      //
+      // **No fallback to the first row** (ISS-0045). It used to fall back and
+      // say nothing about which branch it took, so hard-wiring every row to
+      // confirm left the run green with the claim unmeasured; it landed
+      // correctly only by luck of ordering. No backtick may appear in this
+      // comment: it is inside a template literal and would close it.
+      const target = verbs.find((b) => b.dataset.confirm === 'CONFIRM');
+      if (target === undefined) return {names, drawn, pressed: null, asked: 0, labels: [], said: ''};
+      const pressed = {verb: target.textContent, confirm: target.dataset.confirm, disabled: target.disabled};
       target.click();
       await new Promise((r) => setTimeout(r, 200));
       let asked = 0;
@@ -1086,7 +1097,7 @@ async function recordEveryVerbAsksWhy(
         await new Promise((r) => setTimeout(r, 200));
       }
       await new Promise((r) => setTimeout(r, 300));
-      return {names, asked, labels, said: (document.querySelector('#status') || {}).textContent || ''};
+      return {names, drawn, pressed, asked, labels, said: (document.querySelector('#status') || {}).textContent || ''};
     })()
   `;
   const reason = 'because the smoke run pressed it';
@@ -1121,10 +1132,14 @@ async function recordEveryVerbAsksWhy(
     if (opened.verbs > 0) {
       const seen = (await win.webContents.executeJavaScript(
         pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason),
-      )) as { names: string[]; asked: number; labels: string[]; said: string };
+      )) as { names: string[]; drawn: Array<{ verb: string; confirm: string; disabled: boolean; title: string }>; pressed: { verb: string; confirm: string; disabled: boolean } | null; asked: number; labels: string[]; said: string };
       record(seen.names.length > 0, `the verbs drawn are the sidecar's: ${seen.names.join(', ')}`);
       // ISS-0040: the reason used to be asked for only inside a confirmation,
       // and Accept does not confirm.
+      record(
+        seen.pressed !== null && seen.pressed.confirm === 'false' && seen.pressed.disabled === false,
+        `the verb pressed really is one that does not stop to confirm: ${JSON.stringify(seen.pressed)}`,
+      );
       record(
         seen.labels.some((label) => /^why /i.test(label)),
         'pressing a verb that does NOT stop to confirm still asks why',
@@ -1155,13 +1170,20 @@ async function recordEveryVerbAsksWhy(
     if (opened.verbs > 0) {
       const seen = (await other.webContents.executeJavaScript(
         pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason),
-      )) as { names: string[]; asked: number; labels: string[]; said: string };
-      record(seen.asked === 0, 'a design verdict asks nothing, because Deck cannot record one');
-      record(sent.length === before, 'and sends nothing');
+      )) as { names: string[]; drawn: Array<{ verb: string; confirm: string; disabled: boolean; title: string }>; pressed: { verb: string; confirm: string; disabled: boolean } | null; asked: number; labels: string[]; said: string };
+      // **Read off the BUTTON, not the status bar** (ISS-0045). The status bar
+      // carries a sentence for many reasons, so reverting the drawn half left
+      // these green while every row still looked like a working verb.
       record(
-        /revision/i.test(seen.said) && /cockpit/i.test(seen.said),
-        'and says the verdict must name a revision and belongs in the cockpit',
+        seen.drawn.length > 0 && seen.drawn.every((row) => row.disabled),
+        `every verb on ${withEndpoint} is drawn disabled: ${JSON.stringify(seen.drawn.map((r) => [r.verb, r.disabled]))}`,
       );
+      record(
+        seen.drawn.every((row) => /revision/i.test(row.title) && /cockpit/i.test(row.title)),
+        'and each one says the verdict must name a revision and belongs in the cockpit',
+      );
+      record(seen.asked === 0, 'pressing one asks nothing, because Deck cannot record the verdict');
+      record(sent.length === before, 'and sends nothing');
     }
   } finally {
     other.destroy();

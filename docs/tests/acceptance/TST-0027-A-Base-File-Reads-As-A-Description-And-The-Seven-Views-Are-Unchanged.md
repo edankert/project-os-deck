@@ -83,7 +83,9 @@ What it settles, step by step:
 
 **What excuses an empty view is something said about ITS OWN FILTER.** The first version of this asked whether the file had reported anything at all, which is not the same question: "Today" and "This Week" in `TaskNotes/Views/tasks-default.base` were excused by a complaint about a plugin's view type and a `%` in an unrelated formula, while the identical emptiness in `Tasks Base.base` needed a hand-written exemption. One cause, two views, opposite treatment ([[ISS-0042-Each-Of-The-Three-New-Scripts-Passes-While-What-It-Measures-Is-Wrong]]).
 
-Of the 21 views that select nothing: **16 are explained by a refusal in their own filter**, and **5 are verified empty by hand** and named in the script with the reason. All five filter on a date at or after today, and the latest `due:` or `scheduled:` anywhere in the vault is 2026-03-17. The exemptions are written by file and view rather than the rule being softened, and they come out the moment a task is scheduled for a future date.
+**"Its own filter" means the location starts with `source.filter`, not that the word appears somewhere in it.** A refusal's location is a path into the document and a formula's name is part of that path, so under the first version a formula called `filterHelper` excused an empty view that a formula called `plainHelper` did not — same emptiness, same complaint, opposite verdict ([[ISS-0046-An-Empty-View-Is-Excused-By-A-Name-Somebody-Chose]]).
+
+Of the 21 views that select nothing: **16 are explained by a refusal in their own filter**, and **5 are exempt under a condition the script tests**. All five filter on a date at or after today, and the exemption holds only while no note in the vault is dated that late — checked on every run, not asserted in a comment. Schedule one task for next month and those five become failures naming the date that broke them, which is the right answer: they would have stopped being correctly empty.
 
 **What still needs a person:**
 
