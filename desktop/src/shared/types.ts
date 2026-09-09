@@ -126,6 +126,21 @@ export interface DeckState {
   /** Rises on every accepted change; lets a subscriber drop a stale broadcast. */
   revision: number;
   /**
+   * How many times each workspace's NOTES have changed, keyed by workspace id.
+   *
+   * A second number beside `revision`, not the same one, and the reason is
+   * worth stating: `revision` counts changes to what Deck is doing — a card
+   * moved, a view chosen — and this counts changes to what Deck is looking at.
+   * A window that redrew because somebody dragged a card has not gone stale.
+   * Two revisions that mean different things must not share a name
+   * (TASK-0039).
+   *
+   * Monotonic per workspace within a run, and NOT persisted: the index is
+   * rebuilt from disk at every start, so a number carried over from the last
+   * run would be a number this run's index could not honour.
+   */
+  indexRevisions: Record<string, number>;
+  /**
    * Where a person is in a flow. RESERVED by TASK-0052; nothing writes it and
    * nothing reads it, and `normaliseState` does not read it back off disk
    * either, because nothing could have put it there honestly.

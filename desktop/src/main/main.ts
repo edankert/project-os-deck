@@ -19,6 +19,7 @@ import { SidecarSupervisor, freePort, waitForExit } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
+import { NoteIndex, docsRootFor } from './note-index.js';
 import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 
 // Pinned before anything reads it: Electron derives this from the app name,
@@ -43,6 +44,47 @@ const windowBook = new WindowBook(path.join(app.getPath('userData'), 'deck-windo
 const panelBook = new PanelBook(path.join(app.getPath('userData'), 'deck-panels.json'));
 const sidecars = new SidecarSupervisor();
 
+/**
+ * Deck's own index, one per open workspace.
+ *
+ * The main process reads the workspace's Markdown itself and keeps a record
+ * per note (FEAT-0011). Edwin decided that on 2026-09-08 rather than asking
+ * the cockpit for a records endpoint: "Decks own index, the Decks application
+ * are individual applications/views." The sidecar stays the authority on
+ * obligations, on the rendered note, on the context and on every write.
+ */
+const indexes = new Map<string, NoteIndex>();
+
+/**
+ * Build the index for a workspace, once, and keep it current.
+ *
+ * The walk is synchronous and a large vault takes a moment, so it runs after
+ * the current turn rather than in the middle of opening the workspace: a
+ * person waiting for a window should not wait for 2715 files first. Until it
+ * finishes, the records path answers "still building" with the revision.
+ */
+function openIndex(workspace: { id: string; root: string }): void {
+  if (indexes.has(workspace.id)) return;
+  const index = new NoteIndex({
+    workspaceId: workspace.id,
+    docsRoot: docsRootFor(workspace.root),
+    onChange: (revision) => {
+      store.dispatch({ type: 'index-changed', workspaceId: workspace.id, revision });
+    },
+  });
+  indexes.set(workspace.id, index);
+  setTimeout(() => {
+    if (!indexes.has(workspace.id)) return;
+    index.build();
+    index.watch();
+  }, 0).unref?.();
+}
+
+function closeIndexes(): void {
+  for (const index of indexes.values()) index.close();
+  indexes.clear();
+}
+
 const host = new DeckHost({
   webRoot: WEB_ROOT,
   // A page this host serves can read. It is not the shell and does not pretend to be.
@@ -51,6 +93,7 @@ const host = new DeckHost({
   sidecarBaseFor: (id) => sidecars.handle(id)?.base ?? null,
   onSidecarUnreachable: (id) => sidecars.forget(id),
   isSidecarStarting: (id) => sidecars.isStarting(id),
+  indexFor: (id) => indexes.get(id)?.snapshot() ?? null,
 });
 
 interface WindowInfo {
@@ -198,6 +241,8 @@ function registerIpc(): void {
   handle('deck:workspaces:remove', (_e, id: string) => {
     workspaces.remove(id);
     sidecars.stopOne(id);
+    indexes.get(id)?.close();
+    indexes.delete(id);
     return { ok: true };
   });
 
@@ -206,6 +251,7 @@ function registerIpc(): void {
     if (workspace === null) return { ok: false, error: `no workspace with id ${id}` };
     try {
       const handle = await sidecars.resolve(workspace);
+      openIndex(workspace);
       store.dispatch({ type: 'open-workspace', workspaceId: id });
       return { ok: true, borrowed: !handle.ownedByDeck };
     } catch (err) {
@@ -317,6 +363,7 @@ function shutdown(): void {
     }
   }
   store.close();
+  closeIndexes();
   stopping = sidecars.stopAll();
   void host.close();
 }
@@ -409,6 +456,19 @@ async function runSmoke(): Promise<void> {
       const payload = (await proxied.json()) as { groups?: Array<{ items?: unknown[] }> };
       const items = (payload.groups ?? []).reduce((n, g) => n + (g.items?.length ?? 0), 0);
       record(items > 0, 'the proxied read returned notes');
+
+      // Deck's OWN index, read the way a page reads it. The walk runs after
+      // the workspace opens, so this waits for it rather than racing it.
+      let records = { building: true, records: [], revision: 0 };
+      for (let attempt = 0; attempt < 40 && records.building; attempt += 1) {
+        await delay(250);
+        records = (await (await fetch(`${hostOrigin}/deck/records/${prepared.id}`)).json()) as typeof records;
+      }
+      record(!records.building, 'Deck built its own index of the workspace');
+      record(records.records.length > 0, `Deck's index holds records (${records.records.length})`);
+      record(records.revision > 0, 'the records answer carries the revision it was built from');
+      const refusedRecords = await fetch(`${hostOrigin}/deck/records/${prepared.id}`, { method: 'POST' });
+      record(refusedRecords.status === 405, 'the records path refuses a POST with 405');
 
       // The window booted before the workspace was opened, so give it the rail again.
       focus.webContents.reload();

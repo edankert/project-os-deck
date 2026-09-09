@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — Deck's own index"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0011-Decks-Own-Index]]"]
 implements: ["[[FEAT-0011-Decks-Own-Index]]"]
 related: ["[[PHASE-0001-Deck]]", "[[ADR-0004-A-View-Is-A-Description]]"]

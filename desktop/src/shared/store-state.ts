@@ -27,6 +27,12 @@ export type DeckAction =
   | { type: 'set-query'; text: string }
   | { type: 'set-filters'; filters: Filters }
   | { type: 'set-fold'; key: string; folded: boolean }
+  /**
+   * The notes of a workspace changed on disk. Raised by the main process's
+   * index, never by a window: a renderer cannot know what is on disk, and the
+   * channel a window dispatches on is reachable from any page it loads.
+   */
+  | { type: 'index-changed'; workspaceId: string; revision: number }
   | { type: 'restore'; state: DeckState };
 
 /**
@@ -71,6 +77,7 @@ export function initialState(): DeckState {
     filters: { statuses: [], types: [] },
     folds: {},
     revision: 0,
+    indexRevisions: {},
     flowCursor: null,
   };
 }
@@ -211,6 +218,16 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (state.folds[action.key] === action.folded) return state;
       return bump({ ...state, folds: { ...state.folds, [action.key]: action.folded === true } });
     }
+    case 'index-changed': {
+      const current = state.indexRevisions[action.workspaceId] ?? 0;
+      // Never backwards. A late broadcast from an index that has already been
+      // replaced would otherwise tell a window its picture is newer than it is.
+      if (action.revision <= current) return state;
+      return bump({
+        ...state,
+        indexRevisions: { ...state.indexRevisions, [action.workspaceId]: action.revision },
+      });
+    }
     case 'restore': {
       return { ...normaliseState(action.state), revision: state.revision + 1 };
     }
@@ -289,6 +306,11 @@ export function normaliseState(value: unknown): DeckState {
     filters: normaliseFilters(raw['filters']),
     folds,
     revision: typeof raw['revision'] === 'number' && Number.isFinite(raw['revision']) ? raw['revision'] : 0,
+    // Not read back from the file. The index is rebuilt from disk at every
+    // start, so a number carried over from the last run is one this run's
+    // index cannot honour, and a window comparing against it would think its
+    // picture was old when it was the newest there is.
+    indexRevisions: {},
     // Always null, and deliberately not read back from the file: nothing
     // writes it, so there is nothing on disk that could be there honestly.
     // The slot exists so that a flow, when one is built, has somewhere to put

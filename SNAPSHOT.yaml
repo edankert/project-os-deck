@@ -162,7 +162,7 @@ items:
     FEAT-0011:
       file: "docs/features/index/FEAT-0011-Decks-Own-Index.md"
       title: "Deck's own index: the main process reads the workspace's Markdown itself, so a view can arrange notes the sidecar does not arrange"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -330,21 +330,21 @@ items:
     TASK-0038:
       file: "docs/features/index/plan/tasks/TASK-0038-Records-From-The-Workspaces-Markdown.md"
       title: "Records from the workspace's Markdown: frontmatter parsed, a list-valued type counted under each value, and the sidecar's normalisation mirrored rather than guessed"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0011"
       phase: PHASE-0001
     TASK-0039:
       file: "docs/features/index/plan/tasks/TASK-0039-The-Index-Watches-And-Carries-A-Revision.md"
       title: "The index watches the workspace and carries a revision, so a view knows its picture is old"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0011"
       phase: PHASE-0001
     TASK-0040:
       file: "docs/features/index/plan/tasks/TASK-0040-The-Records-Reach-The-Renderer-Read-Only.md"
       title: "The records reach the renderer through Deck's own host, read-only, on both hosts"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0011"
       phase: PHASE-0001
@@ -1089,7 +1089,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 52
-    tasks_done: 24
+    tasks_done: 27
     tests_total: 23
     tests_passing: 0
     tests_failing: 0

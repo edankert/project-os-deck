@@ -8,7 +8,7 @@ phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
 updated: 2026-09-07
-source: ["Edwin, 2026-09-07: 'They are opened but they don\'t show anything and they show the following status message: the sidecar for Your Trainer exited before it answered'"]
+source: ["Edwin, 2026-09-07: 'They are opened but they do not show anything and they show the following status message: the sidecar for Your Trainer exited before it answered'"]
 severity: high
 component: main
 parent: ""

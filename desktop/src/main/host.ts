@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import type { Capabilities, Workspace } from '../shared/types.js';
+import type { IndexSnapshot } from './note-index.js';
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
 
@@ -165,6 +166,15 @@ export interface HostOptions {
    * issues reads without waiting for a sidecar the way the shell does.
    */
   isSidecarStarting?: (workspaceId: string) => boolean;
+  /**
+   * Deck's own index for a workspace, or null when Deck has none open for it.
+   *
+   * These records are DECK'S, not the sidecar's, so this path is not a forward
+   * and the allow-list ISS-0014 hardened has nothing to do with it. It has its
+   * own surface and its own refusals, and the suite says so rather than
+   * assuming the forwarding tests cover it (TASK-0040).
+   */
+  indexFor?: (workspaceId: string) => IndexSnapshot | null;
 }
 
 export interface Listening {
@@ -173,6 +183,7 @@ export interface Listening {
 }
 
 export const SIDECAR_PREFIX = '/deck/sidecar/';
+export const RECORDS_PREFIX = '/deck/records/';
 
 export class DeckHost {
   private readonly options: HostOptions;
@@ -243,11 +254,51 @@ export class DeckHost {
       });
       return;
     }
+    if (pathname.startsWith(RECORDS_PREFIX)) {
+      this.records(pathname.slice(RECORDS_PREFIX.length), res);
+      return;
+    }
     if (rawPathname.startsWith(SIDECAR_PREFIX)) {
       await this.proxy(rawPathname, url.search, method, res);
       return;
     }
     this.serveFile(pathname, method, res);
+  }
+
+  /**
+   * Deck's own records for one workspace, on both hosts.
+   *
+   * The answer always carries the revision it was built from, so a caller
+   * knows which state of the index it holds without a second round trip —
+   * which is what makes the changed-under-you mark possible (TASK-0051).
+   *
+   * A read that arrives while the index is still building is answered, not
+   * refused and not treated as a failure. ISS-0011 is exactly this shape one
+   * layer down: a read during a long start-up was read as a death and the
+   * thing being read was torn down.
+   */
+  private records(workspaceId: string, res: http.ServerResponse): void {
+    if (workspaceId === '' || workspaceId.includes('/')) {
+      plain(res, 404, 'that request names no workspace');
+      return;
+    }
+    const index = this.options.indexFor?.(workspaceId) ?? null;
+    if (index === null) {
+      // By name, never as an empty list: an empty index and a workspace Deck
+      // does not have open look identical on screen, and only one is a
+      // mistake the person can do something about.
+      plain(res, 404, `Deck has no index for the workspace ${workspaceId}`);
+      return;
+    }
+    json(res, 200, {
+      workspaceId: index.workspaceId,
+      revision: index.revision,
+      building: index.building,
+      // Nothing while the walk is still running, rather than half a workspace
+      // that a view would quietly draw as though it were all of it.
+      records: index.building ? [] : index.records,
+      problems: index.problems,
+    });
   }
 
   private async proxy(rawPathname: string, search: string, method: string, res: http.ServerResponse): Promise<void> {

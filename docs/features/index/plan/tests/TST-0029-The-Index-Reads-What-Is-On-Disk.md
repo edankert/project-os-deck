@@ -6,7 +6,7 @@ title: "The index reads what is on disk, counts types the way the sidecar does, 
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0011-Decks-Own-Index]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -56,10 +56,14 @@ Deck keeps its own index of the workspace's Markdown, which means two programs n
 - A change on disk reaches the record without a restart, and every window can tell that its picture is old.
 - The records are readable from both hosts and writable from neither.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh index`: the check count and the date.
-- The sidecar commit and date the type-count fixture was recorded from.
+- `bash tools/scripts/run-desktop-tests.sh index`: 27 checks pass, 2026-09-09.
+- The fixture was recorded on 2026-09-09 from cockpit commit `11ded07`, by `tools/scripts/record-sidecar-fixture.py`, which imports the sidecar's own `Index` rather than re-reading its rules.
+- This repository: 199 notes, compared path by path against the sidecar's answer; no disagreements and no named differences needed.
+- Your Trainer: 2715 notes, compared as per-type counts; eleven named differences, one of them [[project-os-cockpit#ISS-0279]] and ten of them files whose frontmatter PyYAML refuses outright and Deck reads.
+- The comparison for Your Trainer is SKIPPED, out loud, when that repository is not on the machine — which is the case in CI.
+- Four checks over real HTTP for the records route, plus four in the smoke run against the real application.
 
 ## Adequacy (who verifies this test?)
 

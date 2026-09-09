@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0040
 aliases: ["TASK-0040"]
 title: "The records reach the renderer through Deck's own host, read-only, on both hosts"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0011-Decks-Own-Index]]"]
 parent: "FEAT-0011"
 effort: ""
@@ -42,12 +42,27 @@ The renderer asks Deck's own host for records and gets them, in the shell and on
 
 ## Steps
 
-- [ ] Add the records path to Deck's host, inside the existing method guard.
-- [ ] Answer the still-building case explicitly, with a test that asks during a slow build.
-- [ ] Carry the revision on every answer.
-- [ ] Extend the host suite with the method refusals and the unknown-workspace case.
-- [ ] Extend [[TST-0029-The-Index-Reads-What-Is-On-Disk]] to cover the served route.
+- [x] Add the records path to Deck's host, inside the existing method guard — `/deck/records/<workspaceId>`
+- [x] Answer the still-building case explicitly, with a test that asks during a slow build
+- [x] Carry the revision on every answer
+- [x] Extend the suite with the method refusals and the unknown-workspace case — eight methods, TRACE driven down a raw socket because `fetch` will not send it
+- [x] Extend [[TST-0029-The-Index-Reads-What-Is-On-Disk]] to cover the served route — four checks, plus four in the smoke run against the real application
 
 ## Notes
 
 This path is Deck's own and is not a forward to the sidecar, so the allow-list [[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]] hardened does not apply to it. It has its own surface and its own refusals, and the suite has to say so rather than assuming the forwarding tests cover it.
+
+
+## Done, 2026-09-09
+
+**One route, both hosts.** `GET /deck/records/<workspaceId>` on Deck's own HTTP host answers `{ workspaceId, revision, building, records, problems }`. The Electron window loads from that host too, so the shell and a tablet read the same bytes over one origin and there is no preload-only path for records — a second data path is what "one renderer, two hosts" exists to prevent ([[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]).
+
+**Every answer carries the revision it was built from**, so a caller knows which index state it holds without a second round trip. That is what makes [[TASK-0051-The-Changed-Under-You-Mark]] possible.
+
+**A read during the build is answered, not refused.** It comes back 200 with `building: true`, the revision, and no records — not half a workspace, which a view would quietly draw as though it were all of it. [[ISS-0011-A-Read-From-The-Served-Page-Kills-A-Sidecar-That-Is-Still-Indexing]] is this shape one layer down: a read arriving during a long start-up was read as a death, and the thing being read was torn down.
+
+**A workspace Deck has no index for is refused BY NAME**, 404 with the id in the sentence, rather than as an empty list. An empty index and a workspace nobody opened look identical on screen and only one of them is something a person can act on.
+
+**This path is Deck's own and is not a forward**, so the allow-list [[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]] hardened has nothing to do with it, and the suite says so rather than assuming the forwarding tests cover it. Its own refusals are checked over real HTTP: eight methods that are not `GET` or `HEAD`, including `TRACE`, which `fetch` refuses to send and which is therefore driven down a raw socket.
+
+**The smoke run proves the wiring**, which no suite can: it waits for the real application's index to finish walking this repository, asserts it holds records, asserts the answer carries a revision, and asserts a POST to the records path is refused with 405.
