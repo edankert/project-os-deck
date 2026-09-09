@@ -6,7 +6,7 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-08
+updated: 2026-09-09
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
@@ -71,6 +71,8 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.pages.checks` | not yet | |
 | `shell.checks.mark-dialog` | not yet | new in the cockpit on 2026-09-06, read here 2026-09-07: the mark dialog renders the check's own body through `/api/render` and shows every comment on it above the verdict buttons. Deck has no checks page yet, so this arrives with `shell.pages.checks` |
 | `shell.pages.release` | not yet | |
+| `shell.pages.release.settle` | not yet | new in the cockpit on 2026-09-08, read here 2026-09-09: the checks a release owes, on one screen, each settled with `na`, `excused` or `blocked` and one ledger event carrying a reason and an author. A release page SETTLES a check and never passes one — `pass`, `partial`, `fail` and `question` are refused by name at the server (the cockpit's ADR-0041). Deck has no release page, so this arrives with `shell.pages.release`. Worth noting when it does: Deck's own write path already follows the same shape, posting to the endpoint the sidecar named and restating no verb |
+| `shell.pages.release.coverage` | not yet | new in the cockpit on 2026-09-08, read here 2026-09-09: what a release ships that nothing verifies — features no acceptance check names in `covers:`, and requirements with unticked criteria — computed mechanically, with a verb that dispatches an agent to draft the missing `TST-*` notes for review as a diff. Arrives with `shell.pages.release`. The agent-dispatch half is a bigger question than the page: Deck offers no agent verbs at all and [[ADR-0003-Deck-Writes-Through-The-Shell]] scopes its writes to two |
 | `shell.pages.accept` | not yet | stepwise, not a list |
 | `shell.pages.test-run` | not yet | |
 | `shell.pages.session` | not yet | |
@@ -109,6 +111,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 ## Maintenance
 
+- 2026-09-09 — **two keys arrived and were added as `not yet`, which is the first time this table has grown because the cockpit grew rather than because a decision changed.** The cockpit is at `11ded07` and has landed one change note since the last read, `CHG-20260908-Preparing-A-Release-Is-One-Workflow`, which added `shell.pages.release.settle` and `shell.pages.release.coverage` (FEAT-0145, ADR-0041). Both are release-page work and Deck has no release page, so both arrive with `shell.pages.release` when that row moves. Compared mechanically rather than by eye: the register lists 57, this table now carries 57, and neither side holds a key the other lacks. No row moved position. `shell.reader.actuators` stays `not yet` although [[FEAT-0013-The-First-Write]] built it — the row's own condition is that the transition is WALKED in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]], and nobody has walked it. `api.write.notes` stays `not yet` for the same reason.
 - 2026-09-08 — **two rows changed position because a decision changed, not because the register did.** The cockpit is still at `c0ed9e3` and no key arrived. `api.write.notes` moved from `not applicable` to `not yet`: Edwin decided on 2026-09-08 that Deck must be able to write, and [[ADR-0003-Deck-Writes-Through-The-Shell]] put that write in the shell's main process over loopback, so the reason the row gave for "not applicable" no longer holds. `shell.reader.actuators` stays `not yet` and now names [[FEAT-0013-The-First-Write]] as the feature that adopts it. Nothing else moved, and the served host still refuses every write, which keeps `api.guards` and `api.infra` as they were.
 - 2026-09-07, closing day — the re-read [[PHASE-0001-Deck]]'s last exit criterion asks for, made on the day that phase closed. The cockpit is still at `c0ed9e3` and has landed no change note since the previous read, so no key arrived and no row moved. The keys were compared mechanically rather than by eye: the register lists 55 and this table carries 55, with no key on either side that the other lacks. The nine rows Spread relies on — `surface.shell`, `shell.workspaces.rail`, `shell.workspaces.discovery`, `shell.nav.modes`, `shell.reader.render`, `shell.windows`, `api.read.nav`, `api.read.note` and `api.read.record` — are all `adopted`, as are `shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find` and `api.guards`.
 - 2026-09-07, later — no row moved. The Parity phase, [[PHASE-0004-Parity]], is now the phase that takes the `not yet` rows a working day needs; the `shell.terminal` row records Edwin's wish to evaluate T3 Code's terminal before Deck builds a console.
