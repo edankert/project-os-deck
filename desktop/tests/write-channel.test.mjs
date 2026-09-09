@@ -420,16 +420,39 @@ test('a window may not raise an index revision itself', () => {
 
 // ---- the bridge belongs to the origin, not to the window (ISS-0029) ----
 
-test('a window is stopped from navigating away from the origin Deck serves', () => {
-  // The preload runs on every document its `webContents` loads, so without a
-  // guard `window.deck.write.*` would still be there after the window followed
-  // a link out of a rendered note. Checked in the built main process, because
-  // no suite can open an Electron window: what is asserted is that both guards
-  // are registered and that the comparison is by ORIGIN.
-  const main = fs.readFileSync(path.join(desktopRoot, 'dist', 'main', 'main.js'), 'utf-8');
-  assert.match(main, /will-navigate/, 'nothing stops the window navigating');
-  assert.match(main, /setWindowOpenHandler/, 'a new window could carry the preload with it');
-  assert.match(main, /action:\s*['"]deny['"]/, 'a new window is allowed rather than denied');
+test('where a link in a Deck window may lead', () => {
+  // The DECISION, driven directly. The previous version of this check searched
+  // the built file for `will-navigate`, `setWindowOpenHandler` and
+  // `action: 'deny'`, and passed after the condition was inverted, after
+  // `preventDefault` became a no-operation, and after `allow` was returned with
+  // `deny` left behind in a comment (ISS-0032). The WIRING is driven by the
+  // smoke run, which makes a real page try to leave.
+  const { navigationFor } = load('shared/origin.js');
+  const host = 'http://127.0.0.1:7300';
+  // A page Deck serves is followed, or the guard is a wall rather than a rule.
+  assert.equal(navigationFor(host, `${host}/`), 'follow');
+  assert.equal(navigationFor(host, `${host}/renderer/renderer.js`), 'follow');
+  // An ordinary web page goes to the person's own browser, because refusing it
+  // silently would make a link in a note look broken.
+  assert.equal(navigationFor(host, 'https://example.test/x'), 'open-outside');
+  assert.equal(navigationFor(host, 'http://example.test/x'), 'open-outside');
+  // Everything else is REFUSED rather than handed to the operating system's
+  // opener, which is what "open a link in the browser" does not mean.
+  for (const url of [
+    'file:///etc/passwd',
+    'javascript:alert(1)',
+    'data:text/html,<script>1</script>',
+    'vscode://file/etc/passwd',
+    'not a url at all',
+    '',
+  ]) {
+    assert.equal(navigationFor(host, url), 'refuse', `${url} was not refused`);
+  }
+  // A near-miss origin is not followed. `127.0.0.1:7300.example.test` is not
+  // even a URL — the parser reads `7300.example.test` as a port and gives up —
+  // so it is refused; the valid near-miss goes outside like any other page.
+  assert.equal(navigationFor(host, 'http://127.0.0.1:7300.example.test/'), 'refuse');
+  assert.equal(navigationFor(host, 'http://127.0.0.1.example.test:7300/'), 'open-outside');
 });
 
 test('sameOrigin compares origins, not prefixes', () => {

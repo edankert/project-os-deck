@@ -195,49 +195,6 @@
      ]
     },
     {
-     "id": "FEAT-0006",
-     "title": "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry",
-     "status": "review",
-     "url": "/docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md",
-     "subtitle": "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside.",
-     "type": "feature",
-     "review_verdict": "approved",
-     "children": [
-      {
-       "id": "",
-       "title": "Plan — every state has an address",
-       "status": "active",
-       "url": "/docs/features/addresses/plan/PLAN.md",
-       "subtitle": "",
-       "type": "plan"
-      },
-      {
-       "id": "TASK-0017",
-       "title": "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly",
-       "status": "done",
-       "url": "/docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md",
-       "subtitle": "",
-       "type": "task"
-      },
-      {
-       "id": "TASK-0018",
-       "title": "Copy the address and open one — the round trip a person can actually perform",
-       "status": "done",
-       "url": "/docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md",
-       "subtitle": "",
-       "type": "task"
-      },
-      {
-       "id": "TASK-0052",
-       "title": "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor",
-       "status": "done",
-       "url": "/docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md",
-       "subtitle": "",
-       "type": "task"
-      }
-     ]
-    },
-    {
      "id": "FEAT-0008",
      "title": "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a tablet",
      "status": "review",
@@ -471,6 +428,49 @@
        "title": "The state survives a restart — written when it settles, read at launch, and never fatal when the file is bad",
        "status": "done",
        "url": "/docs/features/store/plan/tasks/TASK-0011-The-State-Survives-A-Restart.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0006",
+     "title": "Every reachable Deck state has an address, so a layout is a list of addresses and some geometry",
+     "status": "done",
+     "url": "/docs/features/addresses/FEAT-0006-Every-State-Has-An-Address.md",
+     "subtitle": "Any state a person can reach in Deck can be written down as a short string, and pasting that string back puts Deck in that state. This is what makes a layout serialisable, a window restorable and Deck drivable from outside.",
+     "type": "feature",
+     "review_verdict": "approved",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — every state has an address",
+       "status": "active",
+       "url": "/docs/features/addresses/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0017",
+       "title": "The address grammar — one string covering the workspace, the view, the desk and the note, parsed strictly",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0017-The-Address-Grammar.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0018",
+       "title": "Copy the address and open one — the round trip a person can actually perform",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0018-Copy-The-Address-And-Open-One.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0052",
+       "title": "The address grammar gains surface, page, flow and step; panel kinds come from a registry; and the store reserves a flow cursor",
+       "status": "done",
+       "url": "/docs/features/addresses/plan/tasks/TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry.md",
        "subtitle": "",
        "type": "task"
       }

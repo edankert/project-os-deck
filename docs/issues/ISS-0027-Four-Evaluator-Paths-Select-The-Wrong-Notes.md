@@ -53,4 +53,4 @@ tests: ["[[TST-0031-The-Evaluator-Runs-The-Seeded-Language]]"]
 
 **Two smaller things fixed alongside.** A `groupBy` written as a map rather than a string was silently ignored, which dropped the grouping from four of the cockpit's own views. And a formula with an empty body was reported with an empty `construct`, which told a person nothing.
 
-**Evidence.** Six checks in `desktop/tests/evaluator.test.mjs`, including one that runs all six of the cockpit's own views over this repository's real index and asserts the counts. Reverting the three evaluator fixes fails one, two and four checks respectively.
+**Evidence.** Six checks in `desktop/tests/evaluator.test.mjs`, including one that runs all six of the cockpit's own views over this repository's real index and asserts the counts. Reverting each of the four fixes fails, in order, one, two, one and three checks — measured rather than counted by hand, which is ISS-0036.

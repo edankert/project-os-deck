@@ -42,4 +42,4 @@ An excluded path is ignored. A rebuild that changes no record raises no revision
 
 **One check had to be corrected rather than added**, and it is worth saying which: "the revision is monotonic, and a rebuild does not send it backwards" called `build()` twice and asserted the number rose each time. That asserted the defect. It now says what is actually wanted — the revision never falls, and only a real change raises it.
 
-**Evidence.** `bash tools/scripts/run-desktop-tests.sh index`. Reverting the guard fails four checks.
+**Evidence.** `bash tools/scripts/run-desktop-tests.sh index`. Reverting the guard fails one check; ISS-0036 corrects the number.

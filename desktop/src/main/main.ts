@@ -21,7 +21,7 @@ import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
 import { NoteIndex, docsRootFor, pathPrefixFor } from './note-index.js';
 import { SidecarWriteClient, WriteRefused } from '../shared/write-client.js';
-import { sameOriginAs } from '../shared/origin.js';
+import { navigationFor } from '../shared/origin.js';
 import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 
 // Pinned before anything reads it: Electron derives this from the app name,
@@ -138,6 +138,17 @@ function panelSubject(panel: string | null, address: string | null): string | nu
   return null;
 }
 
+/**
+ * Hand a link to the person's own browser.
+ *
+ * A seam rather than a direct call, so the smoke run can DRIVE the guard — a
+ * check that opened a real browser would be a check nobody ran twice — and can
+ * assert that the link went outward rather than merely that the window stayed.
+ */
+let openOutside = (url: string): void => {
+  void shell.openExternal(url);
+};
+
 function createWindow(role: WindowRole, address: string | null, panel: string | null): BrowserWindow {
   const key = boundsKey(role, panel, panelSubject(panel, address));
   const bounds = placeWindow(windowBook.get(key), displays());
@@ -164,14 +175,13 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
   // Markdown, and the page's policy stops a script and a form but not a link
   // somebody clicks.
   win.webContents.on('will-navigate', (event, url) => {
-    if (sameOriginAs(hostOrigin, url)) return;
+    const decision = navigationFor(hostOrigin, url);
+    if (decision === 'follow') return;
     event.preventDefault();
-    // Opened where a link belongs, which is the person's browser. Refusing
-    // silently would make a link in a note look broken.
-    void shell.openExternal(url);
+    if (decision === 'open-outside') openOutside(url);
   });
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (!sameOriginAs(hostOrigin, url)) void shell.openExternal(url);
+    if (navigationFor(hostOrigin, url) === 'open-outside') openOutside(url);
     // Never `allow`. A new window would carry this preload with it, and a
     // popped-out panel is opened through `deck:window:open-panel`, which is a
     // route Deck controls.
@@ -911,6 +921,8 @@ async function runSmoke(): Promise<void> {
     }
 
 
+    await recordNavigationGuard(record);
+
     // **What a tablet actually gets**, from the machine's own network address
     // rather than from loopback, which is the only way to exercise the path a
     // tablet takes (TST-0010). Safari and the visual absence of a control stay
@@ -1010,6 +1022,45 @@ function lanAddress(): string | null {
     }
   }
   return null;
+}
+
+/**
+ * The navigation guard, DRIVEN rather than searched for.
+ *
+ * The previous check read the built file for three strings, which survives
+ * inverting the very condition it claims to protect (ISS-0032). This makes a
+ * real page try to leave and looks at where the window ended up.
+ *
+ * In a window of its own, opened and closed for the purpose, so a navigation
+ * cannot disturb the window the rest of the run is using.
+ */
+async function recordNavigationGuard(record: (ok: boolean, what: string) => void): Promise<void> {
+  const handedOut: string[] = [];
+  const restore = openOutside;
+  openOutside = (url) => handedOut.push(url);
+  const win = createWindow('satellite', null, null);
+  try {
+    await once(win.webContents, 'did-finish-load');
+    const home = win.webContents.getURL();
+
+    // Not awaited: a navigation destroys the frame the call was made in, so
+    // the promise never settles cleanly. What is asserted is where the window
+    // ended up, which is the thing that matters.
+    void win.webContents.executeJavaScript(`location.href = 'https://example.test/somewhere'`).catch(() => {});
+    await delay(1200);
+    record(win.webContents.getURL() === home, `a page that tried to leave Deck's origin did not`);
+    record(handedOut.includes('https://example.test/somewhere'), 'and the link was handed to the browser instead');
+
+    handedOut.length = 0;
+    void win.webContents.executeJavaScript(`location.href = 'file:///etc/passwd'`).catch(() => {});
+    await delay(1200);
+    record(win.webContents.getURL() === home, 'a file: URL did not move the window either');
+    record(handedOut.length === 0, 'and a file: URL was NOT handed to the operating system');
+  } finally {
+    openOutside = restore;
+    if (!win.isDestroyed()) win.close();
+    await delay(300);
+  }
 }
 
 /**

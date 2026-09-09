@@ -316,10 +316,12 @@ export interface EvalContext {
    * What sits between the workspace root and a record's path, usually `docs`.
    *
    * A base file's `inFolder` is written against the vault, whose root is the
-   * repository; a record's path is relative to the docs root. Without this the
-   * two never line up (ISS-0027).
+   * repository; a record's path is relative to the docs root, and without this
+   * the two never line up (ISS-0027). REQUIRED rather than optional, so a
+   * caller that forgets it is a compile error rather than a silently wrong
+   * answer (ISS-0031).
    */
-  pathPrefix?: string;
+  pathPrefix: string;
   unsupported: Unsupported[];
   /** Where in the description this expression came from, for a report. */
   where: string;
@@ -371,7 +373,7 @@ function report(context: EvalContext, construct: string, reason: string): typeof
  * file disambiguates, not a second place to look.
  */
 function readName(name: string, context: EvalContext): unknown {
-  if (name === 'file') return fileOf(context.record, context.pathPrefix ?? '');
+  if (name === 'file') return fileOf(context.record, context.pathPrefix);
   if (name === 'note') return context.record.frontmatter;
   if (name === 'this') {
     if (context.this === null) {
@@ -381,7 +383,7 @@ function readName(name: string, context: EvalContext): unknown {
         'a `this.`-relative filter names the note a view is embedded in, and no Deck surface has one yet',
       );
     }
-    return { file: fileOf(context.this, context.pathPrefix ?? ''), ...context.this.frontmatter };
+    return { file: fileOf(context.this, context.pathPrefix), ...context.this.frontmatter };
   }
   if (name === 'formula') return { __formulas: true };
   return context.record.frontmatter[name] ?? null;
@@ -555,8 +557,20 @@ function apply(name: string, target: unknown, args: unknown[], context: EvalCont
       const wanted = linkTarget(nameOf(rest[0]));
       if (wanted === '') return false;
       const receiver = target === null ? args[0] : target;
-      if (isFileObject(receiver)) return linksIn(context.record).includes(wanted);
-      return linksUnder(receiver).includes(wanted);
+      if (!isFileObject(receiver)) return linksUnder(receiver).includes(wanted);
+      // **`file.hasLink` is a backlink question and Deck holds half the
+      // answer.** A record carries frontmatter and no body, which TASK-0038
+      // decided deliberately — 1537 notes with their bodies is a different
+      // memory question from 1537 records. The cockpit builds its backlink
+      // graph from frontmatter AND body, so a note linked only in its prose is
+      // invisible here. Answering the smaller question in silence is the
+      // failure this evaluator is written against, so it says so (ISS-0033).
+      report(
+        context,
+        'file.hasLink()',
+        'file.hasLink reads a note\'s frontmatter and Deck holds no note bodies, so a link written in the prose is not seen; the answer is right for the frontmatter and incomplete for the note',
+      );
+      return linksIn(context.record).includes(wanted);
     }
     case 'asLink':
       return `[[${nameOf(first)}]]`;
@@ -692,10 +706,19 @@ export function same(a: unknown, b: unknown): boolean {
   if (Array.isArray(left) && Array.isArray(right)) {
     return left.length === right.length && left.every((v, i) => same(v, right[i]));
   }
-  // Case-SENSITIVE, because Obsidian's is. Lower-casing both sides made
-  // `status == "Done"` match `status: done` (ISS-0027), and it bought nothing:
-  // the three type spellings agree because `comparable` reduces a wikilink to
-  // its target, not because of case.
+  // **Case-SENSITIVE.** Lower-casing both sides made `status == "Done"` match
+  // `status: done` (ISS-0027), and it bought nothing: the three type spellings
+  // agree because `comparable` reduces a wikilink to its target, not because of
+  // case.
+  //
+  // **How that was established, since it is a premise and not a citation.** It
+  // was measured against Edwin's own vault rather than read in Obsidian's
+  // documentation: the ten live base files there compare against values whose
+  // case matches the notes exactly, and no file relies on a mismatch. That is
+  // weaker footing than a specification, and the consequence is real — every
+  // TaskNotes view filters `note.type == "[[Task]]"` and selects NOTHING over a
+  // project-os repository, which writes `type: "[[task]]"`. Correct, and
+  // surprising, which is why it is written down here and in TASK-0043.
   return left === right;
 }
 

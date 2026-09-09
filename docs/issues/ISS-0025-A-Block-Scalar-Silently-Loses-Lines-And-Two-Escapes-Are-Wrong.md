@@ -69,4 +69,4 @@ A block scalar keeps every line it contains, blank and hash-leading alike, and i
 
 **A dash after a dash nests.** `- - 1` opens a sequence inside a sequence, by the same trick that already handled `- key: value`: the line is rewritten as though its content started at its own column and a block is read there.
 
-**Evidence.** Four checks in `desktop/tests/index.test.mjs`, one per fault. Reverting the scan fails three of them. And the claim [[TASK-0038-Records-From-The-Workspaces-Markdown]] made — every file measured with no unreported problem — is now true in the stronger form: Deck's key sets are identical to PyYAML's across 2924 notes.
+**Evidence.** Four checks in `desktop/tests/index.test.mjs`, one per fault. Reverting the scan fails two of them, and reverting the escape chain another two — measured by `mutate` rather than counted by hand, which is ISS-0036. And the claim [[TASK-0038-Records-From-The-Workspaces-Markdown]] made — every file measured with no unreported problem — is now true in the stronger form: Deck's key sets are identical to PyYAML's across 2924 notes.

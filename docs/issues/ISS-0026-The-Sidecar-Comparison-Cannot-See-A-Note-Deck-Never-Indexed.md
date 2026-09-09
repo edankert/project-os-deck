@@ -44,4 +44,4 @@ A fixture path that exists on disk and has no record fails by name. What is comp
 
 **That is what makes [[FEAT-0011-Decks-Own-Index]]'s claim true rather than wide.** Deck and the sidecar now agree about every key of every note in both corpora, with no note indexed by one and not the other — which is a bigger claim than the one the note was making, and it is checked.
 
-**Evidence.** Two new checks drive the failures directly, over temporary workspaces, because what they guard is a note that is ABSENT and an absent thing is what a loop over what is present cannot see. Reverting the missing-note check fails four.
+**Evidence.** Two new checks drive the failures directly, over temporary workspaces, because what they guard is a note that is ABSENT and an absent thing is what a loop over what is present cannot see. Reverting the missing-note check fails one; ISS-0036 corrects the number, which was counted by hand and wrong.

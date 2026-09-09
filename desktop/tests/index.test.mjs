@@ -9,6 +9,7 @@
 // loosened an assertion would test nothing.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import net from 'node:net';
@@ -18,9 +19,44 @@ import { desktopRoot, load } from './helpers.mjs';
 const { parseFrontmatter, parseYaml, firstHeading } = load('shared/yaml.js');
 const { EXCLUDED_DIRECTORIES, isExcluded, isTemplate, linkTarget, normaliseStatus, normaliseTypes, recordFrom, typeCounts } =
   load('shared/records.js');
-const { NoteIndex, docsRootFor, walkNotes } = load('main/note-index.js');
+const { NoteIndex, docsRootFor, pathPrefixFor, walkNotes } = load('main/note-index.js');
 
 const REPO = path.resolve(desktopRoot, '..');
+
+/**
+ * The digest the fixture recorded, computed the same way.
+ *
+ * The one deliberate difference is normalised rather than treated as a
+ * divergence: PyYAML builds a date where Deck keeps the text it was written
+ * as, which `shared/yaml.ts` records as a decision — a record crosses a JSON
+ * boundary and a date would be a string on the far side anyway.
+ */
+function valueDigest(frontmatter) {
+  const canon = (v) => {
+    if (typeof v === 'string') return v.replace(/(\.\d*?)0+(?=[+Z-]|$)/, (_m, head) => head.replace(/\.$/, ''));
+    if (Array.isArray(v)) return v.map(canon);
+    if (v !== null && typeof v === 'object') {
+      return Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, x]) => [k, canon(x)]));
+    }
+    return v;
+  };
+  const ordered = Object.fromEntries(
+    Object.entries(canon(frontmatter)).sort(([a], [b]) => (a < b ? -1 : 1)),
+  );
+  return createHash('sha256').update(stableJson(ordered)).digest('hex').slice(0, 16);
+}
+
+/** JSON with object keys in sorted order, matching Python's `sort_keys=True`. */
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(', ')}]`;
+  if (value !== null && typeof value === 'object') {
+    const parts = Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}: ${stableJson(value[k])}`);
+    return `{${parts.join(', ')}}`;
+  }
+  return JSON.stringify(value);
+}
 const FIXTURE = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'sidecar-types.json'), 'utf-8'));
 
 // ---- the record ----
@@ -188,9 +224,12 @@ function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
     FIXTURE.expectedDifferences.filter((d) => d.workspace === workspace).map((d) => [d.relPath, d]),
   );
   let compared = 0;
+  let edited = 0;
   const notIndexed = [];
   const contradictions = [];
   const keySets = [];
+  const values = [];
+  const unreported = [];
   const unexplained = [];
   for (const [relPath, note] of Object.entries(recorded.notes)) {
     const record = mine.get(relPath);
@@ -202,12 +241,32 @@ function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
     }
     compared += 1;
 
-    // The key set. `unreadable` means PyYAML refused the whole document, so
-    // the sidecar has no keys at all and the difference rules cover it.
-    if (note.unreadable !== true) {
+    // **A note edited since the fixture was recorded has different content**,
+    // so its keys and values are not comparable and only the "is it indexed"
+    // question above applies. Without this the value check would go red on
+    // every commit that touches a note, which is most of them here — and a
+    // check that is red for an ordinary reason is a check nobody reads.
+    const unchanged = typeof note.mtime !== 'number' || Math.abs(record.mtimeMs / 1000 - note.mtime) < 0.01;
+    if (!unchanged) {
+      edited += 1;
+      continue;
+    }
+
+    if (note.unreadable === true) {
+      // PyYAML refused the whole document, so the sidecar has nothing to
+      // compare against. What CAN be asserted is that Deck said so: if Deck
+      // ever reads such a file silently, nobody finds out (ISS-0034).
+      if (!reported.has(relPath)) unreported.push(relPath);
+    } else {
+      // The key set, and the VALUES. Comparing names alone left a check that
+      // passed after every frontmatter value in 2,926 notes was replaced with
+      // the same string (ISS-0034).
       const wanted = recorded.shapes[note.shape];
       const ours = Object.keys(record.frontmatter).sort().join(',');
       if (ours !== wanted) keySets.push(`${relPath}: deck [${ours}] where the sidecar read [${wanted}]`);
+      else if (valueDigest(record.frontmatter) !== note.values) {
+        values.push(`${relPath}: the same keys, different values — ${JSON.stringify(record.frontmatter).slice(0, 160)}`);
+      }
     }
 
     if (note.type !== null) {
@@ -224,8 +283,20 @@ function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
   assert.deepEqual(notIndexed, [], `these notes in ${workspace} are on disk and Deck did not index them`);
   assert.deepEqual(contradictions, [], `Deck and the sidecar CONTRADICT each other about these notes in ${workspace}`);
   assert.deepEqual(keySets, [], `Deck and the sidecar read different keys from these notes in ${workspace}`);
+  assert.deepEqual(values, [], `Deck and the sidecar read different VALUES from these notes in ${workspace}`);
+  assert.deepEqual(
+    unreported,
+    [],
+    `the sidecar could not read these notes in ${workspace} and Deck read them without saying so`,
+  );
   assert.deepEqual(unexplained, [], `no rule in the fixture explains these differences in ${workspace}`);
   assert.ok(compared > atLeast, `only ${compared} notes were compared; the fixture has lost its content`);
+  // A fixture whose notes have ALL been edited compares nothing but presence,
+  // which is the same failure one layer up. Re-record it.
+  assert.ok(
+    compared - edited > atLeast / 2,
+    `${edited} of ${compared} notes in ${workspace} have been edited since the fixture was recorded; re-record it with tools/scripts/record-sidecar-fixture.py`,
+  );
   for (const [relPath, row] of named) {
     const record = mine.get(relPath);
     if (record === undefined) continue;
@@ -259,9 +330,13 @@ test('a note ON DISK that Deck did not index fails the comparison', () => {
   fs.writeFileSync(path.join(root, 'here.md'), '---\ntype: issue\n---\n');
   fs.mkdirSync(path.join(root, '.trash'));
   fs.writeFileSync(path.join(root, '.trash', 'hidden.md'), '---\ntype: issue\n---\n');
+  const digest = valueDigest({ type: 'issue' });
   const recorded = {
     shapes: ['type'],
-    notes: { 'here.md': { type: 'issue', shape: 0 }, '.trash/hidden.md': { type: 'issue', shape: 0 } },
+    notes: {
+      'here.md': { type: 'issue', shape: 0, values: digest },
+      '.trash/hidden.md': { type: 'issue', shape: 0, values: digest },
+    },
   };
   assert.throws(
     () => compareWithSidecar(recorded, root, 'thisRepository', 0),
@@ -279,8 +354,36 @@ test('a note whose KEYS differ from the sidecar\'s fails the comparison', () => 
   // fields on twenty-two notes with nothing going red.
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-keys-'));
   fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: open\n---\n');
-  const recorded = { shapes: ['status,tests,type'], notes: { 'a.md': { type: 'issue', shape: 0 } } };
+  const recorded = { shapes: ['status,tests,type'], notes: { 'a.md': { type: 'issue', shape: 0, values: 'x' } } };
   assert.throws(() => compareWithSidecar(recorded, root, 'thisRepository', 0), /read different keys/);
+});
+
+test('a note whose VALUES differ from the sidecar\'s fails the comparison', () => {
+  // The check that read key NAMES and stopped: replacing every frontmatter
+  // value in 2,926 notes left it passing (ISS-0034).
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-values-'));
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: open\n---\n');
+  const recorded = {
+    shapes: ['status,type'],
+    notes: { 'a.md': { type: 'issue', shape: 0, values: valueDigest({ type: 'issue', status: 'fixed' }) } },
+  };
+  assert.throws(() => compareWithSidecar(recorded, root, 'thisRepository', 0), /different VALUES/);
+  // The same values pass, so the digest is not simply always different.
+  recorded.notes['a.md'].values = valueDigest({ type: 'issue', status: 'open' });
+  assert.equal(compareWithSidecar(recorded, root, 'thisRepository', 0), 1);
+});
+
+test('a note the sidecar could not read, that Deck reads SILENTLY, fails', () => {
+  // Deck may read a file PyYAML refuses — that is a named difference. What it
+  // may not do is read one without saying so, because then nobody finds out
+  // how much of it Deck actually got (ISS-0034).
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-unreadable-'));
+  fs.writeFileSync(path.join(root, 'ok.md'), '---\ntype: issue\n---\n');
+  const recorded = {
+    shapes: [''],
+    notes: { 'ok.md': { type: null, shape: 0, values: '', unreadable: true } },
+  };
+  assert.throws(() => compareWithSidecar(recorded, root, 'thisRepository', 0), /without saying so/);
 });
 
 test('the fixture states the RULES a difference has to fall under, not just a list', () => {
@@ -701,4 +804,76 @@ test('an escape is read once, so a literal backslash-n stays one', () => {
 test('a sequence inside a sequence nests', () => {
   const { value } = parseYaml(['m:', '  - - 1', '    - 2', '  - 3'].join('\n'));
   assert.deepEqual(value.m, [[1, 2], 3]);
+});
+
+// ---- the path prefix, along the route it travels (ISS-0031) ----
+
+test('the path prefix is what Obsidian would put in front of a record', () => {
+  // `docs` for a project-os repository, whose notes are under `docs/` while the
+  // vault root is the repository. Empty for a vault, whose notes are the tree.
+  const { pathPrefixFor } = load('main/note-index.js');
+  assert.equal(pathPrefixFor(REPO, path.join(REPO, 'docs')), 'docs');
+  assert.equal(pathPrefixFor(REPO, REPO), '');
+  assert.equal(pathPrefixFor('/vault', '/vault'), '');
+  assert.equal(pathPrefixFor('/vault', '/vault/notes/inner'), 'notes/inner');
+  // A docs root outside the workspace is not a prefix of anything.
+  assert.equal(pathPrefixFor('/a', '/b/docs'), '');
+});
+
+test('the index carries the prefix, and so does what the host answers', async () => {
+  // Three hops could each drop it while every check passed, and each restored
+  // a real defect silently (ISS-0031). The evaluator's side is now a type
+  // error; these two are the hops a type cannot reach.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-prefix-'));
+  fs.mkdirSync(path.join(root, 'docs'));
+  fs.writeFileSync(path.join(root, 'docs', 'a.md'), '---\ntype: issue\n---\n');
+  const index = new NoteIndex({
+    workspaceId: 'aaaa1111',
+    docsRoot: path.join(root, 'docs'),
+    pathPrefix: pathPrefixFor(root, path.join(root, 'docs')),
+    quietMs: 0,
+  });
+  index.build();
+  assert.equal(index.snapshot().pathPrefix, 'docs', 'the index dropped the prefix');
+
+  const { host, origin } = await hostWithIndex(() => index.snapshot());
+  try {
+    const payload = await (await fetch(`${origin}/deck/records/aaaa1111`)).json();
+    assert.equal(payload.pathPrefix, 'docs', "the host's answer dropped the prefix");
+  } finally {
+    await host.close();
+    index.close();
+  }
+});
+
+test('every block-scalar shape reads what PyYAML reads', () => {
+  // ISS-0035. The ISS-0025 fix introduced two new SILENT mis-reads of its own:
+  // the scalar swallowed lines shallower than itself, and the chomping
+  // indicator was matched and then ignored. Nothing in the three corpora
+  // exercises either — `~/Notes` holds the only seventeen block scalars and
+  // all seventeen are plain `|` — so the shapes are written out here instead.
+  //
+  // Every expectation was taken from PyYAML by running it, not from memory.
+  const cases = [
+    ['clip keeps one trailing newline', 'a: |\n  x\n', { a: 'x\n' }],
+    ['and only if the source had one', 'a: |\n  x', { a: 'x' }],
+    ['two lines', 'a: |\n  x\n  y\n', { a: 'x\ny\n' }],
+    ['strip keeps none', 'a: |-\n  x\n', { a: 'x' }],
+    ['keep keeps every one', 'a: |+\n  x\n\n\n', { a: 'x\n\n\n' }],
+    ['a blank line inside belongs to the block', 'a: |\n  x\n\n  y\nb: 1\n', { a: 'x\n\ny\n', b: 1 }],
+    ['a deeper line keeps its extra indent', 'a: |\n  x\n   deeper\n  y\n', { a: 'x\n deeper\ny\n' }],
+    ['a hash inside is content, not a comment', 'a: |\n  # c\n  x\n', { a: '# c\nx\n' }],
+    ['a SHALLOWER line after is not the block', 'a: |\n    x\n  # c\n', { a: 'x\n' }],
+    ['folded joins its lines with spaces', 'a: >\n  x\n  y\n', { a: 'x y\n' }],
+    ['a blank line folds to ONE newline', 'a: >\n  x\n  y\n\n  z\n', { a: 'x y\nz\n' }],
+    ['folded strip', 'a: >-\n  x\n  y\n', { a: 'x y' }],
+    ['an empty block is an empty string', 'a: |\nb: 1\n', { a: '', b: 1 }],
+    ['the key after a block still reads', 'a: |\n  x\nb: 2\n', { a: 'x\n', b: 2 }],
+    ['nested under a key', 'outer:\n  a: |\n    x\n  b: 1\n', { outer: { a: 'x\n', b: 1 } }],
+  ];
+  for (const [what, source, wanted] of cases) {
+    const { value, problems } = parseYaml(source);
+    assert.deepEqual(value, wanted, `${what}: ${JSON.stringify(source)}`);
+    assert.deepEqual(problems, [], `${what} reported a problem`);
+  }
 });

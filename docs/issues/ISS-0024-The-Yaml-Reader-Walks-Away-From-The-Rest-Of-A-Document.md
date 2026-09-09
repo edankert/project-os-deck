@@ -20,7 +20,7 @@ tests: ["[[TST-0029-The-Index-Reads-What-Is-On-Disk]]"]
 
 ## Problem
 
-**Twenty-two notes in Your Trainer lose every frontmatter key after a certain line, and Deck's own note claims it loses none.** `desktop/src/shared/records.ts` says "Every key the file declares is here under its own name", and [[TASK-0038-Records-From-The-Workspaces-Markdown]] says the same thing twice. It is false for a file shaped like this:
+**Fourteen notes in Your Trainer lose every frontmatter key after a certain line, and Deck's own note claims it loses none.** `desktop/src/shared/records.ts` says "Every key the file declares is here under its own name", and [[TASK-0038-Records-From-The-Workspaces-Markdown]] says the same thing twice. It is false for a file shaped like this:
 
 ```yaml
 updated: 2026-05-07

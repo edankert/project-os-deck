@@ -11,7 +11,7 @@ source: ["The eighteen tasks PHASE-0001 gained on 2026-09-08 when Edwin widened 
 commit: ""
 pr: ""
 impacts: ["desktop/src/main/", "desktop/src/renderer/", "desktop/src/shared/", "desktop/tests/", "desktop/fixtures/", "tools/scripts/record-sidecar-fixture.py"]
-issues: ["[[ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card]]", "[[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]]", "[[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]", "[[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]", "[[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]", "[[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]", "[[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]", "[[ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates]]", "[[ISS-0030-A-Change-To-Any-File-Rebuilds-The-Index-And-Marks-Every-Window]]"]
+issues: ["[[ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded]]", "[[ISS-0032-The-Navigation-Guards-Are-Checked-By-Grep]]", "[[ISS-0033-Haslink-Answers-From-Frontmatter-And-Does-Not-Say-So]]", "[[ISS-0034-The-Sidecar-Comparison-Compares-No-Values]]", "[[ISS-0035-Two-New-Block-Scalar-Misreads]]", "[[ISS-0036-Notes-Quote-Measurements-That-Do-Not-Reproduce]]", "[[ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card]]", "[[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]]", "[[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]", "[[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]", "[[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]", "[[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]", "[[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]", "[[ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates]]", "[[ISS-0030-A-Change-To-Any-File-Rebuilds-The-Index-And-Marks-Every-Window]]"]
 features: ["[[FEAT-0006-Every-State-Has-An-Address]]", "[[FEAT-0011-Decks-Own-Index]]", "[[FEAT-0012-A-View-Is-A-Description]]", "[[FEAT-0013-The-First-Write]]"]
 related: ["[[PHASE-0001-Deck]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]", "[[RISK-0003-Two-Evaluators-Of-The-Bases-Language]]", "[[RISK-0004-Decks-Index-Duplicates-The-Sidecars-Indexer]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 ---
@@ -56,7 +56,7 @@ Each is written where somebody will meet it rather than only here.
 
 An independent review read this work from a clean context and reproduced seven things before believing any of them. All seven are fixed here, each with a check that fails when the fix is reverted.
 
-**Two in the YAML reader.** A key whose value is followed by an indented list ended the document, costing twenty-two of Your Trainer's notes five relationship fields each ([[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]). A `|` block scalar silently lost every blank line and every line beginning with a hash ([[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]).
+**Two in the YAML reader.** A key whose value is followed by an indented list ended the document, costing fourteen of Your Trainer's notes five relationship fields each ([[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]). A `|` block scalar silently lost every blank line and every line beginning with a hash ([[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]).
 
 **One in the check that should have caught them.** The comparison against the sidecar read the type only and skipped any note Deck had failed to index; hiding a sixth of this repository still passed it ([[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]). It reads the key set now, and **the claim is bigger than it was and checked**: Deck's frontmatter keys are identical to PyYAML's for all 2924 notes across both corpora.
 
@@ -67,6 +67,20 @@ An independent review read this work from a clean context and reproduced seven t
 **One hardening gap the write path made matter.** Nothing stopped a window navigating away from Deck's own origin, and a preload follows its window ([[ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates]]).
 
 **And one banner nobody could act on**: a write to `.obsidian/workspace.json` re-walked the tree and told every window its notes had changed ([[ISS-0030-A-Change-To-Any-File-Rebuilds-The-Index-And-Marks-Every-Window]]).
+
+## Six more, from the RE-review of those seven
+
+The same reviewer read the seven fixes and returned `changes-requested` again. Six more things, and the two that matter most are about the checks rather than the code.
+
+**Two of my own fixes were guarded nowhere.** The path prefix could be dropped at any of three hops with all 307 checks still passing, each restoring exactly the defect it fixed ([[ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded]]) — the records and their prefix now travel as one value, so dropping it is a compile error. And the navigation guards were checked by searching the built file for three strings, which survives inverting the condition, replacing `preventDefault` with a no-operation, and returning `allow` with `deny` left in a comment ([[ISS-0032-The-Navigation-Guards-Are-Checked-By-Grep]]) — `helpers.mjs` opens by warning against exactly that shape.
+
+**My fix for a silent mis-read was itself two silent mis-reads** ([[ISS-0035-Two-New-Block-Scalar-Misreads]]). A block scalar swallowed lines shallower than itself, and the chomping indicator was matched and then ignored. All sixteen shapes now read what PyYAML reads, and the expectations were taken by running PyYAML rather than from memory.
+
+**The comparison was still too narrow, for the third time in two days** ([[ISS-0034-The-Sidecar-Comparison-Compares-No-Values]]). Types, then key names, and now values: replacing every frontmatter value in 2,926 notes left it passing. It carries a value digest now, and a file the sidecar could not read is no longer exempt from everything — Deck must at least have said so.
+
+**`file.hasLink` answers a smaller question than it is asked** ([[ISS-0033-Haslink-Answers-From-Frontmatter-And-Does-Not-Say-So]]), because a record holds no body. It says so now; the real fix is owed and named.
+
+**And six numbers in these notes did not reproduce** ([[ISS-0036-Notes-Quote-Measurements-That-Do-Not-Reproduce]]) — four mutation counts read out of the wrong column, "twenty-two notes" that is fourteen, "143 notes" that is 126. Every count here is now printed by a script that is re-run rather than remembered. **Seventeen mutations, seventeen killed.**
 
 ## What is still owed
 

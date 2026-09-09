@@ -15,7 +15,7 @@ import type { Description, Refusal } from '../shared/description.js';
 import { AddressError, addressFor, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry, marksModeFor, sourceOf } from '../shared/views.js';
 import { SidecarClient, flattenGroups, groupsFromNav, isFinishedWork } from '../shared/sidecar-client.js';
-import { runQuery } from '../shared/query.js';
+import { type QueryIndex, runQuery } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { deskCardsOf } from '../shared/store-state.js';
@@ -375,9 +375,11 @@ async function loadQueryView(
   workspace: Workspace,
   view: Description,
 ): Promise<{ groups: CardGroup[]; refusals: Refusal[] }> {
-  const { records, pathPrefix } = await readRecords(workspace.id);
+  // The index and its prefix travel as one value, so this cannot pass the
+  // records on and leave the prefix behind (ISS-0031).
+  const index = await readRecords(workspace.id);
   const marks = await readMarks(workspace.id, marksModeFor(view));
-  const result = runQuery(view, records, { marks, pathPrefix });
+  const result = runQuery(view, index, { marks });
   return {
     groups: result.groups,
     refusals: [
@@ -396,7 +398,7 @@ async function loadQueryView(
   };
 }
 
-async function readRecords(workspaceId: string): Promise<{ records: NoteRecord[]; pathPrefix: string }> {
+async function readRecords(workspaceId: string): Promise<QueryIndex> {
   const response = await fetch(`/deck/records/${encodeURIComponent(workspaceId)}`);
   if (!response.ok) throw new Error(`Deck's own index answered ${response.status}`);
   const payload = (await response.json()) as { building?: boolean; records?: NoteRecord[]; pathPrefix?: string };

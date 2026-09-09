@@ -10001,6 +10001,22 @@
      "url": "/docs/features/pacer-ghost/plan/tasks/TASK-0872-NoSheetWhenThereIsNothingToAsk.md",
      "subtitle": "",
      "type": "task"
+    },
+    {
+     "id": "TASK-0873",
+     "title": "The pacer is a rider preference, not a question asked at the start line — Profile owns the switch and the effort, and the pre-ride sheet retires",
+     "status": "done",
+     "url": "/docs/features/pacer-ghost/plan/tasks/TASK-0873-ThePacerIsAPreference.md",
+     "subtitle": "",
+     "type": "task"
+    },
+    {
+     "id": "TASK-0874",
+     "title": "The pacer is visible again on every trainer, and it finally draws the ghost that has been built and never used",
+     "status": "done",
+     "url": "/docs/features/pacer-ghost/plan/tasks/TASK-0874-ThePacerIsVisibleAgainAndItDrawsAGhost.md",
+     "subtitle": "",
+     "type": "task"
     }
    ]
   },

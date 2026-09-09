@@ -20,7 +20,9 @@ in a loosened assertion on the Deck side.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import subprocess
 import sys
 from datetime import date
@@ -146,6 +148,34 @@ EXPECTED_DIFFERENCES = [
 ]
 
 
+def canon(value):
+    """The shape Deck would produce, so the digest is of a comparable thing.
+
+    PyYAML builds a `date` or `datetime` where Deck keeps the text it was
+    written as — a deliberate difference, recorded in `shared/yaml.ts`, because
+    a record crosses a JSON boundary and a date would be a string on the far
+    side anyway. Normalised here rather than treated as a divergence, and a
+    fractional second's trailing zeros go with it: PyYAML pads `.202` to
+    `.202000` on the way back out and the file says `.202`.
+    """
+    import datetime
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        value = value.isoformat()
+    if isinstance(value, str):
+        return re.sub(r"(\.\d*?)0+(?=[+Z-]|$)", lambda m: m.group(1).rstrip("."), value)
+    if isinstance(value, list):
+        return [canon(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): canon(v) for k, v in sorted(value.items())}
+    return value
+
+
+def value_digest(metadata: dict) -> str:
+    """A short, stable digest of every frontmatter VALUE."""
+    payload = json.dumps(canon(metadata), sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
 def notes_of(index) -> dict:
     """Per note path, what the sidecar's own reading of it produced.
 
@@ -162,13 +192,16 @@ def notes_of(index) -> dict:
     for record in sorted(index._records.values(), key=lambda r: r.rel_path):
         try:
             post = frontmatter.loads(record.path.read_text(encoding="utf-8"))
-            keys = ",".join(sorted(dict(post.metadata or {}).keys()))
+            metadata = dict(post.metadata or {})
+            keys = ",".join(sorted(metadata.keys()))
+            digest = value_digest(metadata)
             readable = True
         except Exception:
             # PyYAML refuses the document outright, so the sidecar indexed this
             # note with EMPTY frontmatter. Recorded as such rather than skipped:
             # it is a difference Deck's rules have to explain.
             keys = ""
+            digest = ""
             readable = False
         if keys not in by_shape:
             by_shape[keys] = len(shapes)
@@ -176,6 +209,18 @@ def notes_of(index) -> dict:
         notes[record.rel_path] = {
             "type": record.note_type,
             "shape": by_shape[keys],
+            # When this file was last written. A note edited since the fixture
+            # was recorded has different content, so its keys and values are not
+            # comparable and the suite skips them — otherwise the value check
+            # would go red on every commit that touches a note, which is most of
+            # them in this repository.
+            "mtime": round(record.path.stat().st_mtime, 3),
+            # The VALUES, as a digest. Comparing key names alone left a check
+            # that passed after every frontmatter value in 2,926 notes was
+            # replaced with the same string (ISS-0034). A digest is sixteen
+            # characters against a full copy of every value, and the failure
+            # names the file so a person can look.
+            "values": digest,
             **({} if readable else {"unreadable": True}),
         }
     return {"shapes": shapes, "notes": notes}
@@ -201,9 +246,10 @@ def main() -> int:
         trainer = {
             "docsRoot": str(TRAINER / "docs"),
             "shape": (
-                "per note path: the type the sidecar assigned (null means none) and an index into "
-                "`shapes`, which holds the sorted frontmatter key list PyYAML read. `unreadable` "
-                "marks a note whose frontmatter PyYAML refused outright."
+                "per note path: the type the sidecar assigned (null means none), an index into "
+                "`shapes` (the sorted frontmatter key list PyYAML read), and `values`, a digest of "
+                "every frontmatter VALUE. `unreadable` marks a note whose frontmatter PyYAML "
+                "refused outright, which has neither keys nor values to compare."
             ),
             "why": (
                 "Per path, for the same reason this repository is: Your Trainer is worked on daily "
@@ -240,8 +286,9 @@ def main() -> int:
         "thisRepository": {
             "docsRoot": "docs",
             "shape": (
-                "per note path: the type the sidecar assigned (null means none) and an index into "
-                "`shapes`, which holds the sorted frontmatter key list PyYAML read."
+                "per note path: the type the sidecar assigned (null means none), an index into "
+                "`shapes` (the sorted frontmatter key list PyYAML read), and `values`, a digest of "
+                "every frontmatter VALUE."
             ),
             "why": (
                 "Per path rather than per count: this repository gains notes daily, so a count "

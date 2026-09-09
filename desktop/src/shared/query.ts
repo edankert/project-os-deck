@@ -38,19 +38,35 @@ export type FilterNode =
   | boolean
   | null;
 
+/**
+ * An index to run a query over: the records, and what sits in front of their
+ * paths.
+ *
+ * **One thing, and deliberately not two.** The prefix — usually `docs` — has to
+ * travel from the walk, through Deck's host, into the renderer and on to the
+ * evaluator, and each of those hops could drop it while every check still
+ * passed (ISS-0031). Dropping it restores a real defect silently: a base file's
+ * `inFolder` stops matching and the cockpit's own `NAVIGATION.base` selects a
+ * template note it excludes. Carrying them together makes that a type error
+ * rather than a wrong answer.
+ */
+export interface QueryIndex {
+  records: NoteRecord[];
+  /**
+   * What sits between the workspace root and a record's path, usually `docs`.
+   *
+   * Empty for a vault, whose notes are the whole tree. A base file is written
+   * against the vault, whose root is the repository, so `inFolder` only matches
+   * when Deck says what Obsidian would say.
+   */
+  pathPrefix: string;
+}
+
 export interface QueryOptions {
   /** What the sidecar says about each note, by note id. */
   marks?: Map<string, { owed: boolean; owedVerb: string | null; suppressed: boolean }>;
   /** Injectable, so a suite is not a clock. */
   today?: Date;
-  /**
-   * What sits between the workspace root and a record's path, usually `docs`.
-   *
-   * A base file is written against the vault, whose root is the repository, so
-   * `file.inFolder("docs/__templates__")` only matches when Deck says what
-   * Obsidian would say (ISS-0027).
-   */
-  pathPrefix?: string;
 }
 
 export interface QueryResult {
@@ -67,7 +83,8 @@ export interface QueryResult {
 }
 
 /** Run a description's query over an index. Never throws. */
-export function runQuery(description: Description, records: NoteRecord[], options: QueryOptions = {}): QueryResult {
+export function runQuery(description: Description, index: QueryIndex, options: QueryOptions = {}): QueryResult {
+  const { records, pathPrefix } = index;
   const unsupported: Unsupported[] = [];
   if (description.source.kind !== 'query') {
     return { groups: [], unsupported, untracked: true };
@@ -78,11 +95,11 @@ export function runQuery(description: Description, records: NoteRecord[], option
 
   const selected: NoteRecord[] = [];
   for (const record of records) {
-    const context = contextFor(record, formulas, unsupported, options, 'source.filter');
+    const context = contextFor(record, formulas, unsupported, options, pathPrefix, 'source.filter');
     if (filter(context)) selected.push(record);
   }
 
-  sortRecords(selected, source.sort, formulas, unsupported, options);
+  sortRecords(selected, source.sort, formulas, unsupported, options, pathPrefix);
 
   const marks = options.marks ?? new Map();
   const untracked = marks.size === 0 || !selected.some((r) => marks.has(r.id));
@@ -104,7 +121,7 @@ export function runQuery(description: Description, records: NoteRecord[], option
   }
   const rest = pairs.filter((p) => !p.card.owed && marks.get(p.card.noteId)?.suppressed !== true);
   const quiet = pairs.filter((p) => !p.card.owed && marks.get(p.card.noteId)?.suppressed === true);
-  groups.push(...groupRest(rest, source.groupBy, description.label, formulas, unsupported, options));
+  groups.push(...groupRest(rest, source.groupBy, description.label, formulas, unsupported, options, pathPrefix));
   if (quiet.length > 0) {
     groups.push({
       key: 'quiet',
@@ -129,6 +146,7 @@ function groupRest(
   formulas: Record<string, Node>,
   unsupported: Unsupported[],
   options: QueryOptions,
+  pathPrefix: string,
 ): CardGroup[] {
   if (groupBy === null) {
     if (pairs.length === 0) return [];
@@ -140,7 +158,7 @@ function groupRest(
     const value =
       expression === null
         ? null
-        : evaluate(expression, contextFor(pair.record, formulas, unsupported, options, 'source.groupBy'));
+        : evaluate(expression, contextFor(pair.record, formulas, unsupported, options, pathPrefix, 'source.groupBy'));
     const key = value === UNSUPPORTED || value === null || value === '' ? '(none)' : String(labelOf(value));
     const bucket = buckets.get(key);
     if (bucket === undefined) buckets.set(key, [pair.card]);
@@ -166,6 +184,7 @@ function sortRecords(
   formulas: Record<string, Node>,
   unsupported: Unsupported[],
   options: QueryOptions,
+  pathPrefix: string,
 ): void {
   if (sort.length === 0) return;
   const compiled = sort.map((spec) => ({
@@ -175,8 +194,9 @@ function sortRecords(
   records.sort((a, b) => {
     for (const { spec, node } of compiled) {
       if (node === null) continue;
-      const left = evaluate(node, contextFor(a, formulas, unsupported, options, `source.sort.${spec.property}`));
-      const right = evaluate(node, contextFor(b, formulas, unsupported, options, `source.sort.${spec.property}`));
+      const where = `source.sort.${spec.property}`;
+      const left = evaluate(node, contextFor(a, formulas, unsupported, options, pathPrefix, where));
+      const right = evaluate(node, contextFor(b, formulas, unsupported, options, pathPrefix, where));
       // Nothing sorts LAST, whichever way round the sort was asked for: a
       // note with no due date is not the most urgent one, and reversing the
       // order should not make it so. So presence is decided outside the flip.
@@ -276,11 +296,11 @@ function contextFor(
   formulas: Record<string, Node>,
   unsupported: Unsupported[],
   options: QueryOptions,
+  pathPrefix: string,
   where: string,
 ): EvalContext {
-  const context: EvalContext = { record, formulas, this: null, unsupported, where };
+  const context: EvalContext = { record, formulas, this: null, unsupported, where, pathPrefix };
   if (options.today !== undefined) context.today = options.today;
-  if (options.pathPrefix !== undefined) context.pathPrefix = options.pathPrefix;
   return context;
 }
 

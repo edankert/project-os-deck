@@ -318,14 +318,6 @@
      "type": "issue"
     },
     {
-     "id": "ISS-0428",
-     "title": "The pacer is invisible everywhere except the data-only Route cockpit — a drivable rider who turns it on gets nothing on screen, and the pacer ghost has never been built by any production code",
-     "status": "triage",
-     "url": "/docs/issues/ISS-0428-ThePacerIsInvisibleOutsideTheDataOnlyRouteCockpit.md",
-     "subtitle": "pacerRuntime now has exactly one consumer that draws anything: DataOnlyRouteControls at ActiveWorkoutScreen.kt:1831, reached only when the trainer is data-only and the workout is a route.",
-     "type": "issue"
-    },
-    {
      "id": "ISS-0423",
      "title": "The app knows at connect that a trainer cannot be driven, and lets the rider pick an ERG workout anyway — the verdict reaches the cockpit and nothing earlier",
      "status": "triage",
@@ -1510,6 +1502,14 @@
      "status": "fixed",
      "url": "/docs/issues/ISS-0419-PedalsAreBoundAndNothingReadsThem.md",
      "subtitle": "FEAT-0110 exists because \"a rider who connects their pedals sees a connected device and a power reading of zero\". After PHASE-021 they see a connected device and the trainer's power reading, which is a different wrong a…",
+     "type": "issue"
+    },
+    {
+     "id": "ISS-0428",
+     "title": "The pacer is invisible everywhere except the data-only Route cockpit — a drivable rider who turns it on gets nothing on screen, and the pacer ghost has never been built by any production code",
+     "status": "fixed",
+     "url": "/docs/issues/ISS-0428-ThePacerIsInvisibleOutsideTheDataOnlyRouteCockpit.md",
+     "subtitle": "pacerRuntime now has exactly one consumer that draws anything: DataOnlyRouteControls at ActiveWorkoutScreen.kt:1831, reached only when the trainer is data-only and the workout is a route.",
      "type": "issue"
     }
    ]

@@ -19,3 +19,32 @@ export function sameOriginAs(host: string, url: string): boolean {
     return false;
   }
 }
+
+/** What a window should do when a page tries to take it somewhere. */
+export type Navigation = 'follow' | 'open-outside' | 'refuse';
+
+/**
+ * Where a link in a Deck window may lead.
+ *
+ * Three answers, and the third is the one that was missing. A page Deck serves
+ * is FOLLOWED. An ordinary web page is OPENED OUTSIDE, in the person's own
+ * browser, because refusing it silently would make a link in a note look
+ * broken. Anything else is REFUSED — `file:`, `javascript:`, a custom scheme —
+ * because handing one of those to the operating system's opener is not what
+ * "open a link in the browser" means, and the guard used to hand it over
+ * (ISS-0032).
+ *
+ * A decision rather than a side effect, so it can be driven without opening a
+ * window: the previous version was checked by searching the built file for
+ * three strings, which survives inverting the condition it claims to protect.
+ */
+export function navigationFor(host: string, url: string): Navigation {
+  if (sameOriginAs(host, url)) return 'follow';
+  let scheme: string;
+  try {
+    scheme = new URL(url).protocol;
+  } catch {
+    return 'refuse';
+  }
+  return scheme === 'http:' || scheme === 'https:' ? 'open-outside' : 'refuse';
+}

@@ -64,7 +64,7 @@ function select(filter, records = VAULT) {
   const unsupported = [];
   const predicate = compileFilter(filter, 'source.filter', unsupported);
   const chosen = records.filter((record) =>
-    predicate({ record, formulas: {}, this: null, today: TODAY, unsupported, where: 'source.filter' }),
+    predicate({ record, formulas: {}, this: null, today: TODAY, unsupported, where: 'source.filter', pathPrefix: 'docs' }),
   );
   return { names: chosen.map((r) => r.fileName), unsupported };
 }
@@ -125,11 +125,17 @@ test('the THREE spellings of "this note is of type X" agree', () => {
 
 test('the property namespaces resolve to what they name', () => {
   const record = VAULT[0];
-  const context = { record, formulas: {}, this: null, unsupported: [], where: 'x' };
+  const context = { record, formulas: {}, this: null, unsupported: [], where: 'x', pathPrefix: 'docs' };
   assert.equal(evaluate(parseExpression('role'), context), 'lead');
   assert.equal(evaluate(parseExpression('note.role'), context), 'lead');
   assert.equal(evaluate(parseExpression('file.name'), context), 'Ada');
-  assert.equal(evaluate(parseExpression('file.path'), context), 'Comic/Ada.md');
+  // `file.path` is what OBSIDIAN would call it: the record's path with the
+  // docs root's own name in front, because a base file is written against the
+  // vault whose root is the repository (ISS-0027).
+  assert.equal(evaluate(parseExpression('file.path'), context), 'docs/Comic/Ada.md');
+  assert.equal(evaluate(parseExpression('file.folder'), context), 'docs/Comic');
+  const vault = { ...context, pathPrefix: '' };
+  assert.equal(evaluate(parseExpression('file.path'), vault), 'Comic/Ada.md', 'a vault has no prefix');
   assert.equal(evaluate(parseExpression('file.ext'), context), 'md');
   const withFormula = { ...context, formulas: { summary: parseExpression('role + " (" + toString(age) + ")"') } };
   assert.equal(evaluate(parseExpression('formula.summary'), withFormula), 'lead (34)');
@@ -162,7 +168,7 @@ test('every function in the SEED either evaluates or is reported by name', () =>
   const reported = [];
   for (const name of SEED_FUNCTIONS) {
     const unsupported = [];
-    const context = { record: VAULT[0], formulas: {}, this: null, today: TODAY, unsupported, where: 'seed' };
+    const context = { record: VAULT[0], formulas: {}, this: null, today: TODAY, unsupported, where: 'seed', pathPrefix: 'docs' };
     const node = parseExpression(`${name}(1)`);
     const value = evaluate(node, context);
     if (isImplemented(name)) {
@@ -182,7 +188,7 @@ test('every function in the SEED either evaluates or is reported by name', () =>
 
 test('a function outside the seed is reported as not part of the language at all', () => {
   const unsupported = [];
-  const context = { record: VAULT[0], formulas: {}, this: null, unsupported, where: 'x' };
+  const context = { record: VAULT[0], formulas: {}, this: null, unsupported, where: 'x', pathPrefix: 'docs' };
   assert.equal(evaluate(parseExpression('teleport(1)'), context), UNSUPPORTED);
   assert.match(unsupported[0].reason, /not part of the language/);
 });
@@ -223,11 +229,11 @@ function queryView(source, extra = {}) {
 }
 
 test('sort by a property with a direction produces the order that was asked for', () => {
-  const up = runQuery(queryView({ filter: 'type == link("Chapter")', sort: [{ property: 'number' }] }), VAULT);
+  const up = runQuery(queryView({ filter: 'type == link("Chapter")', sort: [{ property: 'number' }] }), { records: VAULT, pathPrefix: 'docs' });
   assert.deepEqual(up.groups[0].cards.map((c) => c.title), ['Chapter 1', 'Chapter 2', 'Rest']);
   const down = runQuery(
     queryView({ filter: 'type == link("Chapter")', sort: [{ property: 'number', direction: 'desc' }] }),
-    VAULT,
+    { records: VAULT, pathPrefix: 'docs' },
   );
   // Nothing sorts LAST whichever way round it was asked for: `Rest` has no
   // number, and a note with no due date is not the most urgent one.
@@ -235,7 +241,7 @@ test('sort by a property with a direction produces the order that was asked for'
 });
 
 test('groupBy a property produces the groups the description asked for', () => {
-  const result = runQuery(queryView({ filter: 'type == link("Task")', groupBy: 'status' }), VAULT);
+  const result = runQuery(queryView({ filter: 'type == link("Task")', groupBy: 'status' }), { records: VAULT, pathPrefix: 'docs' });
   assert.deepEqual(
     result.groups.map((g) => [g.label, g.cards.length]),
     [
@@ -249,7 +255,7 @@ test('groupBy a property produces the groups the description asked for', () => {
 // ---- the navigator draws either kind ----
 
 test('a query-sourced view draws through the same group model a mode-sourced one does', () => {
-  const result = runQuery(queryView({ filter: 'type == link("Chapter")' }), VAULT);
+  const result = runQuery(queryView({ filter: 'type == link("Chapter")' }), { records: VAULT, pathPrefix: 'docs' });
   const faces = projectOsProvider.views(WORKSPACE)[0].face;
   const rows = rowsFor({ groups: result.groups, faces, folds: {}, onDesk: new Set(), currentNoteId: null });
   // One heading and its cards, exactly as the sidecar's groups draw.
@@ -263,7 +269,7 @@ test('what is owed is at the top of a query-sourced view, read from the sidecar'
     ['Chapter 1', { owed: true, owedVerb: 'Approve', suppressed: false }],
     ['Chapter 2', { owed: false, owedVerb: null, suppressed: true }],
   ]);
-  const result = runQuery(queryView({ filter: 'type == link("Chapter")' }), VAULT, { marks });
+  const result = runQuery(queryView({ filter: 'type == link("Chapter")' }), { records: VAULT, pathPrefix: 'docs' }, { marks });
   assert.deepEqual(result.groups.map((g) => g.key), ['needs-you', 'all', 'quiet']);
   assert.equal(result.groups[0].cards[0].title, 'Chapter 1');
   assert.equal(result.groups[0].cards[0].owedVerb, 'Approve', 'the verb is the sidecar\'s, not invented');
@@ -276,17 +282,17 @@ test('a view the sidecar does not track has NO owed group, and says so', () => {
   // A view of a vault's chapters owes nothing because project-os does not
   // track chapters, which is a different thing from a view that owes nothing
   // today. Drawing an empty "Needs you" heading would confuse the two.
-  const result = runQuery(queryView({ filter: 'type == link("Chapter")' }), VAULT);
+  const result = runQuery(queryView({ filter: 'type == link("Chapter")' }), { records: VAULT, pathPrefix: 'docs' });
   assert.equal(result.untracked, true);
   assert.ok(!result.groups.some((g) => g.key === 'needs-you'));
 });
 
 test('a query over this repository selects what a person would expect', () => {
   const records = walkNotes(path.join(REPO, 'docs')).records;
-  const issues = runQuery(queryView({ filter: 'type == link("issue")' }), records);
+  const issues = runQuery(queryView({ filter: 'type == link("issue")' }), { records: records, pathPrefix: 'docs' });
   const counted = issues.groups.reduce((n, g) => n + g.cards.length, 0);
   assert.ok(counted > 15, `a query over the real index found ${counted} issues`);
-  const fixed = runQuery(queryView({ filter: { and: ['type == link("issue")', 'status == "fixed"'] } }), records);
+  const fixed = runQuery(queryView({ filter: { and: ['type == link("issue")', 'status == "fixed"'] } }), { records: records, pathPrefix: 'docs' });
   const fixedCount = fixed.groups.reduce((n, g) => n + g.cards.length, 0);
   assert.ok(fixedCount > 0 && fixedCount < counted, `${fixedCount} fixed of ${counted}`);
   // A card from Deck's index carries its record, so a face can read a property
@@ -304,7 +310,7 @@ test('a card built from a record carries what the navigator needs', () => {
 
 test('matches() never lets an unsupported construct select a note', () => {
   const unsupported = [];
-  const context = { record: VAULT[0], formulas: {}, this: null, unsupported, where: 'x' };
+  const context = { record: VAULT[0], formulas: {}, this: null, unsupported, where: 'x', pathPrefix: 'docs' };
   assert.equal(matches(parseExpression('map(type)'), context), false);
   assert.ok(unsupported.length > 0);
 });
@@ -366,15 +372,15 @@ test('file.path is what Obsidian would call it, so a base file\'s inFolder match
   const records = walkNotes(path.join(REPO, 'docs')).records;
   const nav = fromBaseFile(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'bases', 'cockpit-navigation.base'), 'utf-8'), 'nav');
   const features = nav.views.find((v) => v.name === 'Features (All)');
-  const counted = (options) =>
-    runQuery(features.description, records, options).groups.reduce((n, g) => n + g.cards.length, 0);
+  const counted = (pathPrefix) =>
+    runQuery(features.description, { records, pathPrefix }).groups.reduce((n, g) => n + g.cards.length, 0);
 
-  const withPrefix = counted({ pathPrefix: 'docs' });
-  const without = counted({});
+  const withPrefix = counted('docs');
+  const without = counted('');
   assert.equal(withPrefix, without - 1, 'the template note is not being excluded');
   assert.ok(withPrefix > 5, `only ${withPrefix} features were selected`);
   // Named, so the check says which note the prefix removes.
-  const names = runQuery(features.description, records, {})
+  const names = runQuery(features.description, { records, pathPrefix: '' })
     .groups.flatMap((g) => g.cards.map((c) => c.rel))
     .filter((rel) => rel.startsWith('__templates__/'));
   assert.deepEqual(names, ['__templates__/feature.md']);
@@ -385,7 +391,7 @@ test("the cockpit's own base file draws what the cockpit draws", () => {
   const nav = fromBaseFile(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'bases', 'cockpit-navigation.base'), 'utf-8'), 'nav');
   const counts = {};
   for (const view of nav.views) {
-    const result = runQuery(view.description, records, { pathPrefix: 'docs' });
+    const result = runQuery(view.description, { records: records, pathPrefix: 'docs' }, { pathPrefix: 'docs' });
     counts[view.name] = result.groups.reduce((n, g) => n + g.cards.length, 0);
     assert.deepEqual(result.unsupported, [], `${view.name} could not be evaluated: ${JSON.stringify(result.unsupported)}`);
   }
@@ -401,8 +407,31 @@ test('a formula with an empty body is reported as an EMPTY EXPRESSION, not as no
   // `Daily Tasks Base.base` declares `formulas: { Untitled: "" }`, and
   // reporting an empty string as the construct told a person nothing at all.
   const view = queryView({ filter: 'type == link("Task")', formulas: { Untitled: '' } });
-  const result = runQuery(view, VAULT);
+  const result = runQuery(view, { records: VAULT, pathPrefix: 'docs' });
   const report = result.unsupported.find((u) => u.where === 'source.formulas.Untitled');
   assert.notEqual(report, undefined);
   assert.ok(report.construct.trim().length > 0, 'the report named nothing');
+});
+
+test('file.hasLink says it can only see the frontmatter', () => {
+  // ISS-0033. A record carries no body — TASK-0038 decided that, because 1537
+  // notes with their bodies is a different memory question from 1537 records —
+  // and the cockpit builds its backlink graph from frontmatter AND body. So
+  // Deck answers a strictly smaller question, and answering it in silence is
+  // the failure this evaluator is written against.
+  const notes = index([
+    ['a.md', { type: 'Task', related: '[[Zed]]' }],
+    ['b.md', { type: 'Task' }],
+  ]);
+  const { names, unsupported } = select('file.hasLink(link("Zed"))', notes);
+  assert.deepEqual(names, ['a'], 'the frontmatter answer is still given');
+  const report = unsupported.find((u) => u.construct === 'file.hasLink()');
+  assert.notEqual(report, undefined, 'the limitation was not reported');
+  assert.match(report.reason, /prose|body/i, 'the report does not say what is not seen');
+
+  // A field's own `hasLink` is complete and reports nothing: the frontmatter is
+  // all there is to a field.
+  const field = select('related.hasLink(link("Zed"))', notes);
+  assert.deepEqual(field.names, ['a']);
+  assert.deepEqual(field.unsupported, []);
 });

@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 30
+  ISS: 36
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -433,6 +433,66 @@ items:
       parent: "FEAT-0006"
       phase: PHASE-0001
   issues:
+    ISS-0031:
+      file: "docs/issues/ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded.md"
+      title: "Three different ways of dropping the path prefix each leave every check passing, so the fix that stopped a base file selecting the wrong notes is guarded nowhere along the route it travels"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Re-review, 2026-09-09. THREE ways of dropping the pathPrefix each leave all 307 checks passing — pathPrefixFor, the host answer, and readRecords — and each restores exactly the ISS-0027 defect silently. The one check that touches it hands the value to runQuery as a literal, so it proves the evaluator USES a prefix and never that one ARRIVES. A test per hop would rot; the shape to reach for is one where dropping it is a type error."
+    ISS-0032:
+      file: "docs/issues/ISS-0032-The-Navigation-Guards-Are-Checked-By-Grep.md"
+      title: "The guards that keep the write bridge on Deck's own origin are checked by searching the built file for three strings, so inverting the condition or deleting the refusal leaves every check passing"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Re-review, 2026-09-09. The ISS-0029 guards are checked by searching the built main.js for three strings. All 307 pass after inverting the will-navigate condition, after replacing preventDefault with a no-op, and after returning action: allow with "deny" left in a comment. helpers.mjs opens by warning against exactly this test shape. Also: shell.openExternal is called for ANY foreign url including file:."
+    ISS-0033:
+      file: "docs/issues/ISS-0033-Haslink-Answers-From-Frontmatter-And-Does-Not-Say-So.md"
+      title: "file.hasLink answers from a note's frontmatter alone, so a backlink query misses every link written in the body, and reports nothing"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: shared
+      tests: []
+      note: "Re-review, 2026-09-09. ISS-0027 fixed hasLink ignoring its receiver and not the other half: file.hasLink reads only frontmatter and a record holds no body (a decision TASK-0038 records). The cockpit builds backlinks from frontmatter AND body, so Deck answers a smaller question in silence — and ISS-0027 says it "walks the whole record, which is what CONTEXT.base wants", which is wrong. Report it today; decide between reading body links at index time and asking /api/cockpit/context."
+    ISS-0034:
+      file: "docs/issues/ISS-0034-The-Sidecar-Comparison-Compares-No-Values.md"
+      title: "The comparison against the sidecar reads key names and never values, so replacing every frontmatter value in all 2926 notes leaves it passing — and a file PyYAML refuses is exempt from it for ever"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "Re-review, 2026-09-09. Replacing every frontmatter VALUE in all 2926 notes leaves both comparison checks passing: the check reads key NAMES. Third time in two days this one check has been found too narrow — types, then names — each time widened to the defect in front of it rather than to the claim it supports. The wider comparison HAS been made and passes (3333 notes, zero value differences); what is missing is the check that keeps it true. Also: a file PyYAML refuses is exempt for ever, so the eight REQ-019x notes are never compared, and REQ-0194 declares 16 keys where Deck reads 13."
+    ISS-0035:
+      file: "docs/issues/ISS-0035-Two-New-Block-Scalar-Misreads.md"
+      title: "The fix that stopped a block scalar losing its blank lines introduced two new silent mis-reads: it swallows the lines after the scalar, and it ignores the indicator that says whether the last newline is kept"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: shared
+      tests: []
+      note: "Re-review, 2026-09-09. The ISS-0025 fix introduced TWO new silent mis-reads. blockScalar stops on the OWNER indent rather than the block\u2019s own, so `a: |` / 4-space x / 2-space `# c` reads "x\\n# c\\n" against PyYAML\u2019s "x\\n". And the chomping indicator is matched by the regexp that starts a block scalar and then ignored, so `|-` gains a trailing newline the old reader correctly omitted. Nothing in the three corpora exercises either: ~/Notes holds the only 17 block scalars and all are plain `|`, and the vault is not in the fixture."
+    ISS-0036:
+      file: "docs/issues/ISS-0036-Notes-Quote-Measurements-That-Do-Not-Reproduce.md"
+      title: "Six numbers written into the close-out notes do not reproduce when the reader re-runs them, in a repository whose whole argument is that a measurement beats a claim"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: docs
+      tests: []
+      note: "Re-review, 2026-09-09. Six numbers in the close-out notes do not reproduce: four mutation counts (ISS-0025 "three"=1, ISS-0026 "four"=1, ISS-0027 "one, two and four"=1,1,1, ISS-0030 "four"=1 — only ISS-0024\u2019s "two" is exact), "twenty-two notes"=14, and "143 notes carrying a status"=126. Each sits in a sentence arguing a measurement beats a claim, and a wrong measurement is worse than a claim because it invites a reader to stop checking. Also unrecorded: case-sensitivity silently empties every TaskNotes view over project-os (53 notes here to 0), and the premise "Obsidian\u2019s == is case-sensitive" carries no citation."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"

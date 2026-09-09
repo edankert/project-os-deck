@@ -68,6 +68,6 @@ The result is pinned by `desktop/fixtures/sidecar-types.json`, recorded by `tool
 
 **The deliberate differences are RULES, not a list of paths**, because a list goes stale on a repository somebody is working in. Two: a list-valued `type:`, which is [[project-os-cockpit#ISS-0279]] and which Deck must not reproduce; and a file whose frontmatter PyYAML refuses outright, where Deck reads what it can and reports the rest. Both are checked live on the Deck side, so a file nobody has seen yet is covered.
 
-**The triggers stand unchanged**, and two of them fired during the work that closed this: the fixture failed and the first question was which side was right (it was Deck's, twice), and the reader was found to be losing keys on twenty-two notes. That is the mitigation doing its job rather than an argument against it.
+**The triggers stand unchanged**, and two of them fired during the work that closed this: the fixture failed and the first question was which side was right (it was Deck's, twice), and the reader was found to be losing keys on fourteen notes. That is the mitigation doing its job rather than an argument against it.
 
 **What would reopen it.** Any of the triggers above. The likeliest is [[PHASE-0003-Vault]] opening, where a vault's type rules are the vault's and both indexers meet them for the first time.

@@ -78,3 +78,12 @@ A description whose source is a query returns a list of notes, grouped and sorte
 
 - `bash tools/scripts/run-desktop-tests.sh evaluator`: 20 checks, 2026-09-09.
 - A query over this repository's REAL index — 199 records, walked by Deck's own walk — selects its issues and its fixed issues, and the cards carry their records so a face can read a property by name.
+
+
+## One consequence of case-sensitivity, recorded 2026-09-09
+
+**Making `==` case-sensitive silently empties every TaskNotes view over a project-os repository.** Those six files filter on `note.type == "[[Task]]"`, and project-os writes `type: "[[task]]"`. Before the change that filter selected fifty-three notes here and 873 in Your Trainer; after it, none.
+
+**That is correct and it is surprising**, which is the reason to write it down rather than leave it to be rediscovered. The files were written for a vault whose types are capitalised, and pointing them at a project-os repository was never a thing anybody meant to do — the six of them arrive as fixtures because they are the honest test of the extension namespace, not because they are views Deck offers.
+
+**The premise carries a measurement rather than a citation, and that is stated in the code.** "Obsidian's `==` is case-sensitive" was established against Edwin's own ten base files, where every comparison matches the notes' case exactly and none relies on a mismatch. That is weaker footing than a specification. If it turns out to be wrong, this is the paragraph to come back to, and [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]] is the note that would reopen.

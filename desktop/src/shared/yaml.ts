@@ -64,7 +64,7 @@ export function parseYaml(source: string): YamlResult {
   const problems: YamlProblem[] = [];
   const lines = scan(source, problems);
   if (lines.length === 0) return { value: null, problems };
-  const reader = new Reader(lines, problems);
+  const reader = new Reader(lines, problems, source.endsWith('\n'));
   const value = reader.block(lines[0]?.indent ?? 0);
   // Anything the reader walked away from is REPORTED, never dropped in
   // silence. Seven notes in Your Trainer put a second list at column zero
@@ -141,6 +141,10 @@ export function firstHeading(body: string): string | null {
 function scan(source: string, problems: YamlProblem[]): Line[] {
   const out: Line[] = [];
   const raw = source.split(/\r?\n/);
+  // Splitting `"x\n"` gives a phantom empty element after the last line. It is
+  // the line BREAK, not a blank line, and counting it as one gave a `|+` block
+  // a trailing newline the file did not have.
+  if (raw.length > 0 && raw[raw.length - 1] === '') raw.pop();
   for (let i = 0; i < raw.length; i += 1) {
     const text = raw[i] as string;
     const trimmed = text.trim();
@@ -165,11 +169,14 @@ function scan(source: string, problems: YamlProblem[]): Line[] {
 class Reader {
   private readonly lines: Line[];
   private readonly problems: YamlProblem[];
+  /** Whether the document's last line carried a break. Clip chomping needs it. */
+  private readonly endsWithNewline: boolean;
   private at = 0;
 
-  constructor(lines: Line[], problems: YamlProblem[]) {
+  constructor(lines: Line[], problems: YamlProblem[], endsWithNewline: boolean) {
     this.lines = lines;
     this.problems = problems;
+    this.endsWithNewline = endsWithNewline;
   }
 
   /**
@@ -269,7 +276,12 @@ class Reader {
         continue;
       }
       if (rest === '|' || rest === '>' || /^[|>][-+]?\d*$/.test(rest)) {
-        out[key] = this.blockScalar(rest.startsWith('>'), line.indent);
+        // The CHOMPING INDICATOR, read rather than only matched. `|` clips —
+        // one trailing newline; `|-` strips it; `|+` keeps every one. It used
+        // to be recognised by the regexp above and then ignored, so `|-` gained
+        // a newline the file said to drop (ISS-0035).
+        const chomp = rest.includes('-') ? 'strip' : rest.includes('+') ? 'keep' : 'clip';
+        out[key] = this.blockScalar(rest.startsWith('>'), line.indent, chomp);
         continue;
       }
       out[key] = this.inlineValue(this.folded(rest, line), line);
@@ -359,21 +371,39 @@ class Reader {
    * when it is detected rather than written. A blank line inside the block
    * belongs to the block even though it is not indented at all.
    */
-  private blockScalar(folded: boolean, ownerIndent: number): string {
+  private blockScalar(folded: boolean, ownerIndent: number, chomp: 'clip' | 'strip' | 'keep'): string {
     const parts: string[] = [];
     let base: number | null = null;
     for (;;) {
       const line = this.lines[this.at];
       if (line === undefined) break;
       const blank = line.skip && line.text.trim() === '';
-      if (!blank && line.indent <= ownerIndent) break;
+      // Stop on the BLOCK's own indentation once it is known, not on the
+      // owner's. A line indented less than the block but more than the key is
+      // outside the scalar, and taking it as content read `a: |` / four-space
+      // `x` / two-space `# c` as "x\n# c\n" (ISS-0035).
+      // Before the block's indentation is known, a content line must be more
+      // indented than the KEY. After it is known, a line AT that indentation is
+      // content and only a shallower one ends the block.
+      if (!blank && (base === null ? line.indent <= ownerIndent : line.indent < base)) break;
       if (blank) {
         // A blank line is inside the block only if the block continues after
-        // it; trailing blanks belong to whatever comes next.
+        // it; trailing blanks belong to whatever comes next — unless the
+        // indicator is `+`, whose whole meaning is that they are kept.
         const resumes = this.lines
           .slice(this.at + 1)
           .find((l) => !(l.skip && l.text.trim() === ''));
-        if (resumes === undefined || resumes.indent <= ownerIndent) break;
+        const ends = resumes === undefined || (base === null ? resumes.indent <= ownerIndent : resumes.indent < base);
+        if (ends && chomp !== 'keep') break;
+        if (ends) {
+          // `|+` keeps every trailing blank line. Take the rest of them and
+          // stop, since nothing after them is the block's.
+          while (this.lines[this.at] !== undefined && (this.lines[this.at] as Line).text.trim() === '') {
+            parts.push('');
+            this.at += 1;
+          }
+          break;
+        }
         parts.push('');
         this.at += 1;
         continue;
@@ -382,23 +412,39 @@ class Reader {
       parts.push(' '.repeat(Math.max(0, line.indent - base)) + line.text.trim());
       this.at += 1;
     }
-    // A literal scalar keeps its line breaks and its trailing newline, which
-    // is YAML's default "clip" behaviour. A folded one joins its lines with
-    // spaces and keeps its paragraph breaks.
+    // A literal scalar keeps its line breaks; a folded one joins its lines with
+    // spaces and keeps its paragraph breaks. What happens to the LAST newline
+    // is the chomping indicator's business: clip keeps one, strip keeps none,
+    // keep keeps every trailing blank line there was.
     if (parts.length === 0) return '';
-    if (!folded) return `${parts.join('\n')}\n`;
-    const paragraphs: string[] = [];
-    let current: string[] = [];
-    for (const part of parts) {
-      if (part === '') {
-        paragraphs.push(current.join(' '));
-        current = [];
-        continue;
+    let body: string;
+    if (!folded) body = parts.join('\n');
+    else {
+      const paragraphs: string[] = [];
+      let current: string[] = [];
+      for (const part of parts) {
+        if (part === '') {
+          paragraphs.push(current.join(' '));
+          current = [];
+          continue;
+        }
+        current.push(part);
       }
-      current.push(part);
+      paragraphs.push(current.join(' '));
+      // ONE newline per blank line, not two: folding turns a line break into a
+      // space and a BLANK line into the break. `\n\n` was a paragraph rule
+      // this language does not have.
+      body = paragraphs.join('\n');
     }
-    paragraphs.push(current.join(' '));
-    return `${paragraphs.join('\n\n')}\n`;
+    // STRIP: no trailing line break at all.
+    if (chomp === 'strip') return body.replace(/\n+$/, '');
+    // KEEP: every one the block had, plus the break that ended its last line.
+    if (chomp === 'keep') return `${body}\n`;
+    // CLIP: one trailing newline, and only if the source had one. A document
+    // whose last line carries no line break gives a scalar with none, which is
+    // what PyYAML does and what a file written without a final newline means.
+    if (!this.endsWithNewline && this.at >= this.lines.length) return body.replace(/\n+$/, '');
+    return `${body.replace(/\n+$/, '')}\n`;
   }
 
   private inlineValue(text: string, line: Line): unknown {
