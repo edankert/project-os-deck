@@ -6,7 +6,7 @@ title: "A criterion ticked in Deck is ticked in the file and in the cockpit, one
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -15,9 +15,9 @@ entrypoint: ""
 command: ""
 last_verified: ""
 covers: ["[[FEAT-0013-The-First-Write]]"]
-issues: []
+issues: ["[[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]]"]
 tasks: []
-artifacts: []
+artifacts: ["tools/scripts/check-write-round-trip.mjs"]
 adequacy: ""
 mutation_score: ""
 reviewed_by: ""
@@ -74,6 +74,35 @@ Deck writes for the first time. [[ADR-0003-Deck-Writes-Through-The-Shell]] decid
 - The two verb lists, Deck's and the cockpit's, for the same note.
 - A photograph or screenshot of the tablet showing the note with no verbs on it.
 
+## Steps 1 to 9 are now measured, and steps 10 and 11 are not
+
+**Run `node tools/scripts/check-write-round-trip.mjs` before walking this.** It drives Deck's write channel against the running sidecar and asks the sidecar what the cockpit would show, which settles most of what a person was going to squint at. Twelve checks, twelve passing on 2026-09-09.
+
+It can settle them because Deck and the cockpit are not two readers of one file — they are two surfaces over ONE sidecar. "What the cockpit shows" is what `/api/render` returns, so asking the sidecar *is* asking the cockpit, and the answer is a string a check can read instead of a screen a person has to compare.
+
+What the script measures, against notes in this repository, reverting every change with `git checkout`:
+
+| step | what the script settles |
+| --- | --- |
+| 2, 3 | the file gains `- [x]` with the evidence, the actor and the date, in the cockpit's own form |
+| 4 | the sidecar's render of that note changes and shows the box ticked, with nothing reloaded and nothing restarted |
+| 7 | Deck's verbs are the sidecar's rows, in order, with the same `confirm` flags — checked on a note that HAS verbs, and failing if it turns out to have none |
+| 8 | the transition moves the status, the reason Deck sent is under `## Decision record`, and the severity is in the frontmatter |
+| — | a write carrying a stale modification time is refused, and changes no file |
+
+**The script found a real defect the first time it ran**, which is the argument for having written it: [[ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason]]. A decision made in Deck moved the status and recorded no grounds, because the field carrying them was dropped between the renderer and the shell. Nine months of walking this test by eye would not have caught it, because the walk's own expected result — "appends the decision callout" — is exactly what a person confirms by seeing a status change.
+
+**What still needs a person, and why the script cannot take it:**
+
+- **Steps 1, 2 and 5, as gestures.** The script calls the write client. It does not click a tick control, so it cannot show that a person can reach the write from the reader, or that Deck refuses a tick with no evidence at the moment of asking.
+- **Step 6.** Finding a note whose rendered checkboxes carry no address means finding one where the sidecar's rendered count and its source count disagree. Neither application can conjure one on demand.
+- **Step 9.** Two Deck windows, one change, and the question of whether the second window offers to take it rather than redrawing underneath you. That is a judgment about what a person notices.
+- **Steps 10 and 11, the tablet.** Absent is not disabled, and only a person holding an iPad can say that nothing on the page is a verb. This is the half [[ADR-0003-Deck-Writes-Through-The-Shell]] turns on and it is not automatable here.
+
+**It writes to this repository, so it refuses to start on a dirty working tree.** That is also why it is a script a person runs and not a check in the suite or the smoke run: neither of those may touch the repository they are checking.
+
 ## Adequacy (who verifies this test?)
 
-A person, because the claim spans two applications, a file on disk and a second device. The automated half is [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]], which proves the channel against a fake sidecar and asserts the capability is false when served; it cannot prove that a real tablet shows nothing, and that is the part of [[ADR-0003-Deck-Writes-Through-The-Shell]] Edwin decided on.
+A person, for the tablet and the gestures. The rest is measured — see the section above.
+
+A person for the tablet, because the claim spans two applications, a file on disk and a second device. The automated half is [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]], which proves the channel against a fake sidecar and asserts the capability is false when served; it cannot prove that a real tablet shows nothing, and that is the part of [[ADR-0003-Deck-Writes-Through-The-Shell]] Edwin decided on.

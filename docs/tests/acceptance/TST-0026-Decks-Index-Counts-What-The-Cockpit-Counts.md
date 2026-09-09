@@ -6,7 +6,7 @@ title: "Deck's own index counts what the cockpit counts, on a project-os reposit
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0011-Decks-Own-Index]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -17,7 +17,7 @@ last_verified: ""
 covers: ["[[FEAT-0011-Decks-Own-Index]]"]
 issues: []
 tasks: []
-artifacts: []
+artifacts: ["tools/scripts/check-counts-live.py"]
 adequacy: ""
 mutation_score: ""
 reviewed_by: ""
@@ -67,6 +67,33 @@ Deck runs from this repository; there is no installed application yet.
 
 - The two count lists, per repository, side by side.
 - What Deck said about the broken file, quoted.
+
+## Steps 1 to 4 are now measured against the cockpit's live code
+
+**Run `../project-os-cockpit/.venv/bin/python3 tools/scripts/check-counts-live.py` before walking this.** It counts every note twice — once with the cockpit's own `Index`, imported and run today, and once with Deck's — and prints the two columns side by side. It reads only: no sidecar, no server, no file written.
+
+It closes the exact gap this note's Adequacy section names. `TST-0029` measures Deck against a fixture recorded from the sidecar, and a recording cannot notice that the sidecar itself moved. This imports the cockpit's indexer as it stands this minute, so a change over there shows up here the same day.
+
+**On 2026-09-09: 3,280 notes across three corpora, and not one type where the two programs disagree.**
+
+| corpus | notes | result |
+| --- | --- | --- |
+| project-os-deck | 195 | every type equal |
+| your-trainer | 2,699 | every type equal |
+| `~/Notes` | 386 | every type equal |
+
+Three things it had to get right before the comparison meant anything, each found by the comparison failing:
+
+- **A template is a note in one program and not in the other.** The cockpit's `Index` holds `docs/__templates__/`; Deck's `typeCounts` skips it, because a blank feature template counted as a feature makes every count one too high. Comparing the raw indexes made every type in this repository differ by exactly one, which was that and nothing else. Both sides drop templates here and the number dropped is printed.
+- **A note the cockpit gave no type is left out by PATH, never by loosening the comparison.** The two rules are the ones `tools/scripts/record-sidecar-fixture.py` states: a list-valued `type:`, and frontmatter PyYAML refuses outright. Both turn on the sidecar assigning *no* type, so neither can excuse a contradiction — the sidecar saying `feature` and Deck saying anything else stays a failure with no tolerance.
+- **Every licensed difference is printed with its path, its reason and what Deck read instead**, so the exemption cannot quietly widen.
+
+**A number worth carrying to the Vault phase.** In `~/Notes`, **92 of 386 notes** — most of the Daily Notes — have a list-valued `type:` and so appear in the cockpit's Library under no type at all. That is project-os-cockpit#ISS-0279 measured rather than described, and it is close to a quarter of the vault.
+
+**What still needs a person:**
+
+- **Steps 5 to 8** — edit a note and see it within seconds, add one, delete one, drop in a file with broken frontmatter. `TST-0029` proves the watcher and the reporting mechanically, but the walk's claim is that a person sees it happen without restarting anything, and that is a claim about the screen.
+- **The Library view itself.** This script compares what the two INDEXES hold. Whether Deck's Library draws those counts where a person can read them is a different question, and it is the one the walk asks.
 
 ## Adequacy (who verifies this test?)
 

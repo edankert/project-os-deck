@@ -136,7 +136,7 @@ const noteFor = (id) => walkNotes(path.join(REPO, 'docs')).records.find((r) => r
         after.includes('## Decision record') && after.includes(reason) && after.includes(ACTOR),
         'the reason Deck sent is IN the file, under the cockpit\'s own `## Decision record` heading',
       );
-      record(/^severity: high\s*$/m.test(after), 'and the severity Deck sent was recorded while the issue left triage');
+      record(/^severity: "?high"?\s*$/m.test(after), 'and the severity Deck sent was recorded while the issue left triage');
       const shown = await rendered(rel.slice('docs/'.length));
       record(shown.includes(row.to), 'the cockpit shows the new status');
     } finally {

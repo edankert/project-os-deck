@@ -63,7 +63,7 @@ focus:
   phase: "PHASE-0001"
   feature: "FEAT-0006"
   task: "TASK-0052"
-  issue: "ISS-0037"
+  issue: ""
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -496,7 +496,7 @@ items:
     ISS-0037:
       file: "docs/issues/ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason.md"
       title: "A decision made in Deck moves the status and records no reason, because the field carrying the reason is dropped between the renderer and the sidecar"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0001
       severity: high

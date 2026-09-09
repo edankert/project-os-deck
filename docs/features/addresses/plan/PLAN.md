@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan — every state has an address"
-status: active
+status: done
 owner: user:edwin
 created: 2026-09-06
 updated: 2026-09-08

@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0037
 aliases: ["ISS-0037"]
 title: "A decision made in Deck moves the status and records no reason, because the field carrying the reason is dropped between the renderer and the sidecar"
-status: open
+status: fixed
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-09
@@ -44,7 +44,19 @@ Forward `note` and `severity` from the shell, and give the renderer somewhere to
 
 ## Acceptance
 
-- [ ] A verb driven through the shell with a reason writes the sidecar's callout into the file, and a check drives it rather than reading the handler
-- [ ] `severity` reaches the sidecar the same way
-- [ ] A verb driven with no reason still works, and writes no empty callout
-- [ ] Deleting either field from the handler turns a check red
+- [x] A verb driven through the shell with a reason writes the sidecar's callout into the file, and a check drives it rather than reading the handler — evidence: tools/scripts/check-write-round-trip.mjs, 12 of 12 on 2026-09-09 (user:edwin, 2026-09-09)
+- [x] `severity` reaches the sidecar the same way — evidence: the same run; ISS-0008 left triage carrying severity: high (user:edwin, 2026-09-09)
+- [x] A verb driven with no reason still works, and writes no empty callout — evidence: write-channel.test.mjs, 'a decision made without a reason sends no reason' (user:edwin, 2026-09-09)
+- [x] Deleting either field from the handler turns a check red — evidence: three mutations, three killed: note, severity, and a window naming the writer (user:edwin, 2026-09-09)
+
+## Fixed, 2026-09-09
+
+**The reason travels with the decision, and a check drives the route rather than reading it.** The mapping from what a window sent to what the sidecar receives is now a function — `transitionRequestFrom` in `desktop/src/shared/write-client.ts` — instead of an object literal buried in the IPC handler. That is the shape [[ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded]] asked for and [[ISS-0032-The-Navigation-Guards-Are-Checked-By-Grep]] asked for again: the decision leaves the wiring, so it can be driven without an Electron window.
+
+**A verb that stops to ask now also asks why.** `Decline` and `Supersede` are the verbs the sidecar's row marks `confirm`, they already interrupt, and the reason box goes in the interruption that is already happening. Escape or an empty box means *no reason*, not *cancel* — the decision was confirmed a moment earlier and asking again about a settled thing is not a question.
+
+**Severity is a text box and not a picker, on purpose.** The four values are `critical`, `high`, `medium`, `low`, they live in the sidecar's `SEVERITIES`, and no endpoint serves them. A picker here would be Deck restating a table it does not own, which is exactly how `draft`, `proposed` and `ready` ended up in Deck's status bands within two days of the real vocabulary changing. A value this project does not use comes back refused in the sidecar's own words. Deck asks for it only when the payload says the note is an issue at `triage`, because the sidecar refuses one anywhere else rather than ignoring it.
+
+**Proved end to end against the running sidecar.** `tools/scripts/check-write-round-trip.mjs` drives `Accept` on [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] with prose and a severity, then reads the file: the status moved, the prose is under the cockpit's own `## Decision record` heading, `severity: "high"` is in the frontmatter, and `git checkout` puts it all back. Twelve of twelve on 2026-09-09.
+
+**Evidence.** Three mutations, three killed. Dropping `note` fails 1 check; dropping `severity` fails 1; letting the request name its own actor instead of the shell fails 1. All three survived every check before this note existed.
