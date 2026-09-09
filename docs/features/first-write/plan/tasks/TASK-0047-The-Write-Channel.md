@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0047
 aliases: ["TASK-0047"]
 title: "The write channel: bridge, IPC and a loopback call, with the write capability false when Deck is served"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 parent: "FEAT-0013"
 effort: ""
@@ -45,13 +45,33 @@ Build the route a write travels: the renderer asks the preload bridge, the bridg
 
 ## Steps
 
-- [ ] Add the write surface to the sidecar client, separate from the read client, callable only from the main process.
-- [ ] Add the preload bridge method and the IPC handler.
-- [ ] Add `write` to the capability set and set it from the presence of the bridge.
-- [ ] Update [[TST-0001-The-Sidecar-Client-Reads-And-Never-Writes]] to state what it now claims.
-- [ ] Extend the host suite: every method that is not a read is still 405, on every path.
-- [ ] Write [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] and link it from `tests:`.
+- [x] Add the write surface to the sidecar client, separate from the read client — `shared/write-client.ts`
+- [x] Add the preload bridge method and the IPC handler — `deck.write.transition`, `deck.write.tick`
+- [x] Add `write` to the capability set — true in the shell, false when served
+- [x] Update [[TST-0001-The-Sidecar-Client-Reads-And-Never-Writes]] to state what it now claims
+- [x] Extend the suite: every method that is not a read is still 405, on every path, over real HTTP
+- [x] Write [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] and link it from `tests:` — written at planning time; its evidence is filled in
 
 ## Notes
 
 This task changes what a phase note says. [[PHASE-0001-Deck]]'s scope bullet "Reads only. Deck adds no write path of its own" is marked reversed on 2026-09-08, and `docs/ARCHITECTURE.md`'s "Deck reads and never writes" paragraph is rewritten. Both are done at planning time so no code lands against a note that contradicts it.
+
+
+## Done, 2026-09-09
+
+**The route, whole: renderer → preload bridge → IPC → main process → loopback POST to the sidecar.** Nothing about it touches Deck's HTTP host, which still answers 405 to every method that is not a read, on every path including the two this feature reads from — asserted over real HTTP against seven paths and four methods.
+
+**A separate module, not a method on the read client.** `shared/sidecar-client.ts` still has no method that writes, and [[TST-0001-The-Sidecar-Client-Reads-And-Never-Writes]] still asserts only `GET` ever reaches a fake sidecar from it. The new claim beside that one is narrower and checkable: no module outside `shared/write-client.ts` both sends a POST and names an `/api/` path. A POST to Deck's OWN host is not a write — the smoke run sends several, to check they are refused — which is why the search is about the sidecar's paths and not about the word POST.
+
+**`write` is false when served, and the verbs are then ABSENT.** Not greyed out: a disabled control is a promise that it could work, and on a tablet it never can. Both halves are checked — the renderer's controls sit behind `capabilities().write`, and the bridge those controls would use does not exist on a served page at all.
+
+**A refusal comes back as the sidecar worded it.** The sidecar knows what Deck does not: that the criterion matched two lines, that the note changed on disk, that the transition is not offered from this status. Replacing that with a generic failure would throw away the only sentence a person can act on.
+
+## One thing the plan assumed and the sidecar does not do
+
+**`/api/render` carries no modification time.** The plan expected the note payload to bring one. It does not — the only endpoint that returns `mtime` is `/api/cockpit/review`, and only for a test note. So the tick reads the time from DECK'S OWN INDEX, which is the better source anyway: the index is the thing watching the file, and `/deck/records/<workspace>?rel=<path>` answers for one note rather than making a reader fetch 2715 records to find one of them.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh write-channel`: 21 checks, 2026-09-09.
+- A live write against the sidecar this repository was already running, reverted with `git checkout` afterwards: `ISS-0016` moved `triage` → `deferred` in the file with the decision callout appended, and a criterion was ticked as `- [x] ... — evidence: ... (user:deck-live-check, 2026-09-09)`.

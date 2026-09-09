@@ -20,6 +20,7 @@ import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
 import { NoteIndex, docsRootFor } from './note-index.js';
+import { SidecarWriteClient, WriteRefused } from '../shared/write-client.js';
 import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 
 // Pinned before anything reads it: Electron derives this from the app name,
@@ -286,6 +287,62 @@ function registerIpc(): void {
     return { ok: true };
   });
 
+  /**
+   * A write, from the renderer, out to the sidecar over loopback.
+   *
+   * The whole route in one place: the renderer asks the bridge, the bridge
+   * sends this message, and this handler makes the request. Nothing about it
+   * is forwarded through Deck's HTTP host, which still answers 405 to every
+   * method that is not a read — putting a loopback address on a request that
+   * came from the network is the hole ADR-0001 closed for the sidecar's own
+   * loopback-only reads (ADR-0003).
+   *
+   * The ACTOR is read from the store here rather than taken as an argument,
+   * so there is one answer to who made a write and a window cannot claim a
+   * different one.
+   */
+  const write = async (
+    workspaceId: string,
+    make: (client: SidecarWriteClient, actor: string) => Promise<unknown>,
+  ): Promise<{ ok: boolean; result?: unknown; error?: string }> => {
+    const base = sidecars.handle(workspaceId)?.base ?? null;
+    if (base === null) return { ok: false, error: `no sidecar is running for the workspace ${workspaceId}` };
+    const actor = store.getState().actor;
+    if (actor === '') return { ok: false, error: 'Deck has no name to write with; set one before making a change' };
+    try {
+      return { ok: true, result: await make(new SidecarWriteClient(base), actor) };
+    } catch (err) {
+      // The sidecar's own sentence, whole. It knows what Deck does not: that
+      // the criterion matched two lines, or that the note changed underneath.
+      if (err instanceof WriteRefused) return { ok: false, error: err.message };
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  };
+
+  handle('deck:write:transition', async (_e, request: { workspaceId: string } & Record<string, unknown>) =>
+    write(String(request?.workspaceId ?? ''), (client, actor) =>
+      client.transition({
+        id: String(request['id'] ?? ''),
+        to: String(request['to'] ?? ''),
+        actor,
+        ...(typeof request['mtime'] === 'number' ? { mtime: request['mtime'] } : {}),
+        ...(typeof request['option'] === 'string' ? { option: request['option'] } : {}),
+      }),
+    ),
+  );
+
+  handle('deck:write:tick', async (_e, request: { workspaceId: string } & Record<string, unknown>) =>
+    write(String(request?.workspaceId ?? ''), (client, actor) =>
+      client.tick({
+        id: String(request['id'] ?? ''),
+        criterion: String(request['criterion'] ?? ''),
+        evidence: String(request['evidence'] ?? ''),
+        actor,
+        ...(typeof request['mtime'] === 'number' ? { mtime: request['mtime'] } : {}),
+      }),
+    ),
+  );
+
   handle('deck:clipboard:write', (_e, text: string) => {
     clipboard.writeText(String(text));
     return { ok: true };
@@ -303,9 +360,31 @@ async function startHost(): Promise<void> {
   console.log(`deck: serving ${WEB_ROOT} on ${listening.address}:${listening.port}`);
 }
 
+/**
+ * The name Deck writes with, when nobody has chosen one.
+ *
+ * Derived from the machine rather than written in a source file: the cockpit
+ * hard-codes `user:edwin` in four places, and a second application copying
+ * that literal would be unusable by anybody else on the day they opened it
+ * (TASK-0048). `user:` is the prefix project-os uses for a person, as against
+ * `agent:` for a delegate.
+ */
+function defaultActor(): string {
+  try {
+    const name = os.userInfo().username.trim();
+    return name === '' ? 'user:unknown' : `user:${name}`;
+  } catch {
+    // A machine that will not say who is using it is not a reason to refuse
+    // to start; it is a reason to say so in the name.
+    return 'user:unknown';
+  }
+}
+
 app.whenReady().then(async () => {
   try {
     registerIpc();
+    // Once, and only when nobody has chosen: a name a person typed is theirs.
+    if (store.getState().actor === '') store.dispatch({ type: 'set-actor', actor: defaultActor() });
     await startHost();
     if (process.argv.includes('--smoke')) {
       await runSmoke();
@@ -643,6 +722,39 @@ async function runSmoke(): Promise<void> {
     const served = await fetch(`${hostOrigin}/deck/capabilities`);
     const servedCaps = (await served.json()) as Record<string, unknown>;
     record(servedCaps['popOutWindows'] === false, 'the served host reports no pop-out capability');
+
+    // The tablet does not write, and the verbs are ABSENT rather than disabled
+    // (ADR-0003). Checked on the served host's own answer, and on the page.
+    record(servedCaps['write'] === false, 'the served host reports no write capability');
+    record(caps?.['write'] === true, 'the shell reports the write capability');
+    const writeControls = (await focus.webContents.executeJavaScript(
+      `({
+        actuators: document.getElementById('actuators').hidden,
+        actor: document.getElementById('actor').textContent,
+        stale: document.getElementById('stale').hidden
+      })`,
+    )) as { actuators: boolean; actor: string; stale: boolean };
+    record(/^writing as /.test(writeControls.actor), `the shell shows the name it writes with ("${writeControls.actor}")`);
+    record(writeControls.stale, 'nothing has changed under this window yet');
+
+    // The mark, driven the way the index drives it: one number, and a window
+    // drawing from an older one says so rather than re-arranging itself.
+    if (prepared !== null) {
+      const revision = store.getState().indexRevisions[prepared.id] ?? 0;
+      store.dispatch({ type: 'index-changed', workspaceId: prepared.id, revision: revision + 1 });
+      await delay(600);
+      const marked = (await focus.webContents.executeJavaScript(
+        `({ hidden: document.getElementById('stale').hidden, said: document.getElementById('stale').textContent })`,
+      )) as { hidden: boolean; said: string };
+      record(!marked.hidden, 'a change under the window was ANNOUNCED');
+      record(/show me/.test(marked.said), 'the mark offers the action that takes it');
+      await focus.webContents.executeJavaScript(`document.querySelector('#stale .action').click()`);
+      await delay(1500);
+      const cleared = (await focus.webContents.executeJavaScript(
+        `document.getElementById('stale').hidden`,
+      )) as boolean;
+      record(cleared, 'the mark cleared when the person took the offered action');
+    }
 
     const refused = await fetch(`${hostOrigin}/deck/capabilities`, { method: 'POST' });
     record(refused.status === 405, 'the host refuses a POST with 405');

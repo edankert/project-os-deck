@@ -45,7 +45,7 @@ The engines surveyed on 2026-09-08 — state machines, BPMN, workflow DSLs — a
 
 ## Canonical entrypoints
 - Primary developer workflow: `cd desktop && npm install`, then `npm start` to run Deck, `npm test` to build and run every suite, `npm run typecheck` for both compiles.
-- One suite at a time, which is what each `TST-*` note's `command:` runs: `bash tools/scripts/run-desktop-tests.sh <suite>` (`address`, `desk`, `desk-model`, `faces`, `groups`, `host`, `panels`, `ports`, `render`, `search`, `sidecar-client`, `sidecar-retry`, `store`, `views`, `window-placement`, or `all`). Six more are named by the tasks of 2026-09-08 and do not exist until those tasks land: `index`, `descriptions`, `evaluator`, `band-and-face`, `writes` and `panel-registry`.
+- One suite at a time, which is what each `TST-*` note's `command:` runs: `bash tools/scripts/run-desktop-tests.sh <suite>` (`address`, `desk`, `desk-model`, `faces`, `groups`, `host`, `panels`, `ports`, `render`, `search`, `sidecar-client`, `sidecar-retry`, `store`, `views`, `window-placement`, or `all`). Eight more landed on 2026-09-09: `index`, `descriptions`, `evaluator`, `band-and-face`, `write-channel`, `panel-registry`, `workspace-paths` and `smoke-support`. The suite named `writes` in the plan is `write-channel`.
 - A real boot with no person watching: `cd desktop && ./node_modules/.bin/electron . --smoke --workspace <path>`. It opens the application, opens that workspace, and prints a JSON verdict.
 - `--lan` binds Deck's host beyond loopback, which is how a tablet reaches it.
 - CI workflow: `.github/workflows/validate-docs.yml`, which validates the documentation and runs every `TST-*` command, so the suites above gate the build

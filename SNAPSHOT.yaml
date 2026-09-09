@@ -180,7 +180,7 @@ items:
     FEAT-0013:
       file: "docs/features/first-write/FEAT-0013-The-First-Write.md"
       title: "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0001
       requirements: []
@@ -393,35 +393,35 @@ items:
     TASK-0047:
       file: "docs/features/first-write/plan/tasks/TASK-0047-The-Write-Channel.md"
       title: "The write channel: bridge, IPC and a loopback call, with the write capability false when Deck is served"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0013"
       phase: PHASE-0001
     TASK-0048:
       file: "docs/features/first-write/plan/tasks/TASK-0048-The-Actor-Is-A-Setting.md"
       title: "The actor is a setting in Deck's store, because the cockpit's hard-coded name cannot be copied into a second application"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0013"
       phase: PHASE-0001
     TASK-0049:
       file: "docs/features/first-write/plan/tasks/TASK-0049-The-Actuator-Row-And-One-Transition.md"
       title: "The actuator rows come from the sidecar, and one transition is wired end to end"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0013"
       phase: PHASE-0001
     TASK-0050:
       file: "docs/features/first-write/plan/tasks/TASK-0050-Ticking-A-Criterion-With-Evidence.md"
       title: "Ticking a criterion with evidence, addressed by the data-raw the sidecar stamped, with the modification time sent and no tick offered when the address is missing"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0013"
       phase: PHASE-0001
     TASK-0051:
       file: "docs/features/first-write/plan/tasks/TASK-0051-The-Changed-Under-You-Mark.md"
       title: "The changed-under-you mark: a write makes every other window stale, and the change is announced rather than applied"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0013"
       phase: PHASE-0001
@@ -1089,7 +1089,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 52
-    tasks_done: 33
+    tasks_done: 38
     tests_total: 23
     tests_passing: 0
     tests_failing: 0

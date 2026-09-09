@@ -29,6 +29,14 @@ interface BridgeShape {
   };
   windows: { role(): Promise<unknown>; openPanel(address: string): Promise<unknown> };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
+  write: { transition(request: unknown): Promise<unknown>; tick(request: unknown): Promise<unknown> };
+}
+
+/** What a write came back as: the sidecar's own words when it refused. */
+export interface WriteResult {
+  ok: boolean;
+  result?: unknown;
+  error?: string;
 }
 
 function bridge(): BridgeShape | null {
@@ -143,6 +151,24 @@ export class Host {
       return result.text ?? null;
     }
     return null;
+  }
+
+  /**
+   * Change a note. Only ever in the shell, and only through the bridge.
+   *
+   * A served page has no bridge, so this is unreachable there — and the
+   * renderer does not offer a verb at all when `write` is false, because a
+   * control that is greyed out is a promise that it could work (ADR-0003).
+   */
+  async write(
+    verb: 'transition' | 'tick',
+    request: Record<string, unknown>,
+  ): Promise<WriteResult> {
+    const b = bridge();
+    if (b === null || !this.caps.write) {
+      return { ok: false, error: 'this host does not write' };
+    }
+    return (await b.write[verb](request)) as WriteResult;
   }
 
   /** Every read goes through Deck's own host, which proxies it. */

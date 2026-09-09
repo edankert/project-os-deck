@@ -38,6 +38,12 @@ const FORWARDABLE = [
   '/api/cockpit/locate',
   '/api/cockpit/context',
   '/api/render',
+  // A READ that says which verbs a note allows. Forwardable because it is one:
+  // a tablet may see that a note could be approved, and the capability set is
+  // what stops it being offered the verb (ADR-0003). No write path is
+  // forwardable, and this host still answers 405 to every method that is not
+  // GET or HEAD.
+  '/api/notes/actions',
 ];
 
 export function isForwardable(sidecarPath: string): boolean {
@@ -255,7 +261,7 @@ export class DeckHost {
       return;
     }
     if (pathname.startsWith(RECORDS_PREFIX)) {
-      this.records(pathname.slice(RECORDS_PREFIX.length), res);
+      this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), res);
       return;
     }
     if (rawPathname.startsWith(SIDECAR_PREFIX)) {
@@ -277,7 +283,7 @@ export class DeckHost {
    * layer down: a read during a long start-up was read as a death and the
    * thing being read was torn down.
    */
-  private records(workspaceId: string, res: http.ServerResponse): void {
+  private records(workspaceId: string, rel: string | null, res: http.ServerResponse): void {
     if (workspaceId === '' || workspaceId.includes('/')) {
       plain(res, 404, 'that request names no workspace');
       return;
@@ -290,13 +296,18 @@ export class DeckHost {
       plain(res, 404, `Deck has no index for the workspace ${workspaceId}`);
       return;
     }
+    // `?rel=` asks for ONE record. A reader opening a note needs that note's
+    // modification time — the only guard against writing to a note that
+    // changed since the page was drawn — and fetching 2715 records to find one
+    // of them would be a strange way to ask.
+    const records = index.building ? [] : index.records;
     json(res, 200, {
       workspaceId: index.workspaceId,
       revision: index.revision,
       building: index.building,
       // Nothing while the walk is still running, rather than half a workspace
       // that a view would quietly draw as though it were all of it.
-      records: index.building ? [] : index.records,
+      records: rel === null ? records : records.filter((record) => record.relPath === rel),
       problems: index.problems,
     });
   }

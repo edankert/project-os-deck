@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0049
 aliases: ["TASK-0049"]
 title: "The actuator rows come from the sidecar, and one transition is wired end to end"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 parent: "FEAT-0013"
 effort: ""
@@ -46,13 +46,26 @@ Deck asks the sidecar which verbs a note allows and draws the rows it gets back.
 
 ## Steps
 
-- [ ] Read the actuator rows for the focused note through the existing read path.
-- [ ] Draw the rows in the reader, honouring `disabled`, `reason` and `confirm`.
-- [ ] Post the chosen row's endpoint through the write channel, with the actor from the store.
-- [ ] Re-read the note after the write and redraw.
-- [ ] Add the search that proves no verb table is in Deck.
-- [ ] Extend [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]], and update the adoption table row.
+- [x] Read the actuator rows for the focused note through the existing read path — `GET /api/notes/actions`, allow-listed on Deck's host
+- [x] Draw the rows in the reader, honouring `disabled`, `reason` and `confirm`
+- [x] Post the chosen row's verb through the write channel, with the actor from the store
+- [x] Re-read the note after the write and redraw
+- [x] Add the search that proves no verb table is in Deck
+- [x] Extend [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]], and update the adoption table row
 
 ## Notes
 
 This is the smaller of the feature's two verbs and the better proof of the channel, because everything about it is decided by the sidecar. If a transition works, the channel works; the tick then tests the harder half, which is addressing a line inside a file.
+
+
+## Done, 2026-09-09
+
+**Deck draws rows and decides nothing.** The verbs shown on a note are exactly the rows `GET /api/notes/actions` returned, in the order returned. A disabled row is drawn disabled with the reason the row carried — not hidden and not enabled. A row that asks for confirmation gets one; a row that does not is applied directly, so Deck decides nothing about which verbs are dangerous.
+
+**A search of the built output finds no verb name.** The whole of the cockpit's own `HUMAN_TRANSITIONS` table — `Approve`, `Decline`, `Accept`, `Supersede`, `Defer` — appears nowhere in Deck, with comments stripped so the check cannot pass on prose. Deck does not know that a proposed ADR can be accepted, which is project-os-cockpit#REQ-0026.
+
+**The read is allow-listed on Deck's host and the writes are not.** A tablet may SEE that a note could be approved; what stops it acting is the capability set, not a missing read. Asserted both ways: `/api/notes/actions` is forwardable, and `/api/notes/transition`, `/api/notes/tick`, `/api/notes/check-toggle` and `/api/notes/create` are not.
+
+**The transition is wired end to end and was run against the real sidecar.** `ISS-0016` at `triage` offered Accept, Defer and Decline — the last with `confirm: true`, which Deck honoured from the row. Moving it to `deferred` changed `status: triage` to `status: "deferred"` in the file and appended the sidecar's decision callout. Deck neither knows nor needs to know that the callout is written; it posts and re-reads. Reverted with `git checkout` afterwards.
+
+**Adoption.** `shell.reader.actuators` stays `not yet` until [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] is walked by a person, which is what its own row says moves it. The code is in; the row moves on the walk.

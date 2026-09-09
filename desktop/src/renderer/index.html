@@ -58,12 +58,19 @@
         <div class="desk" id="desk" aria-live="polite"></div>
       </main>
 
+      <!-- The verbs the sidecar says this note allows, and nothing Deck decided.
+           ABSENT on a served page rather than disabled (ADR-0003). -->
+      <div class="actuators" id="actuators" hidden></div>
       <section class="reader" id="reader" aria-label="Reader">
         <div class="reader-empty">Click a note in the list to put it on the desk and read it here.</div>
       </section>
     </div>
 
+    <!-- A change arrived under this window. Announced, never applied: a page
+         that re-arranges itself while somebody is reading it loses their place. -->
+    <div class="stale" id="stale" hidden></div>
     <div class="status" id="status" role="status"></div>
+    <button type="button" class="actor" id="actor" hidden title="The name Deck writes with"></button>
     <script type="module" src="./renderer/renderer.js"></script>
   </body>
 </html>

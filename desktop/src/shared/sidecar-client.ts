@@ -75,6 +75,15 @@ export interface NotePayload {
   title: string;
   html: string;
   frontmatter: Record<string, unknown>;
+  /**
+   * The file's modification time in seconds, as the sidecar read it.
+   *
+   * Carried because it is the only guard against writing to a note that
+   * changed since this page was rendered, and the write endpoints accept it.
+   * Null when the sidecar did not send one, and a write then travels without
+   * the guard rather than with a number Deck made up.
+   */
+  mtime: number | null;
 }
 
 export interface StatsPayload {
@@ -179,7 +188,20 @@ export class SidecarClient {
         typeof obj['frontmatter'] === 'object' && obj['frontmatter'] !== null
           ? (obj['frontmatter'] as Record<string, unknown>)
           : {},
+      mtime: typeof obj['mtime'] === 'number' ? obj['mtime'] : null,
     };
+  }
+
+  /**
+   * The verbs this note allows, as the sidecar decides them.
+   *
+   * A READ, so it belongs on this client. What comes back is drawn as rows
+   * and nothing about it is restated in Deck: the table lives in the sidecar's
+   * `HUMAN_TRANSITIONS`, and a renderer that kept its own copy is what
+   * project-os-cockpit#REQ-0026 forbids.
+   */
+  async actions(noteId: string): Promise<unknown> {
+    return this.getJson(`/api/notes/actions?id=${encodeURIComponent(noteId)}`);
   }
 
   async stats(scope?: string): Promise<StatsPayload> {

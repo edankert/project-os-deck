@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0051
 aliases: ["TASK-0051"]
 title: "The changed-under-you mark: a write makes every other window stale, and the change is announced rather than applied"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 parent: "FEAT-0013"
 effort: ""
@@ -45,12 +45,32 @@ When the record changes — because Deck wrote, because the cockpit wrote, or be
 
 ## Steps
 
-- [ ] Carry the revision a window drew from, in the renderer's own state.
-- [ ] Compare it against the store's revision on every broadcast and set the mark.
-- [ ] Draw the mark and its action in the navigator and in the reader.
-- [ ] Special-case the writing window's own note.
-- [ ] Test with two windows in the store suite, and with a file changed on disk.
+- [x] Carry the revision a window drew from, in the renderer's own state
+- [x] Compare it against the store's revision on every broadcast and set the mark
+- [x] Draw the mark and its action
+- [x] Special-case the writing window's own note
+- [x] Test with two windows in the store suite, and with a file changed on disk
 
 ## Notes
 
 This is the seam [[PHASE-0002-Glass]] and [[PHASE-0004-Parity]] both build on. Getting the shape right here — a mark plus an action, never a silent redraw — is worth more than the two verbs it currently serves.
+
+
+## Done, 2026-09-09
+
+**A mark plus an action, never a silent redraw.** A window remembers the index revision it drew from. When the store's revision for its workspace goes higher, a line appears saying these notes changed on disk, with a control that takes it. Nothing moves until the person clicks. The cockpit reloads on server-sent events, and a page that re-arranges itself while somebody is reading it loses their place.
+
+**The window that made the write is the exception, and it should be.** The person who ticked a criterion expects to see it ticked, not to be told that something changed. That window re-reads and redraws its own note and clears its own mark; every other window is marked. When it is the writing window's own note that changed, the line says so by name.
+
+**One mark for a burst, because the signal is one number.** Deck's index raises a revision on every accepted change and coalesces a burst into one rise ([[TASK-0039-The-Index-Watches-And-Carries-A-Revision]]), so ten files saved together produce one mark rather than ten.
+
+**A change made outside Deck produces the same mark**, because the signal is the index, not the write: the cockpit writing, or somebody editing a file in Obsidian, raises the same number. That is the majority of changes.
+
+**The mark does not survive a view switch.** It belongs to what this window drew, and carrying it across would be a stale message about a view nobody is looking at any more.
+
+**It is not carried over a restart either.** The index is rebuilt from disk at every start and its number begins again, so a number carried over would tell a window its picture was old when it was the newest there is. The actor beside it IS carried over, because a person chose it.
+
+## Evidence
+
+- `bash tools/scripts/run-desktop-tests.sh write-channel`: two subscribers both hear one change; a burst is one rise; a lower revision is refused; the revisions are per workspace; a window may not raise one itself.
+- The smoke run drives the real application: a change dispatched under an open window is ANNOUNCED rather than applied, the mark offers "show me", and clicking it clears the mark.

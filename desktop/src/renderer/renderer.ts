@@ -21,6 +21,7 @@ import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reco
 import { deskCardsOf } from '../shared/store-state.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
+import { type ActuatorRow, actuatorRows, wordRefusal } from '../shared/write-client.js';
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
@@ -34,6 +35,9 @@ const el = {
   navigator: must('navigator'),
   navList: must('nav-list'),
   refusals: must('refusals'),
+  actuators: must('actuators'),
+  stale: must('stale'),
+  actor: must('actor') as HTMLButtonElement,
   search: must('search') as HTMLInputElement,
   statusFilter: must('status-filter') as HTMLSelectElement,
   typeFilter: must('type-filter') as HTMLSelectElement,
@@ -80,6 +84,25 @@ let panel: PanelType | null = null;
 /** A note panel stays on the note its address named, whatever the focus window does. */
 let pinnedNoteId: string | null = null;
 let queryTimer: ReturnType<typeof setTimeout> | null = null;
+/** The note the reader is showing, with what a write to it needs. */
+let openNote: { id: string; rel: string; mtime: number | null } | null = null;
+/**
+ * The index revision this window drew from.
+ *
+ * A window compares what it drew against what the store now says, and shows a
+ * MARK rather than redrawing: a page that re-arranges itself while somebody is
+ * reading it loses their place (TASK-0051). Null until the first draw, so a
+ * window that has drawn nothing is never stale.
+ */
+let drewFromRevision: number | null = null;
+/**
+ * The note this window wrote to, if any.
+ *
+ * The window that made the write expects to see it, not to be told that
+ * something changed. So it re-reads and redraws its own note and takes no
+ * mark; every other window is marked.
+ */
+let wroteTo: string | null = null;
 
 const pool = new CardPool(el.desk, {
   open: (card) => {
@@ -165,6 +188,8 @@ async function boot(): Promise<void> {
   host.onState(() => {
     renderRail();
     paintSwitcher();
+    drawActor();
+    drawStale();
     // drawDesk, not just the chrome: it is the only thing that repaints the
     // cards, so leaving it out means a window receives a change from another
     // window and shows nothing.
@@ -172,6 +197,7 @@ async function boot(): Promise<void> {
     drawDesk();
   });
   wireControls();
+  drawActor();
   if (panel === 'needs-you') startNeedsYouPoll();
 }
 
@@ -297,6 +323,10 @@ async function selectView(viewId: string): Promise<void> {
 async function loadView(workspace: Workspace, view: Description): Promise<void> {
   const client = clientFor(workspace.id);
   currentView = view;
+  // A mark belongs to what this window drew. Carrying it across a view switch
+  // would be a stale message about a view nobody is looking at any more.
+  drewFromRevision = indexRevision();
+  drawStale();
   currentRefusals = [];
   pool.useFaces(view.face);
   const source = sourceOf(view);
@@ -657,9 +687,270 @@ async function openCard(card: CardModel): Promise<void> {
     article.innerHTML = note.html;
     el.reader.replaceChildren(article);
     el.reader.scrollTop = 0;
+    // The modification time comes from DECK'S OWN INDEX, not from the render
+    // payload: `/api/render` does not carry one. That is the better source
+    // anyway — the index is the thing that watches the file — and it is what
+    // the tick sends as its guard against a note that changed underneath.
+    openNote = { id: card.noteId, rel: card.rel, mtime: await readMtime(workspace.id, card.rel) };
+    // What this window drew from, so it can tell later that it is old.
+    drewFromRevision = indexRevision();
+    drawStale();
+    attachTicks(article);
+    await drawActuators(workspace.id, card.noteId);
   } catch (err) {
+    openNote = null;
     el.reader.replaceChildren(text(err instanceof Error ? err.message : String(err)));
+    el.actuators.hidden = true;
   }
+}
+
+/**
+ * One note's modification time, in seconds, from Deck's own index.
+ *
+ * Null when Deck has no record for it — a workspace still being walked, or a
+ * note the index has not seen. A write then travels without the guard rather
+ * than with a number Deck made up.
+ */
+async function readMtime(workspaceId: string, rel: string): Promise<number | null> {
+  try {
+    const response = await fetch(
+      `/deck/records/${encodeURIComponent(workspaceId)}?rel=${encodeURIComponent(rel)}`,
+    );
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { records?: Array<{ mtimeMs?: number }> };
+    const found = payload.records?.[0]?.mtimeMs;
+    // Seconds, because that is what the sidecar compares against `st_mtime`.
+    return typeof found === 'number' ? found / 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The index revision this window's workspace is at, or 0 when there is none. */
+function indexRevision(): number {
+  const state = host.state();
+  return state.workspaceId === null ? 0 : (state.indexRevisions[state.workspaceId] ?? 0);
+}
+
+/**
+ * The verbs the sidecar says this note allows, drawn as rows.
+ *
+ * Deck restates no verb, no from-state and no transition rule: the table is
+ * the sidecar's `HUMAN_TRANSITIONS` and a renderer keeping its own copy is
+ * what project-os-cockpit#REQ-0026 forbids. A disabled row is drawn disabled
+ * with the reason the row carried — not hidden, and not enabled.
+ */
+async function drawActuators(workspaceId: string, noteId: string): Promise<void> {
+  el.actuators.replaceChildren();
+  // ABSENT when Deck is served, not disabled. A greyed-out verb is a promise
+  // that it could work, and on a tablet it never can (ADR-0003).
+  if (!host.capabilities().write) {
+    el.actuators.hidden = true;
+    return;
+  }
+  let rows: ActuatorRow[] = [];
+  try {
+    rows = actuatorRows(await host.read(workspaceId, `/api/notes/actions?id=${encodeURIComponent(noteId)}`));
+  } catch {
+    // A note the sidecar has no opinion about offers nothing, which is the
+    // common case: most notes at most times owe nobody a decision.
+  }
+  if (rows.length === 0) {
+    el.actuators.hidden = true;
+    return;
+  }
+  el.actuators.hidden = false;
+  const caption = document.createElement('span');
+  caption.className = 'why';
+  caption.textContent = 'this note can be:';
+  el.actuators.appendChild(caption);
+  for (const row of rows) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'verb';
+    button.textContent = row.verb;
+    button.disabled = row.disabled;
+    if (row.reason !== '') button.title = row.reason;
+    button.addEventListener('click', () => {
+      void applyVerb(workspaceId, noteId, row);
+    });
+    el.actuators.appendChild(button);
+    if (row.disabled && row.reason !== '') {
+      const why = document.createElement('span');
+      why.className = 'why';
+      why.textContent = row.reason;
+      el.actuators.appendChild(why);
+    }
+  }
+}
+
+/** Post one actuator row's verb, confirming first when the ROW asks for it. */
+async function applyVerb(workspaceId: string, noteId: string, row: ActuatorRow): Promise<void> {
+  // Deck decides nothing about which verbs are dangerous; the row does.
+  if (row.confirm) {
+    const chosen = await askChoice(`${row.verb} ${noteId}?`, [{ value: 'yes' as const, label: `Yes, ${row.verb}` }]);
+    if (chosen === null) return;
+  }
+  const result = await host.write('transition', {
+    workspaceId,
+    id: noteId,
+    to: row.to,
+    ...(openNote?.mtime === null || openNote?.mtime === undefined ? {} : { mtime: openNote.mtime }),
+  });
+  if (!result.ok) {
+    // The sidecar's refusal, as it worded it.
+    say(result.error ?? 'that change was refused', true);
+    return;
+  }
+  say(`${noteId} is now ${row.to}`);
+  await afterWrite(workspaceId, noteId);
+}
+
+/**
+ * Attach a tick control to every checkbox the sidecar addressed.
+ *
+ * The address arrives WITH the page: the sidecar stamps `data-raw` on each
+ * rendered checkbox, carrying the source line's exact prose, and
+ * `/api/notes/tick` finds the line by that text. Deck invents no id scheme and
+ * tracks no line number.
+ */
+function attachTicks(article: HTMLElement): void {
+  if (!host.capabilities().write) return;
+  const boxes = Array.from(article.querySelectorAll('input[type="checkbox"]'));
+  if (boxes.length === 0) return;
+  const addressed = boxes.filter((box) => (box as HTMLElement).dataset['raw'] !== undefined);
+  if (addressed.length === 0) {
+    // The sidecar emits NO addresses at all when its rendered checkbox count
+    // and its source count disagree, because it cannot then trust any of them.
+    // Offering a tick here would tick the wrong line, so Deck offers none and
+    // says why rather than leaving a person wondering where the controls went.
+    const said = document.createElement('p');
+    said.className = 'no-tick';
+    said.textContent =
+      'No box on this note can be ticked from Deck: the sidecar could not match its rendered checkboxes to the ' +
+      'source lines, so it addressed none of them. A task list that opens immediately after a paragraph does this; ' +
+      'a blank line before it is the fix.';
+    article.prepend(said);
+    return;
+  }
+  for (const box of addressed) {
+    const element = box as HTMLInputElement;
+    if (element.checked) continue;
+    const criterion = element.dataset['raw'] ?? '';
+    const control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'tick';
+    control.textContent = 'tick';
+    control.title = 'Resolve this criterion with evidence';
+    control.addEventListener('click', () => {
+      void tickCriterion(criterion);
+    });
+    element.parentElement?.insertBefore(control, element.nextSibling);
+  }
+}
+
+/** Tick one criterion, collecting the evidence BEFORE the write is sent. */
+async function tickCriterion(criterion: string): Promise<void> {
+  const state = host.state();
+  const workspaceId = state.workspaceId;
+  if (workspaceId === null || openNote === null) return;
+  // The endpoint wants evidence or a reason, and asking for it after a refusal
+  // is worse than asking before: the reader has already done the thinking.
+  const evidence = await askText(`evidence for "${short(criterion)}":`);
+  if (evidence === null) {
+    say('nothing was ticked: a criterion is resolved with evidence');
+    return;
+  }
+  const result = await host.write('tick', {
+    workspaceId,
+    id: openNote.id,
+    criterion,
+    evidence,
+    // Every time. It is the only guard against ticking a note that changed
+    // since this page was rendered.
+    ...(openNote.mtime === null ? {} : { mtime: openNote.mtime }),
+  });
+  if (!result.ok) {
+    say(wordRefusal(result.error ?? ''), true);
+    if (/changed on disk/i.test(result.error ?? '')) await afterWrite(workspaceId, openNote.id);
+    return;
+  }
+  say('ticked, with the evidence and the name you are writing under');
+  await afterWrite(workspaceId, openNote.id);
+}
+
+function short(text_: string): string {
+  return text_.length <= 60 ? text_ : `${text_.slice(0, 57)}…`;
+}
+
+/**
+ * After a write: THIS window re-reads its own note, and every other one is
+ * marked.
+ *
+ * The person who ticked a criterion expects to see it ticked, not to be told
+ * that something changed. The mark is for the windows that did not ask.
+ */
+async function afterWrite(workspaceId: string, noteId: string): Promise<void> {
+  wroteTo = noteId;
+  const card = currentCards.find((c) => c.noteId === noteId);
+  if (card !== undefined) await openCard(card);
+  const workspace = workspaceById(workspaceId);
+  const viewId = host.state().viewId;
+  if (workspace !== null && viewId !== null) {
+    const view = registry.resolve(workspace, viewId);
+    if (view !== null) await loadView(workspace, view);
+  }
+  drewFromRevision = indexRevision();
+  drawStale();
+}
+
+/**
+ * The changed-under-you mark: a line saying what happened, and a control.
+ *
+ * Never applied on its own. Deck's index raises a revision on every accepted
+ * change — whether Deck wrote it, the cockpit did, or somebody edited the file
+ * in Obsidian — and a window drawing from an older one says so. One mark for a
+ * burst, because the revision is one number rather than a list of files.
+ */
+function drawStale(): void {
+  const current = indexRevision();
+  const stale = drewFromRevision !== null && current > drewFromRevision;
+  el.stale.hidden = !stale;
+  if (!stale) return;
+  el.stale.replaceChildren();
+  const said = document.createElement('span');
+  said.textContent =
+    wroteTo === null
+      ? 'These notes changed on disk since this window drew them.'
+      : `These notes changed since this window drew them, and ${wroteTo} was one of them.`;
+  const action = document.createElement('button');
+  action.type = 'button';
+  action.className = 'action';
+  action.textContent = 'show me';
+  action.addEventListener('click', () => {
+    void (async () => {
+      const state = host.state();
+      const workspace = workspaceById(state.workspaceId);
+      const view = workspace === null || state.viewId === null ? null : registry.resolve(workspace, state.viewId);
+      if (workspace !== null && view !== null) await loadView(workspace, view);
+      await reopenFocusedNote();
+      drewFromRevision = indexRevision();
+      wroteTo = null;
+      // Cleared by the redraw, and it does not survive a view switch as a
+      // stale message about a view nobody is looking at any more.
+      drawStale();
+    })();
+  });
+  el.stale.append(said, action);
+}
+
+/** The name Deck writes with, shown and changeable. */
+function drawActor(): void {
+  // Absent where nothing writes: a served page has no name to show.
+  el.actor.hidden = !host.capabilities().write;
+  if (el.actor.hidden) return;
+  const actor = host.state().actor;
+  el.actor.textContent = actor === '' ? 'no name set' : `writing as ${actor}`;
 }
 
 function text(message: string): HTMLElement {
@@ -940,6 +1231,20 @@ function wireControls(): void {
       await host.dispatch({ type: 'open-desk', name: value === '' ? null : value });
       drawNavigator();
       drawDesk();
+    })();
+  });
+
+  el.actor.addEventListener('click', () => {
+    void (async () => {
+      // A minimal control, and the decision is recorded in TASK-0048: a store
+      // field with no way to edit it is enough for one feature and a poor
+      // answer for a working day, and a person should be able to see and
+      // change the name their writes carry before they make one.
+      const name = await askText('write as:', host.state().actor);
+      if (name === null) return;
+      await host.dispatch({ type: 'set-actor', actor: name });
+      drawActor();
+      say(`writing as ${name}`);
     })();
   });
 

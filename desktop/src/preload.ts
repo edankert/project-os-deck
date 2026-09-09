@@ -44,6 +44,20 @@ const api = {
     write: (text: string): Promise<unknown> => ipcRenderer.invoke('deck:clipboard:write', text),
     read: (): Promise<unknown> => ipcRenderer.invoke('deck:clipboard:read'),
   },
+
+  /**
+   * The one route a change to a note travels.
+   *
+   * It ends in the MAIN PROCESS making a loopback request to the sidecar,
+   * because the sidecar authorises a write by the fact that it came from
+   * loopback (ADR-0003). This bridge does not exist on a served page, so a
+   * tablet cannot reach any of it — which is why `write` is false there as a
+   * statement of fact and not only as a decision.
+   */
+  write: {
+    transition: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:transition', request),
+    tick: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:tick', request),
+  },
 };
 
 contextBridge.exposeInMainWorld('deck', api);

@@ -129,6 +129,16 @@ export interface DeckState {
    * (TASK-0024).
    */
   deskCards: Record<string, DeskCard[]>;
+  /**
+   * Who Deck says made a write.
+   *
+   * A setting rather than a literal: the cockpit hard-codes `user:edwin` in
+   * four places in its renderer, and that name cannot be copied into a second
+   * application without making it unusable by anybody else (TASK-0048). The
+   * sidecar does not verify it, so this is a record of intent — it says who
+   * claimed to act, not who was proven to.
+   */
+  actor: string;
   /** What the navigator is narrowed to. Shared, so a second window narrows with it. */
   query: string;
   filters: Filters;
@@ -174,6 +184,14 @@ export interface Capabilities {
   manageWorkspaces: boolean;
   /** State held in the main process and broadcast to every window. */
   sharedStore: boolean;
+  /**
+   * Change a note, through the shell's loopback call to the sidecar.
+   *
+   * False on the served page, and the verbs are then ABSENT rather than
+   * disabled — the same rule pop-out windows follow (TASK-0022). A control
+   * that is greyed out is a promise that it could work.
+   */
+  write: boolean;
 }
 
 export type WindowRole = 'focus' | 'satellite';

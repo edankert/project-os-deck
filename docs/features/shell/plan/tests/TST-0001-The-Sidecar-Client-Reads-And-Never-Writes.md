@@ -31,6 +31,8 @@ related: ["[[PHASE-0001-Deck]]"]
 
 Deck's only route to the sidecar is one typed client. This suite runs that client against a fake sidecar, checks it reads the payloads Deck depends on, and checks it cannot write.
 
+**What this claims is narrower since 2026-09-09, and the narrowing is deliberate.** It used to mean "Deck never writes", which was true because Deck had no write path at all. [[ADR-0003-Deck-Writes-Through-The-Shell]] gave it one. The claim here is now about THIS CLIENT: the read client has no method that writes, and only `GET` ever reaches a fake sidecar through it. The write path is a separate module, `desktop/src/shared/write-client.ts`, called only from the main process, and the claim about IT is in [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] — which asserts that no module outside that one both sends a POST and names an `/api/` path. Together the two still say "a write leaves Deck through one place or not at all"; what changed is that the place exists.
+
 > **Status is evidence, not intent.** This test carries a `command:`, so it records no verdict; the CI run is the verdict. `python3 tools/scripts/run-tests.py --filter TST-0001` reproduces it locally without writing anything.
 
 ## Procedure

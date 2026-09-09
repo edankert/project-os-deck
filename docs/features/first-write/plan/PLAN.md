@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — the first write"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 implements: ["[[FEAT-0013-The-First-Write]]"]
 related: ["[[PHASE-0001-Deck]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]"]

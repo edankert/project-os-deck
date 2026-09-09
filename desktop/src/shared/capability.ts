@@ -10,6 +10,7 @@ export const SHELL_CAPABILITIES: Capabilities = {
   clipboard: true,
   manageWorkspaces: true,
   sharedStore: true,
+  write: true,
 };
 
 /** Everything the served host can honestly offer, which is reading. */
@@ -18,6 +19,11 @@ export const SERVED_CAPABILITIES: Capabilities = {
   clipboard: false,
   manageWorkspaces: false,
   sharedStore: false,
+  // The tablet does not write. Edwin, 2026-09-08, and it is a rule with no
+  // condition attached rather than something waiting on the cockpit
+  // (ADR-0003). A write travels the preload bridge, which a served page does
+  // not have, so this is a statement of fact as well as a decision.
+  write: false,
 };
 
 /**
@@ -36,5 +42,6 @@ export function normaliseCapabilities(value: unknown): Capabilities {
     clipboard: source['clipboard'] === true,
     manageWorkspaces: source['manageWorkspaces'] === true,
     sharedStore: source['sharedStore'] === true,
+    write: source['write'] === true,
   };
 }

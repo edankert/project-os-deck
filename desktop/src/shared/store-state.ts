@@ -27,6 +27,7 @@ export type DeckAction =
   | { type: 'set-query'; text: string }
   | { type: 'set-filters'; filters: Filters }
   | { type: 'set-fold'; key: string; folded: boolean }
+  | { type: 'set-actor'; actor: string }
   /**
    * The notes of a workspace changed on disk. Raised by the main process's
    * index, never by a window: a renderer cannot know what is on disk, and the
@@ -57,6 +58,9 @@ const RENDERER_ACTIONS = new Set([
   'set-query',
   'set-filters',
   'set-fold',
+  // A person changes the name their writes carry, so this crosses the window
+  // channel. It names nobody but the person typing it.
+  'set-actor',
 ]);
 
 export function isRendererAction(value: unknown): value is DeckAction {
@@ -76,6 +80,7 @@ export function initialState(): DeckState {
     query: '',
     filters: { statuses: [], types: [] },
     folds: {},
+    actor: '',
     revision: 0,
     indexRevisions: {},
     flowCursor: null,
@@ -218,6 +223,11 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (state.folds[action.key] === action.folded) return state;
       return bump({ ...state, folds: { ...state.folds, [action.key]: action.folded === true } });
     }
+    case 'set-actor': {
+      const actor = typeof action.actor === 'string' ? action.actor.trim() : '';
+      if (actor === '' || state.actor === actor) return state;
+      return bump({ ...state, actor });
+    }
     case 'index-changed': {
       const current = state.indexRevisions[action.workspaceId] ?? 0;
       // Never backwards. A late broadcast from an index that has already been
@@ -305,6 +315,7 @@ export function normaliseState(value: unknown): DeckState {
     query: typeof raw['query'] === 'string' ? raw['query'] : '',
     filters: normaliseFilters(raw['filters']),
     folds,
+    actor: typeof raw['actor'] === 'string' ? raw['actor'] : '',
     revision: typeof raw['revision'] === 'number' && Number.isFinite(raw['revision']) ? raw['revision'] : 0,
     // Not read back from the file. The index is rebuilt from disk at every
     // start, so a number carried over from the last run is one this run's

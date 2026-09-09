@@ -6,7 +6,7 @@ title: "The write channel exists in the shell and not when served, the verbs com
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -60,10 +60,16 @@ Deck writes for the first time, and [[ADR-0003-Deck-Writes-Through-The-Shell]] p
 - A refusal is a sentence a person can act on, not an HTTP status.
 - A change never redraws underneath somebody who is reading.
 
-## Evidence (fill after running)
+## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh writes`: the check count and the date.
-- The smoke run's line asserting the served page offered no verb.
+- `bash tools/scripts/run-desktop-tests.sh write-channel`: 21 checks pass, 2026-09-09.
+- The smoke run's line asserting the served page offers no verb: the served host answers `write: false`, the shell answers `write: true`, and the shell shows the name it writes with.
+- A LIVE write against the sidecar this repository was already running, on 2026-09-09, reverted with `git checkout` afterwards and the working tree left clean:
+  - `ISS-0016` moved `triage` → `deferred` in the file, with the sidecar's decision callout appended.
+  - A criterion was ticked as `- [x] A live check that Deck can tick a criterion — evidence: ticked through Deck, 2026-09-09 (user:deck-live-check, 2026-09-09)`, which is the sidecar's `TICK_TEMPLATE` exactly.
+  - The same tick with a modification time that had gone stale by one write was refused: `note changed on disk since it was read — reload and retry`.
+  - A criterion that matches nothing was refused: `no criterion on TASK-0052 reads '...'`.
+- The three refusal sentences are matched against the sidecar's OWN wording, read from `note_writes.py` and confirmed against those live refusals. The first version of the wording matched none of them, because all three were written from memory of what such a message might say.
 
 ## Adequacy (who verifies this test?)
 

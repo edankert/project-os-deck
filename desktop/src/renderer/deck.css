@@ -374,3 +374,70 @@ body[data-panel="desk"] .reader { display: none; }
 .refusals ul { margin: 0; padding-left: 16px; }
 .refusals code { font-size: 11px; }
 .refusals .refusal-where { opacity: 0.65; }
+
+/* The verbs the sidecar offers on a note. Absent when Deck is served, never
+   greyed out: a disabled control is a promise that it could work (ADR-0003). */
+.actuators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.actuators .verb {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.actuators .verb:hover:not(:disabled) { border-color: var(--accent); }
+.actuators .verb:disabled { opacity: 0.45; cursor: not-allowed; }
+.actuators .why { opacity: 0.7; }
+
+/* A checkbox the sidecar addressed, and the tick control beside it. */
+.reader .tick {
+  font: inherit;
+  font-size: 11px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.reader .tick:hover { border-color: var(--accent); }
+.reader .no-tick {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--owed);
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* Something changed under this window. A line and a control that takes it. */
+.stale {
+  padding: 4px 12px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: 12px;
+}
+.stale .action { margin-left: 8px; }
+
+.actor {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  margin-left: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+}
+.actor:hover { opacity: 1; border-color: var(--accent); }

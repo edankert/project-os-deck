@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0048
 aliases: ["TASK-0048"]
 title: "The actor is a setting in Deck's store, because the cockpit's hard-coded name cannot be copied into a second application"
-status: backlog
+status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[FEAT-0013-The-First-Write]]"]
 parent: "FEAT-0013"
 effort: ""
@@ -44,12 +44,29 @@ Every write Deck makes says who made it. That name is a field in Deck's store, s
 
 ## Steps
 
-- [ ] Add the actor to the store's state and its reducer, with the default derivation.
-- [ ] Read it in the write channel rather than passing it per call.
-- [ ] Decide the editing surface, or decide there is none yet, and write the reason down.
-- [ ] Add the literal-name search to the suite.
-- [ ] Extend [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] with the actor cases.
+- [x] Add the actor to the store's state and its reducer, with the default derivation
+- [x] Read it in the write channel rather than passing it per call
+- [x] Decide the editing surface — a minimal control; the reasoning is below
+- [x] Add the literal-name search to the suite
+- [x] Extend [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] with the actor cases
 
 ## Notes
 
 The sidecar does not verify the actor, so this field is a record of intent, not an identity. Saying that plainly matters: a person reading a decision callout in a note should know it says who claimed to act, not who was proven to.
+
+
+## Done, 2026-09-09
+
+**The actor is `DeckState.actor`, and the write channel reads it from the store rather than taking it as an argument.** So there is one answer to who made a write and a window cannot claim a different one.
+
+**The default is derived from the machine: `user:` plus the operating system's user name.** `user:` is the prefix project-os uses for a person, as against `agent:` for a delegate. A machine that will not say who is using it gets `user:unknown`, which is a name that admits what it does not know. It is set once, at start-up, and only when nobody has chosen: a name a person typed is theirs and is never replaced.
+
+**A search of the built output finds no person's name.** `user:` built at run time is the point; a name after it in the source is what the check forbids, with comments stripped first — the first version of that check failed on the paragraph explaining why the literal must not be there.
+
+## The editing surface: a minimal control, and why
+
+**There is one, and it is one button.** It sits at the end of the status bar, reads "writing as user:someone", and asks for a new name when clicked. Absent when Deck is served, because a page that cannot write has no name to show.
+
+The alternative was to decide there is none yet. Two things settled it against that. A person about to change a file somebody else will read should be able to SEE what name the change will carry, before making it rather than after — and a store field with no way to edit it means a name derived from a machine account can never be corrected, which is exactly the failure that made the cockpit's hard-coded literal unusable elsewhere. One button is a smaller thing than a settings surface, and [[PHASE-0004-Parity]] can build the surface when a working day needs more than one setting in it.
+
+**The sidecar does not verify the actor**, and saying that plainly matters: a person reading a decision callout in a note should know it says who CLAIMED to act, not who was proven to.

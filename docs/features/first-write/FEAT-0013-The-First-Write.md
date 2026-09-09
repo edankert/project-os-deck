@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0013
 aliases: ["FEAT-0013"]
 title: "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb"
-status: planned
+status: review
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: ["[[PHASE-0001-Deck]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 goal: "One verb goes end to end. In the shell, a person ticks an acceptance criterion with evidence and makes one status transition, and the change is in the note on disk and visible in the cockpit. The served page offers no verb at all. This proves the write path ADR-0003 decided, and it is the smallest thing that can."
 requirements: []
@@ -64,3 +64,22 @@ Two verbs is the whole scope. This feature is not parity with the cockpit's thir
 - Tasks: [[TASK-0047-The-Write-Channel]], [[TASK-0048-The-Actor-Is-A-Setting]], [[TASK-0049-The-Actuator-Row-And-One-Transition]], [[TASK-0050-Ticking-A-Criterion-With-Evidence]], [[TASK-0051-The-Changed-Under-You-Mark]]
 - Plan: `docs/features/first-write/plan/PLAN.md`
 - Acceptance walk: [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]]
+
+
+## Where this stands
+
+**2026-09-09: built, and at `review` waiting on the walk a person makes.** All five tasks are `done`. A write travels renderer → preload bridge → IPC → main process → loopback POST to the sidecar's existing guarded endpoint, and nothing about it touches Deck's HTTP host, which still answers 405 to every method that is not a read on every path.
+
+**It was proved against the real sidecar, not only against a fake one.** `ISS-0016` moved `triage` → `deferred` in the file with the decision callout appended; a criterion was ticked as `- [x] ... — evidence: ... (user:deck-live-check, 2026-09-09)`, which is the sidecar's own template exactly; a tick whose modification time had gone stale was refused; and a criterion matching nothing was refused. Everything was reverted with `git checkout` and the working tree left clean.
+
+**Three things this found rather than assumed.**
+
+`/api/render` carries no modification time — the plan expected one. The tick reads it from Deck's own index instead, which is the better source: the index is the thing watching the file.
+
+The three refusal sentences were first written from memory of what such a message might say, and matched none of the sidecar's actual ones. They are now read from `note_writes.py` and confirmed live.
+
+Both branches of the no-address rule happen on real notes here: `TASK-0052` renders five checkboxes with five `data-raw` attributes, and `PHASE-0001` renders eleven with none, because the sidecar's rendered count and source count disagree. Deck offers no tick there and says why.
+
+**The actor is a store field with one control**, defaulted from the machine's user name and never from a literal — a search of the built output proves no source file names a person. The decision to build a control rather than defer it is in [[TASK-0048-The-Actor-Is-A-Setting]].
+
+**What is owed is [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]]**, walked with `git diff` beside it so the claim is about the file and not about two screens — and on a real tablet, for the half that says the served page offers no verb at all. `shell.reader.actuators` moves to `adopted` on that walk, which is what its own row in the adoption table says.
