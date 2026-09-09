@@ -75,6 +75,49 @@ export interface TickRequest {
   reason?: string;
 }
 
+/**
+ * Build one transition request out of what a window sent.
+ *
+ * **A function rather than an object literal in the IPC handler, because the
+ * literal quietly lost two fields** (ISS-0037). The handler listed the fields
+ * it forwarded, `note` and `severity` were never on the list, and nothing
+ * failed: the sidecar writes its decision callout only when prose arrives and
+ * says nothing when none does, so a Decline made in Deck recorded no grounds
+ * while the same Decline in the cockpit recorded them. Here the mapping can be
+ * driven by a check, and deleting a field turns one red.
+ *
+ * The ACTOR is a separate argument and is never read from the request, so a
+ * window cannot claim to be somebody else.
+ */
+export function transitionRequestFrom(request: Record<string, unknown>, actor: string): TransitionRequest {
+  const text = (key: string): Record<string, string> => {
+    const value = request[key];
+    return typeof value === 'string' && value !== '' ? { [key]: value } : {};
+  };
+  return {
+    id: String(request['id'] ?? ''),
+    to: String(request['to'] ?? ''),
+    actor,
+    ...(typeof request['mtime'] === 'number' ? { mtime: request['mtime'] } : {}),
+    ...text('note'),
+    ...text('severity'),
+    ...text('option'),
+  };
+}
+
+/** The same, for a criterion. See {@link transitionRequestFrom}. */
+export function tickRequestFrom(request: Record<string, unknown>, actor: string): TickRequest {
+  const reason = request['reason'];
+  return {
+    id: String(request['id'] ?? ''),
+    criterion: String(request['criterion'] ?? ''),
+    evidence: String(request['evidence'] ?? ''),
+    actor,
+    ...(typeof request['mtime'] === 'number' ? { mtime: request['mtime'] } : {}),
+    ...(typeof reason === 'string' && reason !== '' ? { reason } : {}),
+  };
+}
+
 type Poster = (
   url: string,
   init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal },

@@ -20,7 +20,12 @@ import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
 import { NoteIndex, docsRootFor, pathPrefixFor } from './note-index.js';
-import { SidecarWriteClient, WriteRefused } from '../shared/write-client.js';
+import {
+  SidecarWriteClient,
+  WriteRefused,
+  tickRequestFrom,
+  transitionRequestFrom,
+} from '../shared/write-client.js';
 import { navigationFor } from '../shared/origin.js';
 import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 
@@ -357,27 +362,11 @@ function registerIpc(): void {
   };
 
   handle('deck:write:transition', async (_e, request: { workspaceId: string } & Record<string, unknown>) =>
-    write(String(request?.workspaceId ?? ''), (client, actor) =>
-      client.transition({
-        id: String(request['id'] ?? ''),
-        to: String(request['to'] ?? ''),
-        actor,
-        ...(typeof request['mtime'] === 'number' ? { mtime: request['mtime'] } : {}),
-        ...(typeof request['option'] === 'string' ? { option: request['option'] } : {}),
-      }),
-    ),
+    write(String(request?.workspaceId ?? ''), (client, actor) => client.transition(transitionRequestFrom(request, actor))),
   );
 
   handle('deck:write:tick', async (_e, request: { workspaceId: string } & Record<string, unknown>) =>
-    write(String(request?.workspaceId ?? ''), (client, actor) =>
-      client.tick({
-        id: String(request['id'] ?? ''),
-        criterion: String(request['criterion'] ?? ''),
-        evidence: String(request['evidence'] ?? ''),
-        actor,
-        ...(typeof request['mtime'] === 'number' ? { mtime: request['mtime'] } : {}),
-      }),
-    ),
+    write(String(request?.workspaceId ?? ''), (client, actor) => client.tick(tickRequestFrom(request, actor))),
   );
 
   handle('deck:clipboard:write', (_e, text: string) => {

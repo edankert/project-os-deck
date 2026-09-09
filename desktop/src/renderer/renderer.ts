@@ -751,8 +751,15 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
     return;
   }
   let rows: ActuatorRow[] = [];
+  // The sidecar takes a severity only while an ISSUE leaves `triage`, and
+  // refuses one anywhere else rather than ignoring it, so Deck asks in exactly
+  // that case and the payload — not Deck — says when that is.
+  let triaging = false;
   try {
-    rows = actuatorRows(await host.read(workspaceId, `/api/notes/actions?id=${encodeURIComponent(noteId)}`));
+    const payload = await host.read(workspaceId, `/api/notes/actions?id=${encodeURIComponent(noteId)}`);
+    rows = actuatorRows(payload);
+    const shape = payload as { type?: unknown; status?: unknown };
+    triaging = String(shape.type ?? '') === 'issue' && String(shape.status ?? '') === 'triage';
   } catch {
     // A note the sidecar has no opinion about offers nothing, which is the
     // common case: most notes at most times owe nobody a decision.
@@ -774,7 +781,7 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
     button.disabled = row.disabled;
     if (row.reason !== '') button.title = row.reason;
     button.addEventListener('click', () => {
-      void applyVerb(workspaceId, noteId, row);
+      void applyVerb(workspaceId, noteId, row, triaging);
     });
     el.actuators.appendChild(button);
     if (row.disabled && row.reason !== '') {
@@ -786,18 +793,47 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
   }
 }
 
-/** Post one actuator row's verb, confirming first when the ROW asks for it. */
-async function applyVerb(workspaceId: string, noteId: string, row: ActuatorRow): Promise<void> {
+/**
+ * Post one actuator row's verb, confirming first when the ROW asks for it.
+ *
+ * **A verb that stops to ask also asks why** (ISS-0037). The sidecar writes a
+ * dated, attributed paragraph into the note when the request carries prose,
+ * and writes nothing when it does not, so a Decline made here used to leave a
+ * `status: declined` nobody could account for six months later. The prose is
+ * collected where the confirmation already interrupts, and stays OPTIONAL: the
+ * cockpit does not require one, and Deck must not be stricter than the surface
+ * it shares a file with.
+ */
+async function applyVerb(
+  workspaceId: string,
+  noteId: string,
+  row: ActuatorRow,
+  triaging = false,
+): Promise<void> {
   // Deck decides nothing about which verbs are dangerous; the row does.
+  let reason: string | null = null;
   if (row.confirm) {
     const chosen = await askChoice(`${row.verb} ${noteId}?`, [{ value: 'yes' as const, label: `Yes, ${row.verb}` }]);
     if (chosen === null) return;
+    // Escape or an empty box here means "no reason", not "cancel" — the
+    // decision was confirmed a moment ago and unwinding it now would be a
+    // second question about a settled thing.
+    reason = await askText(`why? (recorded in the note; blank for none)`);
   }
+  // **Severity is free text, not a picker, deliberately.** The four values are
+  // the cockpit's and the sidecar serves no list of them, so a picker here
+  // would be Deck restating a table it does not own — the drift that put
+  // `draft`/`proposed`/`ready` in Deck's status bands within two days. A value
+  // the project does not use comes back refused, in the sidecar's own words.
+  let severity: string | null = null;
+  if (triaging) severity = await askText('severity? (blank to leave it as filed)');
   const result = await host.write('transition', {
     workspaceId,
     id: noteId,
     to: row.to,
     ...(openNote?.mtime === null || openNote?.mtime === undefined ? {} : { mtime: openNote.mtime }),
+    ...(reason === null ? {} : { note: reason }),
+    ...(severity === null ? {} : { severity }),
   });
   if (!result.ok) {
     // The sidecar's refusal, as it worded it.

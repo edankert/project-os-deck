@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 36
+  ISS: 37
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -63,7 +63,7 @@ focus:
   phase: "PHASE-0001"
   feature: "FEAT-0006"
   task: "TASK-0052"
-  issue: ""
+  issue: "ISS-0037"
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -493,6 +493,16 @@ items:
       component: docs
       tests: []
       note: "Re-review, 2026-09-09. Six numbers in the close-out notes do not reproduce: four mutation counts (ISS-0025 "three"=1, ISS-0026 "four"=1, ISS-0027 "one, two and four"=1,1,1, ISS-0030 "four"=1 — only ISS-0024\u2019s "two" is exact), "twenty-two notes"=14, and "143 notes carrying a status"=126. Each sits in a sentence arguing a measurement beats a claim, and a wrong measurement is worse than a claim because it invites a reader to stop checking. Also unrecorded: case-sensitivity silently empties every TaskNotes view over project-os (53 notes here to 0), and the premise "Obsidian\u2019s == is case-sensitive" carries no citation."
+    ISS-0037:
+      file: "docs/issues/ISS-0037-A-Decision-Made-In-Deck-Records-No-Reason.md"
+      title: "A decision made in Deck moves the status and records no reason, because the field carrying the reason is dropped between the renderer and the sidecar"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: main
+      tests: []
+      note: "Found 2026-09-09 by the round-trip check written for TST-0028, which drove Accept on ISS-0008 and expected the cockpit's decision callout. The sidecar writes the callout only when the request carries prose (_append_decision_record: if not text: return body). Deck's deck:write:transition handler builds the request from an allow-list of id/to/mtime/option, so note and severity never leave the shell, and applyVerb never collects prose in the first place. Decline in the cockpit records why; Decline in Deck records nothing, silently. Deck's own TransitionRequest already has both fields."
     ISS-0024:
       file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
       title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"

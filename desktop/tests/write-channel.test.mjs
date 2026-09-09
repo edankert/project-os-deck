@@ -14,7 +14,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { desktopRoot, fakeSidecar, HEALTH, load } from './helpers.mjs';
 
-const { SidecarWriteClient, WriteRefused, actuatorRows, wordRefusal } = load('shared/write-client.js');
+const { SidecarWriteClient, WriteRefused, actuatorRows, wordRefusal, transitionRequestFrom, tickRequestFrom } =
+  load('shared/write-client.js');
 const { SHELL_CAPABILITIES, SERVED_CAPABILITIES, normaliseCapabilities, can } = load('shared/capability.js');
 const { SidecarClient } = load('shared/sidecar-client.js');
 const { DeckHost, isForwardable } = load('main/host.js');
@@ -72,6 +73,66 @@ test('a write reaches the sidecar as a POST from loopback, carrying what Deck bu
   } finally {
     await sidecar.close();
   }
+});
+
+test('the reason for a decision reaches the sidecar, and so does the severity (ISS-0037)', async () => {
+  // **The defect this replaces was silence, not a wrong answer.** The IPC
+  // handler built its request field by field from a list, `note` and
+  // `severity` were not on it, and the sidecar writes its `## Decision record`
+  // callout only when prose arrives — so a Decline made in Deck moved the
+  // status and recorded no grounds, and nothing anywhere said so. Driven
+  // through the mapping the handler now uses, over a real request, so deleting
+  // a field turns this red.
+  const sidecar = await writingSidecar({ '/api/notes/transition': { payload: { ok: true, result: {} } } });
+  try {
+    const client = new SidecarWriteClient(sidecar.base);
+    await client.transition(
+      transitionRequestFrom(
+        {
+          workspaceId: 'aaaa1111',
+          id: 'ISS-0008',
+          to: 'open',
+          mtime: 1757000000.5,
+          note: 'Real, and now. The renderer has no check at all in CI.',
+          severity: 'high',
+          // A window may not name the writer; the shell does.
+          actor: 'user:somebody-else',
+        },
+        'user:edwin',
+      ),
+    );
+    assert.deepEqual(sidecar.seen.at(-1).body, {
+      id: 'ISS-0008',
+      to: 'open',
+      actor: 'user:edwin',
+      mtime: 1757000000.5,
+      severity: 'high',
+      note: 'Real, and now. The renderer has no check at all in CI.',
+    });
+  } finally {
+    await sidecar.close();
+  }
+});
+
+test('a decision made without a reason sends no reason, so the sidecar writes no empty callout', () => {
+  // The cockpit does not require prose and Deck must not be stricter than the
+  // surface it shares a file with, so the blank box is a real answer.
+  const built = transitionRequestFrom({ id: 'ISS-0008', to: 'open', note: '', severity: '' }, 'user:edwin');
+  assert.deepEqual(built, { id: 'ISS-0008', to: 'open', actor: 'user:edwin' });
+});
+
+test('a tick built from a window carries the criterion and never the window\'s idea of who is writing', () => {
+  const built = tickRequestFrom(
+    { id: 'FEAT-0013', criterion: 'a criterion', evidence: 'walked', actor: 'user:nobody', mtime: 2 },
+    'user:edwin',
+  );
+  assert.deepEqual(built, {
+    id: 'FEAT-0013',
+    criterion: 'a criterion',
+    evidence: 'walked',
+    actor: 'user:edwin',
+    mtime: 2,
+  });
 });
 
 test('a tick carries the criterion, the evidence, the actor and the modification time', async () => {
