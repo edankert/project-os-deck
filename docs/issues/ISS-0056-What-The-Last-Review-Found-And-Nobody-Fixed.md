@@ -51,3 +51,16 @@ Rounds three through six found defects in shipped code. This one found gaps in g
 - [ ] Push, and see `deck-smoke.yml` run for the first time
 - [ ] Decide whether the four smoke-only guards need a gate that runs without a person
 - [ ] Groom the seven smaller findings, or close this note saying they are accepted
+
+## Four of these were my own code describing itself wrongly, and are corrected, 2026-09-09
+
+Not a review round — an inaccuracy in a comment is the same class of fault as an inaccuracy in a note, and three of these were written by the commits that closed the sixth pass.
+
+- **The comment saying "unfold the groups first" now says what `.twist` does**, which is toggle: it also folds any group that was already open. The check works because enough rows end up rendered, and it says so.
+- **`window.__deckOpenNote` is gone.** It was a renderer seam added while trying five routes to open a note; the route that worked clicks a navigator row instead, and the seam was left behind with a comment claiming the smoke run used it. Dead code in the renderer with a false comment on it is worse than no seam.
+- **`.github/workflows/deck-smoke.yml`'s header describes the world it is in.** It said `run-smoke.sh` was TST-0037's `command:`, that the script fetches Electron, and that Electron downloads twice per push — all three untrue since [[ISS-0054-The-Smoke-Runner-Cannot-Start-Where-It-Must]]. It now says the thing that matters: this is the only gate these checks have, and it has never run.
+- **The two stale counts are gone rather than refreshed.** FEAT-0011 said 199 notes here and 2715 in Your Trainer; FEAT-0012 counted the vault's base files. Both now name the script that prints today's figure, which is the rule [[ISS-0052-A-Fourth-Round-Of-Numbers-That-Do-Not-Reproduce]] settled on after four rounds of correcting numbers into new wrong numbers.
+
+**Still open and deliberately not fixed:** `loadQueryView` can be emptied with every gate green (dead until [[PHASE-0003-Vault]] makes it live), the tick's no-address refusal can be deleted, `typeCounts` is called from nowhere, the fixture has decayed by 20 notes, and the largest one — the smoke run is gated by a workflow that has never executed.
+
+**Verified after:** 322 node checks, both smoke configurations at exit 0.

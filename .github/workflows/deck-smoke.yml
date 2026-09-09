@@ -5,17 +5,22 @@
 # a change to it belongs upstream in `../project-os`, where it would be run by
 # every project the template serves — most of which have no Electron.
 #
-# Why it exists when the template's job also runs this. `run-smoke.sh` is
-# TST-0037's `command:`, so `run-tests.py` runs it in both workflows, and it
-# fetches Electron and re-execs under `xvfb-run` by itself. That leaves one
-# assumption: that `xvfb-run` is on the runner image. This job installs xvfb
-# explicitly, so a change in that image turns THIS job red with a one-line fix
-# available here, instead of turning the template-owned backstop red with the
-# fix only available upstream (ISS-0049).
+# **This is the only gate these checks have.** `run-smoke.sh` is not a
+# `TST-*` note's `command:` any more, so `run-tests.py` does not run it —
+# the smoke needs Electron, a screen AND a sidecar, and the template-owned
+# `validate-docs.yml` can provide none of them (ISS-0054). This job installs
+# all three.
 #
-# The cost is that Electron is downloaded twice per push. That is the price of
-# not betting the non-bypassable job on an assumption about somebody else's
-# machine image, and it is deliberate.
+# The consequence, stated because it is easy to miss: until this workflow runs,
+# four of Deck's guards rest on `last_verified:` in TST-0037 and somebody's
+# memory. It has never executed — the work is unpushed (ISS-0056).
+#
+# `run-smoke.sh` installs nothing itself. A missing Electron binary is exit 127
+# with the command to run; an earlier version ran `npm ci`, which empties
+# `node_modules` before fetching and so could destroy a working checkout.
+# It re-execs under `xvfb-run` when it finds no display, which is why xvfb is
+# installed below rather than the script being wrapped here.
+
 name: deck-smoke
 
 on:

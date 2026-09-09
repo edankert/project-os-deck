@@ -1181,10 +1181,16 @@ async function recordEveryVerbAsksWhy(
       (async () => {
         const wanted = ${JSON.stringify(candidates)};
         const probe = {wanted: wanted.length, tried: []};
-        // **Unfold the groups first.** The navigator renders a folded group's
-        // rows nowhere, so every route this check tried — clicking a row, the
-        // search box, addressing the window at the note — failed for the same
-        // reason and looked like four different faults.
+        // **Toggle every group, which unfolds the folded ones.** The navigator
+        // renders a folded group's rows nowhere, so every route this check
+        // tried — clicking a row, the search box, addressing the window at the
+        // note — failed for the same reason and looked like four different
+        // faults.
+        //
+        // A toggle, not an unfold: this also FOLDS any group that was already
+        // open, which is why it is written as "enough rows end up rendered"
+        // rather than "every group is open". Saying "unfold" was wrong about
+        // the code directly under it (ISS-0056).
         for (const twist of [...document.querySelectorAll('#nav-list .twist')]) twist.click();
         await new Promise((r) => setTimeout(r, 600));
         probe.rows = document.querySelectorAll('#nav-list [data-note-id]').length;
