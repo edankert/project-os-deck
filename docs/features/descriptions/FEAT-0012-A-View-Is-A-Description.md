@@ -14,6 +14,9 @@ requirements: []
 tasks: ["[[TASK-0041-The-Description-Shape-And-Its-Parser]]", "[[TASK-0042-Seven-Descriptions-Equal-To-Todays-Views]]", "[[TASK-0043-The-Evaluator-Over-The-Index]]", "[[TASK-0044-Band-And-Face-Come-From-The-Description]]", "[[TASK-0045-The-Navigator-Draws-Any-Description]]", "[[TASK-0046-A-Base-File-Reads-As-A-Description]]"]
 release: ""
 acceptance_exception: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-09
+review_verdict: changes-requested
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[FEAT-0007-Views-Come-From-A-Provider]]", "[[FEAT-0011-Decks-Own-Index]]", "[[TASK-0029-The-Band-Function]]", "[[RISK-0003-Two-Evaluators-Of-The-Bases-Language]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 ---
 
@@ -68,6 +71,26 @@ Three words mean one thing each. A **description** is a view written as data. Th
 - Acceptance walk: [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]]
 
 
+## Independent review — 2026-09-09
+
+**Verdict: changes-requested.** Clean context and a separate session; the same model family as the author, recorded in `reviewed_by`. The description shape, the parser, the band function and the status fixture are sound and well guarded. The findings are all in the evaluator, and they are all the one shape this feature says it exists to prevent: a wrong answer produced quietly, where the note promises either the right answer or a named report.
+
+**The claim under test.** This note's acceptance says "every construct the evaluator does not support is reported by name. No unsupported view ever renders as an empty list", and [[ADR-0004-A-View-Is-A-Description]] says "a construct the evaluator does not support is reported by name. An unsupported filter never silently returns an empty list". Both are true of constructs the evaluator knows it cannot run. Neither covers a construct it thinks it can run and runs differently from Obsidian, and there are four of those.
+
+**Finding 1 (blocking): `contains` on a string tests equality, where Obsidian tests substring.** `desktop/src/shared/expression.ts:510-511` wraps a scalar in a one-element list and compares with `same()`, so `title.contains("Draft")` over `title: "Draft One"` is `false`. Reproduced. `containsAny` and `containsAll` do the same. Nothing is reported. A view written in Obsidian that finds notes finds none in Deck, and the screen says the view is empty.
+
+**Finding 2 (blocking): `hasLink` ignores the property it was called on.** `expression.ts:525-528` answers from `linksIn(context.record)`, which walks the whole frontmatter, so `owner.hasLink(link("Zed"))` is `true` for a note whose `owner` is `[[Ann]]` and whose `related` contains `[[Zed]]`. Reproduced. This selects too many notes rather than too few, silently. Separately, Deck's records hold no body links at all ([[TASK-0038-Records-From-The-Workspaces-Markdown]] decided the body is not kept), so `file.hasLink` can never see a link Obsidian would — also unreported.
+
+**Finding 3 (blocking): `==` on strings is case-insensitive, where Obsidian's is not.** `same()` lower-cases both sides (`expression.ts:625`). `title == "draft one"` matches `title: "Draft One"`. Reproduced. [[TASK-0043-The-Evaluator-Over-The-Index]] states this as a property of `same()` and it is the right rule for the three type spellings; it is applied to every string comparison, and no note says so. This is the coercion decision [[RISK-0003-Two-Evaluators-Of-The-Bases-Language]] names as having "more than one defensible answer" — the answer is defensible, it is just not written down where a person comparing two screens would find it.
+
+**Finding 4 (blocking): `file.path` is docs-root-relative, so `inFolder` in a real base file is inert.** `fileOf` (`expression.ts:382-394`) builds `path` from `record.relPath`, which the walk makes relative to the docs root. A `.base` file written for the same repository in Obsidian uses vault-relative paths. Reproduced against the cockpit's own `docs/__bases__/NAVIGATION.base`, checked in at `desktop/fixtures/bases/cockpit-navigation.base`: its `not: file.inFolder("docs/__templates__")` matches nothing, so running its "Features (All)" view over this repository's 200 records selects 14 notes — the 13 features plus `__templates__/feature.md`. Nothing is reported. The exclusion that base file relies on is not doing anything, and neither is `.trash` or `.obsidian` (harmless only because the walk already skips those).
+
+**Finding 5 (non-blocking): an unsupported report with no construct name.** Running `desktop/fixtures/bases/tasks-daily.base` yields an entry whose `construct` is the empty string, from an empty formula body — `{construct: "", where: "source.formulas.Untitled", reason: "\"\" cannot start an expression (at character 0)"}`. [[TASK-0046-A-Base-File-Reads-As-A-Description]]'s criterion says "Every unsupported construct is named with what it was", and `desktop/tests/descriptions.test.mjs:188` asserts `construct.length > 0` — but only over the parser's refusals, never over the evaluator's runtime `unsupported` list, which is where this one appears.
+
+**Finding 6 (non-blocking, documentation): an acceptance criterion that asks for something that does not exist anywhere.** [[TASK-0044-Band-And-Face-Come-From-The-Description]]'s criterion and [[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]]'s procedure both require that Deck's status bands "assert `final` is present". `final` is in neither `desktop/src/shared/statuses.ts`, nor `desktop/fixtures/cockpit-statuses.json`, nor the cockpit's `statuses.py`. TASK-0044's Done section explains that adding it would have been wrong; the criterion and the test procedure were left saying the opposite, and the task is `done`.
+
+**What was checked and found sound.** The seven provider descriptions parse with zero refusals and name `list` and `spread` and never `glass`; removing the version check fails 2 checks, and making the surface vocabulary accept anything fails 7. The band function is real: forcing `bandOf` to return `mid` fails 6 checks, and the overflow counts are measured over recorded `nav_payload` fixtures. The status copy is pinned — `STATUS_BANDS`, `COMPLETED_STATUSES` and `LEGACY_STATUS_BANDS` all equal the fixture recorded from `statuses.py`, and I re-verified the equality outside the suite. Removing `report()` so unsupported constructs pass silently fails 6 checks, and breaking `same()`'s link normalisation fails 10, so the reporting guarantee that IS claimed is guarded. All thirteen base fixtures parse and run; the `this.`-relative filters and the TaskNotes formula pipeline come back named, as the note says.
+
 ## Where this stands
 
 **2026-09-09: built, and at `review` waiting on the walk a person makes.** All six tasks are `done`. A view is a document with five sections; the project-os provider emits seven of them and nothing a person sees changed. `faces.ts` holds no note type. One band function serves every surface. A query-sourced description runs over Deck's own index and draws through the same group model a mode-sourced one does. Every base file Edwin has written reads as a description, and where the seed stops it says so by name.
@@ -81,3 +104,14 @@ A view that gathers its own obligations marks the GROUP rather than each item, s
 Overview is the one view the shape cannot carry, and the extension namespace is where that fact is written rather than a branch in the renderer. It is not a view of notes; it should be a page, and the address grammar already has the key waiting ([[TASK-0042-Seven-Descriptions-Equal-To-Todays-Views]]).
 
 **What is owed is [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]]**, which a person walks against three base files of different shapes.
+
+
+## Independent review, 2026-09-09: changes requested, and made
+
+**Four evaluator paths selected the wrong notes and reported nothing** — which is the exact failure this feature and [[ADR-0004-A-View-Is-A-Description]] say it exists to prevent, so the finding lands squarely ([[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]).
+
+`contains` on a string tested equality rather than substring, so `title.contains("Draft")` was false over `title: "Draft One"`. `hasLink` ignored its receiver and searched the whole record. `==` on strings was case-insensitive where Obsidian's is not. And `file.path` was docs-root-relative while a base file's `inFolder` is written against the vault root, so the cockpit's own `NAVIGATION.base` selected fourteen notes here where the cockpit shows thirteen — its `docs/__templates__` exclusion had never matched anything.
+
+**All four are fixed, and the check that proves it runs the cockpit's own base file over this repository's real index** and asserts the counts view by view. Two smaller things went with them: a `groupBy` written as a map was silently ignored, dropping the grouping from four of those views, and a formula with an empty body was reported with an empty name.
+
+**The lesson, and it is about the suite rather than the code.** Every one of these passed a check that asked whether an unsupported construct was REPORTED. None asked whether a supported construct returned the right notes. The new checks assert the answer.

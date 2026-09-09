@@ -312,6 +312,14 @@ export interface EvalContext {
   this: NoteRecord | null;
   /** Today, injectable so a suite is not a clock. */
   today?: Date;
+  /**
+   * What sits between the workspace root and a record's path, usually `docs`.
+   *
+   * A base file's `inFolder` is written against the vault, whose root is the
+   * repository; a record's path is relative to the docs root. Without this the
+   * two never line up (ISS-0027).
+   */
+  pathPrefix?: string;
   unsupported: Unsupported[];
   /** Where in the description this expression came from, for a report. */
   where: string;
@@ -363,7 +371,7 @@ function report(context: EvalContext, construct: string, reason: string): typeof
  * file disambiguates, not a second place to look.
  */
 function readName(name: string, context: EvalContext): unknown {
-  if (name === 'file') return fileOf(context.record);
+  if (name === 'file') return fileOf(context.record, context.pathPrefix ?? '');
   if (name === 'note') return context.record.frontmatter;
   if (name === 'this') {
     if (context.this === null) {
@@ -373,17 +381,29 @@ function readName(name: string, context: EvalContext): unknown {
         'a `this.`-relative filter names the note a view is embedded in, and no Deck surface has one yet',
       );
     }
-    return { file: fileOf(context.this), ...context.this.frontmatter };
+    return { file: fileOf(context.this, context.pathPrefix ?? ''), ...context.this.frontmatter };
   }
   if (name === 'formula') return { __formulas: true };
   return context.record.frontmatter[name] ?? null;
 }
 
-function fileOf(record: NoteRecord): Record<string, unknown> {
-  const folder = record.relPath.includes('/') ? record.relPath.slice(0, record.relPath.lastIndexOf('/')) : '';
+/**
+ * The `file` object, with the path Obsidian would show.
+ *
+ * A record's `relPath` is relative to the DOCS root, mirroring the sidecar. A
+ * base file is written against the VAULT, whose root is the repository, so the
+ * cockpit's own `NAVIGATION.base` says `file.inFolder("docs/__templates__")`
+ * and Deck's paths start `__templates__/` — the exclusion never matched, and
+ * that view selected fourteen notes here where the cockpit shows thirteen
+ * (ISS-0027). `pathPrefix` is the docs root's own name, so a filter a person
+ * wrote against their vault means the same thing in Deck.
+ */
+function fileOf(record: NoteRecord, prefix: string): Record<string, unknown> {
+  const full = prefix === '' ? record.relPath : `${prefix}/${record.relPath}`;
+  const folder = full.includes('/') ? full.slice(0, full.lastIndexOf('/')) : '';
   return {
     name: record.fileName,
-    path: record.relPath,
+    path: full,
     folder,
     ext: 'md',
     mtime: record.mtimeMs,
@@ -507,12 +527,16 @@ function apply(name: string, target: unknown, args: unknown[], context: EvalCont
       return Math.min(...[first, ...rest].map((v) => Number(v)));
     case 'max':
       return Math.max(...[first, ...rest].map((v) => Number(v)));
+    // `contains` means two things and both are Obsidian's: membership in a
+    // list, and a SUBSTRING of a string. Treating every receiver as a list
+    // made `title.contains("Draft")` false over `title: "Draft One"`
+    // (ISS-0027), which is a wrong answer produced confidently.
     case 'contains':
-      return asList(first).some((v) => same(v, rest[0]));
+      return containsOne(first, rest[0]);
     case 'containsAny':
-      return rest.some((wanted) => asList(first).some((v) => same(v, wanted)));
+      return rest.some((wanted) => containsOne(first, wanted));
     case 'containsAll':
-      return rest.every((wanted) => asList(first).some((v) => same(v, wanted)));
+      return rest.every((wanted) => containsOne(first, wanted));
     case 'isEmpty':
       return first === null || first === undefined || first === '' || (Array.isArray(first) && first.length === 0);
     case 'notEmpty':
@@ -522,9 +546,17 @@ function apply(name: string, target: unknown, args: unknown[], context: EvalCont
       const path = String((first as Record<string, unknown>)?.['path'] ?? first ?? '');
       return path === folder || path.startsWith(`${folder}/`);
     }
+    // `file.hasLink(x)` asks whether THIS FILE links to x, and
+    // `field.hasLink(x)` asks about that field. It used to search the whole
+    // record whatever the receiver was, so `owner.hasLink(link("Zed"))` was
+    // true when `owner` was `[[Ann]]` and some other field held `[[Zed]]`
+    // (ISS-0027).
     case 'hasLink': {
       const wanted = linkTarget(nameOf(rest[0]));
-      return linksIn(context.record).includes(wanted);
+      if (wanted === '') return false;
+      const receiver = target === null ? args[0] : target;
+      if (isFileObject(receiver)) return linksIn(context.record).includes(wanted);
+      return linksUnder(receiver).includes(wanted);
     }
     case 'asLink':
       return `[[${nameOf(first)}]]`;
@@ -551,17 +583,56 @@ function apply(name: string, target: unknown, args: unknown[], context: EvalCont
   }
 }
 
-/** Every wikilink a record's frontmatter names, for `hasLink`. */
+/**
+ * Whether a value contains another: membership for a list, a substring for a
+ * string, and equality for anything else.
+ */
+function containsOne(haystack: unknown, needle: unknown): boolean {
+  if (Array.isArray(haystack)) return haystack.some((v) => same(v, needle));
+  if (typeof haystack === 'string') {
+    const inner = comparable(needle);
+    // A link compares as its target, so `type.contains(link("Chapter"))` still
+    // matches `type: "[[Chapter]]"` — the wikilink brackets are not part of
+    // what either side means.
+    if (typeof inner === 'string') {
+      return linkTarget(haystack).includes(inner) || haystack.includes(inner);
+    }
+    return same(haystack, needle);
+  }
+  return same(haystack, needle);
+}
+
+/** Whether this is the `file` object rather than one of the note's own fields. */
+function isFileObject(value: unknown): boolean {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>)['path'] === 'string' &&
+    'properties' in (value as Record<string, unknown>)
+  );
+}
+
+/** Every wikilink a record's frontmatter names, for `file.hasLink`. */
 function linksIn(record: NoteRecord): string[] {
+  return linksUnder(record.frontmatter);
+}
+
+/** Every wikilink under one value, however deeply it is nested. */
+function linksUnder(value: unknown): string[] {
   const out: string[] = [];
-  const walk = (value: unknown): void => {
-    if (typeof value === 'string') {
-      if (value.trim().startsWith('[[')) out.push(linkTarget(value));
+  const walk = (v: unknown): void => {
+    if (typeof v === 'string') {
+      if (v.trim().startsWith('[[')) out.push(linkTarget(v));
       return;
     }
-    if (Array.isArray(value)) for (const entry of value) walk(entry);
+    if (Array.isArray(v)) {
+      for (const entry of v) walk(entry);
+      return;
+    }
+    if (v !== null && typeof v === 'object') for (const entry of Object.values(v)) walk(entry);
   };
-  for (const value of Object.values(record.frontmatter)) walk(value);
+  walk(value);
   return out;
 }
 
@@ -621,9 +692,10 @@ export function same(a: unknown, b: unknown): boolean {
   if (Array.isArray(left) && Array.isArray(right)) {
     return left.length === right.length && left.every((v, i) => same(v, right[i]));
   }
-  if (typeof left === 'string' && typeof right === 'string') {
-    return left.toLowerCase() === right.toLowerCase();
-  }
+  // Case-SENSITIVE, because Obsidian's is. Lower-casing both sides made
+  // `status == "Done"` match `status: done` (ISS-0027), and it bought nothing:
+  // the three type spellings agree because `comparable` reduces a wikilink to
+  // its target, not because of case.
   return left === right;
 }
 

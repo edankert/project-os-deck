@@ -375,9 +375,9 @@ async function loadQueryView(
   workspace: Workspace,
   view: Description,
 ): Promise<{ groups: CardGroup[]; refusals: Refusal[] }> {
-  const records = await readRecords(workspace.id);
+  const { records, pathPrefix } = await readRecords(workspace.id);
   const marks = await readMarks(workspace.id, marksModeFor(view));
-  const result = runQuery(view, records, { marks });
+  const result = runQuery(view, records, { marks, pathPrefix });
   return {
     groups: result.groups,
     refusals: [
@@ -396,12 +396,12 @@ async function loadQueryView(
   };
 }
 
-async function readRecords(workspaceId: string): Promise<NoteRecord[]> {
+async function readRecords(workspaceId: string): Promise<{ records: NoteRecord[]; pathPrefix: string }> {
   const response = await fetch(`/deck/records/${encodeURIComponent(workspaceId)}`);
   if (!response.ok) throw new Error(`Deck's own index answered ${response.status}`);
-  const payload = (await response.json()) as { building?: boolean; records?: NoteRecord[] };
+  const payload = (await response.json()) as { building?: boolean; records?: NoteRecord[]; pathPrefix?: string };
   if (payload.building === true) throw new Error('Deck is still reading this workspace');
-  return payload.records ?? [];
+  return { records: payload.records ?? [], pathPrefix: payload.pathPrefix ?? '' };
 }
 
 /**

@@ -63,6 +63,17 @@ export function docsRootFor(root: string): string {
   return root;
 }
 
+/**
+ * What Obsidian would put in front of a record's path.
+ *
+ * `docs` for a project-os repository, whose notes are under `docs/` while the
+ * vault root is the repository; empty for a vault, whose notes are the tree.
+ */
+export function pathPrefixFor(root: string, docsRoot: string): string {
+  const relative = path.relative(root, docsRoot);
+  return relative === '' || relative.startsWith('..') ? '' : relative.split(path.sep).join('/');
+}
+
 export interface WalkResult {
   records: NoteRecord[];
   problems: RecordProblem[];
@@ -129,6 +140,15 @@ function reason(err: unknown): string {
 export interface IndexSnapshot {
   workspaceId: string;
   docsRoot: string;
+  /**
+   * What sits between the workspace root and a record's path, usually `docs`.
+   *
+   * Empty for a vault, whose notes are the whole tree. A base file's
+   * `inFolder` is written against the vault root, and a record's path is
+   * relative to the docs root, so something has to say what is between them
+   * (ISS-0027).
+   */
+  pathPrefix: string;
   /** Rises on every accepted change, and never falls. */
   revision: number;
   /** True until the first walk has finished. */
@@ -140,6 +160,8 @@ export interface IndexSnapshot {
 export interface NoteIndexOptions {
   workspaceId: string;
   docsRoot: string;
+  /** The docs root's own name under the workspace root; `pathPrefixFor` finds it. */
+  pathPrefix?: string;
   io?: IndexIo;
   /** Called after every accepted change, with the new revision. */
   onChange?: (revision: number) => void;
@@ -149,6 +171,8 @@ export interface NoteIndexOptions {
 export class NoteIndex {
   readonly workspaceId: string;
   readonly docsRoot: string;
+  /** The docs root's own name under the workspace root, or empty. */
+  readonly pathPrefix: string;
   private readonly io: IndexIo;
   private readonly onChange: (revision: number) => void;
   private readonly quietMs: number;
@@ -165,6 +189,7 @@ export class NoteIndex {
   constructor(options: NoteIndexOptions) {
     this.workspaceId = options.workspaceId;
     this.docsRoot = options.docsRoot;
+    this.pathPrefix = options.pathPrefix ?? '';
     this.io = options.io ?? nodeIo;
     this.onChange = options.onChange ?? (() => {});
     this.quietMs = options.quietMs ?? QUIET_MS;
@@ -173,16 +198,22 @@ export class NoteIndex {
   /** Walk the whole tree. Called once at the start, and again after a burst. */
   build(): void {
     const { records, problems } = walkNotes(this.docsRoot, this.io);
+    // A rebuild that produces the same records is not a change, and must not
+    // raise the number a window reads as "your picture is old" (ISS-0030). The
+    // FIRST build always raises: a window drawing from revision 0 has drawn
+    // nothing.
+    const changed = !this.built || !sameRecords(this.byPath, records);
     this.byPath = new Map(records.map((r) => [r.relPath, r]));
     this.problems = problems;
     this.built = true;
-    this.raise();
+    if (changed) this.raise();
   }
 
   snapshot(): IndexSnapshot {
     return {
       workspaceId: this.workspaceId,
       docsRoot: this.docsRoot,
+      pathPrefix: this.pathPrefix,
       revision: this.revision,
       building: !this.built,
       records: [...this.byPath.values()],
@@ -213,9 +244,14 @@ export class NoteIndex {
     if (name === null) this.rebuildWanted = true;
     else {
       const rel = name.split(path.sep).join('/');
-      // Anything that is not one Markdown file is a rebuild: a renamed
+      // A change under a directory the walk does not read is not a change to
+      // the notes. Obsidian writes `.obsidian/workspace.json` whenever a pane
+      // moves, and re-walking a vault for that — then telling every window its
+      // notes had changed — was a banner nobody could act on (ISS-0030).
+      if (isExcluded(rel)) return;
+      // Anything else that is not one Markdown file is a rebuild: a renamed
       // directory arrives as its own name and says nothing about what moved.
-      if (rel.toLowerCase().endsWith('.md') && !isExcluded(rel)) this.pending.add(rel);
+      if (rel.toLowerCase().endsWith('.md')) this.pending.add(rel);
       else this.rebuildWanted = true;
     }
     if (this.timer !== null) return;
@@ -272,6 +308,22 @@ export class NoteIndex {
     this.revision += 1;
     this.onChange(this.revision);
   }
+}
+
+/**
+ * Whether a fresh walk found what the index already holds.
+ *
+ * Compared by path and modification time, which is what a change to a note
+ * moves. Comparing the whole record would be comparing every frontmatter value
+ * of 2715 notes to answer a question the file system already answered.
+ */
+function sameRecords(held: Map<string, NoteRecord>, found: NoteRecord[]): boolean {
+  if (held.size !== found.length) return false;
+  for (const record of found) {
+    const existing = held.get(record.relPath);
+    if (existing === undefined || existing.mtimeMs !== record.mtimeMs) return false;
+  }
+  return true;
 }
 
 function existsUnder(root: string, rel: string): boolean {

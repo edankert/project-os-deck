@@ -47,6 +47,16 @@ interface Line {
   text: string;
   /** One-based line number in the original document. */
   number: number;
+  /**
+   * A blank line or a whole-line comment: nothing OUTSIDE a block scalar, and
+   * content INSIDE one.
+   *
+   * These used to be dropped by the scan, before any reader ran, and a `|`
+   * block scalar therefore lost every blank line and every line beginning with
+   * a hash — silently, which is the worst way to be wrong (ISS-0025). They are
+   * kept now and skipped where they mean nothing.
+   */
+  skip: boolean;
 }
 
 /** Read a YAML document. Never throws; what it cannot read, it names. */
@@ -134,14 +144,20 @@ function scan(source: string, problems: YamlProblem[]): Line[] {
   for (let i = 0; i < raw.length; i += 1) {
     const text = raw[i] as string;
     const trimmed = text.trim();
-    if (trimmed === '') continue;
-    if (trimmed.startsWith('#')) continue;
-    if (trimmed === '---' || trimmed === '...') {
+    const skip = trimmed === '' || trimmed.startsWith('#');
+    if (!skip && (trimmed === '---' || trimmed === '...')) {
       // A second document in one file. Deck reads the first and says so.
       problems.push({ construct: 'a second document in one file', line: i + 1, text: trimmed });
       break;
     }
-    out.push({ indent: text.length - text.trimStart().length, text: trimmed, number: i + 1 });
+    // Every line, including the blank ones and the comments: inside a block
+    // scalar they are content, and only the reader knows where it is.
+    out.push({
+      indent: text.length - text.trimStart().length,
+      text: skip ? text : trimmed,
+      number: i + 1,
+      skip,
+    });
   }
   return out;
 }
@@ -156,7 +172,15 @@ class Reader {
     this.problems = problems;
   }
 
+  /**
+   * The next line that means something, skipping blanks and comments.
+   *
+   * Every reader but `blockScalar` goes through here. That one walks the raw
+   * array instead, because inside a block scalar a blank line and a line
+   * starting with a hash are content (ISS-0025).
+   */
   private peek(): Line | null {
+    while (this.at < this.lines.length && (this.lines[this.at] as Line).skip) this.at += 1;
     return this.lines[this.at] ?? null;
   }
 
@@ -164,6 +188,7 @@ class Reader {
   reportLeftovers(): void {
     for (; this.at < this.lines.length; this.at += 1) {
       const line = this.lines[this.at] as Line;
+      if (line.skip) continue;
       this.problems.push({
         construct: 'a line the document has no place for',
         line: line.number,
@@ -204,10 +229,13 @@ class Reader {
       // `- key: value` opens a mapping whose first line is this one. The
       // mapping's indentation is where that first key starts, two columns in
       // from the dash, which is what makes its continuation lines line up.
-      if (isMappingStart(rest)) {
-        this.lines[this.at - 1] = { indent: contentIndent, text: rest, number: line.number };
+      // `- key: value` opens a mapping and `- - 1` opens a nested sequence.
+      // Both are the same trick: rewrite this line as though its content
+      // started at its own column, and read a block there.
+      if (isMappingStart(rest) || rest.startsWith('- ') || rest === '-') {
+        this.lines[this.at - 1] = { indent: contentIndent, text: rest, number: line.number, skip: false };
         this.at -= 1;
-        out.push(this.mapping(contentIndent));
+        out.push(this.block(contentIndent));
         continue;
       }
       out.push(this.inlineValue(rest, line));
@@ -269,8 +297,13 @@ class Reader {
     for (;;) {
       const next = this.peek();
       if (next === null || next.indent <= line.indent) break;
-      if (next.text.startsWith('- ') || next.text === '-') break;
       if (splitKey(next.text) !== null) break;
+      // A more-indented `- ` line is NOT a sequence item here. This key
+      // already has a scalar value, and YAML has no way for it to have a
+      // sequence as well, so the line continues the scalar — which is what
+      // PyYAML does. Breaking here instead abandoned the rest of the document
+      // and cost twenty-two of Your Trainer's notes their relationship fields
+      // (ISS-0024).
       parts.push(next.text);
       this.at += 1;
     }
@@ -314,20 +347,58 @@ class Reader {
     return null;
   }
 
+  /**
+   * The lines under a `|` or `>`, as content.
+   *
+   * Walks the RAW array rather than `peek`, because inside a block scalar
+   * there are no comments and no blank-line elision: a blank line is a
+   * paragraph break and a line starting with a hash is a Markdown heading.
+   *
+   * Indentation is measured from the first non-blank line and stripped from
+   * every line, which is what YAML calls the block's indentation indicator
+   * when it is detected rather than written. A blank line inside the block
+   * belongs to the block even though it is not indented at all.
+   */
   private blockScalar(folded: boolean, ownerIndent: number): string {
     const parts: string[] = [];
     let base: number | null = null;
     for (;;) {
-      const line = this.peek();
-      if (line === null || line.indent <= ownerIndent) break;
+      const line = this.lines[this.at];
+      if (line === undefined) break;
+      const blank = line.skip && line.text.trim() === '';
+      if (!blank && line.indent <= ownerIndent) break;
+      if (blank) {
+        // A blank line is inside the block only if the block continues after
+        // it; trailing blanks belong to whatever comes next.
+        const resumes = this.lines
+          .slice(this.at + 1)
+          .find((l) => !(l.skip && l.text.trim() === ''));
+        if (resumes === undefined || resumes.indent <= ownerIndent) break;
+        parts.push('');
+        this.at += 1;
+        continue;
+      }
       if (base === null) base = line.indent;
-      parts.push(' '.repeat(Math.max(0, line.indent - base)) + line.text);
+      parts.push(' '.repeat(Math.max(0, line.indent - base)) + line.text.trim());
       this.at += 1;
     }
-    // Blank lines were dropped by the scan, so a folded scalar's paragraph
-    // breaks are gone. Folded scalars appear in none of the files Deck reads;
-    // if one turns up whose paragraphs matter, this is the line to change.
-    return folded ? parts.join(' ') : parts.join('\n');
+    // A literal scalar keeps its line breaks and its trailing newline, which
+    // is YAML's default "clip" behaviour. A folded one joins its lines with
+    // spaces and keeps its paragraph breaks.
+    if (parts.length === 0) return '';
+    if (!folded) return `${parts.join('\n')}\n`;
+    const paragraphs: string[] = [];
+    let current: string[] = [];
+    for (const part of parts) {
+      if (part === '') {
+        paragraphs.push(current.join(' '));
+        current = [];
+        continue;
+      }
+      current.push(part);
+    }
+    paragraphs.push(current.join(' '));
+    return `${paragraphs.join('\n\n')}\n`;
   }
 
   private inlineValue(text: string, line: Line): unknown {
@@ -592,14 +663,53 @@ export function parseScalar(text: string): unknown {
 export function unquote(text: string): string {
   const trimmed = text.trim();
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed
-      .slice(1, -1)
-      .replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) => String.fromCharCode(parseInt(hex, 16)))
-      .replace(/\\n/g, '\n')
-      .replace(/\\t/g, '\t')
-      .replace(/\\r/g, '\r')
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, '\\');
+    // ONE pass, not a chain of replacements. A chain reads `\\n` — an escaped
+    // backslash followed by the letter n — as an escaped newline, because the
+    // `\n` rule runs before the `\\` rule and there is no order that fixes
+    // it: whichever runs first eats the other's input (ISS-0025).
+    const source = trimmed.slice(1, -1);
+    let out = '';
+    for (let i = 0; i < source.length; i += 1) {
+      if (source[i] !== '\\') {
+        out += source[i];
+        continue;
+      }
+      const next = source[i + 1];
+      i += 1;
+      switch (next) {
+        case 'n':
+          out += '\n';
+          break;
+        case 't':
+          out += '\t';
+          break;
+        case 'r':
+          out += '\r';
+          break;
+        case '0':
+          out += '\0';
+          break;
+        case 'u': {
+          const hex = source.slice(i + 1, i + 5);
+          if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+            out += String.fromCharCode(parseInt(hex, 16));
+            i += 4;
+          } else {
+            out += 'u';
+          }
+          break;
+        }
+        case undefined:
+          out += '\\';
+          break;
+        default:
+          // `\\`, `\"`, `\/` and anything else: the character itself. YAML
+          // refuses an unknown escape and Deck keeps it, which is the
+          // forgiving direction and the one the index needs.
+          out += next;
+      }
+    }
+    return out;
   }
   if (trimmed.length >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'")) {
     return trimmed.slice(1, -1).replace(/''/g, "'");

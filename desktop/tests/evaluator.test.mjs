@@ -7,6 +7,7 @@
 // it is reported instead of quietly producing a different answer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { desktopRoot, load } from './helpers.mjs';
 
@@ -18,6 +19,7 @@ const { walkNotes } = load('main/note-index.js');
 const { parseDescription, DESCRIPTION_VERSION } = load('shared/description.js');
 const { rowsFor } = load('shared/rows.js');
 const { projectOsProvider } = load('shared/views.js');
+const { fromBaseFile } = load('shared/base-file.js');
 
 const REPO = path.resolve(desktopRoot, '..');
 const WORKSPACE = { id: 'aaaa1111', root: REPO, name: 'deck', kind: 'project-os' };
@@ -305,4 +307,102 @@ test('matches() never lets an unsupported construct select a note', () => {
   const context = { record: VAULT[0], formulas: {}, this: null, unsupported, where: 'x' };
   assert.equal(matches(parseExpression('map(type)'), context), false);
   assert.ok(unsupported.length > 0);
+});
+
+// ---- four paths that used to select the wrong notes (ISS-0027) ----
+
+test('contains on a STRING is a substring test, not equality', () => {
+  const notes = index([
+    ['a.md', { type: 'Task', title: 'Draft One', tags: ['red', 'blue'] }],
+    ['b.md', { type: 'Task', title: 'Final', tags: ['green'] }],
+  ]);
+  // The wrong answer, confidently: `title.contains("Draft")` was false over
+  // `title: "Draft One"`, because every receiver was treated as a list and a
+  // string became a one-element list.
+  assert.deepEqual(select('title.contains("Draft")', notes).names, ['a']);
+  assert.deepEqual(select('title.contains("Nothing")', notes).names, []);
+  // Membership still works for a list, which is the other half of `contains`.
+  assert.deepEqual(select('tags.contains("blue")', notes).names, ['a']);
+  assert.deepEqual(select('tags.containsAny("green", "pink")', notes).names, ['b']);
+  assert.deepEqual(select('tags.containsAll("red", "blue")', notes).names, ['a']);
+  // And a link still compares as its target, so the type filters are unmoved.
+  assert.deepEqual(select('type.contains(link("Task"))', notes).names, ['a', 'b']);
+});
+
+test('hasLink asks about its RECEIVER, not about the whole note', () => {
+  const notes = index([
+    ['a.md', { type: 'Task', owner: '[[Ann]]', related: '[[Zed]]' }],
+    ['b.md', { type: 'Task', owner: '[[Zed]]' }],
+  ]);
+  // It used to search the whole record whatever the receiver was, so this
+  // matched `a` — whose owner is Ann — because some OTHER field held Zed.
+  assert.deepEqual(select('owner.hasLink(link("Zed"))', notes).names, ['b']);
+  assert.deepEqual(select('related.hasLink(link("Zed"))', notes).names, ['a']);
+  // `file.hasLink` is the one that asks about the whole note, which is what
+  // the cockpit's own CONTEXT.base uses.
+  assert.deepEqual(select('file.hasLink(link("Zed"))', notes).names, ['a', 'b']);
+});
+
+test('equality is case-SENSITIVE, as Obsidian\'s is', () => {
+  const notes = index([
+    ['a.md', { type: 'Task', status: 'done' }],
+    ['b.md', { type: 'Task', status: 'Done' }],
+  ]);
+  assert.deepEqual(select('status == "done"', notes).names, ['a']);
+  assert.deepEqual(select('status == "Done"', notes).names, ['b']);
+  // The three type spellings still agree, because they agree by the wikilink
+  // being reduced to its target and never by case.
+  const one = select('type.contains(link("Task"))', notes).names;
+  assert.deepEqual(one, select('type == link("Task")', notes).names);
+  assert.deepEqual(one, select('note.type == "[[Task]]"', notes).names);
+});
+
+test('file.path is what Obsidian would call it, so a base file\'s inFolder matches', () => {
+  // ISS-0027. A record's path is relative to the DOCS root; a base file is
+  // written against the vault, whose root is the repository. The cockpit's own
+  // NAVIGATION.base says `file.inFolder("docs/__templates__")`, which never
+  // matched — so its "Features (All)" view selected fourteen notes here where
+  // the cockpit shows thirteen.
+  const records = walkNotes(path.join(REPO, 'docs')).records;
+  const nav = fromBaseFile(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'bases', 'cockpit-navigation.base'), 'utf-8'), 'nav');
+  const features = nav.views.find((v) => v.name === 'Features (All)');
+  const counted = (options) =>
+    runQuery(features.description, records, options).groups.reduce((n, g) => n + g.cards.length, 0);
+
+  const withPrefix = counted({ pathPrefix: 'docs' });
+  const without = counted({});
+  assert.equal(withPrefix, without - 1, 'the template note is not being excluded');
+  assert.ok(withPrefix > 5, `only ${withPrefix} features were selected`);
+  // Named, so the check says which note the prefix removes.
+  const names = runQuery(features.description, records, {})
+    .groups.flatMap((g) => g.cards.map((c) => c.rel))
+    .filter((rel) => rel.startsWith('__templates__/'));
+  assert.deepEqual(names, ['__templates__/feature.md']);
+});
+
+test("the cockpit's own base file draws what the cockpit draws", () => {
+  const records = walkNotes(path.join(REPO, 'docs')).records;
+  const nav = fromBaseFile(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'bases', 'cockpit-navigation.base'), 'utf-8'), 'nav');
+  const counts = {};
+  for (const view of nav.views) {
+    const result = runQuery(view.description, records, { pathPrefix: 'docs' });
+    counts[view.name] = result.groups.reduce((n, g) => n + g.cards.length, 0);
+    assert.deepEqual(result.unsupported, [], `${view.name} could not be evaluated: ${JSON.stringify(result.unsupported)}`);
+  }
+  // Read off this repository's own snapshot: thirteen features and four
+  // phases. If a feature or a phase is added, this fails and says so, which is
+  // the right way round for a check about agreeing with another program.
+  assert.equal(counts['Features (All)'], 13);
+  assert.equal(counts['Phases (All)'], 4);
+  assert.ok(counts['Features (Open)'] <= counts['Features (All)']);
+});
+
+test('a formula with an empty body is reported as an EMPTY EXPRESSION, not as nothing', () => {
+  // `Daily Tasks Base.base` declares `formulas: { Untitled: "" }`, and
+  // reporting an empty string as the construct told a person nothing at all.
+  const view = queryView({ filter: 'type == link("Task")', formulas: { Untitled: '' } });
+  const result = runQuery(view, VAULT);
+  const report = result.unsupported.find((u) => u.where === 'source.formulas.Untitled');
+  assert.notEqual(report, undefined);
+  assert.ok(report.construct.trim().length > 0, 'the report named nothing');
 });

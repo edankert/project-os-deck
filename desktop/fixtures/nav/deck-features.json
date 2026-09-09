@@ -279,6 +279,7 @@
      "url": "/docs/features/index/FEAT-0011-Decks-Own-Index.md",
      "subtitle": "Deck's main process reads every Markdown file in the open workspace, parses its frontmatter, and keeps one record per note that it updates when the file changes. A view described as a query has something to run over, and Deck stops depending on the cockpit growing an endpoint that returns the notes.",
      "type": "feature",
+     "review_verdict": "changes-requested",
      "children": [
       {
        "id": "",
@@ -317,15 +318,16 @@
     {
      "id": "FEAT-0012",
      "title": "A view is a description: what a view selects, groups, bands and shows becomes a document Deck reads, in a language Deck owns",
-     "status": "planned",
+     "status": "review",
      "url": "/docs/features/descriptions/FEAT-0012-A-View-Is-A-Description.md",
      "subtitle": "A Deck view stops being an id, a label and a sidecar mode with every other decision in code. It becomes a document with a source, a band rule, a card face, a list of surfaces and the registry as its verbs. The project-os provider emits seven of them that draw exactly what Deck draws today, and a base file from a vault reads as one.",
      "type": "feature",
+     "review_verdict": "changes-requested",
      "children": [
       {
        "id": "",
        "title": "Plan — a view is a description",
-       "status": "draft",
+       "status": "active",
        "url": "/docs/features/descriptions/plan/PLAN.md",
        "subtitle": "",
        "type": "plan"
@@ -333,7 +335,7 @@
       {
        "id": "TASK-0041",
        "title": "The description shape, its version and its extension namespace, and a parser that refuses what it cannot read by name",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/descriptions/plan/tasks/TASK-0041-The-Description-Shape-And-Its-Parser.md",
        "subtitle": "",
        "type": "task"
@@ -341,7 +343,7 @@
       {
        "id": "TASK-0042",
        "title": "The project-os provider emits seven mode-sourced descriptions, and nothing a person sees changes",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/descriptions/plan/tasks/TASK-0042-Seven-Descriptions-Equal-To-Todays-Views.md",
        "subtitle": "",
        "type": "task"
@@ -349,7 +351,7 @@
       {
        "id": "TASK-0043",
        "title": "The evaluator for the seeded language over Deck's index: filters, functions, sort and grouping, with anything unsupported named rather than silently empty",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/descriptions/plan/tasks/TASK-0043-The-Evaluator-Over-The-Index.md",
        "subtitle": "",
        "type": "task"
@@ -357,7 +359,7 @@
       {
        "id": "TASK-0044",
        "title": "Band and face are read from the description: faces.ts becomes a reader, and the vocabularies it still copies are pinned to the cockpit by fixture",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/descriptions/plan/tasks/TASK-0044-Band-And-Face-Come-From-The-Description.md",
        "subtitle": "",
        "type": "task"
@@ -365,7 +367,7 @@
       {
        "id": "TASK-0045",
        "title": "The navigator draws any description, whether its notes came from a sidecar mode or from a query over Deck's index",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/descriptions/plan/tasks/TASK-0045-The-Navigator-Draws-Any-Description.md",
        "subtitle": "",
        "type": "task"
@@ -373,7 +375,7 @@
       {
        "id": "TASK-0046",
        "title": "A base file reads as a description — the parser half only, so the Vault phase inherits a language instead of inventing one",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/descriptions/plan/tasks/TASK-0046-A-Base-File-Reads-As-A-Description.md",
        "subtitle": "",
        "type": "task"
@@ -383,15 +385,16 @@
     {
      "id": "FEAT-0013",
      "title": "The first write: Deck ticks a criterion and makes one transition, through the shell to the loopback sidecar, and the tablet is offered no verb",
-     "status": "planned",
+     "status": "review",
      "url": "/docs/features/first-write/FEAT-0013-The-First-Write.md",
      "subtitle": "One verb goes end to end. In the shell, a person ticks an acceptance criterion with evidence and makes one status transition, and the change is in the note on disk and visible in the cockpit. The served page offers no verb at all. This proves the write path ADR-0003 decided, and it is the smallest thing that can.",
      "type": "feature",
+     "review_verdict": "changes-requested",
      "children": [
       {
        "id": "",
        "title": "Plan — the first write",
-       "status": "draft",
+       "status": "active",
        "url": "/docs/features/first-write/plan/PLAN.md",
        "subtitle": "",
        "type": "plan"
@@ -399,7 +402,7 @@
       {
        "id": "TASK-0047",
        "title": "The write channel: bridge, IPC and a loopback call, with the write capability false when Deck is served",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/first-write/plan/tasks/TASK-0047-The-Write-Channel.md",
        "subtitle": "",
        "type": "task"
@@ -407,7 +410,7 @@
       {
        "id": "TASK-0048",
        "title": "The actor is a setting in Deck's store, because the cockpit's hard-coded name cannot be copied into a second application",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/first-write/plan/tasks/TASK-0048-The-Actor-Is-A-Setting.md",
        "subtitle": "",
        "type": "task"
@@ -415,7 +418,7 @@
       {
        "id": "TASK-0049",
        "title": "The actuator rows come from the sidecar, and one transition is wired end to end",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/first-write/plan/tasks/TASK-0049-The-Actuator-Row-And-One-Transition.md",
        "subtitle": "",
        "type": "task"
@@ -423,7 +426,7 @@
       {
        "id": "TASK-0050",
        "title": "Ticking a criterion with evidence, addressed by the data-raw the sidecar stamped, with the modification time sent and no tick offered when the address is missing",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/first-write/plan/tasks/TASK-0050-Ticking-A-Criterion-With-Evidence.md",
        "subtitle": "",
        "type": "task"
@@ -431,7 +434,7 @@
       {
        "id": "TASK-0051",
        "title": "The changed-under-you mark: a write makes every other window stale, and the change is announced rather than applied",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/first-write/plan/tasks/TASK-0051-The-Changed-Under-You-Mark.md",
        "subtitle": "",
        "type": "task"

@@ -43,7 +43,7 @@ related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[TASK-0028-A-Card-Fac
 - Assert a note in the Needs-you group is never assigned to the mid or quiet band; past the front band's capacity it is counted as overflow and the count is returned.
 - Assert a note in the view's own groups that does not fit the mid band is counted as mid overflow and never assigned to the quiet band.
 - Assert the table carries columns for held and joined-to-desk that nothing yet fills.
-- Compare Deck's status bands against the fixture recorded from the cockpit's `statuses.py`, band by band, and assert `final` is present.
+- Compare Deck's status bands against the fixture recorded from the cockpit's `statuses.py`, band by band. **Corrected 2026-09-09:** this step used to end "and assert `final` is present", from [[TASK-0044-Band-And-Face-Come-From-The-Description]]'s claim that the vault uses `final`. It does not: the vault's 143 notes carrying a status write `draft`, `active`, `done`, `todo`, `none`, `research`, `planning` and `in-progress`, and `final` is in neither Deck, the fixture, nor the cockpit's `statuses.py`. What the suite asserts instead is that a status project-os has never heard of — `research`, `planning`, `none` — comes back as `none` rather than being guessed at.
 - Assert the fixture records the date and the cockpit commit it was read at.
 - Assert the four faces [[TASK-0028-A-Card-Face-Per-Type]] built are now `face` sections on the seven descriptions and produce the same cards they produced before.
 

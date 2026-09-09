@@ -43,6 +43,14 @@ export interface QueryOptions {
   marks?: Map<string, { owed: boolean; owedVerb: string | null; suppressed: boolean }>;
   /** Injectable, so a suite is not a clock. */
   today?: Date;
+  /**
+   * What sits between the workspace root and a record's path, usually `docs`.
+   *
+   * A base file is written against the vault, whose root is the repository, so
+   * `file.inFolder("docs/__templates__")` only matches when Deck says what
+   * Obsidian would say (ISS-0027).
+   */
+  pathPrefix?: string;
 }
 
 export interface QueryResult {
@@ -208,7 +216,10 @@ function compileOne(source: string, where: string, unsupported: Unsupported[]): 
     return parseExpression(source);
   } catch (err) {
     unsupported.push({
-      construct: source,
+      // Never empty. `Daily Tasks Base.base` declares `formulas: { Untitled: "" }`,
+      // and reporting an empty string as the construct told a person nothing
+      // at all about what could not be read.
+      construct: source.trim() === '' ? 'an empty expression' : source,
       where,
       reason: err instanceof ExpressionError ? `${err.message} (at character ${err.at})` : String(err),
     });
@@ -269,6 +280,7 @@ function contextFor(
 ): EvalContext {
   const context: EvalContext = { record, formulas, this: null, unsupported, where };
   if (options.today !== undefined) context.today = options.today;
+  if (options.pathPrefix !== undefined) context.pathPrefix = options.pathPrefix;
   return context;
 }
 

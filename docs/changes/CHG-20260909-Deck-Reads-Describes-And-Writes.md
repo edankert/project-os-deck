@@ -11,7 +11,7 @@ source: ["The eighteen tasks PHASE-0001 gained on 2026-09-08 when Edwin widened 
 commit: ""
 pr: ""
 impacts: ["desktop/src/main/", "desktop/src/renderer/", "desktop/src/shared/", "desktop/tests/", "desktop/fixtures/", "tools/scripts/record-sidecar-fixture.py"]
-issues: ["[[ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card]]", "[[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]]"]
+issues: ["[[ISS-0022-The-Smoke-Run-Says-A-Popped-Out-Desk-Never-Draws-A-Card]]", "[[ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case]]", "[[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]", "[[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]", "[[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]", "[[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]", "[[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]", "[[ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates]]", "[[ISS-0030-A-Change-To-Any-File-Rebuilds-The-Index-And-Marks-Every-Window]]"]
 features: ["[[FEAT-0006-Every-State-Has-An-Address]]", "[[FEAT-0011-Decks-Own-Index]]", "[[FEAT-0012-A-View-Is-A-Description]]", "[[FEAT-0013-The-First-Write]]"]
 related: ["[[PHASE-0001-Deck]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]", "[[RISK-0003-Two-Evaluators-Of-The-Bases-Language]]", "[[RISK-0004-Decks-Index-Duplicates-The-Sidecars-Indexer]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 ---
@@ -52,8 +52,24 @@ Each is written where somebody will meet it rather than only here.
 - **A new read path**, `GET /deck/records/<workspaceId>`, optionally `?rel=<path>` for one note. It answers on both hosts, carries the revision it was built from, says `building: true` while the walk is running, and refuses every method that is not `GET` or `HEAD`.
 - **The status band names in the stylesheet are the cockpit's six** — `active`, `pending`, `done`, `archived`, `blocked`, `reference` — where they were Deck's own four.
 
+## Seven more defects, found by the review the same day
+
+An independent review read this work from a clean context and reproduced seven things before believing any of them. All seven are fixed here, each with a check that fails when the fix is reverted.
+
+**Two in the YAML reader.** A key whose value is followed by an indented list ended the document, costing twenty-two of Your Trainer's notes five relationship fields each ([[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]). A `|` block scalar silently lost every blank line and every line beginning with a hash ([[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]).
+
+**One in the check that should have caught them.** The comparison against the sidecar read the type only and skipped any note Deck had failed to index; hiding a sixth of this repository still passed it ([[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]). It reads the key set now, and **the claim is bigger than it was and checked**: Deck's frontmatter keys are identical to PyYAML's for all 2924 notes across both corpora.
+
+**Four in the evaluator, and they land squarely on what this feature says it exists to prevent** ([[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]). `contains` on a string tested equality. `hasLink` ignored its receiver. `==` was case-insensitive where Obsidian's is not. `file.path` never lined up with a base file's `inFolder`, so the cockpit's own `NAVIGATION.base` selected fourteen features here where the cockpit shows thirteen. Every one had passed a check asking whether an unsupported construct was reported; none asked whether a supported one returned the right notes.
+
+**One verification gate failing in silence.** A test note named a suite that does not exist, and `npm test` cannot see that because it runs the files rather than the notes ([[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]). `run-tests.py` is part of what "the tests pass" means from here.
+
+**One hardening gap the write path made matter.** Nothing stopped a window navigating away from Deck's own origin, and a preload follows its window ([[ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates]]).
+
+**And one banner nobody could act on**: a write to `.obsidian/workspace.json` re-walked the tree and told every window its notes had changed ([[ISS-0030-A-Change-To-Any-File-Rebuilds-The-Index-And-Marks-Every-Window]]).
+
 ## What is still owed
 
-Four acceptance walks and a review, all of them a person's job: [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]], [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]], [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] and [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]].
+Four acceptance walks and a re-review, all of them a person's job: [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]], [[TST-0011-Deck-Opens-A-Workspace-You-Add-And-Leaves-Nothing-Running]], [[TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged]] and [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]].
 
 [[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]] is unchanged and is still the reason ISS-0022 cost a day: the smoke run is the only thing that drives the renderer, it is not in CI, and until today nothing checked the smoke run either.

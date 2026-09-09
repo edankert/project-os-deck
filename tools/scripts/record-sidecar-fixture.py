@@ -37,6 +37,7 @@ STATUS_OUT = DECK / "desktop" / "fixtures" / "cockpit-statuses.json"
 sys.path.insert(0, str(COCKPIT / "src"))
 
 try:
+    import frontmatter
     from project_os_cockpit.index import Index
     from project_os_cockpit import statuses as cockpit_statuses
     from project_os_cockpit.cockpit import nav_payload
@@ -145,6 +146,41 @@ EXPECTED_DIFFERENCES = [
 ]
 
 
+def notes_of(index) -> dict:
+    """Per note path, what the sidecar's own reading of it produced.
+
+    The TYPE is `Index`'s answer. The KEY SHAPE is PyYAML's, read the same way
+    the index reads it, because comparing the type alone let Deck lose five
+    relationship fields on twenty-two notes without a single check noticing
+    (ISS-0024, ISS-0026). Shapes are stored once and referenced by number: 2924
+    notes share 361 of them, so the whole key set costs about what a list of
+    paths costs.
+    """
+    shapes: list[str] = []
+    by_shape: dict[str, int] = {}
+    notes: dict[str, dict] = {}
+    for record in sorted(index._records.values(), key=lambda r: r.rel_path):
+        try:
+            post = frontmatter.loads(record.path.read_text(encoding="utf-8"))
+            keys = ",".join(sorted(dict(post.metadata or {}).keys()))
+            readable = True
+        except Exception:
+            # PyYAML refuses the document outright, so the sidecar indexed this
+            # note with EMPTY frontmatter. Recorded as such rather than skipped:
+            # it is a difference Deck's rules have to explain.
+            keys = ""
+            readable = False
+        if keys not in by_shape:
+            by_shape[keys] = len(shapes)
+            shapes.append(keys)
+        notes[record.rel_path] = {
+            "type": record.note_type,
+            "shape": by_shape[keys],
+            **({} if readable else {"unreadable": True}),
+        }
+    return {"shapes": shapes, "notes": notes}
+
+
 def commit_of(repo: Path) -> str:
     result = subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "--short", "HEAD"],
@@ -155,7 +191,7 @@ def commit_of(repo: Path) -> str:
 
 def main() -> int:
     deck_index = Index.build(DECK / "docs")
-    deck_types = {r.rel_path: r.note_type for r in deck_index._records.values()}
+    deck_notes = notes_of(deck_index)
 
     trainer: dict[str, object] | None = None
     trainer_paths: set[str] = set()
@@ -164,15 +200,19 @@ def main() -> int:
         trainer_paths = {r.rel_path for r in trainer_index._records.values()}
         trainer = {
             "docsRoot": str(TRAINER / "docs"),
-            "shape": "per note path, the single type the sidecar assigned; null means it assigned none",
+            "shape": (
+                "per note path: the type the sidecar assigned (null means none) and an index into "
+                "`shapes`, which holds the sorted frontmatter key list PyYAML read. `unreadable` "
+                "marks a note whose frontmatter PyYAML refused outright."
+            ),
             "why": (
                 "Per path, for the same reason this repository is: Your Trainer is worked on daily "
                 "and a count recorded this morning is wrong this afternoon. The first version of "
                 "this held counts and went stale within the hour, on a task somebody added while "
                 "the fixture was being written. Paths cost more bytes and no maintenance."
             ),
-            "notes": len(trainer_index._records),
-            "types": {r.rel_path: r.note_type for r in sorted(trainer_index._records.values(), key=lambda r: r.rel_path)},
+            "noteCount": len(trainer_index._records),
+            **notes_of(trainer_index),
         }
     else:
         print(f"record-sidecar-fixture: {TRAINER}/docs is not here; recording this repository only",
@@ -199,15 +239,18 @@ def main() -> int:
         ),
         "thisRepository": {
             "docsRoot": "docs",
-            "shape": "per note path, the single type the sidecar assigned; null means it assigned none",
+            "shape": (
+                "per note path: the type the sidecar assigned (null means none) and an index into "
+                "`shapes`, which holds the sorted frontmatter key list PyYAML read."
+            ),
             "why": (
                 "Per path rather than per count: this repository gains notes daily, so a count "
                 "recorded today is wrong tomorrow, while what the sidecar called one file stays "
                 "true. The suite compares the paths that are still there and refuses to pass on "
                 "a fixture that has lost its content."
             ),
-            "notes": len(deck_types),
-            "types": dict(sorted(deck_types.items())),
+            "noteCount": len(deck_notes["notes"]),
+            **deck_notes,
         },
         "yourTrainer": trainer,
         "differenceRules": DIFFERENCE_RULES,
@@ -252,9 +295,9 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(fixture, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"record-sidecar-fixture: wrote {OUT.relative_to(DECK)}")
-    print(f"  this repository: {len(deck_types)} notes")
+    print(f"  this repository: {len(deck_notes['notes'])} notes")
     if trainer is not None:
-        print(f"  your-trainer:    {trainer['notes']} notes")
+        print(f"  your-trainer:    {trainer['noteCount']} notes")
     print(f"  named differences: {len(EXPECTED_DIFFERENCES)}")
     return 0
 

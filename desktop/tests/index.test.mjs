@@ -164,21 +164,21 @@ test('one unreadable file costs one record, never the walk', () => {
 /**
  * Compare Deck's answer with the sidecar's, note by note, for one workspace.
  *
- * Two claims, and they are not the same strength.
+ * Three claims, and they are not the same strength.
  *
- * A CONTRADICTION — the sidecar says a note is a feature and Deck says it is
- * anything else — fails with no tolerance at all. That is the correctness
- * claim RISK-0004 is about, and it cannot go stale.
+ * A note the fixture names that is still ON DISK and that Deck did not index
+ * fails outright. That check was missing, and its absence let a mutation that
+ * hid `issues/` and `reference/` — a sixth of this repository — pass the whole
+ * comparison (ISS-0026).
+ *
+ * A CONTRADICTION about what a note IS — the sidecar says feature and Deck says
+ * anything else — fails with no tolerance. So does a difference in the KEY SET,
+ * which is what caught nothing while Deck was losing five relationship fields
+ * on twenty-two of Your Trainer's notes (ISS-0024).
  *
  * Deck KNOWING SOMETHING THE SIDECAR DOES NOT is allowed under the two rules
- * the fixture states, and each is checked live on the Deck side rather than
- * against a list of paths: a list goes stale, and Your Trainer produced a
- * twelfth such file within an hour of the first recording. Anything else is
- * reported by name.
- *
- * Only the paths the fixture names and that are still on disk are compared, so
- * a note added since is not a failure. A fixture that lost its content cannot
- * pass either: the caller says how many notes it expects to compare.
+ * the fixture states, each checked live on the Deck side rather than against a
+ * list of paths, because a list goes stale.
  */
 function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
   const walked = walkNotes(docsRoot);
@@ -188,32 +188,44 @@ function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
     FIXTURE.expectedDifferences.filter((d) => d.workspace === workspace).map((d) => [d.relPath, d]),
   );
   let compared = 0;
+  const notIndexed = [];
   const contradictions = [];
+  const keySets = [];
   const unexplained = [];
-  for (const [relPath, sidecarType] of Object.entries(recorded)) {
+  for (const [relPath, note] of Object.entries(recorded.notes)) {
     const record = mine.get(relPath);
-    if (record === undefined) continue;
+    if (record === undefined) {
+      // A note DELETED since the fixture was recorded is not a disagreement.
+      // A note still on disk that Deck did not index is the worst kind.
+      if (fs.existsSync(path.join(docsRoot, relPath))) notIndexed.push(relPath);
+      continue;
+    }
     compared += 1;
-    const types = record.types;
-    if (sidecarType !== null) {
-      if (JSON.stringify(types) !== JSON.stringify([sidecarType])) {
-        contradictions.push(`${relPath}: deck ${JSON.stringify(types)}, sidecar ${JSON.stringify(sidecarType)}`);
+
+    // The key set. `unreadable` means PyYAML refused the whole document, so
+    // the sidecar has no keys at all and the difference rules cover it.
+    if (note.unreadable !== true) {
+      const wanted = recorded.shapes[note.shape];
+      const ours = Object.keys(record.frontmatter).sort().join(',');
+      if (ours !== wanted) keySets.push(`${relPath}: deck [${ours}] where the sidecar read [${wanted}]`);
+    }
+
+    if (note.type !== null) {
+      if (JSON.stringify(record.types) !== JSON.stringify([note.type])) {
+        contradictions.push(`${relPath}: deck ${JSON.stringify(record.types)}, sidecar ${JSON.stringify(note.type)}`);
       }
       continue;
     }
-    if (types.length === 0) continue;
-    // The sidecar has no opinion and Deck does. One of the two rules has to
-    // cover it, or somebody has to look at it.
+    if (record.types.length === 0) continue;
     const listValued = Array.isArray(record.frontmatter.type);
     if (listValued || reported.has(relPath) || named.has(relPath)) continue;
-    unexplained.push(`${relPath}: deck ${JSON.stringify(types)} where the sidecar had no opinion`);
+    unexplained.push(`${relPath}: deck ${JSON.stringify(record.types)} where the sidecar had no opinion`);
   }
+  assert.deepEqual(notIndexed, [], `these notes in ${workspace} are on disk and Deck did not index them`);
   assert.deepEqual(contradictions, [], `Deck and the sidecar CONTRADICT each other about these notes in ${workspace}`);
+  assert.deepEqual(keySets, [], `Deck and the sidecar read different keys from these notes in ${workspace}`);
   assert.deepEqual(unexplained, [], `no rule in the fixture explains these differences in ${workspace}`);
   assert.ok(compared > atLeast, `only ${compared} notes were compared; the fixture has lost its content`);
-  // Every named instance still has to reproduce. A row that quietly stopped
-  // being true is an excuse, and this is what stops the list becoming a list
-  // of them.
   for (const [relPath, row] of named) {
     const record = mine.get(relPath);
     if (record === undefined) continue;
@@ -223,7 +235,7 @@ function compareWithSidecar(recorded, docsRoot, workspace, atLeast) {
 }
 
 test('Deck calls every note in this repository what the sidecar calls it', () => {
-  compareWithSidecar(FIXTURE.thisRepository.types, path.join(REPO, 'docs'), 'thisRepository', 150);
+  compareWithSidecar(FIXTURE.thisRepository, path.join(REPO, 'docs'), 'thisRepository', 150);
 });
 
 test('Deck calls every note in Your Trainer what the sidecar calls it', (t) => {
@@ -234,7 +246,41 @@ test('Deck calls every note in Your Trainer what the sidecar calls it', (t) => {
     t.skip('your-trainer is not on this machine, so the large-workspace comparison did not run');
     return;
   }
-  compareWithSidecar(trainer.types, trainer.docsRoot, 'yourTrainer', 2000);
+  compareWithSidecar(trainer, trainer.docsRoot, 'yourTrainer', 2000);
+});
+
+test('a note ON DISK that Deck did not index fails the comparison', () => {
+  // The check ISS-0026 was missing, and its absence let a mutation hiding a
+  // sixth of this repository pass the whole comparison. Driven over a
+  // temporary workspace, because the failure it guards is a note that is
+  // ABSENT from the index — and an absent thing is what a loop over what is
+  // present cannot see.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-missing-'));
+  fs.writeFileSync(path.join(root, 'here.md'), '---\ntype: issue\n---\n');
+  fs.mkdirSync(path.join(root, '.trash'));
+  fs.writeFileSync(path.join(root, '.trash', 'hidden.md'), '---\ntype: issue\n---\n');
+  const recorded = {
+    shapes: ['type'],
+    notes: { 'here.md': { type: 'issue', shape: 0 }, '.trash/hidden.md': { type: 'issue', shape: 0 } },
+  };
+  assert.throws(
+    () => compareWithSidecar(recorded, root, 'thisRepository', 0),
+    /on disk and Deck did not index them/,
+  );
+  // A note the fixture names that has actually been DELETED is not a failure:
+  // both repositories lose notes, and a comparison that broke on that would be
+  // a comparison nobody trusted.
+  fs.rmSync(path.join(root, '.trash'), { recursive: true });
+  assert.equal(compareWithSidecar(recorded, root, 'thisRepository', 0), 1);
+});
+
+test('a note whose KEYS differ from the sidecar\'s fails the comparison', () => {
+  // The check that was type-only, which is why ISS-0024 lost five relationship
+  // fields on twenty-two notes with nothing going red.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-keys-'));
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: open\n---\n');
+  const recorded = { shapes: ['status,tests,type'], notes: { 'a.md': { type: 'issue', shape: 0 } } };
+  assert.throws(() => compareWithSidecar(recorded, root, 'thisRepository', 0), /read different keys/);
 });
 
 test('the fixture states the RULES a difference has to fall under, not just a list', () => {
@@ -364,22 +410,55 @@ test('adding, deleting and renaming a note each do the obvious thing', () => {
   index.close();
 });
 
-test('the revision is monotonic, and a rebuild does not send it backwards', () => {
+test('the revision never falls, and only a real change raises it', () => {
   const root = tempWorkspace();
   const index = new NoteIndex({ workspaceId: 'w', docsRoot: root, quietMs: 0 });
   index.build();
-  const after = [index.snapshot().revision];
+  const first = index.snapshot().revision;
+  assert.equal(first, 1, 'the first build always raises: a window at revision 0 has drawn nothing');
+
+  // A rebuild that finds the same records is not a change. It used to raise
+  // anyway, so a write to `.obsidian/workspace.json` — which Obsidian does
+  // whenever a pane moves — told every window its notes had changed
+  // (ISS-0030).
   index.build();
-  after.push(index.snapshot().revision);
+  assert.equal(index.snapshot().revision, first, 'a rebuild that changed nothing raised the revision');
+
   fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: doing\n---\n');
   index.noticed('a.md');
   index.settle();
-  after.push(index.snapshot().revision);
+  const second = index.snapshot().revision;
+  assert.ok(second > first, 'a real change did not raise the revision');
+
+  // Including across a rebuild: the counter only ever goes up.
+  fs.writeFileSync(path.join(root, 'c.md'), '---\ntype: risk\n---\n');
   index.build();
-  after.push(index.snapshot().revision);
-  for (let i = 1; i < after.length; i += 1) {
-    assert.ok(after[i] > after[i - 1], `the revision fell: ${after.join(' then ')}`);
-  }
+  assert.ok(index.snapshot().revision > second, 'a rebuild that found a new note did not raise');
+  index.close();
+});
+
+test('a change under a directory the walk does not read is ignored entirely', () => {
+  // Obsidian writes `.obsidian/workspace.json` whenever a pane moves. Re-
+  // walking a vault for that, and then marking every window, was a banner
+  // nobody could act on (ISS-0030).
+  const root = tempWorkspace();
+  const { reads, io } = countingIo();
+  const seen = [];
+  const index = new NoteIndex({ workspaceId: 'w', docsRoot: root, io, onChange: (r) => seen.push(r), quietMs: 0 });
+  index.build();
+  reads.length = 0;
+  seen.length = 0;
+
+  index.noticed('.obsidian/workspace.json');
+  index.settle();
+  assert.equal(reads.length, 0, `an excluded path caused ${reads.length} reads`);
+  assert.deepEqual(seen, [], 'an excluded path raised the revision');
+
+  // A Markdown file that is NOT excluded still does both.
+  fs.writeFileSync(path.join(root, 'a.md'), '---\ntype: issue\nstatus: fixed\n---\n');
+  index.noticed('a.md');
+  index.settle();
+  assert.equal(seen.length, 1);
   index.close();
 });
 
@@ -580,3 +659,46 @@ function rawRequest(origin, requestLine) {
     socket.on('error', reject);
   });
 }
+
+// ---- what the reader used to get wrong ----
+
+test('a key whose value is followed by an indented list does NOT end the document', () => {
+  // ISS-0024. Twenty-two of Your Trainer's notes are written this way — a
+  // `source:` key was deleted and its list left behind — and Deck used to stop
+  // at that point, losing `effort`, `depends`, `blocks`, `related` and
+  // `tests`. YAML has no way for a key with a scalar value to have a sequence
+  // as well, so the lines CONTINUE the scalar, which is what PyYAML does.
+  const { value, problems } = parseYaml(
+    ['updated: 2026-05-07', '  - "[[FEAT-0066]]"', '  - "[[REQ-0157]]"', 'effort: "high"', 'blocks: []'].join('\n'),
+  );
+  assert.deepEqual(Object.keys(value), ['updated', 'effort', 'blocks'], 'the keys after the list were lost');
+  assert.equal(value.effort, 'high');
+  assert.deepEqual(value.blocks, []);
+  assert.equal(value.updated, '2026-05-07 - "[[FEAT-0066]]" - "[[REQ-0157]]"');
+  assert.deepEqual(problems, [], 'nothing was left unread, so nothing should be reported');
+});
+
+test('a block scalar keeps its blank lines, its hashes and its trailing newline', () => {
+  // ISS-0025, and the SILENT one: the scan stripped blanks and comments from
+  // the whole document before any reader ran, so a `|` scalar lost them with
+  // no report at all.
+  const { value } = parseYaml(['body: |', '  # Heading', '', '  text', 'after: 1'].join('\n'));
+  assert.equal(value.body, '# Heading\n\ntext\n');
+  assert.equal(value.after, 1, 'the key after the block scalar was lost');
+});
+
+test('an escape is read once, so a literal backslash-n stays one', () => {
+  // ISS-0025. A chain of replacements cannot be right: whichever rule runs
+  // first eats the other's input, so `\\n` — an escaped backslash and the
+  // letter n — came out as a backslash and a newline.
+  const { value } = parseYaml(['a: "x\\\\ny"', 'b: "x\\ny"', 'c: "a\\"b"', 'd: "\\u0041"'].join('\n'));
+  assert.equal(value.a, 'x\\ny');
+  assert.equal(value.b, 'x\ny');
+  assert.equal(value.c, 'a"b');
+  assert.equal(value.d, 'A');
+});
+
+test('a sequence inside a sequence nests', () => {
+  const { value } = parseYaml(['m:', '  - - 1', '    - 2', '  - 3'].join('\n'));
+  assert.deepEqual(value.m, [[1, 2], 3]);
+});

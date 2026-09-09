@@ -8,7 +8,7 @@ import type { ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { BrowserWindow, app, clipboard, dialog, ipcMain, screen } from 'electron';
+import { BrowserWindow, app, clipboard, dialog, ipcMain, screen, shell } from 'electron';
 import { SHELL_CAPABILITIES, SERVED_CAPABILITIES } from '../shared/capability.js';
 import { type DeckAction, isRendererAction } from '../shared/store-state.js';
 import type { WindowRole } from '../shared/types.js';
@@ -19,8 +19,9 @@ import { SidecarSupervisor, freePort, waitForExit } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
-import { NoteIndex, docsRootFor } from './note-index.js';
+import { NoteIndex, docsRootFor, pathPrefixFor } from './note-index.js';
 import { SidecarWriteClient, WriteRefused } from '../shared/write-client.js';
+import { sameOriginAs } from '../shared/origin.js';
 import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 
 // Pinned before anything reads it: Electron derives this from the app name,
@@ -66,9 +67,11 @@ const indexes = new Map<string, NoteIndex>();
  */
 function openIndex(workspace: { id: string; root: string }): void {
   if (indexes.has(workspace.id)) return;
+  const docsRoot = docsRootFor(workspace.root);
   const index = new NoteIndex({
     workspaceId: workspace.id,
-    docsRoot: docsRootFor(workspace.root),
+    docsRoot,
+    pathPrefix: pathPrefixFor(workspace.root, docsRoot),
     onChange: (revision) => {
       store.dispatch({ type: 'index-changed', workspaceId: workspace.id, revision });
     },
@@ -150,6 +153,28 @@ function createWindow(role: WindowRole, address: string | null, panel: string | 
   if (address !== null) query.set('address', address);
   if (panel !== null) query.set('panel', panel);
   void win.loadURL(`${hostOrigin}/?${query.toString()}`);
+
+  // **The bridge belongs to the origin, not to the window** (ISS-0029). A
+  // preload runs on every document its `webContents` loads, so without these
+  // two guards `window.deck.write.*` — the write channel, since 2026-09-09 —
+  // would still be there after the window navigated somewhere Deck does not
+  // serve. The reader injects markup the sidecar rendered from a note's own
+  // Markdown, and the page's policy stops a script and a form but not a link
+  // somebody clicks.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (sameOriginAs(hostOrigin, url)) return;
+    event.preventDefault();
+    // Opened where a link belongs, which is the person's browser. Refusing
+    // silently would make a link in a note look broken.
+    void shell.openExternal(url);
+  });
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (!sameOriginAs(hostOrigin, url)) void shell.openExternal(url);
+    // Never `allow`. A new window would carry this preload with it, and a
+    // popped-out panel is opened through `deck:window:open-panel`, which is a
+    // route Deck controls.
+    return { action: 'deny' };
+  });
 
   win.once('ready-to-show', () => {
     // A satellite appears without taking the keyboard from the window in use.

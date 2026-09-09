@@ -70,9 +70,25 @@ Three words are used throughout and mean one thing each. **Deck** is the applica
 
 ## Where this stands
 
-**2026-09-09: everything a machine can do is done. Every task in the phase is `done`, and what is left is four walks and a review.**
+**2026-09-09, after the review: seven defects found, seven fixed, and the checks that missed them are stronger than the code that was wrong.**
 
-All eighteen tasks the widening of 2026-09-08 added have landed, and so have the two defects that were open. Seven of the eleven exit criteria are ticked. The desktop suites run 291 checks; `electron . --smoke` boots the real application against this repository and reports `ok: true` with nothing skipped.
+An independent review ran against the day's work from a clean context and returned `approved` for [[FEAT-0006-Every-State-Has-An-Address]] and `changes-requested` for the three new features. Every finding was reproduced before it was believed, and every one is now fixed with a check that fails when the fix is reverted.
+
+**Two were defects in Deck's YAML reader, and one of them was silent.** A key whose value is followed by an indented list ended the document, so twenty-two of Your Trainer's notes lost `effort`, `depends`, `blocks`, `related` and `tests` — PyYAML folds those lines into the scalar and reads on, and Deck now does too ([[ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document]]). Worse, a `|` block scalar lost every blank line and every line beginning with a hash, with nothing reported at all, because the scan stripped them before any reader ran ([[ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong]]).
+
+**One was the check that should have caught both.** The comparison against the sidecar read the TYPE only and skipped any note Deck had failed to index — a mutation hiding a sixth of this repository still passed it ([[ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed]]). It now compares the key set as well, and a note on disk with no record fails by name. **The claim is bigger than it was and it is checked**: Deck's frontmatter keys are identical to PyYAML's for every one of the 2924 notes across both corpora.
+
+**Four were in the evaluator, and they land squarely.** `contains` on a string tested equality, `hasLink` ignored its receiver, `==` was case-insensitive where Obsidian's is not, and `file.path` never lined up with a base file's `inFolder` — so the cockpit's own `NAVIGATION.base` selected fourteen features here where the cockpit shows thirteen ([[ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes]]). Every one of them passed a check asking whether an unsupported construct was reported; none asked whether a supported one returned the right notes.
+
+**One was a verification gate failing while nobody looked.** [[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]] named a suite that does not exist, and `npm test` cannot see that because it runs the files rather than the notes ([[ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist]]). `python3 tools/scripts/run-tests.py` now reports `passing=23 failing=0`, and it is part of what "the tests pass" means from here.
+
+**One was a hardening gap the write path made matter.** Nothing stopped a Deck window navigating away from the origin Deck serves, and a preload follows its window ([[ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates]]). Both guards are in, comparing by origin rather than by prefix.
+
+**The three features keep `changes-requested` recorded**, because that is the last verdict a reviewer actually returned. They go to `done` when the walks are made and a review approves the fixes — the same rule the four older features have been held by since 2026-09-07.
+
+**2026-09-09, earlier: everything a machine can do is done. Every task in the phase is `done`, and what is left is four walks and a review.**
+
+All eighteen tasks the widening of 2026-09-08 added have landed, and so have the two defects that were open. Seven of the eleven exit criteria are ticked. The desktop suites run 306 checks; `electron . --smoke` boots the real application against this repository and reports `ok: true` with nothing skipped; `run-tests.py` runs each test note's own command and reports 23 passing.
 
 **The two open defects were both mis-diagnosed in their own notes, and saying so is part of the record.**
 

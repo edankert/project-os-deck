@@ -305,6 +305,11 @@ export class DeckHost {
       workspaceId: index.workspaceId,
       revision: index.revision,
       building: index.building,
+      // What sits between the workspace root and a record's path, usually
+      // `docs`. A base file's `inFolder` is written against the vault, whose
+      // root is the repository, so an evaluator that does not know this never
+      // matches one (ISS-0027).
+      pathPrefix: index.pathPrefix,
       // Nothing while the walk is still running, rather than half a workspace
       // that a view would quietly draw as though it were all of it.
       records: rel === null ? records : records.filter((record) => record.relPath === rel),

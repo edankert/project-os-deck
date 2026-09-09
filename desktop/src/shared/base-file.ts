@@ -167,7 +167,7 @@ function readView(
       kind: 'query',
       filter,
       sort,
-      groupBy: typeof view['groupBy'] === 'string' && view['groupBy'] !== '' ? view['groupBy'] : null,
+      groupBy: readGroupBy(view['groupBy']),
       formulas,
     },
     // A vault note is not tracked by project-os, so nothing is owed and
@@ -184,6 +184,22 @@ function readView(
     extensions: {},
   };
   return { name, description, refusals };
+}
+
+/**
+ * What a view groups by, in either form Obsidian writes.
+ *
+ * A bare property name, or a map carrying the property and a direction — the
+ * cockpit's own `NAVIGATION.base` uses the second, and reading only the first
+ * dropped its grouping silently.
+ */
+function readGroupBy(raw: unknown): string | null {
+  if (typeof raw === 'string' && raw !== '') return raw;
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    const property = (raw as Record<string, unknown>)['property'];
+    if (typeof property === 'string' && property !== '') return property;
+  }
+  return null;
 }
 
 /** A file-wide filter and a view's own one both apply, which is an `and`. */

@@ -15,7 +15,7 @@ tasks: ["[[TASK-0017-The-Address-Grammar]]", "[[TASK-0018-Copy-The-Address-And-O
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
-review_date: 2026-09-07
+review_date: 2026-09-09
 review_verdict: approved
 related: ["[[PHASE-0001-Deck]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]"]
 ---
@@ -66,6 +66,16 @@ This is new work inside the feature, not a defect in what was built. The approva
 **2026-09-07: done.** The walk is made and the second independent review approved this feature. [[TST-0013-An-Address-Survives-Being-Written-Down]] passed — Edwin walked it on 2026-09-06 and marked it pass in the release ledger, with the remark "I think this bit works". A second clean-context review, run at the close-out of [[PHASE-0001-Deck]], read this feature's code and criteria again and approved it with no findings against it ([[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]).
 
 **2026-09-06: built and tested; the acceptance walk is owed.** Every criterion above is checked by the suites and by the smoke run that boots the real application. The status is `review` rather than `done` because the walk that settles it for a person — copying an address, quitting, and pasting it back tomorrow — is [[TST-0013-An-Address-Survives-Being-Written-Down]], and nobody has walked it yet.
+
+## Independent review — 2026-09-09 (third pass, TASK-0052's widening)
+
+**Verdict: approved.** Clean context and a separate session; the same model family as the author, recorded in `reviewed_by`. This pass reviewed only what [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]] added — the four new keys and the panel registry — and re-checked that nothing the earlier passes approved has moved.
+
+**The three criteria added on 2026-09-08 hold.** `surface`, `page`, `flow` and `step` each refuse an unregistered value by name, and `?step=` without `?flow=` is refused in both the formatter and the parser (`desktop/src/shared/address.ts:73-80`). `pageKinds` and `flowKinds` are empty, so `?page=release` is refused today with a sentence that names the actual state of the program rather than an empty list. The round-trip table and the malformed table live in `desktop/tests/address-table.mjs` and are read by both suites, so "still parses to the same state" is a measurement rather than a copy.
+
+**The registry keeps the guarantee it replaced a literal list to keep.** Mutating `Vocabulary.has` to accept any string — the change that would silently reopen the grammar — failed 7 checks across `panel-registry`, `address` and `descriptions`. Registration is a module-load side effect in `desktop/src/shared/panels.ts:38`, so there is no ordering hazard between the two hosts, and `register` refuses an id that could not survive an address round trip.
+
+**Nothing found against this feature.** Two documentation nits, neither blocking: [[TASK-0052-The-Grammar-Opens-And-The-Panels-Come-From-A-Registry]]'s Evidence says "The whole desktop suite: 190 checks" where the suite now runs 291, and it names `shared/registry.ts` in one paragraph and `shared/vocabularies.ts` in another for the same three vocabularies. Both are true statements about different files; a reader auditing the note will have to open both.
 
 ## Independent review — 2026-09-06 (second pass)
 

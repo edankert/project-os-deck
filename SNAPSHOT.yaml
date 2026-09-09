@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 13
-  ISS: 23
+  ISS: 30
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -433,6 +433,76 @@ items:
       parent: "FEAT-0006"
       phase: PHASE-0001
   issues:
+    ISS-0024:
+      file: "docs/issues/ISS-0024-The-Yaml-Reader-Walks-Away-From-The-Rest-Of-A-Document.md"
+      title: "A key whose value is followed by an indented list makes Deck's YAML reader abandon everything after it, so twenty-two notes lose their relationship fields"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: shared
+      tests: []
+      note: "Independent review, 2026-09-09. `mapping()` breaks on a `- ` line BEFORE checking whether it is over-indented, so a key whose scalar value is followed by an indented list ends the mapping and every key after it is unread. Twenty-two of Your Trainer's notes lose `effort`, `depends`, `blocks`, `related` and `tests`; PyYAML FOLDS those lines into the scalar and reads on. Not silent — `reportLeftovers` names the lines — but records.ts and TASK-0038 both claim every key is present, which is false."
+    ISS-0025:
+      file: "docs/issues/ISS-0025-A-Block-Scalar-Silently-Loses-Lines-And-Two-Escapes-Are-Wrong.md"
+      title: "A literal block scalar silently loses every blank line and every line beginning with a hash, and two string escapes produce the wrong characters"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: shared
+      tests: []
+      note: "Independent review, 2026-09-09. WORSE than ISS-0024 because it is SILENT: `scan()` strips blank and comment lines from the whole document before any reader runs, so a `|` block scalar loses every blank line, every line starting with `#`, and its trailing newline. Refutes TASK-0038's 'zero unreported problems'. Two latent siblings: `\\n` is read before `\\\\` so a literal backslash-n comes out as backslash-newline, and a nested block sequence flattens."
+    ISS-0026:
+      file: "docs/issues/ISS-0026-The-Sidecar-Comparison-Cannot-See-A-Note-Deck-Never-Indexed.md"
+      title: "The check that Deck and the sidecar agree about every note skips any note Deck failed to index, so hiding a sixth of the corpus still passes it"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: tests
+      tests: []
+      note: "Independent review, 2026-09-09. The RISK-0004 comparison skips any fixture path Deck did not index (`if (record === undefined) continue`) with only a `compared > 150` floor against 199. Demonstrated: hiding `issues/` and `reference/` left Deck indexing 169 of 200 and the check still passed. Also type-only, so FEAT-0011's 'agrees about all 199 notes' is wider than what runs — and it is why ISS-0024 went unseen."
+    ISS-0027:
+      file: "docs/issues/ISS-0027-Four-Evaluator-Paths-Select-The-Wrong-Notes.md"
+      title: "Four paths in the evaluator select the wrong notes and report nothing, which is the failure the description feature says it exists to prevent"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: high
+      component: shared
+      tests: []
+      note: "Independent review, 2026-09-09. FOUR paths produce a different answer confidently, which is the failure ADR-0004 says the feature exists to prevent. `contains` on a string tests equality not substring. `hasLink` ignores its receiver. `==` on strings is case-insensitive where Obsidian's is not. `file.path` is docs-root-relative so a base file's `inFolder(\"docs/__templates__\")` never matches — the cockpit's own NAVIGATION.base selects 14 notes here where the cockpit shows 13."
+    ISS-0028:
+      file: "docs/issues/ISS-0028-A-Test-Note-Names-A-Suite-That-Does-Not-Exist.md"
+      title: "TST-0033's command and entrypoint name a suite file that was never created, so the repository's own test runner reports one failing test"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: tests
+      tests: []
+      note: "Independent review, 2026-09-09. TST-0033 says `writes`; the suite is `write-channel`. `run-tests.py` reports passing=22 failing=1, and QUALITY.md's gate blocks FEAT-0013 on it. The lesson is not the name: `npm test` runs every file in tests/ and was green throughout, so only `run-tests.py` — which reads each note's own `command:` — could see it, and it was not run at close-out."
+    ISS-0029:
+      file: "docs/issues/ISS-0029-The-Preload-Bridge-Follows-The-Window-Anywhere-It-Navigates.md"
+      title: "Nothing stops a Deck window navigating away from its own host, and the preload bridge — which carries the write channel — goes with it"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: main
+      tests: []
+      note: "Independent review, 2026-09-09, recorded as a LEAD: the absence of both guards and the injection point are verified, the click was not driven in Electron. No `will-navigate` and no `setWindowOpenHandler` anywhere in desktop/src, so the preload — which since 2026-09-09 carries the write channel — follows the window to any origin it navigates to. The reader injects sidecar-rendered HTML; the CSP blocks script and forms but not a clicked link."
+    ISS-0030:
+      file: "docs/issues/ISS-0030-A-Change-To-Any-File-Rebuilds-The-Index-And-Marks-Every-Window.md"
+      title: "A change to any file at all rebuilds Deck's index and tells every window its notes changed, so saving an Obsidian layout raises the changed-under-you mark"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: low
+      component: main
+      tests: []
+      note: "Independent review, 2026-09-09, non-blocking. `noticed` treats anything that is not one Markdown file as a full rebuild and `build()` raises the revision unconditionally, so a write to `.obsidian/workspace.json` — which Obsidian does whenever a pane moves — re-walks the tree and raises TASK-0051's changed-under-you banner with no note touched."
     ISS-0023:
       file: "docs/issues/ISS-0023-Two-Sidecars-For-One-Repository-When-The-Paths-Differ-Only-In-Case.md"
       title: "Deck starts a second sidecar for a repository the cockpit already has open when the two spell the home directory differently, and that sidecar rewrites the repository's discovery file to its own port"

@@ -417,3 +417,34 @@ test('a window may not raise an index revision itself', () => {
   // dispatches on is reachable from any page the window loads.
   assert.equal(isRendererAction({ type: 'index-changed', workspaceId: 'a', revision: 2 }), false);
 });
+
+// ---- the bridge belongs to the origin, not to the window (ISS-0029) ----
+
+test('a window is stopped from navigating away from the origin Deck serves', () => {
+  // The preload runs on every document its `webContents` loads, so without a
+  // guard `window.deck.write.*` would still be there after the window followed
+  // a link out of a rendered note. Checked in the built main process, because
+  // no suite can open an Electron window: what is asserted is that both guards
+  // are registered and that the comparison is by ORIGIN.
+  const main = fs.readFileSync(path.join(desktopRoot, 'dist', 'main', 'main.js'), 'utf-8');
+  assert.match(main, /will-navigate/, 'nothing stops the window navigating');
+  assert.match(main, /setWindowOpenHandler/, 'a new window could carry the preload with it');
+  assert.match(main, /action:\s*['"]deny['"]/, 'a new window is allowed rather than denied');
+});
+
+test('sameOrigin compares origins, not prefixes', () => {
+  // `http://127.0.0.1:7300.example.test` STARTS WITH the host origin and is
+  // somebody else's machine, which is why this is not a `startsWith`.
+  const { sameOriginAs } = load('shared/origin.js');
+  const host = 'http://127.0.0.1:7300';
+  assert.equal(sameOriginAs(host, 'http://127.0.0.1:7300/'), true);
+  assert.equal(sameOriginAs(host, 'http://127.0.0.1:7300/renderer/renderer.js'), true);
+  assert.equal(sameOriginAs(host, 'http://127.0.0.1:7300.example.test/'), false);
+  assert.equal(sameOriginAs(host, 'http://127.0.0.1:7301/'), false);
+  assert.equal(sameOriginAs(host, 'https://127.0.0.1:7300/'), false);
+  assert.equal(sameOriginAs(host, 'https://example.test/'), false);
+  assert.equal(sameOriginAs(host, 'file:///etc/passwd'), false);
+  assert.equal(sameOriginAs(host, 'javascript:alert(1)'), false);
+  assert.equal(sameOriginAs(host, 'not a url at all'), false);
+  assert.equal(sameOriginAs('', 'http://127.0.0.1:7300/'), false);
+});

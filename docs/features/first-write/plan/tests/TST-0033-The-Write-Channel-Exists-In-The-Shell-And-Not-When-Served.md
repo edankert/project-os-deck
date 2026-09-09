@@ -11,8 +11,8 @@ source: ["[[FEAT-0013-The-First-Write]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
 level: unit
-entrypoint: "desktop/tests/writes.test.mjs"
-command: "bash tools/scripts/run-desktop-tests.sh writes"
+entrypoint: "desktop/tests/write-channel.test.mjs"
+command: "bash tools/scripts/run-desktop-tests.sh write-channel"
 covers: ["[[FEAT-0013-The-First-Write]]"]
 issues: []
 tasks: ["[[TASK-0047-The-Write-Channel]]", "[[TASK-0048-The-Actor-Is-A-Setting]]", "[[TASK-0049-The-Actuator-Row-And-One-Transition]]", "[[TASK-0050-Ticking-A-Criterion-With-Evidence]]", "[[TASK-0051-The-Changed-Under-You-Mark]]"]
