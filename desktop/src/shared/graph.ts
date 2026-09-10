@@ -9,7 +9,7 @@
  * exactly that. So the cockpit is not changed, and the rules below mirror the
  * cockpit's `index.py` so a link Deck draws is a link the cockpit resolves.
  *
- * Mirrored from the cockpit, and pinned by TST-0045:
+ * Mirrored from the cockpit, and pinned by TST-0046:
  * - A link is `[[target]]` or `[[target|shown]]`; an embed `![[...]]` is not a link.
  * - In a link-bearing frontmatter key (`parent`, `phase`, `related`, ...), a
  *   bare project-os id is a link too.

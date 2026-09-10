@@ -15,9 +15,9 @@ entrypoint: "desktop/src/main/smoke-glass.ts"
 command: ""
 last_verified: 2026-09-10
 automation: "one command, run manually or by the deck-smoke CI job; not by run-tests.py, which has no sidecar"
-covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]"]
+covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 issues: []
-tasks: ["[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]"]
+tasks: ["[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]"]
 artifacts: ["tools/scripts/run-smoke.sh"]
 adequacy: "Not measured by mutation: each run takes about four minutes. What it has caught is recorded instead. It found five defects in Glass on 2026-09-10 before a person saw them: a transition cut short by a broadcast, a raised pane covering another’s header, a pane hidden behind the reading column, a target strip that vanished as the pointer reached for a name, and a reach cancelled by a focus that arrived late. Each has a check here that failed before its fix and passes after."
 mutation_score: "not measured (the run takes four minutes); five defects found and fixed on 2026-09-10"
@@ -43,6 +43,7 @@ related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-T
 - **The keyboard.** Positions in the whole view, a lift by Tab, arrows and Enter, and the reduced-motion arrival as a highlight and a cut.
 - **The view switch and a held change.** No delay per card, a transition, elements kept and moved, none reused; a held change counted on the chip and dealt only when it is clicked.
 - **The throw.** The strip at the edge naming the windows that way; a throw into a reader window, onto a desk panel, onto a display with no Deck window when the machine has one, and send to by keyboard.
+- **The orbit.** One request returns the whole graph and a POST is refused; every node's band is the band the sidecar's status gives the same note; Deck's links for twelve notes match the sidecar's own context; the orbit opens from the switcher; the most linked-to notes are cards and the rest dots; resting on a link shows its sentence; landing on a dot lifts the note, opens it and names it in the store; "show this in the field" flies to it; each of the three treatments draws the same notes and blocks draw no links; left alone the orbit drifts, and under reduced motion it does not.
 - **Nothing is written.** `git status` in the workspace is the same before and after.
 
 ## Where this test's verdict comes from

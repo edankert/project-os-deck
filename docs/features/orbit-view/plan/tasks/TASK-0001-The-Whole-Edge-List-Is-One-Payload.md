@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0001
 aliases: ["TASK-0001"]
 title: "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
@@ -15,7 +15,7 @@ due: ""
 depends: []
 blocks: ["TASK-0002", "TASK-0003"]
 related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[PHASE-0002-Glass]]", "[[FEAT-0010-Lifting-A-Note]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]", "[[project-os-cockpit#ISS-0023]]"]
-tests: []
+tests: ["[[TST-0046-The-Whole-Link-Graph-Is-Read-From-Decks-Own-Index]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # The whole edge list is one payload
@@ -45,3 +45,15 @@ One endpoint — `/api/cockpit/graph` — returns every node and every edge in t
 ## Provenance
 
 Moved from `project-os-cockpit` on 2026-09-06, where it was `TASK-0592` (last commit there `74172d8`). Links to notes that stayed in that repository use the `[[project-os-cockpit#ID]]` form ([[project-os-cockpit#FEAT-0093]]). Split on 2026-09-07 into the cockpit's endpoint and Deck's consuming half, when [[PHASE-0002-Glass]] opened with the field built first.
+
+## Outcome
+
+**Done 2026-09-10, and amended: Deck's own index answers the edge list, not a cockpit endpoint.** This task was written on 2026-09-07, when the sidecar was the only index Deck had, so it asked the cockpit for `/api/cockpit/graph` and began by filing an issue there. On 2026-09-08 Edwin decided Deck keeps its own index of the workspace's Markdown ([[FEAT-0011-Decks-Own-Index]]: "the Decks application are individual applications/views"), and the whole edge list is a read over exactly that. So no issue was filed and the cockpit is not changed; the acceptance line asking for one was written for a Deck that no longer exists, and this outcome is the reason it is not ticked.
+
+**What Deck serves.** `GET /deck/graph/<workspace>` returns every note as a node (id, path, title, type, status, band, phase, inbound count) and every link as an edge (source, target or null, what was written, the offset in the source file, resolved, cross-repository). `GET /deck/graph/<workspace>/sentence?source=&offset=` returns the sentence a link sits in. Both are reads on Deck's host and refuse a POST with 405. The graph is built by `desktop/src/shared/graph.ts` from the index's records and each file read once more, and kept per index revision.
+
+**It resolves the way the cockpit does.** The rules are the cockpit's `index.py`: `[[target]]` and `[[target|shown]]`, embeds excluded, bare ids in link-bearing frontmatter keys, and id, alias, file name, title, then the id in a drifted slug. The smoke run compares twelve notes' links with the sidecar's own `/api/cockpit/context` and they match. Every node's band is `bandFor` of its status, the same function the reader's rows use, and the smoke run checks 57 nodes against the sidecar's own status.
+
+**One defect found while building it.** Every `PLAN.md` without an `id` takes `PLAN` as its id, so the plans collapsed into one node. An id claimed by more than one note is now replaced by the note's path.
+
+**The number.** On the cockpit's corpus (1,549 notes, 15,358 links, 14,839 of them resolved), the one request is 2.39 MB and took 86 ms cold and 15 ms warm on a Mac Studio (M2 Max) over Deck's host on loopback. On Your Trainer, 2,714 notes and 12,119 links, 2.28 MB in 107 ms; on this repository, 236 notes and 3,626 links, 0.59 MB in 39 ms. Written in [[FEAT-0001-The-Corpus-Has-An-Inside]].

@@ -7,7 +7,7 @@ status: planned
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "Edwin, ledger 2026-09-07 on TST-0015: 'one of the thing around relationships / dependencies I think is a little bit of an issue that I don't see this at the moment'"]
 goal: "In Glass a click lifts a note out of the field onto the desk Deck already has, and while it is held the notes joined to it take the front band, so the relationships a person cannot see today are the first thing they see."
 requirements: []
@@ -60,6 +60,8 @@ Three words are used throughout. The **field** is the cylinder of cards that [[F
 - Design: [[DES-0002-The-Glass-Cockpit]], reviewed in [[REFERENCE-DES-0002-REVIEW]]
 
 ## Where this stands
+
+**2026-09-10: built.** A click lifts a note into a pane and ghosts its slot; its neighbourhood takes the front band from inside and outside the view, the label says so and the owed count keeps its place; two held notes mark and count what they share; ×, ⌥× and Escape put back; the desk is Spread's. All three tasks are done. What is left is Edwin's walk, [[TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives]].
 
 **2026-09-10: a held note becomes a pane, in the feature beside this one.** [[REFERENCE-GLASS-PHASE-REVIEW]] found that this feature lifts a note and puts it back and never says the held note can be moved, and that the plan's open question about the reader's width had been left to the design. [[TASK-0054-A-Held-Note-Is-A-Pane]] under [[FEAT-0014-The-Hands]] answers both: a held note is dragged, resized and stacked with DES-0002's header rule, has a stated minimum width and a verb that widens it to a reading column, and keeps its place and size in the desk record Spread already saves. Reaching for a card before lifting it, which shows the neighbourhood as wires without a lift, is [[TASK-0056-Reach]] and reuses [[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]'s context read. This feature's three tasks and their acceptance are unchanged.
 

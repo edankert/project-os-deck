@@ -11,7 +11,7 @@ This document is the **registry overview** for the project's development phases.
 
 ## Phase Definitions
 
-Deck has four phases, in this order. The order is Edwin's, decided on 2026-09-06 and recorded in [Part 8 of the architecture options note](reference/cockpit-surface-architecture-options-2026-09-06.md), and revised on 2026-09-07 when Glass became the main view and a parity phase was added before Vault ([ADR-0002](decisions/ADR-0002-Glass-Is-The-Main-View.md)). On 2026-09-10 PHASE-0001 is active with every feature `done` and its code pushed and green; it owes four walks a person must make and one triage decision, and nothing else. PHASE-0002 is planned in full, reviewed on 2026-09-10 against a Minority Report style surface rather than a skin, and starts when PHASE-0001 closes.
+Deck has four phases, in this order. The order is Edwin's, decided on 2026-09-06 and recorded in [Part 8 of the architecture options note](reference/cockpit-surface-architecture-options-2026-09-06.md), and revised on 2026-09-07 when Glass became the main view and a parity phase was added before Vault ([ADR-0002](decisions/ADR-0002-Glass-Is-The-Main-View.md)). On 2026-09-10 PHASE-0001 is active with every feature `done` and its code pushed and green; it owes four walks a person must make and one triage decision, and nothing else. PHASE-0002 was reviewed on 2026-09-10 against a Minority Report style surface rather than a skin, and built and tested the same day at Edwin's instruction: eighteen of nineteen tasks are done, and what is left is four walks, Safari on the tablet, a week of use, a laptop measurement and the orbit's treatment, all a person's.
 
 | Order | Phase | Name | What it delivers | Judged by |
 |-------|-------|------|------------------|-----------|

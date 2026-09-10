@@ -65,3 +65,7 @@ Deck runs from this repository; there is no installed application yet.
 ## Evidence (fill after running)
 
 - The walk's verdict is a dated event in the release ledger, not a status on this note. Record the planted ids beside it, so a later walk can tell whether it found the same thing.
+
+## Automated half
+
+**Added 2026-09-10.** The orbit marks both things this walk looks for, so a person does not have to be told where to look: a note with no link in or out stands in an orphan band along the top of the orbit with a ring round it, and a link that alone holds a cluster of three or more notes on is drawn in its own colour. [[TST-0047-The-Orbit-Layout-Is-Solved-Once-And-Kept]] plants both in a small corpus and finds them, and the navigator lists every orphan under "With no link in or out". None of the three real corpora measured on 2026-09-10 has a cluster held on by a single link, so the walk has to plant one, as its procedure says.

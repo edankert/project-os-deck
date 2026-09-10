@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0004
 aliases: ["TASK-0004"]
 title: "Landing opens the note in the reader that already exists, so the field never becomes a second document pane"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0003", "TASK-0035"]
 blocks: []
 related: ["[[project-os-cockpit#ADR-0020]]", "[[FEAT-0010-Lifting-A-Note]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Landing opens the note
@@ -42,3 +42,9 @@ The temptation is a panel inside the field showing a summary of the note. That p
 ## Provenance
 
 Moved from `project-os-cockpit` on 2026-09-06, where it was `TASK-0595` (last commit there `74172d8`). Links to notes that stayed in that repository use the `[[project-os-cockpit#ID]]` form ([[project-os-cockpit#FEAT-0093]]).
+
+## Outcome
+
+**Done 2026-09-10.** Landing on a dot or a card in the orbit is a lift: the note goes onto the desk through the same `put-on-desk` action, becomes a pane, and is focused, so the address, the desk and the reader all name it. A pane carries ◎, "show this in the link graph", and O on its header does the same: Deck switches to the orbit and flies to the note rather than cutting. In the orbit the navigator lists every card it draws and every note with no link, so each is reached by keyboard. Nothing of a note is drawn in the field but its id, title, type, status and a link's sentence; the pane is the desk's reader, and the verbs stay in the reading column.
+
+**Evidence.** [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: a real click on a dot lifts it, opens it and names it in the store; ◎ turns the orbit to face it, with frames in between, so it flew.

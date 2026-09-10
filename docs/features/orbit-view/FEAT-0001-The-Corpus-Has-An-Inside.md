@@ -7,7 +7,7 @@ status: planned
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["Edwin 2026-09-05: 'I like the idea of the 3d world fly-through ... I would like an orbit view in the application in general, so feel free to create the corresponding docs for thus'", "Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'"]
 goal: "Give Deck a view of the link graph as a whole — 16148 edges over 1537 notes, coloured by status band, entered by flying rather than by listing — so the structural questions the reader cannot currently ask (what does nothing link to, which clusters hang by one edge) have somewhere to be asked."
 requirements: []
@@ -70,7 +70,25 @@ The first is a query a table could answer, and [[DES-0001]] says so plainly in O
 
 **D1 — constellation, glass or blocks.** [[DES-0001]] draws three treatments of the same view, live and switchable: a near-black sky of luminous points; a cyan instrument with brackets and billboarded panes; and opaque painted-wood solids on a lit table. They differ in what they make easy to believe, not only in how they look, and two of them cost something real — glass collapses four of the six status hues into 25 degrees, and blocks cannot draw the 16148 edges at all. The choice is Edwin's. It now concerns the orbit arrangement's look only, because the Glass field itself is built with [[DES-0002]]'s fog-and-detail treatment. Nothing else in this feature depends on it except [[TASK-0003]]'s edge overlay.
 
+## Measured
+
+**2026-09-10, on a Mac Studio (Apple M2 Max), with `electron . --measure`, over Deck's host on loopback.** The three numbers this feature promised, on the corpus it was written against (the cockpit's) and on two others.
+
+| Workspace | Notes | Links (resolved) | The one request: size, cold, warm | Layout solve | Drift when a note is added | Orbit frame time, median / 95th; script work |
+|---|---|---|---|---|---|---|
+| project-os-cockpit | 1,549 | 15,358 (14,839) | 2.39 MB, 86 ms, 15 ms | 1.07 s | 0 | 16.7 / 16.8 ms; 3.2 ms |
+| Your Trainer | 2,714 | 12,119 (12,039) | 2.28 MB, 107 ms, 16 ms | 2.6 s | 0 | 16.7 / 17.4 ms; 2.8 ms |
+| This repository | 236 | 3,626 (3,398) | 0.59 MB, 39 ms, 6 ms | 133 ms | 0 | 16.7 / 17.1 ms; 1.2 ms |
+
+**The edge list comes from Deck's own index, not a cockpit endpoint.** See [[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]: the plan predated [[FEAT-0011-Decks-Own-Index]], and the graph is a read over it. The smoke run checks twelve notes' links against the sidecar's own context and every node's band against the sidecar's status.
+
+**The drift is zero by construction.** A note added and linked is placed near its links with every existing note pinned; the layout is solved again only past 15% change. The solve runs once per workspace and is kept on disk.
+
+**The corpus has no cluster held on by a single link** in any of the three: every link that alone joins notes to the rest holds on fewer than three. It has 32 notes with no link in or out in the cockpit's corpus, 131 in Your Trainer and 17 here, and the orphan band shows them.
+
 ## Where this stands
+
+**2026-09-10: built, measured, and waiting on one decision.** The orbit is a surface of the Glass field with its own address, drawn by the same renderer; the numbers are above. [[TASK-0005-The-Treatment-Is-Chosen-Not-Assumed]] is Edwin's: all three treatments are drawn and switchable, and constellation is the default until he chooses. [[TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible]] is his walk; its automated half is [[TST-0047-The-Orbit-Layout-Is-Solved-Once-And-Kept]].
 
 **2026-09-07: no longer the gate in front of Glass, but one arrangement inside it.** Edwin, the same day: *"I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity."* [[ADR-0002-Glass-Is-The-Main-View]] records the decision, and [[PHASE-0002-Glass]] opens today. Until then this feature was the read-only slice the phase had to measure before [[DES-0002]]'s arrangements could be built. That order is reversed: the field is built first ([[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]), and the orbit is drawn by the field's renderer as the arrangement where distance is connectedness. The three measurements stay, as exit criteria of the phase rather than as preconditions for starting it. If one of them fails, the orbit arrangement is what is not built, and the rest of Glass is unaffected.
 

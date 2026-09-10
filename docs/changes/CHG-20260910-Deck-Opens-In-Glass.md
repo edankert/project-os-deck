@@ -2,7 +2,7 @@
 type: "[[change]]"
 id: CHG-20260910-Deck-Opens-In-Glass
 aliases: ["CHG-20260910-Deck-Opens-In-Glass"]
-title: "Deck opens in Glass: a field where what needs you is in front, a lifted note brings its neighbourhood forward, a person's hands arrange the rest, and a tablet follows the Mac's desk"
+title: "Deck opens in Glass: a field where what needs you is in front, a lifted note brings its neighbourhood forward, a person's hands arrange the rest, a tablet follows the Mac's desk, and the whole link graph is one more arrangement"
 status: merged
 owner: user:edwin
 created: 2026-09-10
@@ -10,9 +10,9 @@ updated: 2026-09-10
 source: ["Edwin, 2026-09-10: 'Implement and Test Phase 0002 fully'", "[[REFERENCE-GLASS-PHASE-REVIEW]]"]
 commit: ""
 pr: ""
-impacts: ["desktop/src/renderer/", "desktop/src/shared/", "desktop/src/main/host.ts", "desktop/src/main/main.ts", "desktop/src/main/smoke-glass.ts", "desktop/src/preload.ts", "desktop/tests/"]
+impacts: ["desktop/src/renderer/", "desktop/src/shared/", "desktop/src/main/host.ts", "desktop/src/main/main.ts", "desktop/src/main/smoke-glass.ts", "desktop/src/main/graph-service.ts", "desktop/src/main/orbit-worker.ts", "desktop/src/main/measure.ts", "desktop/src/preload.ts", "desktop/tests/"]
 issues: []
-features: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]"]
+features: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[DES-0002-The-Glass-Cockpit]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 ---
 
@@ -28,6 +28,8 @@ related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[ADR-
 
 **A tablet shows the Mac's desk.** A page served by Deck's host now reads the store over two new read routes, `GET /deck/state` and `GET /deck/events`, and a note lifted on the Mac appears on the tablet within a second. The tablet keeps its own view and surface, can follow the Mac's note when asked, and still sends nothing back: both routes answer 405 to every other method.
 
+**The whole link graph is one more arrangement of the field.** Choose Orbit on the surface toggle and every note in the workspace stands round the person, nearer the more the corpus points at it, clustered by phase, with its links as filaments. Rest the pointer on a link to read the sentence that made it; click a note to land on it; press ◎ on a pane to fly the orbit to that note. Notes with no link stand in a band along the top, and a link that alone holds a cluster on is drawn in its own colour. The three treatments DES-0001 drew, constellation, glass and blocks, are all there to compare; which one stays is Edwin's.
+
 **Nothing a hand does writes to the record.** `git status` in the workspace is the same before and after every gesture above, and the smoke run checks it.
 
 ## What changed underneath
@@ -36,7 +38,9 @@ related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[ADR-
 - A desk card gained optional `w`, `h` and `wide`. Spread ignores them and shows the same note at the same place.
 - Every view description names `glass` first in its surfaces, and every band table gained rows for the neighbourhood, a pull and a push, with owed still first.
 - The shell gained two routes a served page cannot reach: `deck:windows:list` and `deck:window:throw`.
-- Six new node suites and a Glass section of the smoke run, which drives everything above with real pointer events: [[TST-0039-The-Served-Page-Follows-The-Store-By-Reading]] to [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].
+- Deck's host gained three more reads over Deck's own index: `/deck/graph/<workspace>`, its `/sentence`, and `/deck/orbit/<workspace>`. The orbit's layout is kept in Deck's user data directory as `deck-orbit-<workspace>.json`.
+- `electron . --measure` takes the phase's numbers; they are in [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] and [[FEAT-0001-The-Corpus-Has-An-Inside]].
+- Eight new node suites and a Glass section of the smoke run, which drives everything above with real pointer events: [[TST-0039-The-Served-Page-Follows-The-Store-By-Reading]] to [[TST-0047-The-Orbit-Layout-Is-Solved-Once-And-Kept]].
 
 ## Five defects the smoke run found before a person did
 
@@ -48,6 +52,11 @@ Each was in Glass as first written, each made a check fail, and each is fixed wi
 4. **The throw's strip vanished as the pointer reached for a name.** The names are wider than the edge zone that summons them. The strip now stays while the pointer is over it.
 5. **A reach could be cancelled by a click made earlier.** A press focuses a card, and a focus that arrived late started a reach for that card instead. Only keyboard focus reaches now.
 
+## Two defects in the orbit, found the same way
+
+6. **A dozen plans were one node.** Every `PLAN.md` without an `id` took `PLAN` as its id. An id two notes share now falls back to each note's path.
+7. **The first layouts drew the corpus as a thin line.** A few notes that most others link to pulled the whole layout to one height and one arc. The layout is now Fruchterman–Reingold, spread to fill the cylinder by blending each coordinate with its rank.
+
 ## Hazards
 
-No dependency, environment variable, path or long-running step was added. One contract grew: Deck's host answers two more reads, and the network smoke run asserts that both refuse every write from the machine's own address. Deck's own risk notes are unchanged.
+No dependency or environment variable was added. One file is new on disk: the orbit's kept layout, one per workspace in Deck's user data directory, which Deck solves again if it is missing or unreadable. One long step is new: solving the layout the first time a workspace's orbit is opened takes about a second for 1,500 notes and two and a half for 2,700, once, on a worker thread so that no window waits for it. The first build solved it in the main process, which would have held every window's store traffic for those seconds. Deck's host answers five more reads, and the network smoke run asserts that the two a tablet follows refuse every write from the machine's own address; the graph path refuses a POST too. Deck's own risk notes are unchanged.

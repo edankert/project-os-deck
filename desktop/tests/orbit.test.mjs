@@ -47,6 +47,27 @@ test('a corpus fills the cylinder rather than contracting into a line', () => {
   assert.ok(1 - gap > 0.7, `the notes cover ${(1 - gap).toFixed(2)} of the way round`);
 });
 
+test('a corpus dominated by a few hubs still fills the cylinder', () => {
+  // The shape of a real project: most notes link to one of three phases and
+  // little else. Relaxed alone, this stood in a thin line across a few degrees.
+  const nodes = [node('H1', 'P1'), node('H2', 'P2'), node('H3', 'P3')];
+  const edges = [];
+  for (let i = 0; i < 200; i += 1) {
+    nodes.push(node(`L${i}`, `P${(i % 3) + 1}`));
+    edges.push(edge(`L${i}`, `H${(i % 3) + 1}`));
+    if (i % 5 === 0) edges.push(edge(`L${i}`, `L${(i + 1) % 200}`));
+  }
+  const { layout } = layoutOrbit({ nodes, edges });
+  const ps = Object.values(layout.places);
+  const vs = ps.map((p) => p.v).sort((a, b) => a - b);
+  const spreadV = vs[Math.floor(vs.length * 0.9)] - vs[Math.floor(vs.length * 0.1)];
+  const us = ps.map((p) => p.u).sort((a, b) => a - b);
+  let gap = 1 - us[us.length - 1] + us[0];
+  for (let i = 1; i < us.length; i += 1) gap = Math.max(gap, us[i] - us[i - 1]);
+  assert.ok(spreadV > 1.0, `the notes use ${spreadV.toFixed(2)} of the height`);
+  assert.ok(1 - gap > 0.8, `the notes cover ${(1 - gap).toFixed(2)} of the way round`);
+});
+
 test('two solves of the same corpus give identical positions', () => {
   const a = layoutOrbit(planted()).layout;
   const b = layoutOrbit(planted()).layout;
@@ -133,4 +154,40 @@ test('a corpus the size of the cockpit’s is solved in a bounded time', () => {
   assert.equal(Object.keys(layout.places).length, 1600);
   assert.ok(ms < 20000, `the solve took ${ms}ms`);
   console.log(`# a 1600-note, 16000-link corpus was laid out in ${ms}ms`);
+});
+
+test('the layout is solved off the main thread, kept on disk, and asked for once', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { GraphService } = load('main/graph-service.js');
+  const { walkNotes } = load('main/note-index.js');
+  const { desktopRoot } = await import('./helpers.mjs');
+  const docsRoot = path.join(desktopRoot, '..', 'docs');
+  const snapshot = { workspaceId: 'aaaa1111', docsRoot, pathPrefix: 'docs', revision: 1, building: false, records: walkNotes(docsRoot).records, problems: [] };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-orbit-'));
+  const service = new GraphService(dir);
+  try {
+    let ticks = 0;
+    const clock = setInterval(() => { ticks += 1; }, 5);
+    const [a, b] = await Promise.all([service.layoutFor(snapshot), service.layoutFor(snapshot)]);
+    clearInterval(clock);
+    assert.equal(a, b, 'two requests for the same state solved twice');
+    assert.ok(Object.keys(a.layout.places).length > 100);
+    assert.ok(ticks >= 3, `the main thread's clock ticked ${ticks} times during a ${a.ms}ms solve`);
+    assert.ok(fs.existsSync(path.join(dir, 'deck-orbit-aaaa1111.json')), 'the layout was not kept');
+    const answered = await service.answer('/deck/orbit/aaaa1111', new URLSearchParams(), () => snapshot);
+    assert.deepEqual(answered.layout, a.layout);
+    // A second service, as after a restart, reads the kept layout and moves nothing.
+    const restarted = new GraphService(dir);
+    try {
+      const again = await restarted.layoutFor(snapshot);
+      assert.deepEqual(again.layout.places, a.layout.places);
+      assert.equal(again.drift, 0);
+    } finally {
+      restarted.close();
+    }
+  } finally {
+    service.close();
+  }
 });

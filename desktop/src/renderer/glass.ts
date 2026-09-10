@@ -344,6 +344,25 @@ export class GlassField {
     return null;
   }
 
+  /**
+   * The navigator's groups for the orbit: the cards it draws, and the notes
+   * with no link. The keyboard's route to every card the orbit shows, and to
+   * the orphans TST-0025 asks a person to find.
+   */
+  orbitGroups(): CardGroup[] {
+    if (this.arrangement !== 'orbit' || this.orbit === null) return [];
+    const cards: CardModel[] = [];
+    for (const [id, slot] of this.model.current.slots) {
+      if (slot.band === 'deep') continue;
+      const entry = this.entries.get(id);
+      if (entry !== undefined) cards.push(entry.card);
+    }
+    const orphans = this.orbit.layout.orphans.map((id) => this.entries.get(id)?.card).filter((c): c is CardModel => c !== undefined);
+    const out: CardGroup[] = [{ key: 'deck:orbit-near', label: 'Nearest in the link graph', needsHuman: false, suppressed: false, cards }];
+    if (orphans.length > 0) out.push({ key: 'deck:orbit-orphans', label: 'With no link in or out', needsHuman: false, suppressed: false, cards: orphans });
+    return out;
+  }
+
   /** "Show this in the field": fly the orbit to a note (TASK-0004). */
   showInOrbit(noteId: string): void {
     const slot = this.model.current.slots.get(noteId);
@@ -389,18 +408,38 @@ export class GlassField {
    * because a background window's animation frames are suspended and every
    * number DES-0002 carried was taken in one.
    */
-  measureTurn(ms: number, radiansPerSecond = Math.PI / 2): Promise<{ frames: number; median: number; p95: number; visible: boolean; focused: boolean }> {
+  measureTurn(
+    ms: number,
+    radiansPerSecond = Math.PI / 2,
+  ): Promise<{ frames: number; median: number; p95: number; visible: boolean; focused: boolean; mostTiles: number; mostElements: number; workMedian: number; workP95: number }> {
     return new Promise((resolve) => {
       this.frameTimes = [];
+      // The work a frame costs, apart from the wait for the display: a 60 Hz
+      // display holds every frame to 16.7 ms however little work it took, so
+      // the frame time alone cannot show the headroom a slower machine needs.
+      const work: number[] = [];
       let last = performance.now();
       const start = last;
+      // The worst moment, not the last one: the most tiles and elements on
+      // screen at any point of the turn, sampled every tenth frame.
+      let mostTiles = 0;
+      let mostElements = 0;
+      let frame = 0;
       const step = (now: number): void => {
+        frame += 1;
+        if (frame % 10 === 0) {
+          const c = this.counts();
+          mostTiles = Math.max(mostTiles, c.tiles, this.arrangement === 'orbit' ? this.dots.length : 0);
+          mostElements = Math.max(mostElements, c.elements);
+        }
         if (document.visibilityState === 'visible' && document.hasFocus()) this.frameTimes?.push(now - last);
         const dt = now - last;
         last = now;
+        const began = performance.now();
         this.model.turn((radiansPerSecond * dt) / 1000);
         this.el.field.classList.add('turning');
         this.render();
+        if (document.visibilityState === 'visible' && document.hasFocus()) work.push(performance.now() - began);
         if (now - start < ms) {
           requestAnimationFrame(step);
           return;
@@ -409,12 +448,18 @@ export class GlassField {
         const times = (this.frameTimes ?? []).slice(1).sort((a, b) => a - b);
         this.frameTimes = null;
         const at = (q: number): number => (times.length === 0 ? 0 : (times[Math.min(times.length - 1, Math.floor(q * times.length))] as number));
+        const costs = work.slice(1).sort((a, b) => a - b);
+        const cost = (q: number): number => (costs.length === 0 ? 0 : (costs[Math.min(costs.length - 1, Math.floor(q * costs.length))] as number));
         resolve({
           frames: times.length,
           median: at(0.5),
           p95: at(0.95),
           visible: document.visibilityState === 'visible',
           focused: document.hasFocus(),
+          mostTiles,
+          mostElements,
+          workMedian: cost(0.5),
+          workP95: cost(0.95),
         });
       };
       requestAnimationFrame(step);

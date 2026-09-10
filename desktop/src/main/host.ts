@@ -198,7 +198,7 @@ export interface HostOptions {
    * files. How the graph a Glass arrangement reads reaches a page without the
    * host knowing what a graph is (TASK-0001).
    */
-  extraReads?: (pathname: string, search: URLSearchParams) => unknown | undefined;
+  extraReads?: (pathname: string, search: URLSearchParams) => unknown | Promise<unknown> | undefined;
 }
 
 export interface Listening {
@@ -310,7 +310,7 @@ export class DeckHost {
       return;
     }
     if (this.options.extraReads !== undefined) {
-      const answer = this.options.extraReads(pathname, url.searchParams);
+      const answer = await this.options.extraReads(pathname, url.searchParams);
       if (answer !== undefined) {
         if (answer === null) plain(res, 404, 'nothing there');
         else json(res, 200, answer);

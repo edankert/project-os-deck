@@ -57,6 +57,12 @@ test('a target resolves by id, then alias, then file name, then title, then the 
   assert.equal(r.resolve('The BLE layer'), 'a/FEAT-0085-BleReliabilityLayer.md');
   assert.equal(r.resolve('FEAT-0085-BleHardening'), 'a/FEAT-0085-BleReliabilityLayer.md', 'a drifted slug still reaches the id');
   assert.equal(r.resolve('Nothing'), null);
+  // One note's id and another's alias: the id wins.
+  const both = new Resolver([
+    source('x/Other.md', '', { id: 'OTHER-0001', aliases: ['ISS-0007'] }),
+    source('y/ISS-0007.md', '', { id: 'ISS-0007' }),
+  ]);
+  assert.equal(both.resolve('ISS-0007'), 'y/ISS-0007.md', 'an alias outranked an id');
 });
 
 test('self-links and templates are no edge, a dangling link is kept, and a cross-repository one says so', () => {

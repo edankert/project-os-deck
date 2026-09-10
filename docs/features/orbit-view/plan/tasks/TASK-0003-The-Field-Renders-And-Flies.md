@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0003
 aliases: ["TASK-0003"]
 title: "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0002", "TASK-0005", "TASK-0031"]
 blocks: ["TASK-0004"]
 related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
-tests: []
+tests: ["[[TST-0047-The-Orbit-Layout-Is-Solved-Once-And-Kept]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # The field renders and flies
@@ -46,3 +46,9 @@ The treatment of the orbit — the sky, the instrument or the lit workshop of bl
 ## Provenance
 
 Moved from `project-os-cockpit` on 2026-09-06, where it was `TASK-0594` (last commit there `74172d8`). Links to notes that stayed in that repository use the `[[project-os-cockpit#ID]]` form ([[project-os-cockpit#FEAT-0093]]). Rewritten on 2026-09-07 to render inside the Glass field's renderer when [[PHASE-0002-Glass]] opened with the field built first.
+
+## Outcome
+
+**Done 2026-09-10, drawn in all three treatments; which one stays is [[TASK-0005-The-Treatment-Is-Chosen-Not-Assumed]].** The orbit is the surface `orbit`, offered by the surface toggle beside Glass, Spread and List, so it has an address. It is drawn by the field's own renderer: the 24 most linked-to notes are cards bound to their notes, and every other note is a dot on the same canvas the quiet band uses, coloured by status band and sized by inbound links. Links are filaments on the canvas, and only those with both ends in front of the person are drawn. Resting on a link quotes the sentence that made it; a link that holds a cluster on is drawn in its own colour. Left alone for four seconds the orbit drifts at 1.5 degrees a second, and under reduced motion it does not; nothing else changes with reduced motion.
+
+**The number.** Turning the orbit on the cockpit's corpus held the display's 16.7 ms median frame, 16.8 ms at the 95th percentile, with 3.2 ms of script work in the median frame, 575 dots and 4,978 links on screen at most. On Your Trainer, 16.7 ms, 2.8 ms of work, 953 dots. A Mac Studio (M2 Max), window in front. Written in [[FEAT-0001-The-Corpus-Has-An-Inside]].

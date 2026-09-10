@@ -504,8 +504,24 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
         stored.every((c) => spread.some((s) => s.id === c.noteId && s.left === `${c.x}px` && s.top === `${c.y}px`)),
         `Spread shows the same desk at the same positions (${spread.map((s) => s.id).join(', ')})`,
       );
-      await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
-      await delay(1500);
+      // A card dragged in Spread is where it was dragged in Glass: one record.
+      // The card the pointer will actually grab: in Spread two cards overlap,
+      // and the one on top at a point is the one a press takes.
+      const spreadCard = await js<{ x: number; y: number; id: string } | null>(`(() => { for (const c of document.querySelectorAll('#desk .card:not([hidden])')) { const r = c.getBoundingClientRect(); const x = r.left + 30, y = r.top + 14; const hit = document.elementFromPoint(x, y); const top = hit && hit.closest('.card'); if (top === c) return { x, y, id: c.dataset.noteId }; } return null; })()`);
+      if (spreadCard !== null) {
+        const was = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === spreadCard.id);
+        await pointer(win, drag(spreadCard, { x: spreadCard.x + 120, y: spreadCard.y + 60 }, 8));
+        await delay(700);
+        const now = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === spreadCard.id);
+        record(was !== undefined && now !== undefined && (now.x !== was.x || now.y !== was.y), `a card dragged in Spread moved in the store (${was?.x},${was?.y} to ${now?.x},${now?.y})`);
+        await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
+        await delay(1500);
+        const pane = await js<{ left: string; top: string } | null>(`(() => { const p = document.querySelector('.pane[data-note-id="${spreadCard.id}"]'); return p ? { left: p.style.left, top: p.style.top } : null; })()`);
+        record(now !== undefined && pane !== null && pane.left === `${now.x}px` && pane.top === `${now.y}px`, `and Glass holds it as a pane at that same place (${pane?.left}, ${pane?.top})`);
+      } else {
+        await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
+        await delay(1500);
+      }
       record((await js<number>(`document.querySelectorAll('.pane').length`)) === stored.length, 'and switching back shows them held in Glass');
     }
     reset();
@@ -527,6 +543,8 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     record(focusedRow !== null && deskIds().includes(focusedRow), `Tab, the arrow keys and Enter lift a note from the navigator (${focusedRow})`);
     // Reduced motion: arriving is a highlight, not a flight.
     await js(`window.__deckReducedMotion = true`);
+    ctx.focusApp(win);
+    for (let i = 0; i < 20 && !(await js<boolean>('document.hasFocus()')); i += 1) await delay(100);
     // Down until a note's row, past any heading the desk's groups added.
     for (let i = 0; i < 6; i += 1) {
       press(win, 'Down');
@@ -550,7 +568,15 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       console.log('DIAG trace2', JSON.stringify(await js(`(window.__deckTraceLog || []).slice(-30)`)));
       console.log('DIAG highlight', JSON.stringify(arrived), JSON.stringify(await js(`({ active: document.activeElement ? document.activeElement.className + ' ' + (document.activeElement.dataset.noteId || '') : null, rows: [...document.querySelectorAll('#nav-list .highlight')].length })`)));
     }
-    record(arrived.theta === null || Math.abs(arrived.yaw - arrived.theta) < 1e-6 || Math.abs(Math.abs(arrived.yaw - arrived.theta) - 2 * Math.PI) < 1e-6, 'and the field cut to it rather than flying');
+    // No flight: the yaw is already where it ends up, and stays there. (Not
+    // compared with the note's slot, which a held pane may re-deal just after
+    // the cut; what reduced motion forbids is the movement, not the deal.)
+    const still: number[] = [];
+    for (let i = 0; i < 6; i += 1) {
+      still.push(await js<number>(`__t.yaw()`));
+      await delay(50);
+    }
+    record(still.every((y) => Math.abs(y - (still[0] as number)) < 1e-9) && !(await js<boolean>(`document.getElementById('field').classList.contains('turning')`)), `and the field cut to it rather than flying (yaw held at ${(still[0] as number).toFixed(3)})`);
     await js(`window.__deckReducedMotion = false`);
     reset();
     await delay(800);
@@ -613,6 +639,21 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
 
     // ---- TASK-0033: an address that names Spread opens on the desk ----
     store.dispatch({ type: 'select-surface', surface: 'glass' });
+    // An address copied in Glass, with a note focused, restores the view, the
+    // surface and the note when it is opened again.
+    await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'issues').click()`);
+    await delay(1500);
+    await js(`document.querySelector('#nav-list .nav-row:not([hidden])').click()`);
+    await delay(1500);
+    const copied = await js<{ address: string; note: string | null }>(`(async () => { document.getElementById('copy-address').click(); await new Promise((r) => setTimeout(r, 400)); const said = document.getElementById('status').textContent; return { address: (said.match(/deck:\\/\\/\\S+/) || [''])[0], note: window.__deckLastState.noteId }; })()`);
+    record(/^deck:\/\/[a-z0-9]+\/issues\?/.test(copied.address) && copied.address.includes('note=') && !copied.address.includes('surface='), `Copy address in Glass writes the view and the note, and no surface (${copied.address})`);
+    store.dispatch({ type: 'select-view', viewId: 'features' });
+    store.dispatch({ type: 'focus-note', noteId: null });
+    store.dispatch({ type: 'select-surface', surface: 'spread' });
+    void win.loadURL(win.webContents.getURL().replace(/address=[^&]*/, `address=${encodeURIComponent(copied.address)}`));
+    await boot();
+    const restored = await js<{ surface: string; view: string | null; note: string | null }>(`({ surface: document.body.dataset.surface, view: window.__deckLastState.viewId, note: window.__deckLastState.noteId })`);
+    record(restored.surface === 'glass' && restored.view === 'issues' && restored.note === copied.note, `that address opened again restores Glass, the Issues view and ${copied.note} (${restored.surface}, ${restored.view}, ${restored.note})`);
     void win.loadURL(win.webContents.getURL().replace(/address=[^&]*/, `address=${encodeURIComponent(`deck://${prepared.id}/issues?surface=spread`)}`));
     await boot();
     const spreadOpened = await js<{ surface: string; desk: boolean; field: boolean }>(`({ surface: document.body.dataset.surface, desk: __t.shown('#desk-area'), field: __t.shown('#field-area') })`);
@@ -849,6 +890,9 @@ async function recordOrbit(
   record(shown.surface === 'orbit' && /the link graph: \d+ notes/.test(shown.label), `the orbit opens from the switcher, drawn by the same field ("${shown.label.slice(0, 80)}")`);
   record(shown.cards > 0 && shown.dots > 0, `the most linked-to notes are cards and the rest are dots on the canvas (${shown.cards} cards, ${shown.dots} dots, ${shown.edges} links drawn)`);
   record(shown.treatments, 'the three treatments are offered in the orbit');
+  const listed = await js<{ near: number; orphans: number }>(`(() => { const count = (re) => { const g = [...document.querySelectorAll('#nav-list .nav-group')].find((e) => re.test(e.textContent)); return g ? Number(g.querySelector('.mark').textContent) : 0; }; return { near: count(/Nearest in the link graph/), orphans: count(/With no link/) }; })()`);
+  record(listed.near === shown.cards, `every card the orbit draws is listed in the navigator for the keyboard (${listed.near} of ${shown.cards})`);
+  record(listed.orphans > 0, `and so is every note with no link (${listed.orphans})`);
   record((await js<string>(`location.search`)).length >= 0 && store.getState().surface === 'orbit', 'the orbit is a surface the store holds, so it has an address');
   // A rest on a link quotes the sentence that made it.
   const fieldBox = await js<{ left: number; top: number }>(`__t.rect('#field')`);

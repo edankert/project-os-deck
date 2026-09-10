@@ -55,7 +55,7 @@ counters:
   RISK: 4
   REL: 0
   TASK: 57
-  TST: 45
+  TST: 47
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -199,35 +199,28 @@ items:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
       title: "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
     TASK-0002:
       file: "docs/features/orbit-view/plan/tasks/TASK-0002-The-Layout-Is-Computed-Once-And-Kept.md"
       title: "The layout is computed once and kept — and a new note takes a place without moving its neighbours"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
     TASK-0003:
       file: "docs/features/orbit-view/plan/tasks/TASK-0003-The-Field-Renders-And-Flies.md"
       title: "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop"
-      status: backlog
-      owner: user:edwin
-      parent: "FEAT-0001"
-      phase: PHASE-0002
-    TASK-0004:
-      file: "docs/features/orbit-view/plan/tasks/TASK-0004-Landing-Opens-The-Note.md"
-      title: "Landing opens the note in the reader that already exists, so the field never becomes a second document pane"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
     TASK-0005:
       file: "docs/features/orbit-view/plan/tasks/TASK-0005-The-Treatment-Is-Chosen-Not-Assumed.md"
       title: "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: "FEAT-0001"
       phase: PHASE-0002
@@ -304,7 +297,7 @@ items:
     TASK-0034:
       file: "docs/features/glass-field/plan/tasks/TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace.md"
       title: "The field is measured on the largest workspace, and the numbers go in the note"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0009"
       phase: PHASE-0002
@@ -1480,8 +1473,8 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 57
-    tasks_done: 51
-    tests_total: 31
+    tasks_done: 56
+    tests_total: 33
     tests_passing: 2
     tests_failing: 0
     issues_open: 0

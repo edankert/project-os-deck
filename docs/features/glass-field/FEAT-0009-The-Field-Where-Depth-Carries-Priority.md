@@ -7,7 +7,7 @@ status: planned
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]"]
 goal: "Deck opens on Glass: the notes of the current view arranged in a field where distance says how much a note needs you, with what is owed in front, the view's own subject in the middle and the quiet work behind you. Switching view moves the same cards rather than loading a page, and the navigator beside the field stays the route for the keyboard and the screen reader."
 requirements: []
@@ -54,7 +54,25 @@ Glass is a surface over the views Deck already has. The view provider still deci
 - Plan: `docs/features/glass-field/plan/PLAN.md`
 - Design: [[DES-0002-The-Glass-Cockpit]], reviewed in [[REFERENCE-DES-0002-REVIEW]]
 
+## Measured
+
+**2026-09-10, on a Mac Studio (Apple M2 Max, 12 cores, 34 GB, macOS 26), with `electron . --measure`.** The window was brought in front and focused, the page confirmed it had focus, and the meter recorded a frame only while the document was visible and focused; every run held both, over about 300 frames of a five-second turn through the quiet band of the Issues view. The renderer is the review's hybrid: bound cards for the near bands, one canvas for the quiet band.
+
+| Workspace | Notes | Frame time, median / 95th percentile | Script work per frame, median / 95th | The same work at 4× CPU cost | Most tiles on the canvas | Elements in the document |
+|---|---|---|---|---|---|---|
+| Your Trainer | 2,734 | 16.7 / 17.3 ms | 2.2 / 2.9 ms | 6.1 / 7.5 ms | 286 | 2,081 |
+| project-os-cockpit | 1,570 | 16.7 / 17.2 ms | 1.8 / 2.5 ms | 4.1 / 5.3 ms | 231 | 1,254 |
+| This repository | 255 | 16.7 / 17.3 ms | 0.7 / 1.8 ms | 0.7 / 1.2 ms | 50 | 191 |
+
+**How to read it.** The display refreshes at 60 Hz, so no frame is shorter than 16.7 ms; the frame time says the field kept up on every workspace, and the 95th percentile says it rarely missed. The script work is the turn, the redraw of the cards and the canvas paint, measured around them; it leaves out the browser's own style, layout and compositing, so it is the part Deck controls rather than the whole cost. "4× CPU cost" is Chromium's CPU throttling, a stand-in for a slower machine and not a laptop.
+
+**The hybrid is kept.** Nothing here asks for the pool DES-0002 proposed.
+
+**The laptop question is still open.** [[ADR-0002-Glass-Is-The-Main-View]] keeps Glass as the default while it holds a usable frame rate on a laptop. This machine is a desktop; the same command on the laptop answers it, and Edwin judges the numbers.
+
 ## Where this stands
+
+**2026-09-10: built and measured.** The field, the bands, the geometry, the renderer, the view switch, the address and the measurement are in; every task is done. What is left is Edwin's: the walk [[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]], including Safari on the tablet, and the measurement on a laptop.
 
 **2026-09-07: planned, and first in line.** Edwin decided the order on 2026-09-07: *"I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity."* Until that day the phase plan held Glass behind two gates: Spread had to be judged in a real task first, and [[FEAT-0001-The-Corpus-Has-An-Inside]] had to measure the link graph before any arrangement was built. Both gates are gone. Spread is built and walked, its judgement moves to [[PHASE-0004-Parity]], and FEAT-0001's measurements become exit criteria of [[PHASE-0002-Glass]] rather than a precondition for starting it. [[ADR-0002-Glass-Is-The-Main-View]] records the decision.
 

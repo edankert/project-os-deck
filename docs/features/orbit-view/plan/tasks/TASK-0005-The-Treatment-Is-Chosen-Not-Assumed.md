@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0005
 aliases: ["TASK-0005"]
 title: "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["Edwin 2026-09-05: 'this feels a little minority report like or did you have something more like (wooden) play blocks in mind'"]
 parent: "FEAT-0001"
 effort: ""
@@ -46,3 +46,7 @@ They are not three palettes. They disagree about what the view is claiming:
 ## Provenance
 
 Moved from `project-os-cockpit` on 2026-09-06, where it was `TASK-0596` (last commit there `74172d8`). Links to notes that stayed in that repository use the `[[project-os-cockpit#ID]]` form ([[project-os-cockpit#FEAT-0093]]).
+
+## Where this stands
+
+**2026-09-10: all three are drawn, over the same real data, and switchable; the choice is Edwin's and has not been made.** In the orbit, the field's bar carries constellation, glass and blocks. Each draws the same notes. Glass holds `blocked` out as the only red and desaturates `archived`, which answers the collapsed hues before a choice rather than after it. Blocks draw no links at all, and a reach, resting on a block, draws that block's links, which is what replaces the edge callout there. `DECK_SMOKE_ONLY=glass electron . --smoke` saves a picture of each over this repository as `deck-orbit-constellation.png`, `deck-orbit-glass.png` and `deck-orbit-blocks.png` in the system's temporary directory, and the running application switches between them live. Constellation is the default until the choice is recorded in [[DES-0001-Nine-Ways-To-Read-The-Record]].

@@ -65,7 +65,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.reader.render` | adopted | 2026-09-06: Deck shows the HTML the sidecar rendered and parses no Markdown of its own |
 | `shell.reader.actuators` | not yet | same verbs, same guards. 2026-09-08: [[FEAT-0013-The-First-Write]] is the feature that adopts this row. It reads the legal verbs from `GET /api/notes/actions` and draws the rows returned, restating no verb table (the cockpit's REQ-0026), and wires one transition end to end. The row moves to `adopted` when that transition is walked in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] |
 | `shell.reader.design` | not yet | |
-| `shell.context.pane` | replaced by | the neighbourhood in Glass; a context panel in Spread |
+| `shell.context.pane` | replaced by | the neighbourhood in Glass: since 2026-09-10 a held note's linked notes and backlinks take the front band, read from `/api/cockpit/context` (TASK-0036), and reach shows them as wires before a lift (TASK-0056); a context panel in Spread is still not built |
 | `shell.pages.overview` | not yet | the digest, the watermark and the unpushed commits have no home in DES-0002 yet (review, Part 2) |
 | `shell.pages.history` | not yet | |
 | `shell.pages.checks` | not yet | |

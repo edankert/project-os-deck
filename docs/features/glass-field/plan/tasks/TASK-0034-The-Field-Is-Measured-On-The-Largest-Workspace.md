@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0034
 aliases: ["TASK-0034"]
 title: "The field is measured on the largest workspace, and the numbers go in the note"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 parent: "FEAT-0009"
 effort: ""
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0031", "TASK-0032"]
 blocks: []
 related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[PHASE-0002-Glass]]", "[[REFERENCE-DES-0002-REVIEW]]"]
-tests: []
+tests: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # The field is measured on the largest workspace
@@ -41,11 +41,21 @@ Three numbers are written down: the median frame time while turning through the 
 
 ## Steps
 
-- [ ] Add a frame-time meter that only records while the document is visible.
-- [ ] Turn through the quiet band on Your Trainer and on this repository; take the median and the two counts.
-- [ ] Write the numbers into the feature note with date, machine and renderer.
-- [ ] Record the pooled-versus-canvas decision, and the failure branch if it applies.
+- [x] Add a frame-time meter that only records while the document is visible.
+- [x] Turn through the quiet band on Your Trainer and on this repository; take the median and the two counts.
+- [x] Write the numbers into the feature note with date, machine and renderer.
+- [x] Record the pooled-versus-canvas decision, and the failure branch if it applies.
 
 ## Notes
 
 A budget is a number, and this note does not invent one. The phase's exit criterion is that the numbers are written down and Edwin judges them, which is how the treatment decision in [[TASK-0005-The-Treatment-Is-Chosen-Not-Assumed]] is handled too.
+
+## Outcome
+
+**Done 2026-09-10.** `electron . --measure` opens each workspace in a throwaway state directory, asks macOS for the keyboard, shows and focuses the window, confirms from inside the page that it has focus, and turns the field for five seconds through the quiet band. The meter in the page records a frame only while the document is visible and has focus, and each result says whether both held; every run below held both, over about 300 frames. The numbers are written into [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]], "Measured", with the date, the machine and the renderer.
+
+**What was learned about measuring.** The first run focused the window three seconds early and recorded no frames in two workspaces of three, because something else took focus back; focus is now taken immediately before each turn and a run that loses it is taken again. And a 60 Hz display holds every frame to 16.7 ms however little work it took, so the frame time alone shows the field keeps up but not by how much. The meter therefore also records the script's work per frame, and the turn is taken again under Chromium's CPU throttling at four times, as a stand-in for a slower machine.
+
+**The hybrid is kept.** Bound cards for the near bands and one canvas for the quiet band held the display's rate on Your Trainer, 2,734 notes, with 2.2 ms of script work in the median frame and 6.1 ms at four times the CPU cost. No pool was needed.
+
+**The laptop branch is not decided here.** The machine is a Mac Studio (M2 Max). [[ADR-0002-Glass-Is-The-Main-View]] asks whether Glass holds a usable frame rate on a laptop, and a desktop cannot answer that; the throttled run is an estimate, not a laptop. The same command on the laptop answers it, and [[PHASE-0002-Glass]] records that it is owed.

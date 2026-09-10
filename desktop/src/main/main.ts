@@ -7,6 +7,7 @@
 import type { ChildProcess } from 'node:child_process';
 import { recordGlass } from './smoke-glass.js';
 import { GraphService } from './graph-service.js';
+import { runMeasure } from './measure.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -42,7 +43,7 @@ import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
 // affect each other.
 app.setPath(
   'userData',
-  process.argv.includes('--smoke')
+  process.argv.includes('--smoke') || process.argv.includes('--measure')
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'deck-smoke-'))
     : path.join(app.getPath('appData'), 'project-os-deck'),
 );
@@ -540,6 +541,36 @@ app.whenReady().then(async () => {
       await runSmoke();
       return;
     }
+    if (process.argv.includes('--measure')) {
+      // TASK-0034's measurement, and FEAT-0001's three numbers. The roots are
+      // this repository, the cockpit's (the corpus FEAT-0001 was written
+      // against) and Your Trainer (the fleet's largest), unless named.
+      const named = argValue('--measure-workspaces');
+      const here = defaultWorkspacePath(__dirname);
+      const roots = named !== null ? named.split(',') : [here, path.join(here, '..', 'project-os-cockpit'), path.join(here, '..', 'your-trainer')];
+      const results = await runMeasure(
+        {
+          store,
+          addWorkspace: (root) => {
+            const added = workspaces.add(root);
+            return added.ok ? { ok: true, id: added.workspace.id, name: added.workspace.name } : { ok: false, reason: added.reason };
+          },
+          openWorkspace: async (id) => (await ipcInvoke('deck:workspaces:open', id)) as { ok: boolean; error?: string },
+          snapshot: (id) => indexes.get(id)?.snapshot() ?? null,
+          graphs,
+          origin: hostOrigin,
+          createWindow: (role, address, panel) => createWindow(role, address, panel),
+          focusApp,
+          untilBooted,
+        },
+        roots,
+      );
+      console.log(JSON.stringify({ measurements: results }, null, 2));
+      shutdown();
+      await waitForExit(stopping);
+      app.exit(0);
+      return;
+    }
     createWindow('focus', null, null);
     for (const address of panelBook.list()) {
       const parsed = tryParseAddress(address);
@@ -593,6 +624,7 @@ function shutdown(): void {
   }
   store.close();
   closeIndexes();
+  graphs.close();
   stopping = sidecars.stopAll();
   void host.close();
 }

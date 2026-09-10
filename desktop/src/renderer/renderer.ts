@@ -456,7 +456,10 @@ async function loadOrbit(): Promise<void> {
       }
       const data: OrbitData = { nodes: graph.nodes, edges: graph.edges, layout: orbit.layout, bridges: orbit.bridges };
       (globalThis as unknown as { __deckOrbit?: unknown }).__deckOrbit = { graphMs: graph.ms, layoutMs: orbit.ms, drift: orbit.drift, nodes: data.nodes.length, edges: data.edges.length };
-      if (surfaceNow() === 'orbit') glass.setArrangement('orbit', data);
+      if (surfaceNow() === 'orbit') {
+        glass.setArrangement('orbit', data);
+        drawNavigator();
+      }
       return;
     }
   } catch (err) {
@@ -709,7 +712,7 @@ function drawNavigator(): void {
   const shown = countDistinct(groups);
   const held = countDistinct(currentGroups);
   navigator.render({
-    groups: glass.isActive() ? [...deskGroups(), ...groups] : groups,
+    groups: glass.isActive() ? [...deskGroups(), ...glass.orbitGroups(), ...groups] : groups,
     faces: currentView?.face ?? PLAIN_FACES,
     folds: state.folds,
     onDesk: new Set(deskCardsOf(state, state.workspaceId).map((c) => c.noteId)),
