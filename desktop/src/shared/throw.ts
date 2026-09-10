@@ -50,6 +50,17 @@ export function edgeNear(
   return gap <= distance ? edge : null;
 }
 
+/**
+ * What a person calls a display: its own name, or its number when the system
+ * gives it none. macOS names some displays only " (2)", which read as "a new
+ * reader on  (2)" in the strip (ISS-0062).
+ */
+export function displayName(label: string | undefined, index: number, primary: boolean): string {
+  const trimmed = (label ?? '').trim();
+  if (/[A-Za-z]/.test(trimmed)) return trimmed;
+  return primary ? 'the main display' : `display ${index + 1}`;
+}
+
 /** Pixels per millisecond over the last `windowMs` of samples. */
 export function speedOf(samples: readonly PointerSample[], windowMs = 90): number {
   if (samples.length < 2) return 0;
@@ -155,7 +166,9 @@ export function targetsToward(
       displayId: w.displayId,
       label: `${WORDS[w.carries]} on ${w.displayLabel}`,
     }));
-  const occupied = new Set(windows.map((w) => w.displayId));
+  // Taken only by a window a note can land in: a display holding nothing but
+  // a Needs-you strip still gets a new reader (ISS-0062).
+  const occupied = new Set(windows.filter((w) => w.carries !== 'needs-you').map((w) => w.displayId));
   const selfDisplay = displays.find(
     (d) => a.x >= d.workArea.x && a.x < d.workArea.x + d.workArea.width && a.y >= d.workArea.y && a.y < d.workArea.y + d.workArea.height,
   );

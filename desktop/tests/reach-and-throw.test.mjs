@@ -8,7 +8,7 @@ import { load } from './helpers.mjs';
 
 const { ContextCache, joinedTo, sharedAmong, REACH_REST_MS, REACH_HOLD_MS } = load('shared/neighbourhood.js');
 const { contextFromPayload, neighboursOf, cardFromContext } = load('shared/sidecar-client.js');
-const { recogniseThrow, edgeNear, speedOf, targetsToward, landingBounds, THROW_EDGE_PX, THROW_MIN_SPEED } = load('shared/throw.js');
+const { recogniseThrow, edgeNear, speedOf, targetsToward, landingBounds, displayName, THROW_EDGE_PX, THROW_MIN_SPEED } = load('shared/throw.js');
 
 function context(id, linked, backlinks = []) {
   const item = (n) => ({ id: n, title: n, status: 'open', type: 'issue', url: `/docs/issues/${n}.md` });
@@ -137,4 +137,12 @@ test('a new reader lands at the near edge of the display it was thrown to', () =
   assert.equal(right.x, area.x, 'thrown right, it appears on the display’s left edge');
   const left = landingBounds('left', DISPLAYS[2].workArea);
   assert.equal(left.x + left.width, DISPLAYS[2].workArea.x + DISPLAYS[2].workArea.width);
+});
+
+test('a display holding only a Needs-you strip still offers a new reader, and a nameless display is numbered (ISS-0062)', () => {
+  const strip = [{ id: 9, carries: 'needs-you', bounds: { x: 1600, y: 100, width: 400, height: 300 }, displayId: 2, displayLabel: 'Display 2' }];
+  assert.deepEqual(targetsToward('right', SELF, strip, DISPLAYS, false).map((t) => t.label), ['a new reader on Display 2']);
+  assert.equal(displayName(' (2)', 1, false), 'display 2');
+  assert.equal(displayName('', 0, true), 'the main display');
+  assert.equal(displayName('LG HDR WQHD', 0, true), 'LG HDR WQHD');
 });

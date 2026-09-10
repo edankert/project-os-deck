@@ -72,3 +72,5 @@ DES-0002's many-monitors section said only screen 1 has a front plane and the ot
 **The strip stays while the pointer is over it.** The first build hid it as soon as the pointer left the 44-pixel edge zone, and every name is wider than that, so a person reaching for one lost them all.
 
 **Evidence.** [[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]] for the recogniser and the targets; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: a throw into a reader window, onto a desk panel, onto a display with no Deck window (on a machine with more than one display), and send to by keyboard alone.
+
+**Amended 2026-09-10 (ISS-0062).** A display holding only a Needs-you strip now offers a new reader, an unnamed display is called "display N", and the smoke run now throws to the tablet, checks the flight's direction and the reduced-motion cut.

@@ -157,3 +157,42 @@ test('a child the navigator folds away is dealt only when a person named it', ()
   assert.deepEqual(fieldEntries(groups).map((e) => e.card.noteId), ['FEAT-1']);
   assert.deepEqual(fieldEntries(groups, hand({ pulled: new Set(['TASK-1']) })).map((e) => e.card.noteId), ['FEAT-1', 'TASK-1']);
 });
+
+test('a pull into a full front band takes a spare slot and is counted as placed by hand (ISS-0059)', () => {
+  const { groups, view } = real('your-trainer-issues.json', 'issues');
+  const plain = dealField(view.band, fieldEntries(groups));
+  const quiet = plain.mid[0] ?? plain.deep[0];
+  assert.notEqual(quiet, undefined);
+  const pulled = dealField(view.band, fieldEntries(groups, hand({ pulled: new Set([quiet.card.noteId]) })));
+  assert.ok(pulled.front.some((e) => e.card.noteId === quiet.card.noteId), 'the pull vanished into the overflow count');
+  assert.equal(pulled.handPlaced, 1);
+  assert.equal(pulled.frontOverflow, plain.frontOverflow, 'the pull pushed an owed note out of view');
+  // Past the spares, a pull is counted too, and the count says so.
+  const many = new Set(plain.mid.slice(0, 12).map((e) => e.card.noteId));
+  const crowded = dealField(view.band, fieldEntries(groups, hand({ pulled: many })));
+  assert.equal(crowded.handPlaced, 8);
+  assert.equal(crowded.frontOverflow, plain.frontOverflow + 4);
+});
+
+test('a pulled owed note is not counted as placed by hand, and a pushed finished note is not counted as pushed', () => {
+  const groups = [
+    { key: 'needs', label: 'Needs you', needsHuman: true, suppressed: false, cards: [card('ISS-1', { owed: true })] },
+    { key: 'done', label: 'Done', needsHuman: false, suppressed: true, cards: [card('ISS-2', { status: 'fixed' })] },
+  ];
+  const view = VIEWS.find((v) => v.id === 'issues');
+  const deal = dealField(view.band, fieldEntries(groups, hand({ pulled: new Set(['ISS-1']), pushed: new Set(['ISS-2']) })));
+  assert.equal(deal.handPlaced, 0, 'the record put ISS-1 in front, not the hand');
+  assert.equal(deal.pushedBehind, 0, 'ISS-2 was behind already; the push put nothing there');
+});
+
+test('with notes held, what they share is dealt before the other neighbours, and a neighbour cannot be pushed', () => {
+  const cards = Array.from({ length: 20 }, (_, i) => card(`N-${i}`));
+  const groups = [{ key: 'a', label: 'A', needsHuman: false, suppressed: false, cards }];
+  const joined = new Set(cards.map((c) => c.noteId));
+  const view = VIEWS.find((v) => v.id === 'features');
+  const shared = new Set(['N-15', 'N-16', 'N-17', 'N-18', 'N-19']);
+  const deal = dealField(view.band, fieldEntries(groups, hand({ held: new Set(['H']), joined })), { first: shared });
+  assert.deepEqual(deal.front.slice(0, 5).map((e) => e.card.noteId), [...shared], 'the shared notes were not dealt first');
+  const entry = fieldEntries(groups, hand({ joined }))[0];
+  assert.match(pushRefusal(entry), /stays in front while you hold a note it is joined to/);
+});

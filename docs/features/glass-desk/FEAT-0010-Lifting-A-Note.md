@@ -16,6 +16,9 @@ release: ""
 acceptance_exception: ""
 design: "[[DES-0002-The-Glass-Cockpit]]"
 related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]"]
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-10
+review_verdict: changes-requested
 ---
 
 # Lifting a note
@@ -66,3 +69,13 @@ Three words are used throughout. The **field** is the cylinder of cards that [[F
 **2026-09-10: a held note becomes a pane, in the feature beside this one.** [[REFERENCE-GLASS-PHASE-REVIEW]] found that this feature lifts a note and puts it back and never says the held note can be moved, and that the plan's open question about the reader's width had been left to the design. [[TASK-0054-A-Held-Note-Is-A-Pane]] under [[FEAT-0014-The-Hands]] answers both: a held note is dragged, resized and stacked with DES-0002's header rule, has a stated minimum width and a verb that widens it to a reading column, and keeps its place and size in the desk record Spread already saves. Reaching for a card before lifting it, which shows the neighbourhood as wires without a lift, is [[TASK-0056-Reach]] and reuses [[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]'s context read. This feature's three tasks and their acceptance are unchanged.
 
 **2026-09-07: planned.** Written the day Edwin decided that Glass is Deck's main view and is built first ([[ADR-0002-Glass-Is-The-Main-View]]). Nothing here can start before [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] has a field to lift from, which is its TASK-0031, and a slot geometry that treats a held note as an obstacle, which is its TASK-0030.
+
+## Independent review, 2026-09-10
+
+**Verdict: changes requested.** Reviewed by model:claude-opus-5 in a fresh context that started from the notes and the diff (3045a42..c283128). It ran as a subagent launched from the authoring session (the commits' `Claude-Session` trailer names the session this reviewer runs under), so what is independent is the context, not the session tree or the model family. What the reviewer ran: `npm test`, 391 of 391; the six Glass suites, 50 of 50; `DECK_SMOKE_ONLY=glass electron . --smoke`, 113 checks and none failed, on a Mac with four displays; `bash tools/scripts/run-smoke.sh lan`, exit 0; `git status` unchanged in this repository and the cockpit's after every run. Mutants were run against `desktop/dist`, which was rebuilt afterwards. R marks a finding reproduced by a command; N marks one not reproduced.
+
+1. R — "No field card is dealt underneath a held note" (TASK-0035) fails whenever the pane is clamped into the field. `paneObstacles()` uses the stored `x` and `paintPane()` draws the clamped one; in a real window three field cards were drawn under a pane. The detail is in FEAT-0009's review, finding 1.
+2. R — What two held notes share is mostly not in the field. In the smoke run the bar read "2 held · 8 joined to more than one of them" and only 2 cards carried the mark. The other 6 are joined notes the 12-card front band had no room for, because `frontRank` gives every joined note the same rank and gives shared notes no priority. TASK-0037's acceptance, "every field card ... carries the mark", is met literally, but the question the feature answers is visible for 2 of 8.
+3. R — The smoke check for "its neighbours take the front band" passes with a single neighbour. Its predicate is `front.length === Math.min(ids.length, 12) || front.length >= 1`. With the built field keeping only the first joined note, it passed as "2 of 11". TASK-0036's evidence, "11 of 11", is what one run printed, not what the check requires.
+4. R — TASK-0036's line "every note in its linked and backlink groups is in the front band at full size" cannot hold for a note with more than twelve neighbours, because the rest are counted as overflow. The line has not been amended to say so.
+5. N — Under reduced motion the lift's turn is a cut with no highlight: `faceFront()` calls `flyTo(0)` without one, and TASK-0036 asks for "a highlight on the neighbours". The `joined` card styling may be meant as that highlight. The smoke run does not check that a lift turns the field to face the neighbourhood.

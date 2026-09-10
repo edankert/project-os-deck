@@ -42,7 +42,7 @@ The renderer is served as well as hosted ([[FEAT-0008-One-Renderer-Two-Hosts]]),
 - `will-change` is set on near-band cards only, asserted the same way.
 - Dragging the field and pressing the arrow keys turn it; the compass shows the count of notes behind the person at every yaw.
 - A pointer sequence (down, move, up) at the centre of a front card, driven through the smoke run, reaches that card and not a container.
-- The field draws and turns in Safari on a tablet served by Deck's own host, and a far card opens by fly-then-open.
+- The field draws and turns in Safari on a tablet served by Deck's own host, and a far card opens by fly-then-open. **Amended 2026-09-10:** this line is a person's check, carried by the walk [[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]] and PHASE-0002's tablet criterion; the task was closed on the rest, and the review of 2026-09-10 rightly found it had been closed without saying so. The fly-then-open on touch is built (`tap` in `glass.ts`); what the walk sees is Safari.
 
 ## Steps
 

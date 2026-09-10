@@ -16,6 +16,9 @@ release: ""
 acceptance_exception: ""
 design: "[[DES-0002-The-Glass-Cockpit]]"
 related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[FEAT-0007-Views-Come-From-A-Provider]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]]"]
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-10
+review_verdict: changes-requested
 ---
 
 # The field where depth carries priority
@@ -56,13 +59,13 @@ Glass is a surface over the views Deck already has. The view provider still deci
 
 ## Measured
 
-**2026-09-10, on a Mac Studio (Apple M2 Max, 12 cores, 34 GB, macOS 26), with `electron . --measure`.** The window was brought in front and focused, the page confirmed it had focus, and the meter recorded a frame only while the document was visible and focused; every run held both, over about 300 frames of a five-second turn through the quiet band of the Issues view. The renderer is the review's hybrid: bound cards for the near bands, one canvas for the quiet band.
+**2026-09-10, on a Mac Studio (Apple M2 Max, 12 cores, 34 GB, macOS 26), with `electron . --measure`.** The window was brought in front and focused, the page confirmed it had focus, and the meter recorded a frame only while the document was visible and focused; every run held both, over about 300 frames of a five-second turn through the quiet band of the Issues view. **Two notes were held as panes and a reach was drawn from a card while it turned**, which is the field a person will use; the first measurement had neither, which the review found (ISS-0063), and these numbers replace it. The renderer is the review's hybrid: bound cards for the near bands, one canvas for the quiet band.
 
 | Workspace | Notes | Frame time, median / 95th percentile | Script work per frame, median / 95th | The same work at 4× CPU cost | Most tiles on the canvas | Elements in the document |
 |---|---|---|---|---|---|---|
-| Your Trainer | 2,734 | 16.7 / 17.3 ms | 2.2 / 2.9 ms | 6.1 / 7.5 ms | 286 | 2,081 |
-| project-os-cockpit | 1,570 | 16.7 / 17.2 ms | 1.8 / 2.5 ms | 4.1 / 5.3 ms | 231 | 1,254 |
-| This repository | 255 | 16.7 / 17.3 ms | 0.7 / 1.8 ms | 0.7 / 1.2 ms | 50 | 191 |
+| Your Trainer | 2,734 | 16.7 / 17.0 ms | 2.2 / 3.2 ms | 6.6 / 8.2 ms | 286 | 2,303 |
+| project-os-cockpit | 1,570 | 16.7 / 17.4 ms | 1.8 / 2.5 ms | 4.7 / 5.9 ms | 229 | 1,390 |
+| This repository | 261 | 16.7 / 17.0 ms | 1.1 / 1.8 ms | 1.8 / 2.9 ms | 35 | 729 |
 
 **How to read it.** The display refreshes at 60 Hz, so no frame is shorter than 16.7 ms; the frame time says the field kept up on every workspace, and the 95th percentile says it rarely missed. The script work is the turn, the redraw of the cards and the canvas paint, measured around them; it leaves out the browser's own style, layout and compositing, so it is the part Deck controls rather than the whole cost. "4× CPU cost" is Chromium's CPU throttling, a stand-in for a slower machine and not a laptop.
 
@@ -87,3 +90,18 @@ Glass is a surface over the views Deck already has. The view provider still deci
 **2026-09-10: reviewed before the build, and what a hand does with the field is a feature beside this one.** Edwin's instruction that Glass is a real Minority Report style surface and not a skin over Spread led to [[REFERENCE-GLASS-PHASE-REVIEW]], which found that this feature and [[FEAT-0010-Lifting-A-Note]] let a person look and lift and nothing else. This feature is unchanged: the field, the bands, the renderer, the view switch, the address and the measurement stand as written. What changes around it is [[FEAT-0014-The-Hands]]: the band function reads two more inputs, `pulled` and `pushed`, which [[TASK-0029-The-Band-Function]] records as an amendment; the compass counts pushed notes beside the count behind; and [[TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace]] measures a field with panes and wires on it, because that is the field a person will use.
 
 **What is deliberately taken from Spread rather than rebuilt.** The groups ([[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]), the card faces ([[TASK-0028-A-Card-Face-Per-Type]]), the search and filters ([[TASK-0027-Search-And-Filter-In-The-Renderer]]) and the desk ([[FEAT-0005-Spread-Cards-On-A-Desk]]) all carry over. Glass is a different arrangement of the same model, which is why it can be built now.
+
+## Independent review, 2026-09-10
+
+**Verdict: changes requested.** Reviewed by model:claude-opus-5 in a fresh context that started from the notes and the diff (3045a42..c283128). It ran as a subagent launched from the authoring session (the commits' `Claude-Session` trailer names the session this reviewer runs under), so what is independent is the context, not the session tree or the model family. What the reviewer ran: `npm test`, 391 of 391; the six Glass suites, 50 of 50; `DECK_SMOKE_ONLY=glass electron . --smoke`, 113 checks and none failed, on a Mac with four displays; `bash tools/scripts/run-smoke.sh lan`, exit 0; `git status` unchanged in this repository and the cockpit's after every run. Mutants were run against `desktop/dist`, which was rebuilt afterwards. R marks a finding reproduced by a command; N marks one not reproduced.
+
+1. R — A card is dealt under a pane whenever the pane is drawn somewhere other than its stored `x`. `paneObstacles()` in `glass.ts` builds the sectors from `card.x`, but `paintPane()` clamps the pane into the field. In a real window, a pane stored at x=3000 was drawn at 1000–1320 px and FEAT-0006, FEAT-0007 and FEAT-0008 were visible cards under it (a probe added to the built smoke run). This happens whenever the reading column narrows the field or a card placed in Spread sits past the field's width. The smoke run's own overlap check runs only before the reading column opens. It breaks TASK-0035's and TASK-0054's acceptance too.
+2. R — The obstacle's half-card pad in `obstaclesFor` uses the scale straight ahead, so an off-axis card, which is drawn larger, can reach under an unclamped pane. Over 20,000 random pane placements against the built `slots.js`, 8% left a visible near card up to 22.5 px under the pane. TST-0041 tests one pane position, the left third of the screen, and passes.
+3. R — Deck does not always open in Glass when the address names no surface. The store keeps `surface` across a restart and across opening another workspace (`normaliseState` keeps `spread`, and the launch window is created with no address), so a person who last chose Spread reopens in Spread. The first acceptance line says Glass "unless the address asks for Spread"; either the line or the behaviour should change.
+4. N — The quiet band's own count is not on screen at all times, as the third acceptance line asks. The compass shows how many dealt notes are out of sight, which, facing the quiet band, is the near bands' count (read in `drawInstrument`).
+5. R — The measurement was not taken on "a field with panes and wires", as this note's 2026-09-10 paragraph and PHASE-0002's order paragraph say. `measure.ts` dispatches `clear-desk` and never reaches for a card before it turns the field.
+6. R — The check that a change arriving mid-view is announced does not guard the real path. The smoke run injects a pending change through `window.__deckHoldChange`. With `void prepareChange()` in the built renderer replaced by a no-op, the chip check still passed. Nothing exercises the real sequence: the index changes, the view is read again in the background, the notes are counted.
+7. R — Two rules in `dealField` are unguarded. Counting an owed pulled note as placed by hand, and counting a suppressed pushed note as pushed, each survived TST-0040. Twenty other mutants across TST-0039, 0040, 0041, 0043 and 0044 were killed, including every mutant those notes list that the reviewer re-ran.
+8. R — TASK-0033's refusal of an unknown surface in an address is guarded by `panel-registry.test.mjs`, not by the TST-0043 and TST-0045 it cites as evidence. The mutant survived the `hands` and `address` suites and was killed by `panel-registry`.
+9. R — TASK-0031 is `done` with its Safari acceptance line unmet and not amended (the step is marked `[~]`). The note says so, but QUALITY.md asks for a criterion the work departed from to be amended or narrowed, not left standing.
+10. N — Under reduced motion, TASK-0032 asks that a view switch highlight the newly focused card and scroll it into view in the navigator. Nothing checks that; the smoke run checks only an arrival from the navigator.

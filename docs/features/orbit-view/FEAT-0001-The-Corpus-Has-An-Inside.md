@@ -72,12 +72,12 @@ The first is a query a table could answer, and [[DES-0001]] says so plainly in O
 
 ## Measured
 
-**2026-09-10, on a Mac Studio (Apple M2 Max), with `electron . --measure`, over Deck's host on loopback.** The three numbers this feature promised, on the corpus it was written against (the cockpit's) and on two others.
+**2026-09-10, on a Mac Studio (Apple M2 Max), with `electron . --measure`, over Deck's host on loopback; the last run, with two panes held.** The layout solve runs on a worker thread. The three numbers this feature promised, on the corpus it was written against (the cockpit's) and on two others.
 
 | Workspace | Notes | Links (resolved) | The one request: size, cold, warm | Layout solve | Drift when a note is added | Orbit frame time, median / 95th; script work |
 |---|---|---|---|---|---|---|
-| project-os-cockpit | 1,549 | 15,358 (14,839) | 2.39 MB, 86 ms, 15 ms | 1.07 s | 0 | 16.7 / 16.8 ms; 3.2 ms |
-| Your Trainer | 2,714 | 12,119 (12,039) | 2.28 MB, 107 ms, 16 ms | 2.6 s | 0 | 16.7 / 17.4 ms; 2.8 ms |
+| project-os-cockpit | 1,549 | 15,358 (14,839) | 2.39 MB, 80 ms, 15 ms | 1.11 s | 0 | 16.7 / 17.6 ms; 3.4 ms |
+| Your Trainer | 2,714 | 12,119 (12,039) | 2.28 MB, 117 ms, 16 ms | 2.5 s | 0 | 16.7 / 17.6 ms; 3.4 ms |
 | This repository | 236 | 3,626 (3,398) | 0.59 MB, 39 ms, 6 ms | 133 ms | 0 | 16.7 / 17.1 ms; 1.2 ms |
 
 **The edge list comes from Deck's own index, not a cockpit endpoint.** See [[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]: the plan predated [[FEAT-0011-Decks-Own-Index]], and the graph is a read over it. The smoke run checks twelve notes' links against the sidecar's own context and every node's band against the sidecar's status.

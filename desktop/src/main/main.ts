@@ -16,7 +16,7 @@ import { SHELL_CAPABILITIES, SERVED_CAPABILITIES } from '../shared/capability.js
 import { type DeckAction, isRendererAction } from '../shared/store-state.js';
 import type { WindowRole } from '../shared/types.js';
 import { addressFor, formatAddress, tryParseAddress } from '../shared/address.js';
-import { type Edge, landingBounds } from '../shared/throw.js';
+import { type Edge, displayName, landingBounds } from '../shared/throw.js';
 import { deskCardsOf } from '../shared/store-state.js';
 import { PANE_HEADER_HEIGHT } from '../shared/panes.js';
 import { DeckHost } from './host.js';
@@ -366,8 +366,7 @@ function registerIpc(): void {
       const index = all.findIndex((d) => d.id === id);
       const display = all[index];
       if (display === undefined) return 'a display';
-      if (typeof display.label === 'string' && display.label !== '') return display.label;
-      return id === primaryId ? 'the main display' : `display ${index + 1}`;
+      return displayName(display.label, index, id === primaryId);
     };
     const windows = [];
     for (const [id, info] of windowInfo) {
@@ -728,6 +727,11 @@ async function runSmoke(): Promise<void> {
         tempDir: app.getPath('temp'),
         untilBooted,
         focusApp,
+        openServedPage: () => {
+          const page = new BrowserWindow({ width: 900, height: 700, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
+          void page.loadURL(`${hostOrigin}/`);
+          return page;
+        },
         windows: () =>
           [...windowInfo.entries()].flatMap(([id, info]) => {
             const w = BrowserWindow.fromId(id);
@@ -1117,6 +1121,11 @@ async function runSmoke(): Promise<void> {
         tempDir: app.getPath('temp'),
         untilBooted,
         focusApp,
+        openServedPage: () => {
+          const page = new BrowserWindow({ width: 900, height: 700, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
+          void page.loadURL(`${hostOrigin}/`);
+          return page;
+        },
         windows: () =>
           [...windowInfo.entries()].flatMap(([id, info]) => {
             const w = BrowserWindow.fromId(id);

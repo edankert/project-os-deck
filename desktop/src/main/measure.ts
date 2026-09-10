@@ -137,6 +137,12 @@ export async function runMeasure(ctx: MeasureContext, roots: string[]): Promise<
       ctx.focusApp(win);
       await delay(3000);
       const js = <T>(code: string): Promise<T> => win.webContents.executeJavaScript(code) as Promise<T>;
+      // The field a person will use: two notes held as panes, and a reach
+      // drawn from a card, with its wires on the canvas (TASK-0034).
+      const front = await js<string[]>(`[...document.querySelectorAll('.field-card:not(.leaving)')].filter((e) => e.dataset.band === 'front').map((e) => e.dataset.noteId).slice(0, 2)`);
+      for (const [i, noteId] of front.entries()) ctx.store.dispatch({ type: 'put-on-desk', noteId, x: 16 + i * 28, y: 16 + i * 34 });
+      await delay(1500);
+      const reached = await js<string | null>(`(async () => { const c = [...document.querySelectorAll('.field-card:not(.leaving):not(.ghost)')].find((e) => e.dataset.band === 'mid'); if (!c) return null; window.__deckGlass.reachFor(c.dataset.noteId); await new Promise((r) => setTimeout(r, 800)); const r = window.__deckGlass.reaching(); return r ? r.noteId + ' ' + r.neighbours.length : null; })()`);
       await js(`window.__deckGlass.model.face(Math.PI * 0.75); window.__deckGlass.render(false); true`);
       await delay(400);
       const turn = await measuredTurn(ctx, win, 'Math.PI / 5');
@@ -154,7 +160,7 @@ export async function runMeasure(ctx: MeasureContext, roots: string[]): Promise<
       } catch (err) {
         throttled = { unavailable: err instanceof Error ? err.message : String(err) };
       }
-      glass = { turn, throttled4x: throttled, counts, view: 'issues', dealt: await js<number>(`window.__deckGlass.model.current.slots.size`) };
+      glass = { turn, throttled4x: throttled, counts, view: 'issues', panes: await js<number>(`document.querySelectorAll('.pane').length`), reaching: reached, dealt: await js<number>(`window.__deckGlass.model.current.slots.size`) };
       await js(`document.querySelector('#surface-toggle button[data-surface="orbit"]').click()`);
       for (let i = 0; i < 120; i += 1) {
         if (await js<boolean>(`/the link graph: \\d+ notes/.test(document.getElementById('front-label').textContent)`)) break;

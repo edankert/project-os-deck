@@ -17,8 +17,8 @@ covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 issues: []
 tasks: ["[[TASK-0030-The-Slot-Geometry]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]"]
 artifacts: []
-adequacy: "Measured 2026-09-10 against the built modules, five mutations and five killed. A quiet band of twenty rows fails 1. Dealing the front band without excluding obstacles fails 2. A turn that assigns fails 1. Anchoring the card at its top fails 1. A heading that does not start a new column fails 1."
-mutation_score: "5 mutations, 5 killed (2026-09-10)"
+adequacy: "Measured 2026-09-10 against the built modules, five mutations and five killed. A quiet band of twenty rows fails 1. Dealing the front band without excluding obstacles fails 2. A turn that assigns fails 1. Anchoring the card at its top fails 1. A heading that does not start a new column fails 1. After ISS-0058, the obstacle margin taken straight ahead fails the random-placement test."
+mutation_score: "6 mutations, 6 killed (2026-09-10)"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
@@ -47,7 +47,7 @@ related: ["[[REFERENCE-DES-0002-REVIEW]]"]
 
 ## Evidence
 
-2026-09-10: 9 of 9 pass.
+2026-09-10: 10 of 10 pass; the random-placement test was added for ISS-0058.
 
 ## Adequacy (who verifies this test?)
 

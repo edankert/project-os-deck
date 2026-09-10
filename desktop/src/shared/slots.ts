@@ -311,19 +311,43 @@ export function thetaAtScreenX(x: number, depth: number, yaw: number, viewport: 
 }
 
 /**
+ * The world angle where `edgeAt(theta)` crosses `x`, for a function that
+ * rises across the visible arc. Found by halving.
+ */
+function crossing(x: number, yaw: number, edgeAt: (theta: number) => number): number {
+  let lo = -VISIBLE_HALF_ANGLE - 10 * DEG;
+  let hi = VISIBLE_HALF_ANGLE + 10 * DEG;
+  for (let i = 0; i < 40; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (edgeAt(yaw + mid) < x) lo = mid;
+    else hi = mid;
+  }
+  return norm(yaw + (lo + hi) / 2);
+}
+
+/**
  * The obstacles a rectangle on the front plane makes, at this yaw.
  *
- * One sector per band depth, widened by half a card so a card is not dealt
- * with its edge under the pane. Recomputed when the pane moves and when a
- * turn ends, which is when assignment runs again.
+ * One sector per band depth, covering every angle at which a card's BOX
+ * would touch the rectangle: from where a card's right edge reaches the
+ * rectangle's left, to where its left edge reaches the rectangle's right,
+ * each edge at the scale that card would be drawn at. The first version
+ * widened the sector by half a card straight ahead, and a card off to the
+ * side is drawn larger, so 8% of random placements left one up to 22 px
+ * under the pane (ISS-0058).
  */
 export function obstaclesFor(rect: { left: number; right: number }, yaw: number, viewport: Viewport): Obstacle[] {
   const out: Obstacle[] = [];
   for (const depth of [FRONT.depth, MID.depth]) {
-    const scale = PERSPECTIVE / (PERSPECTIVE + depth);
-    const pad = (CARD_BOX.width / 2) * scale;
-    const from = thetaAtScreenX(rect.left - pad, depth, yaw, viewport);
-    const to = thetaAtScreenX(rect.right + pad, depth, yaw, viewport);
+    const at = (theta: number): Projection => project({ theta, depth, y: 0 }, yaw, viewport);
+    const from = crossing(rect.left, yaw, (theta) => {
+      const p = at(theta);
+      return p.x + (CARD_BOX.width / 2) * p.scale;
+    });
+    const to = crossing(rect.right, yaw, (theta) => {
+      const p = at(theta);
+      return p.x - (CARD_BOX.width / 2) * p.scale;
+    });
     out.push({ from, to, nearest: depth, farthest: depth });
   }
   return out;

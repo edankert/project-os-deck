@@ -17,8 +17,8 @@ covers: ["[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]"]
 issues: []
 tasks: ["[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]"]
 artifacts: []
-adequacy: "Measured 2026-09-10 against the built modules, five mutations and five killed. A cache that never caches fails 1. A shared set that counts notes joined to one fails 1. A throw that ignores speed fails 1. A Needs-you strip offered as a target fails 1. A tablet never offered fails 1."
-mutation_score: "5 mutations, 5 killed (2026-09-10)"
+adequacy: "Measured 2026-09-10 against the built modules, five mutations and five killed. A cache that never caches fails 1. A shared set that counts notes joined to one fails 1. A throw that ignores speed fails 1. A Needs-you strip offered as a target fails 1. A tablet never offered fails 1. After ISS-0062, a strip-only display counted as taken, and a nameless display left unnamed, each fail 1."
+mutation_score: "7 mutations, 7 killed (2026-09-10)"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
@@ -45,7 +45,7 @@ Lifting a note and reaching for one read the same thing, what the note links to 
 
 ## Evidence
 
-2026-09-10: 8 of 8 pass.
+2026-09-10: 9 of 9 pass; the strip-only display and the display names were added for ISS-0062.
 
 ## Adequacy (who verifies this test?)
 

@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 14
-  ISS: 57
+  ISS: 63
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -61,10 +61,10 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0001"
-  task: "TASK-0001"
-  issue: ""
-  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Thirteen tasks done and committed (2bba469); the orbit arrangement (FEAT-0001) is being built on Deck's own index, then TASK-0034's measurement closes the phase."
+  feature: "FEAT-0014"
+  task: ""
+  issue: "ISS-0058"
+  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings are ISS-0058 to ISS-0063, being fixed now. TASK-0005 (the orbit's treatment) is Edwin's."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.

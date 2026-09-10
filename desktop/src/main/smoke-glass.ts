@@ -36,6 +36,8 @@ export interface GlassSmokeContext {
    * element's focus event and a keyboard check measures nothing.
    */
   focusApp(win: BrowserWindow): void;
+  /** A page served with no bridge, exactly as a tablet loads it. */
+  openServedPage(): BrowserWindow;
   /** Every Deck window, with what it carries and which display it is on. */
   windows(): Array<{ id: number; address: string | null; displayId: number; win: BrowserWindow }>;
 }
@@ -228,8 +230,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       return { ids, front: ids.filter((id) => { const w = __t.where(id); return w && w.band === 'front'; }) };
     })()`);
     record(neighbours.ids.length > 0, `${target.id} has a neighbourhood to bring forward (${neighbours.ids.length})`);
+    // Every neighbour the front band can hold: all of them up to its twelve
+    // slots, and no fewer (ISS-0063: the first version also passed on one).
     record(
-      neighbours.front.length === Math.min(neighbours.ids.length, 12) || neighbours.front.length >= 1,
+      neighbours.front.length === Math.min(neighbours.ids.length, 12),
       `its neighbours take the front band (${neighbours.front.length} of ${neighbours.ids.length})`,
     );
 
@@ -298,6 +302,24 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     await delay(600);
     record(deskIds().length === 0, 'esc sweeps the desk');
 
+    // ---- ISS-0061: under reduced motion a lift highlights its neighbours ----
+    await js(`window.__deckReducedMotion = true`);
+    const rmFront = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`))[0];
+    if (rmFront !== undefined) {
+      const yawBefore = await js<number>(`__t.yaw()`);
+      await pointer(win, [...click(rmFront), { type: 'move', ...off }]);
+      let lit = 0;
+      for (let i = 0; i < 20 && lit === 0; i += 1) {
+        await delay(100);
+        lit = await js<number>(`document.querySelectorAll('.field-card.highlight.joined').length`);
+      }
+      const turned = await js<boolean>(`document.getElementById('field').classList.contains('turning')`);
+      record(lit > 0 && !turned, `under reduced motion a lift highlights the neighbours it brought forward (${lit}) and does not fly (yaw ${yawBefore.toFixed(2)} to ${(await js<number>(`__t.yaw()`)).toFixed(2)})`);
+      store.dispatch({ type: 'clear-desk' });
+      await delay(600);
+    }
+    await js(`window.__deckReducedMotion = false`);
+
     // ---- TASK-0031: turning, by drag and by key, and the compass ----
     const yaw0 = await js<number>(`__t.yaw()`);
     const dealt0 = await js<number>(`__t.assignments()`);
@@ -315,7 +337,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     press(win, 'End');
     await delay(1300);
     const behindText = await js<string>(`__t.text('#compass-behind')`);
-    record(/\d+ out of sight/.test(behindText), `the compass counts what is out of sight ("${behindText}")`);
+    record(/\d+ in the quiet band · \d+ out of sight/.test(behindText), `the compass counts the quiet band and what is out of sight ("${behindText}")`);
     press(win, 'Home');
     await delay(1300);
 
@@ -474,6 +496,20 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       await delay(1200);
       const wide = (store.getState().deskCards[prepared.id] ?? []).filter((c) => c.wide === true).map((c) => c.noteId);
       record(wide.join() === paneB, `widening another pane replaces the first (${wide.join(', ')})`);
+      // With the reading column open the field is narrower, and a pane stored
+      // past its edge is drawn clamped: no card may be drawn under it (ISS-0058).
+      store.dispatch({ type: 'move-card', noteId: paneA, x: 3000, y: 120 });
+      await delay(1500);
+      const clamped = await js<{ overlap: string[]; left: string }>(`(() => {
+        const pane = document.querySelector('.pane[data-note-id="${paneA}"]');
+        const p = pane.getBoundingClientRect();
+        const overlap = __t.visibleCards().filter((c) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top).map((c) => c.id);
+        return { overlap, left: pane.style.left };
+      })()`);
+      record(clamped.left !== '3000px', `a pane stored past the narrowed field is drawn inside it (at ${clamped.left})`);
+      record(clamped.overlap.length === 0, `and no card is drawn under it (${clamped.overlap.join(', ') || 'none'})`);
+      store.dispatch({ type: 'move-card', noteId: paneA, x: movedA?.x ?? 16, y: movedA?.y ?? 16 });
+      await delay(800);
       // The keyboard on a header moves the pane.
       await js(`document.querySelector('.pane[data-note-id="${paneA}"] .pane-head').focus()`);
       const beforeKey = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
@@ -563,8 +599,27 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       const slot = id ? window.__deckGlass.model.current.slots.get(id) : null;
       return { id, highlighted: !!document.querySelector('.field-card.highlight, .nav-row.highlight'), yaw: __t.yaw(), theta: slot ? slot.theta : null };
     })()`);
-    record(arrived.highlighted, 'under reduced motion, choosing a row highlights it');
+    // A keyboard check can only fail fairly while the window holds the
+    // keyboard. If it failed AND the page had lost focus, it is taken once
+    // more after focus is given back, and the verdict says so; a failure with
+    // focus held stays a failure.
+    let focusNote = '';
+    if (!arrived.highlighted && !(await js<boolean>('document.hasFocus()'))) {
+      ctx.focusApp(win);
+      for (let i = 0; i < 20 && !(await js<boolean>('document.hasFocus()')); i += 1) await delay(100);
+      press(win, 'Up');
+      await delay(200);
+      press(win, 'Down');
+      for (let i = 0; i < 10; i += 1) {
+        if (await js<boolean>(`!!document.querySelector('.field-card.highlight, .nav-row.highlight')`)) break;
+        await delay(100);
+      }
+      arrived.highlighted = await js<boolean>(`!!document.querySelector('.field-card.highlight, .nav-row.highlight')`);
+      focusNote = ' (taken again: the window had lost the keyboard)';
+    }
+    record(arrived.highlighted, `under reduced motion, choosing a row highlights it${focusNote}`);
     if (!arrived.highlighted) {
+      console.log('DIAG focus', await js<boolean>('document.hasFocus()'));
       console.log('DIAG trace2', JSON.stringify(await js(`(window.__deckTraceLog || []).slice(-30)`)));
       console.log('DIAG highlight', JSON.stringify(arrived), JSON.stringify(await js(`({ active: document.activeElement ? document.activeElement.className + ' ' + (document.activeElement.dataset.noteId || '') : null, rows: [...document.querySelectorAll('#nav-list .highlight')].length })`)));
     }
@@ -614,22 +669,61 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     record(kept.moved > 0, `and moved to their new places (${kept.moved})`);
     reset();
     await delay(1200);
+    // The real path of a change arriving mid-view (ISS-0063): Deck's index
+    // moves on, the renderer reads the view again, and the one read it makes
+    // is answered with one note changed. Nothing is written to the workspace.
+    await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'issues').click()`);
+    await delay(2200);
     const stay = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards()`))[0];
     if (stay !== undefined) {
       const placed = await js<{ x: number; y: number } | null>(`__t.where(${JSON.stringify(stay.id)})`);
-      const heldCount = await js<number>(`window.__deckHoldChange(${JSON.stringify(stay.id)}, 'smoke-changed')`);
-      await delay(500);
-      const chip = await js<{ shown: boolean; text: string; where: { x: number; y: number } | null; moved: { x: number; y: number } | null }>(`({ shown: __t.shown('#pending-chip'), text: __t.text('#pending-chip'), where: __t.rect('#pending-chip'), moved: __t.where(${JSON.stringify(stay.id)}) })`);
-      record(heldCount === 1 && chip.shown && /^1 note changed/.test(chip.text), `a change under the field is announced with a count ("${chip.text}")`);
+      await js(`(() => {
+        const real = window.fetch;
+        window.fetch = async (input, init) => {
+          const response = await real(input, init);
+          if (!String(input).includes('cockpit/nav?mode=')) return response;
+          window.fetch = real;
+          const payload = await response.clone().json();
+          const walk = (items) => { for (const item of items) { if (item.id === ${JSON.stringify(stay.id)}) item.status = 'smoke-changed'; walk(item.children || []); } };
+          for (const group of payload.groups || []) walk(group.items || []);
+          return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        };
+        return true;
+      })()`);
+      const revision = store.getState().indexRevisions[prepared.id] ?? 0;
+      store.dispatch({ type: 'index-changed', workspaceId: prepared.id, revision: revision + 1 });
+      let chip = { shown: false, text: '', where: null as { x: number; y: number } | null, moved: null as { x: number; y: number } | null };
+      for (let i = 0; i < 30 && !chip.shown; i += 1) {
+        await delay(150);
+        chip = await js<typeof chip>(`({ shown: __t.shown('#pending-chip'), text: __t.text('#pending-chip'), where: __t.rect('#pending-chip'), moved: __t.where(${JSON.stringify(stay.id)}) })`);
+      }
+      record(chip.shown && /^1 note changed/.test(chip.text), `a change arriving under the field is read, counted and announced ("${chip.text}")`);
       record(placed !== null && chip.moved !== null && Math.abs(chip.moved.x - placed.x) < 1 && Math.abs(chip.moved.y - placed.y) < 1, 'and no card moved until the person acted');
       if (chip.where !== null) {
         await pointer(win, click(chip.where));
         await delay(1500);
-        const applied = await js<{ chip: boolean; status: string | null }>(`({ chip: __t.shown('#pending-chip'), status: (document.querySelector('.field-card[data-note-id="${stay.id}"]') || {}).dataset?.status || null })`);
+        const applied = await js<{ chip: boolean; status: string | null }>(`({ chip: __t.shown('#pending-chip'), status: (__t.glass().entryFor(${JSON.stringify(stay.id)}) || { card: {} }).card.status || null })`);
         record(!applied.chip, 'the chip went when the person clicked it');
-        record(applied.status !== null, `and the change was dealt, the card still bound to its note (${applied.status})`);
+        record(applied.status === 'smoke-changed', `and the change was dealt: ${stay.id} now has the status that arrived (${applied.status})`);
       }
     }
+
+    // ---- ISS-0061: under reduced motion a view switch highlights the note a person was on ----
+    await js(`window.__deckReducedMotion = true`);
+    const focusRow = await js<string | null>(`(() => { const r = document.querySelector('#nav-list .nav-row:not([hidden])'); if (!r) return null; return r.dataset.noteId; })()`);
+    if (focusRow !== null) {
+      store.dispatch({ type: 'focus-note', noteId: focusRow });
+      await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'features').click()`);
+      await delay(1500);
+      await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'issues').click()`);
+      let marked = { card: false, row: false, animate: true };
+      for (let i = 0; i < 20 && !(marked.card || marked.row); i += 1) {
+        await delay(100);
+        marked = await js<typeof marked>(`({ card: !!document.querySelector('.field-card.highlight[data-note-id="${focusRow}"]'), row: !!document.querySelector('.nav-row.highlight[data-note-id="${focusRow}"]'), animate: document.getElementById('field').classList.contains('animate') })`);
+      }
+      record(marked.row && !marked.animate, `under reduced motion a view switch is a cut and highlights the note a person was on (${focusRow}: row ${marked.row}, card ${marked.card})`);
+    }
+    await js(`window.__deckReducedMotion = false`);
 
     // ---- TASK-0055: the throw ----
     await recordThrow(ctx, win, js);
@@ -717,8 +811,12 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
     if (readerTarget !== null) {
       await pointer(win, [
         { type: 'move', x: readerTarget.x, y: readerTarget.y, wait: 120 },
-        { type: 'up', x: readerTarget.x, y: readerTarget.y, wait: 1500 },
+        { type: 'up', x: readerTarget.x, y: readerTarget.y, wait: 150 },
       ]);
+      // The flight goes toward the edge the card left: right, here.
+      const flight = await js<{ thrown: boolean; transform: string }>(`(() => { const e = document.querySelector('.field-card[data-note-id="${card.id}"]'); return { thrown: !!e && e.classList.contains('thrown'), transform: e ? e.style.transform : '' }; })()`);
+      record(flight.thrown && /^translate\(1400px, 0px\)/.test(flight.transform), `the thrown card flies toward the right edge it left (${flight.transform.slice(0, 40)})`);
+      await delay(1400);
       const addressNow = ctx.addressOf(reader.id) ?? '';
       record(addressNow.includes(`note=${encodeURIComponent(card.id)}`), `the note thrown at the reader lands in that reader (${addressNow})`);
       if (!addressNow.includes(`note=${encodeURIComponent(card.id)}`)) {
@@ -739,18 +837,65 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
       ]);
       const deskTarget = await js<{ x: number; y: number } | null>(`(() => { const t = [...document.querySelectorAll('#target-strip .target')].find((e) => e.textContent.startsWith('desk on')); if (!t) return null; const r = t.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
       if (deskTarget !== null) {
+        // This one under reduced motion: the landing is a cut, and the front
+        // plane names where it went.
+        await js(`window.__deckReducedMotion = true`);
         await pointer(win, [
           { type: 'move', x: deskTarget.x, y: deskTarget.y, wait: 120 },
-          { type: 'up', x: deskTarget.x, y: deskTarget.y, wait: 1500 },
+          { type: 'up', x: deskTarget.x, y: deskTarget.y, wait: 150 },
         ]);
+        const cut = await js<{ thrown: boolean; said: string }>(`({ thrown: !!document.querySelector('.field-card.thrown'), said: __t.text('#field-say') })`);
+        record(!cut.thrown && /sent to the desk on/.test(cut.said), `under reduced motion the landing is a cut, and the target is named ("${cut.said}")`);
+        await js(`window.__deckReducedMotion = false`);
+        await delay(1300);
         record((store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === second.id), `a note thrown at the desk panel is on the desk (${second.id})`);
         const inPanel = (await desk.webContents.executeJavaScript(`[...document.querySelectorAll('#desk .card:not([hidden])')].map((c) => c.dataset.noteId)`)) as string[];
-        record(inPanel.includes(second.id), 'and the desk panel on the other screen shows it');
+        record(inPanel.includes(second.id), 'and the desk panel window shows it');
       } else {
         await pointer(win, [{ type: 'up', x: edgeX, y: second.y }]);
         record(false, 'the strip named the desk panel');
       }
     }
+    // The tablet is a target while a served page follows the store: one is
+    // opened here with no bridge, as a tablet loads it (ISS-0062).
+    const tablet = ctx.openServedPage();
+    try {
+      await once(tablet, 'did-finish-load');
+      await ctx.untilBooted(tablet);
+      await delay(1200);
+      const fourth = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards()`)).find((c) => !(store.getState().deskCards[prepared.id] ?? []).some((d) => d.noteId === c.id));
+      if (fourth === undefined) {
+        record(false, 'a card was in sight to throw to the tablet');
+      } else {
+        await pointer(win, [
+          { type: 'move', x: fourth.x, y: fourth.y },
+          { type: 'down', x: fourth.x, y: fourth.y },
+          ...Array.from({ length: 10 }, (_, i) => ({ type: 'move' as const, x: fourth.x + ((edgeX - fourth.x) * (i + 1)) / 10, y: fourth.y })),
+          { type: 'move', x: edgeX, y: fourth.y + 2, wait: 700 },
+        ]);
+        const toTablet = await js<{ x: number; y: number } | null>(`(() => { const t = [...document.querySelectorAll('#target-strip .target')].find((e) => e.textContent === 'tablet'); if (!t) return null; const r = t.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+        if (toTablet === null) {
+          await pointer(win, [{ type: 'up', x: edgeX, y: fourth.y }]);
+          record(false, 'the strip offers the tablet while a served page is following');
+        } else {
+          const sentAt = Date.now();
+          await pointer(win, [
+            { type: 'move', x: toTablet.x, y: toTablet.y, wait: 120 },
+            { type: 'up', x: toTablet.x, y: toTablet.y, wait: 60 },
+          ]);
+          let shown = -1;
+          for (let i = 0; i < 40 && shown < 0; i += 1) {
+            const seen = (await tablet.webContents.executeJavaScript(`((window.__deckLastState || {}).deskCards || {})[${JSON.stringify(prepared.id)}] || []`)) as Array<{ noteId: string }>;
+            if (seen.some((c) => c.noteId === fourth.id)) shown = Date.now() - sentAt;
+            else await delay(50);
+          }
+          record(shown >= 0 && shown < 1500, `a note thrown to the tablet is on the tablet's desk (${fourth.id}, ${shown}ms after the release)`);
+        }
+      }
+    } finally {
+      if (!tablet.isDestroyed()) tablet.destroy();
+    }
+
     // An empty display is a target only where there is one: a note thrown
     // there opens a new reader on it, which this check closes again at once.
     if (ctx.displayCount() > 1) {
@@ -793,7 +938,19 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
     const rowNote = await js<string | null>(`document.activeElement && document.activeElement.dataset.noteId || null`);
     press(win, 's');
     await delay(900);
-    const asked = await js<{ asked: string; focus: string }>(`({ asked: __t.text('#status'), focus: document.activeElement ? document.activeElement.textContent : '' })`);
+    let asked = await js<{ asked: string; focus: string; hasFocus: boolean }>(`({ asked: __t.text('#status'), focus: document.activeElement ? document.activeElement.textContent : '', hasFocus: document.hasFocus() })`);
+    if (asked.focus.trim() === '' && !asked.hasFocus) {
+      // The same rule as the highlight: taken again only if the keyboard was lost.
+      ctx.focusApp(win);
+      for (let i = 0; i < 20 && !(await js<boolean>('document.hasFocus()')); i += 1) await delay(100);
+      await js(`document.querySelector('#status button') ? document.querySelector('#status button').focus() : document.querySelector('#nav-list .nav-row:not([hidden])').focus()`);
+      if (!(await js<boolean>(`!!document.querySelector('#status button')`))) {
+        press(win, 's');
+        await delay(900);
+      }
+      asked = await js<typeof asked>(`({ asked: __t.text('#status'), focus: document.activeElement ? document.activeElement.textContent : '', hasFocus: document.hasFocus() })`);
+    }
+    if (asked.focus.trim() === '') console.log('DIAG sendto', JSON.stringify(asked));
     record(/^send /.test(asked.asked.trim()) && asked.focus.length > 0, `send to asks where, and the keyboard is on the first answer ("${asked.focus}")`);
     const focusIsReader = asked.focus.startsWith('reader on');
     press(win, 'Return');
@@ -900,7 +1057,9 @@ async function recordOrbit(
   if (edge === null) {
     record(false, 'a link was drawn clear of the dots to rest on');
   } else {
-    await pointer(win, [{ type: 'move', x: fieldBox.left + edge.x, y: fieldBox.top + edge.y, wait: 900 }]);
+    // Field coordinates are whole pixels from edgeSample; the field's own
+    // offset is rounded the same way the harness rounds a pointer.
+    await pointer(win, [{ type: 'move', x: Math.round(fieldBox.left) + edge.x, y: Math.round(fieldBox.top) + edge.y, wait: 900 }]);
     const callout = await js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#edge-callout'), text: __t.text('#edge-callout') })`);
     record(callout.shown && callout.text.includes(edge.source) && callout.text.length > edge.source.length + 8, `resting on the link ${edge.source} → ${edge.target} shows the sentence that made it ("${callout.text.slice(0, 90)}")`);
     await pointer(win, [{ type: 'move', x: fieldBox.left + 20, y: fieldBox.top + 20, wait: 200 }]);

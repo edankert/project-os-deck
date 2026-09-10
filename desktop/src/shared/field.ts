@@ -10,7 +10,7 @@
  * Pure, so the whole deal is tested without a window.
  */
 import type { CardGroup, CardModel } from './types.js';
-import { type BandInputs, type BandTable, type HandInputs, NO_HAND, bandCards, bandInputsFor } from './description.js';
+import { type BandInputs, type BandTable, type HandInputs, NO_HAND, bandInputsFor, bandOf } from './description.js';
 
 /** One note in the field, with the heading it is dealt under. */
 export interface FieldEntry {
@@ -108,41 +108,83 @@ export function fieldEntries(groups: CardGroup[], hand: HandInputs = NO_HAND, ex
 /**
  * The order the front band is filled in.
  *
- * While a note is held, what it is joined to comes first: that is what the
- * person just asked to see. Owed notes come next, and past the capacity they
- * are COUNTED rather than demoted, so the front plane's pinned count still
- * says how many are waiting. What a hand pulled comes last, because a hand
- * does not outrank the record.
+ * While a note is held, what it is joined to comes first, and among those the
+ * notes joined to more than one held note come before the rest: they answer
+ * the question two held notes ask, and a front band that dealt them last hid
+ * six of the eight on the first real run (ISS-0059). Owed notes come next,
+ * and past the capacity they are COUNTED rather than demoted, so the front
+ * plane's pinned count still says how many are waiting. What a hand pulled
+ * comes last, because a hand does not outrank the record, and it has the
+ * band's spare slots to itself (see `dealField`).
  */
-function frontRank(entry: FieldEntry): number {
-  if (entry.inputs.joinedToDesk) return 0;
-  if (entry.inputs.owed) return 1;
-  if (entry.inputs.pulled) return 2;
-  return 3;
+function frontRank(entry: FieldEntry, first: ReadonlySet<string>): number {
+  if (entry.inputs.joinedToDesk) return first.has(entry.card.noteId) ? 0 : 1;
+  if (entry.inputs.owed) return 2;
+  if (entry.inputs.pulled) return 3;
+  return 4;
 }
 
-export function dealField(table: BandTable, entries: FieldEntry[]): FieldDeal {
+/** How many of the front band's spare slots a hand's pulls may use beyond its capacity. */
+export const PULL_SPARES = 8;
+
+export interface DealOptions {
+  /** Notes dealt first among the neighbourhood: what the held notes share. */
+  first?: ReadonlySet<string>;
+  /** Spare front slots a pulled note may take past the capacity. */
+  spares?: number;
+}
+
+export function dealField(table: BandTable, entries: FieldEntry[], options: DealOptions = {}): FieldDeal {
+  const first = options.first ?? new Set<string>();
+  const spares = options.spares ?? PULL_SPARES;
   const ordered = entries
     .map((entry, index) => ({ entry, index }))
-    .sort((a, b) => frontRank(a.entry) - frontRank(b.entry) || a.index - b.index)
+    .sort((a, b) => frontRank(a.entry, first) - frontRank(b.entry, first) || a.index - b.index)
     .map((x) => x.entry);
-  const banding = bandCards(
-    table,
-    ordered.map((entry) => ({ card: entry, inputs: entry.inputs })),
-  );
+  const front: FieldEntry[] = [];
+  const mid: FieldEntry[] = [];
+  const deep: FieldEntry[] = [];
+  const overflowing: FieldEntry[] = [];
+  let midOverflow = 0;
+  for (const entry of ordered) {
+    const band = bandOf(table, entry.inputs);
+    if (band === 'front') {
+      if (front.length < table.frontCapacity) front.push(entry);
+      else overflowing.push(entry);
+    } else if (band === 'mid') {
+      if (mid.length < table.midCapacity) mid.push(entry);
+      else midOverflow += 1;
+    } else {
+      deep.push(entry);
+    }
+  }
+  // A pull the full band would swallow takes a spare slot instead: a gesture
+  // that changes nothing a person can see is worse than a band one card
+  // wider. An owed note past the capacity stays counted, as before; a hand
+  // does not push the record's notes out of view to make room (ISS-0059).
+  let used = 0;
+  const counted: FieldEntry[] = [];
+  for (const entry of overflowing) {
+    if (entry.inputs.pulled && !entry.inputs.owed && !entry.inputs.joinedToDesk && used < spares) {
+      front.push(entry);
+      used += 1;
+    } else {
+      counted.push(entry);
+    }
+  }
   // The middle keeps the navigator's order, heading by heading, so a sector
   // is one heading and reads in the order the list does.
   const midOrder = new Map(entries.map((e, i) => [e.card.noteId, i]));
-  const mid = [...banding.mid].sort((a, b) => (midOrder.get(a.card.noteId) ?? 0) - (midOrder.get(b.card.noteId) ?? 0));
+  mid.sort((a, b) => (midOrder.get(a.card.noteId) ?? 0) - (midOrder.get(b.card.noteId) ?? 0));
   return {
-    front: banding.front,
+    front,
     mid,
-    deep: banding.deep,
-    frontOverflow: banding.frontOverflow,
-    midOverflow: banding.midOverflow,
+    deep,
+    frontOverflow: counted.length,
+    midOverflow,
     owed: entries.filter((e) => e.inputs.owed).length,
-    handPlaced: banding.front.filter((e) => e.inputs.pulled && !e.inputs.owed && !e.inputs.joinedToDesk).length,
-    pushedBehind: banding.deep.filter((e) => e.inputs.pushed && !e.inputs.suppressed).length,
+    handPlaced: front.filter((e) => e.inputs.pulled && !e.inputs.owed && !e.inputs.joinedToDesk).length,
+    pushedBehind: deep.filter((e) => e.inputs.pushed && !e.inputs.suppressed).length,
   };
 }
 
@@ -154,7 +196,15 @@ export function dealField(table: BandTable, entries: FieldEntry[]): FieldDeal {
  * when the card springs back, so it names the note and what it is owed.
  */
 export function pushRefusal(entry: FieldEntry): string | null {
-  if (!entry.inputs.owed) return null;
-  const owed = entry.card.owedVerb ?? 'a decision';
-  return `${entry.card.noteId} stays in front: it is owed ${owed}, and a hand does not overrule the record`;
+  if (entry.inputs.owed) {
+    const owed = entry.card.owedVerb ?? 'a decision';
+    return `${entry.card.noteId} stays in front: it is owed ${owed}, and a hand does not overrule the record`;
+  }
+  // A neighbour is in front because a person is holding what it is joined
+  // to. Pushing it was announced and not done, because the neighbourhood
+  // rule comes first (ISS-0059); it is refused in words instead.
+  if (entry.inputs.joinedToDesk) {
+    return `${entry.card.noteId} stays in front while you hold a note it is joined to; put that note back first`;
+  }
+  return null;
 }

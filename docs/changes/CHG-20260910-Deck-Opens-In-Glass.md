@@ -10,8 +10,8 @@ updated: 2026-09-10
 source: ["Edwin, 2026-09-10: 'Implement and Test Phase 0002 fully'", "[[REFERENCE-GLASS-PHASE-REVIEW]]"]
 commit: ""
 pr: ""
-impacts: ["desktop/src/renderer/", "desktop/src/shared/", "desktop/src/main/host.ts", "desktop/src/main/main.ts", "desktop/src/main/smoke-glass.ts", "desktop/src/main/graph-service.ts", "desktop/src/main/orbit-worker.ts", "desktop/src/main/measure.ts", "desktop/src/preload.ts", "desktop/tests/"]
-issues: []
+impacts: ["desktop/src/renderer/", "desktop/src/shared/", "desktop/src/main/host.ts", "desktop/src/main/store.ts", "desktop/src/main/main.ts", "desktop/src/main/smoke-glass.ts", "desktop/src/main/graph-service.ts", "desktop/src/main/orbit-worker.ts", "desktop/src/main/measure.ts", "desktop/src/preload.ts", "desktop/tests/"]
+issues: ["[[ISS-0058-A-Card-Can-Be-Drawn-Under-A-Pane]]", "[[ISS-0059-The-Front-Band-Hides-What-A-Hand-Or-A-Lift-Asked-For]]", "[[ISS-0060-Deck-Can-Reopen-In-Spread-With-No-Address-Asking]]", "[[ISS-0061-Reduced-Motion-Is-Missing-From-A-Lift-And-A-View-Switch]]", "[[ISS-0062-A-Display-With-Only-A-Strip-Cannot-Receive-A-Throw]]", "[[ISS-0063-Checks-And-Notes-Claim-More-Than-They-Measure]]"]
 features: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[DES-0002-The-Glass-Cockpit]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 ---
@@ -34,7 +34,7 @@ related: ["[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[ADR-
 
 ## What changed underneath
 
-- The store gained a `surface` and a `session` part holding the pulled and pushed sets. The persister drops the session, so a restart starts with nothing pulled; neither the session nor the yaw is ever in an address.
+- The store gained a `surface` and a `session` part holding the pulled and pushed sets. The persister in `desktop/src/main/store.ts` drops the session, so a restart starts with nothing pulled; neither the session nor the yaw is ever in an address. The surface is not read back either, so Deck opens in Glass (ISS-0060).
 - A desk card gained optional `w`, `h` and `wide`. Spread ignores them and shows the same note at the same place.
 - Every view description names `glass` first in its surfaces, and every band table gained rows for the neighbourhood, a pull and a push, with owed still first.
 - The shell gained two routes a served page cannot reach: `deck:windows:list` and `deck:window:throw`.
@@ -59,4 +59,8 @@ Each was in Glass as first written, each made a check fail, and each is fixed wi
 
 ## Hazards
 
-No dependency or environment variable was added. One file is new on disk: the orbit's kept layout, one per workspace in Deck's user data directory, which Deck solves again if it is missing or unreadable. One long step is new: solving the layout the first time a workspace's orbit is opened takes about a second for 1,500 notes and two and a half for 2,700, once, on a worker thread so that no window waits for it. The first build solved it in the main process, which would have held every window's store traffic for those seconds. Deck's host answers five more reads, and the network smoke run asserts that the two a tablet follows refuse every write from the machine's own address; the graph path refuses a POST too. Deck's own risk notes are unchanged.
+No dependency was added, and nothing a person running Deck sets. Three environment variables and one flag are new, all for a developer: `DECK_SMOKE_ONLY=glass` runs the smoke run's Glass section alone and says so in its verdict, `DECK_SMOKE_DEBUG=1` prints each Glass check, `DECK_SMOKE_TRACE=1` records the field's reach and focus events for a failing check, and `--measure` takes the phase's numbers. One file is new on disk: the orbit's kept layout, one per workspace in Deck's user data directory, which Deck solves again if it is missing or unreadable. One long step is new: solving the layout the first time a workspace's orbit is opened takes about a second for 1,500 notes and two and a half for 2,700, once, on a worker thread so that no window waits for it. The first build solved it in the main process, which would have held every window's store traffic for those seconds. Deck's host answers five more reads, and the network smoke run asserts that the two a tablet follows refuse every write from the machine's own address; the graph path refuses a POST too. Deck's own risk notes are unchanged.
+
+## What the independent review found, and what was done
+
+The review of 2026-09-10 requested changes on the three features and on TST-0045. Its reproduced findings are six issues, each fixed with its check in place: a card could be drawn under a pane ([[ISS-0058-A-Card-Can-Be-Drawn-Under-A-Pane]]); the front band hid a pull into a full band, a push on a neighbour and most shared notes ([[ISS-0059-The-Front-Band-Hides-What-A-Hand-Or-A-Lift-Asked-For]]); Deck could reopen in Spread ([[ISS-0060-Deck-Can-Reopen-In-Spread-With-No-Address-Asking]]); reduced motion was missing from a lift and a view switch ([[ISS-0061-Reduced-Motion-Is-Missing-From-A-Lift-And-A-View-Switch]]); a display holding only a strip could not receive a throw ([[ISS-0062-A-Display-With-Only-A-Strip-Cannot-Receive-A-Throw]]); and several checks and notes claimed more than they measured, this note among them ([[ISS-0063-Checks-And-Notes-Claim-More-Than-They-Measure]]). Fixing them turned up one more: the orbit kept drifting under a pointer that was reading a link's sentence; a pointer over the orbit now pauses the drift.

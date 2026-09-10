@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0031"]
 blocks: []
 related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[TASK-0017-The-Address-Grammar]]", "[[TASK-0027-Search-And-Filter-In-The-Renderer]]", "[[FEAT-0004-Windows-On-Any-Screen]]"]
-tests: ["[[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
+tests: ["[[TST-0034-The-Grammar-Carries-The-New-Keys-And-The-Panel-Registry-Refuses-Strangers]]", "[[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Glass is addressed and opened first
@@ -60,4 +60,6 @@ The review asked for the address before the renderer. It is placed after the fir
 
 **The navigator is the keyboard's route into the field.** One row is the tab stop and the arrow keys move it; Enter lifts the row's note in Glass; `p` pulls, `b` pushes, `s` sends, Delete puts back. Each row says its place in the whole view, folded groups included, with `aria-posinset` and `aria-setsize`. Arriving on a row flies the field to its card and reaches for it; under reduced motion the row and the card are highlighted and the field cuts.
 
-**Evidence.** [[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]] for the surface in the store and the address; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]] for the default surface, the address with `surface=spread`, the toggle, the keyboard lift and the reduced-motion arrival.
+**Evidence.** [[TST-0034-The-Grammar-Carries-The-New-Keys-And-The-Panel-Registry-Refuses-Strangers]] (`panel-registry.test.mjs`) for the grammar refusing a surface nothing draws, corrected on 2026-09-10 after the review found it cited elsewhere; [[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]] for the surface in the store; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]] for the default surface, the address with `surface=spread`, the toggle, the keyboard lift and the reduced-motion arrival.
+
+**Amended 2026-09-10 (ISS-0060).** The surface is no longer kept across a restart or a change of workspace: Deck opens in Glass unless an address names another surface.

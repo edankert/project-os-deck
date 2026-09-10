@@ -221,6 +221,8 @@ export class GlassField {
   private reach: { noteId: string; neighbours: Set<string> } | null = null;
   private reachTimer: ReturnType<typeof setTimeout> | null = null;
   private highlight: string | null = null;
+  /** Several cards marked at once, for a moment: a lift's neighbours under reduced motion. */
+  private highlights = new Set<string>();
   private viewport = { width: 800, height: 600 };
   private lastHeldKey = '';
   /** A note was lifted and the field has not yet turned to face its neighbourhood. */
@@ -316,10 +318,18 @@ export class GlassField {
       const y = (seg.y1 + seg.y2) / 2;
       if (Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) < 60) continue;
       if (this.dotAt(x, y) !== null) continue;
-      if (this.edgeAt(x, y) !== seg.edge) continue;
-      if (x < 40 || y < 40 || x > this.viewport.width - 260 || y > this.viewport.height - 80) continue;
-      if (!clear(x, y)) continue;
-      return { x, y, source: seg.edge.source, target: seg.edge.target };
+      // Whole pixels, and the same link from every pixel around it, so a
+      // pointer that lands a pixel off still rests on this link.
+      const px = Math.round(x);
+      const py = Math.round(y);
+      let steady = true;
+      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        if (this.edgeAt(px + dx, py + dy) !== seg.edge) steady = false;
+      }
+      if (!steady) continue;
+      if (px < 40 || py < 40 || px > this.viewport.width - 260 || py > this.viewport.height - 80) continue;
+      if (!clear(px, py)) continue;
+      return { x: px, y: py, source: seg.edge.source, target: seg.edge.target };
     }
     return null;
   }
@@ -520,7 +530,7 @@ export class GlassField {
       this.deal = null;
       this.model.deal({ front: [], mid: [], deep: [] }, []);
     } else {
-      this.deal = dealField(this.input.view.band, entries);
+      this.deal = dealField(this.input.view.band, entries, { first: new Set(this.shared.keys()) });
       this.model.deal(
         {
           front: this.deal.front.map((e) => e.card.noteId),
@@ -541,7 +551,14 @@ export class GlassField {
     // Once every held note's neighbourhood is here, turn to face it.
     if (this.faceOnArrival && missing.length === 0) {
       this.faceOnArrival = false;
-      this.faceFront();
+      if (this.hooks.reducedMotion()) {
+        // Under reduced motion the turn is replaced by a highlight on the
+        // neighbours it would have turned to (TASK-0036, ISS-0061).
+        this.model.face(0);
+        this.highlightAll(this.joined);
+      } else {
+        this.faceFront();
+      }
     }
     if (missing.length > 0) {
       void Promise.all(missing.map((id) => this.hooks.context(id).catch(() => null))).then(() => {
@@ -589,13 +606,29 @@ export class GlassField {
     this.drawPanes();
   }
 
+  /**
+   * Where a pane is DRAWN: its stored place, clamped into the field. One
+   * function, used by the painter and by the obstacles, so the field keeps
+   * cards clear of the pane a person sees (ISS-0058).
+   */
+  private paneRect(card: DeskCard): { left: number; top: number; w: number; h: number } {
+    const w = card.w ?? PANE_DEFAULT_WIDTH;
+    const h = card.h ?? PANE_DEFAULT_HEIGHT;
+    return {
+      left: Math.max(0, Math.min(card.x, this.viewport.width - w)),
+      top: Math.max(0, Math.min(card.y, this.viewport.height - PANE_HEADER_HEIGHT)),
+      w,
+      h,
+    };
+  }
+
   private paneObstacles(): Obstacle[] {
     if (this.arrangement === 'orbit') return [];
     const out: Obstacle[] = [];
     for (const card of this.held) {
       if (card.wide === true) continue;
-      const w = card.w ?? PANE_DEFAULT_WIDTH;
-      out.push(...obstaclesFor({ left: card.x, right: card.x + w }, this.model.yaw, this.viewport));
+      const r = this.paneRect(card);
+      out.push(...obstaclesFor({ left: r.left, right: r.left + r.w }, this.model.yaw, this.viewport));
     }
     return out;
   }
@@ -719,7 +752,7 @@ export class GlassField {
     element.classList.toggle('owed', entry.inputs.owed);
     element.classList.toggle('joined', this.joined.has(card.noteId));
     element.classList.toggle('reached', this.reach?.neighbours.has(card.noteId) === true);
-    element.classList.toggle('highlight', this.highlight === card.noteId);
+    element.classList.toggle('highlight', this.highlight === card.noteId || this.highlights.has(card.noteId));
     const shared = this.shared.get(card.noteId) ?? 0;
     element.classList.toggle('shared', shared >= 2);
     element.setAttribute('aria-current', String(this.hooks.state().noteId === card.noteId));
@@ -1061,11 +1094,15 @@ export class GlassField {
     }
     this.el.heading.textContent =
       deg < 45 || deg > 315 ? 'facing the front' : deg > 135 && deg < 225 ? 'facing the quiet band' : 'facing the middle';
-    const parts = [`${behind} out of sight`];
+    // The quiet band's own count, on screen at all times (FEAT-0009), beside
+    // everything out of sight, which is a different number (ISS-0063).
+    const quiet = this.arrangement === 'orbit' ? 0 : [...this.model.current.slots.values()].filter((slot) => slot.band === 'deep').length;
+    const parts = [this.arrangement === 'orbit' ? `${behind} out of sight` : `${quiet} in the quiet band · ${behind} out of sight`];
     if (pushed > 0) parts.push(`${pushed} pushed there by hand`);
     if (this.reach !== null && reachBehind > 0) parts.push(`${reachBehind} of ${this.reach.noteId}'s neighbours behind you`);
     this.el.behind.textContent = parts.join(' · ');
     this.el.compass.dataset['behind'] = String(behind);
+    this.el.compass.dataset['quiet'] = String(quiet);
     this.el.compass.dataset['pushed'] = String(pushed);
   }
 
@@ -1086,6 +1123,10 @@ export class GlassField {
     // In the orbit: resting on a link quotes it; a dot is a note to lift.
     field.addEventListener('pointermove', (event) => {
       if (this.arrangement !== 'orbit' || look !== null || event.buttons !== 0) return;
+      // A pointer over the orbit is a person looking: the drift waits, or the
+      // link under the pointer turns away while its sentence is being read.
+      if (this.idle.frame !== null) this.el.field.classList.remove('turning');
+      this.scheduleIdle();
       if ((event.target as HTMLElement).closest('.field-card, .pane, .compass, .field-bar') !== null) {
         this.showCallout(null, 0, 0);
         return;
@@ -1245,6 +1286,19 @@ export class GlassField {
       this.clearHighlightLater();
     };
     this.flight = requestAnimationFrame(step);
+  }
+
+  /** Mark these cards for a moment. */
+  highlightAll(ids: Iterable<string>): void {
+    this.highlights = new Set(ids);
+    this.render(false);
+    const marked = this.highlights;
+    setTimeout(() => {
+      if (this.highlights === marked) {
+        this.highlights = new Set();
+        this.render(false);
+      }
+    }, 1600);
   }
 
   private clearHighlightLater(): void {
@@ -1428,7 +1482,16 @@ export class GlassField {
   async pull(entry: FieldEntry): Promise<void> {
     if (!this.hooks.canArrange()) return;
     await this.hooks.dispatch({ type: 'pull', noteId: entry.card.noteId });
-    this.tell(`${entry.card.noteId} pulled into the front band, for this session`);
+    // Said after the deal, by what the deal did: a pull the spare slots
+    // could not take is counted, and the front plane says so (ISS-0059).
+    setTimeout(() => {
+      const where = this.model.current.slots.get(entry.card.noteId);
+      this.tell(
+        where?.band === 'front'
+          ? `${entry.card.noteId} pulled into the front band, for this session`
+          : `${entry.card.noteId} is pulled, but the front band and its spare slots are full; it is counted in "more in front"`,
+      );
+    }, 60);
   }
 
   async push(entry: FieldEntry): Promise<void> {
@@ -1673,13 +1736,10 @@ export class GlassField {
 
   private paintPane(pane: HTMLElement, deskCard: DeskCard, index: number): void {
     const card = this.cardFor(deskCard.noteId);
-    const w = deskCard.w ?? PANE_DEFAULT_WIDTH;
-    const h = deskCard.h ?? PANE_DEFAULT_HEIGHT;
     // Clamped at PAINT time, as Spread clamps a card, and never in the store:
     // a desk arranged on a wide screen keeps its positions, and a pane the
     // reading column or a smaller window would hide stays whole on screen.
-    const left = Math.max(0, Math.min(deskCard.x, this.viewport.width - w));
-    const top = Math.max(0, Math.min(deskCard.y, this.viewport.height - PANE_HEADER_HEIGHT));
+    const { left, top, w, h } = this.paneRect(deskCard);
     pane.style.left = `${left}px`;
     pane.style.top = `${top}px`;
     pane.style.width = `${w}px`;

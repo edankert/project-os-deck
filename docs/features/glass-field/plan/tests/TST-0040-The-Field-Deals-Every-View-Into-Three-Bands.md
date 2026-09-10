@@ -17,8 +17,8 @@ covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Li
 issues: []
 tasks: ["[[TASK-0029-The-Band-Function]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]"]
 artifacts: []
-adequacy: "Measured 2026-09-10 against the built modules, five mutations and five killed. Making the owed row need a held note fails 5. Sending a pushed note to the front fails 2. Ordering the front band without the neighbourhood first fails 1. Dealing the sidecar’s double listing twice fails 1. A push refusal that never refuses fails 1."
-mutation_score: "5 mutations, 5 killed (2026-09-10)"
+adequacy: "Measured 2026-09-10 against the built modules, five mutations and five killed. Making the owed row need a held note fails 5. Sending a pushed note to the front fails 2. Ordering the front band without the neighbourhood first fails 1. Dealing the sidecar’s double listing twice fails 1. A push refusal that never refuses fails 1. After ISS-0059, five more: no spare slots for a pull, shared notes not first, a neighbour's push allowed, a pulled owed note counted by hand, and a pushed finished note counted as pushed; each fails 1."
+mutation_score: "10 mutations, 10 killed (2026-09-10)"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
@@ -45,7 +45,7 @@ The field shows what needs a person in front, the view's own notes in the middle
 
 ## Evidence
 
-2026-09-10: 9 of 9 pass.
+2026-09-10: 12 of 12 pass, three added for ISS-0059.
 
 ## Adequacy (who verifies this test?)
 

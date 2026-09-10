@@ -56,6 +56,8 @@ A budget is a number, and this note does not invent one. The phase's exit criter
 
 **What was learned about measuring.** The first run focused the window three seconds early and recorded no frames in two workspaces of three, because something else took focus back; focus is now taken immediately before each turn and a run that loses it is taken again. And a 60 Hz display holds every frame to 16.7 ms however little work it took, so the frame time alone shows the field keeps up but not by how much. The meter therefore also records the script's work per frame, and the turn is taken again under Chromium's CPU throttling at four times, as a stand-in for a slower machine.
 
-**The hybrid is kept.** Bound cards for the near bands and one canvas for the quiet band held the display's rate on Your Trainer, 2,734 notes, with 2.2 ms of script work in the median frame and 6.1 ms at four times the CPU cost. No pool was needed.
+**The hybrid is kept.** Bound cards for the near bands and one canvas for the quiet band held the display's rate on Your Trainer, 2,734 notes, with two panes held and a reach drawn: 2.2 ms of script work in the median frame and 6.6 ms at four times the CPU cost. No pool was needed.
+
+**Measured again after the review (ISS-0063).** The first numbers were taken with the desk cleared and no reach, while this task says the field is measured with panes and wires on it. `measure.ts` now lifts two notes and reaches for a card before turning, and the numbers in the feature note are from that run.
 
 **The laptop branch is not decided here.** The machine is a Mac Studio (M2 Max). [[ADR-0002-Glass-Is-The-Main-View]] asks whether Glass holds a usable frame rate on a laptop, and a desktop cannot answer that; the throttled run is an estimate, not a laptop. The same command on the laptop answers it, and [[PHASE-0002-Glass]] records that it is owed.

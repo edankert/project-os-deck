@@ -18,7 +18,7 @@ issues: []
 tasks: ["[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]"]
 artifacts: []
 adequacy: "Measured 2026-09-10 against the built modules, eight mutations and eight killed. Persisting the session fails 1. A pull that leaves the note pushed fails 1. A resize with no minimum fails 1. A raise that changes nothing fails 1. A widen that keeps the other pane in the column fails 1. A snap that ignores headers fails 1. A surface the store does not check fails 1."
-mutation_score: "8 mutations, 8 killed (2026-09-10)"
+mutation_score: "8 mutations, 8 killed (2026-09-10); reading the surface back from the file, added for ISS-0060, is killed too"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""

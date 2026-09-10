@@ -183,6 +183,9 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
         noteId: null,
         query: '',
         filters: { statuses: [], types: [] },
+        // A workspace opens in Glass (ADR-0002); an address that names a
+        // surface is followed after the workspace is open (ISS-0060).
+        surface: DEFAULT_SURFACE,
       });
     }
     case 'select-view': {
@@ -483,7 +486,11 @@ export function normaliseState(value: unknown): DeckState {
     // The slot exists so that a flow, when one is built, has somewhere to put
     // the one piece of state that is not in the record (TASK-0052).
     flowCursor: null,
-    surface: typeof raw['surface'] === 'string' && STORE_SURFACES.includes(raw['surface']) ? raw['surface'] : DEFAULT_SURFACE,
+    // Not read back from the file: the surface is where a person was looking,
+    // like the yaw, and Deck opens in Glass unless an address asks otherwise
+    // (ADR-0002). Carrying it over reopened Deck in Spread with no address
+    // asking for it (ISS-0060).
+    surface: DEFAULT_SURFACE,
     // Never read back from the file, and never written to it either
     // (`persistable`). A restart starts with nothing pulled and nothing pushed.
     session: emptySession(),

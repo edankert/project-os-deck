@@ -133,7 +133,10 @@ test('the surface is Glass unless a person chose otherwise, and the address writ
   assert.equal(state.surface, 'spread');
   assert.equal(reduce(state, { type: 'select-surface', surface: 'hologram' }), state, 'a surface nothing draws was stored');
   assert.equal(normaliseState({ surface: 'hologram' }).surface, 'glass');
-  assert.equal(normaliseState({ surface: 'spread' }).surface, 'spread');
+  // A state file saying spread opens in Glass, and a workspace opens in Glass (ISS-0060).
+  assert.equal(normaliseState({ surface: 'spread' }).surface, 'glass');
+  assert.equal(reduce(state, { type: 'open-workspace', workspaceId: 'bbbb2222' }).surface, 'glass');
+  assert.equal(reduce(state, { type: 'open-workspace', workspaceId: WS }), state, 'reopening the same workspace changed its surface');
   const glass = formatAddress(addressFor(WS, 'issues', { note: 'ISS-0008' }));
   assert.equal(glass.includes('surface'), false);
   assert.equal(parseAddress(glass).surface, null, 'no surface in the address means Glass');

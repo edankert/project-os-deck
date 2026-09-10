@@ -574,6 +574,14 @@ async function loadView(workspace: Workspace, view: Description): Promise<void> 
   applySurface();
   drawNavigator();
   drawDesk();
+  // Under reduced motion a view switch is a cut, so the note a person was on
+  // is shown by a highlight: its card, and its row scrolled into view
+  // (TASK-0032, ISS-0061).
+  const focused = host.state().noteId;
+  if (reducedMotion() && focused !== null && currentCards.some((c) => c.noteId === focused)) {
+    if (glass.isActive()) glass.arriveAt(focused);
+    navigator.highlight(focused);
+  }
 }
 
 /**
@@ -1579,10 +1587,11 @@ async function applyAddress(raw: string): Promise<void> {
   } else if (address.panel !== null) {
     say(`that address carries the ${address.panel} panel, which belongs to a popped-out window; opening the rest of it here`);
   }
-  // The surface before the view, so the view is drawn once, on the right one.
-  // No surface in the address means Glass.
-  await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
   await selectWorkspace(workspace.id);
+  // After the workspace, which opens in Glass (ISS-0060), and before the
+  // view, so the view is drawn once, on the surface the address names. No
+  // surface in the address means Glass.
+  await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
   await selectView(address.viewId);
   if (address.desk !== null) await host.dispatch({ type: 'open-desk', name: address.desk });
   if (address.note !== null) {
@@ -1835,32 +1844,6 @@ function startNeedsYouPoll(): void {
     })();
   }, beat);
 }
-
-/**
- * Hold a change to one note's status as though it had arrived from disk.
- *
- * The smoke run's route to TASK-0032's chip: it must never write to the
- * repository it checks, so it cannot make a real change arrive. What it
- * drives is everything after the arrival — the count, the chip, the field
- * not moving, and the deal on the person's click.
- */
-(globalThis as unknown as { __deckHoldChange?: (noteId: string, status: string) => number }).__deckHoldChange = (
-  noteId,
-  status,
-) => {
-  const clone = JSON.parse(JSON.stringify(currentGroups)) as CardGroup[];
-  const walk = (cards: CardModel[]): void => {
-    for (const card of cards) {
-      if (card.noteId === noteId) card.status = status;
-      walk(card.children);
-    }
-  };
-  for (const group of clone) walk(group.cards);
-  pendingGroups = clone;
-  pendingCount = changedNotes(currentGroups, clone);
-  drawDesk();
-  return pendingCount;
-};
 
 // The smoke run reads this to check that a satellite saw the state change.
 host.onState((state) => {

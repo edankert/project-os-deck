@@ -76,6 +76,30 @@ test('no slot inside an obstacle is dealt to a card, at any yaw', () => {
   }
 });
 
+test('over random panes and yaws, no visible card is drawn under a pane (ISS-0058)', () => {
+  // A seeded walk, so a failure names a placement that can be replayed.
+  let seed = 12345;
+  const random = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let checked = 0;
+  for (let i = 0; i < 3000; i += 1) {
+    const width = 700 + Math.floor(random() * 900);
+    const viewport = { width, height: 700 };
+    const w = 280 + Math.floor(random() * 300);
+    const left = Math.floor(random() * Math.max(1, width - w));
+    const yaw = (random() * 2 - 1) * Math.PI;
+    const obstacles = obstaclesFor({ left, right: left + w }, yaw, viewport);
+    const { slots } = assignSlots(bands(12, 40, 0), obstacles);
+    for (const [id, slot] of slots) {
+      const p = project(slot, yaw, viewport);
+      if (!p.visible) continue;
+      const r = cardRect(p);
+      checked += 1;
+      assert.ok(r.right <= left + 0.5 || r.left >= left + w - 0.5, `${id} overlaps a pane at ${left}–${left + w} in a ${width}px field at yaw ${yaw.toFixed(3)} (${r.left.toFixed(1)}–${r.right.toFixed(1)})`);
+    }
+  }
+  assert.ok(checked > 10000, `only ${checked} cards were checked`);
+});
+
 test('an obstacle takes spare slots first, and past the spares the band says how many did not fit', () => {
   assert.ok(frontSlots().length > 12, 'the front band has no spares');
   assert.ok(midSlots().length > 40, 'the mid band has no spares');

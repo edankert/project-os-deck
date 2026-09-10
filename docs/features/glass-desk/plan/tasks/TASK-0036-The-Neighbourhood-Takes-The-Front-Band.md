@@ -35,11 +35,11 @@ Two findings from [[REFERENCE-DES-0002-REVIEW]] are rules here. First, the front
 ## Acceptance
 
 - Lifting a note makes one request for its context, and putting it back makes none.
-- While a note is held, every note in its linked and backlink groups is in the front band at full size, and the field has turned to face them.
+- While a note is held, every note in its linked and backlink groups is in the front band at full size, and the field has turned to face them. **Amended 2026-09-10 (ISS-0059):** every such note up to the front band's twelve slots, the notes two held notes share first; past twelve they are counted on the bar and listed in the navigator under "Joined to what you are holding".
 - A neighbour is still a field card: clicking it lifts it, and the held set grows by one, not by the neighbour's own neighbourhood.
 - The front band's label reads "what is joined to what you are holding" while any note is held, and returns to its view meaning when none is.
 - The owed count is drawn in the same place before, during and after a note is held.
-- Under reduced motion, the turn is replaced by a highlight on the neighbours and no card is animated.
+- Under reduced motion, the turn is replaced by a highlight on the neighbours and no card is animated. Built on 2026-09-10 after the review found it missing (ISS-0061).
 - Every neighbour is reachable and liftable from the navigator by keyboard.
 
 ## Steps
