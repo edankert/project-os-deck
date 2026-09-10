@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-08T12:00Z"
+updated: "2026-09-10T12:00Z"
 
 template:
   replace_me: false
@@ -48,22 +48,23 @@ counters:
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 13
+  FEAT: 14
   ISS: 57
   PHASE: 4
   REQ: 0
   RISK: 4
   REL: 0
-  TASK: 52
-  TST: 37
+  TASK: 57
+  TST: 38
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0001"
-  feature: "FEAT-0006"
-  task: "TASK-0052"
-  issue: "ISS-0038"
+  feature: ""
+  task: ""
+  issue: "ISS-0056"
+  note: "Nothing is in flight: PHASE-0001's ten features are done, pushed and green, and it waits on four walks only Edwin can make plus a triage decision on ISS-0056. PHASE-0002 was reviewed on 2026-09-10 against a Minority Report style surface and gained FEAT-0014 (five tasks, one walk); it starts when PHASE-0001 closes."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -186,6 +187,15 @@ items:
       requirements: []
       tasks: ["TASK-0047", "TASK-0048", "TASK-0049", "TASK-0050", "TASK-0051"]
       note: "ADDED 2026-09-08 with ADR-0003, which REVERSES PHASE-0001's 'Deck adds no write path of its own' and ARCHITECTURE.md's 'reads and never writes'. It does NOT reverse ADR-0001: Deck's host still answers 405 to every method that is not a read. The route is renderer -> preload bridge -> main process -> LOOPBACK request to the sidecar's existing guarded endpoint; the capability set gains write, FALSE when served, so a tablet is offered no verb AT ALL -- absent, not disabled. Edwin 2026-09-08: 'the tablet does not write', a RULE with no condition, not a wait on the cockpit's REQ-0034. TWO VERBS ONLY: tick a criterion with evidence (addressed by the data-raw the sidecar stamps; mtime sent; no data-raw means no tick offered) and one transition read from GET /api/notes/actions. The actor is a STORE SETTING, because the cockpit's hard-coded user:edwin is a literal that cannot be copied. A write makes other windows stale, so the changed-under-you mark is built here -- the seam PHASE-0002 and PHASE-0004 both need. Everything else the cockpit can do stays PHASE-0004's, adopted a register row at a time. Adoption: api.write.notes moved not applicable -> not yet."
+    FEAT-0014:
+      file: "docs/features/glass-hands/FEAT-0014-The-Hands.md"
+      title: "The hands: a person arranges the field, throws a note to another screen, and reaches for a card to see what it is joined to"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057"]
+      note: "ADDED 2026-09-10 from REFERENCE-GLASS-PHASE-REVIEW, after Edwin said the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned, Glass let a person turn, switch view, lift and put back; every band and position was the record's opinion. Five properties of the film's surface survive without gloves and the plan had one and a half. This carries the rest: PULL and PUSH by a short drag, session state in the store shared by every window, dropped by the persister, never in the address, owed beats both and the refusal says why, the label counts hand-placed and the compass counts pushed (TASK-0053); a held note is a PANE moved, resized and stacked with DES-0002's header rule, place and size in the desk record Spread saves, a stated minimum width and a widen-to-column verb (TASK-0054); a THROW off the field's edge toward a window on another display lands in its reader or on its desk, opens a new reader window on an empty display, reaches the tablet, with a target strip, a flight and a keyboard send-to (TASK-0055); REACH by hover or press-and-hold draws wires to a card's neighbours on the canvas from TASK-0036's cached context read (TASK-0056); and the SERVED PAGE FOLLOWS THE STORE over GET /deck/state and /deck/events, both 405 to writes, so the tablet shows the Mac's desk and follows focus when asked, never steering (TASK-0057). FOUND IN CODE: host-bridge.ts keeps a fresh local state when there is no bridge, so the tablet today never sees the store. Nothing a hand does writes; git status after the walk is the check. Order: TASK-0057 first (host only), 0053 after the renderer, 0054 after the lift, 0056 after the neighbourhood, 0055 last. Not adopted, in the review's Part 5: a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's)."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -432,6 +442,41 @@ items:
       owner: user:edwin
       parent: "FEAT-0006"
       phase: PHASE-0001
+    TASK-0053:
+      file: "docs/features/glass-hands/plan/tasks/TASK-0053-Pull-Forward-And-Push-Behind.md"
+      title: "Pull forward and push behind: a card is placed in the front band or behind you by hand for the session, an owed note cannot be pushed out, and the front plane says how many notes a hand placed"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0014"
+      phase: PHASE-0002
+    TASK-0054:
+      file: "docs/features/glass-hands/plan/tasks/TASK-0054-A-Held-Note-Is-A-Pane.md"
+      title: "A held note is a pane: moved, resized and stacked on the front plane by hand, its header always readable, and its place kept in the desk record Spread already saves"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0014"
+      phase: PHASE-0002
+    TASK-0055:
+      file: "docs/features/glass-hands/plan/tasks/TASK-0055-Throw-To-A-Screen.md"
+      title: "Throw to a screen: a drag that leaves the field toward another window lands the note in that window's reader or on its desk, opens a new reader window on an empty display, and reaches the tablet"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0014"
+      phase: PHASE-0002
+    TASK-0056:
+      file: "docs/features/glass-hands/plan/tasks/TASK-0056-Reach.md"
+      title: "Reach: hovering a card on the desktop, or pressing and holding it on the tablet, draws wires to what it is joined to and counts the neighbours behind you, before anything is lifted"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0014"
+      phase: PHASE-0002
+    TASK-0057:
+      file: "docs/features/glass-hands/plan/tasks/TASK-0057-The-Served-Page-Follows-The-Store.md"
+      title: "The served page follows the store: Deck's host gains two read routes, a tablet shows the desk the Mac holds and follows the shell's focus when asked, and still cannot send anything back"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0014"
+      phase: PHASE-0002
   issues:
     ISS-0031:
       file: "docs/issues/ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded.md"
@@ -1015,18 +1060,18 @@ items:
       requirements: []
       tasks: ["TASK-0038", "TASK-0039", "TASK-0040", "TASK-0041", "TASK-0042", "TASK-0043", "TASK-0044", "TASK-0045", "TASK-0046", "TASK-0047", "TASK-0048", "TASK-0049", "TASK-0050", "TASK-0051", "TASK-0052"]
       issues: []
-      note: "WIDENED 2026-09-08 and still active. Edwin, asked whether to reopen this phase or insert a design step before Glass: 'happy to reopen phase-0001 to implement this'. Three features added -- FEAT-0011 Deck's own index, FEAT-0012 a view is a description, FEAT-0013 the first write -- plus TASK-0052 under FEAT-0006 (the grammar gains surface/page/flow/step, panel kinds come from a registry, a flow cursor slot is reserved), two decisions (ADR-0003 the shell writes and the served host never does; ADR-0004 a view is a description over Deck's own index), two hazards (RISK-0003, RISK-0004) and five exit criteria. ONE SCOPE BULLET REVERSED: 'Reads only. Deck adds no write path of its own' is struck on 2026-09-08. FEAT-0006 went from done back to doing for TASK-0052, the same move FEAT-0004 and FEAT-0005 made on 2026-09-07. The tasks list here is the NEW work only; the 23 completed ones are in the note. COST TO GLASS: PHASE-0002 starts after FEAT-0012, and TASK-0029's band table moves into the description. NONE OF THIS DISCHARGES what the phase already owed: two reopened walks, ISS-0022 undiagnosed, ISS-0023 with RISK-0001 back at open, and four features at review. The phase that makes Deck a thing you can open, and the one that carries the foundations rather than a separate foundations phase before it. Deliberate: a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge, and the two rules that must hold from the first line of code -- one renderer with two hosts, and views taken from a provider rather than a fixed list of buttons -- would be stranded in a phase that ends before any view exists. Exit is measured, not listed: Spread opens the same notes as the cockpit, a status window survives a restart on a second display, and the same renderer served by the sidecar opens read-only on a tablet. If the phase proves too large to steer, the split point is the first criterion. Asks nothing new of the sidecar: the list of views is Deck's own (Edwin 2026-09-06), and the project-os provider matches the cockpit's navigator."
+      note: "2026-09-10: ALL TEN FEATURES DONE AND APPROVED, the 26 commits PUSHED on 2026-09-09, and both CI jobs (validate-docs, deck-smoke) GREEN on main; the first CI run found two things a developer's machine cannot (ISS-0057, fixed). What holds the phase open is a person's work only: FOUR WALKS in the ledger (TST-0010 tablet, TST-0011 quit, TST-0027 base file against Obsidian, TST-0028 tick seen in the cockpit), collected into one ninety-minute sitting in REFERENCE-FOUR-WALKS-OWED, with no ledger entry since 2026-09-08; and ISS-0056 at triage naming this phase (its first action, the push, is done; a gate decision on the four smoke-only guards and seven small findings remain). No task at backlog or doing; every risk closed. WIDENED 2026-09-08 by Edwin ('happy to reopen phase-0001 to implement this'): FEAT-0011 Deck's own index, FEAT-0012 a view is a description, FEAT-0013 the first write, TASK-0052 under FEAT-0006, ADR-0003 and ADR-0004, RISK-0003 and RISK-0004, five exit criteria; the 'Reads only' scope bullet reversed. The tasks list here is that new work only; the 23 completed before are in the note. The phase that makes Deck a thing you can open, carrying the foundations rather than a separate foundations phase before it, because a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge. Asks nothing new of the sidecar."
     PHASE-0002:
       file: "docs/phases/PHASE-0002-Glass.md"
-      title: "Glass — the main view, where depth carries priority and a held note brings its neighbourhood to the front"
+      title: "Glass — the main view, where depth carries priority, a person arranges the field by hand, and a held note brings its neighbourhood to the front"
       status: active
       order: 2
       owner: user:edwin
-      features: ["FEAT-0009", "FEAT-0010", "FEAT-0001"]
+      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001"]
       requirements: []
-      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
       issues: ["ISS-0008"]
-      note: "OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit; its issues are ironed out here. Was gated on FEAT-0001's three measurements; those are now EXIT CRITERIA written as numbers, not a gate. Three features: FEAT-0009 the field (the focus; bands from the groups the sidecar already sends; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band (what Edwin said he cannot see today), FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Three acceptance walks: TST-0023, TST-0024, TST-0025. Asks nothing new of the sidecar except FEAT-0001's endpoint, which is cockpit work. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk, the navigator, the addresses and the tablet host."
+      note: "REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
       title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
@@ -1351,6 +1396,14 @@ items:
       phase: PHASE-0001
       covers: ["FEAT-0006"]
       note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0006 for TASK-0052. The register-then-parse pair is load-bearing: a parser that quietly accepts every panel kind passes a refusal test with a typo but fails this one. Carrying TST-0005's round-trip and malformed tables UNCHANGED is what makes 'nothing regressed' a measurement rather than a claim."
+    TST-0038:
+      file: "docs/tests/acceptance/TST-0038-The-Field-Is-Arranged-By-Hand-And-A-Note-Is-Thrown-To-Another-Screen.md"
+      title: "The field is arranged by hand, a note is thrown to another screen, the tablet shows what the Mac holds, and the record is untouched"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0014"]
+      note: "Acceptance walk for FEAT-0014, added 2026-09-10. Reach a card and see wires; pull one forward and push one behind; try to push an owed note and read the refusal; drag, resize, stack and widen panes; throw a card to the reader window on a second display and another to an empty display; see the desk on the tablet and press-and-hold there; restart and find the panes kept and the hand sets gone; git status clean. Needs Your Trainer, a second display and a tablet. Rests at active; the verdict is a ledger event."
   releases: {}
   workflows: {}
   changes:
@@ -1430,11 +1483,11 @@ items:
 
 metrics:
   counts:
-    features_total: 13
+    features_total: 14
     features_done: 10
     phases_total: 4
     phases_done: 0
-    tasks_total: 52
+    tasks_total: 57
     tasks_done: 38
     tests_total: 24
     tests_passing: 1

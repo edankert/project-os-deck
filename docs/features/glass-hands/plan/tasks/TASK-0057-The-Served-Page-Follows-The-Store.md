@@ -1,0 +1,57 @@
+---
+type: "[[task]]"
+id: TASK-0057
+aliases: ["TASK-0057"]
+title: "The served page follows the store: Deck's host gains two read routes, a tablet shows the desk the Mac holds and follows the shell's focus when asked, and still cannot send anything back"
+status: backlog
+phase: "[[PHASE-0002-Glass]]"
+owner: user:edwin
+created: 2026-09-10
+updated: 2026-09-10
+source: ["[[FEAT-0014-The-Hands]]", "[[REFERENCE-GLASS-PHASE-REVIEW]]"]
+parent: "FEAT-0014"
+effort: ""
+due: ""
+depends: []
+blocks: ["TASK-0055"]
+related: ["[[FEAT-0014-The-Hands]]", "[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[TASK-0021-Decks-Own-Read-Only-Host]]", "[[TASK-0022-Capability-Is-Detected-Not-Assumed]]", "[[FEAT-0003-One-Store-In-The-Main-Process]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
+tests: []
+---
+
+# The served page follows the store
+
+## Objective
+
+A tablet served by Deck's host shows the desk the Mac holds, sees a note lifted on the Mac within a second, and follows the shell's focused note when a person asks it to. It does this by reading, and it can still send nothing back.
+
+## Detail
+
+**Today the served page never sees the store.** Without the preload bridge, `Host.start()` in `desktop/src/renderer/host-bridge.ts` fetches `/deck/capabilities` and keeps a fresh local state from `initialState()`. Every desk, every focused note and every view choice on the tablet is the tablet's own, and a note lifted on the Mac is invisible there. The review of 2026-09-10 found this by reading the code; no walk had asked the question, because [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]] checks that the tablet reads notes and refuses writes, which it does.
+
+**Two read routes fix it, and neither touches [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]].** `GET /deck/state` answers with the store's state, minus the parts only the shell can use, which the capability set already names. `GET /deck/events` is a server-sent event stream that pushes the state, or the changed part of it, whenever the store broadcasts. Both answer `GET` and `HEAD` and answer 405 to everything else, exactly as every other route on Deck's host does, and `npm run smoke:lan` asserts that from the network address. Reading state is a read; the tablet still cannot dispatch, and [[ADR-0003-Deck-Writes-Through-The-Shell]]'s rule that the tablet does not write is untouched.
+
+**What the tablet shares and what stays its own.** The desk is per workspace and is shared: the tablet shows the workspace's desk and every held note. The pulled and pushed sets of [[TASK-0053-Pull-Forward-And-Push-Behind]] are shared too, because they are in the store. The tablet's own view and surface choice stay local, so a person can browse Features on the tablet while the Mac shows Issues. A **follow** toggle on the served page makes the tablet follow the shell's focused note, which is what the cockpit's Following toggle did and the adoption table lists; the toggle is off by default, and the plan records that the default flips if the walk finds people expect a mirror.
+
+**What is on the network.** The state carries workspace ids, desk contents, focused notes and window roles, none of which is more than the notes already served to the same address. The served state is filtered through the same allow-list of workspaces that `/deck/workspaces` uses, so a workspace with no sidecar answering is not described.
+
+## Acceptance
+
+- `GET /deck/state` on Deck's host returns the store's state without the shell-only parts, and `GET /deck/events` streams a change within a second of a store broadcast.
+- `POST`, `PUT`, `DELETE`, `PATCH` and `OPTIONS` on both routes are refused 405, asserted over real HTTP from the network address in the smoke run.
+- A served page subscribes on start, and a note lifted on the Mac is on the tablet's desk within a second, with no reload.
+- The tablet's view and surface choice are local and unchanged by a view switch on the Mac.
+- With follow on, the tablet shows the note the shell focuses; with follow off, it does not.
+- The capability set of a served page still reads `write: false`, and the page still offers no verb.
+- The state a served page receives describes only workspaces with a sidecar answering.
+
+## Steps
+
+- [ ] Add the two routes to `desktop/src/main/host.ts` with the state filter and the 405 rule; add them to the host suite and to `smoke:lan`.
+- [ ] Subscribe in `Host.start()` when there is no bridge, and replace the local state with what arrives.
+- [ ] Add the follow toggle to the served page, off by default.
+- [ ] Move the adoption table's `shell.live` and Following rows as this lands, with the date.
+- [ ] Write the automated test notes and link them from `tests:`.
+
+## Notes
+
+This extends [[FEAT-0008-One-Renderer-Two-Hosts]] and could have reopened it. It is placed here because the throw is what needs it and because it is the first task that can start in this phase before the field is drawn.

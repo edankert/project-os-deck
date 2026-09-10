@@ -7,7 +7,7 @@ status: backlog
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-08
+updated: 2026-09-10
 source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 parent: "FEAT-0009"
 effort: ""
@@ -41,6 +41,7 @@ The front band holds about twelve cards and the mid band about forty. Your Train
 - A note in the Needs-you group is never assigned to the mid or quiet band; past the front band's capacity it is counted as overflow and the count is returned.
 - A note in the view's own groups that does not fit the mid band is counted as mid overflow and is never assigned to the quiet band, because "behind you" must mean finished, not "did not fit".
 - The table has columns for held and joined-to-desk that are unused until [[FEAT-0010-Lifting-A-Note]] fills them.
+- **Amended 2026-09-10.** The table also has columns for `pulled` and `pushed`, unused until [[TASK-0053-Pull-Forward-And-Push-Behind]] fills them, with the rule stated now so it is not invented later: pulled beats subject for the front band, pushed beats subject for the quiet band, and owed beats both, so an owed note is never moved by a hand.
 
 ## Steps
 
@@ -52,4 +53,4 @@ The front band holds about twelve cards and the mid band about forty. Your Train
 
 ## Notes
 
-The review's phrase for this is a degree-of-interest function, after Furnas: every note gets a number saying how much the person wants to see it now, and the display shows the most interesting largest. Writing it as one table is what makes "the one that breaks the rule" a row rather than a special case. The Recent view, if it ever returns, is a row here where distance means age, and the table says so.
+The review's phrase for this is a degree-of-interest function, after Furnas: every note gets a number saying how much the person wants to see it now, and the display shows the most interesting largest. Writing it as one table is what makes "the one that breaks the rule" a row rather than a special case. The Recent view, if it ever returns, is a row here where distance means age, and the table says so. The hand's inputs, added on 2026-09-10 by [[FEAT-0014-The-Hands]], are the first that come from a person rather than from the record, and the reason owed beats them is that the front plane's meaning as what the record says needs a person must survive a rearrangement by hand.

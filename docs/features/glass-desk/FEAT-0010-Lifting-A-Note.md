@@ -61,4 +61,6 @@ Three words are used throughout. The **field** is the cylinder of cards that [[F
 
 ## Where this stands
 
+**2026-09-10: a held note becomes a pane, in the feature beside this one.** [[REFERENCE-GLASS-PHASE-REVIEW]] found that this feature lifts a note and puts it back and never says the held note can be moved, and that the plan's open question about the reader's width had been left to the design. [[TASK-0054-A-Held-Note-Is-A-Pane]] under [[FEAT-0014-The-Hands]] answers both: a held note is dragged, resized and stacked with DES-0002's header rule, has a stated minimum width and a verb that widens it to a reading column, and keeps its place and size in the desk record Spread already saves. Reaching for a card before lifting it, which shows the neighbourhood as wires without a lift, is [[TASK-0056-Reach]] and reuses [[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]'s context read. This feature's three tasks and their acceptance are unchanged.
+
 **2026-09-07: planned.** Written the day Edwin decided that Glass is Deck's main view and is built first ([[ADR-0002-Glass-Is-The-Main-View]]). Nothing here can start before [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] has a field to lift from, which is its TASK-0031, and a slot geometry that treats a held note as an obstacle, which is its TASK-0030.

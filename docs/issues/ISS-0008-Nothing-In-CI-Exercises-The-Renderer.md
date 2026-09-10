@@ -7,7 +7,7 @@ status: triage
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["Independent review of the PHASE-0001 Spread work, 2026-09-07"]
 severity: medium
 component: tests
@@ -35,6 +35,10 @@ Which of those is worth it is a decision about how much this project spends on i
 ## What is true today
 
 The smoke run does now drive the renderer hard, on a real Electron window against a real sidecar: it clicks a row onto the desk, drags a card and finds it where it was left after a reload, empties the list with a search and restores it, checks the fold, the counts and the headings, and opens all three panels. It is one command, `npm run smoke`, and a person has to run it.
+
+## The premise changed on 2026-09-09, noted 2026-09-10
+
+**The smoke run is in continuous integration now.** `.github/workflows/deck-smoke.yml` installs Electron, a virtual display and the sidecar from its sibling checkout, runs `npm run smoke`, and went green on `main` on 2026-09-09 after its first run found two things a developer's machine cannot ([[ISS-0057-Both-CI-Jobs-Failed-On-Their-First-Run]]). So the sentence above, "the smoke run is not in continuous integration", is no longer true. What is still true is that the smoke is the renderer's only gate, that it drives the renderer through a real window rather than through unit checks, and that a check it does not make is a check nothing makes. [[REFERENCE-GLASS-PHASE-REVIEW]] asked grooming to re-read this note against that: the three ways out listed above are now a choice about whether the smoke alone is enough for a phase whose every task is renderer work, not about getting the renderer into CI at all.
 
 ## Measured, 2026-09-07: reverting a shipped fix is invisible to every check
 
