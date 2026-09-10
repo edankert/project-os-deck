@@ -5,6 +5,7 @@
  * so the shell and a tablet run identical bytes over one origin (ADR-0001).
  */
 import type { ChildProcess } from 'node:child_process';
+import { recordGlass } from './smoke-glass.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,13 +13,16 @@ import { BrowserWindow, app, clipboard, dialog, ipcMain, screen, shell } from 'e
 import { SHELL_CAPABILITIES, SERVED_CAPABILITIES } from '../shared/capability.js';
 import { type DeckAction, isRendererAction } from '../shared/store-state.js';
 import type { WindowRole } from '../shared/types.js';
-import { tryParseAddress } from '../shared/address.js';
+import { addressFor, formatAddress, tryParseAddress } from '../shared/address.js';
+import { type Edge, landingBounds } from '../shared/throw.js';
+import { deskCardsOf } from '../shared/store-state.js';
+import { PANE_HEADER_HEIGHT } from '../shared/panes.js';
 import { DeckHost } from './host.js';
 import { DeckStore } from './store.js';
 import { SidecarSupervisor, freePort, waitForExit } from './sidecar.js';
 import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
-import { type DisplayInfo, boundsKey, placeWindow } from './window-placement.js';
+import { type DisplayInfo, type SavedBounds, boundsKey, placeWindow } from './window-placement.js';
 import { NoteIndex, docsRootFor, pathPrefixFor, walkNotes } from './note-index.js';
 import {
   SidecarWriteClient,
@@ -103,6 +107,11 @@ const host = new DeckHost({
   onSidecarUnreachable: (id) => sidecars.forget(id),
   isSidecarStarting: (id) => sidecars.isStarting(id),
   indexFor: (id) => indexes.get(id)?.snapshot() ?? null,
+  // A tablet follows the Mac's desk by READING it (TASK-0057). Nothing a
+  // served page sends can reach the store: this host answers 405 to every
+  // method that is not a read, and the page has no bridge.
+  state: () => store.getState(),
+  subscribeState: (fn) => store.subscribe(fn),
 });
 
 interface WindowInfo {
@@ -154,9 +163,16 @@ let openOutside = (url: string): void => {
   void shell.openExternal(url);
 };
 
-function createWindow(role: WindowRole, address: string | null, panel: string | null): BrowserWindow {
+function createWindow(
+  role: WindowRole,
+  address: string | null,
+  panel: string | null,
+  landing: SavedBounds | null = null,
+): BrowserWindow {
   const key = boundsKey(role, panel, panelSubject(panel, address));
-  const bounds = placeWindow(windowBook.get(key), displays());
+  // A window a note was thrown into lands where the throw said, placed by the
+  // same function that places every window (TASK-0055).
+  const bounds = placeWindow(landing ?? windowBook.get(key), displays());
   const win = new BrowserWindow({
     ...bounds,
     minWidth: 520,
@@ -327,6 +343,106 @@ function registerIpc(): void {
     panelBook.add(address);
     createWindow('satellite', address, parsed.address.panel);
     return { ok: true };
+  });
+
+  /**
+   * Every other Deck window, where it is and what it carries, for a throw
+   * (TASK-0055). The main process is the only thing that knows every window's
+   * bounds and the display it is on, so the renderer asks rather than guesses.
+   */
+  handle('deck:windows:list', (event) => {
+    const self = BrowserWindow.fromWebContents(event.sender);
+    const all = screen.getAllDisplays();
+    const primaryId = screen.getPrimaryDisplay().id;
+    const labelOf = (id: number): string => {
+      const index = all.findIndex((d) => d.id === id);
+      const display = all[index];
+      if (display === undefined) return 'a display';
+      if (typeof display.label === 'string' && display.label !== '') return display.label;
+      return id === primaryId ? 'the main display' : `display ${index + 1}`;
+    };
+    const windows = [];
+    for (const [id, info] of windowInfo) {
+      if (self !== null && id === self.id) continue;
+      const win = BrowserWindow.fromId(id);
+      if (win === null || win.isDestroyed()) continue;
+      const b = win.getBounds();
+      const displayId = screen.getDisplayMatching(b).id;
+      const carries = info.role === 'focus' ? 'focus' : (info.panel ?? 'focus');
+      windows.push({ id, carries, bounds: b, displayId, displayLabel: labelOf(displayId) });
+    }
+    const selfBounds = self === null ? null : self.getBounds();
+    return {
+      self: selfBounds === null ? null : { bounds: selfBounds, displayId: screen.getDisplayMatching(selfBounds).id },
+      windows,
+      displays: all.map((d) => ({ id: d.id, label: labelOf(d.id), workArea: d.workArea })),
+      // A served page following the store is a place a note can be thrown to.
+      followers: host.followers(),
+    };
+  });
+
+  /**
+   * A note thrown to another window (TASK-0055).
+   *
+   * Landing is an action the windows already understand. A reader window is
+   * re-addressed at the note, the way a pop-out is addressed; a desk panel and
+   * the tablet get the note on the desk, which is per workspace and so is the
+   * same desk everywhere; a display with no Deck window gets a new reader,
+   * placed by the function that places every window.
+   */
+  handle('deck:window:throw', (_e, request: Record<string, unknown>) => {
+    const noteId = typeof request?.['noteId'] === 'string' ? request['noteId'] : '';
+    const workspaceId = typeof request?.['workspaceId'] === 'string' ? request['workspaceId'] : '';
+    const viewId = typeof request?.['viewId'] === 'string' ? request['viewId'] : '';
+    const target = (request?.['target'] ?? {}) as Record<string, unknown>;
+    const edge = (['left', 'right', 'top', 'bottom'].includes(String(request?.['edge'])) ? request['edge'] : 'right') as Edge;
+    if (noteId === '' || workspaceId === '' || viewId === '') return { ok: false, error: 'a throw names a note, a workspace and a view' };
+    let address: string;
+    try {
+      address = formatAddress(addressFor(workspaceId, viewId, { note: noteId, panel: 'note' }));
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+    const onTheDesk = (): void => {
+      const cards = deskCardsOf(store.getState(), workspaceId);
+      store.dispatch({ type: 'put-on-desk', noteId, x: 16 + (cards.length % 3) * 28, y: 16 + cards.length * PANE_HEADER_HEIGHT });
+    };
+    if (target['kind'] === 'tablet') {
+      onTheDesk();
+      return { ok: true, landed: 'tablet' };
+    }
+    if (target['kind'] === 'window') {
+      const id = Number(target['windowId']);
+      const info = windowInfo.get(id);
+      const win = BrowserWindow.fromId(id);
+      if (info === undefined || win === null || win.isDestroyed()) return { ok: false, error: 'that window has closed' };
+      if (info.panel === 'desk') {
+        onTheDesk();
+        return { ok: true, landed: 'desk' };
+      }
+      if (info.role === 'focus') {
+        store.dispatch({ type: 'focus-note', noteId });
+        return { ok: true, landed: 'focus' };
+      }
+      if (info.panel === 'note') {
+        if (info.address !== null) panelBook.remove(info.address);
+        panelBook.add(address);
+        info.address = address;
+        const query = new URLSearchParams({ role: 'satellite', address, panel: 'note' });
+        void win.loadURL(`${hostOrigin}/?${query.toString()}`);
+        return { ok: true, landed: 'reader' };
+      }
+      return { ok: false, error: 'a Needs-you strip shows what the record says is owed, and a note is not thrown to it' };
+    }
+    if (target['kind'] === 'display') {
+      const display = screen.getAllDisplays().find((d) => d.id === Number(target['displayId']));
+      if (display === undefined) return { ok: false, error: 'that display is gone' };
+      const bounds = landingBounds(edge, display.workArea);
+      panelBook.add(address);
+      createWindow('satellite', address, 'note', { ...bounds, displayId: display.id });
+      return { ok: true, landed: 'new-reader' };
+    }
+    return { ok: false, error: 'a throw names where it goes' };
   });
 
   /**
@@ -555,6 +671,37 @@ async function runSmoke(): Promise<void> {
     // The workspace has to exist before the first window boots: the rail is
     // drawn once at start, and a window that opened on an empty rail stays empty.
     const prepared = prepareWorkspace();
+    // A developer's shortcut to the Glass section alone, which is the part
+    // that takes the most iterations. A run that uses it says so in its
+    // verdict, so it can never stand in for the whole smoke.
+    if (process.env['DECK_SMOKE_ONLY'] === 'glass' && prepared !== null) {
+      await ipcInvoke('deck:workspaces:open', prepared.id);
+      skip('everything but Glass: DECK_SMOKE_ONLY=glass');
+      await recordGlass({
+        store,
+        createWindow: (role, address, panel) => createWindow(role, address, panel),
+        addressOf: (id) => windowInfo.get(id)?.address ?? null,
+        displayCount: () => screen.getAllDisplays().length,
+        record,
+        skip,
+        notHere,
+        prepared,
+        tempDir: app.getPath('temp'),
+        untilBooted,
+        focusApp,
+        windows: () =>
+          [...windowInfo.entries()].flatMap(([id, info]) => {
+            const w = BrowserWindow.fromId(id);
+            if (w === null || w.isDestroyed()) return [];
+            return [{ id, address: info.address, displayId: screen.getDisplayMatching(w.getBounds()).id, win: w }];
+          }),
+      });
+      console.log(JSON.stringify(smokeVerdict(failures, skipped, notApplicable), null, 2));
+      shutdown();
+      await delay(400);
+      app.exit(1);
+      return;
+    }
     const focus = createWindow('focus', null, null);
     await once(focus.webContents, 'did-finish-load');
     await untilBooted(focus);
@@ -587,6 +734,9 @@ async function runSmoke(): Promise<void> {
       const refusedRecords = await fetch(`${hostOrigin}/deck/records/${prepared.id}`, { method: 'POST' });
       record(refusedRecords.status === 405, 'the records path refuses a POST with 405');
 
+      // These checks are Spread's. Glass is the surface Deck opens since
+      // PHASE-0002, so Spread is chosen by name; Glass has its own section.
+      store.dispatch({ type: 'select-surface', surface: 'spread' });
       // The window booted before the workspace was opened, so give it the rail again.
       focus.webContents.reload();
       await once(focus.webContents, 'did-finish-load');
@@ -910,7 +1060,39 @@ async function runSmoke(): Promise<void> {
     }
 
 
+    // **Glass** (PHASE-0002): the field, the desk lifted out of it, and the
+    // hands, driven with real pointer events through `sendInputEvent`, which
+    // hit-tests the way a person's pointer does. DES-0002 lost two revisions
+    // to a synthetic click that never hit-tested.
+    if (prepared === null) skip('Glass: no workspace was opened');
+    else {
+      await recordGlass({
+        store,
+        createWindow: (role, address, panel) => createWindow(role, address, panel),
+        addressOf: (id) => windowInfo.get(id)?.address ?? null,
+        displayCount: () => screen.getAllDisplays().length,
+        record,
+        skip,
+        notHere,
+        prepared,
+        tempDir: app.getPath('temp'),
+        untilBooted,
+        focusApp,
+        windows: () =>
+          [...windowInfo.entries()].flatMap(([id, info]) => {
+            const w = BrowserWindow.fromId(id);
+            if (w === null || w.isDestroyed()) return [];
+            return [{ id, address: info.address, displayId: screen.getDisplayMatching(w.getBounds()).id, win: w }];
+          }),
+      });
+    }
+
     await recordNavigationGuard(record);
+
+    // **The tablet follows the store** (TASK-0057). A page with no bridge is
+    // exactly what a tablet loads, so the check opens one here rather than
+    // needing a tablet, and times how long a lift on the Mac takes to reach it.
+    await recordServedPageFollows(record, skip, prepared);
 
     // **The renderer's own guards, driven in a real window.** Neither of these
     // can be a node check: `node --test` cannot load the renderer at all
@@ -1366,6 +1548,20 @@ async function recordFromTheNetwork(
   const posted = await fetch(`${origin}/deck/workspaces`, { method: 'POST' });
   record(posted.status === 405, `a POST from the network is refused with 405 (it answered ${posted.status})`);
 
+  // The two routes a tablet follows the store over are reads and nothing else
+  // (TASK-0057). Every other method, from the network address.
+  for (const route of ['/deck/state', '/deck/events']) {
+    const refusedAll: string[] = [];
+    for (const method of ['POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) {
+      const answered = await fetch(`${origin}${route}`, { method });
+      if (answered.status !== 405) refusedAll.push(`${method} ${answered.status}`);
+    }
+    record(refusedAll.length === 0, `${route} refuses every write from the network with 405 (${refusedAll.join(', ') || 'all five'})`);
+  }
+  const stateRead = await fetch(`${origin}/deck/state`);
+  const stateBody = (await stateRead.json()) as { actor?: string };
+  record(stateRead.status === 200 && stateBody.actor === '', 'the state a tablet reads carries no name to write with');
+
   if (prepared === null) {
     skip('the traversal checks: no workspace was opened, so there is no sidecar to try to reach past');
     return;
@@ -1387,6 +1583,70 @@ async function recordFromTheNetwork(
   // everything: a note whose name carries a space is the awkward case.
   const nav = await fetch(`${origin}/deck/sidecar/${prepared.id}/api/cockpit/nav?mode=features`);
   record(nav.status === 200, `an ordinary read from the network still answers (${nav.status})`);
+}
+
+/**
+ * A page with no bridge follows the Mac's desk, and cannot change it.
+ *
+ * The window is opened WITHOUT the preload, so the page is served exactly as
+ * a tablet is: it fetches the served capability set, reads `/deck/state` and
+ * subscribes to `/deck/events`. A note is then put on the desk in the main
+ * process, the way a lift on the Mac does it, and the page's own drawn state
+ * is read back.
+ */
+async function recordServedPageFollows(
+  record: (ok: boolean, what: string) => void,
+  skip: (what: string) => void,
+  prepared: PreparedWorkspace | null,
+): Promise<void> {
+  if (prepared === null) {
+    skip('the served page following the store: no workspace was opened');
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 900,
+    height: 700,
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  try {
+    void win.loadURL(`${hostOrigin}/`);
+    await once(win.webContents, 'did-finish-load');
+    await untilBooted(win);
+    const before = (await win.webContents.executeJavaScript(
+      `({ bridge: typeof window.deck, mark: document.getElementById('host-mark').textContent, follow: !document.getElementById('follow').hidden })`,
+    )) as { bridge: string; mark: string; follow: boolean };
+    record(before.bridge === 'undefined', 'the served page has no bridge, as on a tablet');
+    record(before.follow, 'the served page offers the follow toggle');
+    const lifted = `SMOKE-${Date.now()}`;
+    const sentAt = Date.now();
+    store.dispatch({ type: 'open-workspace', workspaceId: prepared.id });
+    store.dispatch({ type: 'put-on-desk', noteId: lifted, x: 40, y: 40 });
+    let arrived = -1;
+    for (let i = 0; i < 40; i += 1) {
+      const seen = (await win.webContents.executeJavaScript(
+        `((window.__deckLastState || {}).deskCards || {})[${JSON.stringify(prepared.id)}] || []`,
+      )) as Array<{ noteId: string }>;
+      if (seen.some((c) => c.noteId === lifted)) {
+        arrived = Date.now() - sentAt;
+        break;
+      }
+      await delay(50);
+    }
+    record(arrived >= 0 && arrived < 1000, `a note lifted on the Mac reached the served page's desk within a second (${arrived}ms)`);
+    // The tablet cannot take it back off: the action is not one it applies.
+    await win.webContents.executeJavaScript(
+      `document.querySelector('#nav-list .nav-row') && document.querySelector('#nav-list .nav-row').click()`,
+    );
+    await delay(600);
+    record(
+      store.getState().deskCards[prepared.id]?.some((c) => c.noteId === lifted) === true,
+      'a click on the served page left the Mac’s desk as it was',
+    );
+    store.dispatch({ type: 'take-off-desk', noteId: lifted });
+  } finally {
+    win.destroy();
+  }
 }
 
 /** This machine's own network address, or null when it has none. */
@@ -1589,6 +1849,14 @@ async function ipcInvoke(channel: string, ...args: unknown[]): Promise<unknown> 
   const handler = smokeHandlers.get(channel);
   if (handler === undefined) throw new Error(`no handler for ${channel}`);
   return handler({} as Electron.IpcMainInvokeEvent, ...args);
+}
+
+/** The smoke run's keyboard checks need Deck to be the application with the keyboard. */
+function focusApp(win: BrowserWindow): void {
+  if (process.platform === 'darwin') app.focus({ steal: true });
+  win.show();
+  win.focus();
+  win.webContents.focus();
 }
 
 /** Wait for the renderer to finish booting, not merely to finish loading. */

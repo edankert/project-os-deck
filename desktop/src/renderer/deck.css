@@ -441,3 +441,362 @@ body[data-panel="desk"] .reader { display: none; }
   cursor: pointer;
 }
 .actor:hover { opacity: 1; border-color: var(--accent); }
+
+/* ------------------------------------------------------------------------
+ * Glass (PHASE-0002). The field where depth carries priority.
+ *
+ * Two rules a test reads this file for (TST-0042): nothing here blurs, and
+ * nothing here puts a backdrop filter over the moving field, because the
+ * DES-0002 review measured both; and `will-change` is set on the near-band
+ * cards only, so the compositor promotes fifty layers rather than the page.
+ * Distance is drawn with fog and less detail instead.
+ * ------------------------------------------------------------------------ */
+
+.surface-toggle { display: flex; gap: 2px; padding-left: 8px; border-left: 1px solid var(--line); }
+.surface-toggle button {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+.surface-toggle button[aria-checked="true"] { color: var(--ink); border-color: var(--accent); }
+
+/* Which surface is on screen. The field and the desk never show together. */
+body[data-surface="glass"] #desk-area,
+body[data-surface="list"] #desk-area { display: none; }
+/* In Glass the reader is the reading column, shown when a pane is widened
+   (TASK-0054), or on a served page when a note is opened. */
+body[data-surface="glass"]:not(.reading) .reader,
+body[data-surface="glass"]:not(.reading) .actuators { display: none; }
+body[data-surface="glass"].reading .reader { width: min(520px, 38vw); max-width: 520px; min-width: 280px; flex: 0 0 min(520px, 38vw); }
+body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
+/* A popped-out panel carries one thing, and a field is not among them: the
+   renderer never makes Glass active in one (surfaceNow), so the field area
+   keeps its `hidden` attribute there. */
+
+.field-area { flex: 1 1 auto; min-width: 320px; display: flex; flex-direction: column; min-height: 0; }
+.field-bar {
+  /* A fixed height: a button appearing in the bar must not resize the field,
+     because a resized field is re-dealt and every card moves under the pointer. */
+  flex: 0 0 34px;
+  height: 34px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 12px;
+}
+.field-bar .spacer { flex: 1 1 auto; }
+.field-bar .action { padding: 1px 8px; line-height: 1.4; }
+.front-label { color: var(--ink); font-weight: 600; }
+.field.holding ~ .field-bar .front-label,
+.field-area .front-label { transition: color 0.3s; }
+.owed-count { color: var(--owed); font-variant-numeric: tabular-nums; min-width: 5.5em; }
+.hand-count { color: var(--accent); }
+.field-overflow { color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; }
+.pending-chip { border-color: var(--accent); }
+
+/* The fog: one gradient painted once. Far things lose contrast; nothing goes out of focus. */
+.field {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 46%, rgba(40, 52, 78, 0.55), rgba(18, 20, 26, 0) 70%),
+    linear-gradient(180deg, #0f1117 0%, #151925 46%, #10131b 100%);
+}
+.field:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.field-canvas { position: absolute; inset: 0; pointer-events: none; }
+.field-cards,
+.field-sectors { position: absolute; inset: 0; pointer-events: none; }
+.field-panes { position: absolute; inset: 0; pointer-events: none; }
+
+.field-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 186px;
+  height: 92px;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  background: rgba(34, 38, 52, 0.94);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: none;
+  transition: opacity 1s ease;
+}
+.field.animate .field-card { transition: transform 1s cubic-bezier(0.22, 0.8, 0.28, 1), opacity 1s ease; }
+.field.turning .field-card { transition: none; }
+.field-card:hover { border-color: var(--accent); }
+.field-card:focus-visible { outline: 2px solid var(--accent); }
+.field-card[aria-current="true"] { box-shadow: 0 0 0 2px var(--accent); }
+.field-card .fc-top { display: flex; gap: 6px; align-items: baseline; }
+.field-card .fc-id { color: var(--ink-dim); font-size: 10.5px; letter-spacing: 0.04em; }
+.field-card .fc-mark { margin-left: auto; color: var(--accent); font-size: 11px; }
+.field-card .fc-title {
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1.25;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.field-card .fc-face { margin-top: auto; color: var(--ink-dim); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.field-card .fc-owed { color: var(--owed); font-size: 10.5px; }
+.field-card .fc-owed:empty { display: none; }
+/* Detail by distance: the middle band drops the face line and the owed verb. */
+.field-card[data-band="mid"] { background: rgba(30, 34, 46, 0.9); }
+.field-card[data-band="mid"] .fc-face,
+.field-card[data-band="mid"] .fc-owed { display: none; }
+.field-card[data-status="pending"],
+.field-card[data-status="blocked"] { border-left-color: var(--owed); }
+.field-card[data-status="done"],
+.field-card[data-status="archived"] { border-left-color: var(--done); }
+.field-card[data-status="active"] { border-left-color: var(--accent); }
+.field-card.owed { border-color: color-mix(in srgb, var(--owed) 55%, var(--line)); }
+.field-card.pulled { border-color: var(--accent); }
+.field-card.joined { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent); }
+.field-card.shared .fc-mark { color: #bb9af7; }
+.field-card.reached { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 80%, transparent); }
+.field-card.highlight { outline: 3px solid var(--owed); outline-offset: 2px; }
+.field-card.grabbed { cursor: grabbing; transition: none; z-index: 2900 !important; }
+.field-card.thrown { transition: transform 1s ease-in, opacity 1s ease-in; }
+/* A lifted note leaves its slot as an outline, so the hole shows and it can go back. */
+.field-card.ghost {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: none;
+}
+.field-card.ghost > * { visibility: hidden; }
+.field-card.leaving { opacity: 0 !important; pointer-events: none !important; }
+.field-card.refused { animation: deck-refused 0.5s ease; }
+@keyframes deck-refused {
+  0%, 100% { translate: 0 0; }
+  25% { translate: -6px 0; }
+  75% { translate: 6px 0; }
+}
+
+.sector-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 160px;
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: 50% 50%;
+}
+
+.compass {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(20, 23, 31, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 11px;
+  z-index: 4000;
+}
+.compass-dial { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 50%; position: relative; }
+.compass-mark {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  transform: rotate(var(--turn, 0deg));
+  background: conic-gradient(from -20deg, var(--owed) 0 40deg, transparent 40deg);
+}
+.compass-text { display: flex; flex-direction: column; color: var(--ink-dim); }
+.compass-text span:first-child { color: var(--ink); }
+
+.field-say {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  max-width: 70%;
+  padding: 6px 12px;
+  background: rgba(20, 23, 31, 0.95);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  z-index: 4500;
+  pointer-events: none;
+}
+.field-say.refusal { border-color: var(--owed); color: var(--owed); }
+
+.target-strip {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  z-index: 4600;
+  background: rgba(20, 23, 31, 0.96);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.target-strip[data-edge="right"] { right: 6px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+.target-strip[data-edge="left"] { left: 6px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+.target-strip[data-edge="top"] { top: 6px; left: 50%; transform: translateX(-50%); }
+.target-strip[data-edge="bottom"] { bottom: 6px; left: 50%; transform: translateX(-50%); }
+.target-strip .target { padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; white-space: nowrap; }
+.target-strip .target.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.target-strip .target.landed { border-color: var(--owed); }
+
+/* A held note is a pane on the front plane (TASK-0054). Its header is always
+   readable: a pane may cover another's body, never its header. */
+/* A pane makes no stacking context of its own (no z-index, no opacity), so
+   its header and body can be stacked separately: every header above every
+   body (glass.ts, paintPane). The body carries the pane's surface. */
+.pane {
+  position: absolute;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  min-height: 160px;
+}
+.pane > * { pointer-events: auto; }
+.pane.dragging .pane-head { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); }
+/* Widened: the note is in the reading column, and the pane shows only its header. */
+.pane.wide { height: 34px !important; min-height: 34px; }
+.pane.wide .pane-head { border-radius: 8px; border-bottom: 1px solid var(--line); }
+.pane.wide .pane-body,
+.pane.wide .pane-resize { display: none; }
+.pane-head {
+  position: relative;
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 8px 8px 0 0;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 10px;
+  background: #252a38;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  cursor: grab;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pane[data-status="pending"] .pane-head,
+.pane[data-status="blocked"] .pane-head { border-left-color: var(--owed); }
+.pane[data-status="done"] .pane-head,
+.pane[data-status="archived"] .pane-head { border-left-color: var(--done); }
+.pane[data-status="active"] .pane-head { border-left-color: var(--accent); }
+.pane-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pane-id { font-weight: 600; }
+.pane-status, .pane-face { color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; }
+.pane-tools { margin-left: auto; display: flex; gap: 2px; }
+.pane-tools button {
+  background: none;
+  border: 0;
+  color: var(--ink-dim);
+  font: inherit;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.pane-tools button:hover { background: var(--line); color: var(--ink); }
+.pane-body {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  background: #1d212d;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+.pane.top .pane-head { border-top-color: color-mix(in srgb, var(--accent) 70%, var(--line)); }
+.pane-body h1 { font-size: 15px; }
+.pane-body h2 { font-size: 13.5px; }
+.pane-body pre { background: var(--ground); padding: 8px; border-radius: 6px; overflow-x: auto; }
+.pane-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--line) 50%);
+}
+
+/* The orbit arrangement's three treatments (TASK-0005). Drawn on the canvas;
+   these only mark which one is chosen. */
+.treatments { display: flex; gap: 2px; }
+.treatments button { background: transparent; color: var(--ink-dim); border: 1px solid transparent; border-radius: 5px; padding: 2px 8px; font: inherit; cursor: pointer; }
+.treatments button[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+.edge-callout {
+  position: absolute;
+  max-width: 360px;
+  padding: 8px 10px;
+  background: rgba(20, 23, 31, 0.97);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  z-index: 4700;
+  pointer-events: none;
+}
+
+/* Navigator rows are the keyboard's route into the field (TASK-0033). */
+.nav-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.nav-row.highlight { background: color-mix(in srgb, var(--owed) 22%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .field.animate .field-card,
+  .field-card,
+  .field-card.thrown { transition: none; }
+  .field-card.refused { animation: none; }
+}
+
+.field-empty {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  max-width: 260px;
+  margin: 0;
+  color: var(--ink-dim);
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  pointer-events: none;
+}

@@ -46,15 +46,15 @@ test('an address with none of the new keys is written exactly as it was', () => 
 // ---- the four new keys ----
 
 test('surface round-trips, and refuses a surface nothing draws', () => {
-  assert.deepEqual(surfaceKinds.ids(), ['list', 'spread'], 'Glass registers its own surface in PHASE-0002');
+  assert.deepEqual(surfaceKinds.ids(), ['list', 'spread', 'glass'], 'Glass registered its own surface in PHASE-0002');
   for (const surface of surfaceKinds.ids()) {
     const address = formatAddress(addressFor(WORKSPACE, 'issues', { surface }));
     assert.equal(parseAddress(address).surface, surface);
   }
-  const refused = tryParseAddress(`deck://${WORKSPACE}/issues?surface=glass`);
-  assert.equal(refused.ok, false, 'a surface nothing draws yet was accepted');
+  const refused = tryParseAddress(`deck://${WORKSPACE}/issues?surface=hologram`);
+  assert.equal(refused.ok, false, 'a surface nothing draws was accepted');
   assert.match(refused.reason, /surface/, 'the refusal names the key');
-  assert.match(refused.reason, /glass/, 'and the value it could not read');
+  assert.match(refused.reason, /hologram/, 'and the value it could not read');
 });
 
 test('page and flow are empty today, and say so rather than pretending', () => {

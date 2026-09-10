@@ -40,7 +40,22 @@ function bandTable(gathersOwed: boolean): BandTable {
         band: 'front',
         note: gathersOwed
           ? 'This view gathers what is owed itself, so the sidecar sends it no Needs-you group. A note the payload still marks owed stands in front.'
-          : "The sidecar's Needs-you group. Nothing owed is ever demoted; past the front band's capacity it is counted, not moved.",
+          : "The sidecar's Needs-you group. Nothing owed is ever demoted; past the front band's capacity it is counted, not moved. First, so no hand can move it: owed beats pulled and pushed.",
+      },
+      {
+        when: { joinedToDesk: true },
+        band: 'front',
+        note: 'Joined to a note on the desk: while a note is held, what it links to and what links to it take the front band (TASK-0036).',
+      },
+      {
+        when: { pulled: true },
+        band: 'front',
+        note: 'A hand brought it forward, for this session only. Pulled beats the subject (TASK-0053).',
+      },
+      {
+        when: { pushed: true },
+        band: 'deep',
+        note: 'A hand sent it behind you, for this session only. Pushed beats the subject; the compass counts it (TASK-0053).',
       },
       {
         when: { suppressed: true },
@@ -75,8 +90,13 @@ const PROJECT_OS_FACES: FaceSection = {
   },
 };
 
-/** Every project-os view is drawn as a list or on the desk, and not yet in the field. */
-const PROJECT_OS_SURFACES = Object.freeze(['list', 'spread']);
+/**
+ * Every project-os view may be drawn in the field, on the desk, or as a list.
+ *
+ * `glass` first, because it is the surface Deck opens (ADR-0002), and added
+ * by PHASE-0002 on the day the field existed to draw them.
+ */
+const PROJECT_OS_SURFACES = Object.freeze(['glass', 'spread', 'list']);
 
 function modeView(id: string, label: string, mode: string, gathersOwed = false): Description {
   return {
@@ -89,9 +109,6 @@ function modeView(id: string, label: string, mode: string, gathersOwed = false):
     source: { kind: 'mode', mode },
     band: bandTable(gathersOwed),
     face: PROJECT_OS_FACES,
-    // `glass` is absent because Glass does not exist yet, not because these
-    // views are unsuited to it: PHASE-0002 adds it per view as it draws them,
-    // and the surface vocabulary refuses the name until then.
     surfaces: [...PROJECT_OS_SURFACES],
     verbs: 'registry',
     extensions: {},

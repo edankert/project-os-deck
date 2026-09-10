@@ -1,0 +1,145 @@
+// TST-0041 — the slot geometry: the bands become positions on a cylinder, a
+// thousand quiet tiles have a stated shape, an obstacle is a sector, and a
+// turn deals nothing (TASK-0030).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { desktopRoot, load } from './helpers.mjs';
+
+const {
+  assignSlots,
+  quietSlot,
+  frontSlots,
+  midSlots,
+  project,
+  cardTransform,
+  cardRect,
+  obstaclesFor,
+  blocked,
+  inSector,
+  FieldModel,
+  behindCount,
+  CARD_BOX,
+  QUIET,
+  DEG,
+} = load('shared/slots.js');
+
+const VIEWPORT = { width: 1000, height: 700 };
+
+function bands(front, mid, deep) {
+  const make = (prefix, n) => Array.from({ length: n }, (_, i) => `${prefix}-${i}`);
+  return { front: make('F', front), mid: make('M', mid), deep: make('D', deep) };
+}
+
+test('2660 notes, Your Trainer’s size, all have a position and no two coincide', () => {
+  const dealt = bands(12, 40, 2608);
+  const { slots, frontOverflow, midOverflow } = assignSlots(dealt);
+  assert.equal(frontOverflow, 0);
+  assert.equal(midOverflow, 0);
+  assert.equal(slots.size, 2660);
+  const places = new Set([...slots.values()].map((s) => `${s.theta.toFixed(6)}|${s.depth}|${s.y}`));
+  assert.equal(places.size, 2660, 'two notes were given the same place');
+});
+
+test('the quiet band has a stated shape: forty to a row, twenty-five rows, a layer per thousand', () => {
+  assert.equal(QUIET.columns * QUIET.rows, 1000);
+  assert.deepEqual([quietSlot(0).row, quietSlot(0).column, quietSlot(0).layer], [0, 0, 0]);
+  assert.deepEqual([quietSlot(39).row, quietSlot(39).column], [0, 39]);
+  assert.deepEqual([quietSlot(40).row, quietSlot(40).column], [1, 0]);
+  assert.deepEqual([quietSlot(999).row, quietSlot(999).column, quietSlot(999).layer], [24, 39, 0]);
+  assert.deepEqual([quietSlot(1000).row, quietSlot(1000).column, quietSlot(1000).layer], [0, 0, 1]);
+  assert.ok(quietSlot(1000).depth > quietSlot(999).depth, 'the next layer stands further back');
+  // Behind the person: a quiet tile is out of sight while facing the front band.
+  for (const i of [0, 20, 39, 500, 999]) {
+    assert.equal(project(quietSlot(i), 0, VIEWPORT).visible, false, `quiet tile ${i} is visible from the front`);
+  }
+  assert.equal(project(quietSlot(539), Math.PI, VIEWPORT).visible, true, 'turning round shows the middle of the quiet band');
+});
+
+test('no slot inside an obstacle is dealt to a card, at any yaw', () => {
+  for (const yawDeg of [0, 25, 70, 140, 200, 290]) {
+    const yaw = yawDeg * DEG;
+    // A pane on the left third of the screen, turned into sectors at this yaw.
+    const obstacles = obstaclesFor({ left: 0, right: 330 }, yaw, VIEWPORT);
+    const { slots } = assignSlots(bands(12, 40, 10), obstacles);
+    for (const [id, slot] of slots) {
+      assert.equal(blocked(slot, obstacles), false, `${id} was dealt into the obstacle at yaw ${yawDeg}`);
+    }
+    // And on screen at that yaw, no dealt near card's box crosses the pane.
+    for (const [id, slot] of slots) {
+      if (slot.band === 'deep') continue;
+      const p = project(slot, yaw, VIEWPORT);
+      if (!p.visible) continue;
+      assert.ok(cardRect(p).left >= 330 - 0.5, `${id} is drawn under the pane at yaw ${yawDeg} (left ${cardRect(p).left.toFixed(1)})`);
+    }
+  }
+});
+
+test('an obstacle takes spare slots first, and past the spares the band says how many did not fit', () => {
+  assert.ok(frontSlots().length > 12, 'the front band has no spares');
+  assert.ok(midSlots().length > 40, 'the mid band has no spares');
+  // The whole circle, as two half-circles: one sector cannot span it.
+  const everything = [
+    { from: -Math.PI + 1e-9, to: 0, nearest: 0, farthest: 700 },
+    { from: 0, to: Math.PI, nearest: 0, farthest: 700 },
+  ];
+  const { slots, frontOverflow, midOverflow } = assignSlots(bands(12, 40, 3), everything);
+  assert.equal(frontOverflow, 12);
+  assert.equal(midOverflow, 40);
+  assert.equal(slots.size, 3, 'the quiet band is on the canvas and is not an obstacle’s business');
+});
+
+test('a sector is read across the wrap at pi', () => {
+  assert.equal(inSector(Math.PI - 0.01, Math.PI - 0.1, -Math.PI + 0.1), true);
+  assert.equal(inSector(-Math.PI + 0.01, Math.PI - 0.1, -Math.PI + 0.1), true);
+  assert.equal(inSector(0, Math.PI - 0.1, -Math.PI + 0.1), false);
+});
+
+test('the card box is anchored once: the transform puts the box centre on the projected point', () => {
+  assert.equal(CARD_BOX.anchor, 'centre');
+  const p = project(frontSlots()[0], 0, VIEWPORT);
+  const m = /translate3d\(([-\d.]+)px, ([-\d.]+)px, 0\) scale\(([\d.]+)\)/.exec(cardTransform(p));
+  assert.notEqual(m, null);
+  // With transform-origin at the box's centre, the scaled box's centre is the
+  // translate plus half the unscaled box.
+  const cx = Number(m[1]) + CARD_BOX.width / 2;
+  const cy = Number(m[2]) + CARD_BOX.height / 2;
+  assert.ok(Math.abs(cx - p.x) < 0.1 && Math.abs(cy - p.y) < 0.1, `the transform anchors at (${cx}, ${cy}), not (${p.x}, ${p.y})`);
+  const rect = cardRect(p);
+  assert.ok(Math.abs((rect.left + rect.right) / 2 - p.x) < 1e-9);
+  // The renderer's stylesheet agrees: transform-origin at the centre.
+  const css = fs.readFileSync(path.join(desktopRoot, 'src', 'renderer', 'deck.css'), 'utf-8');
+  const rule = /\.field-card\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  assert.match(rule, /transform-origin:\s*50% 50%/, 'the field card rule does not anchor at the centre');
+});
+
+test('a turn changes the yaw and deals nothing; the turn’s end deals once', () => {
+  const field = new FieldModel();
+  field.deal(bands(12, 40, 100));
+  assert.equal(field.assignments, 1);
+  for (let i = 0; i < 120; i += 1) field.turn(0.02);
+  assert.equal(field.assignments, 1, 'a turn re-dealt the field');
+  assert.ok(Math.abs(field.yaw - 2.4) < 1e-9);
+  field.turnEnd(null);
+  assert.equal(field.assignments, 1, 'a turn with no pane on screen has nothing to re-deal');
+  field.turnEnd(obstaclesFor({ left: 0, right: 200 }, field.yaw, VIEWPORT));
+  assert.equal(field.assignments, 2);
+});
+
+test('the compass counts every dealt note that is out of sight', () => {
+  const { slots } = assignSlots(bands(12, 40, 500));
+  const ahead = behindCount(slots, 0, VIEWPORT);
+  const behind = behindCount(slots, Math.PI, VIEWPORT);
+  assert.ok(ahead >= 500, `facing the front, only ${ahead} are behind`);
+  assert.ok(behind >= 52, `facing the quiet band, the near bands are behind (${behind})`);
+  assert.equal(slots.size, 552);
+});
+
+test('the mid band is dealt a heading to a column, so a sector reads as one heading', () => {
+  const mid = ['a', 'a', 'a', 'a', 'a', 'b', 'c', 'c', 'c'];
+  const { slots, sectors } = assignSlots({ front: [], mid: mid.map((h, i) => `${h}${i}`), deep: [] }, [], (id) => id[0]);
+  assert.deepEqual(sectors.map((s) => [s.key, s.count]), [['a', 5], ['b', 1], ['c', 3]]);
+  // `c` has three, so it starts a fresh column: row 0.
+  assert.equal(slots.get('c6').row, 0);
+});

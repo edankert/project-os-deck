@@ -20,14 +20,16 @@ import { Vocabulary } from './registry.js';
 /**
  * Which surface draws the view: a list, cards on a desk, or the field.
  *
- * `list` and `spread` are the two Deck has. `glass` is registered by
- * PHASE-0002 when the field exists, which is the same day the description
- * language starts naming it in a view's `surfaces` section (FEAT-0012). Until
- * then an address cannot ask for a surface nothing draws.
+ * `list` and `spread` were the two Deck had. `glass` was registered by
+ * PHASE-0002 on the day the field existed (TASK-0033), which is the same day
+ * the description language started naming it in a view's `surfaces` section.
+ * An address without a surface means Glass (ADR-0002), so the grammar never
+ * writes `surface=glass` and always accepts it.
  */
 export const surfaceKinds = new Vocabulary('surface');
 surfaceKinds.register({ id: 'list', label: 'The list' });
 surfaceKinds.register({ id: 'spread', label: 'Cards on a desk' });
+surfaceKinds.register({ id: 'glass', label: 'The field' });
 
 /**
  * A page: a whole screen that is not a view of notes — the acceptance checks,

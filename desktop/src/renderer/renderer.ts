@@ -11,6 +11,7 @@
  * they put them. A popped-out window carries one panel and nothing else.
  */
 import type { CardGroup, CardModel, PanelType, Workspace } from '../shared/types.js';
+import type { NoteContext } from '../shared/sidecar-client.js';
 import type { Description, Refusal } from '../shared/description.js';
 import { AddressError, addressFor, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry, marksModeFor, sourceOf } from '../shared/views.js';
@@ -25,6 +26,13 @@ import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } fr
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
+import { GlassField, glassElements } from './glass.js';
+import { ContextCache } from '../shared/neighbourhood.js';
+import { type Edge, type ThrowTarget, type WindowInfo, type DisplayInfo, targetsToward } from '../shared/throw.js';
+import { DEFAULT_SURFACE } from '../shared/store-state.js';
+import { surfaceKinds } from '../shared/vocabularies.js';
+import { cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
+import { joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 
 const host = new Host();
 const registry = new ViewRegistry();
@@ -55,6 +63,8 @@ const el = {
   popOut: must('pop-out') as HTMLButtonElement,
   saveDesk: must('save-desk') as HTMLButtonElement,
   clearDesk: must('clear-desk') as HTMLButtonElement,
+  follow: must('follow') as HTMLButtonElement,
+  surfaceToggle: must('surface-toggle'),
 };
 
 let workspaces: Workspace[] = [];
@@ -127,7 +137,85 @@ const navigator = new NavigatorList(el.navList, {
   fold: (key, folded) => {
     void host.dispatch({ type: 'set-fold', key, folded });
   },
+  focusRow: (card) => {
+    if (!glass.isActive()) return;
+    // Arriving from the keyboard flies the field to the card, or highlights
+    // it under reduced motion, and reaches for it (TASK-0033, TASK-0056).
+    glass.arriveAt(card.noteId);
+    glass.reachFor(card.noteId);
+    if (reducedMotion()) navigator.highlight(card.noteId);
+  },
+  key: (card, key) => {
+    if (!glass.isActive()) return false;
+    const entry = glass.entryFor(card.noteId);
+    if ((key === 'p' || key === 'P') && entry !== undefined) {
+      void glass.pull(entry);
+      return true;
+    }
+    if ((key === 'b' || key === 'B') && entry !== undefined) {
+      void glass.push(entry);
+      return true;
+    }
+    if (key === 's' || key === 'S') {
+      void sendTo(card);
+      return true;
+    }
+    if (key === 'Delete' || key === 'Backspace') {
+      void glass.putBack(card.noteId);
+      return true;
+    }
+    return false;
+  },
 });
+
+/**
+ * A note's neighbourhood, asked for at most once per note per index revision
+ * (TASK-0036, TASK-0056). Shared by the lift and the reach.
+ */
+const contexts = new ContextCache((workspaceId, noteId) => clientFor(workspaceId).context(noteId));
+
+function reducedMotion(): boolean {
+  // The smoke run asks for it by name, because it cannot change the system setting.
+  if ((globalThis as unknown as { __deckReducedMotion?: boolean }).__deckReducedMotion === true) return true;
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Notes whose change arrived while the field was on screen, held until the person acts (TASK-0032). */
+let pendingGroups: CardGroup[] | null = null;
+let pendingCount = 0;
+
+const glass = new GlassField(glassElements(), {
+  state: () => host.state(),
+  canArrange: () => host.canArrange(),
+  dispatch: (action) => host.dispatch(action),
+  open: (card) => openCard(card),
+  say: (message, isError) => say(message, isError),
+  context: (noteId) => {
+    const state = host.state();
+    if (state.workspaceId === null) return Promise.reject(new Error('no workspace'));
+    const known = contexts.peek(state.workspaceId, noteId, indexRevision()) !== undefined;
+    const asked = contexts.get(state.workspaceId, noteId, indexRevision());
+    // A neighbourhood that arrives changes the navigator's desk groups too.
+    if (!known) void asked.then(() => drawNavigator()).catch(() => null);
+    return asked;
+  },
+  peekContext: (noteId) => {
+    const state = host.state();
+    return state.workspaceId === null ? undefined : contexts.peek(state.workspaceId, noteId, indexRevision());
+  },
+  noteHtml: async (card) => {
+    const state = host.state();
+    if (state.workspaceId === null || card.rel === null) return '<p>This card has no note behind it.</p>';
+    return (await clientFor(state.workspaceId).note(card.rel)).html;
+  },
+  targets: (edge) => throwTargets(edge),
+  throwTo: (target, card, edge) => throwTo(target, card, edge),
+  applyPending: () => applyPending(),
+  reducedMotion,
+});
+glass.sendTo = (card) => sendTo(card);
+(globalThis as unknown as { __deckGlass?: GlassField }).__deckGlass = glass;
+(globalThis as unknown as { __deckContexts?: ContextCache }).__deckContexts = contexts;
 
 /** What a card wears before a view has been chosen: what every card has. */
 const PLAIN_FACES = {
@@ -164,6 +252,7 @@ async function boot(): Promise<void> {
   document.body.classList.toggle('pinned', pinned);
   document.body.dataset['panel'] = panel ?? '';
   el.hostMark.textContent = host.isShell() ? 'shell' : 'served · read only';
+  document.body.dataset['surface'] = surfaceNow();
   el.popOut.hidden = !host.capabilities().popOutWindows;
 
   workspaces = await host.workspaces();
@@ -185,7 +274,8 @@ async function boot(): Promise<void> {
     else say('no workspace yet — add one from the rail');
   }
 
-  host.onState(() => {
+  host.onState((state) => {
+    if (host.following()) void followTheMac(state);
     renderRail();
     paintSwitcher();
     drawActor();
@@ -198,6 +288,7 @@ async function boot(): Promise<void> {
   });
   wireControls();
   drawActor();
+  drawFollow();
   if (panel === 'needs-you') startNeedsYouPoll();
 }
 
@@ -306,6 +397,59 @@ function paintSwitcher(): void {
   }
 }
 
+/** The surface this window draws the view with. A popped-out panel is never the field. */
+function surfaceNow(): string {
+  if (pinned || panel !== null) return 'spread';
+  const chosen = host.state().surface || DEFAULT_SURFACE;
+  const offered = currentView?.surfaces ?? [];
+  // A view that does not offer the chosen surface is drawn on its first one,
+  // and the toggle shows which, so nothing changes without being visible.
+  if (offered.length > 0 && !offered.includes(chosen)) return offered[0] ?? DEFAULT_SURFACE;
+  return chosen;
+}
+
+function applySurface(): void {
+  const surface = surfaceNow();
+  document.body.dataset['surface'] = surface;
+  glass.setActive(surface === 'glass');
+  paintSurfaceToggle();
+}
+
+/**
+ * The surface toggle: Glass, Spread, List, as the view's description offers
+ * them (TASK-0033). A toggle beside the views, never a view called Glass, and
+ * the renderer names no surface of its own: the labels are the vocabulary's.
+ */
+function renderSurfaceToggle(): void {
+  el.surfaceToggle.replaceChildren();
+  if (pinned) return;
+  for (const id of currentView?.surfaces ?? []) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('role', 'radio');
+    button.dataset['surface'] = id;
+    button.textContent = id.charAt(0).toUpperCase() + id.slice(1);
+    button.title = surfaceKinds.label(id) ?? id;
+    button.addEventListener('click', () => {
+      void (async () => {
+        await host.dispatch({ type: 'select-surface', surface: id });
+        applySurface();
+        drawNavigator();
+        drawDesk();
+      })();
+    });
+    el.surfaceToggle.appendChild(button);
+  }
+  paintSurfaceToggle();
+}
+
+function paintSurfaceToggle(): void {
+  const surface = surfaceNow();
+  for (const button of Array.from(el.surfaceToggle.querySelectorAll('button'))) {
+    button.setAttribute('aria-checked', String(button.dataset['surface'] === surface));
+  }
+}
+
 async function selectView(viewId: string): Promise<void> {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
@@ -318,6 +462,9 @@ async function selectView(viewId: string): Promise<void> {
   await host.dispatch({ type: 'select-view', viewId });
   paintSwitcher();
   await loadView(workspace, view);
+  // A view switch is the other act that applies a held change: the new view
+  // was read just now, so what was pending is in it.
+  preparedFor = indexRevision();
 }
 
 async function loadView(workspace: Workspace, view: Description): Promise<void> {
@@ -328,7 +475,10 @@ async function loadView(workspace: Workspace, view: Description): Promise<void> 
   drewFromRevision = indexRevision();
   drawStale();
   currentRefusals = [];
+  pendingGroups = null;
+  pendingCount = 0;
   pool.useFaces(view.face);
+  renderSurfaceToggle();
   const source = sourceOf(view);
   try {
     if (source.kind === 'nav') {
@@ -358,6 +508,7 @@ async function loadView(workspace: Workspace, view: Description): Promise<void> 
     say(err instanceof Error ? err.message : String(err), true);
   }
   renderFilters();
+  applySurface();
   drawNavigator();
   drawDesk();
 }
@@ -498,7 +649,7 @@ function drawNavigator(): void {
   const shown = countDistinct(groups);
   const held = countDistinct(currentGroups);
   navigator.render({
-    groups,
+    groups: glass.isActive() ? [...deskGroups(), ...groups] : groups,
     faces: currentView?.face ?? PLAIN_FACES,
     folds: state.folds,
     onDesk: new Set(deskCardsOf(state, state.workspaceId).map((c) => c.noteId)),
@@ -508,6 +659,44 @@ function drawNavigator(): void {
   drawRefusals();
   if (el.search.value !== state.query) el.search.value = state.query;
   syncFilters();
+}
+
+/**
+ * The groups Glass adds above the view's own in the navigator: what is held,
+ * what it is joined to, and what the held notes share (FEAT-0010).
+ *
+ * The keyboard's route to every held note and every neighbour. A neighbour
+ * from outside the view is in none of the view's groups, so without these the
+ * front band would hold cards no key could reach.
+ */
+function deskGroups(): CardGroup[] {
+  const state = host.state();
+  const ws = state.workspaceId;
+  if (ws === null) return [];
+  const heldIds = deskCardsOf(state, ws).map((c) => c.noteId);
+  if (heldIds.length === 0) return [];
+  const byId = new Map(currentCards.map((c) => [c.noteId, c]));
+  const known = new Map<string, NoteContext>();
+  for (const id of heldIds) {
+    const context = contexts.peek(ws, id, indexRevision());
+    if (context !== undefined) known.set(id, context);
+    for (const item of context === undefined ? [] : neighboursOf(context)) {
+      if (!byId.has(item.id)) byId.set(item.id, cardFromContext(item));
+    }
+  }
+  const card = (id: string): CardModel => byId.get(id) ?? blankCard(id, id, '');
+  const out: CardGroup[] = [
+    { key: 'deck:held', label: 'On the desk', needsHuman: false, suppressed: false, cards: heldIds.map(card) },
+  ];
+  const joined = [...joinedTo(heldIds, known)];
+  if (joined.length > 0) {
+    out.push({ key: 'deck:joined', label: 'Joined to what you are holding', needsHuman: false, suppressed: false, cards: joined.map(card) });
+  }
+  const shared = [...sharedAmong(heldIds, known).keys()];
+  if (shared.length > 0) {
+    out.push({ key: 'deck:shared', label: 'Joined to more than one held note', needsHuman: false, suppressed: false, cards: shared.map(card) });
+  }
+  return out;
 }
 
 /**
@@ -579,6 +768,21 @@ function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[
 function drawDesk(): void {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
+
+  if (glass.isActive()) {
+    // The reader is the reading column: shown for a widened pane, or on a
+    // served page once a note is opened, since a tablet holds no panes.
+    const wide = deskCardsOf(state, state.workspaceId).some((c) => c.wide === true);
+    document.body.classList.toggle('reading', wide || (!host.canArrange() && state.noteId !== null));
+    glass.update({
+      groups: currentGroups,
+      view: currentView,
+      faces: currentView?.face ?? PLAIN_FACES,
+      pending: pendingCount,
+    });
+    return;
+  }
+  document.body.classList.remove('reading');
 
   if (panel === 'needs-you') {
     // The strip is what is owed, drawn as cards that flow rather than as an
@@ -656,8 +860,65 @@ function renderDeskList(): void {
   el.deskList.value = state.deskName ?? (names.includes(current) ? current : '');
 }
 
+/**
+ * The follow toggle, on a served page that reads the Mac's store.
+ *
+ * Off by default, as the task's plan records: a tablet that jumped whenever
+ * somebody clicked on the Mac would be a surprising thing to hand a person.
+ * The walk decides whether that default flips.
+ */
+function drawFollow(): void {
+  el.follow.hidden = !host.followsTheStore();
+  const on = host.following();
+  el.follow.setAttribute('aria-pressed', String(on));
+  el.follow.textContent = on ? 'Following the Mac' : 'Follow the Mac';
+}
+
+/** Where a following tablet last went, so a broadcast that changes nothing moves nothing. */
+let followed: { workspaceId: string | null; viewId: string | null; noteId: string | null } = {
+  workspaceId: null,
+  viewId: null,
+  noteId: null,
+};
+
+/**
+ * Take the Mac's workspace, view and note, on a tablet that is following.
+ *
+ * Only what changed is followed, so a broadcast about a card moved on the
+ * Mac's desk does not reload the tablet's view.
+ */
+async function followTheMac(state: ReturnType<typeof host.state>): Promise<void> {
+  const wanted = { workspaceId: state.workspaceId, viewId: state.viewId, noteId: state.noteId };
+  const before = followed;
+  followed = wanted;
+  const workspace = workspaceById(wanted.workspaceId);
+  if (workspace === null) return;
+  if (wanted.viewId !== null && (wanted.viewId !== before.viewId || currentView?.id !== wanted.viewId)) {
+    const view = registry.resolve(workspace, wanted.viewId);
+    if (view !== null && currentView?.id !== view.id) await loadView(workspace, view);
+  }
+  if (wanted.noteId !== null && wanted.noteId !== before.noteId) {
+    const card = currentCards.find((c) => c.noteId === wanted.noteId);
+    if (card !== undefined) await openCard(card);
+    else say(`the Mac is showing ${wanted.noteId}, which this view does not hold`);
+  }
+}
+
 /** A click in the navigator puts a note on the desk, or takes it off again. */
 async function toggleOnDesk(card: CardModel): Promise<void> {
+  // A tablet reads the Mac's desk and does not change it (TASK-0057), so a
+  // row on a served page opens the note and leaves the desk as it is.
+  if (!host.canArrange() && host.followsTheStore()) {
+    if (glass.isActive()) glass.arriveAt(card.noteId);
+    await openCard(card);
+    return;
+  }
+  if (glass.isActive()) {
+    // In Glass a row lifts the note, as a click on its card does. Putting it
+    // back is the pane's ×, or Delete on the row.
+    await glass.lift(card);
+    return;
+  }
   const state = host.state();
   const cards = deskCardsOf(state, state.workspaceId);
   if (cards.some((c) => c.noteId === card.noteId)) {
@@ -979,9 +1240,21 @@ async function afterWrite(workspaceId: string, noteId: string): Promise<void> {
  * in Obsidian — and a window drawing from an older one says so. One mark for a
  * burst, because the revision is one number rather than a list of files.
  */
+let preparedFor = -1;
+
 function drawStale(): void {
   const current = indexRevision();
   const stale = drewFromRevision !== null && current > drewFromRevision;
+  if (stale && glass.isActive()) {
+    // In Glass the chip on the field's bar says it, with a count (TASK-0032).
+    el.stale.hidden = true;
+    if (preparedFor !== current) {
+      preparedFor = current;
+      contexts.forgetBefore(current);
+      void prepareChange();
+    }
+    return;
+  }
   el.stale.hidden = !stale;
   if (!stale) return;
   el.stale.replaceChildren();
@@ -1009,6 +1282,121 @@ function drawStale(): void {
     })();
   });
   el.stale.append(said, action);
+}
+
+/**
+ * Where a throw toward an edge could land (TASK-0055): the windows that lie
+ * that way, a display with no Deck window, and the tablet when one is
+ * following. Asked of the main process, which knows every window's bounds.
+ */
+async function throwTargets(edge: Edge): Promise<ThrowTarget[]> {
+  const listed = (await host.windowList()) as {
+    self: { bounds: { x: number; y: number; width: number; height: number } } | null;
+    windows: WindowInfo[];
+    displays: DisplayInfo[];
+    followers: number;
+  } | null;
+  if (listed === null || listed.self === null) return [];
+  return targetsToward(edge, listed.self.bounds, listed.windows, listed.displays, listed.followers > 0);
+}
+
+async function throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promise<void> {
+  const state = host.state();
+  if (state.workspaceId === null || state.viewId === null) return;
+  const result = await host.throwNote({ target, noteId: card.noteId, workspaceId: state.workspaceId, viewId: state.viewId, edge });
+  if (!result.ok) say(result.error ?? 'that throw did not land', true);
+  else say(`${card.noteId} is in the ${target.label}`);
+}
+
+/**
+ * Send to: the throw from the keyboard (TASK-0055). The same targets the
+ * strip would name at any edge, chosen by name.
+ */
+async function sendTo(card: CardModel): Promise<void> {
+  if (!host.canArrange()) {
+    say('a tablet follows the Mac and sends nothing back', true);
+    return;
+  }
+  const seen = new Map<string, { target: ThrowTarget; edge: Edge }>();
+  for (const edge of ['right', 'left', 'bottom', 'top'] as Edge[]) {
+    for (const target of await throwTargets(edge)) {
+      if (!seen.has(target.label)) seen.set(target.label, { target, edge });
+    }
+  }
+  if (seen.size === 0) {
+    say('there is no other window to send it to; pop one out first', true);
+    return;
+  }
+  const chosen = await askChoice(
+    `send ${card.noteId} to:`,
+    [...seen.keys()].map((label) => ({ value: label, label })),
+  );
+  if (chosen === null) return;
+  const picked = seen.get(chosen);
+  if (picked !== undefined) await throwTo(picked.target, card, picked.edge);
+}
+
+/**
+ * A change arrived while the field was on screen (TASK-0032).
+ *
+ * Read in the background and COUNTED, never applied: a field that re-deals
+ * under the pointer is the automation surprise the DES-0002 review names. The
+ * held notes are the exception and are refreshed at once, because holding a
+ * stale note is worse than a moving card.
+ */
+async function prepareChange(): Promise<void> {
+  const state = host.state();
+  const workspace = workspaceById(state.workspaceId);
+  const view = currentView;
+  if (workspace === null || view === null) return;
+  glass.forgetBodies();
+  glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount });
+  let next: CardGroup[];
+  try {
+    const source = sourceOf(view);
+    if (source.kind === 'nav') next = groupsFromNav(await clientFor(workspace.id).nav(source.mode));
+    else if (source.kind === 'query') next = (await loadQueryView(workspace, view)).groups;
+    else return;
+  } catch {
+    return;
+  }
+  if (currentView !== view) return;
+  pendingGroups = next;
+  pendingCount = changedNotes(currentGroups, next);
+  drawDesk();
+}
+
+/** How many notes differ between two deals: arrived, left, or moved group or status. */
+function changedNotes(before: CardGroup[], after: CardGroup[]): number {
+  const describe = (groups: CardGroup[]): Map<string, string> => {
+    const out = new Map<string, string>();
+    for (const card of flattenGroups(groups)) {
+      const group = groups.find((g) => g.cards.includes(card))?.key ?? '';
+      out.set(card.noteId, `${out.get(card.noteId) ?? ''}|${group}|${card.status}|${card.owed}`);
+    }
+    return out;
+  };
+  const a = describe(before);
+  const b = describe(after);
+  let changed = 0;
+  for (const [id, sig] of b) if (a.get(id) !== sig) changed += 1;
+  for (const id of a.keys()) if (!b.has(id)) changed += 1;
+  return changed;
+}
+
+/** The person acted on the chip: the held change is dealt, with the view switch's transitions. */
+function applyPending(): void {
+  if (pendingGroups === null) return;
+  currentGroups = pendingGroups;
+  currentCards = flattenGroups(currentGroups);
+  pendingGroups = null;
+  pendingCount = 0;
+  drewFromRevision = indexRevision();
+  wroteTo = null;
+  drawStale();
+  renderFilters();
+  drawNavigator();
+  drawDesk();
 }
 
 /** The name Deck writes with, shown and changeable. */
@@ -1086,6 +1474,9 @@ function currentAddress(): string | null {
         desk: state.deskName,
         note: panel === 'note' ? pinnedNoteId : state.noteId,
         panel,
+        // Written only when it is not Glass: an address without a surface
+        // means Glass (ADR-0002, TASK-0033).
+        surface: panel === null && surfaceNow() !== DEFAULT_SURFACE ? surfaceNow() : null,
       }),
     );
   } catch (err) {
@@ -1125,14 +1516,21 @@ async function applyAddress(raw: string): Promise<void> {
   } else if (address.panel !== null) {
     say(`that address carries the ${address.panel} panel, which belongs to a popped-out window; opening the rest of it here`);
   }
+  // The surface before the view, so the view is drawn once, on the right one.
+  // No surface in the address means Glass.
+  await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
   await selectWorkspace(workspace.id);
   await selectView(address.viewId);
   if (address.desk !== null) await host.dispatch({ type: 'open-desk', name: address.desk });
   if (address.note !== null) {
     const card = currentCards.find((c) => c.noteId === address.note);
     if (card === undefined) say(`that address names a note this view does not show: ${address.note}`, true);
-    else await openCard(card);
+    else {
+      await openCard(card);
+      if (glass.isActive()) glass.arriveAt(card.noteId);
+    }
   }
+  applySurface();
   drawNavigator();
   drawDesk();
 }
@@ -1195,6 +1593,9 @@ function askChoice<T extends string>(label: string, options: Array<{ value: T; l
       resolve(null);
     });
     el.status.appendChild(cancel);
+    // The keyboard lands on the first answer, so a choice asked from a key
+    // press can be answered with keys alone (TASK-0055's send to).
+    (el.status.querySelector('button') as HTMLButtonElement | null)?.focus();
   });
 }
 
@@ -1301,6 +1702,13 @@ function wireControls(): void {
     })();
   });
 
+  el.follow.addEventListener('click', () => {
+    host.setFollowing(!host.following());
+    followed = { workspaceId: null, viewId: null, noteId: null };
+    drawFollow();
+    if (host.following()) void followTheMac(host.state());
+  });
+
   el.actor.addEventListener('click', () => {
     void (async () => {
       // A minimal control, and the decision is recorded in TASK-0048: a store
@@ -1364,6 +1772,32 @@ function startNeedsYouPoll(): void {
     })();
   }, beat);
 }
+
+/**
+ * Hold a change to one note's status as though it had arrived from disk.
+ *
+ * The smoke run's route to TASK-0032's chip: it must never write to the
+ * repository it checks, so it cannot make a real change arrive. What it
+ * drives is everything after the arrival — the count, the chip, the field
+ * not moving, and the deal on the person's click.
+ */
+(globalThis as unknown as { __deckHoldChange?: (noteId: string, status: string) => number }).__deckHoldChange = (
+  noteId,
+  status,
+) => {
+  const clone = JSON.parse(JSON.stringify(currentGroups)) as CardGroup[];
+  const walk = (cards: CardModel[]): void => {
+    for (const card of cards) {
+      if (card.noteId === noteId) card.status = status;
+      walk(card.children);
+    }
+  };
+  for (const group of clone) walk(group.cards);
+  pendingGroups = clone;
+  pendingCount = changedNotes(currentGroups, clone);
+  drawDesk();
+  return pendingCount;
+};
 
 // The smoke run reads this to check that a satellite saw the state change.
 host.onState((state) => {

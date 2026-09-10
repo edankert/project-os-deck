@@ -20,8 +20,12 @@
     <header class="bar">
       <div class="brand">Deck</div>
       <nav class="switcher" id="switcher" role="tablist" aria-label="Views"></nav>
+      <!-- Which surface draws the view. A toggle beside the views, never a view called Glass (TASK-0033). -->
+      <div class="surface-toggle" id="surface-toggle" role="radiogroup" aria-label="Surface"></div>
       <div class="bar-right">
         <span class="host-mark" id="host-mark" title="which host is serving this page"></span>
+        <!-- On a served page only: show the note the Mac's shell has focused (TASK-0057). -->
+        <button type="button" class="action" id="follow" hidden aria-pressed="false" title="Show the note the Mac is showing">Follow the Mac</button>
         <button type="button" class="action" id="copy-address" title="Copy this state's address">Copy address</button>
         <button type="button" class="action" id="open-address" title="Open a pasted address">Open address…</button>
         <button type="button" class="action" id="pop-out" title="Open one panel in its own window" hidden>Pop out…</button>
@@ -56,6 +60,41 @@
           <span id="count" class="count"></span>
         </div>
         <div class="desk" id="desk" aria-live="polite"></div>
+      </main>
+
+      <!-- Glass: the field where depth carries priority (FEAT-0009). The containers
+           are pointer-transparent and the cards are not (TASK-0031). -->
+      <main class="field-area" id="field-area" hidden>
+        <div class="field-bar">
+          <!-- First, so it keeps its place whatever the label beside it says (TASK-0036). -->
+          <span class="owed-count" id="owed-count" title="Every owed note in this view, drawn or not. It keeps this place whatever the front band means."></span>
+          <span class="front-label" id="front-label">in front: what needs you</span>
+          <span class="hand-count" id="hand-count"></span>
+          <button type="button" class="action" id="let-go" hidden title="Every pulled and pushed note goes back where the record puts it">Let go</button>
+          <span class="spacer"></span>
+          <button type="button" class="action pending-chip" id="pending-chip" hidden></button>
+          <span class="field-overflow" id="field-overflow"></span>
+          <span class="glass-desk-count count" id="glass-desk-count"></span>
+        </div>
+        <div class="field" id="field" tabindex="0" aria-label="The field: arrow keys turn, Home faces the front, End faces the quiet band, Escape sweeps the desk">
+          <canvas class="field-canvas" id="field-canvas" aria-hidden="true"></canvas>
+          <div class="field-sectors" id="field-sectors" aria-hidden="true"></div>
+          <div class="field-cards" id="field-cards" role="list" aria-label="Cards in the field"></div>
+          <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
+          <div class="compass" id="compass">
+            <div class="compass-dial" aria-hidden="true"><span class="compass-mark"></span></div>
+            <div class="compass-text">
+              <span id="compass-heading">facing the front</span>
+              <span id="compass-behind"></span>
+            </div>
+            <button type="button" class="action" id="look-ahead" title="Face the front band (Home)">look ahead</button>
+            <button type="button" class="action" id="look-behind" title="Face the quiet band (End)">look behind</button>
+          </div>
+          <div class="field-say" id="field-say" role="status" hidden></div>
+          <!-- An empty front band is a statement, so it is said rather than left as a gap. -->
+          <p class="field-empty" id="field-empty" hidden>Nothing in this view is owed right now. The view's own notes stand either side of you, and finished work is behind you.</p>
+          <div class="target-strip" id="target-strip" hidden aria-live="polite"></div>
+        </div>
       </main>
 
       <!-- The verbs the sidecar says this note allows, and nothing Deck decided.

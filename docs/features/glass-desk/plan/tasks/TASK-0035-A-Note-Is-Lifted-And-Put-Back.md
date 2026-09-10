@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0035
 aliases: ["TASK-0035"]
 title: "A note is lifted out of the field onto the desk, its slot stays ghosted, and closing is three verbs none of which destroys anything"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0010-Lifting-A-Note]]"]
 parent: "FEAT-0010"
 effort: ""
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0031", "TASK-0030"]
 blocks: ["TASK-0036"]
 related: ["[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[DES-0002-The-Glass-Cockpit]]"]
-tests: []
+tests: ["[[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # A note is lifted and put back
@@ -46,13 +46,19 @@ The held note's body is rendered by the reader Deck already has, from the sideca
 
 ## Steps
 
-- [ ] Wire a field card's click to the store's existing put-on-desk action, with the note id from the card's bound model.
-- [ ] Keep a lifted note's slot out of the deal and draw it as a ghost; return the note to that slot on put-back.
-- [ ] Register held notes as obstacles for the slot geometry.
-- [ ] Add the three closing verbs and confirm a background click is a no-op.
-- [ ] Render the held note through the existing reader pane.
-- [ ] Add a check that lift and the three closing verbs are pure store transitions, and a smoke step that lifts a card with a real pointer sequence and finds the ghost.
+- [x] Wire a field card's click to the store's existing put-on-desk action, with the note id from the card's bound model.
+- [x] Keep a lifted note's slot out of the deal and draw it as a ghost; return the note to that slot on put-back.
+- [x] Register held notes as obstacles for the slot geometry.
+- [x] Add the three closing verbs and confirm a background click is a no-op.
+- [x] Render the held note through the existing reader pane.
+- [x] Add a check that lift and the three closing verbs are pure store transitions, and a smoke step that lifts a card with a real pointer sequence and finds the ghost.
 
 ## Notes
 
 DES-0002 says the desk should survive a workspace switch and hold notes from several repositories. That is not built. Deck's desks are per workspace and each note's content comes from its own sidecar, and the feature note records the decision. The rev 3 lesson of DES-0002 applies to the click: a `preserve-3d` container is an invisible pane in front of its children, so the check must use real pointer events and never `element.click()`.
+
+## Outcome
+
+**Done 2026-09-10.** A click on a field card puts the note on the workspace's desk through the same `put-on-desk` action Spread uses, and every click adds. The note's slot stays in the deal and is drawn as a dashed ghost, so putting it back fills the same slot. × on a pane puts that note back; ⌥× puts back every other note; Escape sweeps the desk; a click on the field's background changes nothing. A held note's body comes from the sidecar's rendered HTML.
+
+**Evidence.** [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: a real click lifts, the ghost and the pane appear, each closing verb does what it says and asks the sidecar nothing, and the same desk is on Spread after a surface switch.

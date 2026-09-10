@@ -13,6 +13,7 @@
 import type { Capabilities, DeckState, Workspace } from '../shared/types.js';
 import { type DeckAction, initialState, reduce } from '../shared/store-state.js';
 import { SERVED_CAPABILITIES, normaliseCapabilities } from '../shared/capability.js';
+import { TABLET_LOCAL_ACTIONS, mergeServed } from '../shared/served-state.js';
 
 interface BridgeShape {
   capabilities(): Promise<unknown>;
@@ -27,7 +28,12 @@ interface BridgeShape {
     dispatch(action: DeckAction): Promise<DeckState>;
     subscribe(fn: (state: DeckState) => void): () => void;
   };
-  windows: { role(): Promise<unknown>; openPanel(address: string): Promise<unknown> };
+  windows: {
+    role(): Promise<unknown>;
+    openPanel(address: string): Promise<unknown>;
+    list(): Promise<unknown>;
+    throw(request: unknown): Promise<unknown>;
+  };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
   write: { transition(request: unknown): Promise<unknown>; tick(request: unknown): Promise<unknown> };
 }
@@ -49,6 +55,14 @@ export class Host {
   private local: DeckState = initialState();
   private listeners = new Set<(state: DeckState) => void>();
   private unsubscribeShared: (() => void) | null = null;
+  /**
+   * On a served page: the Mac's state as last read, and the tablet's own
+   * choices. What the page draws is the two merged (TASK-0057).
+   */
+  private remote: DeckState | null = null;
+  private own: DeckState = initialState();
+  private follow = false;
+  private events: EventSource | null = null;
 
   async start(): Promise<void> {
     const b = bridge();
@@ -62,6 +76,72 @@ export class Host {
     }
     const response = await fetch('/deck/capabilities');
     this.caps = normaliseCapabilities(await response.json());
+    await this.followTheStore();
+  }
+
+  /**
+   * Read the Mac's state, then keep reading it.
+   *
+   * Until TASK-0057 a served page kept a fresh state of its own, so a tablet
+   * showed its own desk and never saw a note lifted on the Mac. It now reads
+   * `/deck/state` once and subscribes to `/deck/events`, and sends nothing
+   * back: the tablet follows and never steers (ADR-0001). A host that has
+   * neither route leaves the page on its own state, as it was before.
+   */
+  private async followTheStore(): Promise<void> {
+    try {
+      const response = await fetch('/deck/state');
+      if (!response.ok) return;
+      this.remote = (await response.json()) as DeckState;
+      this.recompute();
+    } catch {
+      return;
+    }
+    if (typeof EventSource === 'undefined') return;
+    const events = new EventSource('/deck/events');
+    events.addEventListener('state', (event) => {
+      try {
+        this.remote = JSON.parse((event as MessageEvent<string>).data) as DeckState;
+      } catch {
+        return;
+      }
+      this.recompute();
+    });
+    this.events = events;
+  }
+
+  private recompute(): void {
+    if (this.remote === null) return;
+    const next = mergeServed(this.remote, this.own, this.follow);
+    this.local = next;
+    for (const fn of [...this.listeners]) fn(next);
+  }
+
+  /** Whether this page reads the Mac's store rather than keeping its own. */
+  followsTheStore(): boolean {
+    return this.remote !== null;
+  }
+
+  /**
+   * Whether this page can change the desk, the hand's sets and the panes.
+   *
+   * Only the shell. A served page that follows the store would have its change
+   * overwritten by the next broadcast, and a page that could send one back
+   * would be a tablet that steers, which is a decision nobody has made.
+   */
+  canArrange(): boolean {
+    return bridge() !== null;
+  }
+
+  /** Whether the tablet shows the note the Mac's shell has focused. */
+  following(): boolean {
+    return this.follow;
+  }
+
+  setFollowing(on: boolean): void {
+    if (this.follow === on) return;
+    this.follow = on;
+    this.recompute();
   }
 
   capabilities(): Capabilities {
@@ -89,6 +169,18 @@ export class Host {
     const b = bridge();
     if (b !== null && this.caps.sharedStore) {
       await b.state.dispatch(action);
+      return;
+    }
+    if (this.remote !== null) {
+      // A tablet changes only what it keeps for itself. The rest belongs to
+      // the Mac, and the tablet does not steer.
+      if (!TABLET_LOCAL_ACTIONS.has(action.type)) return;
+      // Reduced against what the page DRAWS, so "select the view already
+      // shown" stays a no-operation, and the result becomes the tablet's own.
+      const next = reduce(this.local, action);
+      if (next === this.local) return;
+      this.own = next;
+      this.recompute();
       return;
     }
     const next = reduce(this.local, action);
@@ -122,6 +214,20 @@ export class Host {
     const b = bridge();
     if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to open' };
     return (await b.windows.openPanel(address)) as { ok: boolean; error?: string };
+  }
+
+  /** Every other Deck window and display, for a throw. Nothing on a served page. */
+  async windowList(): Promise<unknown> {
+    const b = bridge();
+    if (b === null || !this.caps.popOutWindows) return null;
+    return b.windows.list();
+  }
+
+  /** Send a note to another window, a display or the tablet (TASK-0055). */
+  async throwNote(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; landed?: string }> {
+    const b = bridge();
+    if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to throw to' };
+    return (await b.windows.throw(request)) as { ok: boolean; error?: string; landed?: string };
   }
 
   async windowRole(): Promise<{ role: string; panel: string | null }> {
@@ -181,6 +287,7 @@ export class Host {
   }
 
   stop(): void {
+    this.events?.close();
     this.unsubscribeShared?.();
     this.listeners.clear();
   }

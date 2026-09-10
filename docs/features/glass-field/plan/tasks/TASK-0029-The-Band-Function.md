@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0029
 aliases: ["TASK-0029"]
 title: "The band section of every description, and the function that applies it: front, mid and deep per view, with overflow stated rather than silent"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0044"]
 blocks: ["TASK-0030", "TASK-0031"]
 related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]", "[[FEAT-0012-A-View-Is-A-Description]]", "[[TASK-0044-Band-And-Face-Come-From-The-Description]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
-tests: ["[[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]]"]
+tests: ["[[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]]", "[[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]]"]
 ---
 
 # The band section of every description, and the function that applies it
@@ -45,12 +45,22 @@ The front band holds about twelve cards and the mid band about forty. Your Train
 
 ## Steps
 
-- [ ] Write the table as the `band` section of each of the seven descriptions: inputs (owed, in subject, suppressed, held, joined to desk) against the band, per view.
-- [ ] Implement the function over the card model the navigator already builds, returning the three bands and the two overflow counts.
-- [ ] Build fixtures from the real payloads for this repository and for Your Trainer's Issues and Features views.
-- [ ] Add the suite: every view, every band, both overflow counts, and the rule that an owed note never leaves the front band.
-- [ ] Link [[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]], which covers the table and the function, and add whatever Glass's own use needs on top.
+- [x] Write the table as the `band` section of each of the seven descriptions: inputs (owed, in subject, suppressed, held, joined to desk) against the band, per view.
+- [x] Implement the function over the card model the navigator already builds, returning the three bands and the two overflow counts.
+- [x] Build fixtures from the real payloads for this repository and for Your Trainer's Issues and Features views.
+- [x] Add the suite: every view, every band, both overflow counts, and the rule that an owed note never leaves the front band.
+- [x] Link [[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]], which covers the table and the function, and add whatever Glass's own use needs on top.
 
 ## Notes
 
 The review's phrase for this is a degree-of-interest function, after Furnas: every note gets a number saying how much the person wants to see it now, and the display shows the most interesting largest. Writing it as one table is what makes "the one that breaks the rule" a row rather than a special case. The Recent view, if it ever returns, is a row here where distance means age, and the table says so. The hand's inputs, added on 2026-09-10 by [[FEAT-0014-The-Hands]], are the first that come from a person rather than from the record, and the reason owed beats them is that the front plane's meaning as what the record says needs a person must survive a rearrangement by hand.
+
+## Outcome
+
+**Done 2026-09-10.** The field deals a view's notes into the three bands with the description's own `band` table and the function TASK-0044 wrote. What Glass adds is `desktop/src/shared/field.ts`: `fieldEntries` turns the navigator's groups into one entry per note, and `dealField` orders the front band and counts what the front plane has to say. Every one of the seven views has six rows, in this order: owed, joined to the desk, pulled, pushed, suppressed, and the view's subject. Owed is first, so no hand can move an owed note.
+
+**The sidecar's double listing is dealt once.** A note that needs a person arrives twice, in Needs-you and under its phase. The field deals it once, owed, under its phase heading, so it has a sector if a hand ever lets it into the middle.
+
+**Only a group's own cards are dealt, not their children.** The navigator folds a feature's tasks under it and the field shows them as the feature's progress bar. A child is dealt on its own when the desk or a hand names it.
+
+**Evidence.** [[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]], 9 of 9 over the real navigation payloads of this repository and of Your Trainer's Issues and Features views; five mutations of the rule, five killed.

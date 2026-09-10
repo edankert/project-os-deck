@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0036
 aliases: ["TASK-0036"]
 title: "The neighbourhood takes the front band while a note is held, the front plane says what it now means, and the owed count keeps its place"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0010-Lifting-A-Note]]"]
 parent: "FEAT-0010"
 effort: ""
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0035"]
 blocks: ["TASK-0037"]
 related: ["[[FEAT-0010-Lifting-A-Note]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
-tests: []
+tests: ["[[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]]", "[[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # The neighbourhood takes the front band
@@ -44,12 +44,18 @@ Two findings from [[REFERENCE-DES-0002-REVIEW]] are rules here. First, the front
 
 ## Steps
 
-- [ ] Add a `context` read to the typed sidecar client, returning linked notes and backlinks by type; confirm the host's allow-list carries the path.
-- [ ] Add "joined to a held note" as an input of the band function and give it the front band.
-- [ ] Turn the field to face the neighbours on lift, with the reduced-motion substitute.
-- [ ] Draw the mode label and pin the owed count's position.
-- [ ] Add a check over a fixture context payload that the right notes land in the front band and the label changes, and a smoke step that lifts a note with a real pointer and reads the label.
+- [x] Add a `context` read to the typed sidecar client, returning linked notes and backlinks by type; confirm the host's allow-list carries the path.
+- [x] Add "joined to a held note" as an input of the band function and give it the front band.
+- [x] Turn the field to face the neighbours on lift, with the reduced-motion substitute.
+- [x] Draw the mode label and pin the owed count's position.
+- [x] Add a check over a fixture context payload that the right notes land in the front band and the label changes, and a smoke step that lifts a note with a real pointer and reads the label.
 
 ## Notes
 
 [[REFERENCE-COCKPIT-ADOPTION]] marks `shell.context.pane` as replaced by the neighbourhood in Glass. This task is what earns that row.
+
+## Outcome
+
+**Done 2026-09-10.** Deck's sidecar client gained `context`, reading `/api/cockpit/context?this=<id>`, which Deck's host already forwarded. The answer is cached per note per index revision in `ContextCache` (`desktop/src/shared/neighbourhood.ts`), which reach shares. While a note is held, every note it links to and every note linking to it is dealt into the front band, from inside the view or outside it, and the field turns to face them once they have arrived. The label reads "in front: what is joined to what you are holding". The owed count is the first thing on the bar, so it keeps its place whatever the label says.
+
+**Evidence.** [[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]] for the payload and the cache; [[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]] for the neighbourhood's order in the front band; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: one request per lift, 11 of 11 neighbours in front, the label, and the owed count unmoved to the pixel.

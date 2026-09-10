@@ -63,11 +63,14 @@ export interface Refusal {
 export type Band = 'front' | 'mid' | 'deep';
 
 /**
- * What the payload says about a note, which is all the band rule gets to see.
+ * What the payload says about a note, and what a person did to it, which is
+ * all the band rule gets to see.
  *
- * `held` and `joinedToDesk` are RESERVED by TASK-0029 and filled by
- * FEAT-0010's desk. They are columns in the table now so that lifting a note
- * does not mean rewriting the rule.
+ * `held` and `joinedToDesk` were reserved by TASK-0029 and are filled by
+ * FEAT-0010's desk: a held note is on the desk, and a note joined to one is
+ * in its neighbourhood. `pulled` and `pushed` were reserved on 2026-09-10 and
+ * are filled by FEAT-0014's hands. They are the first inputs that come from a
+ * person rather than from the record.
  */
 export interface BandInputs {
   owed: boolean;
@@ -76,7 +79,22 @@ export interface BandInputs {
   inSubject: boolean;
   held: boolean;
   joinedToDesk: boolean;
+  /** A hand brought this note into the front band (TASK-0053). */
+  pulled: boolean;
+  /** A hand sent this note behind the person (TASK-0053). */
+  pushed: boolean;
 }
+
+/** The inputs a row may match on, in the order a person reads them. */
+export const BAND_INPUT_NAMES: readonly (keyof BandInputs)[] = [
+  'owed',
+  'suppressed',
+  'inSubject',
+  'held',
+  'joinedToDesk',
+  'pulled',
+  'pushed',
+];
 
 export interface BandRow {
   /** The inputs this row matches. An absent key matches either value. */
@@ -374,7 +392,7 @@ function readBand(raw: unknown, refusals: Refusal[]): BandTable | null {
           refusals.push({
             construct: 'a band input',
             where: `${where}.when.${key}`,
-            reason: `a row matches on owed, suppressed, inSubject, held or joinedToDesk, and this says ${key}`,
+            reason: `a row matches on ${BAND_INPUT_NAMES.join(', ')}, and this says ${key}`,
           });
           continue;
         }
@@ -395,7 +413,7 @@ function readBand(raw: unknown, refusals: Refusal[]): BandTable | null {
 }
 
 function isBandInput(key: string): key is keyof BandInputs {
-  return ['owed', 'suppressed', 'inSubject', 'held', 'joinedToDesk'].includes(key);
+  return (BAND_INPUT_NAMES as readonly string[]).includes(key);
 }
 
 function positive(value: unknown, fallback: number): number {
@@ -531,18 +549,34 @@ export interface Banding<T> {
  * Trainer's Issues view with nothing in front while forty issues waited for
  * triage.
  */
-export function bandInputsFor(group: CardGroup, card: CardModel): BandInputs {
+export function bandInputsFor(group: CardGroup, card: CardModel, hand: HandInputs = NO_HAND): BandInputs {
   const owed = card.owed || group.needsHuman;
   return {
     owed,
     suppressed: group.suppressed,
     inSubject: !owed && !group.suppressed,
-    // Filled by FEAT-0010's desk. Reserved here so lifting a note is not a
-    // rewrite of the rule.
-    held: false,
-    joinedToDesk: false,
+    held: hand.held.has(card.noteId),
+    joinedToDesk: hand.joined.has(card.noteId),
+    pulled: hand.pulled.has(card.noteId),
+    pushed: hand.pushed.has(card.noteId),
   };
 }
+
+/** What the desk and the hands say about the field, by note id. */
+export interface HandInputs {
+  held: ReadonlySet<string>;
+  joined: ReadonlySet<string>;
+  pulled: ReadonlySet<string>;
+  pushed: ReadonlySet<string>;
+}
+
+/** Nothing held, nothing joined, nothing moved by hand: the navigator's case. */
+export const NO_HAND: HandInputs = Object.freeze({
+  held: new Set<string>(),
+  joined: new Set<string>(),
+  pulled: new Set<string>(),
+  pushed: new Set<string>(),
+});
 
 /**
  * Which band one note stands in, by the description's own table.

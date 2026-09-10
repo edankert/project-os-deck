@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0056
 aliases: ["TASK-0056"]
 title: "Reach: hovering a card on the desktop, or pressing and holding it on the tablet, draws wires to what it is joined to and counts the neighbours behind you, before anything is lifted"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0036"]
 blocks: []
 related: ["[[FEAT-0014-The-Hands]]", "[[FEAT-0010-Lifting-A-Note]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0031-The-Field-Renders-And-Turns]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]"]
-tests: []
+tests: ["[[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Reach
@@ -46,12 +46,20 @@ Before a person lifts a card, reaching for it shows what it is joined to. On the
 
 ## Steps
 
-- [ ] Add the reach timer and the per-note, per-revision cache over the context read; share the cache with the lift.
-- [ ] Draw the wires and the rim highlights on the canvas from the slot geometry's positions; count the neighbours behind on the compass.
-- [ ] Add press-and-hold on touch and the navigator focus route.
-- [ ] Extend the smoke run: a rest that draws, a pass that does not request, a second rest that does not request.
-- [ ] Write the automated test notes and link them from `tests:`.
+- [x] Add the reach timer and the per-note, per-revision cache over the context read; share the cache with the lift.
+- [x] Draw the wires and the rim highlights on the canvas from the slot geometry's positions; count the neighbours behind on the compass.
+- [x] Add press-and-hold on touch and the navigator focus route.
+- [x] Extend the smoke run: a rest that draws, a pass that does not request, a second rest that does not request.
+- [x] Write the automated test notes and link them from `tests:`.
 
 ## Notes
 
 This is not [[FEAT-0001-The-Corpus-Has-An-Inside]]'s edge overlay. That draws every edge of the corpus from one payload; this draws the few edges of one note from a read Deck already makes. When the graph payload exists the reach can read from it instead, and the wires do not change.
+
+## Outcome
+
+**Done 2026-09-10.** Resting the pointer on a card for **450 ms** (`REACH_REST_MS`) reads its neighbourhood through the shared cache and draws a wire on the canvas from the card's edge to each neighbour on screen; neighbours in the near bands also get a rim. Neighbours out of sight are counted on the compass. Moving off clears it. On touch, a press of **500 ms** does the same and a release clears it. Focusing a navigator row, or a card from the keyboard, reaches for it too.
+
+**A mouse press does not reach.** The first build reached for a card whenever it took focus, and a press focuses it; the smoke run showed that a focus arriving late cancelled the reach under the pointer. Only keyboard focus (`:focus-visible`) reaches now, and every pointer that can hover reaches by resting, not only one reported as a mouse.
+
+**Evidence.** [[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]] for the cache and the timings; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: a pass across a band asks nothing, a rest reaches with at most one request, moving off clears the wires, a second rest asks nothing, and no element is added to the document.

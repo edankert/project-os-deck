@@ -11,7 +11,8 @@
  * rather than something to read back off the DOM when a person saves
  * (TASK-0024, TASK-0025).
  */
-import type { Desk, DeskCard, DeckState, Filters } from './types.js';
+import type { Desk, DeskCard, DeckState, Filters, SessionState } from './types.js';
+import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
 
 export type DeckAction =
   | { type: 'open-workspace'; workspaceId: string }
@@ -28,6 +29,26 @@ export type DeckAction =
   | { type: 'set-filters'; filters: Filters }
   | { type: 'set-fold'; key: string; folded: boolean }
   | { type: 'set-actor'; actor: string }
+  /** Draw the view as the field or as the desk (TASK-0033). */
+  | { type: 'select-surface'; surface: string }
+  /**
+   * A hand brought a note into the front band, or sent it behind (TASK-0053).
+   *
+   * Neither beats owed: the band function refuses to move an owed note, and
+   * the renderer refuses the gesture and says why before it is dispatched.
+   * The reducer does not know which notes are owed — that is view data — so
+   * it records what the hand did and the band rule decides what it means.
+   */
+  | { type: 'pull'; noteId: string }
+  | { type: 'push'; noteId: string }
+  /** Every pulled and pushed note in this workspace goes back where the record puts it. */
+  | { type: 'let-go' }
+  /** A pane's size, clamped to the minimum a body can be read at (TASK-0054). */
+  | { type: 'resize-card'; noteId: string; w: number; h: number }
+  /** A pane brought to the top of its stack, which is the end of the desk's list. */
+  | { type: 'raise-card'; noteId: string }
+  /** A pane moved to the reading column, or back out of it when `wide` is false. */
+  | { type: 'widen-card'; noteId: string; wide: boolean }
   /**
    * The notes of a workspace changed on disk. Raised by the main process's
    * index, never by a window: a renderer cannot know what is on disk, and the
@@ -61,6 +82,13 @@ const RENDERER_ACTIONS = new Set([
   // A person changes the name their writes carry, so this crosses the window
   // channel. It names nobody but the person typing it.
   'set-actor',
+  'select-surface',
+  'pull',
+  'push',
+  'let-go',
+  'resize-card',
+  'raise-card',
+  'widen-card',
 ]);
 
 export function isRendererAction(value: unknown): value is DeckAction {
@@ -84,7 +112,42 @@ export function initialState(): DeckState {
     revision: 0,
     indexRevisions: {},
     flowCursor: null,
+    surface: DEFAULT_SURFACE,
+    session: emptySession(),
   };
+}
+
+/** What Deck draws a view with when nobody chose: the field (ADR-0002). */
+export const DEFAULT_SURFACE = 'glass';
+/** The surfaces the store accepts. The address grammar's vocabulary names the same two. */
+export const STORE_SURFACES: readonly string[] = ['glass', 'spread'];
+
+export function emptySession(): SessionState {
+  return { pulled: {}, pushed: {} };
+}
+
+/** The notes a hand pulled into the front band in this workspace. */
+export function pulledIn(state: DeckState, workspaceId: string | null): string[] {
+  if (workspaceId === null) return [];
+  return state.session.pulled[workspaceId] ?? [];
+}
+
+/** The notes a hand pushed behind the person in this workspace. */
+export function pushedIn(state: DeckState, workspaceId: string | null): string[] {
+  if (workspaceId === null) return [];
+  return state.session.pushed[workspaceId] ?? [];
+}
+
+/**
+ * The state as it is written to disk: everything but the session part.
+ *
+ * Where a person's hands were today is not what they reopen tomorrow (the
+ * DES-0002 review's rule, applied by TASK-0053). The persister calls this, so
+ * the rule lives beside the reducer and is tested without a file.
+ */
+export function persistable(state: DeckState): Omit<DeckState, 'session'> {
+  const { session: _dropped, ...kept } = state;
+  return kept;
 }
 
 export function deskKey(workspaceId: string, name: string): string {
@@ -199,7 +262,7 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
         if (c.noteId !== action.noteId) return c;
         if (c.x === round(action.x) && c.y === round(action.y)) return c;
         moved = true;
-        return { noteId: c.noteId, x: round(action.x), y: round(action.y) };
+        return { ...copyCard(c), x: round(action.x), y: round(action.y) };
       });
       if (!moved) return state;
       return bump({ ...state, deskCards: { ...state.deskCards, [state.workspaceId]: next } });
@@ -228,6 +291,75 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (actor === '' || state.actor === actor) return state;
       return bump({ ...state, actor });
     }
+    case 'select-surface': {
+      if (!STORE_SURFACES.includes(action.surface)) return state;
+      if (state.surface === action.surface) return state;
+      return bump({ ...state, surface: action.surface });
+    }
+    case 'pull':
+    case 'push': {
+      if (state.workspaceId === null || typeof action.noteId !== 'string' || action.noteId === '') return state;
+      const ws = state.workspaceId;
+      const into = action.type === 'pull' ? 'pulled' : 'pushed';
+      const outOf = action.type === 'pull' ? 'pushed' : 'pulled';
+      const target = state.session[into][ws] ?? [];
+      if (target.includes(action.noteId)) return state;
+      // A note is pulled or pushed, never both: the later gesture wins.
+      const other = (state.session[outOf][ws] ?? []).filter((id) => id !== action.noteId);
+      return bump({
+        ...state,
+        session: {
+          ...state.session,
+          [into]: { ...state.session[into], [ws]: [...target, action.noteId] },
+          [outOf]: { ...state.session[outOf], [ws]: other },
+        } as SessionState,
+      });
+    }
+    case 'let-go': {
+      if (state.workspaceId === null) return state;
+      const ws = state.workspaceId;
+      if ((state.session.pulled[ws] ?? []).length === 0 && (state.session.pushed[ws] ?? []).length === 0) return state;
+      return bump({
+        ...state,
+        session: {
+          pulled: { ...state.session.pulled, [ws]: [] },
+          pushed: { ...state.session.pushed, [ws]: [] },
+        },
+      });
+    }
+    case 'resize-card': {
+      if (state.workspaceId === null) return state;
+      const w = clampSide(action.w, PANE_MIN_WIDTH);
+      const h = clampSide(action.h, PANE_MIN_HEIGHT);
+      return updateCard(state, action.noteId, (c) => (c.w === w && c.h === h ? c : { ...c, w, h }));
+    }
+    case 'raise-card': {
+      if (state.workspaceId === null) return state;
+      const cards = deskCardsOf(state, state.workspaceId);
+      const at = cards.findIndex((c) => c.noteId === action.noteId);
+      // Already on top, or not on the desk: nothing to raise.
+      if (at === -1 || at === cards.length - 1) return state;
+      const next = [...cards.slice(0, at), ...cards.slice(at + 1), cards[at] as DeskCard];
+      return bump({ ...state, deskCards: { ...state.deskCards, [state.workspaceId]: next } });
+    }
+    case 'widen-card': {
+      if (state.workspaceId === null) return state;
+      const cards = deskCardsOf(state, state.workspaceId);
+      if (!cards.some((c) => c.noteId === action.noteId)) return state;
+      let changed = false;
+      // One reading column: widening a pane takes it out of every other.
+      const next = cards.map((c) => {
+        const wide = c.noteId === action.noteId ? action.wide === true : false;
+        if ((c.wide === true) === wide) return c;
+        changed = true;
+        const copy: DeskCard = { ...c };
+        if (wide) copy.wide = true;
+        else delete copy.wide;
+        return copy;
+      });
+      if (!changed) return state;
+      return bump({ ...state, deskCards: { ...state.deskCards, [state.workspaceId]: next } });
+    }
     case 'index-changed': {
       const current = state.indexRevisions[action.workspaceId] ?? 0;
       // Never backwards. A late broadcast from an index that has already been
@@ -253,7 +385,31 @@ function bump(state: DeckState): DeckState {
 }
 
 function copyCard(card: DeskCard): DeskCard {
-  return { noteId: card.noteId, x: card.x, y: card.y };
+  const copy: DeskCard = { noteId: card.noteId, x: card.x, y: card.y };
+  if (card.w !== undefined) copy.w = card.w;
+  if (card.h !== undefined) copy.h = card.h;
+  if (card.wide === true) copy.wide = true;
+  return copy;
+}
+
+/** One card on the current workspace's desk changed, and nothing else did. */
+function updateCard(state: DeckState, noteId: string, change: (card: DeskCard) => DeskCard): DeckState {
+  if (state.workspaceId === null) return state;
+  const cards = deskCardsOf(state, state.workspaceId);
+  let changed = false;
+  const next = cards.map((c) => {
+    if (c.noteId !== noteId) return c;
+    const updated = change(c);
+    if (updated !== c) changed = true;
+    return updated;
+  });
+  if (!changed) return state;
+  return bump({ ...state, deskCards: { ...state.deskCards, [state.workspaceId]: next } });
+}
+
+function clampSide(value: number, minimum: number): number {
+  const n = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : minimum;
+  return Math.min(PANE_MAX_SIDE, Math.max(minimum, n));
 }
 
 function round(value: number): number {
@@ -327,6 +483,10 @@ export function normaliseState(value: unknown): DeckState {
     // The slot exists so that a flow, when one is built, has somewhere to put
     // the one piece of state that is not in the record (TASK-0052).
     flowCursor: null,
+    surface: typeof raw['surface'] === 'string' && STORE_SURFACES.includes(raw['surface']) ? raw['surface'] : DEFAULT_SURFACE,
+    // Never read back from the file, and never written to it either
+    // (`persistable`). A restart starts with nothing pulled and nothing pushed.
+    session: emptySession(),
   };
 }
 
@@ -337,7 +497,13 @@ function normaliseCards(value: unknown): DeskCard[] {
     const card = c as Record<string, unknown>;
     const noteId = str(card['noteId']);
     if (noteId === null) return [];
-    return [{ noteId, x: num(card['x']), y: num(card['y']) }];
+    const out: DeskCard = { noteId, x: num(card['x']), y: num(card['y']) };
+    // A size is kept only when it is a real one; anything else is a pane
+    // nobody resized, which is what a desk saved before panes existed holds.
+    if (typeof card['w'] === 'number' && Number.isFinite(card['w'])) out.w = clampSide(card['w'], PANE_MIN_WIDTH);
+    if (typeof card['h'] === 'number' && Number.isFinite(card['h'])) out.h = clampSide(card['h'], PANE_MIN_HEIGHT);
+    if (card['wide'] === true) out.wide = true;
+    return [out];
   });
 }
 

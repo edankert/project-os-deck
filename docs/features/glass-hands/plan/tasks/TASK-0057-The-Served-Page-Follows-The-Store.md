@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0057
 aliases: ["TASK-0057"]
 title: "The served page follows the store: Deck's host gains two read routes, a tablet shows the desk the Mac holds and follows the shell's focus when asked, and still cannot send anything back"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
@@ -15,7 +15,7 @@ due: ""
 depends: []
 blocks: ["TASK-0055"]
 related: ["[[FEAT-0014-The-Hands]]", "[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[TASK-0021-Decks-Own-Read-Only-Host]]", "[[TASK-0022-Capability-Is-Detected-Not-Assumed]]", "[[FEAT-0003-One-Store-In-The-Main-Process]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
-tests: []
+tests: ["[[TST-0039-The-Served-Page-Follows-The-Store-By-Reading]]"]
 ---
 
 # The served page follows the store
@@ -46,12 +46,20 @@ A tablet served by Deck's host shows the desk the Mac holds, sees a note lifted 
 
 ## Steps
 
-- [ ] Add the two routes to `desktop/src/main/host.ts` with the state filter and the 405 rule; add them to the host suite and to `smoke:lan`.
-- [ ] Subscribe in `Host.start()` when there is no bridge, and replace the local state with what arrives.
-- [ ] Add the follow toggle to the served page, off by default.
-- [ ] Move the adoption table's `shell.live` and Following rows as this lands, with the date.
-- [ ] Write the automated test notes and link them from `tests:`.
+- [x] Add the two routes to `desktop/src/main/host.ts` with the state filter and the 405 rule; add them to the host suite and to `smoke:lan`. Evidence: `served-state.test.mjs` 10 of 10; `recordFromTheNetwork` asserts five methods on each route.
+- [x] Subscribe in `Host.start()` when there is no bridge, and replace the local state with what arrives. Evidence: the smoke run's served window received a lifted note within a second.
+- [x] Add the follow toggle to the served page, off by default. Evidence: `#follow`, hidden in the shell, `aria-pressed` false at start.
+- [x] Move the adoption table's `shell.live` and Following rows as this lands, with the date. Evidence: `docs/reference/cockpit-adoption.md`, 2026-09-10.
+- [x] Write the automated test notes and link them from `tests:`. Evidence: [[TST-0039-The-Served-Page-Follows-The-Store-By-Reading]].
 
 ## Notes
 
 This extends [[FEAT-0008-One-Renderer-Two-Hosts]] and could have reopened it. It is placed here because the throw is what needs it and because it is the first task that can start in this phase before the field is drawn.
+
+## Outcome
+
+**Done 2026-09-10.** The served state is built by `servedState` in `desktop/src/shared/served-state.ts`: the store's state without the writing name, and with every part keyed by workspace kept only for a workspace whose sidecar answers. `GET /deck/state` answers with it and `GET /deck/events` streams it whole on every broadcast, rather than a patch, because a page that missed one event must not stay wrong. A served page merges it with its own choices in `mergeServed`: the workspace, view, surface, search, filters and folds stay the tablet's, and so does the note unless Follow the Mac is on.
+
+**A tablet no longer changes the desk.** A row clicked on a served page opens the note and leaves the desk alone, and the served page applies only the actions in `TABLET_LOCAL_ACTIONS`. Before this task a tablet put cards on a desk of its own that nobody else saw; after it, the desk it shows is the Mac's, so a change made there would be overwritten by the next broadcast, or would be a tablet that steers.
+
+**The store's new shape landed with this task**, because the host has to describe it: `surface`, and a `session` part holding the pulled and pushed sets that the persister drops. Their actions belong to [[TASK-0033-Glass-Is-Addressed-And-Opened-First]] and [[TASK-0053-Pull-Forward-And-Push-Behind]].

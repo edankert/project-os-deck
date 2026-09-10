@@ -6,7 +6,7 @@ title: "Glass opens first, and a day's notes are read in it: the owed work in fr
 status: active
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[PHASE-0002-Glass]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -41,7 +41,7 @@ Deck runs from this repository; there is no installed application yet.
 - To start it: `cd desktop && npm start`. A window opens. The console line `deck: serving ... on 127.0.0.1:<port>` is Deck's own web host, and you will need it for the tablet step.
 - To stop it: quit the application, or press Ctrl+C in the terminal you started it from.
 - **A workspace is added once, by hand.** Deck scans nothing. In the window, the left rail carries **+ add a workspace**; choose a folder that holds a `SNAPSHOT.yaml`. Use Your Trainer: its Issues view has hundreds of notes, and a field of thirty cannot overflow anything.
-- **The surface toggle** sits beside the view buttons in the switcher and reads Spread or Glass. The **compass** is the small dial at the edge of the field that carries the count of notes behind you.
+- **The surface toggle** sits beside the view buttons in the switcher and reads Glass, Spread and List; the one in use is outlined. The **compass** is the panel at the bottom right of the field: a small dial, the way you face, and the count of dealt notes out of sight. The **owed count** is the first thing on the bar above the field.
 - **A tablet on the same network**, and Deck started with `npm run start:lan` so its host binds beyond loopback, for the last step. The tablet setup in [[TST-0010-Deck-Opens-Read-Only-On-A-Tablet]] applies.
 - **Not before** the six tasks this note lists have landed: without the band function, the geometry, the renderer, the re-arrangement, the address and the measurement, the field is a prototype and not a view.
 
@@ -51,16 +51,16 @@ Deck runs from this repository; there is no installed application yet.
 - Note what is in front of you. Open the same repository in the cockpit and compare its Needs-you group for the same view against the front band.
 - Drag the field, or hold an arrow key, until you face the quiet band. Read the compass before and after the turn.
 - Switch from Issues to Features. Watch the cards.
-- Put the mouse away. From the navigator, use Tab and the arrow keys to reach a card in the mid band, and Enter to open it.
+- Put the mouse away. From the navigator, use Tab and the arrow keys to reach a card in the mid band, and Enter to lift it: its pane opens on the front plane with the note in it.
 - Copy the address. On the tablet, open Deck's host in Safari and paste the address.
 
 ## Expected results
 
 - Deck opens on Glass, not on Spread, and the switcher shows Glass as the current surface.
 - The front band holds the notes the cockpit's Needs-you group holds for that view, or holds as many as fit and shows how many more there are. No owed note is anywhere but the front band or that count.
-- Turning shows the quiet band behind you as small id tiles, and the compass count before the turn equals the number of tiles you turn to face.
+- Turning shows the quiet band behind you as small id tiles, and the compass count falls as the quiet band comes into view and rises as the front band leaves it. (Amended 2026-09-10: the count is every dealt note out of sight, mid-band cards past the edge included, and a thousand tiles are never all in view at once, so it cannot equal the tiles faced.)
 - On the view switch, the notes present in both views move to new places, notes that leave fade out, and no card slides from one note's place into another's.
-- A mid-band card is reached and opened from the navigator with the keyboard alone, and the field flies to it.
+- A mid-band card is reached and lifted from the navigator with the keyboard alone, and the field flies to it as the row is reached.
 - The pasted address opens the same view on the tablet, on Glass, and a far card there opens by flying to it and then tapping it.
 
 ## Evidence (fill after running)

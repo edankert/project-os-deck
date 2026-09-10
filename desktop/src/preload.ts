@@ -38,6 +38,10 @@ const api = {
   windows: {
     role: (): Promise<unknown> => ipcRenderer.invoke('deck:window:role'),
     openPanel: (address: string): Promise<unknown> => ipcRenderer.invoke('deck:window:open-panel', address),
+    /** Every other window and display, for a throw (TASK-0055). */
+    list: (): Promise<unknown> => ipcRenderer.invoke('deck:windows:list'),
+    /** A note thrown to a window, a display or the tablet. */
+    throw: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:window:throw', request),
   },
 
   clipboard: {

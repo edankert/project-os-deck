@@ -55,17 +55,16 @@ counters:
   RISK: 4
   REL: 0
   TASK: 57
-  TST: 38
+  TST: 45
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
-  phase: "PHASE-0001"
-  feature: ""
-  task: ""
-  issue: "ISS-0056"
-  note: "Nothing is in flight: PHASE-0001's ten features are done, pushed and green, and it waits on four walks only Edwin can make plus a triage decision on ISS-0056. PHASE-0002 was reviewed on 2026-09-10 against a Minority Report style surface and gained FEAT-0014 (five tasks, one walk); it starts when PHASE-0001 closes."
-
+  phase: "PHASE-0002"
+  feature: "FEAT-0014"
+  task: "TASK-0057"
+  issue: ""
+  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Order: TASK-0057 (the tablet follows the store, host only), then the pure band and slot functions, the address, the renderer, the view switch, lifting, the hands, the orbit, and the measurement last."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -277,35 +276,28 @@ items:
     TASK-0029:
       file: "docs/features/glass-field/plan/tasks/TASK-0029-The-Band-Function.md"
       title: "The band section of every description, and the function that applies it: front, mid and deep per view, with overflow stated rather than silent"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0009"
       phase: PHASE-0002
     TASK-0030:
       file: "docs/features/glass-field/plan/tasks/TASK-0030-The-Slot-Geometry.md"
       title: "The slot geometry: a cylinder of slots dealt from the bands, a shape for a thousand quiet tiles, and an obstacle that is a sector rather than a rectangle"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0009"
       phase: PHASE-0002
     TASK-0031:
       file: "docs/features/glass-field/plan/tasks/TASK-0031-The-Field-Renders-And-Turns.md"
       title: "The field renders and turns: near bands as bound cards, the quiet band on one canvas, fog instead of blur, and a card a real pointer can hit"
-      status: backlog
-      owner: user:edwin
-      parent: "FEAT-0009"
-      phase: PHASE-0002
-    TASK-0032:
-      file: "docs/features/glass-field/plan/tasks/TASK-0032-A-View-Switch-Re-Arranges.md"
-      title: "A view switch re-arranges the same cards, and a change arriving mid-view is announced rather than applied"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0009"
       phase: PHASE-0002
     TASK-0033:
       file: "docs/features/glass-field/plan/tasks/TASK-0033-Glass-Is-Addressed-And-Opened-First.md"
       title: "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboard route"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0009"
       phase: PHASE-0002
@@ -319,21 +311,21 @@ items:
     TASK-0035:
       file: "docs/features/glass-desk/plan/tasks/TASK-0035-A-Note-Is-Lifted-And-Put-Back.md"
       title: "A note is lifted out of the field onto the desk, its slot stays ghosted, and closing is three verbs none of which destroys anything"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0010"
       phase: PHASE-0002
     TASK-0036:
       file: "docs/features/glass-desk/plan/tasks/TASK-0036-The-Neighbourhood-Takes-The-Front-Band.md"
       title: "The neighbourhood takes the front band while a note is held, the front plane says what it now means, and the owed count keeps its place"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0010"
       phase: PHASE-0002
     TASK-0037:
       file: "docs/features/glass-desk/plan/tasks/TASK-0037-What-These-Share.md"
       title: "What these share: with several notes on the desk the field marks what is joined to more than one of them, and the desk bar counts it"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0010"
       phase: PHASE-0002
@@ -445,35 +437,35 @@ items:
     TASK-0053:
       file: "docs/features/glass-hands/plan/tasks/TASK-0053-Pull-Forward-And-Push-Behind.md"
       title: "Pull forward and push behind: a card is placed in the front band or behind you by hand for the session, an owed note cannot be pushed out, and the front plane says how many notes a hand placed"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0014"
       phase: PHASE-0002
     TASK-0054:
       file: "docs/features/glass-hands/plan/tasks/TASK-0054-A-Held-Note-Is-A-Pane.md"
       title: "A held note is a pane: moved, resized and stacked on the front plane by hand, its header always readable, and its place kept in the desk record Spread already saves"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0014"
       phase: PHASE-0002
     TASK-0055:
       file: "docs/features/glass-hands/plan/tasks/TASK-0055-Throw-To-A-Screen.md"
       title: "Throw to a screen: a drag that leaves the field toward another window lands the note in that window's reader or on its desk, opens a new reader window on an empty display, and reaches the tablet"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0014"
       phase: PHASE-0002
     TASK-0056:
       file: "docs/features/glass-hands/plan/tasks/TASK-0056-Reach.md"
       title: "Reach: hovering a card on the desktop, or pressing and holding it on the tablet, draws wires to what it is joined to and counts the neighbours behind you, before anything is lifted"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0014"
       phase: PHASE-0002
     TASK-0057:
       file: "docs/features/glass-hands/plan/tasks/TASK-0057-The-Served-Page-Follows-The-Store.md"
       title: "The served page follows the store: Deck's host gains two read routes, a tablet shows the desk the Mac holds and follows the shell's focus when asked, and still cannot send anything back"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0014"
       phase: PHASE-0002
@@ -1488,9 +1480,9 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 57
-    tasks_done: 38
-    tests_total: 24
-    tests_passing: 1
+    tasks_done: 51
+    tests_total: 31
+    tests_passing: 2
     tests_failing: 0
     issues_open: 0
     issues_triage: 2

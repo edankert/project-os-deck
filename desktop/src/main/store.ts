@@ -10,7 +10,7 @@
  * transport and the file.
  */
 import type { DeckState } from '../shared/types.js';
-import { type DeckAction, initialState, normaliseState, reduce } from '../shared/store-state.js';
+import { type DeckAction, initialState, normaliseState, persistable, reduce } from '../shared/store-state.js';
 import { readJsonFile, writeJsonFileAtomic } from './atomic-json.js';
 
 export type Subscriber = (state: DeckState) => void;
@@ -91,7 +91,9 @@ export class DeckStore {
     if (!this.dirty) return;
     this.dirty = false;
     try {
-      writeJsonFileAtomic(this.file, this.state);
+      // Without the session part: what a person's hands did today is not
+      // what they reopen tomorrow (TASK-0053).
+      writeJsonFileAtomic(this.file, persistable(this.state));
     } catch {
       // Losing the layout is a nuisance; refusing to quit over it is worse.
     }

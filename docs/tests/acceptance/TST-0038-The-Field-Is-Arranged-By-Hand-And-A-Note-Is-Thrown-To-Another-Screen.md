@@ -53,9 +53,9 @@ Deck runs from this repository; there is no installed application yet.
 - Drag a different mid-band card up and away until it goes behind you. Read the compass. Turn to face the quiet band and find it.
 - Drag a card from the Needs-you front band up and away. Watch what happens and read what the front plane says.
 - Click a card to lift it. Drag the pane to the right of the window, resize it wider, then lift a second note and drop its pane over the first one's header. Click the lower header.
-- Press **widen** on one pane. Watch the field.
+- Press **widen** (⇥ on the pane's header) on one pane. Watch the field.
 - Drag a third card off the right edge of the field toward the second display, slowly enough to read the strip that appears at the edge, and release over the reader window's name. Look at the second display.
-- Drag a fourth card off the same edge and release past it with nothing under the pointer. Look at the second display.
+- Close the reader window on the second display. Drag a fourth card off the same edge, quickly, and release past it with nothing under the pointer. Look at the second display. (Amended 2026-09-10: with a reader still there, a release past the edge goes to that nearest window, as [[TASK-0055-Throw-To-A-Screen]] says; the new window opens only on a display with no Deck window on it.)
 - Look at the tablet. Find the desk there and compare it to the Mac's.
 - On the tablet, press and hold a card for a second. Look for wires. Release without moving.
 - Quit Deck and start it again with the same command. Look at the panes, the front label and the compass.

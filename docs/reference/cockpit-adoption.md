@@ -6,7 +6,7 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-09
+updated: 2026-09-10
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
@@ -81,9 +81,9 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.agents.strip` | not yet | |
 | `shell.agents.attention` | not yet | |
 | `shell.agents.approvals` | not yet | |
-| `shell.agents.follow` | not yet | one focus window; satellites draw no switcher at all as of 2026-09-06, so there is nothing to follow yet |
+| `shell.agents.follow` | not yet | 2026-09-10: half of it. A served page has a Follow the Mac toggle that shows the note the shell has focused (TASK-0057), which is the cockpit's toggle pointed at a different leader. Following an AGENT's navigation, and `cockpit focus` landing in Deck, are not built |
 | `shell.terminal` | not yet | several consoles as furniture in the field, [[PHASE-0004-Parity]]. **Edwin, 2026-09-07:** before building, evaluate T3 Code's terminal (a Node server owning the PTYs with node-pty, streamed over a WebSocket to xterm.js in a web client) in place of the cockpit's IPC-only terminal; that shape fits Deck's two hosts. The choice is recorded as an ADR in that phase. Still to honour: PHASE-040's control plane as the source of sessions, and a context budget past sixteen |
-| `shell.live` | not yet | a change arriving mid-view is announced, never applied silently |
+| `shell.live` | adopted | 2026-09-10, TASK-0057 and TASK-0032: Deck's own server-sent event stream, `GET /deck/events`, carries the store to a served page, and a change arriving while a person looks is announced with a count and applied only when they act. Deck's stream carries Deck's store, not the sidecar's `/_events` reload signal |
 | `shell.validation` | not yet | |
 | `shell.theme` | not yet | Glass has no light-mode form yet (review, Part 2) |
 | `shell.settings` | not yet | |

@@ -117,10 +117,11 @@ test('several unreadable things are ALL reported, not the first one thrown', () 
 });
 
 test('a surface nothing draws is refused, from the same vocabulary the address reads', () => {
-  const { refusals } = parseDescription(valid({ surfaces: ['list', 'glass'] }));
-  const named = refusals.find((r) => r.where === 'surfaces[1]');
+  const { refusals } = parseDescription(valid({ surfaces: ['list', 'glass', 'hologram'] }));
+  assert.equal(refusals.find((r) => r.where === 'surfaces[1]'), undefined, 'glass is drawn since PHASE-0002');
+  const named = refusals.find((r) => r.where === 'surfaces[2]');
   assert.notEqual(named, undefined, 'a surface Deck does not draw was accepted');
-  assert.match(named.reason, /glass/);
+  assert.match(named.reason, /hologram/);
 });
 
 // ---- the seven ----
@@ -137,9 +138,11 @@ test('the seven views the provider emits are seven descriptions with no refusals
   }
 });
 
-test('each of the seven names list and spread, and does NOT name glass', () => {
+test('each of the seven names glass first, then spread and list', () => {
+  // Glass first because it is the surface Deck opens (ADR-0002); added the
+  // day the field existed to draw them (TASK-0033).
   for (const view of projectOsProvider.views(WORKSPACE)) {
-    assert.deepEqual(view.surfaces, ['list', 'spread'], `${view.id} draws on the wrong surfaces`);
+    assert.deepEqual(view.surfaces, ['glass', 'spread', 'list'], `${view.id} draws on the wrong surfaces`);
   }
 });
 

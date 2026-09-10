@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0030
 aliases: ["TASK-0030"]
 title: "The slot geometry: a cylinder of slots dealt from the bands, a shape for a thousand quiet tiles, and an obstacle that is a sector rather than a rectangle"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 parent: "FEAT-0009"
 effort: ""
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0029"]
 blocks: ["TASK-0031"]
 related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]"]
-tests: []
+tests: ["[[TST-0041-The-Slot-Geometry-Places-Every-Note-And-Keeps-Obstacles-Clear]]"]
 ---
 
 # The slot geometry
@@ -43,12 +43,22 @@ Slot assignment runs on view change, on panel move and on turn end. It never run
 
 ## Steps
 
-- [ ] Choose the quiet band's shape (rows or a spiral) and write its arithmetic with the tile counts stated.
-- [ ] Implement the function over the band function's output, with obstacles as sectors.
-- [ ] Share the card box anchor with the renderer as one constant.
-- [ ] Add the suite: capacity, uniqueness, obstacle exclusion at several yaws, the quiet band's shape, and the no-assignment-on-turn rule.
-- [ ] Write the automated test note and link it from `tests:`.
+- [x] Choose the quiet band's shape (rows or a spiral) and write its arithmetic with the tile counts stated.
+- [x] Implement the function over the band function's output, with obstacles as sectors.
+- [x] Share the card box anchor with the renderer as one constant.
+- [x] Add the suite: capacity, uniqueness, obstacle exclusion at several yaws, the quiet band's shape, and the no-assignment-on-turn rule.
+- [x] Write the automated test note and link it from `tests:`.
 
 ## Notes
 
 The starting numbers are DES-0002's: twelve front, forty mid. They are inputs to the function, not constants inside it, because [[TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace]] may move them and the obstacles later include a console ([[PHASE-0004-Parity]]) that takes a sector of its own.
+
+## Outcome
+
+**Done 2026-09-10.** `desktop/src/shared/slots.ts` places every banded note on a cylinder. The front band is four rows in five columns 34 degrees apart at depth 380; twelve slots are used and the rest are spares for obstacles. The middle band is four rows in eight columns a side, from 50 degrees out, at depth 620, dealt a heading to a column when the heading has three notes or more. The quiet band is rows, not a spiral: forty tiles to a row across 156 degrees behind the person and twenty-five rows to a layer, a thousand tiles a layer, each further layer 150 units back. Rows, because a person looking for one note scans a shelf.
+
+**The two prototype defects are rules.** One function, `cardTransform`, anchors a card at its centre for the tests and the renderer alike, and the stylesheet's `transform-origin` is checked against it. An obstacle is an angular sector with a depth range, and `obstaclesFor` turns a pane on the screen into one sector per band depth.
+
+**A turn deals nothing.** `FieldModel.turn` changes the yaw and nothing else; assignment runs on a view change, a pane move and a turn's end when a pane is on screen.
+
+**Evidence.** [[TST-0041-The-Slot-Geometry-Places-Every-Note-And-Keeps-Obstacles-Clear]], 9 of 9; five mutations, five killed. 2660 notes all have distinct positions. The one reading of the acceptance that needed a decision: "every note has a position" is read as every note the band function dealt; a note past a band's capacity is counted as overflow and listed in the navigator, which is TASK-0029's rule.

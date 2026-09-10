@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0037
 aliases: ["TASK-0037"]
 title: "What these share: with several notes on the desk the field marks what is joined to more than one of them, and the desk bar counts it"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0010-Lifting-A-Note]]"]
 parent: "FEAT-0010"
 effort: ""
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0036"]
 blocks: []
 related: ["[[FEAT-0010-Lifting-A-Note]]", "[[DES-0002-The-Glass-Cockpit]]"]
-tests: []
+tests: ["[[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # What these share
@@ -40,11 +40,17 @@ The computation needs no whole graph. TASK-0036 already fetches a context per he
 
 ## Steps
 
-- [ ] Compute the shared set from the held notes' contexts as a pure function in `shared/`, tested over fixtures with zero, one, two and three held notes.
-- [ ] Draw the mark on field cards and the count in the desk bar.
-- [ ] Recompute on every lift and put-back.
-- [ ] Surface the shared set as a group in the navigator.
+- [x] Compute the shared set from the held notes' contexts as a pure function in `shared/`, tested over fixtures with zero, one, two and three held notes.
+- [x] Draw the mark on field cards and the count in the desk bar.
+- [x] Recompute on every lift and put-back.
+- [x] Surface the shared set as a group in the navigator.
 
 ## Notes
 
 A note that is shared and also owed is both marked and in the front band; the mark says what it is joined to, and the band says what it wants. The two must not compete for the same pixel.
+
+## Outcome
+
+**Done 2026-09-10.** `sharedAmong` counts, from the contexts already fetched, every note joined to two or more held notes; a held note is not counted. Each drawn card among them carries a ◆ mark with the count, the field's bar says "2 held · 8 joined to more than one of them", and the navigator lists them under "Joined to more than one held note". Putting a note back recomputes from what is still held.
+
+**Evidence.** [[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]] over zero, one, two and three held notes; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: the bar's count equals the shared set, every drawn card in it is marked and no other, and the navigator's group has the same count.

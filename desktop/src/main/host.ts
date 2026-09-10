@@ -13,8 +13,9 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import type { Capabilities, Workspace } from '../shared/types.js';
+import type { Capabilities, DeckState, Workspace } from '../shared/types.js';
 import type { IndexSnapshot } from './note-index.js';
+import { servedState } from '../shared/served-state.js';
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
 
@@ -181,6 +182,23 @@ export interface HostOptions {
    * assuming the forwarding tests cover it (TASK-0040).
    */
   indexFor?: (workspaceId: string) => IndexSnapshot | null;
+  /**
+   * The store's state, for `/deck/state` and `/deck/events` (TASK-0057).
+   *
+   * Both are READS. A tablet follows the Mac's desk by reading it and sends
+   * nothing back, because this host answers 405 to every method that is not a
+   * read (ADR-0001). Absent, both routes answer 404: a host with no store to
+   * describe is not one that should pretend to have an empty one.
+   */
+  state?: () => DeckState;
+  /** Called with every state the store broadcasts. Returns its own unsubscribe. */
+  subscribeState?: (fn: (state: DeckState) => void) => () => void;
+  /**
+   * Anything else this host serves, as `{ path: answer }`, checked before the
+   * files. How the graph a Glass arrangement reads reaches a page without the
+   * host knowing what a graph is (TASK-0001).
+   */
+  extraReads?: (pathname: string, search: URLSearchParams) => unknown | undefined;
 }
 
 export interface Listening {
@@ -189,14 +207,28 @@ export interface Listening {
 }
 
 export const SIDECAR_PREFIX = '/deck/sidecar/';
+/** How often an idle event stream says it is still there, so nothing between closes it. */
+export const EVENTS_HEARTBEAT_MS = 20_000;
 export const RECORDS_PREFIX = '/deck/records/';
 
 export class DeckHost {
   private readonly options: HostOptions;
   private server: http.Server | null = null;
+  /** The pages following the store right now: one open event stream each. */
+  private readonly streams = new Set<http.ServerResponse>();
 
   constructor(options: HostOptions) {
     this.options = options;
+  }
+
+  /**
+   * How many served pages are following the store.
+   *
+   * A throw can land on the tablet only when one is listening, so the target
+   * strip names it only then (TASK-0055).
+   */
+  followers(): number {
+    return this.streams.size;
   }
 
   listen(port: number, bind = '127.0.0.1'): Promise<Listening> {
@@ -218,11 +250,16 @@ export class DeckHost {
 
   close(): Promise<void> {
     return new Promise((resolve) => {
+      // An event stream is a request that never finishes on its own, so a
+      // close that waited for it would wait for the tablet to put itself down.
+      for (const stream of this.streams) stream.end();
+      this.streams.clear();
       if (this.server === null) {
         resolve();
         return;
       }
       this.server.close(() => resolve());
+      this.server.closeAllConnections?.();
       this.server = null;
     });
   }
@@ -260,6 +297,26 @@ export class DeckHost {
       });
       return;
     }
+    if (pathname === '/deck/state') {
+      if (this.options.state === undefined) {
+        plain(res, 404, 'this host has no store to describe');
+        return;
+      }
+      json(res, 200, servedState(this.options.state(), this.openWorkspaceIds()));
+      return;
+    }
+    if (pathname === '/deck/events') {
+      this.events(res, method);
+      return;
+    }
+    if (this.options.extraReads !== undefined) {
+      const answer = this.options.extraReads(pathname, url.searchParams);
+      if (answer !== undefined) {
+        if (answer === null) plain(res, 404, 'nothing there');
+        else json(res, 200, answer);
+        return;
+      }
+    }
     if (pathname.startsWith(RECORDS_PREFIX)) {
       this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), res);
       return;
@@ -269,6 +326,58 @@ export class DeckHost {
       return;
     }
     this.serveFile(pathname, method, res);
+  }
+
+  /** The workspaces whose sidecar is answering, which is what the network may be told about. */
+  private openWorkspaceIds(): Set<string> {
+    return new Set(
+      this.options
+        .listWorkspaces()
+        .filter((w) => this.options.sidecarBaseFor(w.id) !== null)
+        .map((w) => w.id),
+    );
+  }
+
+  /**
+   * The store's state as a server-sent event stream (TASK-0057).
+   *
+   * The whole served state on every broadcast, rather than a patch: the state
+   * is a few kilobytes, a patch format would be a second thing to keep
+   * honest, and a page that missed one event must not be left wrong until the
+   * next restart. The first event is sent at once, so a page that subscribes
+   * never draws a default it then has to replace.
+   */
+  private events(res: http.ServerResponse, method: string): void {
+    if (this.options.state === undefined || this.options.subscribeState === undefined) {
+      plain(res, 404, 'this host has no store to follow');
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+    if (method === 'HEAD') {
+      res.end();
+      return;
+    }
+    const send = (state: DeckState): void => {
+      if (res.writableEnded) return;
+      res.write(`event: state\ndata: ${JSON.stringify(servedState(state, this.openWorkspaceIds()))}\n\n`);
+    };
+    this.streams.add(res);
+    const unsubscribe = this.options.subscribeState(send);
+    const beat = setInterval(() => {
+      if (!res.writableEnded) res.write(': still here\n\n');
+    }, EVENTS_HEARTBEAT_MS);
+    beat.unref?.();
+    const stop = (): void => {
+      clearInterval(beat);
+      unsubscribe();
+      this.streams.delete(res);
+    };
+    res.on('close', stop);
+    res.on('error', stop);
   }
 
   /**

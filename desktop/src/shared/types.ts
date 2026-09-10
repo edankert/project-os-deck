@@ -89,6 +89,20 @@ export interface DeskCard {
   noteId: string;
   x: number;
   y: number;
+  /**
+   * A pane's size, when a person resized it in Glass (TASK-0054).
+   *
+   * Optional, so every desk saved before panes existed reads exactly as it
+   * did, and Spread, which draws every card at one size, ignores both.
+   */
+  w?: number;
+  h?: number;
+  /**
+   * Whether this note is in the reading column: the fixed-width column at the
+   * side of the field that a widened pane moves to. At most one card per desk
+   * has it, because widening a second pane replaces the first.
+   */
+  wide?: boolean;
 }
 
 export interface Desk {
@@ -172,6 +186,31 @@ export interface DeckState {
    * `docs/ARCHITECTURE.md`, "Flows", carries the concept in words.
    */
   flowCursor: FlowCursor | null;
+  /**
+   * Which surface draws the view: `glass`, the field, or `spread`, the desk.
+   *
+   * Glass unless a person chose otherwise (ADR-0002). Shared, so a second
+   * window follows the first, and written into an address only when it is
+   * NOT the default: an address without it means Glass (TASK-0033).
+   */
+  surface: string;
+  /**
+   * What a person's hands did to the field this session (TASK-0053).
+   *
+   * The first state that every window shares and that must NOT be kept: the
+   * store's persister drops this whole part, so a restart starts with both
+   * sets empty, and neither is ever in an address. Keyed by workspace id,
+   * because the field a hand arranged belongs to one workspace.
+   */
+  session: SessionState;
+}
+
+/** The part of the state that lasts for the session and is never written to disk. */
+export interface SessionState {
+  /** Notes a hand brought into the front band. */
+  pulled: Record<string, string[]>;
+  /** Notes a hand sent behind the person, into the quiet band. */
+  pushed: Record<string, string[]>;
 }
 
 /** What a host can do. The renderer asks rather than testing for Electron. */

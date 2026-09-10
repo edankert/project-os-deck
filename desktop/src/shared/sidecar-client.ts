@@ -200,6 +200,18 @@ export class SidecarClient {
    * `HUMAN_TRANSITIONS`, and a renderer that kept its own copy is what
    * project-os-cockpit#REQ-0026 forbids.
    */
+  /**
+   * What a note links to and what links to it (TASK-0036).
+   *
+   * `/api/cockpit/context`, which the cockpit's register lists under
+   * `api.read.note` and Deck's host already forwards. One request per note:
+   * the whole-graph payload is the orbit's business, not the neighbourhood's.
+   */
+  async context(noteId: string): Promise<NoteContext> {
+    const path = `/api/cockpit/context?this=${encodeURIComponent(noteId)}`;
+    return contextFromPayload(await this.getJson(path), `${this.base}${path}`);
+  }
+
   async actions(noteId: string): Promise<unknown> {
     return this.getJson(`/api/notes/actions?id=${encodeURIComponent(noteId)}`);
   }
@@ -223,6 +235,102 @@ export class SidecarClient {
  * for this repository and for Your Trainer, and a fixture that went through a
  * different reader would be measuring the fixture.
  */
+/** One note in a context answer: enough to draw it as a card and open it. */
+export interface ContextItem {
+  id: string;
+  title: string;
+  status: string;
+  type: string;
+  /** Docs-root-relative, read off the item's `/docs/<rel>` url. */
+  rel: string | null;
+  severity: string | null;
+}
+
+export interface NoteContext {
+  /** The note asked about, or null when the sidecar could not resolve it. */
+  active: { id: string; title: string } | null;
+  linked: ContextItem[];
+  backlinks: ContextItem[];
+}
+
+/**
+ * Read a context answer, flattening its type groups.
+ *
+ * The sidecar groups linked notes and backlinks by type for its right pane.
+ * The neighbourhood wants the notes, so the grouping is dropped here and the
+ * type stays on each item.
+ */
+export function contextFromPayload(raw: unknown, url = 'a recorded payload'): NoteContext {
+  const obj = requireObject(raw, url);
+  const items = (value: unknown): ContextItem[] => {
+    if (!Array.isArray(value)) return [];
+    const out: ContextItem[] = [];
+    for (const group of value) {
+      if (typeof group !== 'object' || group === null) continue;
+      const list = (group as Record<string, unknown>)['items'];
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        if (typeof item !== 'object' || item === null) continue;
+        const it = item as Record<string, unknown>;
+        const id = typeof it['id'] === 'string' ? it['id'] : '';
+        if (id === '') continue;
+        const link = typeof it['url'] === 'string' ? it['url'] : '';
+        out.push({
+          id,
+          title: typeof it['title'] === 'string' ? it['title'] : id,
+          status: typeof it['status'] === 'string' ? it['status'] : '',
+          type: typeof it['type'] === 'string' ? it['type'] : '',
+          rel: link.startsWith('/docs/') ? decodeURIComponent(link.slice('/docs/'.length)) : null,
+          severity: typeof it['severity'] === 'string' ? it['severity'] : null,
+        });
+      }
+    }
+    return out;
+  };
+  const active = obj['active'];
+  return {
+    active:
+      typeof active === 'object' && active !== null && typeof (active as Record<string, unknown>)['id'] === 'string'
+        ? {
+            id: (active as Record<string, unknown>)['id'] as string,
+            title: String((active as Record<string, unknown>)['title'] ?? ''),
+          }
+        : null,
+    linked: items(obj['linked']),
+    backlinks: items(obj['backlinks']),
+  };
+}
+
+/** Every note in a context, once: what the note links to and what links to it. */
+export function neighboursOf(context: NoteContext): ContextItem[] {
+  const seen = new Map<string, ContextItem>();
+  for (const item of [...context.linked, ...context.backlinks]) {
+    if (!seen.has(item.id)) seen.set(item.id, item);
+  }
+  return [...seen.values()];
+}
+
+/** A neighbour from outside the view, as a card the field can draw and a person can open. */
+export function cardFromContext(item: ContextItem): CardModel {
+  return {
+    noteId: item.id,
+    title: item.title,
+    noteType: item.type,
+    status: item.status,
+    rel: item.rel,
+    subtitle: null,
+    owed: false,
+    owedVerb: null,
+    groupKey: 'deck:joined',
+    severity: item.severity,
+    lastVerified: null,
+    stale: false,
+    progress: null,
+    children: [],
+    frontmatter: null,
+  };
+}
+
 export function navFromPayload(raw: unknown, mode: string, url = 'a recorded payload'): NavPayload {
   const obj = requireObject(raw, url);
   const rawGroups = obj['groups'];

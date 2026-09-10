@@ -46,7 +46,7 @@ function card(extra = {}) {
 }
 
 function inputs(extra = {}) {
-  return { owed: false, suppressed: false, inSubject: true, held: false, joinedToDesk: false, ...extra };
+  return { owed: false, suppressed: false, inSubject: true, held: false, joinedToDesk: false, pulled: false, pushed: false, ...extra };
 }
 
 // ---- faces.ts holds no type ----
@@ -179,12 +179,18 @@ test('mid overflow is counted and never falls into the quiet band', () => {
   assert.equal(banded.deep.length, 0);
 });
 
-test('the table carries held and joined-to-desk columns that nothing yet fills', () => {
-  // Reserved by TASK-0029 and filled by FEAT-0010's desk. Columns in the rule
-  // now so that lifting a note does not mean rewriting it.
+test('the desk and the hands fill their columns, and owed beats every one of them', () => {
+  // Reserved by TASK-0029 in 2026-09-07's plan and filled on 2026-09-10:
+  // joined-to-desk by FEAT-0010's neighbourhood, pulled and pushed by
+  // FEAT-0014's hands. Held changes nothing on its own: a held note is on the
+  // desk, and its slot in the field stays where it was, ghosted.
   const view = VIEWS.find((v) => v.id === 'features');
-  assert.equal(bandOf(view.band, inputs({ held: true })), 'mid', 'holding a note already changes its band');
-  assert.equal(bandOf(view.band, inputs({ joinedToDesk: true })), 'mid');
+  assert.equal(bandOf(view.band, inputs({ held: true })), 'mid', 'holding a note moves its slot');
+  assert.equal(bandOf(view.band, inputs({ joinedToDesk: true })), 'front', 'the neighbourhood takes the front band');
+  assert.equal(bandOf(view.band, inputs({ pulled: true })), 'front', 'pulled beats the subject');
+  assert.equal(bandOf(view.band, inputs({ pushed: true })), 'deep', 'pushed beats the subject');
+  assert.equal(bandOf(view.band, inputs({ owed: true, inSubject: false, pushed: true })), 'front', 'owed beats pushed');
+  assert.equal(bandOf(view.band, inputs({ suppressed: true, inSubject: false, pulled: true })), 'front', 'a hand may bring finished work forward');
   const withHeld = {
     ...view.band,
     rows: [{ when: { held: true }, band: 'front' }, ...view.band.rows],

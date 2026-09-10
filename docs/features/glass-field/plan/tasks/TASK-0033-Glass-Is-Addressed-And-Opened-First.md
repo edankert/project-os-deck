@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0033
 aliases: ["TASK-0033"]
 title: "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboard route"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 parent: "FEAT-0009"
 effort: ""
@@ -15,7 +15,7 @@ due: ""
 depends: ["TASK-0031"]
 blocks: []
 related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[TASK-0017-The-Address-Grammar]]", "[[TASK-0027-Search-And-Filter-In-The-Renderer]]", "[[FEAT-0004-Windows-On-Any-Screen]]"]
-tests: []
+tests: ["[[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Glass is addressed and opened first
@@ -43,13 +43,21 @@ The navigator already exists with groups, search and filters ([[TASK-0027-Search
 
 ## Steps
 
-- [ ] Add the surface to the address grammar and its parser tests, with the refusal of unknown values.
-- [ ] Route the renderer by surface, Glass by default, and add the toggle to the switcher.
-- [ ] Give the navigator rows and the near cards roles, a focus order and set-size attributes.
-- [ ] Wire the keyboard open verb to the fly, with the reduced-motion substitute.
-- [ ] Extend the smoke run with the keyboard walk and the default-surface check.
-- [ ] Write the automated test notes and link them from `tests:`.
+- [x] Add the surface to the address grammar and its parser tests, with the refusal of unknown values.
+- [x] Route the renderer by surface, Glass by default, and add the toggle to the switcher.
+- [x] Give the navigator rows and the near cards roles, a focus order and set-size attributes.
+- [x] Wire the keyboard open verb to the fly, with the reduced-motion substitute.
+- [x] Extend the smoke run with the keyboard walk and the default-surface check.
+- [x] Write the automated test notes and link them from `tests:`.
 
 ## Notes
 
 The review asked for the address before the renderer. It is placed after the first draw here only because the grammar and the navigator already exist and the change is small; it can be built beside [[TASK-0031-The-Field-Renders-And-Turns]] rather than after it.
+
+## Outcome
+
+**Done 2026-09-10.** `glass` is registered in the surface vocabulary and named first in all seven descriptions' `surfaces`. The store holds a `surface`, Glass unless a person chose otherwise, and an address carries `surface=` only when it is not Glass; `surface=hologram` is refused. The switcher gained a toggle, Glass · Spread · List, drawn from the view's own `surfaces` with the vocabulary's labels, and the renderer names no surface.
+
+**The navigator is the keyboard's route into the field.** One row is the tab stop and the arrow keys move it; Enter lifts the row's note in Glass; `p` pulls, `b` pushes, `s` sends, Delete puts back. Each row says its place in the whole view, folded groups included, with `aria-posinset` and `aria-setsize`. Arriving on a row flies the field to its card and reaches for it; under reduced motion the row and the card are highlighted and the field cuts.
+
+**Evidence.** [[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]] for the surface in the store and the address; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]] for the default surface, the address with `surface=spread`, the toggle, the keyboard lift and the reduced-motion arrival.
