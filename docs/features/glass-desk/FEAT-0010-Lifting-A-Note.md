@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0010
 aliases: ["FEAT-0010"]
 title: "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it"
-status: planned
+status: review
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
@@ -79,3 +79,23 @@ Three words are used throughout. The **field** is the cylinder of cards that [[F
 3. R — The smoke check for "its neighbours take the front band" passes with a single neighbour. Its predicate is `front.length === Math.min(ids.length, 12) || front.length >= 1`. With the built field keeping only the first joined note, it passed as "2 of 11". TASK-0036's evidence, "11 of 11", is what one run printed, not what the check requires.
 4. R — TASK-0036's line "every note in its linked and backlink groups is in the front band at full size" cannot hold for a note with more than twelve neighbours, because the rest are counted as overflow. The line has not been amended to say so.
 5. N — Under reduced motion the lift's turn is a cut with no highlight: `faceFront()` calls `flyTo(0)` without one, and TASK-0036 asks for "a highlight on the neighbours". The `joined` card styling may be meant as that highlight. The smoke run does not check that a lift turns the field to face the neighbourhood.
+
+## Second independent review, 2026-09-10
+
+**Verdict: changes requested.** The first review's findings are fixed and checked, but the reduced-motion lift added for ISS-0061 can leave field cards under the held note, which TASK-0035 forbids. And the renderer's half of "what two held notes share comes first" has no check that fails without it.
+
+**Who reviewed, and how independent it was.** model:claude-opus-5, the same model as the author, in a fresh context that started from the notes and the code at cd95528 (diffed against 3045a42) and has no memory of authoring the work. It is not a separate session tree: it was launched as a subagent from the authoring session (its commit trailer names the same `Claude-Session` as the commits), and its scratchpad directory is shared with the author's and the first reviewer's. Of the files already there it read only the `panes`, `reaching` and turn fields of two measurement logs, and one grep line.
+
+**What it ran.** `npm test`: 396 of 396. Fourteen mutations of the built `dist/shared` modules, run against their suites. The Glass section of the smoke run (`DECK_SMOKE_ONLY=glass DECK_SMOKE_DEBUG=1 electron . --smoke`): once clean, 120 checks and none failed, on four displays; once with seven renderer mutations in `dist/web/renderer`. `bash tools/scripts/run-smoke.sh both`: the loopback run failed one Glass check and the network run passed. A second full loopback run: `ok: true`, 120 Glass checks. `electron . --measure --measure-workspaces <this repository>`, twice. Node probes over the built slot and field modules. `dist` was rebuilt after every mutation, and `git status` in this repository was unchanged after every run. R marks a finding reproduced by a command; N marks one that was not.
+
+**What the fixes got right.** A pane stored at x=3000 with the reading column open was drawn at 94.4 pixels with no card under it; with obstacles taken from the stored `x` again, the smoke run found TASK-0009 under the pane. Two held notes now mark all they share: the clean run read "2 held · 8 joined to more than one of them" and 8 cards marked, where the first review saw 2. The neighbour check requires every neighbour the band can hold (11 of 11). Under reduced motion a lift from the front highlighted 11 neighbours without turning, and with the highlight removed the check failed ("(0)"). TASK-0036's line is amended to the band's twelve.
+
+1. R — The reduced-motion lift added for ISS-0061 can leave field cards under the held note. `redeal()` deals with the pane's obstacles at the yaw the field faces now. The new branch then calls `this.model.face(0)` and `highlightAll(...)`, and nothing calls `turnEnd()`, so the obstacles are never computed again for yaw 0. `flyTo`'s own reduced-motion branch does call `turnEnd()`. Probe over the built `FieldModel`, with a pane at its default place (16 to 336 px) in a 1,000 px field: a lift made while facing yaw 0.6 leaves 12 cards under the pane at yaw 0, yaw 1.0 leaves 16, and yaw -0.8 leaves 8; with `turnEnd()` added, 0 in each case. The keyboard makes this the likely route: under reduced motion, focusing a mid row cuts the field to that card, and Enter lifts it from there. It breaks TASK-0035's "No field card is dealt underneath a held note". The smoke run's reduced-motion lift starts from a front card at yaw 0, so it cannot see this. Reproduced over the built modules and the code path in `glass.ts`; not driven in a window.
+2. R — "The notes two held notes share first", as TASK-0036 now reads, has no check in the renderer. TST-0040 calls `dealField` directly with `first` set. With the renderer's `{ first: new Set(this.shared.keys()) }` removed from the built `glass.js`, the smoke run printed "2 held · 8 joined to more than one of them" and "(2 marked)" and still passed; that is exactly the defect ISS-0059 was filed for. The mark check compares the marks with the shared cards that happen to be drawn, and never asks that the shared cards be drawn.
+3. R — The first review's finding 5 is only half answered. No smoke check records the yaw after a lift under normal motion, so nothing checks TASK-0036's "the field has turned to face them"; every lift in the run starts from a front card at yaw 0. Found by searching `smoke-glass.ts` for such a check.
+
+**The first review's findings.** Findings 1, 2, 3 and 4 are addressed and checked. Finding 5 is built for reduced motion and checked there. Its other half, the turn under normal motion, is still unchecked (finding 3 above).
+
+## Review stopped, 2026-09-10
+
+**Edwin stopped the review loop after two rounds, so this feature stays at `review`.** Both reviews requested changes. The first's findings are ISS-0058 to ISS-0063 and the second's are [[ISS-0064-A-Reduced-Motion-Lift-And-A-Pull-Beside-A-Pane-Still-Misplace-Cards]] and [[ISS-0065-Five-Checks-Still-Cannot-Fail-And-Four-Notes-Are-Stale]]; all eight are fixed. No third review was run, so no review has approved the feature. The quality gate needs an approved review for `done`, so moving it there is Edwin's decision, not the agent's.

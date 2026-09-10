@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0014
 aliases: ["FEAT-0014"]
 title: "The hands: a person arranges the field, throws a note to another screen, and reaches for a card to see what it is joined to"
-status: planned
+status: review
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
@@ -77,3 +77,24 @@ Four words are used throughout. **Pull** brings a card into the front band by ha
 6. R — In the target strip, an unnamed display reads as "a new reader on  (2)", because macOS labels such a display " (2)".
 7. R — The CHG note says no environment variable was added. `DECK_SMOKE_ONLY`, `DECK_SMOKE_DEBUG` and `DECK_SMOKE_TRACE` are new (optional and smoke-only), as is the `--measure` flag. Its impact list also omits `desktop/src/main/store.ts`, whose persister now drops the session part.
 8. R — TST-0039, TST-0043 and TST-0044 match their claims: 10, 10 and 8 tests pass, and every mutant those notes list that the reviewer re-ran was killed. The network smoke run passed the five 405s on both routes and the page with no bridge received the lifted note within a second.
+
+## Second independent review, 2026-09-10
+
+**Verdict: changes requested.** A pull into a full front band still vanishes whenever a pane takes the spare slots, and the front label then counts a card that is not on the field. Two TASK-0055 lines still promise what the checks do not show.
+
+**Who reviewed, and how independent it was.** model:claude-opus-5, the same model as the author, in a fresh context that started from the notes and the code at cd95528 (diffed against 3045a42) and has no memory of authoring the work. It is not a separate session tree: it was launched as a subagent from the authoring session (its commit trailer names the same `Claude-Session` as the commits), and its scratchpad directory is shared with the author's and the first reviewer's. Of the files already there it read only the `panes`, `reaching` and turn fields of two measurement logs, and one grep line.
+
+**What it ran.** `npm test`: 396 of 396. Fourteen mutations of the built `dist/shared` modules, run against their suites. The Glass section of the smoke run (`DECK_SMOKE_ONLY=glass DECK_SMOKE_DEBUG=1 electron . --smoke`): once clean, 120 checks and none failed, on four displays; once with seven renderer mutations in `dist/web/renderer`. `bash tools/scripts/run-smoke.sh both`: the loopback run failed one Glass check and the network run passed. A second full loopback run: `ok: true`, 120 Glass checks. `electron . --measure --measure-workspaces <this repository>`, twice. Node probes over the built slot and field modules. `dist` was rebuilt after every mutation, and `git status` in this repository was unchanged after every run. R marks a finding reproduced by a command; N marks one that was not.
+
+**What the fixes got right.** A display holding only a Needs-you strip now offers a new reader, and an unnamed display gets a name. Breaking either fails TST-0044. A push on a neighbour is refused in words, and allowing it fails TST-0040. Counting a pulled owed note as placed by hand fails TST-0040, and so does counting a pushed finished note as pushed. With no pane held, a pull into Your Trainer's full front band stands in front, and removing the spare slots fails TST-0040. In the clean smoke run a note thrown to a served page reached its desk 184 ms after the release. The thrown card flew toward the right edge it left (`translate(1400px, 0px)`). Under reduced motion the landing was a cut, and the front plane read "ISS-0056 sent to the desk on LG HDR WQHD".
+
+1. R — A pull into a full front band still vanishes whenever a pane is held on a field 1,000 px wide or narrower. The front label then says "1 placed by hand" for a card that is not on the field. The eight spare slots a pull may use are the same eight slots a pane takes as an obstacle, and pulled cards are dealt last. Probe over Your Trainer's fixture: `dealField` puts the pulled card in front with `handPlaced` 1. With one pane at its default place in a 1,000 px field, only 12 front slots are free, and the slot geometry drops the pull. `glass.ts` takes its hand count from `deal.handPlaced` (line 1062), while `pull()` tells the person the band is full. Free front slots with one default pane: 8 at 800 px, 12 at 1,000, 16 at 1,200 to 1,440, and 20 at 1,800. In that case TASK-0053's first line and ISS-0059's first acceptance line fail. Reproduced over the built modules; not driven in a window.
+2. R — Letting a pulled owed or joined note take a spare slot survives TST-0040. It is probably harmless, since it only makes a note in the record visible sooner; it is noted for completeness.
+3. R — The strip numbers an unnamed display by its position in Electron's list, not by the number the system shows. On this machine macOS labels display id 5 " (1)", and the strip called it "a new reader on display 4". Evidence: the clean smoke run, and a throwaway Electron script printing `screen.getAllDisplays()`. ISS-0062's "reads display N" is met literally, but a person cannot match "display 4" to "(1)".
+4. R — Two TASK-0055 lines still promise what the checks do not show. Its first two lines say "a reader window on a second display" and "a desk panel there". The smoke run's reader and desk windows sit on the focus window's display: its window list gave display 4 for all three. ISS-0062 says so, but the lines were not amended, unlike TASK-0031's Safari line. The same goes for "the target's name is highlighted" (FEAT-0014: "the target highlighted"): `fly()` says the name in the front plane and highlights nothing, and its comment reads "the target's name is said instead". The flight's direction is checked for the right edge only.
+
+**The first review's findings.** Findings 1, 2, 4, 6, 7 and 8 are addressed and checked, with finding 1 still failing while a pane is held (finding 1 above). Finding 3 is fixed and guarded; see FEAT-0010's second review, finding 1, for a new route under reduced motion. Finding 5 is partly addressed: the tablet, the flight and the cut are now checked, while the reader and desk windows are still on one display and the task's lines are unchanged (finding 4 above).
+
+## Review stopped, 2026-09-10
+
+**Edwin stopped the review loop after two rounds, so this feature stays at `review`.** Both reviews requested changes. The first's findings are ISS-0058 to ISS-0063 and the second's are [[ISS-0064-A-Reduced-Motion-Lift-And-A-Pull-Beside-A-Pane-Still-Misplace-Cards]] and [[ISS-0065-Five-Checks-Still-Cannot-Fail-And-Four-Notes-Are-Stale]]; all eight are fixed. No third review was run, so no review has approved the feature. The quality gate needs an approved review for `done`, so moving it there is Edwin's decision, not the agent's.

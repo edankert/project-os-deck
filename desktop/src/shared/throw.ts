@@ -58,6 +58,10 @@ export function edgeNear(
 export function displayName(label: string | undefined, index: number, primary: boolean): string {
   const trimmed = (label ?? '').trim();
   if (/[A-Za-z]/.test(trimmed)) return trimmed;
+  // The number macOS gives it, when the name is only that: " (1)" is display 1,
+  // whatever its place in Electron's list (ISS-0064).
+  const numbered = /\((\d+)\)/.exec(trimmed);
+  if (numbered !== null) return `display ${numbered[1]}`;
   return primary ? 'the main display' : `display ${index + 1}`;
 }
 

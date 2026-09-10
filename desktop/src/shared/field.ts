@@ -1,8 +1,11 @@
 /**
  * The field's deal: which of a view's notes stand in which band (TASK-0029).
  *
- * The rule is the description's `band` table and the function that applies
- * it is `bandCards` (TASK-0044). This module is Glass's use of them: it turns
+ * The rule is the description's `band` table, applied note by note with
+ * `bandOf` (TASK-0044). `dealField` fills the bands itself rather than calling
+ * `bandCards`, because the field adds two things the navigator's banding does
+ * not have: the neighbourhood's order and a pull's spare slots. This module
+ * is Glass's use of the table: it turns
  * the groups the navigator already draws into one entry per note, fills in
  * what the desk and the hands say about each, orders the front band, and
  * counts what the front plane has to say out loud.
@@ -186,6 +189,24 @@ export function dealField(table: BandTable, entries: FieldEntry[], options: Deal
     handPlaced: front.filter((e) => e.inputs.pulled && !e.inputs.owed && !e.inputs.joinedToDesk).length,
     pushedBehind: deep.filter((e) => e.inputs.pushed && !e.inputs.suppressed).length,
   };
+}
+
+/**
+ * The order the front band takes its SLOTS in, which is not the order it was
+ * filled in: the neighbourhood, then what a hand pulled, then what is owed.
+ *
+ * When panes leave fewer front slots than the band holds, the note a person
+ * just pulled stays in view and an owed note is counted instead; the owed
+ * count on the bar and the navigator still show every owed note. Dealt the
+ * other way, a pull beside a pane vanished while the label counted it
+ * (ISS-0064).
+ */
+export function frontForSlots(front: readonly FieldEntry[]): FieldEntry[] {
+  const rank = (e: FieldEntry): number => (e.inputs.joinedToDesk ? 0 : e.inputs.pulled && !e.inputs.owed ? 1 : 2);
+  return front
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => rank(a.e) - rank(b.e) || a.i - b.i)
+    .map((x) => x.e);
 }
 
 /**

@@ -130,6 +130,11 @@ const PAGE_HELPERS = `
     // In sight means inside the FIELD and first under the pointer: a card
     // clipped behind the navigator is on the page and cannot be pressed.
     visibleCards: (band) => { const f = document.getElementById('field').getBoundingClientRect(); return [...document.querySelectorAll('.field-card:not(.leaving)')].filter((e) => e.style.pointerEvents === 'auto' && (!band || e.dataset.band === band) && !e.classList.contains('ghost')).map((e) => { const r = e.getBoundingClientRect(); return { id: e.dataset.noteId, band: e.dataset.band, x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, right: r.right, top: r.top, bottom: r.bottom, owed: e.classList.contains('owed') }; }).filter((c) => c.x > f.left + 60 && c.x < f.right - 60 && c.y > f.top + 30 && c.y < f.bottom - 30 && window.__t.hit(c.x, c.y) === c.id); },
+    // Every near card drawn in the field, with no hit test: a card wholly
+    // under a pane fails the hit test, so visibleCards() cannot see the very
+    // cards an overlap check is looking for (ISS-0065).
+    nearCards: () => { const f = document.getElementById('field').getBoundingClientRect(); return [...document.querySelectorAll('.field-card:not(.leaving):not(.ghost)')].filter((e) => e.style.pointerEvents === 'auto').map((e) => { const r = e.getBoundingClientRect(); return { id: e.dataset.noteId, left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }).filter((c) => c.right > f.left && c.left < f.right && c.bottom > f.top && c.top < f.bottom); },
+    underPanes: () => { const panes = [...document.querySelectorAll('.pane:not(.wide)')].map((p) => p.getBoundingClientRect()); return window.__t.nearCards().filter((c) => panes.some((p) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top)).map((c) => c.id); },
     hit: (x, y) => { const e = document.elementFromPoint(x, y); const card = e && e.closest('.field-card'); return card ? card.dataset.noteId : (e ? e.className || e.tagName : null); },
     text: (sel) => (document.querySelector(sel) || {}).textContent || '',
     shown: (sel) => { const e = document.querySelector(sel); return !!e && !e.hidden && getComputedStyle(e).display !== 'none'; },
@@ -265,6 +270,11 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       const shouldMark = two.drawn.filter((id) => two.shared.includes(id)).sort();
       record(JSON.stringify(two.marked.slice().sort()) === JSON.stringify(shouldMark), `every drawn card joined to both carries the mark, and no other does (${two.marked.length} marked)`);
       record(two.navGroup === two.shared.length, `the navigator lists what they share (${two.navGroup})`);
+      // Dealt first: every shared note has a front slot when there are no
+      // more of them than the band's free slots. With the renderer not passing
+      // them first, 2 of 8 were drawn (ISS-0065).
+      const sharedInFront = await js<number>(`${JSON.stringify(two.shared)}.filter((id) => { const w = __t.where(id); return w && w.band === 'front'; }).length`);
+      record(two.shared.length === 0 || sharedInFront === Math.min(two.shared.length, 8), `every shared note is dealt into the front band first (${sharedInFront} of ${two.shared.length})`);
     } else {
       skip('the shared mark: the lifted note brought no second card into the front band');
     }
@@ -302,6 +312,25 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     await delay(600);
     record(deskIds().length === 0, 'esc sweeps the desk');
 
+    // ---- TASK-0036: a lift turns the field to face its neighbours ----
+    await js(`window.__deckGlass.model.face(0.8); window.__deckGlass.render(false); true`);
+    await delay(300);
+    const offFront = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`))[0];
+    if (offFront === undefined) {
+      record(false, 'a front card was in sight at yaw 0.8 to lift');
+    } else {
+      await pointer(win, [...click(offFront), { type: 'move', ...off }]);
+      const yaws: number[] = [];
+      for (let i = 0; i < 60; i += 1) {
+        yaws.push(await js<number>(`__t.yaw()`));
+        await delay(40);
+      }
+      const between = yaws.filter((y) => y < 0.79 && y > 0.01).length;
+      record(Math.abs(yaws[yaws.length - 1] as number) < 0.01 && between > 0, `a lift turns the field to face its neighbours, flying from 0.8 to ${(yaws[yaws.length - 1] as number).toFixed(2)} (${between} frames between)`);
+      store.dispatch({ type: 'clear-desk' });
+      await delay(800);
+    }
+
     // ---- ISS-0061: under reduced motion a lift highlights its neighbours ----
     await js(`window.__deckReducedMotion = true`);
     const rmFront = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`))[0];
@@ -315,6 +344,41 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       }
       const turned = await js<boolean>(`document.getElementById('field').classList.contains('turning')`);
       record(lit > 0 && !turned, `under reduced motion a lift highlights the neighbours it brought forward (${lit}) and does not fly (yaw ${yawBefore.toFixed(2)} to ${(await js<number>(`__t.yaw()`)).toFixed(2)})`);
+      // And from a yaw away from the front, with that pane held: after the
+      // cut no card is drawn under it (ISS-0064).
+      // Turned TOWARD the pane's side, so the slots the pane will cover once
+      // the field faces the front are free in the deal made before the cut. A
+      // turn the other way frees only slots that end up off the field's edge,
+      // and then a stale deal draws nothing under the pane to find.
+      const side = await js<number>(`(() => { const p = document.querySelector('.pane:not(.wide)'); const f = document.getElementById('field').getBoundingClientRect(); if (!p) return 1; const r = p.getBoundingClientRect(); return (r.left + r.right) / 2 < (f.left + f.right) / 2 ? -1 : 1; })()`);
+      const away = 0.8 * side;
+      await js(`window.__deckGlass.model.face(${away}); window.__deckGlass.render(false); true`);
+      await delay(200);
+      const another = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`)).find((c) => c.id !== rmFront.id);
+      if (another !== undefined) {
+        // Looked at in the page, on the first turn of the event loop after the
+        // field faces the front: a store update a moment later deals the field
+        // again and hides a stale deal, so a look 1.5 seconds on cannot fail.
+        // And the note's context is forgotten first, so the cut waits for the
+        // sidecar's answer and comes after every store update, as it does for
+        // a note nobody has reached for; with the answer cached the cut came
+        // first and the next update hid what it left.
+        await js(`(() => { const c = window.__deckContexts; for (const k of [...c.answers.keys()]) if (k.endsWith(' ' + ${JSON.stringify(another.id)})) c.answers.delete(k); return true; })()`);
+        const watch = js<{ under: string[]; ms: number; yaw: number }>(`new Promise((resolve) => {
+          const t0 = performance.now();
+          const look = () => {
+            const yaw = __t.yaw();
+            if (Math.abs(yaw) < 0.01 || performance.now() - t0 > 4000) resolve({ under: __t.underPanes(), ms: Math.round(performance.now() - t0), yaw });
+            else setTimeout(look, 0);
+          };
+          look();
+        })`);
+        await pointer(win, [...click(another), { type: 'move', ...off }]);
+        const seen = await watch;
+        await delay(1200);
+        const under = [...new Set([...seen.under, ...(await js<string[]>(`__t.underPanes()`))])];
+        record(Math.abs(seen.yaw) < 0.01 && under.length === 0, `a reduced-motion lift from yaw ${away.toFixed(1)} cuts to the front and leaves no card under a pane, at the cut and after (${under.join(', ') || 'none'}; yaw ${seen.yaw.toFixed(2)} after ${seen.ms}ms)`);
+      }
       store.dispatch({ type: 'clear-desk' });
       await delay(600);
     }
@@ -337,7 +401,9 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     press(win, 'End');
     await delay(1300);
     const behindText = await js<string>(`__t.text('#compass-behind')`);
-    record(/\d+ in the quiet band · \d+ out of sight/.test(behindText), `the compass counts the quiet band and what is out of sight ("${behindText}")`);
+    const quietDealt = await js<number>(`[...window.__deckGlass.model.current.slots.values()].filter((s) => s.band === 'deep').length`);
+    const quietSaid = Number(/(\d+) in the quiet band/.exec(behindText)?.[1] ?? '-1');
+    record(quietSaid === quietDealt && /\d+ out of sight/.test(behindText), `the compass counts the quiet band, the number dealt there, and what is out of sight ("${behindText}", ${quietDealt} dealt)`);
     press(win, 'Home');
     await delay(1300);
 
@@ -413,6 +479,9 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       await pointer(win, [{ type: 'move', x: reachFor.x, y: reachFor.y, wait: 1100 }]);
       const reached = await js<{ reaching: { noteId: string; neighbours: string[] } | null; requests: number }>(`({ reaching: __t.glass().reaching(), requests: __t.requests() })`);
       record(reached.reaching?.noteId === reachFor.id, `resting on ${reachFor.id} reaches for it`);
+      // The wires are on the canvas: read the pixel back, not the state.
+      const wire = await js<{ x: number; y: number; alpha: number } | null>(`__t.glass().wirePixel()`);
+      record(wire !== null && wire.alpha > 0, `and a wire is drawn on the canvas (alpha ${wire?.alpha ?? 'no wire'} at its middle)`);
       if (reached.reaching?.noteId !== reachFor.id) {
         console.log('DIAG trace', JSON.stringify(await js(`(window.__deckTraceLog || []).slice(-30)`)));
         console.log('DIAG reach', JSON.stringify(await js(`({ reaching: __t.glass().reaching(), hit: __t.hit(${reachFor.x}, ${reachFor.y}), active: document.activeElement ? (document.activeElement.className + ' ' + (document.activeElement.dataset.noteId || '')) : null, where: __t.where(${JSON.stringify(reachFor.id)}), pending: __t.glass().pendingReach, yaw: __t.yaw() })`)), JSON.stringify(reachFor));
@@ -420,6 +489,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       record(reached.requests - passBefore <= 1, `with at most one request (${reached.requests - passBefore})`);
       await pointer(win, [{ type: 'move', x: empty.x, y: empty.y, wait: 200 }]);
       record((await js<unknown>(`__t.glass().reaching()`)) === null, 'moving off clears the wires');
+      if (wire !== null) record((await js<number>(`__t.glass().pixelAlpha(${wire.x}, ${wire.y})`)) === 0, 'and the canvas is clear where the wire was');
       await pointer(win, [{ type: 'move', x: reachFor.x, y: reachFor.y, wait: 1100 }]);
       record((await js<number>(`__t.requests()`)) === reached.requests, 'a second reach for the same note asks nothing');
       await pointer(win, [{ type: 'move', x: empty.x, y: empty.y, wait: 200 }]);
@@ -479,7 +549,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       // No near card is drawn under a pane.
       const overlap = await js<string[]>(`(() => {
         const panes = [...document.querySelectorAll('.pane:not(.wide)')].map((p) => p.getBoundingClientRect());
-        return __t.visibleCards().filter((c) => panes.some((p) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top)).map((c) => c.id);
+        return __t.nearCards().filter((c) => panes.some((p) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top)).map((c) => c.id);
       })()`);
       record(overlap.length === 0, `no field card is dealt under a pane (${overlap.join(', ') || 'none'})`);
       // Widen: the reading column.
@@ -503,7 +573,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       const clamped = await js<{ overlap: string[]; left: string }>(`(() => {
         const pane = document.querySelector('.pane[data-note-id="${paneA}"]');
         const p = pane.getBoundingClientRect();
-        const overlap = __t.visibleCards().filter((c) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top).map((c) => c.id);
+        const overlap = __t.nearCards().filter((c) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top).map((c) => c.id);
         return { overlap, left: pane.style.left };
       })()`);
       record(clamped.left !== '3000px', `a pane stored past the narrowed field is drawn inside it (at ${clamped.left})`);
@@ -578,27 +648,36 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     await delay(1500);
     record(focusedRow !== null && deskIds().includes(focusedRow), `Tab, the arrow keys and Enter lift a note from the navigator (${focusedRow})`);
     // Reduced motion: arriving is a highlight, not a flight.
+    // Let the lift settle: it turns the field once its neighbourhood arrives,
+    // and a turn still going made the cut check below fail once (ISS-0065).
+    for (let i = 0, last = NaN; i < 40; i += 1) {
+      const y = await js<number>(`__t.yaw()`);
+      if (Math.abs(y - last) < 1e-9 && !(await js<boolean>(`document.getElementById('field').classList.contains('turning')`))) break;
+      last = y;
+      await delay(100);
+    }
     await js(`window.__deckReducedMotion = true`);
     ctx.focusApp(win);
     for (let i = 0; i < 20 && !(await js<boolean>('document.hasFocus()')); i += 1) await delay(100);
-    // Down until a note's row, past any heading the desk's groups added.
-    for (let i = 0; i < 6; i += 1) {
+    // Down until a note's row whose card stands away from where the field
+    // faces, so the cut has somewhere to go and the check measures something.
+    let jumped = { from: 0, first: 0, later: 0 };
+    for (let i = 0; i < 12; i += 1) {
+      const from = await js<number>(`__t.yaw()`);
       press(win, 'Down');
       await delay(120);
+      const first = await js<number>(`__t.yaw()`);
       const onCard = await js<boolean>(`!!(document.activeElement && document.activeElement.classList.contains('nav-row') && document.activeElement.dataset.noteId && __t.where(document.activeElement.dataset.noteId))`);
-      if (onCard) break;
+      if (!onCard || Math.abs(first - from) < 0.05) continue;
+      await delay(300);
+      jumped = { from, first, later: await js<number>(`__t.yaw()`) };
+      break;
     }
-    // Polled rather than read once: the highlight lasts 1.6 seconds, and what
-    // is checked is that it appears, not how soon the focus event is scheduled.
     for (let i = 0; i < 10; i += 1) {
       if (await js<boolean>(`!!document.querySelector('.field-card.highlight, .nav-row.highlight')`)) break;
       await delay(100);
     }
-    const arrived = await js<{ id: string | null; highlighted: boolean; yaw: number; theta: number | null }>(`(() => {
-      const id = document.activeElement && document.activeElement.dataset.noteId || null;
-      const slot = id ? window.__deckGlass.model.current.slots.get(id) : null;
-      return { id, highlighted: !!document.querySelector('.field-card.highlight, .nav-row.highlight'), yaw: __t.yaw(), theta: slot ? slot.theta : null };
-    })()`);
+    const arrived = { highlighted: await js<boolean>(`!!document.querySelector('.field-card.highlight, .nav-row.highlight')`) };
     // A keyboard check can only fail fairly while the window holds the
     // keyboard. If it failed AND the page had lost focus, it is taken once
     // more after focus is given back, and the verdict says so; a failure with
@@ -621,7 +700,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     if (!arrived.highlighted) {
       console.log('DIAG focus', await js<boolean>('document.hasFocus()'));
       console.log('DIAG trace2', JSON.stringify(await js(`(window.__deckTraceLog || []).slice(-30)`)));
-      console.log('DIAG highlight', JSON.stringify(arrived), JSON.stringify(await js(`({ active: document.activeElement ? document.activeElement.className + ' ' + (document.activeElement.dataset.noteId || '') : null, rows: [...document.querySelectorAll('#nav-list .highlight')].length })`)));
+      console.log('DIAG highlight', JSON.stringify(jumped), JSON.stringify(await js(`({ active: document.activeElement ? document.activeElement.className + ' ' + (document.activeElement.dataset.noteId || '') : null, rows: [...document.querySelectorAll('#nav-list .highlight')].length })`)));
     }
     // No flight: the yaw is already where it ends up, and stays there. (Not
     // compared with the note's slot, which a held pane may re-deal just after
@@ -631,7 +710,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       still.push(await js<number>(`__t.yaw()`));
       await delay(50);
     }
-    record(still.every((y) => Math.abs(y - (still[0] as number)) < 1e-9) && !(await js<boolean>(`document.getElementById('field').classList.contains('turning')`)), `and the field cut to it rather than flying (yaw held at ${(still[0] as number).toFixed(3)})`);
+    record(
+      Math.abs(jumped.first - jumped.from) >= 0.05 && Math.abs(jumped.later - jumped.first) < 1e-9 && still.every((y) => Math.abs(y - (still[0] as number)) < 1e-9),
+      `and the field cut to it rather than flying (from ${jumped.from.toFixed(3)} straight to ${jumped.first.toFixed(3)}, held at ${jumped.later.toFixed(3)})`,
+    );
     await js(`window.__deckReducedMotion = false`);
     reset();
     await delay(800);
@@ -721,7 +803,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
         await delay(100);
         marked = await js<typeof marked>(`({ card: !!document.querySelector('.field-card.highlight[data-note-id="${focusRow}"]'), row: !!document.querySelector('.nav-row.highlight[data-note-id="${focusRow}"]'), animate: document.getElementById('field').classList.contains('animate') })`);
       }
-      record(marked.row && !marked.animate, `under reduced motion a view switch is a cut and highlights the note a person was on (${focusRow}: row ${marked.row}, card ${marked.card})`);
+      record(marked.row && marked.card && !marked.animate, `under reduced motion a view switch is a cut and highlights the note a person was on, its row and its card (${focusRow}: row ${marked.row}, card ${marked.card})`);
     }
     await js(`window.__deckReducedMotion = false`);
 
@@ -844,8 +926,8 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
           { type: 'move', x: deskTarget.x, y: deskTarget.y, wait: 120 },
           { type: 'up', x: deskTarget.x, y: deskTarget.y, wait: 150 },
         ]);
-        const cut = await js<{ thrown: boolean; said: string }>(`({ thrown: !!document.querySelector('.field-card.thrown'), said: __t.text('#field-say') })`);
-        record(!cut.thrown && /sent to the desk on/.test(cut.said), `under reduced motion the landing is a cut, and the target is named ("${cut.said}")`);
+        const cut = await js<{ thrown: boolean; said: string; landed: string }>(`({ thrown: !!document.querySelector('.field-card.thrown'), said: __t.text('#field-say'), landed: (document.querySelector('#target-strip:not([hidden]) .target.landed') || {}).textContent || '' })`);
+        record(!cut.thrown && /sent to the desk on/.test(cut.said) && /^desk on/.test(cut.landed), `under reduced motion the landing is a cut, and the target's name is highlighted ("${cut.landed}")`);
         await js(`window.__deckReducedMotion = false`);
         await delay(1300);
         record((store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === second.id), `a note thrown at the desk panel is on the desk (${second.id})`);

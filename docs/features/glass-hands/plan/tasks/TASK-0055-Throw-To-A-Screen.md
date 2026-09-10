@@ -38,7 +38,7 @@ A person drags a card off the edge of the field toward another window, on the sa
 
 ## Acceptance
 
-- With a reader window on a second display, a drag that leaves the field toward it lands the note in that window's reader, and the focus window's desk is unchanged.
+- With a reader window lying in the drag's direction, a drag that leaves the field toward it lands the note in that window's reader, and the focus window's desk is unchanged. (Amended 2026-09-10, ISS-0065: this said "on a second display". The smoke run's reader stands beside the focus window on the same display; a reader on a second display is walked in [[TST-0038-The-Field-Is-Arranged-By-Hand-And-A-Note-Is-Thrown-To-Another-Screen]].)
 - With a desk panel there instead, the same throw puts the note on the desk, and the card's flight goes toward that display.
 - With no Deck window on the display in that direction, the throw opens a new reader window at that display's near edge carrying the note, placed by the same function that places every window.
 - The target strip names every window in the drag's direction while the card is near the edge, and nothing when it is not.
@@ -74,3 +74,5 @@ DES-0002's many-monitors section said only screen 1 has a front plane and the ot
 **Evidence.** [[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]] for the recogniser and the targets; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: a throw into a reader window, onto a desk panel, onto a display with no Deck window (on a machine with more than one display), and send to by keyboard alone.
 
 **Amended 2026-09-10 (ISS-0062).** A display holding only a Needs-you strip now offers a new reader, an unnamed display is called "display N", and the smoke run now throws to the tablet, checks the flight's direction and the reduced-motion cut.
+
+**Amended 2026-09-10 (ISS-0064).** Under reduced motion the strip now stays for 1.2 seconds after a landing with the target's name highlighted, as the acceptance line says; before, the front plane named the target and the strip vanished. A later drag's strip clears that timer, so it cannot hide a strip a person has just opened. A display macOS names only " (1)" now reads "display 1", the number in its name, not its place in Electron's list.

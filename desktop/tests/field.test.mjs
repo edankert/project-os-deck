@@ -7,7 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { desktopRoot, load } from './helpers.mjs';
 
-const { fieldEntries, dealField, pushRefusal, JOINED_GROUP } = load('shared/field.js');
+const { fieldEntries, dealField, pushRefusal, frontForSlots, JOINED_GROUP } = load('shared/field.js');
+const { assignSlots, obstaclesFor } = load('shared/slots.js');
 const { projectOsProvider } = load('shared/views.js');
 const { groupsFromNav, navFromPayload } = load('shared/sidecar-client.js');
 
@@ -195,4 +196,19 @@ test('with notes held, what they share is dealt before the other neighbours, and
   assert.deepEqual(deal.front.slice(0, 5).map((e) => e.card.noteId), [...shared], 'the shared notes were not dealt first');
   const entry = fieldEntries(groups, hand({ joined }))[0];
   assert.match(pushRefusal(entry), /stays in front while you hold a note it is joined to/);
+});
+
+test('a pull beside a pane on a narrow field keeps its slot, and an owed note is counted instead (ISS-0064)', () => {
+  const { groups, view } = real('your-trainer-issues.json', 'issues');
+  const plain = dealField(view.band, fieldEntries(groups));
+  const quiet = plain.mid[0];
+  const deal = dealField(view.band, fieldEntries(groups, hand({ pulled: new Set([quiet.card.noteId]) })));
+  // A default pane at the left of an 800-pixel field, facing the front.
+  const obstacles = obstaclesFor({ left: 16, right: 336 }, 0, { width: 800, height: 700 });
+  const ids = (list) => list.map((e) => e.card.noteId);
+  const kept = assignSlots({ front: ids(frontForSlots(deal.front)), mid: [], deep: [] }, obstacles);
+  assert.ok(kept.slots.has(quiet.card.noteId), 'the pull lost its slot to the pane');
+  assert.ok(kept.frontOverflow > 0, 'the pane took no slot, so this measured nothing');
+  const naive = assignSlots({ front: ids(deal.front), mid: [], deep: [] }, obstacles);
+  assert.equal(naive.slots.has(quiet.card.noteId), false, 'dealt in the fill order, the pull vanishes: the case this guards');
 });

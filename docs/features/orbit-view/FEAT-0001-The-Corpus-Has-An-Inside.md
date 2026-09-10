@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0001
 aliases: ["FEAT-0001"]
 title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck"
-status: planned
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05

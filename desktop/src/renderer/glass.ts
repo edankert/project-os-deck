@@ -24,7 +24,7 @@ import type { CardGroup, CardModel, DeckState, DeskCard } from '../shared/types.
 import type { Description, FaceSection } from '../shared/description.js';
 import type { DeckAction } from '../shared/store-state.js';
 import { deskCardsOf, pulledIn, pushedIn } from '../shared/store-state.js';
-import { type FieldDeal, type FieldEntry, dealField, fieldEntries, pushRefusal } from '../shared/field.js';
+import { type FieldDeal, type FieldEntry, dealField, fieldEntries, frontForSlots, pushRefusal } from '../shared/field.js';
 import {
   type Obstacle,
   type Projection,
@@ -239,6 +239,10 @@ export class GlassField {
   private readonly sentences = new Map<string, string>();
   private idle: { timer: ReturnType<typeof setTimeout> | null; frame: number | null; last: number } = { timer: null, frame: null, last: 0 };
   private bridgeKeys = new Set<string>();
+  /** Hides the strip a reduced-motion landing left up, with its name highlighted. */
+  private landedTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The reach's wires as last painted, for a check that reads the canvas where they are. */
+  private wires: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
 
   constructor(el: Elements, hooks: GlassHooks) {
     this.el = el;
@@ -332,6 +336,31 @@ export class GlassField {
       return { x: px, y: py, source: seg.edge.source, target: seg.edge.target };
     }
     return null;
+  }
+
+  /**
+   * Whether the canvas really has a wire at the middle of the first one the
+   * reach drew: the pixel there, read back, not the renderer's own state.
+   */
+  wirePixel(): { x: number; y: number; alpha: number } | null {
+    const wire = this.wires[0];
+    if (wire === undefined) return null;
+    const x = (wire.x1 + wire.x2) / 2;
+    const y = (wire.y1 + wire.y2) / 2;
+    const ratio = this.el.canvas.width / this.viewport.width;
+    const data = this.el.canvas.getContext('2d')?.getImageData(Math.round(x * ratio) - 2, Math.round(y * ratio) - 2, 5, 5).data;
+    let alpha = 0;
+    for (let i = 3; i < (data?.length ?? 0); i += 4) alpha = Math.max(alpha, data?.[i] ?? 0);
+    return { x, y, alpha };
+  }
+
+  /** The alpha of the canvas at a point, in field coordinates. */
+  pixelAlpha(x: number, y: number): number {
+    const ratio = this.el.canvas.width / this.viewport.width;
+    const data = this.el.canvas.getContext('2d')?.getImageData(Math.round(x * ratio) - 2, Math.round(y * ratio) - 2, 5, 5).data;
+    let alpha = 0;
+    for (let i = 3; i < (data?.length ?? 0); i += 4) alpha = Math.max(alpha, data?.[i] ?? 0);
+    return alpha;
   }
 
   /** A dot drawn now, not under a card, for the smoke run to click. */
@@ -531,9 +560,15 @@ export class GlassField {
       this.model.deal({ front: [], mid: [], deep: [] }, []);
     } else {
       this.deal = dealField(this.input.view.band, entries, { first: new Set(this.shared.keys()) });
+      // The order the front band takes its SLOTS in: the neighbourhood, then
+      // what a hand just pulled, then what is owed. When panes leave fewer
+      // slots than the band holds, the pulled note a person is watching stays
+      // in view and an owed note is counted instead; the owed count on the bar
+      // and the navigator still show every owed note (ISS-0064).
+      const frontOrder = frontForSlots(this.deal.front);
       this.model.deal(
         {
-          front: this.deal.front.map((e) => e.card.noteId),
+          front: frontOrder.map((e) => e.card.noteId),
           mid: this.deal.mid.map((e) => e.card.noteId),
           deep: this.deal.deep.map((e) => e.card.noteId),
         },
@@ -555,6 +590,9 @@ export class GlassField {
         // Under reduced motion the turn is replaced by a highlight on the
         // neighbours it would have turned to (TASK-0036, ISS-0061).
         this.model.face(0);
+        // The cut is a turn, so the panes' sectors are dealt again for the new
+        // angle; without it cards stood under a pane (ISS-0064).
+        this.turnEnd();
         this.highlightAll(this.joined);
       } else {
         this.faceFront();
@@ -1023,6 +1061,7 @@ export class GlassField {
   }
 
   private paintWires(ctx: CanvasRenderingContext2D): void {
+    this.wires = [];
     if (this.reach === null) return;
     const from = this.model.current.slots.get(this.reach.noteId);
     const origin = from === undefined ? null : project(from, this.model.yaw, this.viewport);
@@ -1042,6 +1081,7 @@ export class GlassField {
       ctx.moveTo(ax, origin.y);
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
+      this.wires.push({ x1: ax, y1: origin.y, x2: p.x, y2: p.y });
     }
   }
 
@@ -1059,7 +1099,10 @@ export class GlassField {
     this.el.owedCount.hidden = this.arrangement === 'orbit';
     // The owed count keeps its place whatever the front band means right now.
     this.el.owedCount.textContent = deal === null ? '' : `${deal.owed} owed`;
-    const hand = deal?.handPlaced ?? 0;
+    // Counted from the slots dealt, not from the band: a pull that found no
+    // free slot beside a pane is not in front, and the label must agree with
+    // what the front plane says about it (ISS-0064).
+    const hand = deal === null ? 0 : deal.front.filter((e) => e.inputs.pulled && !e.inputs.owed && !e.inputs.joinedToDesk && this.model.current.slots.has(e.card.noteId)).length;
     const pushed = deal?.pushedBehind ?? 0;
     this.el.handCount.textContent = hand > 0 ? `${hand} placed by hand` : '';
     // Offered whenever a hand has placed anything in this workspace, not only
@@ -1597,6 +1640,10 @@ export class GlassField {
   // ---- the throw ----
 
   private showStrip(edge: Edge | null, targets: ThrowTarget[]): void {
+    // A strip shown now is not the one a reduced-motion landing left up, so
+    // that landing's timer must not hide it.
+    if (this.landedTimer !== null) clearTimeout(this.landedTimer);
+    this.landedTimer = null;
     const strip = this.el.strip;
     if (edge === null || targets.length === 0) {
       strip.hidden = true;
@@ -1650,6 +1697,13 @@ export class GlassField {
       element.style.opacity = '0';
     }
     this.tell(`${entry.card.noteId} sent to the ${target.label}`);
+    if (reduced) {
+      // The cut is shown by the target's name, highlighted for a moment,
+      // since there is no flight to follow (TASK-0055, ISS-0064).
+      this.showStrip(edge, [target]);
+      this.el.strip.querySelector('.target')?.classList.add('landed');
+      this.landedTimer = setTimeout(() => this.showStrip(null, []), 1200);
+    }
     await this.hooks.throwTo(target, entry.card, edge);
     setTimeout(() => {
       element.classList.remove('thrown');

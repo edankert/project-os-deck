@@ -143,6 +143,7 @@ test('a display holding only a Needs-you strip still offers a new reader, and a 
   const strip = [{ id: 9, carries: 'needs-you', bounds: { x: 1600, y: 100, width: 400, height: 300 }, displayId: 2, displayLabel: 'Display 2' }];
   assert.deepEqual(targetsToward('right', SELF, strip, DISPLAYS, false).map((t) => t.label), ['a new reader on Display 2']);
   assert.equal(displayName(' (2)', 1, false), 'display 2');
+  assert.equal(displayName(' (1)', 3, false), 'display 1', 'the name macOS gives wins over the place in the list');
   assert.equal(displayName('', 0, true), 'the main display');
   assert.equal(displayName('LG HDR WQHD', 0, true), 'LG HDR WQHD');
 });

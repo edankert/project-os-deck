@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 14
-  ISS: 63
+  ISS: 65
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -63,8 +63,8 @@ focus:
   phase: "PHASE-0002"
   feature: "FEAT-0014"
   task: ""
-  issue: "ISS-0058"
-  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings are ISS-0058 to ISS-0063, being fixed now. TASK-0005 (the orbit's treatment) is Edwin's."
+  issue: ""
+  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings, ISS-0058 to ISS-0063, are fixed (cd95528); a second review found ISS-0064 and ISS-0065, also fixed. Edwin stopped the review loop after that second round, so FEAT-0009, FEAT-0010 and FEAT-0014 rest at review (no review approved them) and FEAT-0001 is doing. TASK-0005 (the orbit's treatment) is Edwin's."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -72,7 +72,7 @@ items:
     FEAT-0001:
       file: "docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md"
       title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck"
-      status: planned
+      status: doing
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -144,7 +144,7 @@ items:
     FEAT-0009:
       file: "docs/features/glass-field/FEAT-0009-The-Field-Where-Depth-Carries-Priority.md"
       title: "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -153,7 +153,7 @@ items:
     FEAT-0010:
       file: "docs/features/glass-desk/FEAT-0010-Lifting-A-Note.md"
       title: "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -189,7 +189,7 @@ items:
     FEAT-0014:
       file: "docs/features/glass-hands/FEAT-0014-The-Hands.md"
       title: "The hands: a person arranges the field, throws a note to another screen, and reaches for a card to see what it is joined to"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0002
       requirements: []

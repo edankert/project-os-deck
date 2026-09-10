@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0009
 aliases: ["FEAT-0009"]
 title: "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front"
-status: planned
+status: review
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
@@ -105,3 +105,27 @@ Glass is a surface over the views Deck already has. The view provider still deci
 8. R — TASK-0033's refusal of an unknown surface in an address is guarded by `panel-registry.test.mjs`, not by the TST-0043 and TST-0045 it cites as evidence. The mutant survived the `hands` and `address` suites and was killed by `panel-registry`.
 9. R — TASK-0031 is `done` with its Safari acceptance line unmet and not amended (the step is marked `[~]`). The note says so, but QUALITY.md asks for a criterion the work departed from to be amended or narrowed, not left standing.
 10. N — Under reduced motion, TASK-0032 asks that a view switch highlight the newly focused card and scroll it into view in the navigator. Nothing checks that; the smoke run checks only an arrival from the navigator.
+
+## Second independent review, 2026-09-10
+
+**Verdict: changes requested.** The fixes for this feature do what ISS-0058, ISS-0060, ISS-0061 and ISS-0063 say, and each has a check that fails when it is reverted. What is left is one intermittent failure in the command this feature's verdict comes from, a count the screen shows but no check can fail on, and a measurement tool that records the reach without requiring it.
+
+**Who reviewed, and how independent it was.** model:claude-opus-5, the same model as the author, in a fresh context that started from the notes and the code at cd95528 (diffed against 3045a42) and has no memory of authoring the work. It is not a separate session tree: it was launched as a subagent from the authoring session (its commit trailer names the same `Claude-Session` as the commits), and its scratchpad directory is shared with the author's and the first reviewer's. Of the files already there it read only the `panes`, `reaching` and turn fields of two measurement logs, and one grep line.
+
+**What it ran.** `npm test`: 396 of 396. Fourteen mutations of the built `dist/shared` modules, run against their suites. The Glass section of the smoke run (`DECK_SMOKE_ONLY=glass DECK_SMOKE_DEBUG=1 electron . --smoke`): once clean, 120 checks and none failed, on four displays; once with seven renderer mutations in `dist/web/renderer`. `bash tools/scripts/run-smoke.sh both`: the loopback run failed one Glass check and the network run passed. A second full loopback run: `ok: true`, 120 Glass checks. `electron . --measure --measure-workspaces <this repository>`, twice. Node probes over the built slot and field modules. `dist` was rebuilt after every mutation, and `git status` in this repository was unchanged after every run. R marks a finding reproduced by a command; N marks one that was not.
+
+**What the fixes got right.** The pane geometry holds: over 20,000 random layouts (fields 360 to 2,760 pixels wide, one to three panes, any yaw), 125,372 visible cards were checked and none was under a pane. Putting the straight-ahead margin back fails TST-0041, and taking obstacles from the stored `x` again fails the smoke run's clamped check, which printed "and no card is drawn under it (TASK-0009)". Reading the surface back from the state file fails TST-0043, and so does keeping it when a workspace opens. Disabling `prepareChange()` fails the mid-view change check ("0 notes changed"). Removing the view-switch highlight fails its check ("row false, card false"). The notes ISS-0063 lists are corrected: TASK-0033 cites TST-0034, TASK-0031's Safari line is amended, and the change note lists the developer's variables and `store.ts`.
+
+1. R — The gate command failed once on a Glass check. `bash tools/scripts/run-smoke.sh both` printed `FAILED smoke loopback: and the field cut to it rather than flying (yaw held at -1.187)`; the network run passed, and a second full loopback run reported `ok: true`. In every passing run the yaw was 0.000, so this check tests something only when the focused row sits off to the side, and in the one run where it did, it failed. The cause is not known. N — A likely cause, not reproduced: the Enter lift just before this check turns the field to face its neighbours once their context arrives. If the context arrives after reduced motion is switched on, `redeal` cuts to yaw 0 while the check is sampling the yaw. TST-0045's evidence says the full run reported `ok: true`; on this machine that happened in 1 of 2 runs.
+2. R — The quiet band's count is now on screen, which answers the first review's finding 4, but no check can fail for a wrong number. With `const quiet = 0` in the built `glass.js`, the smoke run printed "0 in the quiet band · 14 out of sight" and passed; the check is a regular expression that accepts any digits.
+3. R — `measure.ts` records the reach but never requires it. Both of this reviewer's measure runs over this repository returned `panes: 2, reaching: null`, so they turned with no wires drawn. The author's run behind the table did hold a reach in all three workspaces: its log reads `reaching: "ISS-0058 8"`, `"ISS-0181 20"` and `"ISS-0070 2"`, and its values match the table. So the numbers stand, but their evidence exists only in a temporary directory, and the laptop measurement, which is still owed, can lose the reach without anyone noticing.
+4. N — The renderer half of ISS-0060 is unguarded. `applyAddress` now selects the surface after the workspace, which matters only when the address names a workspace that is not open, and every address in the smoke run names the open one. Found by reading; no mutation was run.
+5. R — This feature is `planned` while this note says it is built and every task is `done`. STATUSES.md's path is planned, doing, review, done. FEAT-0010 and FEAT-0014 are the same.
+6. R — The header of `desktop/src/shared/field.ts` still says the band rule is applied by `bandCards`. Since cd95528, `dealField` has its own copy of the capacity loop, and `bandCards` is called only by `band-and-face.test.mjs`. The copy is guarded: sending mid overflow behind you, or demoting an owed note past the capacity, each fail TST-0040.
+7. R — The focus note in `SNAPSHOT.yaml` says ISS-0058 to ISS-0063 are "being fixed now"; all six are `fixed`.
+
+**The first review's findings.** Findings 1, 2, 3, 5, 6, 7, 8, 9 and 10 are addressed and checked. Finding 4 is addressed on screen and unguarded (finding 2 above).
+
+## Review stopped, 2026-09-10
+
+**Edwin stopped the review loop after two rounds, so this feature stays at `review`.** Both reviews requested changes. The first's findings are ISS-0058 to ISS-0063 and the second's are [[ISS-0064-A-Reduced-Motion-Lift-And-A-Pull-Beside-A-Pane-Still-Misplace-Cards]] and [[ISS-0065-Five-Checks-Still-Cannot-Fail-And-Four-Notes-Are-Stale]]; all eight are fixed. No third review was run, so no review has approved the feature. The quality gate needs an approved review for `done`, so moving it there is Edwin's decision, not the agent's.
