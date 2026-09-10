@@ -105,7 +105,7 @@ test("a key outside the language is Deck's only under Deck's prefix", () => {
 });
 
 test('several unreadable things are ALL reported, not the first one thrown', () => {
-  const doc = valid({ verbs: ['approve'], version: '9', surfaces: ['orbit'], nonsense: 1 });
+  const doc = valid({ verbs: ['approve'], version: '9', surfaces: ['hologram'], nonsense: 1 });
   delete doc.band;
   const { refusals } = parseDescription(doc);
   const where = refusals.map((r) => r.where).sort();
@@ -138,11 +138,11 @@ test('the seven views the provider emits are seven descriptions with no refusals
   }
 });
 
-test('each of the seven names glass first, then spread and list', () => {
+test('each of the seven names glass first, then spread, list and the orbit', () => {
   // Glass first because it is the surface Deck opens (ADR-0002); added the
   // day the field existed to draw them (TASK-0033).
   for (const view of projectOsProvider.views(WORKSPACE)) {
-    assert.deepEqual(view.surfaces, ['glass', 'spread', 'list'], `${view.id} draws on the wrong surfaces`);
+    assert.deepEqual(view.surfaces, ['glass', 'spread', 'list', 'orbit'], `${view.id} draws on the wrong surfaces`);
   }
 });
 

@@ -73,6 +73,8 @@
           <button type="button" class="action" id="let-go" hidden title="Every pulled and pushed note goes back where the record puts it">Let go</button>
           <span class="spacer"></span>
           <button type="button" class="action pending-chip" id="pending-chip" hidden></button>
+          <!-- The orbit's three treatments, all drawn, switchable; which one stays is Edwin's call (TASK-0005). -->
+          <div class="treatments" id="treatments" hidden role="group" aria-label="Treatment"></div>
           <span class="field-overflow" id="field-overflow"></span>
           <span class="glass-desk-count count" id="glass-desk-count"></span>
         </div>
@@ -94,6 +96,7 @@
           <!-- An empty front band is a statement, so it is said rather than left as a gap. -->
           <p class="field-empty" id="field-empty" hidden>Nothing in this view is owed right now. The view's own notes stand either side of you, and finished work is behind you.</p>
           <div class="target-strip" id="target-strip" hidden aria-live="polite"></div>
+          <div class="edge-callout" id="edge-callout" hidden role="tooltip"></div>
         </div>
       </main>
 

@@ -355,6 +355,19 @@ export class FieldModel<T> {
     return this.assign();
   }
 
+  /**
+   * Positions decided elsewhere: the orbit's kept layout (TASK-0002). Counted
+   * as a deal, because it is one, and still never run by a turn.
+   */
+  place(slots: Map<T, Slot>): Assignment<T> {
+    this.assignments += 1;
+    // Placed positions replace the bands: a later turnEnd must not deal an
+    // old set of bands over them.
+    this.bands = { front: [], mid: [], deep: [] };
+    this.current = { slots, frontOverflow: 0, midOverflow: 0, sectors: [] };
+    return this.current;
+  }
+
   /** A pane moved, or the reading column opened. */
   setObstacles(obstacles: Obstacle[]): Assignment<T> {
     this.obstacles = obstacles;

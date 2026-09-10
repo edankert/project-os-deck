@@ -120,7 +120,7 @@ export function initialState(): DeckState {
 /** What Deck draws a view with when nobody chose: the field (ADR-0002). */
 export const DEFAULT_SURFACE = 'glass';
 /** The surfaces the store accepts. The address grammar's vocabulary names the same two. */
-export const STORE_SURFACES: readonly string[] = ['glass', 'spread'];
+export const STORE_SURFACES: readonly string[] = ['glass', 'spread', 'list', 'orbit'];
 
 export function emptySession(): SessionState {
   return { pulled: {}, pushed: {} };

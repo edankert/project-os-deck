@@ -61,10 +61,10 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0014"
-  task: "TASK-0057"
+  feature: "FEAT-0001"
+  task: "TASK-0001"
   issue: ""
-  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Order: TASK-0057 (the tablet follows the store, host only), then the pure band and slot functions, the address, the renderer, the view switch, lifting, the hands, the orbit, and the measurement last."
+  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Thirteen tasks done and committed (2bba469); the orbit arrangement (FEAT-0001) is being built on Deck's own index, then TASK-0034's measurement closes the phase."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.

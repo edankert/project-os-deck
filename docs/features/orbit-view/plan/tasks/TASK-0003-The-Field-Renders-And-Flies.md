@@ -3,11 +3,11 @@ type: "[[task]]"
 id: TASK-0003
 aliases: ["TASK-0003"]
 title: "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-07
+updated: 2026-09-10
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 parent: "FEAT-0001"
 effort: ""

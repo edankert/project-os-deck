@@ -466,11 +466,17 @@ body[data-panel="desk"] .reader { display: none; }
 
 /* Which surface is on screen. The field and the desk never show together. */
 body[data-surface="glass"] #desk-area,
+body[data-surface="orbit"] #desk-area,
 body[data-surface="list"] #desk-area { display: none; }
+body[data-surface="spread"] #field-area,
+body[data-surface="list"] #field-area { display: none; }
 /* In Glass the reader is the reading column, shown when a pane is widened
    (TASK-0054), or on a served page when a note is opened. */
 body[data-surface="glass"]:not(.reading) .reader,
-body[data-surface="glass"]:not(.reading) .actuators { display: none; }
+body[data-surface="glass"]:not(.reading) .actuators,
+body[data-surface="orbit"]:not(.reading) .reader,
+body[data-surface="orbit"]:not(.reading) .actuators { display: none; }
+body[data-surface="orbit"].reading .reader,
 body[data-surface="glass"].reading .reader { width: min(520px, 38vw); max-width: 520px; min-width: 280px; flex: 0 0 min(520px, 38vw); }
 body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 /* A popped-out panel carries one thing, and a field is not among them: the
@@ -496,7 +502,8 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 }
 .field-bar .spacer { flex: 1 1 auto; }
 .field-bar .action { padding: 1px 8px; line-height: 1.4; }
-.front-label { color: var(--ink); font-weight: 600; }
+.front-label { color: var(--ink); font-weight: 600; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.treatments { flex: 0 0 auto; }
 .field.holding ~ .field-bar .front-label,
 .field-area .front-label { transition: color 0.3s; }
 .owed-count { color: var(--owed); font-variant-numeric: tabular-nums; min-width: 5.5em; }
@@ -800,3 +807,18 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   line-height: 1.5;
   pointer-events: none;
 }
+
+/* The orbit's treatments paint the ground the canvas draws on (TASK-0005). */
+.field[data-treatment="constellation"] {
+  background: radial-gradient(ellipse 80% 70% at 50% 46%, #0d1322 0%, #05070d 75%);
+}
+.field[data-treatment="glass"] {
+  background:
+    linear-gradient(rgba(127, 228, 255, 0.04) 1px, transparent 1px) 0 0 / 100% 32px,
+    radial-gradient(ellipse 80% 70% at 50% 46%, #06202a 0%, #04090d 80%);
+}
+.field[data-treatment="blocks"] {
+  background: radial-gradient(ellipse 90% 80% at 50% 40%, #cdbd9f 0%, #9c8a6a 80%);
+}
+.field[data-treatment="blocks"] .sector-label { color: #3a2e20; }
+.edge-callout .callout-head { color: var(--ink-dim); font-size: 11px; margin-bottom: 4px; }

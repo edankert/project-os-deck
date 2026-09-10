@@ -187,7 +187,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     record(opened.deep === 0, 'the document holds no element for a note in the quiet band');
     record(opened.canvas, 'the quiet band is drawn on one canvas');
     const toggle = await js<string[]>(`[...document.querySelectorAll('#surface-toggle button')].map((b) => b.dataset.surface)`);
-    record(toggle.join(',') === 'glass,spread,list', `the switcher offers the surface toggle for the view (${toggle.join(',')})`);
+    record(toggle.join(',') === 'glass,spread,list,orbit', `the switcher offers the surface toggle for the view (${toggle.join(',')})`);
     fs.writeFileSync(path.join(ctx.tempDir, 'deck-glass-issues.png'), (await win.webContents.capturePage()).toPNG());
 
     // ---- TASK-0031: a real pointer reaches a front card, not a container ----
@@ -608,6 +608,9 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     // ---- TASK-0055: the throw ----
     await recordThrow(ctx, win, js);
 
+    // ---- FEAT-0001: the orbit arrangement ----
+    await recordOrbit(ctx, win, js, record);
+
     // ---- TASK-0033: an address that names Spread opens on the desk ----
     store.dispatch({ type: 'select-surface', surface: 'glass' });
     void win.loadURL(win.webContents.getURL().replace(/address=[^&]*/, `address=${encodeURIComponent(`deck://${prepared.id}/issues?surface=spread`)}`));
@@ -766,4 +769,160 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
     win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
     await delay(500);
   }
+}
+
+/**
+ * The orbit: the whole link graph as one arrangement of the same field.
+ *
+ * Read through Deck's own host the way a page reads it, checked against the
+ * sidecar for the two things FEAT-0001 promises about its data: a node's band
+ * is the one the reader shows, and a link Deck draws is a link the cockpit
+ * resolves. Then driven: a rest on a link quotes its sentence, a click on a
+ * dot lands on the note, "show this in the field" flies to it, and the three
+ * treatments are drawn over the same data, each saved as a picture.
+ */
+async function recordOrbit(
+  ctx: GlassSmokeContext,
+  win: BrowserWindow,
+  js: <T>(code: string) => Promise<T>,
+  record: (ok: boolean, what: string) => void,
+): Promise<void> {
+  const { store, prepared } = ctx;
+  const origin = new URL(win.webContents.getURL()).origin;
+  const graphAt = Date.now();
+  const graphResponse = await fetch(`${origin}/deck/graph/${prepared.id}`);
+  const graphText = await graphResponse.text();
+  const graphMs = Date.now() - graphAt;
+  const graph = JSON.parse(graphText) as { nodes: Array<{ id: string; band: string; status: string; rel: string }>; edges: Array<{ source: string; target: string | null; resolved: boolean }> };
+  record(graphResponse.status === 200 && graph.nodes.length > 0, `one request returns the whole graph (${graph.nodes.length} notes, ${graph.edges.length} links, ${graphText.length} bytes, ${graphMs}ms)`);
+  console.log(JSON.stringify({ orbitGraph: { nodes: graph.nodes.length, edges: graph.edges.length, bytes: graphText.length, ms: graphMs } }));
+  const refused = await fetch(`${origin}/deck/graph/${prepared.id}`, { method: 'POST' });
+  record(refused.status === 405, 'the graph path refuses a POST with 405');
+  // A node's band is the one the navigator shows for the same note.
+  const nav = (await (await fetch(`${origin}/deck/sidecar/${prepared.id}/api/cockpit/nav?mode=issues`)).json()) as { groups: Array<{ items: Array<{ id: string; status: string }> }> };
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+  const { bandFor } = await import('../shared/statuses.js');
+  const mismatched: string[] = [];
+  let compared = 0;
+  for (const group of nav.groups) {
+    for (const item of group.items) {
+      const node = byId.get(item.id);
+      if (node === undefined) continue;
+      compared += 1;
+      if (node.band !== bandFor(item.status)) mismatched.push(`${item.id} ${node.band}/${bandFor(item.status)}`);
+    }
+  }
+  record(compared > 10 && mismatched.length === 0, `every node's band is the band the sidecar's status gives the same note (${compared} compared${mismatched.length > 0 ? `; ${mismatched.join(', ')}` : ''})`);
+  // A link Deck draws is a link the cockpit resolves: the neighbours of a
+  // sample of notes, from the graph and from the sidecar's own context.
+  const sample = graph.nodes.filter((n) => /^[A-Z]+-\d{4}$/.test(n.id)).slice(0, 12);
+  const differing: string[] = [];
+  for (const node of sample) {
+    const mine = new Set<string>();
+    for (const e of graph.edges) {
+      if (!e.resolved || e.target === null) continue;
+      if (e.source === node.id) mine.add(e.target);
+      if (e.target === node.id) mine.add(e.source);
+    }
+    const context = (await (await fetch(`${origin}/deck/sidecar/${prepared.id}/api/cockpit/context?this=${encodeURIComponent(node.id)}`)).json()) as { linked: Array<{ items: Array<{ id: string }> }>; backlinks: Array<{ items: Array<{ id: string }> }> };
+    const theirs = new Set([...context.linked, ...context.backlinks].flatMap((g) => g.items.map((i) => i.id)));
+    const onlyMine = [...mine].filter((id) => !theirs.has(id) && /^[A-Z]+-\d{4}$/.test(id));
+    const onlyTheirs = [...theirs].filter((id) => !mine.has(id) && /^[A-Z]+-\d{4}$/.test(id));
+    if (onlyMine.length > 0 || onlyTheirs.length > 0) differing.push(`${node.id}: Deck only ${onlyMine.join(' ')}; cockpit only ${onlyTheirs.join(' ')}`);
+  }
+  record(differing.length === 0, `Deck's links match the cockpit's for ${sample.length} notes${differing.length > 0 ? `: ${differing.slice(0, 3).join(' | ')}` : ''}`);
+
+  // On screen.
+  store.dispatch({ type: 'clear-desk' });
+  const toggle = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="orbit"]')`);
+  if (toggle === null) {
+    record(false, 'the surface toggle offers the orbit');
+    return;
+  }
+  await pointer(win, click(toggle));
+  for (let i = 0; i < 40; i += 1) {
+    if (await js<boolean>(`/the link graph: \\d+ notes/.test(__t.text('#front-label'))`)) break;
+    await delay(250);
+  }
+  await delay(800);
+  const shown = await js<{ surface: string; label: string; cards: number; dots: number; edges: number; treatments: boolean }>(`({ surface: document.body.dataset.surface, label: __t.text('#front-label'), cards: document.querySelectorAll('.field-card:not(.leaving)').length, dots: __t.glass().canvasCounts().dots, edges: __t.glass().canvasCounts().edges, treatments: __t.shown('#treatments') })`);
+  record(shown.surface === 'orbit' && /the link graph: \d+ notes/.test(shown.label), `the orbit opens from the switcher, drawn by the same field ("${shown.label.slice(0, 80)}")`);
+  record(shown.cards > 0 && shown.dots > 0, `the most linked-to notes are cards and the rest are dots on the canvas (${shown.cards} cards, ${shown.dots} dots, ${shown.edges} links drawn)`);
+  record(shown.treatments, 'the three treatments are offered in the orbit');
+  record((await js<string>(`location.search`)).length >= 0 && store.getState().surface === 'orbit', 'the orbit is a surface the store holds, so it has an address');
+  // A rest on a link quotes the sentence that made it.
+  const fieldBox = await js<{ left: number; top: number }>(`__t.rect('#field')`);
+  const edge = await js<{ x: number; y: number; source: string; target: string | null } | null>(`__t.glass().edgeSample()`);
+  if (edge === null) {
+    record(false, 'a link was drawn clear of the dots to rest on');
+  } else {
+    await pointer(win, [{ type: 'move', x: fieldBox.left + edge.x, y: fieldBox.top + edge.y, wait: 900 }]);
+    const callout = await js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#edge-callout'), text: __t.text('#edge-callout') })`);
+    record(callout.shown && callout.text.includes(edge.source) && callout.text.length > edge.source.length + 8, `resting on the link ${edge.source} → ${edge.target} shows the sentence that made it ("${callout.text.slice(0, 90)}")`);
+    await pointer(win, [{ type: 'move', x: fieldBox.left + 20, y: fieldBox.top + 20, wait: 200 }]);
+  }
+  // Landing on a dot lifts the note and opens it, through the same desk.
+  const dot = await js<{ x: number; y: number; id: string } | null>(`__t.glass().dotSample()`);
+  if (dot === null) {
+    record(false, 'a dot was drawn clear of the cards to land on');
+  } else {
+    await pointer(win, [...click({ x: fieldBox.left + dot.x, y: fieldBox.top + dot.y }), { type: 'move', x: fieldBox.left + 20, y: fieldBox.top + 20 }]);
+    await delay(1500);
+    const landed = (store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === dot.id);
+    record(landed, `landing on the dot for ${dot.id} lifts it onto the desk`);
+    record(store.getState().noteId === dot.id, 'and opens it: the store, and so the address, name it');
+    record(await js<boolean>(`!!document.querySelector('.pane[data-note-id="${dot.id}"]')`), 'and it is a pane, read by the reader Deck has');
+    // Show this in the field: from a pane, the orbit flies to it.
+    await js(`__t.glass().faceFront()`);
+    await delay(1300);
+    const before = await js<number>(`__t.yaw()`);
+    const orbitButton = await js<{ x: number; y: number } | null>(`__t.rect('.pane[data-note-id="${dot.id}"] .pane-orbit')`);
+    if (orbitButton !== null) {
+      await pointer(win, click(orbitButton));
+      // Sampled through the flight: a cut goes straight from before to after.
+      const seen: number[] = [];
+      for (let i = 0; i < 40; i += 1) {
+        seen.push(await js<number>(`__t.yaw()`));
+        await delay(30);
+      }
+      await delay(800);
+      const after = await js<{ yaw: number; theta: number | null }>(`({ yaw: __t.yaw(), theta: (window.__deckGlass.model.current.slots.get(${JSON.stringify(dot.id)}) || {}).theta ?? null })`);
+      const norm = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+      record(after.theta !== null && Math.abs(norm(after.yaw - after.theta)) < 0.01, `"show this in the field" turns the orbit to face ${dot.id}`);
+      const between = seen.filter((y) => Math.abs(norm(y - before)) > 0.002 && Math.abs(norm(y - after.yaw)) > 0.002).length;
+      record(Math.abs(norm(before - after.yaw)) < 0.01 || between > 0, `and flies there rather than cutting (${between} frames in between)`);
+    }
+  }
+  store.dispatch({ type: 'clear-desk' });
+  await delay(600);
+  // The three treatments over the same data, a picture of each.
+  for (const treatment of ['constellation', 'glass', 'blocks']) {
+    const button = await js<{ x: number; y: number } | null>(`__t.rect('#treatments button[data-treatment="${treatment}"]')`);
+    if (button === null) continue;
+    await pointer(win, click(button));
+    await delay(500);
+    const drawn = await js<{ treatment: string; dots: number; edges: number }>(`({ treatment: document.getElementById('field').dataset.treatment, dots: __t.glass().canvasCounts().dots, edges: __t.glass().canvasCounts().edges })`);
+    record(drawn.treatment === treatment && drawn.dots > 0, `the ${treatment} treatment draws the same notes (${drawn.dots} dots, ${drawn.edges} links)`);
+    if (treatment === 'blocks') record(drawn.edges === 0, 'and blocks draw no links, as DES-0001 says they cannot');
+    fs.writeFileSync(path.join(ctx.tempDir, `deck-orbit-${treatment}.png`), (await win.webContents.capturePage()).toPNG());
+  }
+  const constellation = await js<{ x: number; y: number } | null>(`__t.rect('#treatments button[data-treatment="constellation"]')`);
+  if (constellation !== null) await pointer(win, click(constellation));
+  // Left alone, the orbit drifts; reduced motion stops that, and nothing else.
+  await pointer(win, [{ type: 'move', x: fieldBox.left + 20, y: fieldBox.top + 20 }]);
+  const drift0 = await js<number>(`__t.yaw()`);
+  await delay(5500);
+  const drift1 = await js<number>(`__t.yaw()`);
+  record(Math.abs(drift1 - drift0) > 0.001, `left alone, the orbit drifts (${(drift1 - drift0).toFixed(4)} radians)`);
+  await js(`window.__deckReducedMotion = true`);
+  await pointer(win, click({ x: fieldBox.left + 20, y: fieldBox.top + 20 }));
+  const still0 = await js<number>(`__t.yaw()`);
+  await delay(5500);
+  const still1 = await js<number>(`__t.yaw()`);
+  record(Math.abs(still1 - still0) < 1e-6, 'under reduced motion it does not drift');
+  await js(`window.__deckReducedMotion = false`);
+  // Back to Glass for what follows.
+  const glassButton = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="glass"]')`);
+  if (glassButton !== null) await pointer(win, click(glassButton));
+  await delay(1200);
 }

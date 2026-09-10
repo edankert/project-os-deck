@@ -30,6 +30,13 @@ export const surfaceKinds = new Vocabulary('surface');
 surfaceKinds.register({ id: 'list', label: 'The list' });
 surfaceKinds.register({ id: 'spread', label: 'Cards on a desk' });
 surfaceKinds.register({ id: 'glass', label: 'The field' });
+/**
+ * The orbit: the same field arranged by the whole link graph, where distance
+ * is connectedness (FEAT-0001). A surface rather than a view, because it
+ * draws the workspace's links rather than a view's groups, and a surface is
+ * what the address already has a key for.
+ */
+surfaceKinds.register({ id: 'orbit', label: 'The link graph' });
 
 /**
  * A page: a whole screen that is not a view of notes — the acceptance checks,

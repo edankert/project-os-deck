@@ -182,10 +182,25 @@ function phaseTarget(value: unknown): string | null {
   return (wrapped?.[1] ?? value).trim();
 }
 
+/**
+ * A node's key: its id, unless another note claims the same one.
+ *
+ * Every `PLAN.md` without an `id` takes its file name, `PLAN`, as its id, so
+ * a dozen plans would collapse into one node. An id claimed more than once is
+ * replaced, for each note claiming it, by the note's path without `.md`.
+ */
+function keysFor(sources: readonly GraphSource[]): Map<string, string> {
+  const claims = new Map<string, number>();
+  for (const s of sources) claims.set(s.id, (claims.get(s.id) ?? 0) + 1);
+  return new Map(sources.map((s) => [s.relPath, (claims.get(s.id) ?? 0) > 1 ? s.relPath.replace(/\.md$/i, '') : s.id]));
+}
+
 export function buildGraph(all: readonly GraphSource[]): Graph {
   const sources = all.filter((s) => !isTemplate(s.relPath));
   const resolver = new Resolver(all);
   const byRel = new Map(sources.map((s) => [s.relPath, s]));
+  const key = keysFor(sources);
+  const k = (s: GraphSource): string => key.get(s.relPath) ?? s.id;
   const edges: GraphEdge[] = [];
   const inbound = new Map<string, Set<string>>();
   for (const source of sources) {
@@ -195,17 +210,17 @@ export function buildGraph(all: readonly GraphSource[]): Graph {
       if (target !== null && target.relPath === source.relPath) continue;
       if (rel !== null && target === null) continue; // a template: not an end of an edge
       edges.push({
-        source: source.id,
-        target: target?.id ?? null,
+        source: k(source),
+        target: target === null ? null : k(target),
         wrote: link.target,
         offset: link.offset,
         resolved: target !== null,
         crossRepo: target === null && CROSS_REPO.test(link.target),
       });
       if (target !== null) {
-        const into = inbound.get(target.id) ?? new Set<string>();
-        into.add(source.id);
-        inbound.set(target.id, into);
+        const into = inbound.get(k(target)) ?? new Set<string>();
+        into.add(k(source));
+        inbound.set(k(target), into);
       }
     }
   }
@@ -213,21 +228,22 @@ export function buildGraph(all: readonly GraphSource[]): Graph {
     const type = s.types[0] ?? '';
     const status = s.status ?? '';
     let phase: string | null = null;
-    if (type === 'phase') phase = s.id;
+    if (type === 'phase') phase = k(s);
     else {
       const wrote = phaseTarget(s.frontmatter['phase']);
       const rel = wrote === null ? null : resolver.resolve(wrote);
-      phase = rel === null ? null : (byRel.get(rel)?.id ?? null);
+      const found = rel === null ? undefined : byRel.get(rel);
+      phase = found === undefined ? null : k(found);
     }
     return {
-      id: s.id,
+      id: k(s),
       rel: s.relPath,
       title: s.title ?? s.id,
       type,
       status,
       band: bandFor(status),
       phase,
-      inbound: inbound.get(s.id)?.size ?? 0,
+      inbound: inbound.get(k(s))?.size ?? 0,
     };
   });
   return { nodes, edges };

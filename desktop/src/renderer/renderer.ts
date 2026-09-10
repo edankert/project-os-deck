@@ -26,7 +26,8 @@ import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } fr
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
-import { GlassField, glassElements } from './glass.js';
+import { GlassField, type OrbitData, glassElements } from './glass.js';
+import type { GraphEdge } from '../shared/graph.js';
 import { ContextCache } from '../shared/neighbourhood.js';
 import { type Edge, type ThrowTarget, type WindowInfo, type DisplayInfo, targetsToward } from '../shared/throw.js';
 import { DEFAULT_SURFACE } from '../shared/store-state.js';
@@ -212,8 +213,18 @@ const glass = new GlassField(glassElements(), {
   throwTo: (target, card, edge) => throwTo(target, card, edge),
   applyPending: () => applyPending(),
   reducedMotion,
+  sentence: async (edge: GraphEdge) => {
+    const state = host.state();
+    if (state.workspaceId === null) return '';
+    const response = await fetch(
+      `/deck/graph/${encodeURIComponent(state.workspaceId)}/sentence?source=${encodeURIComponent(edge.source)}&offset=${edge.offset}`,
+    );
+    if (!response.ok) return '';
+    return ((await response.json()) as { sentence?: string }).sentence ?? '';
+  },
 });
 glass.sendTo = (card) => sendTo(card);
+glass.showInField = (noteId) => void showInField(noteId);
 (globalThis as unknown as { __deckGlass?: GlassField }).__deckGlass = glass;
 (globalThis as unknown as { __deckContexts?: ContextCache }).__deckContexts = contexts;
 
@@ -411,8 +422,57 @@ function surfaceNow(): string {
 function applySurface(): void {
   const surface = surfaceNow();
   document.body.dataset['surface'] = surface;
-  glass.setActive(surface === 'glass');
+  const field = surface === 'glass' || surface === 'orbit';
+  glass.setArrangement(surface === 'orbit' ? 'orbit' : 'bands');
+  glass.setActive(field);
+  if (surface === 'orbit') void loadOrbit();
   paintSurfaceToggle();
+}
+
+/** Which workspace and index revision the orbit on screen was read at. */
+let orbitFor: { workspaceId: string; revision: number } | null = null;
+
+/**
+ * Read the whole link graph and its kept layout from Deck's own host
+ * (TASK-0001, TASK-0002), once per index revision.
+ */
+async function loadOrbit(): Promise<void> {
+  const state = host.state();
+  const workspaceId = state.workspaceId;
+  if (workspaceId === null) return;
+  const revision = indexRevision();
+  if (orbitFor !== null && orbitFor.workspaceId === workspaceId && orbitFor.revision === revision) return;
+  orbitFor = { workspaceId, revision };
+  try {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const [graph, orbit] = await Promise.all([
+        fetch(`/deck/graph/${encodeURIComponent(workspaceId)}`).then((r) => r.json()),
+        fetch(`/deck/orbit/${encodeURIComponent(workspaceId)}`).then((r) => r.json()),
+      ]);
+      if (graph.building === true || orbit.building === true) {
+        say('Deck is still reading this workspace for the link graph…');
+        await new Promise((r) => setTimeout(r, 400));
+        continue;
+      }
+      const data: OrbitData = { nodes: graph.nodes, edges: graph.edges, layout: orbit.layout, bridges: orbit.bridges };
+      (globalThis as unknown as { __deckOrbit?: unknown }).__deckOrbit = { graphMs: graph.ms, layoutMs: orbit.ms, drift: orbit.drift, nodes: data.nodes.length, edges: data.edges.length };
+      if (surfaceNow() === 'orbit') glass.setArrangement('orbit', data);
+      return;
+    }
+  } catch (err) {
+    orbitFor = null;
+    say(`the link graph could not be read: ${err instanceof Error ? err.message : String(err)}`, true);
+  }
+}
+
+/** "Show this in the field": switch to the orbit and fly to the note (TASK-0004). */
+async function showInField(noteId: string): Promise<void> {
+  await host.dispatch({ type: 'select-surface', surface: 'orbit' });
+  applySurface();
+  await loadOrbit();
+  drawNavigator();
+  drawDesk();
+  glass.showInOrbit(noteId);
 }
 
 /**

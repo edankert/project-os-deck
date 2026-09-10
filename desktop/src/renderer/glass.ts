@@ -58,6 +58,30 @@ import {
   recogniseThrow,
 } from '../shared/throw.js';
 import { bandFor, faceFor, faceText } from '../shared/faces.js';
+import type { GraphEdge, GraphNode } from '../shared/graph.js';
+import { type OrbitLayout, orbitSlot } from '../shared/orbit.js';
+
+/** What the orbit arrangement draws: the whole link graph and its kept layout (FEAT-0001). */
+export interface OrbitData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  layout: OrbitLayout;
+  bridges: Array<{ a: string; b: string; side: number }>;
+}
+
+/**
+ * The three treatments DES-0001 draws for the orbit (TASK-0005). They are all
+ * drawn, over the same real data, and switchable; which one is kept is
+ * Edwin's decision, recorded in DES-0001, and nothing else depends on it.
+ */
+export type Treatment = 'constellation' | 'glass' | 'blocks';
+export const TREATMENTS: readonly Treatment[] = ['constellation', 'glass', 'blocks'];
+
+/** How many of the orbit's most linked-to notes are drawn as cards; the rest are dots. */
+export const ORBIT_CARDS = 24;
+/** How long the orbit waits, untouched, before it drifts; and how fast it drifts. */
+export const IDLE_AFTER_MS = 4000;
+export const IDLE_DEGREES_PER_SECOND = 1.5;
 
 /**
  * How far a card is dragged toward or away from the person before it counts
@@ -94,6 +118,8 @@ export interface GlassHooks {
   /** A change arrived while the field was on screen; applying it is the person's call (TASK-0032). */
   applyPending(): void;
   reducedMotion(): boolean;
+  /** The sentence an orbit edge's link sits in (TASK-0003). */
+  sentence(edge: GraphEdge): Promise<string>;
 }
 
 export interface GlassInput {
@@ -126,6 +152,8 @@ interface Elements {
   fieldSay: HTMLElement;
   strip: HTMLElement;
   empty: HTMLElement;
+  callout: HTMLElement;
+  treatments: HTMLElement;
 }
 
 function must(id: string): HTMLElement {
@@ -157,6 +185,8 @@ export function glassElements(): Elements {
     fieldSay: must('field-say'),
     strip: must('target-strip'),
     empty: must('field-empty'),
+    callout: must('edge-callout'),
+    treatments: must('treatments'),
   };
 }
 
@@ -197,6 +227,16 @@ export class GlassField {
   private faceOnArrival = false;
   private frameTimes: number[] | null = null;
   private animateTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Which arrangement the field is in: the view's bands, or the orbit of the whole graph. */
+  private arrangement: 'bands' | 'orbit' = 'bands';
+  private orbit: OrbitData | null = null;
+  private treatment: Treatment = 'constellation';
+  /** What the last paint drew on the canvas, for the pointer to find. */
+  private dots: Array<{ x: number; y: number; r: number; id: string }> = [];
+  private segments: Array<{ x1: number; y1: number; x2: number; y2: number; edge: GraphEdge }> = [];
+  private readonly sentences = new Map<string, string>();
+  private idle: { timer: ReturnType<typeof setTimeout> | null; frame: number | null; last: number } = { timer: null, frame: null, last: 0 };
+  private bridgeKeys = new Set<string>();
 
   constructor(el: Elements, hooks: GlassHooks) {
     this.el = el;
@@ -216,6 +256,99 @@ export class GlassField {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  /**
+   * Arrange the field by the whole link graph, or by the view's bands.
+   *
+   * The orbit is one arrangement of the same field: the same cards, the same
+   * canvas, the same compass, panes and hands. What changes is where a note
+   * stands, which is the kept layout rather than the band function.
+   */
+  setArrangement(arrangement: 'bands' | 'orbit', data: OrbitData | null = this.orbit): void {
+    const changed = arrangement !== this.arrangement || data !== this.orbit;
+    this.arrangement = arrangement;
+    this.orbit = data;
+    this.bridgeKeys = new Set((data?.bridges ?? []).flatMap((b) => [`${b.a} ${b.b}`, `${b.b} ${b.a}`]));
+    this.el.field.dataset['arrangement'] = arrangement;
+    this.el.field.dataset['treatment'] = arrangement === 'orbit' ? this.treatment : '';
+    this.el.treatments.hidden = arrangement !== 'orbit';
+    this.paintTreatments();
+    if (changed && this.active) this.redeal(true);
+    this.scheduleIdle();
+  }
+
+  getArrangement(): 'bands' | 'orbit' {
+    return this.arrangement;
+  }
+
+  setTreatment(treatment: Treatment): void {
+    this.treatment = treatment;
+    this.el.field.dataset['treatment'] = this.arrangement === 'orbit' ? treatment : '';
+    this.paintTreatments();
+    this.render(false);
+  }
+
+  getTreatment(): Treatment {
+    return this.treatment;
+  }
+
+  private paintTreatments(): void {
+    for (const button of Array.from(this.el.treatments.querySelectorAll('button'))) {
+      button.setAttribute('aria-pressed', String(button.dataset['treatment'] === this.treatment));
+    }
+  }
+
+  /** The dots and the edges the last paint drew, for the smoke run and the measurement. */
+  canvasCounts(): { dots: number; edges: number } {
+    return { dots: this.dots.length, edges: this.segments.length };
+  }
+
+  /** The middle of a link drawn now and far from any dot, for the smoke run to rest on. */
+  edgeSample(): { x: number; y: number; source: string; target: string | null } | null {
+    const box = this.el.field.getBoundingClientRect();
+    const clear = (x: number, y: number): boolean => {
+      const hit = document.elementFromPoint(box.left + x, box.top + y) as HTMLElement | null;
+      return hit !== null && hit.closest('.field-card, .pane, .compass, .field-say, .field-bar, .sector-label') === null;
+    };
+    for (const seg of this.segments) {
+      const x = (seg.x1 + seg.x2) / 2;
+      const y = (seg.y1 + seg.y2) / 2;
+      if (Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) < 60) continue;
+      if (this.dotAt(x, y) !== null) continue;
+      if (this.edgeAt(x, y) !== seg.edge) continue;
+      if (x < 40 || y < 40 || x > this.viewport.width - 260 || y > this.viewport.height - 80) continue;
+      if (!clear(x, y)) continue;
+      return { x, y, source: seg.edge.source, target: seg.edge.target };
+    }
+    return null;
+  }
+
+  /** A dot drawn now, not under a card, for the smoke run to click. */
+  dotSample(): { x: number; y: number; id: string } | null {
+    const box = this.el.field.getBoundingClientRect();
+    for (const d of this.dots) {
+      if (d.r === 0 || d.x < 40 || d.y < 40 || d.x > this.viewport.width - 260 || d.y > this.viewport.height - 80) continue;
+      if (this.dotAt(d.x, d.y) !== d.id) continue;
+      const hit = document.elementFromPoint(box.left + d.x, box.top + d.y) as HTMLElement | null;
+      if (hit === null || hit.closest('.field-card, .pane, .compass, .field-say, .field-bar') !== null) continue;
+      return { x: d.x, y: d.y, id: d.id };
+    }
+    return null;
+  }
+
+  /** Where a node or a card is on screen, in the field's own coordinates. */
+  dotFor(noteId: string): { x: number; y: number } | null {
+    const dot = this.dots.find((d) => d.id === noteId);
+    if (dot !== undefined) return { x: dot.x, y: dot.y };
+    return null;
+  }
+
+  /** "Show this in the field": fly the orbit to a note (TASK-0004). */
+  showInOrbit(noteId: string): void {
+    const slot = this.model.current.slots.get(noteId);
+    if (slot === undefined) return;
+    this.flyTo(slot.theta, noteId);
   }
 
   /** New groups, a new view, a state change: deal again and draw. */
@@ -305,6 +438,10 @@ export class GlassField {
   }
 
   private redeal(animate: boolean): void {
+    if (this.arrangement === 'orbit') {
+      this.redealOrbit(animate);
+      return;
+    }
     const state = this.hooks.state();
     const ws = state.workspaceId;
     this.held = deskCardsOf(state, ws);
@@ -368,7 +505,47 @@ export class GlassField {
     }
   }
 
+  /**
+   * The orbit's deal: every node at the place the kept layout gives it.
+   *
+   * The most linked-to notes are cards, bound to their notes like any near
+   * card; the rest are dots on the canvas. No band function runs, and no
+   * obstacle moves a node: in the orbit a position means something about the
+   * corpus, which is why it is the one arrangement that is kept.
+   */
+  private redealOrbit(animate: boolean): void {
+    const state = this.hooks.state();
+    this.held = deskCardsOf(state, state.workspaceId);
+    this.joined = new Set();
+    this.shared = new Map();
+    this.deal = null;
+    const data = this.orbit;
+    const slots = new Map<string, Slot>();
+    this.entries = new Map();
+    if (data !== null) {
+      const maxInbound = data.nodes.reduce((m, n) => Math.max(m, n.inbound), 0);
+      const nearest = [...data.nodes].sort((a, b) => b.inbound - a.inbound || a.id.localeCompare(b.id)).slice(0, ORBIT_CARDS);
+      const near = new Set(nearest.map((n) => n.id));
+      for (const node of data.nodes) {
+        const place = data.layout.places[node.id];
+        if (place === undefined) continue;
+        const at = orbitSlot(place, node.inbound, maxInbound);
+        slots.set(node.id, { band: near.has(node.id) ? 'front' : 'deep', theta: at.theta, depth: at.depth, y: at.y, row: 0, column: 0, layer: 0 });
+        this.entries.set(node.id, {
+          card: cardFromNode(node),
+          groupKey: node.phase ?? '',
+          groupLabel: node.phase ?? 'no phase',
+          inputs: { owed: false, suppressed: false, inSubject: true, held: false, joinedToDesk: false, pulled: false, pushed: false },
+        });
+      }
+    }
+    this.model.place(slots);
+    this.render(animate);
+    this.drawPanes();
+  }
+
   private paneObstacles(): Obstacle[] {
+    if (this.arrangement === 'orbit') return [];
     const out: Obstacle[] = [];
     for (const card of this.held) {
       if (card.wide === true) continue;
@@ -536,6 +713,10 @@ export class GlassField {
     const ratio = canvas.width / this.viewport.width;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, this.viewport.width, this.viewport.height);
+    if (this.arrangement === 'orbit') {
+      this.paintOrbit(ctx);
+      return;
+    }
     const yaw = this.model.yaw;
     const heldIds = new Set(this.held.map((c) => c.noteId));
     ctx.textBaseline = 'middle';
@@ -568,6 +749,201 @@ export class GlassField {
     this.paintWires(ctx);
   }
 
+  /**
+   * The orbit on the canvas: links as filaments, a bridge in its own colour,
+   * and every node that is not a card as a dot sized by what points at it.
+   *
+   * Only links with both ends in front of the person are drawn, and each is
+   * remembered for the pointer, so resting on one can quote its sentence.
+   */
+  private paintOrbit(ctx: CanvasRenderingContext2D): void {
+    const data = this.orbit;
+    this.dots = [];
+    this.segments = [];
+    if (data === null) return;
+    const yaw = this.model.yaw;
+    const at = new Map<string, Projection>();
+    for (const [id, slot] of this.model.current.slots) at.set(id, project(slot, yaw, this.viewport));
+    const palette = TREATMENT_PALETTES[this.treatment];
+    const reached = this.reach;
+    if (this.treatment !== 'blocks') {
+      ctx.lineWidth = 1;
+      for (const edge of data.edges) {
+        if (edge.target === null) continue;
+        const a = at.get(edge.source);
+        const b = at.get(edge.target);
+        if (a === undefined || b === undefined) continue;
+        if (Math.abs(a.phi) > Math.PI / 2 || Math.abs(b.phi) > Math.PI / 2) continue;
+        if (!a.visible && !b.visible) continue;
+        const bridge = this.bridgeKeys.has(`${edge.source} ${edge.target}`);
+        ctx.strokeStyle = bridge ? palette.bridge : palette.edge;
+        ctx.lineWidth = bridge ? 2 : 1;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        this.segments.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, edge });
+      }
+    }
+    // Blocks draw no links: an opaque scene cannot carry thousands of them.
+    // A reach still draws the links of the ONE block the pointer rests on,
+    // which is what replaces the edge callout in that treatment.
+    if (reached !== null) {
+      const from = at.get(reached.noteId);
+      if (from !== undefined && from.visible) {
+        ctx.strokeStyle = palette.reach;
+        ctx.lineWidth = 1.5;
+        for (const id of reached.neighbours) {
+          const to = at.get(id);
+          if (to === undefined || !to.visible) continue;
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.stroke();
+        }
+      }
+    }
+    const nodes = new Map(data.nodes.map((n) => [n.id, n]));
+    const orphans = new Set(data.layout.orphans);
+    const maxInbound = data.nodes.reduce((m, n) => Math.max(m, n.inbound), 1);
+    const drawn = [...this.model.current.slots].filter(([, slot]) => slot.band === 'deep');
+    // Far first, so a near dot is drawn over a far one.
+    drawn.sort((p, q) => q[1].depth - p[1].depth);
+    for (const [id, _slot] of drawn) {
+      const p = at.get(id);
+      const node = nodes.get(id);
+      if (p === undefined || node === undefined || !p.visible) continue;
+      const r = (2 + 5 * Math.sqrt(node.inbound / maxInbound)) * p.scale * 1.4;
+      const colour = palette.band[node.band] ?? palette.band['planned'] ?? '#888';
+      if (this.treatment === 'blocks') {
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(p.x - r + 2, p.y - r + 3, r * 2, r * 2);
+        ctx.fillStyle = colour;
+        ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      } else if (this.treatment === 'glass') {
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(p.x - r, p.y - r, r * 2, r * 2);
+        ctx.fillStyle = colour;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // An orphan carries a ring, so it is found without being told where to look.
+      if (orphans.has(id)) {
+        ctx.strokeStyle = palette.orphan;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      this.dots.push({ x: p.x, y: p.y, r: Math.max(r, 5), id });
+    }
+    // The cards are dots too, for the pointer's purposes.
+    for (const [id, slot] of this.model.current.slots) {
+      if (slot.band === 'deep') continue;
+      const p = at.get(id);
+      if (p !== undefined && p.visible) this.dots.push({ x: p.x, y: p.y, r: 0, id });
+    }
+  }
+
+  /** The link under the pointer, if one is within a few pixels of it. */
+  private edgeAt(x: number, y: number): GraphEdge | null {
+    let best: GraphEdge | null = null;
+    let bestD = 5;
+    for (const s of this.segments) {
+      const dx = s.x2 - s.x1;
+      const dy = s.y2 - s.y1;
+      const len2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((x - s.x1) * dx + (y - s.y1) * dy) / len2));
+      const d = Math.hypot(x - (s.x1 + t * dx), y - (s.y1 + t * dy));
+      if (d < bestD) {
+        bestD = d;
+        best = s.edge;
+      }
+    }
+    return best;
+  }
+
+  private dotAt(x: number, y: number): string | null {
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const d of this.dots) {
+      if (d.r === 0) continue;
+      const dist = Math.hypot(x - d.x, y - d.y);
+      if (dist <= d.r + 3 && dist < bestD) {
+        bestD = dist;
+        best = d.id;
+      }
+    }
+    return best;
+  }
+
+  /** Quote the sentence that made the link under the pointer. */
+  private showCallout(edge: GraphEdge | null, x: number, y: number): void {
+    const callout = this.el.callout;
+    if (edge === null) {
+      callout.hidden = true;
+      return;
+    }
+    const key = `${edge.source} ${edge.offset}`;
+    const place = (): void => {
+      callout.style.left = `${Math.min(this.viewport.width - 370, x + 14)}px`;
+      callout.style.top = `${Math.max(8, y - 12)}px`;
+    };
+    const fill = (sentence: string): void => {
+      callout.replaceChildren();
+      const head = document.createElement('div');
+      head.className = 'callout-head';
+      head.textContent = `${edge.source} → ${edge.target ?? edge.wrote}${this.bridgeKeys.has(`${edge.source} ${edge.target}`) ? ' · holds a cluster on' : ''}`;
+      const body = document.createElement('div');
+      body.textContent = sentence === '' ? '(the link sits in no sentence)' : sentence;
+      callout.append(head, body);
+      callout.hidden = false;
+      place();
+    };
+    const known = this.sentences.get(key);
+    if (known !== undefined) {
+      fill(known);
+      return;
+    }
+    callout.dataset['for'] = key;
+    void this.hooks.sentence(edge).then((sentence) => {
+      this.sentences.set(key, sentence);
+      if (callout.dataset['for'] === key) fill(sentence);
+    });
+  }
+
+  /** The orbit drifts slowly when nobody touches it; reduced motion stops that and nothing else. */
+  private scheduleIdle(): void {
+    if (this.idle.timer !== null) clearTimeout(this.idle.timer);
+    if (this.idle.frame !== null) cancelAnimationFrame(this.idle.frame);
+    this.idle.timer = null;
+    this.idle.frame = null;
+    if (this.arrangement !== 'orbit' || !this.active || this.hooks.reducedMotion()) return;
+    this.idle.timer = setTimeout(() => {
+      this.idle.last = performance.now();
+      const step = (now: number): void => {
+        if (this.arrangement !== 'orbit' || !this.active || this.hooks.reducedMotion() || document.visibilityState !== 'visible') {
+          this.idle.frame = null;
+          return;
+        }
+        const dt = now - this.idle.last;
+        this.idle.last = now;
+        this.model.turn(((IDLE_DEGREES_PER_SECOND * dt) / 1000) * DEG);
+        this.el.field.classList.add('turning');
+        this.render(false);
+        this.idle.frame = requestAnimationFrame(step);
+      };
+      this.idle.frame = requestAnimationFrame(step);
+    }, IDLE_AFTER_MS);
+  }
+
   private paintWires(ctx: CanvasRenderingContext2D): void {
     if (this.reach === null) return;
     const from = this.model.current.slots.get(this.reach.noteId);
@@ -595,9 +971,14 @@ export class GlassField {
     const deal = this.deal;
     const heldCount = this.held.length;
     this.el.frontLabel.textContent =
-      heldCount > 0 ? 'in front: what is joined to what you are holding' : 'in front: what needs you';
+      this.arrangement === 'orbit'
+        ? this.orbitLabel()
+        : heldCount > 0
+          ? 'in front: what is joined to what you are holding'
+          : 'in front: what needs you';
     this.el.field.classList.toggle('holding', heldCount > 0);
-    this.el.empty.hidden = !(deal !== null && deal.front.length === 0 && heldCount === 0 && Math.abs(norm(this.model.yaw)) < 30 * DEG);
+    this.el.empty.hidden = this.arrangement === 'orbit' || !(deal !== null && deal.front.length === 0 && heldCount === 0 && Math.abs(norm(this.model.yaw)) < 30 * DEG);
+    this.el.owedCount.hidden = this.arrangement === 'orbit';
     // The owed count keeps its place whatever the front band means right now.
     this.el.owedCount.textContent = deal === null ? '' : `${deal.owed} owed`;
     const hand = deal?.handPlaced ?? 0;
@@ -652,9 +1033,26 @@ export class GlassField {
       const target = event.target as HTMLElement;
       if (target.closest('.field-card, .pane, button, .target-strip') !== null) return;
       if (event.button !== 0) return;
+      this.scheduleIdle();
+      this.el.field.classList.remove('turning');
       look = { x: event.clientX, yaw: this.model.yaw, id: event.pointerId, moved: false };
       field.setPointerCapture(event.pointerId);
     });
+    // In the orbit: resting on a link quotes it; a dot is a note to lift.
+    field.addEventListener('pointermove', (event) => {
+      if (this.arrangement !== 'orbit' || look !== null || event.buttons !== 0) return;
+      if ((event.target as HTMLElement).closest('.field-card, .pane, .compass, .field-bar') !== null) {
+        this.showCallout(null, 0, 0);
+        return;
+      }
+      const box = field.getBoundingClientRect();
+      const x = event.clientX - box.left;
+      const y = event.clientY - box.top;
+      const dot = this.dotAt(x, y);
+      field.style.cursor = dot !== null ? 'pointer' : '';
+      this.showCallout(dot !== null ? null : this.edgeAt(x, y), x, y);
+    });
+    field.addEventListener('pointerleave', () => this.showCallout(null, 0, 0));
     field.addEventListener('pointermove', (event) => {
       if (look === null || event.pointerId !== look.id) return;
       const dx = event.clientX - look.x;
@@ -670,8 +1068,17 @@ export class GlassField {
       if (look === null || event.pointerId !== look.id) return;
       look = null;
       // A click on the background changes nothing: sweeping a desk by
-      // accident is unforgivable (DES-0002 rev 8).
-      if (!this.turning) return;
+      // accident is unforgivable (DES-0002 rev 8). In the orbit a click on a
+      // dot is a click on a note, and lands on it (TASK-0004).
+      if (!this.turning) {
+        if (this.arrangement === 'orbit') {
+          const box = field.getBoundingClientRect();
+          const id = this.dotAt(event.clientX - box.left, event.clientY - box.top);
+          const entry = id === null ? undefined : this.entries.get(id);
+          if (entry !== undefined) void this.tap(entry);
+        }
+        return;
+      }
       this.turning = false;
       field.classList.remove('turning');
       this.turnEnd();
@@ -679,6 +1086,7 @@ export class GlassField {
     field.addEventListener('pointerup', end);
     field.addEventListener('pointercancel', end);
     field.addEventListener('keydown', (event) => {
+      this.scheduleIdle();
       const target = event.target as HTMLElement;
       if (target.closest('.pane') !== null || target.tagName === 'INPUT') return;
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -709,6 +1117,14 @@ export class GlassField {
       this.tell('let go: every note is back where the record puts it');
     });
     this.el.pendingChip.addEventListener('click', () => this.hooks.applyPending());
+    for (const treatment of TREATMENTS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset['treatment'] = treatment;
+      button.textContent = treatment;
+      button.addEventListener('click', () => this.setTreatment(treatment));
+      this.el.treatments.appendChild(button);
+    }
     // The field's own size, not the window's: opening the reading column
     // narrows the field without resizing the window.
     const resized = (): void => {
@@ -724,12 +1140,17 @@ export class GlassField {
 
   turnBy(by: number): void {
     this.cancelFlight();
+    this.scheduleIdle();
     this.model.turn(by);
     this.render(!this.hooks.reducedMotion());
     this.turnEnd();
   }
 
   private turnEnd(): void {
+    // In the orbit a position is the kept layout's and no pane moves it, so
+    // there is nothing to deal again; dealing the bands here replaced the
+    // orbit with the view's last deal the first time a pane was on screen.
+    if (this.arrangement === 'orbit') return;
     // Panes are fixed to the SCREEN, so after a turn the sectors they cover
     // have moved round the cylinder: deal once, now the turn is over.
     if (this.held.some((c) => c.wide !== true)) {
@@ -749,6 +1170,8 @@ export class GlassField {
    */
   flyTo(yaw: number, highlight: string | null = null): void {
     this.cancelFlight();
+    // A person asked for this direction; the orbit's drift waits again.
+    this.scheduleIdle();
     this.highlight = highlight;
     if (this.hooks.reducedMotion()) {
       this.model.face(yaw);
@@ -796,6 +1219,14 @@ export class GlassField {
     this.el.field.classList.remove('turning');
   }
 
+  private orbitLabel(): string {
+    const data = this.orbit;
+    if (data === null) return 'the link graph: reading it…';
+    const links = data.edges.filter((e) => e.resolved).length;
+    const dangling = data.edges.filter((e) => !e.resolved && !e.crossRepo).length;
+    return `the link graph: ${data.nodes.length} notes, ${links} links, nearer is more linked-to · ${data.layout.orphans.length} with no link · ${data.bridges.length} holding a cluster on · ${dangling} pointing at nothing`;
+  }
+
   /** Arrive at a note from the navigator: fly to it, or highlight it under reduced motion. */
   arriveAt(noteId: string): void {
     this.trace('arriveAt', noteId);
@@ -808,6 +1239,7 @@ export class GlassField {
 
   private pressCard(noteId: string, element: HTMLElement, event: PointerEvent): void {
     if (event.button !== 0) return;
+    this.scheduleIdle();
     const entry = this.entries.get(noteId);
     if (entry === undefined) return;
     event.stopPropagation();
@@ -1161,6 +1593,7 @@ export class GlassField {
       '<header class="pane-head" tabindex="0" role="toolbar">' +
       '<span class="pane-id"></span><span class="pane-status"></span><span class="pane-face"></span>' +
       '<span class="pane-tools">' +
+      '<button type="button" class="pane-orbit" title="Show this in the link graph (O)" aria-label="Show this in the link graph">◎</button>' +
       '<button type="button" class="pane-send" title="Send to another window (S)" aria-label="Send to another window">↗</button>' +
       '<button type="button" class="pane-widen" title="Read it in the column (W)" aria-label="Read in the reading column">⇥</button>' +
       '<button type="button" class="pane-close" title="Put back (⌥ puts back every other)" aria-label="Put back">×</button>' +
@@ -1178,6 +1611,10 @@ export class GlassField {
     (pane.querySelector('.pane-widen') as HTMLElement).addEventListener('click', (event) => {
       event.stopPropagation();
       void this.widen(noteId);
+    });
+    (pane.querySelector('.pane-orbit') as HTMLElement).addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.showInField(noteId);
     });
     (pane.querySelector('.pane-send') as HTMLElement).addEventListener('click', (event) => {
       event.stopPropagation();
@@ -1254,6 +1691,7 @@ export class GlassField {
   }
 
   private grabPane(noteId: string, pane: HTMLElement, event: PointerEvent): void {
+    this.scheduleIdle();
     if (event.button !== 0) return;
     if ((event.target as HTMLElement).closest('button') !== null) return;
     if (!this.hooks.canArrange()) return;
@@ -1390,6 +1828,9 @@ export class GlassField {
     } else if (event.key === 's' || event.key === 'S') {
       event.preventDefault();
       void this.sendFromPane(noteId);
+    } else if (event.key === 'o' || event.key === 'O') {
+      event.preventDefault();
+      this.showInField(noteId);
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
       void this.putBack(noteId);
@@ -1434,7 +1875,63 @@ export class GlassField {
 
   /** The keyboard's throw: name the window, and the note goes there (TASK-0055). */
   sendTo: (card: CardModel) => Promise<void> = async () => {};
+  /** "Show this in the field": the renderer switches to the orbit, then the field flies (TASK-0004). */
+  showInField: (noteId: string) => void = () => {};
 }
+
+/** An orbit node as a card: id, title, type and status, and nothing of its body. */
+function cardFromNode(node: GraphNode): CardModel {
+  return {
+    noteId: node.id,
+    title: node.title,
+    noteType: node.type,
+    status: node.status,
+    rel: node.rel,
+    subtitle: null,
+    owed: false,
+    owedVerb: null,
+    groupKey: node.phase ?? '',
+    severity: null,
+    lastVerified: null,
+    stale: false,
+    progress: null,
+    children: [],
+    frontmatter: null,
+  };
+}
+
+/**
+ * The colours each treatment draws with.
+ *
+ * Glass costs a distinction, as DES-0001 says: four of the six bands sit
+ * inside one cyan family, so `blocked` is held out as the only red and
+ * `archived` is desaturated to stay readable. Blocks make `done` the bare wood
+ * rather than a colour, which is how a corpus that is mostly finished avoids
+ * becoming one flat hue.
+ */
+const TREATMENT_PALETTES: Record<Treatment, { edge: string; bridge: string; reach: string; orphan: string; band: Record<string, string> }> = {
+  constellation: {
+    edge: 'rgba(170, 190, 255, 0.09)',
+    bridge: 'rgba(255, 170, 80, 0.85)',
+    reach: 'rgba(122, 162, 247, 0.8)',
+    orphan: 'rgba(255, 220, 140, 0.9)',
+    band: { done: '#6fbf73', archived: '#4a7a4e', active: '#7aa2f7', pending: '#e0af68', blocked: '#f7768e', planned: '#9aa3b5' },
+  },
+  glass: {
+    edge: 'rgba(127, 228, 255, 0.10)',
+    bridge: 'rgba(255, 190, 90, 0.9)',
+    reach: 'rgba(127, 228, 255, 0.85)',
+    orphan: 'rgba(255, 220, 140, 0.9)',
+    band: { done: '#4fc3dc', archived: '#5a7580', active: '#7fe4ff', pending: '#3aa0b8', blocked: '#ff5566', planned: '#2f7f94' },
+  },
+  blocks: {
+    edge: 'rgba(0,0,0,0)',
+    bridge: 'rgba(0,0,0,0)',
+    reach: 'rgba(40, 30, 20, 0.85)',
+    orphan: 'rgba(200, 60, 40, 0.9)',
+    band: { done: '#b08a5a', archived: '#8a7a66', active: '#5d7fb8', pending: '#c9a14a', blocked: '#b5484f', planned: '#9aa0aa' },
+  },
+};
 
 function findChild(card: CardModel, noteId: string): CardModel | null {
   for (const child of card.children) {

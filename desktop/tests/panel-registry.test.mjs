@@ -46,7 +46,7 @@ test('an address with none of the new keys is written exactly as it was', () => 
 // ---- the four new keys ----
 
 test('surface round-trips, and refuses a surface nothing draws', () => {
-  assert.deepEqual(surfaceKinds.ids(), ['list', 'spread', 'glass'], 'Glass registered its own surface in PHASE-0002');
+  assert.deepEqual(surfaceKinds.ids(), ['list', 'spread', 'glass', 'orbit'], 'Glass and the orbit registered their surfaces in PHASE-0002');
   for (const surface of surfaceKinds.ids()) {
     const address = formatAddress(addressFor(WORKSPACE, 'issues', { surface }));
     assert.equal(parseAddress(address).surface, surface);
@@ -95,7 +95,7 @@ test('a flow and a step round-trip together, once the flow is registered', () =>
 
 test('every new key refuses a value it does not know, by name', () => {
   const cases = [
-    ['surface', 'orbit'],
+    ['surface', 'hologram'],
     ['page', 'release'],
     ['flow', 'triage-a-day'],
     ['step', 'Step One'],

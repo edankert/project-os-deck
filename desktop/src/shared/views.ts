@@ -91,12 +91,14 @@ const PROJECT_OS_FACES: FaceSection = {
 };
 
 /**
- * Every project-os view may be drawn in the field, on the desk, or as a list.
+ * Every project-os view may be drawn in the field, on the desk, as a list, or
+ * as the orbit of the whole link graph.
  *
  * `glass` first, because it is the surface Deck opens (ADR-0002), and added
- * by PHASE-0002 on the day the field existed to draw them.
+ * by PHASE-0002 on the day the field existed to draw them; `orbit` last, the
+ * field arranged by connectedness (FEAT-0001).
  */
-const PROJECT_OS_SURFACES = Object.freeze(['glass', 'spread', 'list']);
+const PROJECT_OS_SURFACES = Object.freeze(['glass', 'spread', 'list', 'orbit']);
 
 function modeView(id: string, label: string, mode: string, gathersOwed = false): Description {
   return {

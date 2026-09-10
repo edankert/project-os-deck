@@ -6,6 +6,7 @@
  */
 import type { ChildProcess } from 'node:child_process';
 import { recordGlass } from './smoke-glass.js';
+import { GraphService } from './graph-service.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -98,6 +99,9 @@ function closeIndexes(): void {
   indexes.clear();
 }
 
+/** The orbit's graph and its kept layout, from Deck's own index (TASK-0001, TASK-0002). */
+const graphs = new GraphService(app.getPath('userData'));
+
 const host = new DeckHost({
   webRoot: WEB_ROOT,
   // A page this host serves can read. It is not the shell and does not pretend to be.
@@ -112,6 +116,9 @@ const host = new DeckHost({
   // method that is not a read, and the page has no bridge.
   state: () => store.getState(),
   subscribeState: (fn) => store.subscribe(fn),
+  // `/deck/graph/<id>`, `/deck/graph/<id>/sentence` and `/deck/orbit/<id>`:
+  // reads over Deck's own index, answered like every other read on this host.
+  extraReads: (pathname, search) => graphs.answer(pathname, search, (id) => indexes.get(id)?.snapshot() ?? null),
 });
 
 interface WindowInfo {
