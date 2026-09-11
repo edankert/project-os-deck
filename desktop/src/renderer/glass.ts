@@ -40,6 +40,9 @@ import {
   project,
 } from '../shared/slots.js';
 import { type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
+import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, unzoomPoint, wheelFactor, zoomAbout } from '../shared/zoom.js';
+import { DOCK_WIDTH, GATHER_MS, GROW_MS, type FocusLayout, type Point, type Rect, type RingNeighbour, chooseForRing, ease, focusLayout, seatRing } from '../shared/focus-ring.js';
+import { type RingItem, RingView } from './ring-view.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 import {
   PANE_DEFAULT_HEIGHT,
@@ -99,6 +102,10 @@ export const TURN_PER_PX = 0.0042;
 /** How long a view switch, a lift's turn and a throw's flight take. */
 export const MOVE_MS = 1000;
 
+function lerpRect(a: Rect, b: Rect, t: number): Rect {
+  return { left: a.left + (b.left - a.left) * t, top: a.top + (b.top - a.top) * t, width: a.width + (b.width - a.width) * t, height: a.height + (b.height - a.height) * t };
+}
+
 export interface GlassHooks {
   state(): DeckState;
   /** Only the shell changes the desk; a served page follows it (TASK-0057). */
@@ -128,6 +135,10 @@ export interface GlassHooks {
   reducedMotion(): boolean;
   /** The sentence an orbit edge's link sits in (TASK-0003). */
   sentence(edge: GraphEdge): Promise<string>;
+  /** The workspace's edge list, read once per index revision, for a ring line's sentence (FEAT-0017). */
+  graphEdges(): Promise<GraphEdge[]>;
+  /** "+N more" on the ring: keyboard focus to the navigator's group of joined notes. */
+  focusJoined(): void;
 }
 
 export interface GlassInput {
@@ -153,6 +164,8 @@ interface Elements {
   pendingChip: HTMLButtonElement;
   deskCount: HTMLElement;
   compass: HTMLElement;
+  ring: HTMLElement;
+  zoomReading: HTMLButtonElement;
   heading: HTMLElement;
   behind: HTMLElement;
   lookAhead: HTMLButtonElement;
@@ -186,6 +199,8 @@ export function glassElements(): Elements {
     pendingChip: must('pending-chip') as HTMLButtonElement,
     deskCount: must('glass-desk-count'),
     compass: must('compass'),
+    ring: must('field-ring'),
+    zoomReading: must('zoom-reading') as HTMLButtonElement,
     heading: must('compass-heading'),
     behind: must('compass-behind'),
     lookAhead: must('look-ahead') as HTMLButtonElement,
@@ -249,12 +264,43 @@ export class GlassField {
   private bridgeKeys = new Set<string>();
   /** Hides the strip a reduced-motion landing left up, with its name highlighted. */
   private landedTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * The zoom, one for the bands and one for the orbit (FEAT-0016). Window
+   * state like the turn: not in the store, not in an address, gone on reload.
+   */
+  private zoomBands: Zoom = { ...IDENTITY_ZOOM };
+  private zoomOrbit: Zoom = { ...IDENTITY_ZOOM };
+  private zoomSettle: ReturnType<typeof setTimeout> | null = null;
+  private zoomEase: number | null = null;
+  private wheelTurnEnd: ReturnType<typeof setTimeout> | null = null;
   /** Hide notes, in this window only: the panes are out of sight and cover nothing (FEAT-0015). */
   private panesHidden = false;
+  /**
+   * The middle is in use (FEAT-0017): the note on top of the desk stands in
+   * the middle of its neighbours. A switch in the window, like the turn and
+   * the zoom: not in the store, not in an address, off after a reload
+   * (decision 2).
+   */
+  private focusOn = false;
+  /** The mini note clicked to get here: the note it came from, and the angle it stood at. */
+  private focusFrom: { noteId: string; angle: number } | null = null;
+  /** The opening in progress: when it began, and the card's rectangle it grows from. */
+  private focusAnim: { noteId: string; start: number; from: Rect | null; frame: number | null } | null = null;
+  /** The pane in the middle as it is drawn now, for `paintPane`. */
+  private focusRect: Rect | null = null;
+  private ringView!: RingView;
+  private ringReachTimer: ReturnType<typeof setTimeout> | null = null;
+  private graphEdgesFor: Promise<GraphEdge[]> | null = null;
   /** The reach's wires as last painted, for a check that reads the canvas where they are. */
   private wires: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
 
   constructor(el: Elements, hooks: GlassHooks) {
+    this.ringView = new RingView(el.ring, {
+      open: (id) => void this.openFromRing(id),
+      rest: (id) => this.restOnMini(id),
+      restLine: (id, at) => void this.restOnLine(id, at),
+      more: () => this.hooks.focusJoined(),
+    });
     this.el = el;
     this.hooks = hooks;
     this.wire();
@@ -262,6 +308,8 @@ export class GlassField {
 
   /** Whether Glass is the surface on screen. Nothing is drawn or measured while it is not. */
   setActive(on: boolean): void {
+    // Spread or List in place of Glass leaves the middle (FEAT-0017, decision 2).
+    if (!on) this.dropFocus();
     this.active = on;
     this.el.area.hidden = !on;
     if (on) {
@@ -283,6 +331,8 @@ export class GlassField {
    */
   setArrangement(arrangement: 'bands' | 'orbit', data: OrbitData | null = this.orbit): void {
     const changed = arrangement !== this.arrangement || data !== this.orbit;
+    // A switch of surface leaves the middle (FEAT-0017, decision 2).
+    if (arrangement !== this.arrangement) this.dropFocus();
     this.arrangement = arrangement;
     this.orbit = data;
     this.bridgeKeys = new Set((data?.bridges ?? []).flatMap((b) => [`${b.a} ${b.b}`, `${b.b} ${b.a}`]));
@@ -422,6 +472,8 @@ export class GlassField {
   /** New groups, a new view, a state change: deal again and draw. */
   update(input: GlassInput): void {
     const viewChanged = input.view?.id !== this.input.view?.id || input.groups !== this.input.groups;
+    // A view switch leaves the middle (decision 2).
+    if (input.view?.id !== this.input.view?.id) this.dropFocus();
     this.input = input;
     if (!this.active) return;
     this.measure();
@@ -437,7 +489,7 @@ export class GlassField {
   whereIs(noteId: string): { band: string; visible: boolean; x: number; y: number } | null {
     const slot = this.model.current.slots.get(noteId);
     if (slot === undefined) return null;
-    const p = project(slot, this.model.yaw, this.viewport);
+    const p = this.at(slot, this.model.yaw);
     return { band: slot.band, visible: p.visible, x: p.x, y: p.y };
   }
 
@@ -445,7 +497,7 @@ export class GlassField {
   counts(): { elements: number; tiles: number; cards: number } {
     let tiles = 0;
     for (const slot of this.model.current.slots.values()) {
-      if (slot.band === 'deep' && project(slot, this.model.yaw, this.viewport).visible) tiles += 1;
+      if (slot.band === 'deep' && this.at(slot, this.model.yaw).visible) tiles += 1;
     }
     return { elements: document.getElementsByTagName('*').length, tiles, cards: this.drawnNotes().length };
   }
@@ -565,6 +617,21 @@ export class GlassField {
     };
     const entries = fieldEntries(this.input.groups, hand, extra);
     this.entries = new Map(entries.map((e) => [e.card.noteId, e]));
+    // While a note is in the middle the field keeps its slots: the
+    // neighbourhood stands on the ring instead of taking the front band, and
+    // leaving deals it once (FEAT-0017, decisions 9 and 10).
+    if (this.focusId() !== null) {
+      this.lastHeldKey = heldIds.join(' ');
+      this.render(false);
+      this.drawPanes();
+      this.drawFocus();
+      if (missing.length > 0) {
+        void Promise.all(missing.map((id) => this.hooks.context(id).catch(() => null))).then(() => {
+          if (this.active) this.redeal(true);
+        });
+      }
+      return;
+    }
     if (this.input.view === null) {
       this.deal = null;
       this.model.deal({ front: [], mid: [], deep: [] }, []);
@@ -593,6 +660,7 @@ export class GlassField {
     this.lastHeldKey = heldKey;
     this.render(animate);
     this.drawPanes();
+    this.drawFocus();
     // Once every held note's neighbourhood is here, turn to face it.
     if (this.faceOnArrival && missing.length === 0) {
       this.faceOnArrival = false;
@@ -652,6 +720,7 @@ export class GlassField {
     this.model.place(slots);
     this.render(animate);
     this.drawPanes();
+    this.drawFocus();
   }
 
   /**
@@ -672,12 +741,18 @@ export class GlassField {
 
   private paneObstacles(): Obstacle[] {
     // A hidden pane covers nothing, so the field deals into its space (decision 2).
-    if (this.arrangement === 'orbit' || this.panesHidden) return [];
+    if (this.arrangement === 'orbit' || this.panesHidden || this.focusId() !== null) return [];
     const out: Obstacle[] = [];
     for (const card of this.held) {
       if (card.wide === true) continue;
       const r = this.paneRect(card);
-      out.push(...obstaclesFor({ left: r.left, right: r.left + r.w }, this.model.yaw, this.viewport));
+      // A pane is on the screen and the zoom is not applied to it, so its
+      // edges are taken back to the unzoomed field before they become a
+      // sector: the part of the cylinder the pane really covers (FEAT-0016).
+      const zoom = this.zoom();
+      const left = unzoomPoint({ x: r.left, y: 0 }, zoom).x;
+      const right = unzoomPoint({ x: r.left + r.w, y: 0 }, zoom).x;
+      out.push(...obstaclesFor({ left, right }, this.model.yaw, this.viewport));
     }
     return out;
   }
@@ -718,7 +793,7 @@ export class GlassField {
       }
       element.classList.remove('leaving');
       this.paintCard(element, entry, slot, heldIds.has(noteId));
-      const p = project(slot, yaw, this.viewport);
+      const p = this.at(slot, yaw);
       this.place(element, p, slot, arriving && animate && !reduced);
       if (p.visible) tabStops += 1;
     }
@@ -820,7 +895,7 @@ export class GlassField {
   private drawSectors(): void {
     const labels: HTMLElement[] = [];
     for (const sector of this.model.current.sectors) {
-      const p = project({ ...sector.slot, y: sector.slot.y - 70 }, this.model.yaw, this.viewport);
+      const p = this.at({ ...sector.slot, y: sector.slot.y - 70 }, this.model.yaw);
       if (!p.visible) continue;
       const entry = [...this.entries.values()].find((e) => e.groupKey === sector.key);
       const label = document.createElement('span');
@@ -849,7 +924,7 @@ export class GlassField {
     ctx.textBaseline = 'middle';
     for (const [noteId, slot] of this.model.current.slots) {
       if (slot.band !== 'deep') continue;
-      const p = project(slot, yaw, this.viewport);
+      const p = this.at(slot, yaw);
       if (!p.visible) continue;
       const entry = this.entries.get(noteId);
       const w = TILE_BOX.width * p.scale;
@@ -890,7 +965,7 @@ export class GlassField {
     if (data === null) return;
     const yaw = this.model.yaw;
     const at = new Map<string, Projection>();
-    for (const [id, slot] of this.model.current.slots) at.set(id, project(slot, yaw, this.viewport));
+    for (const [id, slot] of this.model.current.slots) at.set(id, this.at(slot, yaw));
     const palette = TREATMENT_PALETTES[this.treatment];
     const reached = this.reach;
     if (this.treatment !== 'blocks') {
@@ -1052,11 +1127,12 @@ export class GlassField {
     if (this.idle.frame !== null) cancelAnimationFrame(this.idle.frame);
     this.idle.timer = null;
     this.idle.frame = null;
-    if (this.arrangement !== 'orbit' || !this.active || this.hooks.reducedMotion()) return;
+    // The orbit holds still while a note is in the middle (decision 18).
+    if (this.arrangement !== 'orbit' || !this.active || this.hooks.reducedMotion() || this.focusOn) return;
     this.idle.timer = setTimeout(() => {
       this.idle.last = performance.now();
       const step = (now: number): void => {
-        if (this.arrangement !== 'orbit' || !this.active || this.hooks.reducedMotion() || document.visibilityState !== 'visible') {
+        if (this.arrangement !== 'orbit' || !this.active || this.hooks.reducedMotion() || document.visibilityState !== 'visible' || this.focusOn) {
           this.idle.frame = null;
           return;
         }
@@ -1075,14 +1151,14 @@ export class GlassField {
     this.wires = [];
     if (this.reach === null) return;
     const from = this.model.current.slots.get(this.reach.noteId);
-    const origin = from === undefined ? null : project(from, this.model.yaw, this.viewport);
+    const origin = from === undefined ? null : this.at(from, this.model.yaw);
     if (origin === null || !origin.visible) return;
     ctx.strokeStyle = 'rgba(122,162,247,0.75)';
     ctx.lineWidth = 1.4;
     for (const id of this.reach.neighbours) {
       const slot = this.model.current.slots.get(id);
       if (slot === undefined) continue;
-      const p = project(slot, this.model.yaw, this.viewport);
+      const p = this.at(slot, this.model.yaw);
       if (!p.visible) continue;
       // Anchored on the card's edge along the bearing of the neighbour: the
       // rule DES-0002 settled in rev 5.
@@ -1139,10 +1215,15 @@ export class GlassField {
     // The compass: which way the person faces, and what is out of sight.
     const deg = ((this.model.yaw / DEG) % 360 + 360) % 360;
     this.el.compass.style.setProperty('--turn', `${-deg}deg`);
+    // The zoom, when it is not 1×; pressing it goes back (FEAT-0016).
+    const zoom = this.zoom();
+    this.el.zoomReading.hidden = isIdentity(zoom);
+    this.el.zoomReading.textContent = `${zoom.scale.toFixed(1)}×`;
+    this.el.zoomReading.setAttribute('aria-label', `Zoom ${zoom.scale.toFixed(1)} times; press to reset`);
     let behind = 0;
     let reachBehind = 0;
     for (const [id, slot] of this.model.current.slots) {
-      if (project(slot, this.model.yaw, this.viewport).visible) continue;
+      if (this.at(slot, this.model.yaw).visible) continue;
       behind += 1;
       if (this.reach?.neighbours.has(id) === true) reachBehind += 1;
     }
@@ -1193,6 +1274,34 @@ export class GlassField {
       this.showCallout(dot !== null ? null : this.edgeAt(x, y), x, y);
     });
     field.addEventListener('pointerleave', () => this.showCallout(null, 0, 0));
+    // Zoom (FEAT-0016): not passive, so the page and Electron's own page zoom stay put.
+    field.addEventListener('wheel', (event) => this.onWheel(event), { passive: false });
+    // A double-click on the background returns to 1×; on a card, a pane, a
+    // dot or a button it is two clicks on that thing, and the zoom stays.
+    field.addEventListener('dblclick', (event) => {
+      if (!this.active) return;
+      const target = event.target as HTMLElement;
+      if (target.closest('.field-card, .pane, button, .ring-card, .target-strip, .compass, .field-bar') !== null) return;
+      const box = field.getBoundingClientRect();
+      if (this.arrangement === 'orbit' && this.dotAt(event.clientX - box.left, event.clientY - box.top) !== null) return;
+      if (!isIdentity(this.zoom())) this.zoomTo({ ...IDENTITY_ZOOM });
+    });
+    this.el.zoomReading.addEventListener('click', () => this.zoomTo({ ...IDENTITY_ZOOM }));
+    // + (or =), - and 0 zoom in, out and back to 1× about the middle of the
+    // field, from anywhere a letter is not being typed.
+    document.addEventListener('keydown', (event) => {
+      if (!this.active || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!['+', '=', '-', '0'].includes(event.key)) return;
+      const target = event.target as HTMLElement | null;
+      if (target !== null && target.closest('input, textarea, select, [contenteditable="true"], form, #status') !== null) return;
+      event.preventDefault();
+      if (event.key === '0') {
+        this.zoomTo({ ...IDENTITY_ZOOM });
+        return;
+      }
+      const factor = event.key === '-' ? 1 / KEY_STEP : KEY_STEP;
+      this.zoomTo(zoomAbout(this.zoom(), factor, this.middle(), this.viewport));
+    });
     field.addEventListener('pointermove', (event) => {
       if (look === null || event.pointerId !== look.id) return;
       const dx = event.clientX - look.x;
@@ -1248,6 +1357,11 @@ export class GlassField {
       const target = event.target as HTMLElement;
       if (target.closest('input, select, textarea, form, #status') !== null) return;
       event.preventDefault();
+      // Escape leaves the middle first; a second Escape sweeps (FEAT-0017, decision 12).
+      if (this.focusId() !== null) {
+        this.leaveFocus();
+        return;
+      }
       void this.sweep();
     });
     this.el.lookAhead.addEventListener('click', () => this.faceFront());
@@ -1287,6 +1401,8 @@ export class GlassField {
   }
 
   private turnEnd(): void {
+    // The field keeps its slots while a note is in the middle (decision 9).
+    if (this.focusId() !== null) return;
     // In the orbit a position is the kept layout's and no pane moves it, so
     // there is nothing to deal again; dealing the bands here replaced the
     // orbit with the view's last deal the first time a pane was on screen.
@@ -1513,11 +1629,30 @@ export class GlassField {
     await this.lift(card);
   }
 
-  async lift(card: CardModel): Promise<void> {
+  async lift(card: CardModel, from: Rect | null = null): Promise<void> {
     const state = this.hooks.state();
     const onDesk = this.hooks.desk(state);
     // A person who lifts a note wants to see it (decision 3).
     this.hooks.lifted();
+    // The note opens in the middle of its neighbours, growing from where its
+    // card stands, or from the middle when it is not in sight (FEAT-0017).
+    if (!this.hooks.canArrange()) {
+      // A served page follows the Mac's desk and opens nothing of its own.
+    } else {
+      if (from === null) {
+        const element = this.cardEls.get(card.noteId);
+        const box = this.el.field.getBoundingClientRect();
+        if (element !== undefined && !element.classList.contains('leaving') && element.style.pointerEvents === 'auto') {
+          const r = element.getBoundingClientRect();
+          from = { left: r.left - box.left, top: r.top - box.top, width: r.width, height: r.height };
+        } else if (this.arrangement === 'orbit') {
+          const dot = this.dotFor(card.noteId);
+          if (dot !== null) from = { left: dot.x - 6, top: dot.y - 6, width: 12, height: 12 };
+        }
+      }
+      if (this.focusFrom !== null && this.focusFrom.noteId === card.noteId) this.focusFrom = null;
+      this.openFocus(card.noteId, from);
+    }
     if (!onDesk.some((c) => c.noteId === card.noteId)) {
       const at = this.nextPanePlace(onDesk);
       await this.hooks.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: at.x, y: at.y });
@@ -1822,17 +1957,41 @@ export class GlassField {
     // Clamped at PAINT time, as Spread clamps a card, and never in the store:
     // a desk arranged on a wide screen keeps its positions, and a pane the
     // reading column or a smaller window would hide stays whole on screen.
-    const { left, top, w, h } = this.paneRect(deskCard);
-    pane.style.left = `${left}px`;
-    pane.style.top = `${top}px`;
-    pane.style.width = `${w}px`;
-    pane.style.height = `${h}px`;
+    // While a note is in the middle (FEAT-0017): it is drawn at the focus
+    // size there, and every other held note waits in the dock as its header,
+    // down the field's left edge. Stored places and sizes are untouched
+    // (decisions 11 and 13). A pane being dragged keeps where the hand put it.
+    const focus = this.focusId();
+    const isFocus = focus === deskCard.noteId && this.focusRect !== null;
+    const docked = focus !== null && !isFocus && deskCard.wide !== true;
+    pane.classList.toggle('focus', isFocus);
+    pane.classList.toggle('docked', docked);
+    if (!pane.classList.contains('dragging')) {
+      if (isFocus && this.focusRect !== null) {
+        pane.style.left = `${this.focusRect.left}px`;
+        pane.style.top = `${this.focusRect.top}px`;
+        pane.style.width = `${this.focusRect.width}px`;
+        pane.style.height = `${this.focusRect.height}px`;
+      } else if (docked) {
+        const dockIndex = this.held.filter((c) => c.noteId !== focus && c.wide !== true).findIndex((c) => c.noteId === deskCard.noteId);
+        pane.style.left = '8px';
+        pane.style.top = `${8 + dockIndex * (PANE_HEADER_HEIGHT + 4)}px`;
+        pane.style.width = `${DOCK_WIDTH - 16}px`;
+        pane.style.height = `${PANE_HEADER_HEIGHT}px`;
+      } else {
+        const { left, top, w, h } = this.paneRect(deskCard);
+        pane.style.left = `${left}px`;
+        pane.style.top = `${top}px`;
+        pane.style.width = `${w}px`;
+        pane.style.height = `${h}px`;
+      }
+    }
     // Stacking is the desk's order: a raised pane is the last one, and it
     // covers everything under it, header included. Headers stay readable
     // because a pane dropped on one snaps below it (snapBelowHeaders), not by
     // drawing every header above every body: that showed a lower pane's
     // header through the text of the pane on top of it (ISS-0066).
-    pane.style.zIndex = String(3000 + index);
+    pane.style.zIndex = String(isFocus ? 3900 : 3000 + index);
     pane.classList.toggle('wide', deskCard.wide === true);
     pane.classList.toggle('top', index === this.held.length - 1);
     pane.dataset['status'] = card === null ? 'planned' : bandFor(card.status);
@@ -1871,6 +2030,403 @@ export class GlassField {
     }
   }
 
+  /** The zoom of the arrangement on screen. */
+  zoom(): Zoom {
+    return this.arrangement === 'orbit' ? this.zoomOrbit : this.zoomBands;
+  }
+
+  private setZoom(zoom: Zoom): void {
+    if (this.arrangement === 'orbit') this.zoomOrbit = zoom;
+    else this.zoomBands = zoom;
+  }
+
+  /**
+   * A slot where it is drawn: projected on the cylinder, then zoomed. Every
+   * position Glass draws or reports goes through here, so the hit tests, the
+   * reach and the smoke run all read what is on the screen.
+   */
+  private at(slot: { theta: number; depth: number; y: number }, yaw: number): Projection {
+    // While a note is in the middle the rest steps back: drawn at 0.85 of the
+    // person's zoom, about the middle (FEAT-0017, decision 9).
+    const zoom = this.focusId() !== null ? zoomAbout(this.zoom(), 0.85, this.middle(), this.viewport) : this.zoom();
+    return applyZoom(project(slot, yaw, this.viewport), zoom, this.viewport);
+  }
+
+  /** A slot where it is drawn with no note in the middle: the angle a neighbour had before the lift. */
+  private atPlain(slot: { theta: number; depth: number; y: number }): Projection {
+    return applyZoom(project(slot, this.model.yaw, this.viewport), this.zoom(), this.viewport);
+  }
+
+  /**
+   * Zoom by a factor about a point of the field, now (FEAT-0016). When the
+   * wheel has been still for 150 ms the field moves covered cards out from
+   * under the panes once, as after a turn: panes are fixed to the screen, so a
+   * zoom slides cards under them (decision 3).
+   */
+  zoomBy(factor: number, pivot: { x: number; y: number }): void {
+    this.cancelZoomEase();
+    this.setZoom(zoomAbout(this.zoom(), factor, pivot, this.viewport));
+    this.render(false);
+    this.settleZoom();
+  }
+
+  /** A key's step, or a reset: eased over 150 ms, a cut under reduced motion. */
+  zoomTo(target: Zoom): void {
+    this.cancelZoomEase();
+    const from = this.zoom();
+    if (this.hooks.reducedMotion()) {
+      this.setZoom(target);
+      this.render(false);
+      this.settleZoom();
+      return;
+    }
+    const start = performance.now();
+    const step = (now: number): void => {
+      const t = Math.min(1, (now - start) / 150);
+      const e = t * t * (3 - 2 * t);
+      this.setZoom({ scale: from.scale + (target.scale - from.scale) * e, dx: from.dx + (target.dx - from.dx) * e, dy: from.dy + (target.dy - from.dy) * e });
+      this.render(false);
+      if (t < 1) this.zoomEase = requestAnimationFrame(step);
+      else {
+        this.zoomEase = null;
+        this.setZoom(target);
+        this.render(false);
+        this.settleZoom();
+      }
+    };
+    this.zoomEase = requestAnimationFrame(step);
+  }
+
+  private cancelZoomEase(): void {
+    if (this.zoomEase !== null) cancelAnimationFrame(this.zoomEase);
+    this.zoomEase = null;
+  }
+
+  private settleZoom(): void {
+    if (this.zoomSettle !== null) clearTimeout(this.zoomSettle);
+    this.zoomSettle = setTimeout(() => {
+      this.zoomSettle = null;
+      this.turnEnd();
+    }, 150);
+  }
+
+  /** The middle of the field, where a key's zoom is centred. */
+  private middle(): { x: number; y: number } {
+    return { x: this.viewport.width / 2, y: this.viewport.height / 2 };
+  }
+
+  /**
+   * The wheel (FEAT-0016, TASK-0065). A vertical wheel, or a pinch (Ctrl),
+   * zooms about the pointer; a sideways wheel, or Shift, turns the field. Over
+   * a pane, the bar, the compass or the strip it does its ordinary job.
+   */
+  private onWheel(event: WheelEvent): void {
+    if (!this.active) return;
+    const target = event.target as HTMLElement;
+    if (target.closest('.pane, .field-bar, .compass, .target-strip, .edge-callout') !== null) return;
+    event.preventDefault();
+    this.scheduleIdle();
+    const sideways = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+    if (sideways) {
+      const delta = event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX;
+      this.cancelFlight();
+      this.model.face(this.model.yaw + delta * TURN_PER_PX);
+      this.render(false);
+      if (this.wheelTurnEnd !== null) clearTimeout(this.wheelTurnEnd);
+      this.wheelTurnEnd = setTimeout(() => {
+        this.wheelTurnEnd = null;
+        this.turnEnd();
+      }, 150);
+      return;
+    }
+    const box = this.el.field.getBoundingClientRect();
+    this.zoomBy(wheelFactor(event.deltaY, event.deltaMode, event.ctrlKey, this.viewport.height), { x: event.clientX - box.left, y: event.clientY - box.top });
+  }
+
+  // ---- the note in the middle (FEAT-0017) ----
+
+  /**
+   * The note in the middle: the top of this window's desk, while the middle
+   * is in use (decision 2). None while notes are hidden or the top pane is in
+   * the reading column.
+   */
+  focusId(): string | null {
+    if (!this.focusOn || this.panesHidden || !this.active) return null;
+    const top = this.held[this.held.length - 1];
+    if (top === undefined || top.wide === true) return null;
+    return top.noteId;
+  }
+
+  /** The ring's notes in ring order, for the navigator; null with no note in the middle. */
+  ringOrder(): string[] | null {
+    return this.focusId() === null ? null : this.ringView.order();
+  }
+
+  /** Where the middle is in use, and the pane's rectangle there: for the smoke run. */
+  focusState(): { noteId: string | null; pane: Rect | null; ring: Array<{ id: string; x: number; y: number }>; more: number; neighbours: number } {
+    const id = this.focusId();
+    const ring = [...this.ringView.positions()].map(([noteId, p]) => ({ id: noteId, x: p.x, y: p.y }));
+    return { noteId: id, pane: id === null ? null : this.focusRect, ring, more: this.ringMore, neighbours: this.ringCount };
+  }
+  private ringMore = 0;
+  private ringCount = 0;
+  private layoutCache: { key: string; layout: FocusLayout } | null = null;
+
+  /**
+   * Open the middle for the note just lifted or brought forward, growing
+   * from where its card stands (decision 3). `from` is that card's rectangle
+   * in field coordinates, or null to grow from the middle.
+   */
+  private openFocus(noteId: string, from: Rect | null): void {
+    this.focusOn = true;
+    this.cancelFocusAnim();
+    this.focusAnim = { noteId, start: performance.now(), from, frame: null };
+    this.scheduleIdle();
+  }
+
+  private cancelFocusAnim(): void {
+    if (this.focusAnim?.frame != null) cancelAnimationFrame(this.focusAnim.frame);
+    this.focusAnim = null;
+  }
+
+  /** Leave the middle with no deal and no turn: a switch of view or surface, or a note put back. */
+  private dropFocus(): void {
+    if (!this.focusOn) return;
+    this.focusOn = false;
+    this.focusFrom = null;
+    this.cancelFocusAnim();
+    this.focusRect = null;
+    this.ringView.clear();
+    this.el.field.classList.remove('focusing');
+    this.scheduleIdle();
+  }
+
+  /**
+   * Leave the middle (Escape, and every other way out): the panes go back to
+   * their places, and the field is dealt once for the notes still held, by
+   * FEAT-0010's rule, and turns to face their neighbourhood (decision 10).
+   */
+  leaveFocus(): void {
+    if (this.focusId() === null) {
+      this.dropFocus();
+      return;
+    }
+    this.dropFocus();
+    this.faceOnArrival = this.held.length > 0;
+    this.redeal(true);
+  }
+
+  /**
+   * Draw the middle: the pane at its place, the dock, the dimmed field and
+   * the ring, at the stage the opening has reached.
+   */
+  private drawFocus(): void {
+    const id = this.focusId();
+    this.el.field.classList.toggle('focusing', id !== null);
+    if (id === null) {
+      if (this.focusOn && this.held.length === 0) this.focusOn = false;
+      this.focusRect = null;
+      this.ringView.clear();
+      return;
+    }
+    const context = this.hooks.peekContext(id);
+    if (context === undefined) void this.hooks.context(id).then(() => this.active && this.drawFocus()).catch(() => null);
+    const dock = this.held.length > 1 ? DOCK_WIDTH : 0;
+    const neighbours = this.ringNeighbours(id, context);
+    this.ringCount = neighbours.length;
+    // With a note the person came from, the ring starts opposite the way they
+    // came, so that note sits there and the line between the two keeps its
+    // direction (decision 5).
+    const cameFromAngle = this.focusFrom !== null && neighbours.some((n) => n.cameFrom === true) ? this.focusFrom.angle + Math.PI : null;
+    // Worked out once per field size, dock, count and starting angle, not on
+    // every frame of the opening.
+    // The compass is drawn over the field's corner; no mini note stands under it.
+    const box = this.el.field.getBoundingClientRect();
+    const c = this.el.compass.getBoundingClientRect();
+    const avoid: Rect[] = c.width > 0 ? [{ left: c.left - box.left - 8, top: c.top - box.top - 8, width: c.width + 16, height: c.height + 16 }] : [];
+    const layoutKey = `${this.viewport.width}x${this.viewport.height}|${dock}|${neighbours.length}|${(cameFromAngle ?? -Math.PI / 2).toFixed(4)}|${avoid.map((r) => `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`).join(';')}`;
+    if (this.layoutCache === null || this.layoutCache.key !== layoutKey) this.layoutCache = { key: layoutKey, layout: focusLayout(this.viewport, dock, neighbours.length, cameFromAngle ?? -Math.PI / 2, avoid) };
+    const layout = this.layoutCache.layout;
+    const { chosen, more } = chooseForRing(neighbours, layout.places.length);
+    this.ringMore = more;
+    const { seats, morePlace } = seatRing(chosen, layout, more, cameFromAngle);
+    // The opening's stages: the card grows where it stands, then everything
+    // gathers (decision 3). Under reduced motion both are a cut (decision 16).
+    const reduced = this.hooks.reducedMotion();
+    const anim = this.focusAnim !== null && this.focusAnim.noteId === id ? this.focusAnim : null;
+    const elapsed = anim === null || reduced ? GROW_MS + GATHER_MS : performance.now() - anim.start;
+    const grown = this.grownRect(anim?.from ?? null, layout);
+    let pane: Rect;
+    if (elapsed < GROW_MS) {
+      const from = anim?.from ?? grown;
+      pane = lerpRect(from, grown, ease(elapsed / GROW_MS));
+    } else {
+      pane = lerpRect(grown, layout.pane, ease(Math.min(1, (elapsed - GROW_MS) / GATHER_MS)));
+    }
+    this.focusRect = pane;
+    const gather = Math.max(0, Math.min(1, (elapsed - GROW_MS) / GATHER_MS));
+    const byId = new Map(neighbours.map((n) => [n.id, n]));
+    const items: RingItem[] = seats.map((seat) => {
+      const n = byId.get(seat.id) as RingNeighbour & { title: string; start: Point };
+      return { id: seat.id, title: n.title, direction: n.direction, held: n.held === true, shared: n.shared === true, start: n.start, seat: seat.place };
+    });
+    this.ringView.paint({ centre: layout.centre, pane, items, t: gather, more: more > 0 && morePlace !== null ? { count: more, place: morePlace } : null, focusId: id });
+    this.drawPanes();
+    if (anim !== null && !reduced && elapsed < GROW_MS + GATHER_MS) {
+      if (anim.frame != null) cancelAnimationFrame(anim.frame);
+      anim.frame = requestAnimationFrame(() => {
+        if (this.focusAnim === anim) {
+          anim.frame = null;
+          this.drawFocus();
+        }
+      });
+    } else if (anim !== null) {
+      this.focusAnim = null;
+      if (reduced) {
+        this.ringView.highlight();
+        this.paneEls.get(id)?.classList.add('highlight');
+        setTimeout(() => this.paneEls.get(id)?.classList.remove('highlight'), 1600);
+      }
+    }
+  }
+
+  /** The pane at the end of the first stage: the focus size, standing where the card was. */
+  private grownRect(from: Rect | null, layout: FocusLayout): Rect {
+    if (from === null) return layout.pane;
+    const w = layout.pane.width;
+    const h = layout.pane.height;
+    const cx = from.left + from.width / 2;
+    const cy = from.top + from.height / 2;
+    return {
+      left: Math.max(0, Math.min(this.viewport.width - w, cx - w / 2)),
+      top: Math.max(0, Math.min(this.viewport.height - h, cy - h / 2)),
+      width: w,
+      height: h,
+    };
+  }
+
+  /**
+   * The note's neighbours as the ring needs them: which way each link runs,
+   * whether it is held, shared or owed, where it stood before the lift, and
+   * where it starts its move from (decisions 4 and 5).
+   */
+  private ringNeighbours(id: string, context: NoteContext | undefined): Array<RingNeighbour & { title: string; start: Point }> {
+    if (context === undefined) return [];
+    const out = new Map<string, 'out' | 'in' | 'both'>();
+    const titles = new Map<string, string>();
+    for (const item of context.linked) {
+      if (item.id === id) continue;
+      out.set(item.id, 'out');
+      titles.set(item.id, item.title);
+    }
+    for (const item of context.backlinks) {
+      if (item.id === id) continue;
+      out.set(item.id, out.get(item.id) === 'out' ? 'both' : 'in');
+      if (!titles.has(item.id)) titles.set(item.id, item.title);
+    }
+    const heldIds = new Set(this.held.map((c) => c.noteId));
+    const middle = this.middle();
+    const result: Array<RingNeighbour & { title: string; start: Point }> = [];
+    for (const [nid, direction] of out) {
+      const slot = this.model.current.slots.get(nid);
+      const p = slot === undefined ? null : this.atPlain(slot);
+      const drawn = p !== null && p.visible;
+      const bearing = slot === undefined ? null : norm(slot.theta - this.model.yaw);
+      const angle = drawn && p !== null ? Math.atan2(p.y - middle.y, p.x - middle.x) : null;
+      const start = drawn && p !== null
+        ? { x: p.x, y: p.y }
+        : bearing !== null
+          ? { x: bearing < 0 ? 0 : this.viewport.width, y: middle.y }
+          : { x: middle.x, y: this.viewport.height };
+      const card = this.cardFor(nid);
+      result.push({
+        id: nid,
+        title: card?.title ?? titles.get(nid) ?? nid,
+        direction,
+        held: heldIds.has(nid),
+        shared: this.shared.has(nid),
+        owed: card?.owed === true,
+        cameFrom: this.focusFrom?.noteId === nid,
+        angle,
+        bearing,
+        start,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * A mini note is a door (decision 7): clicking it opens that note in the
+   * middle. A held note's mini note brings its pane forward instead.
+   */
+  private async openFromRing(id: string): Promise<void> {
+    const from = this.focusId();
+    const at = this.ringView.positions().get(id);
+    const centre = this.focusRect === null ? this.middle() : { x: this.focusRect.left + this.focusRect.width / 2, y: this.focusRect.top + this.focusRect.height / 2 };
+    this.focusFrom = from === null || at === undefined ? null : { noteId: from, angle: Math.atan2(at.y - centre.y, at.x - centre.x) };
+    const fromRect = at === undefined ? null : { left: at.x - 84, top: at.y - 22, width: 168, height: 44 };
+    if (this.held.some((c) => c.noteId === id)) {
+      this.openFocus(id, fromRect);
+      await this.hooks.dispatch({ type: 'raise-card', noteId: id });
+      return;
+    }
+    const context = from === null ? undefined : this.hooks.peekContext(from);
+    const item = context === undefined ? undefined : [...context.linked, ...context.backlinks].find((i) => i.id === id);
+    const card = this.cardFor(id) ?? (item === undefined ? null : cardFromContext(item));
+    if (card === null) return;
+    await this.lift(card, fromRect);
+  }
+
+  /** Resting on a mini note reaches for it: wires to those of its neighbours on screen (decision 20). */
+  private restOnMini(id: string | null): void {
+    if (this.ringReachTimer !== null) clearTimeout(this.ringReachTimer);
+    this.ringReachTimer = null;
+    if (id === null) {
+      this.ringView.wires(null, []);
+      return;
+    }
+    this.ringReachTimer = setTimeout(() => {
+      void this.hooks.context(id).then((context) => {
+        const from = this.ringView.positions().get(id);
+        if (from === undefined || this.focusId() === null) return;
+        const ring = this.ringView.positions();
+        const focus = this.focusId();
+        const to: Point[] = [];
+        for (const item of neighboursOf(context)) {
+          const onRing = ring.get(item.id);
+          if (onRing !== undefined && item.id !== id) to.push(onRing);
+          else if (item.id === focus && this.focusRect !== null) to.push({ x: this.focusRect.left + this.focusRect.width / 2, y: this.focusRect.top + this.focusRect.height / 2 });
+        }
+        this.ringView.wires(from, to);
+      }).catch(() => null);
+    }, REACH_REST_MS);
+  }
+
+  /**
+   * Resting on a ring line shows which way the link runs and the sentence it
+   * sits in (decision 8), from the workspace's edge list, read once per index
+   * revision the first time a line is rested on.
+   */
+  private async restOnLine(id: string | null, at: Point): Promise<void> {
+    const focus = this.focusId();
+    if (id === null || focus === null) {
+      this.showCallout(null, 0, 0);
+      return;
+    }
+    let edges: GraphEdge[] = this.arrangement === 'orbit' && this.orbit !== null ? this.orbit.edges : [];
+    if (edges.length === 0) {
+      if (this.graphEdgesFor === null) this.graphEdgesFor = this.hooks.graphEdges().catch(() => []);
+      edges = await this.graphEdgesFor;
+    }
+    const edge = edges.find((e) => e.source === focus && e.target === id) ?? edges.find((e) => e.source === id && e.target === focus) ?? null;
+    if (this.focusId() === focus) this.showCallout(edge, at.x, at.y);
+  }
+
+  /** The edge list is read again after the notes change on disk. */
+  forgetGraphEdges(): void {
+    this.graphEdgesFor = null;
+  }
+
   /**
    * Hide notes, or show them again (FEAT-0015, decisions 1 and 2). The notes
    * stay held and keep shaping the field: their neighbours stay in front and
@@ -1879,6 +2435,8 @@ export class GlassField {
    */
   setHidden(hidden: boolean): void {
     if (this.panesHidden === hidden) return;
+    // Hide notes leaves the middle, then hides (FEAT-0017, decision 15).
+    if (hidden) this.dropFocus();
     this.panesHidden = hidden;
     this.el.panes.hidden = hidden;
     if (this.active) this.redeal(true);
@@ -1902,9 +2460,22 @@ export class GlassField {
     if ((event.target as HTMLElement).closest('button') !== null) return;
     if (!this.hooks.canArrange()) return;
     event.stopPropagation();
+    const head = event.currentTarget as HTMLElement;
+    // A docked header is brought forward when it is released without moving,
+    // and a drag on it moves nothing (FEAT-0017, decision 11).
+    if (pane.classList.contains('docked')) {
+      const x0 = event.clientX;
+      const y0 = event.clientY;
+      const release = (e: PointerEvent): void => {
+        head.removeEventListener('pointerup', release);
+        if (Math.hypot(e.clientX - x0, e.clientY - y0) > CLICK_SLOP_PX) return;
+        void this.bringForward(noteId);
+      };
+      head.addEventListener('pointerup', release);
+      return;
+    }
     // A press on a header raises the pane, drag or not.
     void this.hooks.dispatch({ type: 'raise-card', noteId });
-    const head = event.currentTarget as HTMLElement;
     head.setPointerCapture(event.pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
@@ -1922,6 +2493,9 @@ export class GlassField {
       if (!moved && Math.hypot(dx, dy) <= CLICK_SLOP_PX) return;
       moved = true;
       pane.classList.add('dragging');
+      // Dragging the note in the middle leaves the middle, and the pane lands
+      // where it is dropped (decision 13).
+      if (this.focusId() === noteId) this.leaveFocus();
       pane.style.left = `${left + dx}px`;
       pane.style.top = `${top + dy}px`;
       const point = { t: e.timeStamp, x: e.clientX - fieldBox.left, y: e.clientY - fieldBox.top };
@@ -2001,6 +2575,16 @@ export class GlassField {
   }
 
   private paneKey(noteId: string, event: KeyboardEvent): void {
+    // Tab from the header of the note in the middle goes to its ring, clockwise
+    // from the top, rather than through every link in its text (decision 17).
+    if (event.key === 'Tab' && !event.shiftKey && this.focusId() === noteId && event.target === event.currentTarget) {
+      const first = this.el.ring.querySelector<HTMLElement>('.ring-card:not(.ring-more)');
+      if (first !== null) {
+        event.preventDefault();
+        first.focus();
+        return;
+      }
+    }
     const card = this.held.find((c) => c.noteId === noteId);
     if (card === undefined || !this.hooks.canArrange()) return;
     const step = event.shiftKey ? 64 : 16;
@@ -2027,7 +2611,8 @@ export class GlassField {
     }
     if (event.key === 'Enter') {
       event.preventDefault();
-      void this.hooks.dispatch({ type: 'raise-card', noteId });
+      // Enter on a header puts that note in the middle (decisions 2 and 11).
+      void this.bringForward(noteId);
     } else if (event.key === 'w' || event.key === 'W') {
       event.preventDefault();
       void this.widen(noteId);
@@ -2049,6 +2634,8 @@ export class GlassField {
   /** × on a pane: the note goes back into the slot it left. */
   async putBack(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
+    // × on the note in the middle puts it back and leaves the middle (decision 13).
+    if (this.focusId() === noteId) this.dropFocus();
     await this.hooks.dispatch({ type: 'take-off-desk', noteId });
   }
 
@@ -2079,6 +2666,19 @@ export class GlassField {
     );
   }
 
+  /** Bring a held note forward into the middle: a docked header clicked, or Enter on a header. */
+  private async bringForward(noteId: string): Promise<void> {
+    const pane = this.paneEls.get(noteId);
+    const box = this.el.field.getBoundingClientRect();
+    const r = pane?.getBoundingClientRect();
+    this.focusFrom = null;
+    this.openFocus(noteId, r === undefined ? null : { left: r.left - box.left, top: r.top - box.top, width: r.width, height: r.height });
+    await this.hooks.dispatch({ type: 'raise-card', noteId });
+    // Already on top: no broadcast comes, so draw now.
+    this.drawPanes();
+    this.drawFocus();
+  }
+
   /** ⧉ or V on a pane: keep the note on every view, or give it back to this one (decision 6). */
   async toggleEveryView(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
@@ -2089,6 +2689,8 @@ export class GlassField {
 
   async widen(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
+    // W on the note in the middle reads it in the column and leaves the middle.
+    if (this.focusId() === noteId) this.dropFocus();
     const card = this.held.find((c) => c.noteId === noteId);
     const wide = card?.wide !== true;
     await this.hooks.dispatch({ type: 'widen-card', noteId, wide });

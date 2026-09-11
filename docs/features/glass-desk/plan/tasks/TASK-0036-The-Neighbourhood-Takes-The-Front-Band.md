@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0010-Lifting-A-Note]]"]
 parent: "FEAT-0010"
 effort: ""
@@ -41,6 +41,8 @@ Two findings from [[REFERENCE-DES-0002-REVIEW]] are rules here. First, the front
 - The owed count is drawn in the same place before, during and after a note is held.
 - Under reduced motion, the turn is replaced by a highlight on the neighbours and no card is animated. Built on 2026-09-10 after the review found it missing (ISS-0061).
 - Every neighbour is reachable and liftable from the navigator by keyboard.
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** A lift now puts the note in the middle of the field and its neighbours on a ring around it, and the front band is not dealt again while a note is there. The lines above hold once the note leaves the middle: its neighbourhood then takes the front band and the field turns to face it. Under reduced motion the ring is highlighted instead of moving.
 
 ## Steps
 

@@ -229,6 +229,8 @@ export class NavigatorList {
     const twist = element.querySelector('.twist') as HTMLElement | null;
     if (row.kind === 'group') {
       element.className = 'nav-group';
+      // Named, so a control elsewhere can send the keyboard to a group (FEAT-0017's "+N more").
+      element.dataset['groupKey'] = row.key;
       element.removeAttribute('aria-posinset');
       element.removeAttribute('aria-setsize');
       element.dataset['needsHuman'] = String(row.needsHuman);
@@ -248,6 +250,7 @@ export class NavigatorList {
 
     const { card } = row;
     element.className = 'nav-row';
+    delete element.dataset['groupKey'];
     if (this.marked !== null && this.marked.noteId === card.noteId && Date.now() < this.marked.until) {
       element.classList.add('highlight');
     }

@@ -150,3 +150,5 @@ No sibling issue: this is a feature request, and a search of `docs/issues/` for 
 **2026-09-11: built and tested; the walk is Edwin's.** All six tasks are done. The store suite ([[TST-0049-A-Desk-For-Each-View-And-A-Note-On-Every-View-In-The-Store]]) passes 13 of 13 and fails for each of the four breaks its note names. The Glass section of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) drives every acceptance line above with a real pointer, 21 new checks, each shown to fail with its fix removed. The feature is at `review`: the walk [[TST-0048-Each-View-Keeps-Its-Own-Desk-And-Held-Notes-Can-Be-Hidden]] is a person's, and the open question above is still Edwin's.
 
 **2026-09-11: planned, nothing built.** Six tasks, one store suite and one walk. The main session implements next, starting with [[TASK-0058-The-Store-Keeps-A-Desk-For-Each-View]].
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** Hide notes first takes a note out of the middle of the field, if one is there, and then hides every pane. Showing the notes again does not put one back in the middle.

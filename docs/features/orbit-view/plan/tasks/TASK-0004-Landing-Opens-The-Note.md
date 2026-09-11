@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 parent: "FEAT-0001"
 effort: ""
@@ -48,3 +48,5 @@ Moved from `project-os-cockpit` on 2026-09-06, where it was `TASK-0595` (last co
 **Done 2026-09-10.** Landing on a dot or a card in the orbit is a lift: the note goes onto the desk through the same `put-on-desk` action, becomes a pane, and is focused, so the address, the desk and the reader all name it. A pane carries ◎, "show this in the link graph", and O on its header does the same: Deck switches to the orbit and flies to the note rather than cutting. In the orbit the navigator lists every card it draws and every note with no link, so each is reached by keyboard. Nothing of a note is drawn in the field but its id, title, type, status and a link's sentence; the pane is the desk's reader, and the verbs stay in the reading column.
 
 **Evidence.** [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: a real click on a dot lifts it, opens it and names it in the store; ◎ turns the orbit to face it, with frames in between, so it flew.
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** Landing now also puts the note in the middle of the screen with its direct links on a ring around it. The acceptance above still holds: landing routes through the desk and the address, the ring's mini notes show only id and title, and nothing in the field discharges a verb.

@@ -346,6 +346,27 @@ const glass = new GlassField(glassElements(), {
   throwTo: (target, card, edge) => throwTo(target, card, edge),
   applyPending: () => applyPending(),
   reducedMotion,
+  graphEdges: async () => {
+    // The workspace's edge list, for a ring line's sentence (FEAT-0017). Glass
+    // asks once per index revision and forgets it when the notes change.
+    const state = host.state();
+    if (state.workspaceId === null) return [];
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const graph = (await fetch(`/deck/graph/${encodeURIComponent(state.workspaceId)}`).then((r) => r.json())) as { building?: boolean; edges?: GraphEdge[] };
+      if (graph.building !== true) return graph.edges ?? [];
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    return [];
+  },
+  focusJoined: () => {
+    // "+N more" on the ring: the keyboard goes to the navigator's list of
+    // every note joined to the one in the middle.
+    // The navigator keys a group row as `g:` and the group's key.
+    const group = document.querySelector<HTMLElement>('#nav-list .nav-group[data-group-key="g:deck:joined"]');
+    let next = group?.nextElementSibling ?? null;
+    while (next !== null && !next.classList.contains('nav-row')) next = next.nextElementSibling;
+    (next as HTMLElement | null)?.focus();
+  },
   sentence: async (edge: GraphEdge) => {
     const state = host.state();
     if (state.workspaceId === null) return '';
@@ -892,7 +913,15 @@ function deskGroups(): CardGroup[] {
   const out: CardGroup[] = [
     { key: 'deck:held', label: 'On the desk', needsHuman: false, suppressed: false, cards: heldIds.map(card) },
   ];
-  const joined = [...joinedTo(heldIds, known)];
+  // While a note is in the middle, its neighbours are listed in ring order,
+  // clockwise from the top, as Tab reaches them (FEAT-0017, decision 17).
+  const ring = glass.ringOrder();
+  const joined = [...joinedTo(heldIds, known)].sort((a, b) => {
+    if (ring === null) return 0;
+    const ia = ring.indexOf(a);
+    const ib = ring.indexOf(b);
+    return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib);
+  });
   if (joined.length > 0) {
     out.push({ key: 'deck:joined', label: 'Joined to what you are holding', needsHuman: false, suppressed: false, cards: joined.map(card) });
   }
@@ -1569,6 +1598,7 @@ async function prepareChange(): Promise<void> {
   const view = currentView;
   if (workspace === null || view === null) return;
   glass.forgetBodies();
+  glass.forgetGraphEdges();
   glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount });
   let next: CardGroup[];
   try {

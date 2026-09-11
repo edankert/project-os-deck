@@ -7,7 +7,7 @@ status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["Edwin 2026-09-05: 'I like the idea of the 3d world fly-through ... I would like an orbit view in the application in general, so feel free to create the corresponding docs for thus'", "Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'"]
 goal: "Give Deck a view of the link graph as a whole — 16148 edges over 1537 notes, coloured by status band, entered by flying rather than by listing — so the structural questions the reader cannot currently ask (what does nothing link to, which clusters hang by one edge) have somewhere to be asked."
 requirements: []
@@ -93,6 +93,10 @@ The first is a query a table could answer, and [[DES-0001]] says so plainly in O
 **2026-09-07: no longer the gate in front of Glass, but one arrangement inside it.** Edwin, the same day: *"I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity."* [[ADR-0002-Glass-Is-The-Main-View]] records the decision, and [[PHASE-0002-Glass]] opens today. Until then this feature was the read-only slice the phase had to measure before [[DES-0002]]'s arrangements could be built. That order is reversed: the field is built first ([[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]), and the orbit is drawn by the field's renderer as the arrangement where distance is connectedness. The three measurements stay, as exit criteria of the phase rather than as preconditions for starting it. If one of them fails, the orbit arrangement is what is not built, and the rest of Glass is unaffected.
 
 **One dependency lives in the other repository.** The whole edge list with the offset of every link is a new read endpoint, and the sidecar is not changed for Deck: the cockpit is the primary place for new functionality. So [[TASK-0001-The-Whole-Edge-List-Is-One-Payload]] is split. The endpoint is an issue filed in project-os-cockpit when the task starts, and the task in this repository is the consuming half: the typed client method, the path in Deck's host's allow-list, and the assertion that a node's band equals the reader's. Nothing else in the phase waits on it. [[FEAT-0010-Lifting-A-Note]]'s neighbourhood reads `/api/cockpit/context` per held note until the graph endpoint exists.
+
+**Amended 2026-09-11 ([[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]).** This feature's scope promised 'Fly, zoom, and land', and zoom was not built with it. The wheel, a pinch and the `+`, `-` and `0` keys now zoom the orbit toward the pointer, from 0.6× to 2.5×, and the orbit keeps its own zoom for as long as the window is open.
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** At Edwin's request, landing on a note in the orbit now opens it in the middle of the screen, with the notes it links to and the notes linking to it on a ring around it as mini notes that show only id and title. The orbit stays behind, dimmed and without drifting, and every dot is back at the same place when the note leaves the middle. Landing is still a lift onto the desk, and the pane is still the desk's reader.
 
 ## Provenance
 

@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-11T12:00Z"
+updated: "2026-09-11T18:00Z"
 
 template:
   replace_me: false
@@ -27,7 +27,7 @@ retention:
   # Read by tools/scripts/sync-snapshot.py (ADR-0018). Absent = feature off.
   derive_fields: true      # title/goal derived from the note
   prune_window: 25         # keep N most recent terminal items per collection
-  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage."
+  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage. Later on 2026-09-11 FEAT-0016 (zoom) and FEAT-0017 (an opened note in the middle of its neighbours) were planned from REFERENCE-FOCUS-ZOOM-AND-VERBS, and ISS-0069 (the verb buttons' full-height column) was filed at triage for Edwin's choice. Later on 2026-09-11 FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours) were planned, built and tested at Edwin's request; both are at review, waiting on the walk TST-0052. ISS-0069 (where the approve and decline buttons go) waits on Edwin's choice."
 
 docs_system:
   source_of_truth: SNAPSHOT.yaml
@@ -48,23 +48,23 @@ counters:
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 15
-  ISS: 68
+  FEAT: 17
+  ISS: 69
   PHASE: 4
   REQ: 0
   RISK: 4
   REL: 0
-  TASK: 63
-  TST: 49
+  TASK: 71
+  TST: 52
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0015"
+  feature: "FEAT-0017"
   task: ""
   issue: ""
-  note: "2026-09-11: FEAT-0015 PLANNED from Edwin's request for a Hide notes button and a desk per view with notes kept on every view; TASK-0058 (the store) is next, then 0059 to 0063. Earlier: PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings, ISS-0058 to ISS-0063, are fixed (cd95528); a second review found ISS-0064 and ISS-0065, also fixed. Edwin stopped the review loop after that second round and on 2026-09-11 marked FEAT-0009, FEAT-0010 and FEAT-0014 done himself, without an approved review. FEAT-0001 is doing: TASK-0005 (the orbit's treatment) is Edwin's, and he chose to decide later. What else is left is a person's: four walks, Safari on the tablet, a week of use, a laptop measurement."
+  note: "2026-09-11, later: FEAT-0016 (the mouse wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) PLANNED from Edwin's request, building recommendations 1 and 2 of REFERENCE-FOCUS-ZOOM-AND-VERBS. Order: TASK-0064 (the zoom's pure transform, suite zoom), TASK-0065 (wheel, pinch, keys, compass), TASK-0066 (zoom smoke checks); then TASK-0067 (the ring's pure layout, suite focus-ring; can run beside FEAT-0016), TASK-0068 (the note in the middle, the dock, Escape twice), TASK-0069 (the ring of mini notes and lines), TASK-0070 (the orbit), TASK-0071 (smoke checks, and the rewrite of existing lift checks). Walk TST-0052 covers both. Recommendation 3 (the verb buttons) is NOT planned: ISS-0069 at triage names the layout defect and the three options, and waits on Edwin. Open question for Edwin in FEAT-0017: what 'the associated notes should show their connections' should show. Earlier the same day: FEAT-0015 built and at review, waiting on its walk TST-0048 and Edwin's answer on whether a saved desk remembers its view."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -204,6 +204,24 @@ items:
       requirements: []
       tasks: ["TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063"]
       note: "ADDED 2026-09-11 from Edwin's request: 'I need a button to hide everything (all the open items) on the desk. Also, we probably need to have different open items on different views, maybe some can be marked to be open on all views?' Three parts. HIDE NOTES is a per-window toggle, never stored or addressed, that hides held panes in Glass and desk cards in Spread without taking any note off the desk; the field reclaims the slots panes covered. A DESK PER VIEW: deskCards keeps its shape and now means the notes on EVERY view of a workspace; a new viewDesks map holds each view's own notes; the desk drawn is the every-view list followed by the view's own. A note is MARKED 'on every view' by a toggle on the pane header and the Spread card (key V). NO MIGRATION: a state file written before reads unchanged and every note already held shows as on every view, which is exactly today's behaviour. REVERSES TASK-0024's rule that a view switch leaves the desk alone and FEAT-0010's 2026-09-07 reading that one desk per view is 'honoured by the address'; RESTORES DES-0002 rev 9, where Edwin said 'each view should allow for its own selected notes'. Satellite desk panels show the desk of the view in their own address (ISS-0018's pinned view); a throw to one lands there; the tablet shows the Mac's current view's desk. Saved desks stay workspace-level; whether a saved desk should remember its view is Edwin's open question. Label is 'on every view', never 'pin', which the cockpit's navigator already uses. Order: store (0058, 0059), hide (0060), Glass and Spread (0061), other windows and tablet (0062), smoke (0063)."
+    FEAT-0016:
+      file: "docs/features/glass-zoom/FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit.md"
+      title: "The mouse wheel zooms Glass and the orbit toward the pointer, and three keys do the same from the keyboard"
+      status: review
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0064", "TASK-0065", "TASK-0066"]
+      note: "ADDED 2026-09-11 from Edwin's request 'add zoom (using a mouse wheel)' on Glass and the orbit, building REFERENCE-FOCUS-ZOOM-AND-VERBS recommendation 1. The wheel and a trackpad pinch zoom toward the pointer, 0.6x to 2.5x; +, - and 0 do it from the keyboard; the compass shows the zoom when not 1x and resets it. Zoom scales the field (cards, tiles, dots, links, wires), never the panes, bars or compass; the wheel over a pane still scrolls it. Window state like the yaw: not stored, not addressed, one per arrangement. DEVIATES from the reference's 'nothing is dealt again': covered cards move out from under panes once the wheel stops, because TASK-0035 forbids a card under a pane. Shift+wheel turns. Delivers the zoom FEAT-0001's scope promised ('Fly, zoom, and land') and never built. No RISK note. Order: TASK-0064 pure transform (suite zoom, TST-0050, committed WITH the suite), TASK-0065 renderer, TASK-0066 smoke."
+    FEAT-0017:
+      file: "docs/features/glass-focus/FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours.md"
+      title: "An opened note stands in the middle of its neighbours: in Glass and in the orbit a lifted note moves to the middle of the field, and the notes it is joined to gather on a ring around it"
+      status: review
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071"]
+      note: "ADDED 2026-09-11 from Edwin's requests about selecting in the orbit and in Glass, building REFERENCE-FOCUS-ZOOM-AND-VERBS recommendation 2. A lift grows the card into a pane where it stood (300 ms), then moves it to the middle (700 ms); the neighbours (context read) move by angle and distance to a ring of up to 16 mini notes (15 plus '+N more'), keeping their circular order, with a solid line to what it links to and a dashed line from what links to it; a mini note is a door. REVISITS DES-0002 by Edwin's request (rev 7 dropped re-arranging around an opened note: 'does not survive a second note and collapses at three'): only the note on top of the desk is in the middle, the other held notes wait as headers in a dock at the left edge, and the field dims and keeps its slots. The focus is the TOP OF THE DRAWN DESK plus a per-window switch; nothing new in the store or the address. Escape first leaves the middle, a second Escape sweeps. While a note is in the middle its neighbourhood does not take the front band; leaving deals it there and turns to face it. Amends DES-0002, FEAT-0010, TASK-0035, TASK-0036, TASK-0054, FEAT-0015, FEAT-0001, TASK-0004, PHASE-0002 exit criterion 3 and the walk TST-0024, each by an appended paragraph in a task step. The same focus in the orbit, drift stopped. Tablet unchanged. No RISK note. Open question: what 'the associated notes should show their connections' should show."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -506,7 +524,73 @@ items:
       owner: user:edwin
       parent: "FEAT-0015"
       phase: PHASE-0002
+    TASK-0064:
+      file: "docs/features/glass-zoom/plan/tasks/TASK-0064-The-Zoom-Is-A-Pure-View-Transform.md"
+      title: "The zoom is a pure view transform: it scales around a point, keeps that point still, stops at 0.6 and 2.5 times, and never loses the field off the screen"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0016"
+      phase: PHASE-0002
+    TASK-0065:
+      file: "docs/features/glass-zoom/plan/tasks/TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field.md"
+      title: "The wheel, a pinch and three keys zoom the field in Glass and the orbit, clicks still land on what is drawn, and no card is left under a pane"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0016"
+      phase: PHASE-0002
+    TASK-0066:
+      file: "docs/features/glass-zoom/plan/tasks/TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel.md"
+      title: "The smoke run zooms with a real wheel, a pinch and the keys, and each check is seen to fail with its fix removed"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0016"
+      phase: PHASE-0002
+    TASK-0067:
+      file: "docs/features/glass-focus/plan/tasks/TASK-0067-The-Ring-Is-A-Pure-Layout.md"
+      title: "The ring is a pure layout: the pane's place, up to sixteen places that never overlap it, who gets one, the order they take, and a path by angle and distance"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0017"
+      phase: PHASE-0002
+    TASK-0068:
+      file: "docs/features/glass-focus/plan/tasks/TASK-0068-An-Opened-Note-Moves-To-The-Middle.md"
+      title: "An opened note moves to the middle: its card grows into a pane where it stood, the pane moves to the middle, the other held notes wait in a dock, the field dims, and Escape leaves before it sweeps"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0017"
+      phase: PHASE-0002
+    TASK-0069:
+      file: "docs/features/glass-focus/plan/tasks/TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes.md"
+      title: "The neighbours gather on a ring as mini notes, each with a line from the pane, and a mini note is a door to the next note"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0017"
+      phase: PHASE-0002
+    TASK-0070:
+      file: "docs/features/glass-focus/plan/tasks/TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way.md"
+      title: "The orbit opens a note the same way: the note in the middle, its direct links on the ring as mini notes, the orbit dimmed and still behind, and back at the same pixel after leaving"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0017"
+      phase: PHASE-0002
+    TASK-0071:
+      file: "docs/features/glass-focus/plan/tasks/TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring.md"
+      title: "The smoke run drives the note in the middle and its ring with a real pointer, and the checks that assumed a lift fills the front band are rewritten, not deleted"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0017"
+      phase: PHASE-0002
   issues:
+    ISS-0069:
+      file: "docs/issues/ISS-0069-The-Verb-Buttons-Take-A-Full-Height-Column-Beside-The-Reader.md"
+      title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0001
+      severity: medium
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-11 from Edwin's report that approving or declining in Spread and List 'opens a huge vertical area on the right'. Cause: div.actuators is a direct child of the .body flex row in desktop/src/renderer/index.html, so it becomes a full-height column; TASK-0049 meant it to be drawn in the reader. Three options from REFERENCE-FOCUS-ZOOM-AND-VERBS recommendation 3: a one-line strip at the top of the reader (recommended; keep a disabled verb's reason visible per ISS-0045, and give the strip its own element because openCard replaces the reader's contents), the verbs on the Glass pane header (does not fix Spread and List; PHASE-0002 says the reader carries the verbs), or a decision bar at the bottom of the window. WAITS ON EDWIN'S CHOICE; nothing planned. Phase inherited from FEAT-0013."
     ISS-0031:
       file: "docs/issues/ISS-0031-The-Path-Prefix-Reaches-The-Evaluator-Unguarded.md"
       title: "Three different ways of dropping the path prefix each leave every check passing, so the fix that stopped a base file selecting the wrong notes is guarded nowhere along the route it travels"
@@ -1088,7 +1172,7 @@ items:
       features: ["FEAT-0002", "FEAT-0003", "FEAT-0004", "FEAT-0005", "FEAT-0006", "FEAT-0007", "FEAT-0008", "FEAT-0011", "FEAT-0012", "FEAT-0013"]
       requirements: []
       tasks: ["TASK-0038", "TASK-0039", "TASK-0040", "TASK-0041", "TASK-0042", "TASK-0043", "TASK-0044", "TASK-0045", "TASK-0046", "TASK-0047", "TASK-0048", "TASK-0049", "TASK-0050", "TASK-0051", "TASK-0052"]
-      issues: []
+      issues: ["ISS-0069"]
       note: "2026-09-10: ALL TEN FEATURES DONE AND APPROVED, the 26 commits PUSHED on 2026-09-09, and both CI jobs (validate-docs, deck-smoke) GREEN on main; the first CI run found two things a developer's machine cannot (ISS-0057, fixed). What holds the phase open is a person's work only: FOUR WALKS in the ledger (TST-0010 tablet, TST-0011 quit, TST-0027 base file against Obsidian, TST-0028 tick seen in the cockpit), collected into one ninety-minute sitting in REFERENCE-FOUR-WALKS-OWED, with no ledger entry since 2026-09-08; and ISS-0056 at triage naming this phase (its first action, the push, is done; a gate decision on the four smoke-only guards and seven small findings remain). No task at backlog or doing; every risk closed. WIDENED 2026-09-08 by Edwin ('happy to reopen phase-0001 to implement this'): FEAT-0011 Deck's own index, FEAT-0012 a view is a description, FEAT-0013 the first write, TASK-0052 under FEAT-0006, ADR-0003 and ADR-0004, RISK-0003 and RISK-0004, five exit criteria; the 'Reads only' scope bullet reversed. The tasks list here is that new work only; the 23 completed before are in the note. The phase that makes Deck a thing you can open, carrying the foundations rather than a separate foundations phase before it, because a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge. Asks nothing new of the sidecar."
     PHASE-0002:
       file: "docs/phases/PHASE-0002-Glass.md"
@@ -1096,11 +1180,11 @@ items:
       status: active
       order: 2
       owner: user:edwin
-      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015"]
+      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017"]
       requirements: []
-      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063"]
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071"]
       issues: ["ISS-0008"]
-      note: "2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
+      note: "2026-09-11, later: FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) ADDED at Edwin's request from REFERENCE-FOCUS-ZOOM-AND-VERBS, eight tasks TASK-0064 to TASK-0071, suites TST-0050 and TST-0051, walk TST-0052; no new exit criterion, and criterion 3 is amended by TASK-0069 (a lift fills a ring first, the front band after leaving). FEAT-0017 revisits DES-0002 by Edwin's request. 2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
       title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
@@ -1449,6 +1533,30 @@ items:
       phase: PHASE-0002
       covers: ["FEAT-0015"]
       note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0015. Its command names desktop/tests/view-desks.test.mjs, which TASK-0058 writes; the suite and this note must land in ONE commit, or run-tests.py fails with exit 2 (ISS-0028). Load-bearing checks: a state file holding only deskCards draws the same notes on every view in every workspace; a note put on one view is absent from another; marking removes the note from every view's own list."
+    TST-0050:
+      file: "docs/features/glass-zoom/plan/tests/TST-0050-Zoom-Keeps-The-Point-Under-The-Pointer.md"
+      title: "Zoom keeps the point under the pointer still, stays between 0.6 and 2.5 times, never loses the field off the screen, and at 1 times changes nothing"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0016"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Its command names desktop/tests/zoom.test.mjs, which TASK-0064 writes; the suite and this note must land in ONE commit, or run-tests.py fails with exit 2 (ISS-0028). Written at planning, 2026-09-11, not committed."
+    TST-0051:
+      file: "docs/features/glass-focus/plan/tests/TST-0051-The-Ring-Keeps-Order-Clears-The-Pane-And-Moves-On-Arcs.md"
+      title: "The ring around an opened note keeps its neighbours' order, never overlaps the pane, counts what it cannot hold, and moves them by angle and distance rather than through the middle"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0017"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Its command names desktop/tests/focus-ring.test.mjs, which TASK-0067 writes; the suite and this note must land in ONE commit, or run-tests.py fails with exit 2 (ISS-0028). Written at planning, 2026-09-11, not committed."
+    TST-0052:
+      file: "docs/tests/acceptance/TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms.md"
+      title: "A note opened in Glass or the orbit stands in the middle of its neighbours and Escape puts the field back, and the mouse wheel zooms toward the pointer"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0016", "FEAT-0017"]
+      note: "Acceptance walk for FEAT-0016 and FEAT-0017, added 2026-09-11. Zoom toward the pointer by wheel, pinch and keys, limits, the compass reset, the wheel over a pane scrolls it; a lift grows the pane in place then moves it to the middle with a ring of mini notes and lines; a mini note is a door; the dock; Escape twice; '+N more' and Tab; reduced motion; the orbit's version with no drift; restart; git status clean. Rests at active; the verdict is a ledger event."
   releases: {}
   workflows: {}
   changes:
@@ -1528,17 +1636,17 @@ items:
 
 metrics:
   counts:
-    features_total: 15
+    features_total: 17
     features_done: 13
     phases_total: 4
     phases_done: 0
-    tasks_total: 63
-    tasks_done: 62
-    tests_total: 34
+    tasks_total: 71
+    tasks_done: 70
+    tests_total: 36
     tests_passing: 2
     tests_failing: 0
     issues_open: 0
-    issues_triage: 3
+    issues_triage: 4
     risks_open: 0
     releases_total: 0
     decisions_total: 4

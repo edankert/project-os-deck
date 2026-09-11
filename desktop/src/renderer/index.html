@@ -87,12 +87,17 @@
           <div class="field-sectors" id="field-sectors" aria-hidden="true"></div>
           <div class="field-cards" id="field-cards" role="list" aria-label="Cards in the field"></div>
           <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
+          <!-- The note in the middle's neighbours, as mini notes with a line to each (FEAT-0017).
+               After the panes, so Tab goes from the note to its neighbours. -->
+          <div class="field-ring" id="field-ring" hidden></div>
           <div class="compass" id="compass">
             <div class="compass-dial" aria-hidden="true"><span class="compass-mark"></span></div>
             <div class="compass-text">
               <span id="compass-heading">facing the front</span>
               <span id="compass-behind"></span>
             </div>
+            <!-- The zoom, shown when it is not 1× (FEAT-0016). The wheel, +, - and 0 change it. -->
+            <button type="button" class="action zoom-reading" id="zoom-reading" hidden title="Back to 1× (0)">1.0×</button>
             <button type="button" class="action" id="look-ahead" title="Face the front band (Home)">look ahead</button>
             <button type="button" class="action" id="look-behind" title="Face the quiet band (End)">look behind</button>
           </div>

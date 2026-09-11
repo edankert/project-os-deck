@@ -171,6 +171,21 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     if (process.env['DECK_SMOKE_TRACE'] === '1') await js(`window.__deckTrace = true`);
   };
   const deskIds = (): string[] => deskCardsOf(store.getState(), prepared.id).map((c) => c.noteId);
+  // A lift opens the note in the middle of its neighbours (FEAT-0017). The
+  // checks written before that, about the front band, the turn and the panes,
+  // press Escape once to leave the middle before they look, as a person does.
+  const leave = async (keepFocus = false): Promise<boolean> => {
+    // Only with a note in the middle: with none, Escape sweeps the desk.
+    if ((await js<string | null>(`__t.glass().focusId()`)) === null) return true;
+    ctx.focusApp(win);
+    if (!keepFocus) await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+    press(win, 'Escape');
+    for (let i = 0; i < 20; i += 1) {
+      if ((await js<string | null>(`__t.glass().focusId()`)) === null) return true;
+      await delay(100);
+    }
+    return false;
+  };
   if (process.env['DECK_SMOKE_TRACE'] === '1') {
     win.webContents.on('console-message', (_e, _level, message) => {
       if (/^(glass|nav)/.test(message)) console.log(`TRACE ${message}`);
@@ -235,6 +250,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       return { ids, front: ids.filter((id) => { const w = __t.where(id); return w && w.band === 'front'; }) };
     })()`);
     record(neighbours.ids.length > 0, `${target.id} has a neighbourhood to bring forward (${neighbours.ids.length})`);
+    // Leaving the middle deals the neighbourhood into the front band (FEAT-0017, decision 10).
+    record(await leave(), 'Escape leaves the middle');
+    await delay(1400);
+    neighbours.front = await js<string[]>(`${JSON.stringify(neighbours.ids)}.filter((id) => { const w = __t.where(id); return w && w.band === 'front'; })`);
     // Every neighbour the front band can hold: all of them up to its twelve
     // slots, and no fewer (ISS-0063: the first version also passed on one).
     record(
@@ -308,6 +327,13 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     await delay(400);
     record(deskIds().length === heldNow, 'a click on the field’s background changes nothing');
     await js(`document.getElementById('field').focus()`);
+    // With a note in the middle the first Escape leaves it and the second
+    // sweeps (FEAT-0017, decision 12); with none, one Escape sweeps.
+    if ((await js<string | null>(`__t.glass().focusId()`)) !== null) {
+      press(win, 'Escape');
+      await delay(600);
+      record(deskIds().length === heldNow && (await js<string | null>(`__t.glass().focusId()`)) === null, 'the first Escape leaves the middle and keeps the desk');
+    }
     press(win, 'Escape');
     await delay(600);
     record(deskIds().length === 0, 'esc sweeps the desk');
@@ -320,6 +346,9 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       record(false, 'a front card was in sight at yaw 0.8 to lift');
     } else {
       await pointer(win, [...click(offFront), { type: 'move', ...off }]);
+      // The turn to face the neighbours is made when the middle is left (FEAT-0017, decision 10).
+      await delay(1300);
+      void leave();
       const yaws: number[] = [];
       for (let i = 0; i < 60; i += 1) {
         yaws.push(await js<number>(`__t.yaw()`));
@@ -337,6 +366,8 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     if (rmFront !== undefined) {
       const yawBefore = await js<number>(`__t.yaw()`);
       await pointer(win, [...click(rmFront), { type: 'move', ...off }]);
+      await delay(1300);
+      await leave();
       let lit = 0;
       for (let i = 0; i < 20 && lit === 0; i += 1) {
         await delay(100);
@@ -364,6 +395,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
         // a note nobody has reached for; with the answer cached the cut came
         // first and the next update hid what it left.
         await js(`(() => { const c = window.__deckContexts; for (const k of [...c.answers.keys()]) if (k.endsWith(' ' + ${JSON.stringify(another.id)})) c.answers.delete(k); return true; })()`);
+        // The cut to the front is made when the middle is left (FEAT-0017), so
+        // the note is lifted, the middle opens, and the watch starts before Escape.
+        await pointer(win, [...click(another), { type: 'move', ...off }]);
+        await delay(1300);
         const watch = js<{ under: string[]; ms: number; yaw: number }>(`new Promise((resolve) => {
           const t0 = performance.now();
           const look = () => {
@@ -373,7 +408,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
           };
           look();
         })`);
-        await pointer(win, [...click(another), { type: 'move', ...off }]);
+        await leave();
         const seen = await watch;
         await delay(1200);
         const under = [...new Set([...seen.under, ...(await js<string[]>(`__t.underPanes()`))])];
@@ -493,7 +528,8 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       await pointer(win, [{ type: 'move', x: reachFor.x, y: reachFor.y, wait: 1100 }]);
       record((await js<number>(`__t.requests()`)) === reached.requests, 'a second reach for the same note asks nothing');
       await pointer(win, [{ type: 'move', x: empty.x, y: empty.y, wait: 200 }]);
-      const wiresInDom = await js<number>(`document.querySelectorAll('#field line, #field svg, .wire').length`);
+      // The ring's own layer (FEAT-0017) is not the reach's, and is left out.
+      const wiresInDom = await js<number>(`[...document.querySelectorAll('#field line, #field svg, .wire')].filter((e) => !e.closest('#field-ring')).length`);
       record(wiresInDom === 0, 'a reach adds no element to the document; the wires are on the canvas');
     }
 
@@ -509,7 +545,14 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       toLift.push(next);
       await pointer(win, [...click(next), { type: 'move', x: 10, y: 10 }]);
       await delay(1300);
+      // Out of the middle, so the next card is not under the pane or the ring (FEAT-0017).
+      await leave();
+      await delay(700);
     }
+    // Two held notes: the second is in the middle and the first in the dock.
+    // The pane checks are about panes at their places, so the middle is left.
+    await leave();
+    await delay(900);
     const [paneA, paneB] = deskIds();
     if (process.env['DECK_SMOKE_DEBUG'] === '1') {
       win.webContents.on('console-message', (_e, _level, message) => console.log(`page: ${message}`));
@@ -696,6 +739,11 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     press(win, 'Return');
     await delay(1500);
     record(focusedRow !== null && deskIds().includes(focusedRow), `Tab, the arrow keys and Enter lift a note from the navigator (${focusedRow})`);
+    record((await js<string | null>(`__t.glass().focusId()`)) === focusedRow, `and it opens in the middle of its neighbours (FEAT-0017)`);
+    // Escape from the row itself, so the navigator keeps the keyboard for the checks that follow.
+    await leave(true);
+    await delay(900);
+    await js(`(() => { const r = document.querySelector('#nav-list .nav-row[data-note-id="${focusedRow}"]'); if (r) r.focus(); return true; })()`);
     // Reduced motion: arriving is a highlight, not a flight.
     // Let the lift settle: it turns the field once its neighbourhood arrives,
     // and a turn still going made the cut check below fail once (ISS-0065).
@@ -865,6 +913,12 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     // ---- FEAT-0001: the orbit arrangement ----
     await recordOrbit(ctx, win, js, record);
 
+    // ---- FEAT-0016: the wheel zooms Glass and the orbit ----
+    await recordZoom(ctx, win, js, boot, record);
+
+    // ---- FEAT-0017: an opened note stands in the middle of its neighbours ----
+    await recordFocus(ctx, win, js, boot, record);
+
     // ---- FEAT-0015: a desk for each view, notes on every view, and Hide notes ----
     await recordDesksPerView(ctx, win, js, boot, record);
 
@@ -897,6 +951,734 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     reset();
   }
   void notHere;
+}
+
+/** Escape once, to leave the note in the middle (FEAT-0017), and wait until it has. */
+async function leaveMiddle(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(code: string) => Promise<T>): Promise<boolean> {
+  if ((await js<string | null>(`__t.glass().focusId()`)) === null) return true;
+  ctx.focusApp(win);
+  await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+  press(win, 'Escape');
+  for (let i = 0; i < 20; i += 1) {
+    if ((await js<string | null>(`__t.glass().focusId()`)) === null) return true;
+    await delay(100);
+  }
+  return false;
+}
+
+/**
+ * FEAT-0017 with a real pointer (TASK-0071): a lifted note grows where its
+ * card stood, moves to the middle, and its neighbours gather on a ring of mini
+ * notes with a line to each. Its own section, reset at its start.
+ */
+async function recordFocus(
+  ctx: GlassSmokeContext,
+  win: BrowserWindow,
+  js: <T>(code: string) => Promise<T>,
+  boot: () => Promise<void>,
+  record: (ok: boolean, what: string) => void,
+): Promise<void> {
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const reset = (): void => {
+    store.dispatch({ type: 'open-workspace', workspaceId: ws });
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    store.dispatch({ type: 'let-go' });
+  };
+  type Focus = { noteId: string | null; pane: { left: number; top: number; width: number; height: number } | null; ring: Array<{ id: string; x: number; y: number }>; more: number; neighbours: number };
+  const focus = (): Promise<Focus> => js(`__t.glass().focusState()`);
+  const deskIds = (): string[] => deskCardsOf(store.getState(), ws).map((c) => c.noteId);
+  const view = async (id: string): Promise<void> => {
+    await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === ${JSON.stringify(id)}).click()`);
+    await delay(1800);
+  };
+  const escape = async (): Promise<void> => {
+    ctx.focusApp(win);
+    await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+    press(win, 'Escape');
+    await delay(700);
+  };
+  const frontCard = async (skip: string[] = []): Promise<{ id: string; x: number; y: number; left: number; top: number; right: number; bottom: number } | null> =>
+    (await js<Array<{ id: string; x: number; y: number; left: number; top: number; right: number; bottom: number }>>(`__t.visibleCards('front')`)).find((c) => !skip.includes(c.id)) ?? null;
+  const neighboursOf = (id: string): Promise<{ linked: string[]; backlinks: string[] }> =>
+    js(`window.__deckGlass.hooks.context(${JSON.stringify(id)}).then((c) => ({ linked: [...new Set(c.linked.map((i) => i.id))].filter((x) => x !== ${JSON.stringify(id)}), backlinks: [...new Set(c.backlinks.map((i) => i.id))].filter((x) => x !== ${JSON.stringify(id)}) }))`);
+  const miniRects = (): Promise<Array<{ id: string; left: number; top: number; right: number; bottom: number }>> =>
+    js(`[...document.querySelectorAll('#field-ring .ring-card:not(.ring-more)')].map((e) => { const r = e.getBoundingClientRect(); return { id: e.dataset.noteId, left: r.left, top: r.top, right: r.right, bottom: r.bottom }; })`);
+  const paneRect = (id: string): Promise<{ left: number; top: number; right: number; bottom: number } | null> =>
+    js(`(() => { const p = document.querySelector('.pane[data-note-id="${id}"]'); if (!p) return null; const r = p.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; })()`);
+  const hits = (a: { left: number; top: number; right: number; bottom: number }, b: { left: number; top: number; right: number; bottom: number }): boolean => a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+  const around = (p: { x: number; y: number }, c: { x: number; y: number }): number => Math.atan2(p.y - c.y, p.x - c.x);
+  const cyclic = (ids: string[]): string => {
+    if (ids.length === 0) return '';
+    const first = [...ids].sort()[0] as string;
+    const i = ids.indexOf(first);
+    return [...ids.slice(i), ...ids.slice(0, i)].join(' ');
+  };
+
+  reset();
+  store.dispatch({ type: 'select-surface', surface: 'glass' });
+  win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
+  await view('issues');
+  await js(`__t.glass().zoomTo({ scale: 1, dx: 0, dy: 0 }); window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+  await delay(500);
+  try {
+    // ---- 1 and 2. The card grows where it stands, then moves to the middle ----
+    // A note that other notes link TO, with 4 to 16 neighbours, so the ring
+    // has dashed lines to check and fits without "+N more": Issues first.
+    let card: { id: string; x: number; y: number; left: number; top: number; right: number; bottom: number } | null = null;
+    for (const v of ['issues', 'features']) {
+      await view(v);
+      await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+      await delay(400);
+      const pick = await js<string | null>(`(async () => {
+        const g = window.__deckGlass;
+        for (const c of __t.visibleCards().slice(0, 16)) {
+          const ctx = await g.hooks.context(c.id).catch(() => null);
+          if (!ctx) continue;
+          const ids = new Set([...ctx.linked, ...ctx.backlinks].map((i) => i.id).filter((x) => x !== c.id));
+          const back = ctx.backlinks.filter((i) => i.id !== c.id && !ctx.linked.some((l) => l.id === i.id)).length;
+          if (back > 0 && ids.size >= 4 && ids.size <= 16) return c.id;
+        }
+        return null;
+      })()`);
+      if (pick !== null) {
+        card = (await js<Array<{ id: string; x: number; y: number; left: number; top: number; right: number; bottom: number }>>(`__t.visibleCards()`)).find((c) => c.id === pick) ?? null;
+        if (card !== null) break;
+      }
+    }
+    if (card === null) card = await frontCard();
+    // Off the middle of the field, so a pane growing from the middle and one
+    // growing from the card are told apart (a card near the middle lies under
+    // the middle pane either way).
+    if (card !== null) {
+      const id = card.id;
+      await js(`(() => { const g = window.__deckGlass; const s = g.model.current.slots.get(${JSON.stringify(id)}); if (s) { g.model.face(s.theta - 0.5); g.render(false); } return true; })()`);
+      await delay(400);
+      card = (await js<Array<{ id: string; x: number; y: number; left: number; top: number; right: number; bottom: number }>>(`__t.visibleCards()`)).find((c) => c.id === id) ?? card;
+    }
+    if (card === null) {
+      record(false, 'focus: a front card was in sight to lift');
+      return;
+    }
+    const known = await neighboursOf(card.id);
+    const middle = await js<{ x: number; y: number }>(`(() => { const f = document.getElementById('field').getBoundingClientRect(); return { x: f.left + f.width / 2, y: f.top + f.height / 2 }; })()`);
+    // Where the neighbours were drawn before the lift, for the order check.
+    const before = await js<Array<{ id: string; x: number; y: number }>>(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const ids = ${JSON.stringify([...known.linked, ...known.backlinks])}; const out = []; for (const id of new Set(ids)) { const w = __t.glass().whereIs(id); if (w && w.visible && w.band !== 'deep') out.push({ id, x: f.left + w.x, y: f.top + w.y }); } return out; })()`);
+    await pointer(win, [...click(card), { type: 'move', x: 10, y: 10 }]);
+    const early = await js<{ left: number; top: number; right: number; bottom: number } | null>(`new Promise((resolve) => setTimeout(() => { const p = document.querySelector('.pane[data-note-id="${card.id}"]'); if (!p) return resolve(null); const r = p.getBoundingClientRect(); resolve({ left: r.left, top: r.top, right: r.right, bottom: r.bottom }); }, 110))`);
+    const earlyCentre = early === null ? null : { x: (early.left + early.right) / 2, y: (early.top + early.bottom) / 2 };
+    const offMiddle = Math.hypot(card.x - middle.x, card.y - middle.y);
+    const onCard = earlyCentre === null ? Infinity : Math.hypot(earlyCentre.x - card.x, earlyCentre.y - card.y);
+    record(early !== null && hits(early, card) && offMiddle > 120 && onCard < offMiddle / 2, `about 150 ms after the click the pane grows where the card stood, not from the middle (${Math.round(onCard)} px from the card, which is ${Math.round(offMiddle)} px from the middle)`);
+    await delay(1300);
+    const settled = await focus();
+    const drawnPane = await paneRect(card.id);
+    const fieldBox = await js<{ left: number; top: number }>(`__t.rect('#field')`);
+    const stored = deskCardsOf(store.getState(), ws).find((c) => c.noteId === card.id);
+    const inPlace =
+      settled.noteId === card.id &&
+      settled.pane !== null &&
+      drawnPane !== null &&
+      Math.abs(drawnPane.left - fieldBox.left - settled.pane.left) < 1 &&
+      Math.abs(drawnPane.top - fieldBox.top - settled.pane.top) < 1 &&
+      Math.abs(drawnPane.left + (drawnPane.right - drawnPane.left) / 2 - middle.x) < 2;
+    record(inPlace && stored !== undefined && stored.x === 16 && stored.y === 16, `at one second the pane is in the middle at the ring's rectangle, and the store keeps its cascade place (${stored?.x},${stored?.y})`);
+
+    // ---- 3. The ring: every neighbour up to 16 a mini note, none overlapping ----
+    const all = new Set([...known.linked, ...known.backlinks]);
+    const minis = await miniRects();
+    const paneNow = drawnPane ?? { left: 0, top: 0, right: 0, bottom: 0 };
+    const clearOfPane = minis.every((m) => !hits(m, paneNow));
+    const clearOfEach = minis.every((m, i) => minis.every((n, j) => j <= i || !hits(m, n)));
+    const expected = all.size <= settled.ring.length + settled.more ? all.size : -1;
+    record(minis.length > 0 && minis.length + settled.more === expected && clearOfPane && clearOfEach, `the neighbours stand on the ring as mini notes, none over the pane or another (${minis.length} mini notes${settled.more > 0 ? ` and +${settled.more} more` : ''} for ${all.size} neighbours)`);
+
+    // ---- 4. They keep their circular order ----
+    // Leaving the middle deals the neighbourhood into the front band, where it
+    // is drawn; Enter on the note's header brings it back into the middle, and
+    // the ring must keep the order those cards stood in.
+    await escape();
+    await delay(1500);
+    const standing = await js<Array<{ id: string; x: number; y: number }>>(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const out = []; for (const id of ${JSON.stringify([...all])}) { const w = __t.glass().whereIs(id); if (w && w.visible && w.band !== 'deep') out.push({ id, x: f.left + w.x, y: f.top + w.y }); } return out; })()`);
+    ctx.focusApp(win);
+    await js(`document.querySelector('.pane[data-note-id="${card.id}"] .pane-head').focus(); true`);
+    press(win, 'Return');
+    await delay(1400);
+    const reopened = await focus();
+    const reMinis = await miniRects();
+    const centre = reopened.pane === null ? middle : { x: fieldBox.left + reopened.pane.left + reopened.pane.width / 2, y: fieldBox.top + reopened.pane.top + reopened.pane.height / 2 };
+    const seated = new Map(reMinis.map((m) => [m.id, { x: (m.left + m.right) / 2, y: (m.top + m.bottom) / 2 }]));
+    void before;
+    const drawnBefore = standing.filter((b) => seated.has(b.id));
+    const orderBefore = [...drawnBefore].sort((a, b) => around(a, middle) - around(b, middle)).map((b) => b.id);
+    record(reopened.noteId === card.id, `Enter on its header puts ${card.id} back in the middle (${reopened.noteId})`);
+    const orderAfter = [...drawnBefore].sort((a, b) => around(seated.get(a.id) as { x: number; y: number }, centre) - around(seated.get(b.id) as { x: number; y: number }, centre)).map((b) => b.id);
+    record(drawnBefore.length >= 3 && cyclic(orderBefore) === cyclic(orderAfter), `the neighbours drawn before the lift keep their circular order on the ring (${drawnBefore.length} of them: ${cyclic(orderBefore)} | ${cyclic(orderAfter)})`);
+
+    // ---- 5. Solid lines for links it makes, dashed for links made to it ----
+    const lines = await js<Array<{ id: string; kind: string }>>(`[...document.querySelectorAll('#field-ring .ring-line')].map((l) => ({ id: l.dataset.noteId, kind: ['out', 'in', 'both'].find((k) => l.classList.contains(k)) }))`);
+    const wrong = lines.filter((l) => {
+      const out = known.linked.includes(l.id);
+      const inn = known.backlinks.includes(l.id);
+      return l.kind !== (out && inn ? 'both' : out ? 'out' : 'in');
+    });
+    record(lines.length === reMinis.length && lines.length > 0 && wrong.length === 0, `a line to each mini note, solid for a link it makes and dashed for a link made to it (${card.id}: ${lines.length} lines, ${wrong.length} of the wrong kind)`);
+
+    // ---- 6. Resting on a line shows the link and its sentence ----
+    // A whole-pixel point on the longest line that the pointer would hit: a
+    // line is 1.4 pixels wide, so several points along it are tried.
+    const longest = await js<{ x: number; y: number; id: string } | null>(`(() => { const f = document.getElementById('field-ring').getBoundingClientRect(); let best = null; for (const l of document.querySelectorAll('#field-ring .ring-line')) { const x1 = +l.getAttribute('x1'), y1 = +l.getAttribute('y1'), x2 = +l.getAttribute('x2'), y2 = +l.getAttribute('y2'); const len = Math.hypot(x2 - x1, y2 - y1); for (let t = 0.02; t <= 0.98; t += 0.02) { const x = Math.round(f.left + x1 + (x2 - x1) * t), y = Math.round(f.top + y1 + (y2 - y1) * t); if (document.elementFromPoint(x, y) !== l) continue; if (!best || len > best.len) best = { x, y, id: l.dataset.noteId, len }; break; } } return best; })()`);
+    if (longest === null) {
+      record(false, 'focus: a ring line was clear of the cards to rest on');
+    } else {
+      await pointer(win, [{ type: 'move', x: longest.x, y: longest.y, wait: 1500 }]);
+      const callout = await js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#edge-callout'), text: __t.text('#edge-callout') })`);
+      record(callout.shown && callout.text.includes('→') && callout.text.includes(longest.id), `resting on the line to ${longest.id} shows which way the link runs and its sentence ("${callout.text.slice(0, 80)}")`);
+      await pointer(win, [{ type: 'move', x: 10, y: 10 }]);
+    }
+
+
+    // ---- 11. Nothing is dealt while a note is in the middle ----
+    const assignedBefore = await js<number>(`window.__deckGlass.model.assignments`);
+    store.dispatch({ type: 'set-fold', key: 'smoke-focus', folded: true });
+    await delay(500);
+    store.dispatch({ type: 'set-fold', key: 'smoke-focus', folded: false });
+    await delay(500);
+    const assignedAfter = await js<number>(`window.__deckGlass.model.assignments`);
+    record(assignedBefore === assignedAfter, `the field is not dealt while a note is in the middle (${assignedBefore} assignments before two broadcasts, ${assignedAfter} after)`);
+
+    // ---- 7. A mini note is a door ----
+    const door = reMinis.find((m) => !deskIds().includes(m.id));
+    if (door === undefined) {
+      record(false, 'focus: a mini note that is not held, to open');
+    } else {
+      const doorAngle = around({ x: (door.left + door.right) / 2, y: (door.top + door.bottom) / 2 }, centre);
+      const underDoor = await js<string>(`(() => { const e = document.elementFromPoint(${(door.left + door.right) / 2}, ${(door.top + door.bottom) / 2}); return e ? (e.className || e.tagName) + ' ' + (e.closest('[data-note-id]') ? e.closest('[data-note-id]').dataset.noteId : '') : 'nothing'; })()`);
+      if (!underDoor.includes(door.id)) console.log('DIAG door-hit', underDoor);
+      await pointer(win, [...click({ x: (door.left + door.right) / 2, y: (door.top + door.bottom) / 2 }), { type: 'move', x: 10, y: 10 }]);
+      await delay(1600);
+      const next = await focus();
+      const docked = await js<boolean>(`!!document.querySelector('.pane.docked[data-note-id="${card.id}"]')`);
+      const back = next.ring.find((r) => r.id === card.id);
+      const newCentre = next.pane === null ? centre : { x: next.pane.left + next.pane.width / 2, y: next.pane.top + next.pane.height / 2 };
+      const opposite = back === undefined ? null : Math.abs(((around(back, newCentre) - (doorAngle + Math.PI) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+      if (!(opposite !== null && opposite < 0.9)) console.log('DIAG door', JSON.stringify({ doorAngle, target: doorAngle + Math.PI, back, newCentre, from: await js(`window.__deckGlass.focusFrom`), ring: next.ring.map((r) => r.id) }));
+      record(next.noteId === door.id && docked && opposite !== null && opposite < 0.9, `a click on the mini note ${door.id} puts it in the middle, ${card.id} waits in the dock and sits on the new ring opposite the way it came (${opposite === null ? 'not on the ring' : `${opposite.toFixed(2)} radians off`})`);
+
+      // ---- 8. The dock: a click swaps, a drag moves nothing ----
+      const head = await js<{ x: number; y: number } | null>(`__t.rect('.pane.docked[data-note-id="${card.id}"] .pane-id')`);
+      if (head !== null) {
+        const deskBefore = JSON.stringify(deskCardsOf(store.getState(), ws));
+        await pointer(win, drag(head, { x: head.x + 140, y: head.y + 90 }, 8));
+        await delay(700);
+        const unmoved = JSON.stringify(deskCardsOf(store.getState(), ws)) === deskBefore && (await focus()).noteId === door.id;
+        const head2 = await js<{ x: number; y: number } | null>(`__t.rect('.pane.docked[data-note-id="${card.id}"] .pane-id')`);
+        if (head2 !== null) await pointer(win, [...click(head2), { type: 'move', x: 10, y: 10 }]);
+        await delay(1500);
+        const swapped = (await focus()).noteId === card.id && (await js<boolean>(`!!document.querySelector('.pane.docked[data-note-id="${door.id}"]')`));
+        record(unmoved && swapped, `a drag on a docked header moves nothing and keeps the stack (${unmoved}); a click on it swaps it into the middle (${swapped})`);
+      } else {
+        record(false, 'focus: the previous note had a header in the dock');
+      }
+    }
+
+    // ---- 13. The keyboard: Tab from the pane's header reaches the ring; Enter opens ----
+    ctx.focusApp(win);
+    const top = (await focus()).noteId;
+    await js(`document.querySelector('.pane.focus .pane-head').focus(); true`);
+    let reached: string | null = null;
+    for (let i = 0; i < 16 && reached === null; i += 1) {
+      press(win, 'Tab');
+      await delay(80);
+      reached = await js<string | null>(`document.activeElement && document.activeElement.classList.contains('ring-card') && !document.activeElement.classList.contains('ring-more') ? document.activeElement.dataset.noteId : null`);
+    }
+    const firstOnRing = (await js<string[]>(`[...document.querySelectorAll('#field-ring .ring-card:not(.ring-more)')].map((e) => e.dataset.noteId)`))[0] ?? null;
+    if (reached !== null) {
+      press(win, 'Return');
+      await delay(1600);
+    }
+    const afterEnter = (await focus()).noteId;
+    record(reached !== null && reached === firstOnRing && afterEnter === reached && afterEnter !== top, `Tab from the pane's header reaches the first mini note, ${reached}, and Enter puts it in the middle (${afterEnter})`);
+
+    // ---- 9. Escape leaves the middle; a second Escape sweeps ----
+    const held = deskIds();
+    await escape();
+    await delay(1400);
+    const left = await focus();
+    const joinedInFront = await js<number>(`[...document.querySelectorAll('.field-card.joined')].filter((e) => e.dataset.band === 'front' && e.style.pointerEvents === 'auto').length`);
+    const panesBack = await js<boolean>(`[...document.querySelectorAll('.pane')].every((p) => !p.classList.contains('focus') && !p.classList.contains('docked'))`);
+    record(left.noteId === null && panesBack && deskIds().join() === held.join() && joinedInFront > 0, `Escape once leaves the middle: every pane at its place, the desk as it was, and the neighbourhood in the front band (${joinedInFront} in front)`);
+    await escape();
+    record(deskIds().length === 0, `and a second Escape sweeps the desk (${deskIds().length} left)`);
+
+    // ---- 10. Every other way out leaves the middle ----
+    const ways: Array<[string, () => Promise<void>]> = [
+      ['Hide notes', async () => { await js(`document.getElementById('hide-notes').click(); true`); await delay(500); }],
+      ['W', async () => { ctx.focusApp(win); await js(`document.querySelector('.pane.focus .pane-head').focus(); true`); press(win, 'W'); await delay(700); }],
+      ['a drag of its header', async () => { const h = await js<{ x: number; y: number } | null>(`__t.rect('.pane.focus .pane-id')`); if (h !== null) await pointer(win, drag(h, { x: h.x + 60, y: h.y + 140 }, 8)); await delay(700); }],
+      // With a second note held, so putting the note in the middle back does
+      // not simply empty the desk: the other note must not take the middle.
+      ['×', async () => {
+        // Out of the middle first, so the field's cards are in reach, then a
+        // second note lifted: it is in the middle, the first in the dock.
+        await escape();
+        await delay(800);
+        const second = await frontCard(deskIds());
+        if (second === null || deskIds().length !== 1) stayed.push('× (could not hold two notes)');
+        if (second !== null) {
+          await pointer(win, [...click(second), { type: 'move', x: 10, y: 10 }]);
+          await delay(1300);
+        }
+        await js(`document.querySelector('.pane.focus .pane-close').click(); true`);
+        await delay(700);
+      }],
+      ['a view switch', async () => { await view('features'); await view('issues'); }],
+      ['a surface switch', async () => { await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`); await delay(900); await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`); await delay(1500); }],
+    ];
+    const stayed: string[] = [];
+    for (const [name, act] of ways) {
+      reset();
+      await delay(500);
+      const c = await frontCard();
+      if (c === null) {
+        stayed.push(`${name} (no card to lift)`);
+        continue;
+      }
+      await pointer(win, [...click(c), { type: 'move', x: 10, y: 10 }]);
+      await delay(1300);
+      if ((await focus()).noteId === null) {
+        stayed.push(`${name} (nothing in the middle to leave)`);
+        continue;
+      }
+      await act();
+      if ((await focus()).noteId !== null) stayed.push(name);
+      // Undoing Hide notes or the reading column does not put the note back
+      // in the middle (FEAT-0015's amendment, and decision 13).
+      if (name === 'Hide notes') {
+        await js(`document.getElementById('hide-notes').click(); true`);
+        await delay(600);
+        if ((await focus()).noteId !== null) stayed.push('Hide notes, once shown again');
+      }
+      if (name === 'W') {
+        await js(`(() => { const p = document.querySelector('.pane.wide .pane-widen') || document.querySelector('.pane .pane-widen'); if (p) p.click(); return true; })()`);
+        await delay(700);
+        if ((await focus()).noteId !== null) stayed.push('W, once out of the column');
+      }
+    }
+    record(stayed.length === 0, `Hide notes, W, a drag of its header, ×, a view switch and a surface switch each leave the middle (${stayed.join(', ') || 'all did'})`);
+
+    // ---- 5, the dashed half. ----
+    // A link made only TO the note sorts last on the ring and often ends in
+    // "+N more", so the dashed lines are checked on a note that has one and
+    // few enough neighbours to show it: found in the edge list, confirmed
+    // against its context, and opened as a person would from the navigator.
+    const inNote = await js<string | null>(`(async () => {
+      const g = window.__deckGlass;
+      const edges = await g.hooks.graphEdges();
+      const outs = new Map(), ins = new Map();
+      for (const e of edges) { if (!e.target || e.target === e.source) continue; if (!outs.has(e.source)) outs.set(e.source, new Set()); outs.get(e.source).add(e.target); if (!ins.has(e.target)) ins.set(e.target, new Set()); ins.get(e.target).add(e.source); }
+      const candidates = [...ins.keys()].filter((id) => { const o = outs.get(id) || new Set(); const i = ins.get(id); const all = new Set([...o, ...i]); return [...i].some((x) => !o.has(x)) && all.size >= 3 && all.size <= 9; }).slice(0, 20);
+      for (const id of candidates) {
+        const c = await g.hooks.context(id).catch(() => null);
+        if (!c) continue;
+        const all = new Set([...c.linked, ...c.backlinks].map((x) => x.id).filter((x) => x !== id));
+        if (all.size <= 9 && c.backlinks.some((b) => b.id !== id && !c.linked.some((l) => l.id === b.id))) return id;
+      }
+      return null;
+    })()`);
+    let dashedSeen = { lines: 0, inLines: 0, dashed: 0, wrongKind: -1 };
+    if (inNote !== null) {
+      // Alone on the desk, so the ring has the whole field.
+      reset();
+      await delay(600);
+      const inKnown = await neighboursOf(inNote);
+      await js(`window.__deckGlass.lift({ noteId: ${JSON.stringify(inNote)}, title: ${JSON.stringify(inNote)}, noteType: '', status: '', rel: null, subtitle: null, owed: false, owedVerb: null, groupKey: '', severity: null, lastVerified: null, stale: false, progress: null, children: [], frontmatter: {} })`);
+      await delay(1500);
+      dashedSeen = await js<{ lines: number; inLines: number; dashed: number; wrongKind: number }>(`(() => {
+        const linked = ${JSON.stringify(inKnown.linked)}, back = ${JSON.stringify(inKnown.backlinks)};
+        const ls = [...document.querySelectorAll('#field-ring .ring-line')];
+        const wrongKind = ls.filter((l) => { const id = l.dataset.noteId; const o = linked.includes(id), i = back.includes(id); const want = o && i ? 'both' : o ? 'out' : 'in'; return !l.classList.contains(want); }).length;
+        const inLines = ls.filter((l) => l.classList.contains('in'));
+        return { lines: ls.length, inLines: inLines.length, dashed: inLines.filter((l) => getComputedStyle(l).strokeDasharray !== 'none').length, wrongKind };
+      })()`);
+      if (dashedSeen.lines < 3) console.log('DIAG in-note', inNote, JSON.stringify(inKnown), JSON.stringify(await js(`({ focus: __t.glass().focusState(), desk: window.__deckDesk(), ctx: (() => { const c = window.__deckGlass.hooks.peekContext(${JSON.stringify(inNote)}); return c ? { linked: c.linked.map((i) => i.id), backlinks: c.backlinks.map((i) => i.id) } : null; })() })`)));
+      await escape();
+      await escape();
+    }
+    record(
+      dashedSeen.inLines > 0 && dashedSeen.dashed === dashedSeen.inLines && dashedSeen.wrongKind === 0 && dashedSeen.lines > dashedSeen.inLines,
+      `a link made only to the note in the middle is a dashed line (${inNote ?? 'no note with a link made to it'}: ${dashedSeen.lines} lines, ${dashedSeen.inLines} dashed, ${dashedSeen.wrongKind} of the wrong kind)`,
+    );
+
+    // ---- 12. "+N more" for the note with the most neighbours ----
+    reset();
+    await delay(500);
+    const most = await js<{ id: string; count: number } | null>(`window.__deckGlass.hooks.graphEdges().then((edges) => { const n = new Map(); for (const e of edges) { if (!e.target || e.target === e.source) continue; for (const [a, b] of [[e.source, e.target], [e.target, e.source]]) { if (!n.has(a)) n.set(a, new Set()); n.get(a).add(b); } } let best = null; for (const [id, s] of n) if (!best || s.size > best.count) best = { id, count: s.size }; return best; })`);
+    if (most === null || most.count <= 16) {
+      record(false, `focus: a note with more than 16 neighbours (${most === null ? 'none' : `${most.id} has ${most.count}`})`);
+    } else {
+      await js(`(() => { const g = window.__deckGlass; const c = g.hooks.peekContext(${JSON.stringify(most.id)}); return g.hooks.context(${JSON.stringify(most.id)}).then(() => g.lift({ noteId: ${JSON.stringify(most.id)}, title: ${JSON.stringify(most.id)}, noteType: '', status: '', rel: null, subtitle: null, owed: false, owedVerb: null, groupKey: '', severity: null, lastVerified: null, stale: false, progress: null, children: [], frontmatter: {} })); })()`);
+      await delay(1800);
+      const f = await focus();
+      const ctxCount = await neighboursOf(most.id).then((n) => new Set([...n.linked, ...n.backlinks]).size);
+      const moreCard = await js<{ x: number; y: number; text: string } | null>(`(() => { const e = document.querySelector('#field-ring .ring-more'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, text: e.textContent }; })()`);
+      let listed = -1;
+      let inGroup = false;
+      if (moreCard !== null) {
+        await pointer(win, [...click(moreCard), { type: 'move', x: 10, y: 10 }]);
+        await delay(600);
+        const nav = await js<{ inGroup: boolean; count: number }>(`(() => { const g = document.querySelector('#nav-list .nav-group[data-group-key="g:deck:joined"]'); const a = document.activeElement; let inGroup = false; if (g && a && a.classList.contains('nav-row')) { let n = g.nextElementSibling; while (n && !n.classList.contains('nav-group')) { if (n === a) { inGroup = true; break; } n = n.nextElementSibling; } } return { inGroup, count: g ? Number(g.querySelector('.mark').textContent) : -1 }; })()`);
+        listed = nav.count;
+        inGroup = nav.inGroup;
+      }
+      if (f.neighbours !== ctxCount) console.log('DIAG ring-count', f.neighbours, ctxCount, JSON.stringify(await js(`(() => { const c = window.__deckGlass.hooks.peekContext(${JSON.stringify(most.id)}); return { linked: c.linked.length, backlinks: c.backlinks.length, sample: c.linked.slice(0, 3) }; })()`)));
+      if (!inGroup) console.log('DIAG more', JSON.stringify(await js(`({ groups: [...document.querySelectorAll('#nav-list .nav-group')].map((g) => g.dataset.groupKey + ':' + g.textContent.slice(0, 40)), active: document.activeElement ? document.activeElement.className + ' ' + (document.activeElement.dataset.noteId || '') : null })`)));
+      // The ring holds 16 places at most, and fewer in a narrower field, where
+      // the pane keeps a readable size and "+N more" takes the rest (TASK-0067).
+      record(f.ring.length >= 5 && moreCard !== null && f.ring.length + f.more === ctxCount && inGroup && listed >= ctxCount, `${most.id}, with ${ctxCount} neighbours, shows ${f.ring.length} mini notes and "${moreCard?.text ?? 'no +N more'}", and activating it puts the keyboard in the navigator's group of ${listed}`);
+      await escape();
+    }
+
+    // ---- 14. Under reduced motion the opening is a cut, and highlighted ----
+    reset();
+    await delay(500);
+    await js(`window.__deckReducedMotion = true`);
+    const rm = await frontCard();
+    if (rm !== null) {
+      const watch = js<{ steps: number; lit: boolean }>(`new Promise((resolve) => { const seen = new Set(); const t0 = performance.now(); const look = () => { const p = document.querySelector('.pane[data-note-id="${rm.id}"]'); if (p) seen.add(Math.round(p.getBoundingClientRect().left)); if (performance.now() - t0 < 1200) requestAnimationFrame(look); else resolve({ steps: seen.size, lit: !!document.querySelector('#field-ring .ring-card.highlight') || !!document.querySelector('.pane.highlight') }); }; look(); })`);
+      await pointer(win, [...click(rm), { type: 'move', x: 10, y: 10 }]);
+      const seen = await watch;
+      record(seen.steps <= 1 && seen.lit, `under reduced motion the note is in the middle at once (${seen.steps} places seen) and it is highlighted (${seen.lit})`);
+    }
+    await js(`window.__deckReducedMotion = false`);
+    await escape();
+
+    // ---- 15. The orbit opens a note the same way, and holds still ----
+    reset();
+    await delay(400);
+    const toOrbit = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="orbit"]')`);
+    if (toOrbit !== null) {
+      await pointer(win, click(toOrbit));
+      for (let i = 0; i < 40; i += 1) {
+        if (await js<boolean>(`/the link graph: \\d+ notes/.test(__t.text('#front-label'))`)) break;
+        await delay(250);
+      }
+      await delay(1000);
+      const dotsBefore = await js<Array<{ id: string; x: number; y: number }>>(`window.__deckGlass.dots.map((d) => ({ id: d.id, x: d.x, y: d.y }))`);
+      const yawBefore = await js<number>(`__t.yaw()`);
+      // A dot with links, so the ring has something on it: the drawn dot with
+      // the most links that is clear of every card.
+      const dot = await js<{ x: number; y: number; id: string } | null>(`(() => {
+        const g = window.__deckGlass;
+        const f = document.getElementById('field').getBoundingClientRect();
+        const degree = new Map();
+        for (const e of g.orbit ? g.orbit.edges : []) { if (!e.target || e.target === e.source) continue; degree.set(e.source, (degree.get(e.source) || 0) + 1); degree.set(e.target, (degree.get(e.target) || 0) + 1); }
+        const clear = g.dots.filter((d) => { const hit = document.elementFromPoint(f.left + d.x, f.top + d.y); return hit && !hit.closest('.field-card, .pane, .compass, .field-bar, .sector-label, .field-say'); });
+        clear.sort((a, b) => (degree.get(b.id) || 0) - (degree.get(a.id) || 0));
+        const d = clear[0];
+        return d ? { x: Math.round(d.x), y: Math.round(d.y), id: d.id } : null;
+      })()`);
+      const fbox = await js<{ left: number; top: number }>(`__t.rect('#field')`);
+      if (dot !== null) {
+        await pointer(win, [...click({ x: Math.round(fbox.left) + dot.x, y: Math.round(fbox.top) + dot.y }), { type: 'move', x: 10, y: 10 }]);
+        await delay(1500);
+        const inOrbit = await focus();
+        const yaw0 = await js<number>(`__t.yaw()`);
+        await delay(6000);
+        const yaw6 = await js<number>(`__t.yaw()`);
+        await escape();
+        await delay(300);
+        const dotsAfter = await js<Array<{ id: string; x: number; y: number }>>(`window.__deckGlass.dots.map((d) => ({ id: d.id, x: d.x, y: d.y }))`);
+        const moved = dotsBefore.filter((b) => {
+          const a = dotsAfter.find((d) => d.id === b.id);
+          return a === undefined || Math.hypot(a.x - b.x, a.y - b.y) > 0.5;
+        }).length;
+        record(inOrbit.noteId === dot.id && inOrbit.ring.length > 0 && Math.abs(yaw6 - yaw0) < 1e-9 && Math.abs(yaw0 - yawBefore) < 1e-9 && moved === 0, `in the orbit a click on ${dot.id} opens it in the middle with ${inOrbit.ring.length} mini notes, the orbit holds still for six seconds (${(yaw6 - yaw0).toFixed(4)}), and after Escape no dot has moved (${moved})`);
+      } else {
+        record(false, 'focus: a dot in the orbit to click');
+      }
+      const toGlass = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="glass"]')`);
+      if (toGlass !== null) await pointer(win, click(toGlass));
+      await delay(1800);
+    }
+
+    // ---- 16. Nothing is kept: after a reload nothing is in the middle ----
+    reset();
+    await delay(400);
+    const last = await frontCard();
+    if (last !== null) {
+      await pointer(win, [...click(last), { type: 'move', x: 10, y: 10 }]);
+      await delay(1300);
+    }
+    const keys = Object.keys(store.getState()).sort().join(' ');
+    win.webContents.reload();
+    await boot();
+    if (store.getState().viewId !== 'issues') await view('issues');
+    const reloaded = await focus();
+    const placed = await js<boolean>(`[...document.querySelectorAll('.pane')].every((p) => !p.classList.contains('focus') && !p.classList.contains('docked'))`);
+    const expectedKeys = 'actor deskCards deskName desks filters flowCursor folds indexRevisions noteId query revision session surface viewDesks viewId workspaceId';
+    record(reloaded.noteId === null && placed && keys === expectedKeys, `after a reload nothing is in the middle and every pane is at its place, and the store gained no key (${keys === expectedKeys ? 'same keys' : keys})`);
+  } finally {
+    await js(`window.__deckReducedMotion = false; true`).catch(() => null);
+    reset();
+    await delay(600);
+  }
+}
+
+/**
+ * FEAT-0016, with a real wheel (TASK-0066): the wheel zooms toward the
+ * pointer, a pinch zooms, Shift turns, the keys and the compass work, and
+ * nothing about the zoom is stored. Its own section, reset at its start, so a
+ * failure earlier does not turn it red as well.
+ */
+async function recordZoom(
+  ctx: GlassSmokeContext,
+  win: BrowserWindow,
+  js: <T>(code: string) => Promise<T>,
+  boot: () => Promise<void>,
+  record: (ok: boolean, what: string) => void,
+): Promise<void> {
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const reset = (): void => {
+    store.dispatch({ type: 'open-workspace', workspaceId: ws });
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    store.dispatch({ type: 'let-go' });
+  };
+  // Chromium's input events count a wheel turned toward the person as a
+  // positive deltaY in the page, and sendInputEvent takes the opposite sign.
+  const wheel = (x: number, y: number, deltaY: number, modifiers: Array<'control' | 'shift'> = [], deltaX = 0): void =>
+    win.webContents.sendInputEvent({ type: 'mouseWheel', x: Math.round(x), y: Math.round(y), deltaX: -deltaX, deltaY: -deltaY, canScroll: true, modifiers } as unknown as Electron.MouseWheelInputEvent);
+  const notches = async (x: number, y: number, count: number, sign: 1 | -1, modifiers: Array<'control' | 'shift'> = []): Promise<void> => {
+    for (let i = 0; i < count; i += 1) {
+      wheel(x, y, sign * 100, modifiers);
+      await delay(30);
+    }
+  };
+  const zoom = (): Promise<{ scale: number; dx: number; dy: number }> => js(`__t.glass().zoom()`);
+  const reset1 = async (): Promise<void> => {
+    await js(`__t.glass().zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
+    await delay(400);
+  };
+  const fieldBox = async (): Promise<{ left: number; top: number; right: number; bottom: number }> => js(`__t.rect('#field')`);
+
+  reset();
+  store.dispatch({ type: 'select-surface', surface: 'glass' });
+  win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
+  await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'issues').click()`);
+  await delay(2000);
+  await reset1();
+  try {
+    // ---- 1. The card under the pointer stays under it ----
+    const card = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`))[0];
+    if (card === undefined) {
+      record(false, 'zoom: a front card was in sight to zoom toward');
+      return;
+    }
+    await notches(card.x, card.y, 3, -1);
+    await delay(60);
+    const after = await js<{ id: string | null; cx: number; cy: number; w: number }>(`(() => { const e = document.querySelector('.field-card[data-note-id="${card.id}"]'); const r = e.getBoundingClientRect(); const hit = document.elementFromPoint(${Math.round(card.x)}, ${Math.round(card.y)}); const c = hit && hit.closest('.field-card'); return { id: c ? c.dataset.noteId : null, cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width }; })()`);
+    const z1 = await zoom();
+    record(
+      z1.scale > 1.3 && z1.scale < 1.34 && after.id === card.id && Math.abs(after.cx - card.x) <= 1 && Math.abs(after.cy - card.y) <= 1,
+      `three notches of the wheel over ${card.id} zoom to ${z1.scale.toFixed(3)}× and the card is still under the pointer (${(after.cx - card.x).toFixed(2)}, ${(after.cy - card.y).toFixed(2)} px off)`,
+    );
+
+    // ---- 10. The compass reads the zoom, and pressing it resets ----
+    const reading = await js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#zoom-reading'), text: __t.text('#zoom-reading') })`);
+    const resetButton = await js<{ x: number; y: number } | null>(`__t.rect('#zoom-reading')`);
+    if (resetButton !== null) await pointer(win, [...click(resetButton), { type: 'move', x: 10, y: 10 }]);
+    await delay(400);
+    const afterReset = await zoom();
+    const hiddenAt1 = !(await js<boolean>(`__t.shown('#zoom-reading')`));
+    record(reading.shown && reading.text === '1.3×' && afterReset.scale === 1 && hiddenAt1, `the compass reads "${reading.text}" while zoomed, pressing it returns to ${afterReset.scale}×, and it is hidden at 1×`);
+
+    // ---- 2. The zoom stops at 2.5× and at 0.6× ----
+    const mid = await fieldBox();
+    const cx = (mid.left + mid.right) / 2;
+    const cy = (mid.top + mid.bottom) / 2;
+    await notches(cx, cy, 16, -1);
+    const most = (await zoom()).scale;
+    await notches(cx, cy, 30, 1);
+    const least = (await zoom()).scale;
+    record(most === 2.5 && least === 0.6, `the zoom stops at 2.5× in and 0.6× out (${most}, ${least})`);
+    await reset1();
+
+    // ---- 3. A pinch (Ctrl and the wheel) zooms the field, not the page ----
+    for (let i = 0; i < 6; i += 1) {
+      wheel(cx, cy, -8, ['control']);
+      await delay(30);
+    }
+    await delay(60);
+    const pinched = (await zoom()).scale;
+    const pageZoom = win.webContents.getZoomFactor();
+    record(pinched > 1.3 && pageZoom === 1, `a pinch zooms the field to ${pinched.toFixed(2)}× and the page's own zoom stays ${pageZoom}`);
+    await reset1();
+
+    // ---- 5. Shift and the wheel turn the field ----
+    const yaw0 = await js<number>(`__t.yaw()`);
+    await notches(cx, cy, 3, 1, ['shift']);
+    await delay(300);
+    const yaw1 = await js<number>(`__t.yaw()`);
+    record(Math.abs(yaw1 - yaw0) > 0.5 && (await zoom()).scale === 1, `Shift and the wheel turn the field (${yaw0.toFixed(2)} to ${yaw1.toFixed(2)}) and leave the zoom at 1×`);
+    await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+    await delay(300);
+
+    // ---- 4. Over a pane the wheel scrolls its text ----
+    const lift = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`))[0];
+    if (lift !== undefined) {
+      await pointer(win, [...click(lift), { type: 'move', x: 10, y: 10 }]);
+      await delay(1500);
+      // A pane at its place: the checks below are about panes, not the middle.
+      await leaveMiddle(ctx, win, js);
+      await delay(900);
+    }
+    const body = await js<{ x: number; y: number; top: number; scroll: number } | null>(`(() => { const b = document.querySelector('.pane .pane-body'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, top: b.scrollTop, scroll: b.scrollHeight - b.clientHeight }; })()`);
+    if (body === null || body.scroll <= 0) {
+      record(false, `zoom: a held pane with text to scroll was on screen (${JSON.stringify(body)})`);
+    } else {
+      await notches(body.x, body.y, 3, 1);
+      await delay(300);
+      const scrolled = await js<number>(`document.querySelector('.pane .pane-body').scrollTop`);
+      record(scrolled > body.top && (await zoom()).scale === 1, `the wheel over a pane's text scrolls it (${body.top} to ${scrolled}) and leaves the zoom at 1×`);
+    }
+
+    // ---- 6. When the wheel stops, no card is left under a pane ----
+    const paneBox = await js<{ left: number; right: number; top: number; bottom: number } | null>(`(() => { const p = document.querySelector('.pane:not(.wide)'); if (!p) return null; const r = p.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; })()`);
+    if (paneBox !== null) {
+      await notches(Math.min(mid.right - 40, paneBox.right + 120), cy, 8, -1);
+      await delay(400);
+      const under = await js<string[]>(`__t.underPanes()`);
+      record(under.length === 0, `200 ms after the wheel stops, no card is drawn under a pane at ${(await zoom()).scale.toFixed(2)}× (${under.join(', ') || 'none'})`);
+    } else {
+      record(false, 'zoom: a pane was held to check for cards under it');
+    }
+
+    // ---- 7. At 2× a real click on a card's reported place lifts that card ----
+    await reset1();
+    await js(`__t.glass().zoomTo(__t.glass().zoom()); true`);
+    await notches(cx, cy, 7, -1);
+    await delay(400);
+    const target = await js<{ id: string; x: number; y: number } | null>(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const held = new Set(window.__deckDesk()); for (const c of __t.visibleCards('front')) { if (held.has(c.id)) continue; const w = __t.glass().whereIs(c.id); if (!w || !w.visible) continue; return { id: c.id, x: f.left + w.x, y: f.top + w.y }; } return null; })()`);
+    if (target === null) {
+      record(false, 'zoom: a card was in sight at 2× to click');
+    } else {
+      await pointer(win, [...click(target), { type: 'move', x: 10, y: 10 }]);
+      await delay(1500);
+      record(deskCardsOf(store.getState(), ws).some((c) => c.noteId === target.id), `at ${(await zoom()).scale.toFixed(2)}× a click where Glass reports ${target.id} lifts it`);
+    }
+
+    // ---- 14. Double-click: the background resets, a card is two clicks ----
+    const blank = await js<{ x: number; y: number } | null>(`(() => { const f = document.getElementById('field').getBoundingClientRect(); for (let y = f.top + 60; y < f.bottom - 60; y += 23) for (let x = f.left + 60; x < f.right - 60; x += 29) { const e = document.elementFromPoint(x, y); if (e && e.id === 'field' || (e && e.closest('#field') && !e.closest('.field-card, .pane, button, .compass, .field-bar, .sector-label, .target-strip'))) return { x, y }; } return null; })()`);
+    const dbl = async (at: { x: number; y: number }): Promise<void> => {
+      for (const clickCount of [1, 2]) {
+        win.webContents.sendInputEvent({ type: 'mouseDown', x: Math.round(at.x), y: Math.round(at.y), button: 'left', clickCount });
+        win.webContents.sendInputEvent({ type: 'mouseUp', x: Math.round(at.x), y: Math.round(at.y), button: 'left', clickCount });
+        await delay(40);
+      }
+    };
+    const beforeDbl = (await zoom()).scale;
+    if (blank !== null) {
+      await dbl(blank);
+      await delay(500);
+    }
+    record(blank !== null && beforeDbl > 1 && (await zoom()).scale === 1, `a double-click on the background returns from ${beforeDbl.toFixed(2)}× to 1×`);
+
+    // ---- 9. The keys, and the keys as letters in the search box ----
+    ctx.focusApp(win);
+    await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+    press(win, '=');
+    await delay(400);
+    const inOnce = (await zoom()).scale;
+    press(win, '-');
+    await delay(400);
+    const outOnce = (await zoom()).scale;
+    press(win, '=');
+    press(win, '=');
+    await delay(400);
+    press(win, '0');
+    await delay(400);
+    const zeroed = (await zoom()).scale;
+    await js(`document.getElementById('search').focus(); true`);
+    press(win, '-');
+    press(win, '0');
+    await delay(400);
+    const typed = await js<{ value: string; scale: number }>(`({ value: document.getElementById('search').value, scale: __t.glass().zoom().scale })`);
+    await js(`(() => { const box = document.getElementById('search'); box.value = ''; box.dispatchEvent(new Event('input')); box.blur(); return true; })()`);
+    await delay(600);
+    record(Math.abs(inOnce - 1.25) < 1e-6 && Math.abs(outOnce - 1) < 1e-6 && zeroed === 1 && typed.value === '-0' && typed.scale === 1, `+ zooms to ${inOnce}×, - back to ${outOnce}×, 0 to ${zeroed}×, and typed into the search box they are letters ("${typed.value}", ${typed.scale}×)`);
+
+    // ---- 13. Under reduced motion a key step is a cut ----
+    await js(`window.__deckReducedMotion = true`);
+    ctx.focusApp(win);
+    await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+    const samples = await js<number[]>(`new Promise((resolve) => { const out = []; const t0 = performance.now(); const look = () => { out.push(__t.glass().zoom().scale); if (performance.now() - t0 < 250) requestAnimationFrame(look); else resolve(out); }; setTimeout(look, 60); })`);
+    void samples;
+    press(win, '=');
+    const cut = await js<number[]>(`new Promise((resolve) => { const out = []; const t0 = performance.now(); const look = () => { out.push(__t.glass().zoom().scale); if (performance.now() - t0 < 250) requestAnimationFrame(look); else resolve(out); }; look(); })`);
+    const between = cut.filter((v) => v > 1 + 1e-9 && v < 1.25 - 1e-9).length;
+    record(cut.at(-1) === 1.25 && between === 0, `under reduced motion a key's zoom is a cut (${between} frames between 1× and 1.25×)`);
+    await js(`window.__deckReducedMotion = false`);
+    await reset1();
+
+    // ---- 12. The bands and the orbit keep their own zoom ----
+    await notches(cx, cy, 7, -1);
+    await delay(300);
+    const bandsZoom = (await zoom()).scale;
+    const toOrbit = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="orbit"]')`);
+    if (toOrbit === null) {
+      record(false, 'zoom: the orbit could be opened');
+      return;
+    }
+    await pointer(win, click(toOrbit));
+    for (let i = 0; i < 40; i += 1) {
+      if (await js<boolean>(`/the link graph: \\d+ notes/.test(__t.text('#front-label'))`)) break;
+      await delay(250);
+    }
+    await delay(1000);
+    const orbitStart = (await zoom()).scale;
+
+    // ---- 8. In the orbit at 2×, a link rests and a dot lands ----
+    await notches(cx, cy, 7, -1);
+    await delay(500);
+    const orbitZoom = (await zoom()).scale;
+    const box = await fieldBox();
+    const edge = await js<{ x: number; y: number; source: string } | null>(`__t.glass().edgeSample()`);
+    let rested = false;
+    if (edge !== null) {
+      await pointer(win, [{ type: 'move', x: Math.round(box.left) + edge.x, y: Math.round(box.top) + edge.y, wait: 900 }]);
+      const callout = await js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#edge-callout'), text: __t.text('#edge-callout') })`);
+      rested = callout.shown && callout.text.includes(edge.source);
+    }
+    const dot = await js<{ x: number; y: number; id: string } | null>(`__t.glass().dotSample()`);
+    let landed = false;
+    // The dot's recorded place must be where it is drawn: the pixel there is
+    // read back, since the click and the sample share one list and would agree
+    // even if the list were not zoomed.
+    const drawnAt = dot === null ? 0 : await js<number>(`__t.glass().pixelAlpha(${dot.x}, ${dot.y})`);
+    if (dot !== null) {
+      await pointer(win, [...click({ x: Math.round(box.left) + dot.x, y: Math.round(box.top) + dot.y }), { type: 'move', x: 10, y: 10 }]);
+      await delay(1500);
+      landed = deskCardsOf(store.getState(), ws).some((c) => c.noteId === dot.id);
+    }
+    record(orbitZoom > 1.9 && rested && landed && drawnAt > 0, `in the orbit at ${orbitZoom.toFixed(2)}×, resting on a link shows its sentence and a click on a dot lands on it where it is drawn (${edge?.source ?? 'no link'}, ${dot?.id ?? 'no dot'}, alpha ${drawnAt})`);
+    const glassButton = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="glass"]')`);
+    if (glassButton !== null) await pointer(win, click(glassButton));
+    await delay(2000);
+    const backToBands = (await zoom()).scale;
+    record(orbitStart === 1 && Math.abs(backToBands - bandsZoom) < 1e-9, `the bands and the orbit each keep their own zoom (bands ${bandsZoom.toFixed(2)}×, the orbit opened at ${orbitStart}× and was zoomed to ${orbitZoom.toFixed(2)}×, back to the bands at ${backToBands.toFixed(2)}×)`);
+
+    // ---- 11. A reload is back at 1×, and nothing about the zoom is stored ----
+    win.webContents.reload();
+    await boot();
+    const reloaded = (await zoom()).scale;
+    const stored = JSON.stringify(store.getState());
+    record(reloaded === 1 && !/zoom/i.test(stored), `after a reload the zoom is ${reloaded}×, and the store's state has no zoom in it`);
+  } finally {
+    await js(`window.__deckReducedMotion = false; true`).catch(() => null);
+    reset();
+    await delay(600);
+  }
 }
 
 /**
@@ -961,6 +1743,9 @@ async function recordDesksPerView(
 
     // ---- 1. Hide notes in Glass ----
     const a2 = await rowLift();
+    // Panes at their places, not a note in the middle (FEAT-0017).
+    await leaveMiddle(ctx, win, js);
+    await delay(900);
     const before = JSON.stringify(deskCardsOf(store.getState(), ws));
     const paneRects = await js<Array<{ left: number; right: number; top: number; bottom: number }>>(`[...document.querySelectorAll('.pane:not(.wide)')].map((p) => { const r = p.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; })`);
     const underBefore = await js<number>(`(() => { const rs = ${JSON.stringify(paneRects)}; return __t.nearCards().filter((c) => rs.some((p) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top)).length; })()`);
@@ -1060,6 +1845,8 @@ async function recordDesksPerView(
     store.dispatch({ type: 'set-every-view', noteId: e ?? '', on: true });
     await delay(500);
     const o = await rowLift();
+    await leaveMiddle(ctx, win, js);
+    await delay(900);
     const eHead = `.pane[data-note-id="${e}"] .pane-id`;
     const covered = await js<{ x: number; y: number } | null>(`(() => { const p = document.querySelector('.pane[data-note-id="${e}"] .pane-body'); if (!p) return null; const r = p.getBoundingClientRect(); for (let y = r.top + 6; y < r.bottom - 6; y += 8) for (let x = r.left + 8; x < r.right - 20; x += 8) { const hit = document.elementFromPoint(x, y); const pane = hit && hit.closest('.pane'); if (pane && pane.dataset.noteId === ${JSON.stringify(o)}) return { x, y }; } return null; })()`);
     const underFirst = drawn().at(-1) === o;
@@ -1069,6 +1856,10 @@ async function recordDesksPerView(
     record(underFirst && covered !== null && drawn().at(-1) === e && nowOver === e, `a press on a note on every view lying under this view's own pane raises it above, and the store agrees (${e} over ${o}: ${nowOver}, top of the store ${drawn().at(-1)})`);
 
     // ---- 7. Escape leaves the notes on every view ----
+    // The press in check 6 brought e forward into the middle (FEAT-0017), and
+    // the first Escape leaves it; the sweep is the next one.
+    if ((await js<string | null>(`__t.glass().focusId()`)) !== null) await leaveMiddle(ctx, win, js);
+    await delay(600);
     ctx.focusApp(win);
     await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
     press(win, 'Escape');

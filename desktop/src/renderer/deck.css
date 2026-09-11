@@ -587,6 +587,56 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   touch-action: none;
   transition: opacity 1s ease;
 }
+
+/* The note in the middle (FEAT-0017): the rest of the field steps back, dimmed
+   but still there, and a click on a dimmed card still lifts it. */
+.field.focusing .field-card { opacity: 0.28; }
+.field.focusing .field-canvas { opacity: 0.35; }
+.field.focusing .sector-label { opacity: 0.25; }
+.field-ring { position: absolute; inset: 0; pointer-events: none; z-index: 2950; }
+.field-ring .ring-lines { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.ring-line { stroke: var(--accent); stroke-width: 1.4; opacity: 0.8; pointer-events: stroke; }
+.ring-line.in { stroke-dasharray: 5 4; }
+.ring-line.both { stroke-width: 2.2; }
+.ring-line:hover { opacity: 1; stroke-width: 2.6; }
+.ring-wire { stroke: rgba(158, 206, 106, 0.8); stroke-width: 1.2; }
+.ring-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 168px;
+  height: 44px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-content: center;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: #1d212d;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.ring-card[data-direction="in"] { border-left-style: dashed; }
+.ring-card:hover, .ring-card:focus-visible { border-color: var(--accent); outline: none; }
+.ring-card .ring-id { font-weight: 600; }
+.ring-card .ring-mark { color: var(--ink-dim); font-size: 10px; justify-self: end; }
+.ring-card .ring-title { grid-column: 1 / 3; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-dim); }
+.ring-card.held { border-left-color: var(--done); }
+.ring-card.shared { box-shadow: 0 0 0 1px var(--owed) inset; }
+.ring-card.highlight, .pane.highlight .pane-head { box-shadow: 0 0 0 2px var(--accent); }
+.ring-card.ring-more { display: flex; align-items: center; justify-content: center; font-weight: 600; }
+/* The pane in the middle is read, not arranged; the others wait in the dock as headers. */
+.pane.focus .pane-resize { display: none; }
+.pane.docked .pane-body, .pane.docked .pane-resize { display: none; }
+.pane.docked .pane-head { cursor: pointer; }
 .field.animate .field-card { transition: transform 1s cubic-bezier(0.22, 0.8, 0.28, 1), opacity 1s ease; }
 .field.turning .field-card { transition: none; }
 .field-card:hover { border-color: var(--accent); }

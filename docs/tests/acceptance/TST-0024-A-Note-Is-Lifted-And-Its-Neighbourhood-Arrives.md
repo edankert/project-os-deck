@@ -6,7 +6,7 @@ title: "A note is lifted in Glass, its neighbourhood arrives at the front, two n
 status: active
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-11
 source: ["[[PHASE-0002-Glass]]", "[[FEAT-0010-Lifting-A-Note]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -53,6 +53,8 @@ Deck runs from this repository; there is no installed application yet.
 - Press esc. The desk should empty and every slot should be full again. Click the background once and confirm nothing changes.
 - Lift two notes again, then switch to Spread. The same two notes should be on the desk. Switch back to Glass and they should be held.
 - Put the pointer down. Using only Tab, the arrow keys and Enter in the navigator, reach one of the neighbours and lift it.
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** A lift now puts the issue in the middle of the field with its feature, its tests and its backlinks on a ring around it. Press Escape once to take it out of the middle; then watch the field turn and find the neighbourhood in the front band, as the steps above describe. Where a step says to press esc to empty the desk, press it twice.
 
 ## Expected results
 

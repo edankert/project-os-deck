@@ -71,3 +71,5 @@ The rev 3 lesson of DES-0002 applies to every drag here: a `preserve-3d` contain
 **The record is the desk Spread saves.** `DeskCard` gained optional `w`, `h` and `wide`; Spread ignores them and shows the same note at the same `x` and `y`.
 
 **Evidence.** [[TST-0043-The-Hands-State-Is-Shared-And-Never-Kept]], 10 of 10; [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]: drag, resize to the minimum, snap, raise, widen and replace, the keyboard move, a reload, and Spread's positions.
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** While a note is in the middle of the field, it is drawn there at the focus size and cannot be resized, and dragging its header takes it out of the middle to where it is dropped. Every other held note is drawn as its header in a column at the field's left edge. A press on such a header or pane brings it forward only when released without moving, so a drag never swaps the note in the middle. Each pane's stored place and size are unchanged, and are where it is drawn once nothing is in the middle.

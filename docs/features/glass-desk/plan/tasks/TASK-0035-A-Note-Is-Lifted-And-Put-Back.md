@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0010-Lifting-A-Note]]"]
 parent: "FEAT-0010"
 effort: ""
@@ -43,6 +43,8 @@ The held note's body is rendered by the reader Deck already has, from the sideca
 - A click on the background of the field changes neither the desk nor the field.
 - A held note's body comes from the sidecar's rendered HTML, through the reader Deck already has.
 - Switching to Spread shows the same desk with the same notes; switching back shows them held in Glass.
+
+**Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** A lift now also puts the note in the middle of the field. While a note is there, one Escape takes it out of the middle and a second Escape puts back every note; with nothing in the middle, one Escape puts back every note as before. 'No field card is dealt underneath a held note' holds whenever nothing is in the middle; while a note is, its pane and the ring around it lie over the dimmed field on purpose.
 
 ## Steps
 
