@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0014
 aliases: ["FEAT-0014"]
 title: "The hands: a person arranges the field, throws a note to another screen, and reaches for a card to see what it is joined to"
-status: review
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["Edwin 2026-09-10: 'the functionality for the phase is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'", "[[REFERENCE-GLASS-PHASE-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]", "[[DES-0001-Nine-Ways-To-Read-The-Record]]"]
 goal: "Glass stops being a picture the record paints and becomes a surface a person arranges: a note is pulled forward or pushed behind for the session, a held note is a pane that is moved, resized and stacked, a card is thrown off the field to a window on another screen or to the tablet, and reaching for a card shows what it is joined to before it is lifted. Nothing a hand does writes to the record."
 requirements: []
@@ -98,3 +98,5 @@ Four words are used throughout. **Pull** brings a card into the front band by ha
 ## Review stopped, 2026-09-10
 
 **Edwin stopped the review loop after two rounds, so this feature stays at `review`.** Both reviews requested changes. The first's findings are ISS-0058 to ISS-0063 and the second's are [[ISS-0064-A-Reduced-Motion-Lift-And-A-Pull-Beside-A-Pane-Still-Misplace-Cards]] and [[ISS-0065-Five-Checks-Still-Cannot-Fail-And-Four-Notes-Are-Stale]]; all eight are fixed. No third review was run, so no review has approved the feature. The quality gate needs an approved review for `done`, so moving it there is Edwin's decision, not the agent's.
+
+**Marked `done` on 2026-09-11 by Edwin's decision, without an approved review.** Asked whether to leave the feature at `review`, run a third review, or mark it done, he chose done. The two reviews' verdicts stay recorded above as `changes-requested`; every finding they reproduced is fixed.

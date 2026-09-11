@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0010
 aliases: ["FEAT-0010"]
 title: "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it"
-status: review
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "Edwin, ledger 2026-09-07 on TST-0015: 'one of the thing around relationships / dependencies I think is a little bit of an issue that I don't see this at the moment'"]
 goal: "In Glass a click lifts a note out of the field onto the desk Deck already has, and while it is held the notes joined to it take the front band, so the relationships a person cannot see today are the first thing they see."
 requirements: []
@@ -99,3 +99,5 @@ Three words are used throughout. The **field** is the cylinder of cards that [[F
 ## Review stopped, 2026-09-10
 
 **Edwin stopped the review loop after two rounds, so this feature stays at `review`.** Both reviews requested changes. The first's findings are ISS-0058 to ISS-0063 and the second's are [[ISS-0064-A-Reduced-Motion-Lift-And-A-Pull-Beside-A-Pane-Still-Misplace-Cards]] and [[ISS-0065-Five-Checks-Still-Cannot-Fail-And-Four-Notes-Are-Stale]]; all eight are fixed. No third review was run, so no review has approved the feature. The quality gate needs an approved review for `done`, so moving it there is Edwin's decision, not the agent's.
+
+**Marked `done` on 2026-09-11 by Edwin's decision, without an approved review.** Asked whether to leave the feature at `review`, run a third review, or mark it done, he chose done. The two reviews' verdicts stay recorded above as `changes-requested`; every finding they reproduced is fixed.

@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0009
 aliases: ["FEAT-0009"]
 title: "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front"
-status: review
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]"]
 goal: "Deck opens on Glass: the notes of the current view arranged in a field where distance says how much a note needs you, with what is owed in front, the view's own subject in the middle and the quiet work behind you. Switching view moves the same cards rather than loading a page, and the navigator beside the field stays the route for the keyboard and the screen reader."
 requirements: []
@@ -129,3 +129,5 @@ Glass is a surface over the views Deck already has. The view provider still deci
 ## Review stopped, 2026-09-10
 
 **Edwin stopped the review loop after two rounds, so this feature stays at `review`.** Both reviews requested changes. The first's findings are ISS-0058 to ISS-0063 and the second's are [[ISS-0064-A-Reduced-Motion-Lift-And-A-Pull-Beside-A-Pane-Still-Misplace-Cards]] and [[ISS-0065-Five-Checks-Still-Cannot-Fail-And-Four-Notes-Are-Stale]]; all eight are fixed. No third review was run, so no review has approved the feature. The quality gate needs an approved review for `done`, so moving it there is Edwin's decision, not the agent's.
+
+**Marked `done` on 2026-09-11 by Edwin's decision, without an approved review.** Asked whether to leave the feature at `review`, run a third review, or mark it done, he chose done. The two reviews' verdicts stay recorded above as `changes-requested`; every finding they reproduced is fixed.

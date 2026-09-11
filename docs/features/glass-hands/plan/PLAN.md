@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — the hands"
-status: draft
+status: done
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0014-The-Hands]]"]
 implements: ["[[FEAT-0014-The-Hands]]"]
 related: ["[[PHASE-0002-Glass]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[REFERENCE-GLASS-PHASE-REVIEW]]"]

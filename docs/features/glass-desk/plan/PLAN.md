@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — lifting a note"
-status: draft
+status: done
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-11
 source: ["[[FEAT-0010-Lifting-A-Note]]"]
 implements: ["[[FEAT-0010-Lifting-A-Note]]"]
 related: ["[[PHASE-0002-Glass]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]"]

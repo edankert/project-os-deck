@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — the orbit view"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-07
+updated: 2026-09-11
 source: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 implements: ["[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Cockpit]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible]]"]

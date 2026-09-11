@@ -64,7 +64,7 @@ focus:
   feature: "FEAT-0014"
   task: ""
   issue: ""
-  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings, ISS-0058 to ISS-0063, are fixed (cd95528); a second review found ISS-0064 and ISS-0065, also fixed. Edwin stopped the review loop after that second round, so FEAT-0009, FEAT-0010 and FEAT-0014 rest at review (no review approved them) and FEAT-0001 is doing. TASK-0005 (the orbit's treatment) is Edwin's."
+  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings, ISS-0058 to ISS-0063, are fixed (cd95528); a second review found ISS-0064 and ISS-0065, also fixed. Edwin stopped the review loop after that second round and on 2026-09-11 marked FEAT-0009, FEAT-0010 and FEAT-0014 done himself, without an approved review. FEAT-0001 is doing: TASK-0005 (the orbit's treatment) is Edwin's, and he chose to decide later. What else is left is a person's: four walks, Safari on the tablet, a week of use, a laptop measurement."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -144,7 +144,7 @@ items:
     FEAT-0009:
       file: "docs/features/glass-field/FEAT-0009-The-Field-Where-Depth-Carries-Priority.md"
       title: "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -153,7 +153,7 @@ items:
     FEAT-0010:
       file: "docs/features/glass-desk/FEAT-0010-Lifting-A-Note.md"
       title: "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -189,7 +189,7 @@ items:
     FEAT-0014:
       file: "docs/features/glass-hands/FEAT-0014-The-Hands.md"
       title: "The hands: a person arranges the field, throws a note to another screen, and reaches for a card to see what it is joined to"
-      status: review
+      status: done
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -1469,7 +1469,7 @@ items:
 metrics:
   counts:
     features_total: 14
-    features_done: 10
+    features_done: 13
     phases_total: 4
     phases_done: 0
     tasks_total: 57

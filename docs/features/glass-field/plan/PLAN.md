@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan — the Glass field"
-status: draft
+status: done
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-11
 source: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 implements: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 related: ["[[PHASE-0002-Glass]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
