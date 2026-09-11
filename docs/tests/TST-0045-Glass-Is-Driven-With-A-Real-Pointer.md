@@ -6,14 +6,14 @@ title: "Glass is driven with a real pointer in a real window: the field, the lif
 status: passing
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[PHASE-0002-Glass]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
 level: integration
 entrypoint: "desktop/src/main/smoke-glass.ts"
 command: ""
-last_verified: 2026-09-10
+last_verified: 2026-09-11
 automation: "one command, run manually or by the deck-smoke CI job; not by run-tests.py, which has no sidecar"
 covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]"]
 issues: []
@@ -46,6 +46,7 @@ related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-T
 - **The orbit.** One request returns the whole graph and a POST is refused; every node's band is the band the sidecar's status gives the same note; Deck's links for twelve notes match the sidecar's own context; the orbit opens from the switcher; the most linked-to notes are cards and the rest dots; resting on a link shows its sentence; landing on a dot lifts the note, opens it and names it in the store; "show this in the field" flies to it; each of the three treatments draws the same notes and blocks draw no links; left alone the orbit drifts, and under reduced motion it does not.
 - **After the review (ISS-0058 to ISS-0063).** A pane stored past the narrowed field is drawn inside it with no card under it; a lift under reduced motion highlights its neighbours and does not turn; a view switch under reduced motion highlights the note a person was on; a change arriving mid-view is driven on its real path; the compass counts the quiet band; a throw reaches the tablet, flies toward its edge, and under reduced motion is a cut that names its target.
 - **After the second review (ISS-0064, ISS-0065).** Every shared note is dealt into the front band; the compass's quiet count equals the notes dealt there; a lift under normal motion flies the field to its neighbours; the reduced-motion cut is checked from a yaw away from the note; a reach's wire is read back from the canvas as a pixel, and the pixel is clear once the reach ends; a reduced-motion view switch highlights the card and the row; a reduced-motion landing highlights the target's name; a reduced-motion lift from a turned field leaves no card under a pane, looked at on the first turn of the event loop after the cut. Overlap is judged over every near card drawn, with no hit test.
+- **After Edwin's evaluation (ISS-0066, ISS-0067).** A raised pane covers the header of the pane it lies on; a press on a pane's body raises it; in Spread a click on a card lying under another brings it forward, and a dragged card is on top where it lands.
 - **Nothing is written.** `git status` in the workspace is the same before and after.
 
 ## Evidence
@@ -53,6 +54,8 @@ related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-T
 2026-09-10, on a Mac Studio with four displays, on the build that closed ISS-0058 to ISS-0063: `electron . --smoke` reported `ok: true` with 120 checks printed by `DECK_SMOKE_DEBUG=1` in the Glass section, none failed, none skipped; `electron . --smoke --lan` reported `ok: true` with nothing skipped or not applicable. The throw to a display with no Deck window ran because this machine has more than one display; on a single display it is reported not applicable, and [[TST-0044-The-Neighbourhood-Is-Read-Once-And-A-Throw-Is-Recognised]] carries the recogniser and the landing.
 
 **2026-09-10, after ISS-0064 and ISS-0065**, on the same Mac Studio with four displays: `npm test`, 397 of 397; the Glass section alone, clean, four times with no check failed; `electron . --smoke` and `electron . --smoke --lan` both `ok: true`, the network run printing 125 Glass checks with `DECK_SMOKE_DEBUG=1`. The second reviewer saw the reduced-motion cut check fail once in a full loopback run; that check now waits for the earlier lift to settle and starts from a yaw away from the note, and it did not fail again here.
+
+**2026-09-11, after ISS-0066 and ISS-0067:** `npm test`, 397 of 397; `bash tools/scripts/run-smoke.sh both` passed on loopback and failed once on the network run, at "clearing the search restores the list (14 then 0)" in the older navigator section, which waits a fixed 600 milliseconds. The network run then passed twice in a row. Each of the four new checks failed with its fix removed.
 
 ## Where this test's verdict comes from
 

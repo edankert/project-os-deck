@@ -1785,6 +1785,15 @@ export class GlassField {
     (pane.querySelector('.pane-resize') as HTMLElement).addEventListener('pointerdown', (event) =>
       this.resizePane(noteId, pane, event),
     );
+    // A press anywhere on a pane brings it forward, as a press on a window
+    // does: a pane whose header lies under another is still reachable by its
+    // body (ISS-0066). The header's own press raises it in grabPane.
+    pane.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || !this.hooks.canArrange()) return;
+      if ((event.target as HTMLElement).closest('.pane-head') !== null) return;
+      if (this.held[this.held.length - 1]?.noteId === noteId) return;
+      void this.hooks.dispatch({ type: 'raise-card', noteId });
+    });
     return pane;
   }
 
@@ -1798,13 +1807,12 @@ export class GlassField {
     pane.style.top = `${top}px`;
     pane.style.width = `${w}px`;
     pane.style.height = `${h}px`;
-    // Stacking is the desk's order: a raised pane is the last one. Headers
-    // and bodies stack SEPARATELY, every header above every body, which is
-    // DES-0002's rule: a pane may cover another's body but never its header,
-    // so a stack of eight is eight headers and one body, whichever was raised.
-    (pane.querySelector('.pane-body') as HTMLElement).style.zIndex = String(3000 + index);
-    (pane.querySelector('.pane-resize') as HTMLElement).style.zIndex = String(3000 + index);
-    (pane.querySelector('.pane-head') as HTMLElement).style.zIndex = String(3500 + index);
+    // Stacking is the desk's order: a raised pane is the last one, and it
+    // covers everything under it, header included. Headers stay readable
+    // because a pane dropped on one snaps below it (snapBelowHeaders), not by
+    // drawing every header above every body: that showed a lower pane's
+    // header through the text of the pane on top of it (ISS-0066).
+    pane.style.zIndex = String(3000 + index);
     pane.classList.toggle('wide', deskCard.wide === true);
     pane.classList.toggle('top', index === this.held.length - 1);
     pane.dataset['status'] = card === null ? 'planned' : bandFor(card.status);

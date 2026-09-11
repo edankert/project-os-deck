@@ -117,6 +117,10 @@ let wroteTo: string | null = null;
 
 const pool = new CardPool(el.desk, {
   open: (card) => {
+    // Selecting a card brings it forward: the desk's order is the stacking
+    // order, and Glass raises a pane the same way (ISS-0067). A card that is
+    // not on the desk, as in the Needs-you strip, is left alone by the store.
+    if (panel !== 'needs-you') void host.dispatch({ type: 'raise-card', noteId: card.noteId });
     void openCard(card);
   },
   remove: (card) => {
@@ -1528,7 +1532,12 @@ function grabCard(card: CardModel, element: HTMLElement, event: PointerEvent): v
     if (!moved) return;
     // Marked so the click this pointer release also fires does not open the note.
     element.dataset['dragged'] = 'true';
-    void host.dispatch({ type: 'move-card', noteId: card.noteId, x: latest.x, y: latest.y });
+    // Moved, then brought forward: a card is on top where it is dropped. Not
+    // at the press, because the pool is positional and a raise then would
+    // repaint the element under the pointer with another card (ISS-0067).
+    void host
+      .dispatch({ type: 'move-card', noteId: card.noteId, x: latest.x, y: latest.y })
+      .then(() => host.dispatch({ type: 'raise-card', noteId: card.noteId }));
   };
 
   element.addEventListener('pointermove', move);

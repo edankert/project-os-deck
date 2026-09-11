@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0014-The-Hands]]", "[[REFERENCE-GLASS-PHASE-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
 parent: "FEAT-0014"
 effort: ""
@@ -38,7 +38,7 @@ A note lifted in Glass is a pane on the front plane. A person drags it where the
 
 - A pane is dragged with a real pointer and lands where it was released; after a reload it is there; Spread shows the same note at the same position.
 - A pane is resized by its edge, not below the stated minimum width; the size survives a reload.
-- A pane dropped over another's header snaps below that header, and in a stack of any depth every header is visible and clickable.
+- A pane dropped over another's header snaps below that header, so a stack of any depth is laid down with every header visible and clickable. (Amended 2026-09-11, ISS-0066: the pane on top covers the panes under it, header included; the headers stay readable because of the snap, not because every header is drawn above every body. A press anywhere on a pane raises it.)
 - A click on a header raises that pane above the others.
 - Widen takes a pane to the reading column, the field flows around the column, and widening another pane replaces the first.
 - No field card is dealt under a pane at any position or size, checked over the slot geometry after a simulated move.
@@ -63,6 +63,8 @@ The rev 3 lesson of DES-0002 applies to every drag here: a `preserve-3d` contain
 **Done 2026-09-10.** A held note is a pane on the front plane. The numbers chosen: a **minimum of 280 by 160 pixels**, **320 by 240** when nobody has resized it, a **34-pixel header**, and a reading column **520 pixels wide, or 38% of the window when that is less**. The header carries the id, the status and the face, and three tools: send ↗, widen ⇥ and put back ×. It is dragged by the header and resized by its corner; the keyboard moves it with the arrow keys, resizes it with Alt and the arrows, raises it with Enter, widens it with W, sends it with S and puts it back with Delete.
 
 **Every header stays readable in a stack.** Headers and bodies are stacked separately, every header above every body, so raising one pane never covers another's header; a pane dropped on a header snaps below it. The first build stacked whole panes, and raising the lower pane of two hid the upper one's header, which the smoke run caught.
+
+**Amended 2026-09-11 (ISS-0066).** Edwin, evaluating Deck, found the separate stacking wrong: a lower pane's header floated over the text of the pane on top of it. Panes stack whole again, in the desk's order. What keeps a stack's headers readable is the snap below a header when a pane is dropped, and a press anywhere on a pane brings it forward, so a pane whose header is covered is still reachable by its body.
 
 **The reading column is the reader, beside the field.** Widen moves the note into Deck's reader column, which carries its verbs, and the field narrows and is dealt again; widening another pane replaces the first. The task imagined a column inside the field as an obstacle sector; beside it is the stronger form of the field flowing around it, and it keeps one reader in Deck. A pane is clamped into the field at paint time, never in the store, so a desk arranged on a wide screen keeps its positions.
 

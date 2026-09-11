@@ -546,6 +546,19 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       await pointer(win, click(lower));
       await delay(600);
       record(deskIds().at(-1) === paneA, 'a click on a header raises that pane');
+      // Panes stack whole: the raised pane covers the header of the pane it
+      // lies on, rather than that header showing through its text (ISS-0066).
+      const atHeadB = await js<string | null>(`(() => { const r = document.querySelector('.pane[data-note-id="${paneB}"] .pane-id').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); const p = e && e.closest('.pane'); return p ? p.dataset.noteId : null; })()`);
+      record(atHeadB === paneA, `the raised pane covers the header of the pane under it (${atHeadB} is drawn at ${paneB}'s header)`);
+      // And a press on the part of the lower pane's body still showing brings it forward.
+      const bodyB = await js<{ x: number; y: number } | null>(`(() => { const pane = document.querySelector('.pane[data-note-id="${paneB}"]'); const r = pane.getBoundingClientRect(); for (let y = r.bottom - 6; y > r.top + 40; y -= 8) for (let x = r.right - 20; x > r.left + 6; x -= 8) { const e = document.elementFromPoint(x, y); if (e && !e.closest('a') && e.closest('.pane-body') && e.closest('.pane') === pane) return { x, y }; } return null; })()`);
+      if (bodyB === null) {
+        record(false, `some of ${paneB}'s body shows beside the pane on top, to press`);
+      } else {
+        await pointer(win, [...click(bodyB), { type: 'move', x: 10, y: 10 }]);
+        await delay(600);
+        record(deskIds().at(-1) === paneB, `a press on a pane's body raises it (${deskIds().at(-1)} on top)`);
+      }
       // No near card is drawn under a pane.
       const overlap = await js<string[]>(`(() => {
         const panes = [...document.querySelectorAll('.pane:not(.wide)')].map((p) => p.getBoundingClientRect());
@@ -610,16 +623,44 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
         stored.every((c) => spread.some((s) => s.id === c.noteId && s.left === `${c.x}px` && s.top === `${c.y}px`)),
         `Spread shows the same desk at the same positions (${spread.map((s) => s.id).join(', ')})`,
       );
+      // A click on a card lying under another brings it forward (ISS-0067):
+      // a point of it that shows, and a point of it the other card covers.
+      const buried = await js<{ id: string; x: number; y: number; cx: number; cy: number } | null>(`(() => {
+        const top = ${JSON.stringify(deskIds().at(-1) ?? '')};
+        for (const c of document.querySelectorAll('#desk .card:not([hidden])')) {
+          if (c.dataset.noteId === top) continue;
+          const r = c.getBoundingClientRect();
+          let shows = null, covered = null;
+          for (let y = r.top + 6; y < r.bottom - 4; y += 6) for (let x = r.left + 6; x < r.right - 20; x += 8) {
+            const hit = document.elementFromPoint(x, y);
+            const card = hit && hit.closest('.card');
+            if (card === c && !hit.closest('.remove')) shows = shows || { x, y };
+            else if (card !== null && card !== c) covered = covered || { x, y };
+          }
+          if (shows && covered) return { id: c.dataset.noteId, x: shows.x, y: shows.y, cx: covered.x, cy: covered.y };
+        }
+        return null;
+      })()`);
+      if (buried === null) {
+        record(false, 'two cards overlap in Spread, so bringing one forward can be checked');
+      } else {
+        await pointer(win, [...click(buried), { type: 'move', x: 10, y: 10 }]);
+        await delay(800);
+        const over = await js<string | null>(`(() => { const e = document.elementFromPoint(${buried.cx}, ${buried.cy}); const c = e && e.closest('.card'); return c ? c.dataset.noteId : null; })()`);
+        record(deskIds().at(-1) === buried.id && over === buried.id, `a click on a card lying under another brings it forward in Spread (${buried.id}: last on the desk ${deskIds().at(-1)}, drawn on top ${over})`);
+      }
       // A card dragged in Spread is where it was dragged in Glass: one record.
       // The card the pointer will actually grab: in Spread two cards overlap,
-      // and the one on top at a point is the one a press takes.
-      const spreadCard = await js<{ x: number; y: number; id: string } | null>(`(() => { for (const c of document.querySelectorAll('#desk .card:not([hidden])')) { const r = c.getBoundingClientRect(); const x = r.left + 30, y = r.top + 14; const hit = document.elementFromPoint(x, y); const top = hit && hit.closest('.card'); if (top === c) return { x, y, id: c.dataset.noteId }; } return null; })()`);
+      // and the one on top at a point is the one a press takes. The card
+      // NOT on top is taken, so that it ending on top says something.
+      const spreadCard = await js<{ x: number; y: number; id: string } | null>(`(() => { const top = ${JSON.stringify(deskIds().at(-1) ?? '')}; const cards = [...document.querySelectorAll('#desk .card:not([hidden])')].sort((a, b) => (a.dataset.noteId === top) - (b.dataset.noteId === top)); for (const c of cards) { const r = c.getBoundingClientRect(); for (let y = r.top + 10; y < r.bottom - 4; y += 6) { const x = r.left + 30; const hit = document.elementFromPoint(x, y); const top = hit && hit.closest('.card'); if (top === c && !hit.closest('.remove')) return { x, y, id: c.dataset.noteId }; } } return null; })()`);
       if (spreadCard !== null) {
         const was = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === spreadCard.id);
         await pointer(win, drag(spreadCard, { x: spreadCard.x + 120, y: spreadCard.y + 60 }, 8));
         await delay(700);
         const now = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === spreadCard.id);
         record(was !== undefined && now !== undefined && (now.x !== was.x || now.y !== was.y), `a card dragged in Spread moved in the store (${was?.x},${was?.y} to ${now?.x},${now?.y})`);
+        record(deskIds().at(-1) === spreadCard.id, `and it is on top where it was dropped (${deskIds().at(-1)} last on the desk)`);
         await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
         await delay(1500);
         const pane = await js<{ left: string; top: string } | null>(`(() => { const p = document.querySelector('.pane[data-note-id="${spreadCard.id}"]'); return p ? { left: p.style.left, top: p.style.top } : null; })()`);

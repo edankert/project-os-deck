@@ -681,11 +681,11 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .target-strip .target.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .target-strip .target.landed { border-color: var(--owed); }
 
-/* A held note is a pane on the front plane (TASK-0054). Its header is always
-   readable: a pane may cover another's body, never its header. */
-/* A pane makes no stacking context of its own (no z-index, no opacity), so
-   its header and body can be stacked separately: every header above every
-   body (glass.ts, paintPane). The body carries the pane's surface. */
+/* A held note is a pane on the front plane (TASK-0054). Panes stack whole, in
+   the desk's order (glass.ts, paintPane): the pane on top covers the panes
+   under it, header included (ISS-0066). A pane dropped on another's header
+   snaps below it, so a stack is laid down with its headers showing. The body
+   carries the pane's surface. */
 .pane {
   position: absolute;
   pointer-events: none;
