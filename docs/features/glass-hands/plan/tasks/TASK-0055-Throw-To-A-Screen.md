@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0014-The-Hands]]", "[[REFERENCE-GLASS-PHASE-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
 parent: "FEAT-0014"
 effort: ""
@@ -76,3 +76,5 @@ DES-0002's many-monitors section said only screen 1 has a front plane and the ot
 **Amended 2026-09-10 (ISS-0062).** A display holding only a Needs-you strip now offers a new reader, an unnamed display is called "display N", and the smoke run now throws to the tablet, checks the flight's direction and the reduced-motion cut.
 
 **Amended 2026-09-10 (ISS-0064).** Under reduced motion the strip now stays for 1.2 seconds after a landing with the target's name highlighted, as the acceptance line says; before, the front plane named the target and the strip vanished. A later drag's strip clears that timer, so it cannot hide a strip a person has just opened. A display macOS names only " (1)" now reads "display 1", the number in its name, not its place in Electron's list.
+
+**Amended 2026-09-11 ([[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]).** Edwin asked that day for a desk for each view, with some notes kept on every view. A throw onto a desk panel lands on the desk of the view in that panel's address, which it draws whatever the focus window shows; a throw to the tablet lands on the desk of the Mac's current view. A note marked "on every view" is what still crosses views, and a state file written before the change reads every held note as on every view, so nothing on screen changed on the day it landed.

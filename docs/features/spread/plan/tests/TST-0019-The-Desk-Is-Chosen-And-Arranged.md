@@ -6,7 +6,7 @@ title: "The desk is a chosen set of cards a person arranges, and it survives bei
 status: active
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-11
 source: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -99,3 +99,5 @@ The rest of the suite guards what it says it does: the identity check would fail
 **The bound is the desk's own extent**: the window unioned with every saved position. Stable, because it is a pure function of what was saved rather than a measurement of the last paint; and correct, because a card at y=2000 makes the desk 2000 tall and is reached by scrolling, which is what a desk that scrolls is for. The clamp still catches a negative coordinate.
 
 Both wrong answers are now pinned by checks in `desktop/tests/desk-model.test.mjs`, so neither can come back quietly.
+
+**Amended 2026-09-11 ([[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]).** Edwin asked that day for a desk for each view, with some notes kept on every view. The expected result "A desk holds what a person put on it, from more than one view if they want" now reads: a view's desk holds what a person put on it on that view, plus the notes they keep on every view. `desk-model.test.mjs` checks the new rule. A note marked "on every view" is what still crosses views, and a state file written before the change reads every held note as on every view, so nothing on screen changed on the day it landed.

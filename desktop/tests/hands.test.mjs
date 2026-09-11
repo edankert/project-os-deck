@@ -9,15 +9,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { load } from './helpers.mjs';
 
-const { reduce, initialState, normaliseState, persistable, pulledIn, pushedIn, isRendererAction, DEFAULT_SURFACE } = load('shared/store-state.js');
+const { reduce, initialState, normaliseState, persistable, pulledIn, pushedIn, isRendererAction, DEFAULT_SURFACE, deskCardsOf } = load('shared/store-state.js');
 const { DeckStore } = load('main/store.js');
 const { PANE_MIN_WIDTH, PANE_MIN_HEIGHT, PANE_HEADER_HEIGHT, snapBelowHeaders } = load('shared/panes.js');
 const { parseAddress, formatAddress, addressFor } = load('shared/address.js');
 
 const WS = 'aaaa1111';
 
+// A desk belongs to a view (FEAT-0015), so the workspace opens on one.
 function opened() {
-  return reduce(initialState(), { type: 'open-workspace', workspaceId: WS });
+  return reduce(reduce(initialState(), { type: 'open-workspace', workspaceId: WS }), { type: 'select-view', viewId: 'issues' });
 }
 
 test('a pull and a push are recorded per workspace, and the later gesture wins', () => {
@@ -54,6 +55,7 @@ test('the persister drops the session part, and a restart starts with nothing pu
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-hands-')), 'state.json');
   const store = new DeckStore({ file, writeDelayMs: 1 });
   store.dispatch({ type: 'open-workspace', workspaceId: WS });
+  store.dispatch({ type: 'select-view', viewId: 'issues' });
   store.dispatch({ type: 'pull', noteId: 'A' });
   store.dispatch({ type: 'put-on-desk', noteId: 'B', x: 10, y: 20 });
   store.close();
@@ -61,7 +63,7 @@ test('the persister drops the session part, and a restart starts with nothing pu
   assert.equal('session' in onDisk, false, 'the session was written to disk');
   const again = new DeckStore({ file });
   assert.deepEqual(pulledIn(again.getState(), WS), []);
-  assert.deepEqual(again.getState().deskCards[WS].map((c) => c.noteId), ['B'], 'the desk itself is kept');
+  assert.deepEqual(deskCardsOf(again.getState(), WS).map((c) => c.noteId), ['B'], 'the desk itself is kept');
   again.close();
 });
 
@@ -76,15 +78,15 @@ test('a pane is resized, never below the stated minimum, and the size survives a
   let state = opened();
   state = reduce(state, { type: 'put-on-desk', noteId: 'N', x: 0, y: 0 });
   state = reduce(state, { type: 'resize-card', noteId: 'N', w: 120, h: 40 });
-  const card = state.deskCards[WS][0];
+  const card = deskCardsOf(state, WS)[0];
   assert.equal(card.w, PANE_MIN_WIDTH);
   assert.equal(card.h, PANE_MIN_HEIGHT);
   state = reduce(state, { type: 'resize-card', noteId: 'N', w: 500, h: 360 });
   state = reduce(state, { type: 'move-card', noteId: 'N', x: 40, y: 60 });
-  const moved = state.deskCards[WS][0];
+  const moved = deskCardsOf(state, WS)[0];
   assert.deepEqual([moved.x, moved.y, moved.w, moved.h], [40, 60, 500, 360], 'a move lost the size');
   const back = normaliseState(JSON.parse(JSON.stringify(persistable(state))));
-  assert.deepEqual([back.deskCards[WS][0].w, back.deskCards[WS][0].h], [500, 360]);
+  assert.deepEqual([deskCardsOf(back, WS)[0].w, deskCardsOf(back, WS)[0].h], [500, 360]);
   // A saved desk keeps the size too, which is the record Spread saves.
   state = reduce(state, { type: 'save-desk', name: 'kept' });
   assert.equal(state.desks[`${WS}:kept`].cards[0].w, 500);
@@ -99,7 +101,7 @@ test('raising a pane moves it to the top of the stack, which is the end of the d
   let state = opened();
   for (const id of ['A', 'B', 'C']) state = reduce(state, { type: 'put-on-desk', noteId: id, x: 0, y: 0 });
   state = reduce(state, { type: 'raise-card', noteId: 'A' });
-  assert.deepEqual(state.deskCards[WS].map((c) => c.noteId), ['B', 'C', 'A']);
+  assert.deepEqual(deskCardsOf(state, WS).map((c) => c.noteId), ['B', 'C', 'A']);
   assert.equal(reduce(state, { type: 'raise-card', noteId: 'A' }), state, 'the top pane was raised again');
 });
 
@@ -108,9 +110,9 @@ test('one reading column: widening a second pane takes the first out of it', () 
   for (const id of ['A', 'B']) state = reduce(state, { type: 'put-on-desk', noteId: id, x: 0, y: 0 });
   state = reduce(state, { type: 'widen-card', noteId: 'A', wide: true });
   state = reduce(state, { type: 'widen-card', noteId: 'B', wide: true });
-  assert.deepEqual(state.deskCards[WS].map((c) => c.wide === true), [false, true]);
+  assert.deepEqual(deskCardsOf(state, WS).map((c) => c.wide === true), [false, true]);
   state = reduce(state, { type: 'widen-card', noteId: 'B', wide: false });
-  assert.deepEqual(state.deskCards[WS].map((c) => c.wide === true), [false, false]);
+  assert.deepEqual(deskCardsOf(state, WS).map((c) => c.wide === true), [false, false]);
 });
 
 test('a pane dropped on another pane’s header snaps below it, down a whole stack', () => {

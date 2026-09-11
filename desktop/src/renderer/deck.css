@@ -275,6 +275,39 @@ select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--
 .card:hover .remove { opacity: 1; }
 .card .remove:hover { background: var(--line); color: var(--ink); }
 
+/* Kept on every view (FEAT-0015): the mark sits beside ×, and stays visible once pressed. */
+.card .every {
+  position: absolute;
+  top: 4px;
+  right: 26px;
+  background: none;
+  border: 0;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  opacity: 0;
+}
+.card:hover .every, .card:focus-within .every, .card .every[aria-pressed="true"] { opacity: 1; }
+.card .every[aria-pressed="true"] { color: var(--accent); }
+.card .every:hover { background: var(--line); color: var(--ink); }
+body[data-panel="needs-you"] .card .every { display: none; }
+/* A note on every view, on a view that does not hold it. */
+.card[data-elsewhere="true"] { border-style: dashed; }
+.card[data-elsewhere="true"]::after {
+  content: 'not in this view';
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+/* Hide notes (FEAT-0015): every held note out of sight in this window, still held. */
+body.notes-hidden #desk .card { display: none; }
+.also-held { color: var(--ink-dim); font-size: 11.5px; margin-left: 8px; }
+
 /* The faces: how much is done, how bad it is, when it was last walked. */
 .card .bar {
   display: block;
@@ -751,6 +784,10 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   border-radius: 0 0 8px 8px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
+/* Kept on every view (FEAT-0015): the mark is lit, and a view that does not hold the note says so. */
+.pane-every[aria-pressed="true"] { color: var(--accent); }
+.pane.every-view .pane-head { border-left: 3px solid color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.pane.elsewhere .pane-body { border-style: dashed; }
 .pane.top .pane-head { border-top-color: color-mix(in srgb, var(--accent) 70%, var(--line)); }
 .pane-body h1 { font-size: 15px; }
 .pane-body h2 { font-size: 13.5px; }

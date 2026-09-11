@@ -125,7 +125,7 @@ export async function runMeasure(ctx: MeasureContext, roots: string[]): Promise<
 
     // TASK-0034: turning through the quiet band in Glass, and turning the orbit.
     ctx.store.dispatch({ type: 'open-workspace', workspaceId: id });
-    ctx.store.dispatch({ type: 'clear-desk' });
+    ctx.store.dispatch({ type: 'clear-desk', scope: 'workspace' });
     ctx.store.dispatch({ type: 'select-surface', surface: 'glass' });
     const win = ctx.createWindow('focus', `deck://${id}/issues`, null);
     win.setBounds({ x: 0, y: 0, width: 1440, height: 900 });

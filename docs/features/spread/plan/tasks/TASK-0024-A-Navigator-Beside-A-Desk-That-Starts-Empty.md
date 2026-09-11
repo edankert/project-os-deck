@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-11
 source: ["[[REFERENCE-PHASE-0001-REVIEW]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]"]
 parent: "FEAT-0005"
 effort: ""
@@ -65,3 +65,5 @@ The automated check is [[TST-0019-The-Desk-Is-Chosen-And-Arranged]], and the who
 **Verdict: approved.** Clean context, separate session. Every criterion is met by the code as written. The desk is an explicit list in the store keyed by workspace, `select-view` leaves it untouched by construction, `save-desk` reads the store rather than the DOM, and `reconcileDesk` opens a desk naming a vanished note without that card and reports how many it dropped, which `drawDesk` puts in the desk label.
 
 Two things the criteria do not reach, recorded as leads rather than blocking this task. `CardPool.models` and `NavigatorList.cards` are keyed by note id and never cleared, so both maps grow across every view and workspace change for the life of the window. And `NavigatorList` recovers a row's index with `this.rows.indexOf(row)` when the caller already holds it, which is quadratic in the row count; the same handler then looks the card up by id instead of using the row's own card, so when a note appears in two groups the handler receives whichever model painted last.
+
+**Amended 2026-09-11 ([[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]).** Edwin asked that day for a desk for each view, with some notes kept on every view. The acceptance line "Switching views changes the navigator and leaves the desk alone, so a desk can hold notes from more than one view" no longer holds: each view has its own desk, and switching view shows that view's. A note marked "on every view" is what still crosses views, and a state file written before the change reads every held note as on every view, so nothing on screen changed on the day it landed.

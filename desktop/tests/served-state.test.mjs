@@ -13,7 +13,7 @@ import { load, desktopRoot, fakeSidecar, HEALTH } from './helpers.mjs';
 const { DeckHost } = load('main/host.js');
 const { SERVED_CAPABILITIES } = load('shared/capability.js');
 const { servedState, mergeServed, TABLET_LOCAL_ACTIONS } = load('shared/served-state.js');
-const { initialState, reduce } = load('shared/store-state.js');
+const { initialState, reduce, deskCardsOf } = load('shared/store-state.js');
 
 const WEB_ROOT = path.join(desktopRoot, 'dist', 'web');
 const OPEN = { id: 'aaaa1111', root: '/repo', name: 'open', kind: 'project-os' };
@@ -23,7 +23,11 @@ function macState() {
   let state = initialState();
   state = reduce(state, { type: 'set-actor', actor: 'user:someone' });
   state = reduce(state, { type: 'open-workspace', workspaceId: CLOSED.id });
+  state = reduce(state, { type: 'select-view', viewId: 'issues' });
   state = reduce(state, { type: 'put-on-desk', noteId: 'ISS-0009', x: 10, y: 10 });
+  // One note on every view in the closed workspace too, so both desk maps
+  // have something the filter must leave out (FEAT-0015).
+  state = reduce(state, { type: 'set-every-view', noteId: 'ISS-0009', on: true });
   state = reduce(state, { type: 'save-desk', name: 'secret' });
   state = reduce(state, { type: 'pull', noteId: 'ISS-0009' });
   state = reduce(state, { type: 'open-workspace', workspaceId: OPEN.id });
@@ -37,7 +41,8 @@ function macState() {
 test('the served state leaves out the name Deck writes with and every workspace with no sidecar', () => {
   const served = servedState(macState(), new Set([OPEN.id]));
   assert.equal(served.actor, '', 'the actor belongs to the shell, the only host that writes');
-  assert.deepEqual(Object.keys(served.deskCards), [OPEN.id]);
+  assert.deepEqual(Object.keys(served.deskCards), [], 'the closed workspace’s notes on every view are not described');
+  assert.deepEqual(Object.keys(served.viewDesks), [OPEN.id], 'nor are its views’ desks');
   assert.deepEqual(Object.values(served.desks), [], 'a desk saved in a closed workspace is not described');
   assert.equal(CLOSED.id in served.session.pulled, false, 'the pull was made in the closed workspace');
   assert.deepEqual(served.session.pushed[OPEN.id], ['TASK-0001']);
@@ -64,8 +69,10 @@ test("a tablet keeps its own view and surface, and takes the Mac's desk", () => 
   assert.equal(drawn.viewId, 'features', "a view switch on the Mac does not move the tablet's view");
   assert.equal(drawn.surface, 'spread');
   assert.equal(drawn.noteId, null, 'with follow off, the Mac focusing a note does not move the tablet');
+  // The desk of the Mac's CURRENT view, Issues, though the tablet browses
+  // Features: a throw to the tablet lands there (FEAT-0015, decision 13).
   assert.deepEqual(
-    drawn.deskCards[OPEN.id].map((c) => c.noteId),
+    deskCardsOf(drawn, OPEN.id).map((c) => c.noteId),
     ['FEAT-0002'],
     'the desk is the Mac’s',
   );
@@ -120,7 +127,7 @@ test('GET /deck/state answers with the served state', async () => {
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.actor, '');
-    assert.deepEqual(Object.keys(body.deskCards), [OPEN.id]);
+    assert.deepEqual(Object.keys(body.viewDesks), [OPEN.id]);
   } finally {
     await host.close();
     await sidecar.close();
@@ -188,8 +195,8 @@ test('the event stream sends the state at once, and a change within a second of 
       }
       return list.length >= 2;
     });
-    assert.deepEqual(events[0].state.deskCards[OPEN.id].map((c) => c.noteId), ['FEAT-0002']);
-    assert.deepEqual(events[1].state.deskCards[OPEN.id].map((c) => c.noteId), ['FEAT-0002', 'TASK-0057']);
+    assert.deepEqual(deskCardsOf(events[0].state, OPEN.id).map((c) => c.noteId), ['FEAT-0002']);
+    assert.deepEqual(deskCardsOf(events[1].state, OPEN.id).map((c) => c.noteId), ['FEAT-0002', 'TASK-0057']);
     assert.ok(events[1].at - sentAt < 1000, `the change took ${events[1].at - sentAt}ms`);
     assert.equal(events[1].state.actor, '', 'the stream is filtered the same way as the read');
   } finally {

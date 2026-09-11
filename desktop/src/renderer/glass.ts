@@ -23,7 +23,7 @@
 import type { CardGroup, CardModel, DeckState, DeskCard } from '../shared/types.js';
 import type { Description, FaceSection } from '../shared/description.js';
 import type { DeckAction } from '../shared/store-state.js';
-import { deskCardsOf, pulledIn, pushedIn } from '../shared/store-state.js';
+import { pulledIn, pushedIn } from '../shared/store-state.js';
 import { type FieldDeal, type FieldEntry, dealField, fieldEntries, frontForSlots, pushRefusal } from '../shared/field.js';
 import {
   type Obstacle,
@@ -104,6 +104,14 @@ export interface GlassHooks {
   /** Only the shell changes the desk; a served page follows it (TASK-0057). */
   canArrange(): boolean;
   dispatch(action: DeckAction): Promise<void>;
+  /** The desk this window draws: the notes on every view and this view's own (FEAT-0015). */
+  desk(state: DeckState): DeskCard[];
+  /** A card for a held note this view does not hold, from Deck's own index, once it has arrived. */
+  stranger(noteId: string): CardModel | null;
+  /** Whether a held note is kept on every view of the workspace. */
+  isEveryView(noteId: string): boolean;
+  /** A lift in this window: hidden notes are shown again (FEAT-0015, decision 3). */
+  lifted(): void;
   /** Focus a note and show it in the reader, which carries the verbs. */
   open(card: CardModel): Promise<void>;
   say(message: string, isError?: boolean): void;
@@ -241,6 +249,8 @@ export class GlassField {
   private bridgeKeys = new Set<string>();
   /** Hides the strip a reduced-motion landing left up, with its name highlighted. */
   private landedTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Hide notes, in this window only: the panes are out of sight and cover nothing (FEAT-0015). */
+  private panesHidden = false;
   /** The reach's wires as last painted, for a check that reads the canvas where they are. */
   private wires: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
 
@@ -528,7 +538,7 @@ export class GlassField {
     }
     const state = this.hooks.state();
     const ws = state.workspaceId;
-    this.held = deskCardsOf(state, ws);
+    this.held = this.hooks.desk(state);
     const heldIds = this.held.map((c) => c.noteId);
     const contexts = new Map<string, NoteContext>();
     const missing: string[] = [];
@@ -615,7 +625,7 @@ export class GlassField {
    */
   private redealOrbit(animate: boolean): void {
     const state = this.hooks.state();
-    this.held = deskCardsOf(state, state.workspaceId);
+    this.held = this.hooks.desk(state);
     this.joined = new Set();
     this.shared = new Map();
     this.deal = null;
@@ -661,7 +671,8 @@ export class GlassField {
   }
 
   private paneObstacles(): Obstacle[] {
-    if (this.arrangement === 'orbit') return [];
+    // A hidden pane covers nothing, so the field deals into its space (decision 2).
+    if (this.arrangement === 'orbit' || this.panesHidden) return [];
     const out: Obstacle[] = [];
     for (const card of this.held) {
       if (card.wide === true) continue;
@@ -1124,7 +1135,7 @@ export class GlassField {
     this.el.deskCount.textContent =
       heldCount === 0
         ? ''
-        : `${heldCount} held${heldCount >= 2 ? ` · ${sharedCount} joined to more than one of them` : ''}`;
+        : `${heldCount} held${heldCount >= 2 ? ` · ${sharedCount} joined to more than one of them` : ''}${this.panesHidden ? ' · hidden' : ''}`;
     // The compass: which way the person faces, and what is out of sight.
     const deg = ((this.model.yaw / DEG) % 360 + 360) % 360;
     this.el.compass.style.setProperty('--turn', `${-deg}deg`);
@@ -1504,7 +1515,9 @@ export class GlassField {
 
   async lift(card: CardModel): Promise<void> {
     const state = this.hooks.state();
-    const onDesk = deskCardsOf(state, state.workspaceId);
+    const onDesk = this.hooks.desk(state);
+    // A person who lifts a note wants to see it (decision 3).
+    this.hooks.lifted();
     if (!onDesk.some((c) => c.noteId === card.noteId)) {
       const at = this.nextPanePlace(onDesk);
       await this.hooks.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: at.x, y: at.y });
@@ -1723,7 +1736,9 @@ export class GlassField {
         if (child !== null) return child;
       }
     }
-    return null;
+    // A note on every view that this view does not hold: drawn in full from
+    // Deck's own index (decision 7).
+    return this.hooks.stranger(noteId);
   }
 
   private drawPanes(): void {
@@ -1755,6 +1770,7 @@ export class GlassField {
       '<header class="pane-head" tabindex="0" role="toolbar">' +
       '<span class="pane-id"></span><span class="pane-status"></span><span class="pane-face"></span>' +
       '<span class="pane-tools">' +
+      '<button type="button" class="pane-every" title="Keep this note on every view (V)" aria-label="Keep this note on every view" aria-pressed="false">⧉</button>' +
       '<button type="button" class="pane-orbit" title="Show this in the link graph (O)" aria-label="Show this in the link graph">◎</button>' +
       '<button type="button" class="pane-send" title="Send to another window (S)" aria-label="Send to another window">↗</button>' +
       '<button type="button" class="pane-widen" title="Read it in the column (W)" aria-label="Read in the reading column">⇥</button>' +
@@ -1773,6 +1789,10 @@ export class GlassField {
     (pane.querySelector('.pane-widen') as HTMLElement).addEventListener('click', (event) => {
       event.stopPropagation();
       void this.widen(noteId);
+    });
+    (pane.querySelector('.pane-every') as HTMLElement).addEventListener('click', (event) => {
+      event.stopPropagation();
+      void this.toggleEveryView(noteId);
     });
     (pane.querySelector('.pane-orbit') as HTMLElement).addEventListener('click', (event) => {
       event.stopPropagation();
@@ -1817,7 +1837,13 @@ export class GlassField {
     pane.classList.toggle('top', index === this.held.length - 1);
     pane.dataset['status'] = card === null ? 'planned' : bandFor(card.status);
     setText(pane, '.pane-id', deskCard.noteId);
-    setText(pane, '.pane-status', card === null ? 'not in this view' : card.status || 'no status');
+    const every = this.hooks.isEveryView(deskCard.noteId);
+    (pane.querySelector('.pane-every') as HTMLElement).setAttribute('aria-pressed', String(every));
+    pane.classList.toggle('every-view', every);
+    // A note on every view that this view does not hold says so, beside its status.
+    const inView = this.entries.has(deskCard.noteId) || this.input.groups.some((g) => g.cards.some((c) => c.noteId === deskCard.noteId || findChild(c, deskCard.noteId) !== null));
+    pane.classList.toggle('elsewhere', card !== null && !inView);
+    setText(pane, '.pane-status', card === null ? 'not in this view' : `${card.status || 'no status'}${inView ? '' : ' · not in this view'}`);
     setText(pane, '.pane-face', card === null ? '' : faceText(card, this.input.faces));
     const head = pane.querySelector('.pane-head') as HTMLElement;
     head.setAttribute('aria-label', `${deskCard.noteId}${card === null ? '' : ` ${card.title}`}, held: arrow keys move, Alt and arrows resize, Enter raises, W widens, S sends, Delete puts back`);
@@ -1843,6 +1869,19 @@ export class GlassField {
     } else if (card === null) {
       body.textContent = 'This note is on the desk but not in this view. Put it back, or switch to a view that holds it.';
     }
+  }
+
+  /**
+   * Hide notes, or show them again (FEAT-0015, decisions 1 and 2). The notes
+   * stay held and keep shaping the field: their neighbours stay in front and
+   * their slots stay ghosted. Only the panes go, and the space they covered
+   * is dealt into.
+   */
+  setHidden(hidden: boolean): void {
+    if (this.panesHidden === hidden) return;
+    this.panesHidden = hidden;
+    this.el.panes.hidden = hidden;
+    if (this.active) this.redeal(true);
   }
 
   /** Forget the pane bodies, because the notes they came from changed on disk. */
@@ -1998,6 +2037,9 @@ export class GlassField {
     } else if (event.key === 'o' || event.key === 'O') {
       event.preventDefault();
       this.showInField(noteId);
+    } else if (event.key === 'v' || event.key === 'V') {
+      event.preventDefault();
+      void this.toggleEveryView(noteId);
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
       void this.putBack(noteId);
@@ -2010,19 +2052,39 @@ export class GlassField {
     await this.hooks.dispatch({ type: 'take-off-desk', noteId });
   }
 
-  /** ⌥× on a pane: every OTHER note goes back. */
+  /**
+   * ⌥× on a pane: every OTHER note of this view goes back. A note kept on
+   * every view stays, as it does for Escape (decision 9).
+   */
   async putBackOthers(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
+    let stayed = 0;
     for (const card of [...this.held]) {
-      if (card.noteId !== noteId) await this.hooks.dispatch({ type: 'take-off-desk', noteId: card.noteId });
+      if (card.noteId === noteId) continue;
+      if (this.hooks.isEveryView(card.noteId)) stayed += 1;
+      else await this.hooks.dispatch({ type: 'take-off-desk', noteId: card.noteId });
     }
+    if (stayed > 0) this.tell(`${stayed} ${stayed === 1 ? 'note' : 'notes'} on every view stayed`);
   }
 
-  /** esc: sweep the desk. Every note goes back; no saved desk is touched. */
+  /** esc: sweep this view's desk. A note on every view stays, and the front plane says how many. */
   async sweep(): Promise<void> {
     if (!this.hooks.canArrange() || this.held.length === 0) return;
+    const stayed = this.held.filter((c) => this.hooks.isEveryView(c.noteId)).length;
     await this.hooks.dispatch({ type: 'clear-desk' });
-    this.tell('the desk is swept; every note is back in its slot');
+    this.tell(
+      stayed === 0
+        ? 'the desk is swept; every note is back in its slot'
+        : `the desk is swept; ${stayed} ${stayed === 1 ? 'note' : 'notes'} on every view stayed`,
+    );
+  }
+
+  /** ⧉ or V on a pane: keep the note on every view, or give it back to this one (decision 6). */
+  async toggleEveryView(noteId: string): Promise<void> {
+    if (!this.hooks.canArrange()) return;
+    const on = !this.hooks.isEveryView(noteId);
+    await this.hooks.dispatch({ type: 'set-every-view', noteId, on });
+    this.tell(on ? `${noteId} is on every view` : `${noteId} is on this view only`);
   }
 
   async widen(noteId: string): Promise<void> {

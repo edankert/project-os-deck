@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 source: ["[[FEAT-0014-The-Hands]]", "[[REFERENCE-GLASS-PHASE-REVIEW]]"]
 parent: "FEAT-0014"
 effort: ""
@@ -63,3 +63,5 @@ This extends [[FEAT-0008-One-Renderer-Two-Hosts]] and could have reopened it. It
 **A tablet no longer changes the desk.** A row clicked on a served page opens the note and leaves the desk alone, and the served page applies only the actions in `TABLET_LOCAL_ACTIONS`. Before this task a tablet put cards on a desk of its own that nobody else saw; after it, the desk it shows is the Mac's, so a change made there would be overwritten by the next broadcast, or would be a tablet that steers.
 
 **The store's new shape landed with this task**, because the host has to describe it: `surface`, and a `session` part holding the pulled and pushed sets that the persister drops. Their actions belong to [[TASK-0033-Glass-Is-Addressed-And-Opened-First]] and [[TASK-0053-Pull-Forward-And-Push-Behind]].
+
+**Amended 2026-09-11 ([[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]).** Edwin asked that day for a desk for each view, with some notes kept on every view. "The desk is per workspace and is shared" now reads: the tablet shows the desk of the Mac's current view, whatever view it is browsing itself, and follows it when the Mac switches view. A note marked "on every view" is what still crosses views, and a state file written before the change reads every held note as on every view, so nothing on screen changed on the day it landed.

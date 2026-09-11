@@ -54,6 +54,7 @@ export function servedState(state: DeckState, openWorkspaceIds: ReadonlySet<stri
     noteId: workspaceOpen ? state.noteId : null,
     desks,
     deskCards: keep(state.deskCards),
+    viewDesks: keep(state.viewDesks),
     indexRevisions: keep(state.indexRevisions),
     session: { pulled: keep(state.session.pulled), pushed: keep(state.session.pushed) },
     actor: '',
@@ -78,6 +79,11 @@ export function mergeServed(remote: DeckState, local: DeckState, follow: boolean
   // A tablet that has not chosen a workspace yet starts where the Mac is,
   // which is what a person picking it up expects.
   if (merged.workspaceId === null && remote.workspaceId !== null) merged.workspaceId = remote.workspaceId;
+  // The desk drawn is the one the Mac's current view holds, whatever view the
+  // tablet is browsing: a throw to the tablet lands on that desk, and the
+  // tablet sends nothing back that would say which view it shows (FEAT-0015,
+  // decision 13).
+  merged.deskView = remote.viewId;
   // One revision a subscriber can compare: the larger of the two, so a local
   // change on the tablet and a broadcast from the Mac never look older than
   // what was already drawn.

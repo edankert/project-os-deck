@@ -16,9 +16,14 @@ const { nextSlot, clampToSurface, deskBounds, placementBounds, reconcileDesk, CA
 
 const WORKSPACE = 'aaaa1111';
 
+// A desk belongs to a view (FEAT-0015), so a workspace here opens on one.
 function opened() {
-  return reduce(initialState(), { type: 'open-workspace', workspaceId: WORKSPACE });
+  const state = reduce(initialState(), { type: 'open-workspace', workspaceId: WORKSPACE });
+  return reduce(state, { type: 'select-view', viewId: 'issues' });
 }
+
+// A card's place in the stack is not what these checks are about.
+const plain = (cards) => cards.map(({ z: _z, ...card }) => card);
 
 function withCards(...ids) {
   let state = opened();
@@ -46,19 +51,25 @@ test('a note already on the desk is not put on it twice', () => {
   assert.equal(twice, once, 'nothing changed, so the state is the same object');
 });
 
-test('changing the view leaves the desk alone', () => {
-  // A desk holding notes from more than one view is the point of choosing what
-  // goes on it.
-  const state = reduce(withCards('ISS-0256'), { type: 'select-view', viewId: 'features' });
-  assert.deepEqual(deskCardsOf(state, WORKSPACE).map((c) => c.noteId), ['ISS-0256']);
+test('changing the view shows that view’s own desk, and moves no card', () => {
+  // Rewritten 2026-09-11 (FEAT-0015): this said "changing the view leaves the
+  // desk alone", the rule TASK-0024 set and Edwin reversed that day.
+  const held = withCards('ISS-0256');
+  const state = reduce(held, { type: 'select-view', viewId: 'features' });
+  assert.deepEqual(deskCardsOf(state, WORKSPACE), [], 'the Features desk is its own');
+  assert.equal(state.viewDesks, held.viewDesks, 'a card moved');
+  const back = reduce(state, { type: 'select-view', viewId: 'issues' });
+  assert.deepEqual(plain(deskCardsOf(back, WORKSPACE)), [{ noteId: 'ISS-0256', x: 12, y: 12 }]);
 });
 
 test('another workspace has its own desk, and neither disturbs the other', () => {
   let state = withCards('ISS-0256');
   state = reduce(state, { type: 'open-workspace', workspaceId: 'bbbb2222' });
+  state = reduce(state, { type: 'select-view', viewId: 'issues' });
   assert.deepEqual(deskCardsOf(state, 'bbbb2222'), [], 'the other workspace starts empty');
   state = reduce(state, { type: 'put-on-desk', noteId: 'FEAT-0001', x: 12, y: 12 });
   state = reduce(state, { type: 'open-workspace', workspaceId: WORKSPACE });
+  state = reduce(state, { type: 'select-view', viewId: 'issues' });
   assert.deepEqual(deskCardsOf(state, WORKSPACE).map((c) => c.noteId), ['ISS-0256'], 'and the first desk came back');
 });
 
@@ -66,7 +77,7 @@ test('dragging one card moves that card and no other', () => {
   const before = withCards('ISS-0256', 'ISS-0259', 'ISS-0265');
   const after = reduce(before, { type: 'move-card', noteId: 'ISS-0259', x: 400, y: 250 });
   const cards = deskCardsOf(after, WORKSPACE);
-  assert.deepEqual(cards.find((c) => c.noteId === 'ISS-0259'), { noteId: 'ISS-0259', x: 400, y: 250 });
+  assert.deepEqual(plain(cards.filter((c) => c.noteId === 'ISS-0259')), [{ noteId: 'ISS-0259', x: 400, y: 250 }]);
   // Identity, not equality: an untouched card is the object it already was, so
   // "no other card moved" is checkable rather than asserted.
   const untouched = deskCardsOf(before, WORKSPACE).filter((c) => c.noteId !== 'ISS-0259');
@@ -95,7 +106,7 @@ test('a saved desk is what was on the desk, and opening it brings back exactly t
   state = reduce(state, { type: 'put-on-desk', noteId: 'ISS-9999', x: 0, y: 0 });
   state = reduce(state, { type: 'open-desk', name: 'triage' });
   assert.deepEqual(
-    deskCardsOf(state, WORKSPACE),
+    plain(deskCardsOf(state, WORKSPACE)),
     [
       { noteId: 'ISS-0256', x: 300, y: 120 },
       { noteId: 'ISS-0259', x: 32, y: 12 },

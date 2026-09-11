@@ -392,10 +392,11 @@ function registerIpc(): void {
    * A note thrown to another window (TASK-0055).
    *
    * Landing is an action the windows already understand. A reader window is
-   * re-addressed at the note, the way a pop-out is addressed; a desk panel and
-   * the tablet get the note on the desk, which is per workspace and so is the
-   * same desk everywhere; a display with no Deck window gets a new reader,
-   * placed by the function that places every window.
+   * re-addressed at the note, the way a pop-out is addressed; a desk panel
+   * gets it on the desk of the view in ITS address, which it draws whatever
+   * the focus window shows, and the tablet on the desk of the Mac's current
+   * view (FEAT-0015, decisions 12 and 13); a display with no Deck window gets
+   * a new reader, placed by the function that places every window.
    */
   handle('deck:window:throw', (_e, request: Record<string, unknown>) => {
     const noteId = typeof request?.['noteId'] === 'string' ? request['noteId'] : '';
@@ -410,9 +411,10 @@ function registerIpc(): void {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
-    const onTheDesk = (): void => {
-      const cards = deskCardsOf(store.getState(), workspaceId);
-      store.dispatch({ type: 'put-on-desk', noteId, x: 16 + (cards.length % 3) * 28, y: 16 + cards.length * PANE_HEADER_HEIGHT });
+    const onTheDesk = (deskView: string | null = null): void => {
+      const cards = deskCardsOf(store.getState(), workspaceId, deskView ?? store.getState().viewId);
+      const place = { x: 16 + (cards.length % 3) * 28, y: 16 + cards.length * PANE_HEADER_HEIGHT };
+      store.dispatch(deskView === null ? { type: 'put-on-desk', noteId, ...place } : { type: 'put-on-desk', noteId, ...place, viewId: deskView });
     };
     if (target['kind'] === 'tablet') {
       onTheDesk();
@@ -424,7 +426,8 @@ function registerIpc(): void {
       const win = BrowserWindow.fromId(id);
       if (info === undefined || win === null || win.isDestroyed()) return { ok: false, error: 'that window has closed' };
       if (info.panel === 'desk') {
-        onTheDesk();
+        const parsed = info.address === null ? null : tryParseAddress(info.address);
+        onTheDesk(parsed !== null && parsed.ok ? parsed.address.viewId : null);
         return { ok: true, landed: 'desk' };
       }
       if (info.role === 'focus') {
@@ -1672,9 +1675,9 @@ async function recordServedPageFollows(
     store.dispatch({ type: 'put-on-desk', noteId: lifted, x: 40, y: 40 });
     let arrived = -1;
     for (let i = 0; i < 40; i += 1) {
-      const seen = (await win.webContents.executeJavaScript(
-        `((window.__deckLastState || {}).deskCards || {})[${JSON.stringify(prepared.id)}] || []`,
-      )) as Array<{ noteId: string }>;
+      // The desk the page draws, which on a served page is the Mac's current
+      // view's (FEAT-0015).
+      const seen = ((await win.webContents.executeJavaScript(`window.__deckDesk ? window.__deckDesk() : []`)) as string[]).map((noteId) => ({ noteId }));
       if (seen.some((c) => c.noteId === lifted)) {
         arrived = Date.now() - sentAt;
         break;
@@ -1688,7 +1691,7 @@ async function recordServedPageFollows(
     );
     await delay(600);
     record(
-      store.getState().deskCards[prepared.id]?.some((c) => c.noteId === lifted) === true,
+      deskCardsOf(store.getState(), prepared.id).some((c) => c.noteId === lifted),
       'a click on the served page left the Mac’s desk as it was',
     );
     store.dispatch({ type: 'take-off-desk', noteId: lifted });

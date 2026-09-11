@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-10T12:00Z"
+updated: "2026-09-11T12:00Z"
 
 template:
   replace_me: false
@@ -27,7 +27,7 @@ retention:
   # Read by tools/scripts/sync-snapshot.py (ADR-0018). Absent = feature off.
   derive_fields: true      # title/goal derived from the note
   prune_window: 25         # keep N most recent terminal items per collection
-  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive."
+  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage."
 
 docs_system:
   source_of_truth: SNAPSHOT.yaml
@@ -48,23 +48,23 @@ counters:
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 14
-  ISS: 67
+  FEAT: 15
+  ISS: 68
   PHASE: 4
   REQ: 0
   RISK: 4
   REL: 0
-  TASK: 57
-  TST: 47
+  TASK: 63
+  TST: 49
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0014"
+  feature: "FEAT-0015"
   task: ""
   issue: ""
-  note: "PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings, ISS-0058 to ISS-0063, are fixed (cd95528); a second review found ISS-0064 and ISS-0065, also fixed. Edwin stopped the review loop after that second round and on 2026-09-11 marked FEAT-0009, FEAT-0010 and FEAT-0014 done himself, without an approved review. FEAT-0001 is doing: TASK-0005 (the orbit's treatment) is Edwin's, and he chose to decide later. What else is left is a person's: four walks, Safari on the tablet, a week of use, a laptop measurement."
+  note: "2026-09-11: FEAT-0015 PLANNED from Edwin's request for a Hide notes button and a desk per view with notes kept on every view; TASK-0058 (the store) is next, then 0059 to 0063. Earlier: PHASE-0002 is being built on 2026-09-10 at Edwin's instruction ('Implement and Test Phase 0002 fully'), with PHASE-0001 still owing four walks and a triage on ISS-0056. Eighteen of nineteen tasks done (c283128). The independent review requested changes on FEAT-0009, FEAT-0010, FEAT-0014 and TST-0045; its reproduced findings, ISS-0058 to ISS-0063, are fixed (cd95528); a second review found ISS-0064 and ISS-0065, also fixed. Edwin stopped the review loop after that second round and on 2026-09-11 marked FEAT-0009, FEAT-0010 and FEAT-0014 done himself, without an approved review. FEAT-0001 is doing: TASK-0005 (the orbit's treatment) is Edwin's, and he chose to decide later. What else is left is a person's: four walks, Safari on the tablet, a week of use, a laptop measurement."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -195,6 +195,15 @@ items:
       requirements: []
       tasks: ["TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057"]
       note: "ADDED 2026-09-10 from REFERENCE-GLASS-PHASE-REVIEW, after Edwin said the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned, Glass let a person turn, switch view, lift and put back; every band and position was the record's opinion. Five properties of the film's surface survive without gloves and the plan had one and a half. This carries the rest: PULL and PUSH by a short drag, session state in the store shared by every window, dropped by the persister, never in the address, owed beats both and the refusal says why, the label counts hand-placed and the compass counts pushed (TASK-0053); a held note is a PANE moved, resized and stacked with DES-0002's header rule, place and size in the desk record Spread saves, a stated minimum width and a widen-to-column verb (TASK-0054); a THROW off the field's edge toward a window on another display lands in its reader or on its desk, opens a new reader window on an empty display, reaches the tablet, with a target strip, a flight and a keyboard send-to (TASK-0055); REACH by hover or press-and-hold draws wires to a card's neighbours on the canvas from TASK-0036's cached context read (TASK-0056); and the SERVED PAGE FOLLOWS THE STORE over GET /deck/state and /deck/events, both 405 to writes, so the tablet shows the Mac's desk and follows focus when asked, never steering (TASK-0057). FOUND IN CODE: host-bridge.ts keeps a fresh local state when there is no bridge, so the tablet today never sees the store. Nothing a hand does writes; git status after the walk is the check. Order: TASK-0057 first (host only), 0053 after the renderer, 0054 after the lift, 0056 after the neighbourhood, 0055 last. Not adopted, in the review's Part 5: a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's)."
+    FEAT-0015:
+      file: "docs/features/view-desks/FEAT-0015-Each-View-Keeps-Its-Own-Desk.md"
+      title: "Each view keeps its own desk, a note can be kept on every view, and one button hides every held note in a window"
+      status: review
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063"]
+      note: "ADDED 2026-09-11 from Edwin's request: 'I need a button to hide everything (all the open items) on the desk. Also, we probably need to have different open items on different views, maybe some can be marked to be open on all views?' Three parts. HIDE NOTES is a per-window toggle, never stored or addressed, that hides held panes in Glass and desk cards in Spread without taking any note off the desk; the field reclaims the slots panes covered. A DESK PER VIEW: deskCards keeps its shape and now means the notes on EVERY view of a workspace; a new viewDesks map holds each view's own notes; the desk drawn is the every-view list followed by the view's own. A note is MARKED 'on every view' by a toggle on the pane header and the Spread card (key V). NO MIGRATION: a state file written before reads unchanged and every note already held shows as on every view, which is exactly today's behaviour. REVERSES TASK-0024's rule that a view switch leaves the desk alone and FEAT-0010's 2026-09-07 reading that one desk per view is 'honoured by the address'; RESTORES DES-0002 rev 9, where Edwin said 'each view should allow for its own selected notes'. Satellite desk panels show the desk of the view in their own address (ISS-0018's pinned view); a throw to one lands there; the tablet shows the Mac's current view's desk. Saved desks stay workspace-level; whether a saved desk should remember its view is Edwin's open question. Label is 'on every view', never 'pin', which the cockpit's navigator already uses. Order: store (0058, 0059), hide (0060), Glass and Spread (0061), other windows and tablet (0062), smoke (0063)."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -290,13 +299,6 @@ items:
     TASK-0033:
       file: "docs/features/glass-field/plan/tasks/TASK-0033-Glass-Is-Addressed-And-Opened-First.md"
       title: "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboard route"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0009"
-      phase: PHASE-0002
-    TASK-0034:
-      file: "docs/features/glass-field/plan/tasks/TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace.md"
-      title: "The field is measured on the largest workspace, and the numbers go in the note"
       status: done
       owner: user:edwin
       parent: "FEAT-0009"
@@ -461,6 +463,48 @@ items:
       status: done
       owner: user:edwin
       parent: "FEAT-0014"
+      phase: PHASE-0002
+    TASK-0058:
+      file: "docs/features/view-desks/plan/tasks/TASK-0058-The-Store-Keeps-A-Desk-For-Each-View.md"
+      title: "The store keeps a desk for each view, and a state file written before this reads unchanged"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0015"
+      phase: PHASE-0002
+    TASK-0059:
+      file: "docs/features/view-desks/plan/tasks/TASK-0059-A-Note-Is-Kept-On-Every-View.md"
+      title: "A note is kept on every view: the mark moves it between the view's own list and the workspace's, stacking crosses both, and saved desks follow"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0015"
+      phase: PHASE-0002
+    TASK-0060:
+      file: "docs/features/view-desks/plan/tasks/TASK-0060-Hide-Notes-And-Show-Them-Again.md"
+      title: "Hide notes: one button hides every held note in this window and shows them again, and the field reclaims the space the panes covered"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0015"
+      phase: PHASE-0002
+    TASK-0061:
+      file: "docs/features/view-desks/plan/tasks/TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk.md"
+      title: "Glass and Spread draw the view's own desk and the notes kept on every view, with the mark on the pane and the card"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0015"
+      phase: PHASE-0002
+    TASK-0062:
+      file: "docs/features/view-desks/plan/tasks/TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk.md"
+      title: "Desk panels, throws and the tablet use the right view's desk"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0015"
+      phase: PHASE-0002
+    TASK-0063:
+      file: "docs/features/view-desks/plan/tasks/TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide.md"
+      title: "The smoke run drives desks per view, the every-view mark and hide with a real pointer, and git status stays unchanged"
+      status: done
+      owner: user:edwin
+      parent: "FEAT-0015"
       phase: PHASE-0002
   issues:
     ISS-0031:
@@ -1052,11 +1096,11 @@ items:
       status: active
       order: 2
       owner: user:edwin
-      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001"]
+      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015"]
       requirements: []
-      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005"]
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063"]
       issues: ["ISS-0008"]
-      note: "REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
+      note: "2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
       title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
@@ -1389,6 +1433,22 @@ items:
       phase: PHASE-0002
       covers: ["FEAT-0014"]
       note: "Acceptance walk for FEAT-0014, added 2026-09-10. Reach a card and see wires; pull one forward and push one behind; try to push an owed note and read the refusal; drag, resize, stack and widen panes; throw a card to the reader window on a second display and another to an empty display; see the desk on the tablet and press-and-hold there; restart and find the panes kept and the hand sets gone; git status clean. Needs Your Trainer, a second display and a tablet. Rests at active; the verdict is a ledger event."
+    TST-0048:
+      file: "docs/tests/acceptance/TST-0048-Each-View-Keeps-Its-Own-Desk-And-Held-Notes-Can-Be-Hidden.md"
+      title: "Each view keeps its own desk, a note kept on every view follows every switch, and Hide notes clears the window without taking anything off the desk"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0015"]
+      note: "Acceptance walk for FEAT-0015, added 2026-09-11. Upgrade with notes already held and find them unchanged and marked on every view; unmark one; hold different notes on Issues and Features and switch between them; read the desk bar naming the other view; keep one note on every view and read it on a view that does not hold it; hide and show in Glass and Spread; restart; git status clean. Rests at active; the verdict is a ledger event."
+    TST-0049:
+      file: "docs/features/view-desks/plan/tests/TST-0049-A-Desk-For-Each-View-And-A-Note-On-Every-View-In-The-Store.md"
+      title: "A desk for each view and a note on every view, in the store: an old state file reads unchanged, the mark moves a note between lists, and the tablet is told only about open workspaces"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0015"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers FEAT-0015. Its command names desktop/tests/view-desks.test.mjs, which TASK-0058 writes; the suite and this note must land in ONE commit, or run-tests.py fails with exit 2 (ISS-0028). Load-bearing checks: a state file holding only deskCards draws the same notes on every view in every workspace; a note put on one view is absent from another; marking removes the note from every view's own list."
   releases: {}
   workflows: {}
   changes:
@@ -1468,17 +1528,17 @@ items:
 
 metrics:
   counts:
-    features_total: 14
+    features_total: 15
     features_done: 13
     phases_total: 4
     phases_done: 0
-    tasks_total: 57
-    tasks_done: 56
-    tests_total: 33
+    tasks_total: 63
+    tasks_done: 62
+    tests_total: 34
     tests_passing: 2
     tests_failing: 0
     issues_open: 0
-    issues_triage: 2
+    issues_triage: 3
     risks_open: 0
     releases_total: 0
     decisions_total: 4

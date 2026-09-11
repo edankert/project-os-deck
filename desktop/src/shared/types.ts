@@ -103,6 +103,14 @@ export interface DeskCard {
    * has it, because widening a second pane replaces the first.
    */
   wide?: boolean;
+  /**
+   * Where the card stands in the stack of the desk it is drawn on: higher is
+   * nearer the top (FEAT-0015). Optional, and a card without one counts as 0,
+   * so a desk written before this draws in its list order. It exists because
+   * a desk is now drawn from two lists, the notes on every view and the
+   * view's own, and a press must be able to raise a note from either.
+   */
+  z?: number;
 }
 
 export interface Desk {
@@ -135,7 +143,10 @@ export interface DeckState {
   /** Keyed `<workspaceId>:<desk name>`, so two workspaces may both have a "triage". */
   desks: Record<string, Desk>;
   /**
-   * What is on the desk right now, keyed by workspace id.
+   * The notes held on EVERY view of a workspace, keyed by workspace id
+   * (FEAT-0015). Until 2026-09-11 this was the whole desk, one per workspace;
+   * each view's own notes are in `viewDesks` now, and a file written before
+   * reads every note it held as on every view, which is what it showed.
    *
    * The desk is a chosen subset rather than everything the view holds, so it
    * has to be written down somewhere. It lives here rather than being read
@@ -143,6 +154,20 @@ export interface DeckState {
    * (TASK-0024).
    */
   deskCards: Record<string, DeskCard[]>;
+  /**
+   * Each view's own held notes, keyed by workspace id and then view id
+   * (FEAT-0015). `deskCards` above holds the notes on EVERY view of a
+   * workspace; the desk drawn for a view is both lists (`deskCardsOf`). A
+   * state file written before desks per view has only `deskCards`, so every
+   * note it held reads as on every view, which is exactly what it showed.
+   */
+  viewDesks: Record<string, Record<string, DeskCard[]>>;
+  /**
+   * The view whose desk this state draws, when that is not `viewId`. Set only
+   * on a served page: the tablet browses its own view and draws the desk of
+   * the Mac's current view (FEAT-0015, decision 13). Never stored.
+   */
+  deskView?: string | null;
   /**
    * Who Deck says made a write.
    *

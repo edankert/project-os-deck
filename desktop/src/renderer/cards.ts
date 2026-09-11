@@ -19,11 +19,17 @@ export interface PlacedCard {
   card: CardModel;
   x: number;
   y: number;
+  /** A note on every view, drawn on a view that does not hold it (FEAT-0015). */
+  elsewhere?: boolean;
+  /** Kept on every view of the workspace rather than on this view's desk alone. */
+  everyView?: boolean;
 }
 
 export interface CardHandlers {
   open: (card: CardModel) => void;
   remove: (card: CardModel) => void;
+  /** Keep this note on every view, or give it back to this one (FEAT-0015). */
+  everyView: (card: CardModel) => void;
   /** A drag started on this card. The renderer owns the pointer from here. */
   grab: (card: CardModel, element: HTMLElement, event: PointerEvent) => void;
 }
@@ -89,7 +95,7 @@ export class CardPool {
     element.setAttribute('role', 'button');
     element.tabIndex = 0;
     element.innerHTML =
-      '<span class="id"></span><button type="button" class="remove" title="Take this card off the desk" aria-label="Take this card off the desk">×</button>' +
+      '<span class="id"></span><button type="button" class="every" title="Keep this note on every view (V)" aria-label="Keep this note on every view" aria-pressed="false">⧉</button><button type="button" class="remove" title="Take this card off the desk" aria-label="Take this card off the desk">×</button>' +
       '<span class="title"></span><span class="face"></span><span class="owed"></span>';
 
     const model = (): CardModel | undefined => {
@@ -98,7 +104,7 @@ export class CardPool {
     };
 
     element.addEventListener('click', (event) => {
-      if ((event.target as HTMLElement).closest('.remove') !== null) return;
+      if ((event.target as HTMLElement).closest('.remove, .every') !== null) return;
       // A drag that ended on this card is not a click on it.
       if (element.dataset['dragged'] === 'true') {
         delete element.dataset['dragged'];
@@ -108,10 +114,21 @@ export class CardPool {
       if (card !== undefined) this.handlers.open(card);
     });
     element.addEventListener('keydown', (event) => {
+      if ((event.key === 'v' || event.key === 'V') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        const card = model();
+        if (card !== undefined) this.handlers.everyView(card);
+        return;
+      }
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
       const card = model();
       if (card !== undefined) this.handlers.open(card);
+    });
+    element.querySelector('.every')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const card = model();
+      if (card !== undefined) this.handlers.everyView(card);
     });
     element.querySelector('.remove')?.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -119,7 +136,7 @@ export class CardPool {
       if (card !== undefined) this.handlers.remove(card);
     });
     element.addEventListener('pointerdown', (event) => {
-      if ((event.target as HTMLElement).closest('.remove') !== null) return;
+      if ((event.target as HTMLElement).closest('.remove, .every') !== null) return;
       const card = model();
       if (card !== undefined) this.handlers.grab(card, element, event);
     });
@@ -136,6 +153,9 @@ export class CardPool {
     const face = faceFor(card, this.faces);
     element.dataset['face'] = face.kind;
     element.setAttribute('aria-current', String(card.noteId === currentNoteId));
+    element.dataset['elsewhere'] = String(entry.elsewhere === true);
+    element.dataset['everyView'] = String(entry.everyView === true);
+    element.querySelector('.every')?.setAttribute('aria-pressed', String(entry.everyView === true));
 
     setText(element, '.id', card.noteId);
     setText(element, '.title', card.title);

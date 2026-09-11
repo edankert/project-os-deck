@@ -10,16 +10,17 @@
  * groups the sidecar sent. The desk holds the notes a person put there, where
  * they put them. A popped-out window carries one panel and nothing else.
  */
-import type { CardGroup, CardModel, PanelType, Workspace } from '../shared/types.js';
+import type { CardGroup, CardModel, DeckState, DeskCard, PanelType, Workspace } from '../shared/types.js';
+import type { DeckAction } from '../shared/store-state.js';
 import type { NoteContext } from '../shared/sidecar-client.js';
 import type { Description, Refusal } from '../shared/description.js';
 import { AddressError, addressFor, formatAddress, isDeskName, parseAddress, tryParseAddress } from '../shared/address.js';
 import { DEFAULT_VIEW_ID, ViewRegistry, marksModeFor, sourceOf } from '../shared/views.js';
 import { SidecarClient, flattenGroups, groupsFromNav, isFinishedWork } from '../shared/sidecar-client.js';
-import { type QueryIndex, runQuery } from '../shared/query.js';
+import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
-import { deskCardsOf } from '../shared/store-state.js';
+import { DESK_ACTIONS, deskCardsOf, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } from '../shared/write-client.js';
@@ -64,6 +65,9 @@ const el = {
   popOut: must('pop-out') as HTMLButtonElement,
   saveDesk: must('save-desk') as HTMLButtonElement,
   clearDesk: must('clear-desk') as HTMLButtonElement,
+  hideNotes: must('hide-notes') as HTMLButtonElement,
+  alsoHeld: must('also-held'),
+  glassAlsoHeld: must('glass-also-held'),
   follow: must('follow') as HTMLButtonElement,
   surfaceToggle: must('surface-toggle'),
 };
@@ -94,6 +98,115 @@ let currentCards: CardModel[] = [];
 let panel: PanelType | null = null;
 /** A note panel stays on the note its address named, whatever the focus window does. */
 let pinnedNoteId: string | null = null;
+
+/**
+ * The view whose desk this window draws and changes (FEAT-0015, decision 12).
+ * A popped-out window draws the view in its own address, not the focus
+ * window's (ISS-0018); a served page draws the Mac's current view's desk.
+ */
+function deskViewHere(): string | null {
+  const state = host.state();
+  if (pinned) return currentView?.id ?? state.viewId;
+  return deskViewOf(state);
+}
+
+/** The desk this window draws: the notes on every view and this view's own. */
+function deskHere(state: DeckState = host.state()): DeskCard[] {
+  return deskCardsOf(state, state.workspaceId, deskViewHere());
+}
+
+/** An action sent from this window, a desk action naming the view it draws. */
+function send(action: DeckAction): Promise<void> {
+  if (DESK_ACTIONS.has(action.type) && (action as { viewId?: string }).viewId === undefined) {
+    const viewId = deskViewHere();
+    if (viewId !== null) return host.dispatch({ ...action, viewId } as DeckAction);
+  }
+  return host.dispatch(action);
+}
+
+/**
+ * Cards for held notes the view does not hold, read from Deck's own index.
+ * A note on every view is drawn in full on a view that does not hold it,
+ * or the mark would be useless on exactly the views it exists for (decision 7).
+ */
+const strangers = new Map<string, CardModel>();
+let strangersKey = '';
+let strangersAsked = '';
+
+function strangerCard(noteId: string): CardModel | null {
+  return strangers.get(noteId) ?? null;
+}
+
+function fetchStrangers(): void {
+  const state = host.state();
+  const ws = state.workspaceId;
+  if (ws === null) return;
+  const key = `${ws} ${indexRevision()}`;
+  if (key !== strangersKey) {
+    strangers.clear();
+    strangersKey = key;
+    strangersAsked = '';
+  }
+  const inView = new Set(currentCards.map((c) => c.noteId));
+  const wanted = deskHere(state)
+    .map((c) => c.noteId)
+    .filter((id) => !inView.has(id) && !strangers.has(id));
+  if (wanted.length === 0) return;
+  // Asked once per set of notes per index revision: a note the index no
+  // longer has would otherwise be asked for on every repaint.
+  const asking = wanted.join(' ');
+  if (asking === strangersAsked) return;
+  strangersAsked = asking;
+  void readRecords(ws)
+    .then((index) => {
+      if (`${ws} ${indexRevision()}` !== strangersKey) return;
+      for (const record of index.records) if (wanted.includes(record.id)) strangers.set(record.id, toCard(record, new Map()));
+      drawDesk();
+      drawNavigator();
+    })
+    .catch(() => null);
+}
+
+/**
+ * Hide notes: every held note out of sight in this window, still held and
+ * still in the record (FEAT-0015, decision 1). Per window, like the yaw: not
+ * in the store, not in the state file, not in an address.
+ */
+let notesHidden = false;
+
+function setNotesHidden(hidden: boolean): void {
+  if (notesHidden === hidden) return;
+  notesHidden = hidden;
+  document.body.classList.toggle('notes-hidden', hidden);
+  glass.setHidden(hidden);
+  drawHideButton();
+}
+
+function drawHideButton(): void {
+  const count = deskHere().length;
+  const surface = surfaceNow();
+  el.hideNotes.hidden = count === 0 || surface === 'list' || (panel !== null && panel !== 'desk');
+  el.hideNotes.textContent = notesHidden ? `Show ${count} ${count === 1 ? 'note' : 'notes'}` : 'Hide notes';
+  el.hideNotes.setAttribute('aria-pressed', String(notesHidden));
+}
+
+/**
+ * The other views that still hold notes, for the desk bar: a desk per view is
+ * exactly how a note gets left behind, and DES-0002 rev 9 asked that nothing
+ * be left behind silently (decision 14).
+ */
+function alsoHeldText(): string {
+  const state = host.state();
+  const ws = state.workspaceId;
+  if (ws === null) return '';
+  const here = deskViewHere();
+  const parts = currentViews
+    .filter((view) => view.id !== here)
+    .map((view) => ({ label: view.label, count: viewCardsOf(state, ws, view.id).length }))
+    .filter((entry) => entry.count > 0)
+    .map((entry) => `${entry.label} ${entry.count}`);
+  return parts.length === 0 ? '' : `also held: ${parts.join(', ')}`;
+}
 let queryTimer: ReturnType<typeof setTimeout> | null = null;
 /** The note the reader is showing, with what a write to it needs. */
 let openNote: { id: string; rel: string; mtime: number | null } | null = null;
@@ -120,7 +233,7 @@ const pool = new CardPool(el.desk, {
     // Selecting a card brings it forward: the desk's order is the stacking
     // order, and Glass raises a pane the same way (ISS-0067). A card that is
     // not on the desk, as in the Needs-you strip, is left alone by the store.
-    if (panel !== 'needs-you') void host.dispatch({ type: 'raise-card', noteId: card.noteId });
+    if (panel !== 'needs-you') void send({ type: 'raise-card', noteId: card.noteId });
     void openCard(card);
   },
   remove: (card) => {
@@ -128,7 +241,16 @@ const pool = new CardPool(el.desk, {
     // nothing to take off. The stylesheet hides the control there as well,
     // which ISS-0007 claimed and ISS-0013 actually built.
     if (panel === 'needs-you') return;
-    void host.dispatch({ type: 'take-off-desk', noteId: card.noteId });
+    void send({ type: 'take-off-desk', noteId: card.noteId });
+  },
+  everyView: (card) => {
+    // Keep the note on every view, or give it back to this one (decision 6).
+    if (panel === 'needs-you') return;
+    const state = host.state();
+    const on = !isOnEveryView(state, state.workspaceId, card.noteId);
+    void send({ type: 'set-every-view', noteId: card.noteId, on }).then(() =>
+      say(on ? `${card.noteId} is on every view` : `${card.noteId} is on this view only`),
+    );
   },
   grab: (card, element, event) => {
     grabCard(card, element, event);
@@ -192,7 +314,14 @@ let pendingCount = 0;
 const glass = new GlassField(glassElements(), {
   state: () => host.state(),
   canArrange: () => host.canArrange(),
-  dispatch: (action) => host.dispatch(action),
+  dispatch: (action) => send(action),
+  desk: (state) => deskHere(state),
+  stranger: (noteId) => strangerCard(noteId),
+  isEveryView: (noteId) => {
+    const state = host.state();
+    return isOnEveryView(state, state.workspaceId, noteId);
+  },
+  lifted: () => setNotesHidden(false),
   open: (card) => openCard(card),
   say: (message, isError) => say(message, isError),
   context: (noteId) => {
@@ -727,7 +856,7 @@ function drawNavigator(): void {
     groups: glass.isActive() ? [...deskGroups(), ...glass.orbitGroups(), ...groups] : groups,
     faces: currentView?.face ?? PLAIN_FACES,
     folds: state.folds,
-    onDesk: new Set(deskCardsOf(state, state.workspaceId).map((c) => c.noteId)),
+    onDesk: new Set(deskHere(state).map((c) => c.noteId)),
     currentNoteId: state.noteId,
   });
   el.navCount.textContent = `${shown} of ${held}`;
@@ -748,7 +877,7 @@ function deskGroups(): CardGroup[] {
   const state = host.state();
   const ws = state.workspaceId;
   if (ws === null) return [];
-  const heldIds = deskCardsOf(state, ws).map((c) => c.noteId);
+  const heldIds = deskHere(state).map((c) => c.noteId);
   if (heldIds.length === 0) return [];
   const byId = new Map(currentCards.map((c) => [c.noteId, c]));
   const known = new Map<string, NoteContext>();
@@ -759,7 +888,7 @@ function deskGroups(): CardGroup[] {
       if (!byId.has(item.id)) byId.set(item.id, cardFromContext(item));
     }
   }
-  const card = (id: string): CardModel => byId.get(id) ?? blankCard(id, id, '');
+  const card = (id: string): CardModel => byId.get(id) ?? strangerCard(id) ?? blankCard(id, id, '');
   const out: CardGroup[] = [
     { key: 'deck:held', label: 'On the desk', needsHuman: false, suppressed: false, cards: heldIds.map(card) },
   ];
@@ -843,11 +972,16 @@ function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[
 function drawDesk(): void {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
+  fetchStrangers();
+  drawHideButton();
+  const also = alsoHeldText();
+  el.alsoHeld.textContent = also;
+  el.glassAlsoHeld.textContent = also;
 
   if (glass.isActive()) {
     // The reader is the reading column: shown for a widened pane, or on a
     // served page once a note is opened, since a tablet holds no panes.
-    const wide = deskCardsOf(state, state.workspaceId).some((c) => c.wide === true);
+    const wide = deskHere(state).some((c) => c.wide === true);
     document.body.classList.toggle('reading', wide || (!host.canArrange() && state.noteId !== null));
     glass.update({
       groups: currentGroups,
@@ -873,8 +1007,17 @@ function drawDesk(): void {
     return;
   }
 
-  const onDesk = deskCardsOf(state, state.workspaceId);
-  const reconciled = reconcileDesk(onDesk, currentCards);
+  const onDesk = deskHere(state);
+  // A note on every view that this view does not hold is drawn from Deck's
+  // own index and marked, not dropped (decision 7). Any other note the view
+  // no longer holds is still dropped and counted.
+  const every = new Set(everyViewCardsOf(state, state.workspaceId).map((c) => c.noteId));
+  const inView = new Set(currentCards.map((c) => c.noteId));
+  const visiting = onDesk
+    .filter((c) => every.has(c.noteId) && !inView.has(c.noteId))
+    .map((c) => strangerCard(c.noteId))
+    .filter((c): c is CardModel => c !== null);
+  const reconciled = reconcileDesk(onDesk, [...currentCards, ...visiting]);
   // Clamped at PAINT time rather than in the store: a desk saved on a large
   // monitor keeps the positions it was saved with, and opens on a laptop with
   // every card reachable (ISS-0007). The saved desk is not rewritten.
@@ -887,7 +1030,7 @@ function drawDesk(): void {
   const bounds = placementBounds(el.desk, reconciled.cards);
   const placed: PlacedCard[] = reconciled.cards.map((c) => {
     const at = clampToSurface({ x: c.x, y: c.y }, bounds);
-    return { card: c.card, x: at.x, y: at.y };
+    return { card: c.card, x: at.x, y: at.y, elsewhere: !inView.has(c.card.noteId), everyView: every.has(c.card.noteId) };
   });
   let label = state.deskName ?? (placed.length === 0 ? 'the desk is empty' : 'unsaved desk');
   if (reconciled.dropped > 0) {
@@ -994,16 +1137,17 @@ async function toggleOnDesk(card: CardModel): Promise<void> {
     await glass.lift(card);
     return;
   }
-  const state = host.state();
-  const cards = deskCardsOf(state, state.workspaceId);
+  const cards = deskHere();
   if (cards.some((c) => c.noteId === card.noteId)) {
-    await host.dispatch({ type: 'take-off-desk', noteId: card.noteId });
+    await send({ type: 'take-off-desk', noteId: card.noteId });
     drawNavigator();
     drawDesk();
     return;
   }
   const slot = nextSlot(cards, Math.max(CARD_WIDTH * 2, el.desk.clientWidth));
-  await host.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: slot.x, y: slot.y });
+  // Putting a note on the desk here is a lift: it shows hidden notes again (decision 3).
+  setNotesHidden(false);
+  await send({ type: 'put-on-desk', noteId: card.noteId, x: slot.x, y: slot.y });
   await openCard(card);
 }
 
@@ -1535,9 +1679,9 @@ function grabCard(card: CardModel, element: HTMLElement, event: PointerEvent): v
     // Moved, then brought forward: a card is on top where it is dropped. Not
     // at the press, because the pool is positional and a raise then would
     // repaint the element under the pointer with another card (ISS-0067).
-    void host
-      .dispatch({ type: 'move-card', noteId: card.noteId, x: latest.x, y: latest.y })
-      .then(() => host.dispatch({ type: 'raise-card', noteId: card.noteId }));
+    void send({ type: 'move-card', noteId: card.noteId, x: latest.x, y: latest.y }).then(() =>
+      send({ type: 'raise-card', noteId: card.noteId }),
+    );
   };
 
   element.addEventListener('pointermove', move);
@@ -1602,7 +1746,7 @@ async function applyAddress(raw: string): Promise<void> {
   // surface in the address means Glass.
   await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
   await selectView(address.viewId);
-  if (address.desk !== null) await host.dispatch({ type: 'open-desk', name: address.desk });
+  if (address.desk !== null) await send({ type: 'open-desk', name: address.desk });
   if (address.note !== null) {
     const card = currentCards.find((c) => c.noteId === address.note);
     if (card === undefined) say(`that address names a note this view does not show: ${address.note}`, true);
@@ -1725,7 +1869,7 @@ function wireControls(): void {
         say('open a note before popping one out', true);
         return;
       }
-      if (chosen === 'desk' && deskCardsOf(state, state.workspaceId).length === 0) {
+      if (chosen === 'desk' && deskHere(state).length === 0) {
         say('put something on the desk before popping it out', true);
         return;
       }
@@ -1747,7 +1891,7 @@ function wireControls(): void {
       const state = host.state();
       const workspace = workspaceById(state.workspaceId);
       if (workspace === null) return;
-      const cards = deskCardsOf(state, workspace.id);
+      const cards = deskHere(state);
       if (cards.length === 0) {
         say('there is nothing on the desk to save', true);
         return;
@@ -1760,7 +1904,7 @@ function wireControls(): void {
         say('that name cannot go in an address: up to 64 characters, and no control characters', true);
         return;
       }
-      await host.dispatch({ type: 'save-desk', name });
+      await send({ type: 'save-desk', name });
       drawDesk();
       say(`saved the desk "${name}" with ${cards.length} cards`);
     })();
@@ -1768,16 +1912,32 @@ function wireControls(): void {
 
   el.clearDesk.addEventListener('click', () => {
     void (async () => {
-      await host.dispatch({ type: 'clear-desk' });
+      await send({ type: 'clear-desk' });
       drawNavigator();
       drawDesk();
+      // The notes on every view stay: Clear takes off this view's own (decision 9).
+      const state = host.state();
+      const stayed = everyViewCardsOf(state, state.workspaceId).length;
+      if (stayed > 0) say(`${stayed} ${stayed === 1 ? 'note' : 'notes'} on every view stayed on the desk`);
     })();
+  });
+
+  el.hideNotes.addEventListener('click', () => setNotesHidden(!notesHidden));
+  // H toggles it from anywhere a letter is not being typed (decision 1).
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'h' && event.key !== 'H') return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = event.target as HTMLElement | null;
+    if (target !== null && (target.closest('input, textarea, select, [contenteditable="true"]') !== null)) return;
+    if (el.hideNotes.hidden) return;
+    event.preventDefault();
+    setNotesHidden(!notesHidden);
   });
 
   el.deskList.addEventListener('change', () => {
     void (async () => {
       const value = el.deskList.value;
-      await host.dispatch({ type: 'open-desk', name: value === '' ? null : value });
+      await send({ type: 'open-desk', name: value === '' ? null : value });
       drawNavigator();
       drawDesk();
     })();
@@ -1858,6 +2018,8 @@ function startNeedsYouPoll(): void {
 host.onState((state) => {
   (globalThis as unknown as { __deckLastState?: unknown }).__deckLastState = state;
 });
+// And this, for the ids on the desk this window draws (FEAT-0015).
+(globalThis as unknown as { __deckDesk?: () => string[] }).__deckDesk = () => deskHere().map((c) => c.noteId);
 
 boot()
   .then(() => {

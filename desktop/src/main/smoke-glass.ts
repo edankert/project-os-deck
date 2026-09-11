@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type { DeckState, WindowRole } from '../shared/types.js';
-import type { DeckAction } from '../shared/store-state.js';
+import { type DeckAction, deskCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
 
 export interface GlassSmokeContext {
   store: { dispatch(action: DeckAction): DeckState; getState(): DeckState };
@@ -155,7 +155,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
   const before = gitStatus(prepared.root);
   const reset = (): void => {
     store.dispatch({ type: 'open-workspace', workspaceId: prepared.id });
-    store.dispatch({ type: 'clear-desk' });
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
     store.dispatch({ type: 'let-go' });
   };
   reset();
@@ -170,7 +170,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     await js(PAGE_HELPERS);
     if (process.env['DECK_SMOKE_TRACE'] === '1') await js(`window.__deckTrace = true`);
   };
-  const deskIds = (): string[] => (store.getState().deskCards[prepared.id] ?? []).map((c) => c.noteId);
+  const deskIds = (): string[] => deskCardsOf(store.getState(), prepared.id).map((c) => c.noteId);
   if (process.env['DECK_SMOKE_TRACE'] === '1') {
     win.webContents.on('console-message', (_e, _level, message) => {
       if (/^(glass|nav)/.test(message)) console.log(`TRACE ${message}`);
@@ -251,7 +251,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       const two = await js<{ count: string; shared: string[]; drawn: string[]; marked: string[]; navGroup: number }>(`(() => {
         const ws = ${JSON.stringify(prepared.id)};
         const rev = window.__deckLastState.indexRevisions[ws] || 0;
-        const held = (window.__deckLastState.deskCards[ws] || []).map((c) => c.noteId);
+        const held = window.__deckDesk();
         const counts = new Map();
         for (const id of held) {
           const c = window.__deckContexts.peek(ws, id, rev);
@@ -327,7 +327,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       }
       const between = yaws.filter((y) => y < 0.79 && y > 0.01).length;
       record(Math.abs(yaws[yaws.length - 1] as number) < 0.01 && between > 0, `a lift turns the field to face its neighbours, flying from 0.8 to ${(yaws[yaws.length - 1] as number).toFixed(2)} (${between} frames between)`);
-      store.dispatch({ type: 'clear-desk' });
+      store.dispatch({ type: 'clear-desk', scope: 'workspace' });
       await delay(800);
     }
 
@@ -379,7 +379,7 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
         const under = [...new Set([...seen.under, ...(await js<string[]>(`__t.underPanes()`))])];
         record(Math.abs(seen.yaw) < 0.01 && under.length === 0, `a reduced-motion lift from yaw ${away.toFixed(1)} cuts to the front and leaves no card under a pane, at the cut and after (${under.join(', ') || 'none'}; yaw ${seen.yaw.toFixed(2)} after ${seen.ms}ms)`);
       }
-      store.dispatch({ type: 'clear-desk' });
+      store.dispatch({ type: 'clear-desk', scope: 'workspace' });
       await delay(600);
     }
     await js(`window.__deckReducedMotion = false`);
@@ -519,10 +519,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       record(false, `panes: two notes could be lifted (${toLift.map((c) => c.id).join(', ')} gave ${deskIds().join(', ')})`);
     } else {
       const headA = await js<{ x: number; y: number; left: number; top: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-id')`);
-      const startA = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
+      const startA = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneA);
       await pointer(win, drag({ x: headA.x, y: headA.y }, { x: headA.x + 260, y: headA.y + 180 }, 12));
       await delay(800);
-      const movedA = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
+      const movedA = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneA);
       record(
         startA !== undefined && movedA !== undefined && Math.abs(movedA.x - startA.x - 260) <= 2 && Math.abs(movedA.y - startA.y - 180) <= 2,
         `a pane dragged by its header lands where it was released (${startA?.x},${startA?.y} to ${movedA?.x},${movedA?.y})`,
@@ -530,15 +530,15 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       const handle = await js<{ x: number; y: number }>(`(() => { const r = document.querySelector('.pane[data-note-id="${paneA}"] .pane-resize').getBoundingClientRect(); return { x: r.left + 5, y: r.top + 5 }; })()`);
       await pointer(win, drag(handle, { x: handle.x - 200, y: handle.y + 60 }, 8));
       await delay(600);
-      const sized = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
+      const sized = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneA);
       record(sized?.w === 280, `a pane resized narrower stops at the stated minimum width (${sized?.w})`);
       // Stack: drop B's header onto A's header; it snaps below it.
-      const a = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
+      const a = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneA);
       const headB = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneB}"] .pane-id')`);
       const headA2 = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-id')`);
       await pointer(win, drag(headB, { x: headA2.x, y: headA2.y + 4 }, 12));
       await delay(800);
-      const b = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneB);
+      const b = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneB);
       record(a !== undefined && b !== undefined && b.y === a.y + 34, `a pane dropped on another’s header snaps below it (${a?.y} then ${b?.y})`);
       // A click on the lower pane's header raises it.
       const lower = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-id')`);
@@ -573,11 +573,11 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       record(reading.reading && reading.reader && reading.text > 20, `widen takes the pane to the reading column (${reading.text} characters)`);
       const widenB = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneB}"] .pane-widen')`);
       if (process.env['DECK_SMOKE_DEBUG'] === '1') {
-        console.log('DEBUG widenB', JSON.stringify(widenB), await js(`(() => { const e = document.elementFromPoint(${widenB.x}, ${widenB.y}); return e ? e.className + ' in ' + (e.closest('.pane') || {dataset:{}}).dataset.noteId : null; })()`), 'A', paneA, 'B', paneB, JSON.stringify(store.getState().deskCards[prepared.id]));
+        console.log('DEBUG widenB', JSON.stringify(widenB), await js(`(() => { const e = document.elementFromPoint(${widenB.x}, ${widenB.y}); return e ? e.className + ' in ' + (e.closest('.pane') || {dataset:{}}).dataset.noteId : null; })()`), 'A', paneA, 'B', paneB, JSON.stringify(deskCardsOf(store.getState(), prepared.id)));
       }
       await pointer(win, click(widenB));
       await delay(1200);
-      const wide = (store.getState().deskCards[prepared.id] ?? []).filter((c) => c.wide === true).map((c) => c.noteId);
+      const wide = deskCardsOf(store.getState(), prepared.id).filter((c) => c.wide === true).map((c) => c.noteId);
       record(wide.join() === paneB, `widening another pane replaces the first (${wide.join(', ')})`);
       // With the reading column open the field is narrower, and a pane stored
       // past its edge is drawn clamped: no card may be drawn under it (ISS-0058).
@@ -595,10 +595,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       await delay(800);
       // The keyboard on a header moves the pane.
       await js(`document.querySelector('.pane[data-note-id="${paneA}"] .pane-head').focus()`);
-      const beforeKey = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
+      const beforeKey = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneA);
       press(win, 'Right');
       await delay(400);
-      const afterKey = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === paneA);
+      const afterKey = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === paneA);
       record(beforeKey !== undefined && afterKey !== undefined && afterKey.x === beforeKey.x + 16, 'an arrow key on a pane’s header moves it');
       // Out of the reading column again, so the field is wide enough that no
       // pane is clamped and a position read back is the position stored.
@@ -606,9 +606,17 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       await pointer(win, click(unwiden));
       await delay(1200);
       // A reload: the panes come back where they were, at the size they were.
-      const kept = JSON.stringify(store.getState().deskCards[prepared.id]);
+      const kept = JSON.stringify(deskCardsOf(store.getState(), prepared.id));
+      const paneView = store.getState().viewId;
       win.webContents.reload();
       await boot();
+      // The reload reopens the address the window was created with, whose
+      // view is Issues, and the panes are on the Features desk: a desk
+      // belongs to its view (FEAT-0015). Back to that view, then compare.
+      if (paneView !== null && store.getState().viewId !== paneView) {
+        await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === ${JSON.stringify(paneView)}).click()`);
+        await delay(2000);
+      }
       const restored = await js<Array<{ id: string; left: string; top: string; width: string }>>(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, left: p.style.left, top: p.style.top, width: p.style.width }))`);
       const stored = JSON.parse(kept) as Array<{ noteId: string; x: number; y: number; w?: number }>;
       const matches = stored.every((c) => restored.some((r) => r.id === c.noteId && r.left === `${c.x}px` && r.top === `${c.y}px` && (c.w === undefined || r.width === `${c.w}px`)));
@@ -655,10 +663,10 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       // NOT on top is taken, so that it ending on top says something.
       const spreadCard = await js<{ x: number; y: number; id: string } | null>(`(() => { const top = ${JSON.stringify(deskIds().at(-1) ?? '')}; const cards = [...document.querySelectorAll('#desk .card:not([hidden])')].sort((a, b) => (a.dataset.noteId === top) - (b.dataset.noteId === top)); for (const c of cards) { const r = c.getBoundingClientRect(); for (let y = r.top + 10; y < r.bottom - 4; y += 6) { const x = r.left + 30; const hit = document.elementFromPoint(x, y); const top = hit && hit.closest('.card'); if (top === c && !hit.closest('.remove')) return { x, y, id: c.dataset.noteId }; } } return null; })()`);
       if (spreadCard !== null) {
-        const was = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === spreadCard.id);
+        const was = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === spreadCard.id);
         await pointer(win, drag(spreadCard, { x: spreadCard.x + 120, y: spreadCard.y + 60 }, 8));
         await delay(700);
-        const now = (store.getState().deskCards[prepared.id] ?? []).find((c) => c.noteId === spreadCard.id);
+        const now = deskCardsOf(store.getState(), prepared.id).find((c) => c.noteId === spreadCard.id);
         record(was !== undefined && now !== undefined && (now.x !== was.x || now.y !== was.y), `a card dragged in Spread moved in the store (${was?.x},${was?.y} to ${now?.x},${now?.y})`);
         record(deskIds().at(-1) === spreadCard.id, `and it is on top where it was dropped (${deskIds().at(-1)} last on the desk)`);
         await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
@@ -762,13 +770,16 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     // ---- TASK-0032: a view switch keeps each note's element, and a change is held ----
     // No two of this repository's views hold the same note, so the notes in
     // both are a held note's neighbourhood: it takes the front band whichever
-    // view is chosen, because the desk belongs to the workspace.
+    // view is chosen, once the note is kept on every view (FEAT-0015; until
+    // then the one desk belonged to the workspace).
     await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'issues').click()`);
     await delay(2200);
     const anchor = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards('front')`))[0];
     if (anchor !== undefined) {
       await pointer(win, [...click(anchor), { type: 'move', x: 10, y: 10 }]);
       await delay(2000);
+      store.dispatch({ type: 'set-every-view', noteId: anchor.id, on: true });
+      await delay(600);
     }
     await js(`document.querySelectorAll('.field-card').forEach((e) => { e.__deckMark = e.dataset.noteId; e.__deckAt = e.style.transform; })`);
     const marked = await js<string[]>(`[...document.querySelectorAll('.field-card:not(.leaving)')].map((e) => e.dataset.noteId)`);
@@ -854,6 +865,9 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     // ---- FEAT-0001: the orbit arrangement ----
     await recordOrbit(ctx, win, js, record);
 
+    // ---- FEAT-0015: a desk for each view, notes on every view, and Hide notes ----
+    await recordDesksPerView(ctx, win, js, boot, record);
+
     // ---- TASK-0033: an address that names Spread opens on the desk ----
     store.dispatch({ type: 'select-surface', surface: 'glass' });
     // An address copied in Glass, with a note focused, restores the view, the
@@ -883,6 +897,263 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
     reset();
   }
   void notHere;
+}
+
+/**
+ * FEAT-0015, in a real window with a real pointer: a desk for each view, a
+ * note kept on every view, and Hide notes (TASK-0060 to TASK-0063). It starts
+ * and ends with the whole-workspace reset, so no check inherits a desk.
+ */
+async function recordDesksPerView(
+  ctx: GlassSmokeContext,
+  win: BrowserWindow,
+  js: <T>(code: string) => Promise<T>,
+  boot: () => Promise<void>,
+  record: (ok: boolean, what: string) => void,
+): Promise<void> {
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const reset = (): void => {
+    store.dispatch({ type: 'open-workspace', workspaceId: ws });
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    store.dispatch({ type: 'let-go' });
+  };
+  const view = async (id: string): Promise<void> => {
+    await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === ${JSON.stringify(id)}).click()`);
+    await delay(1800);
+  };
+  const own = (id: string): string[] => viewCardsOf(store.getState(), ws, id).map((c) => c.noteId);
+  const drawn = (): string[] => deskCardsOf(store.getState(), ws).map((c) => c.noteId);
+  const panes = (): Promise<Array<{ id: string; left: string; top: string; width: string; shown: boolean }>> =>
+    js(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, left: p.style.left, top: p.style.top, width: p.style.width, shown: p.offsetParent !== null }))`);
+  const rowLift = async (): Promise<string | null> => {
+    // In Glass a navigator row lifts its note; the first row naming a note not already held.
+    const id = await js<string | null>(`(() => { const held = new Set(window.__deckDesk()); const r = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]:not([hidden])')].find((e) => !held.has(e.dataset.noteId)); if (!r) return null; r.click(); return r.dataset.noteId; })()`);
+    await delay(1500);
+    return id;
+  };
+  const clickAt = async (selector: string): Promise<boolean> => {
+    const at = await js<{ x: number; y: number } | null>(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e || e.offsetParent === null) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+    if (at === null) return false;
+    await pointer(win, [...click(at), { type: 'move', x: 10, y: 10 }]);
+    return true;
+  };
+
+  reset();
+  store.dispatch({ type: 'select-surface', surface: 'glass' });
+  win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
+  await view('issues');
+  try {
+    // ---- 4. A desk per view ----
+    const a = await rowLift();
+    await view('features');
+    const aOnFeatures = await js<boolean>(`!!document.querySelector('.pane[data-note-id="${a}"]')`);
+    const b = await rowLift();
+    await view('issues');
+    const back = await panes();
+    const aStored = deskCardsOf(store.getState(), ws).find((c) => c.noteId === a);
+    record(
+      a !== null && b !== null && !aOnFeatures && back.some((p) => p.id === a && aStored !== undefined && p.left === `${aStored.x}px` && p.top === `${aStored.y}px`) && !back.some((p) => p.id === b),
+      `a note lifted on Issues has no pane on Features, and back on Issues it is where it was and Features' note is not (${a} on Issues, ${b} on Features: ${back.map((p) => p.id).join(', ')})`,
+    );
+    const also = await js<string>(`__t.text('#glass-also-held')`);
+    record(/Features 1/.test(also), `the Issues bar names the other view that still holds a note ("${also}")`);
+
+    // ---- 1. Hide notes in Glass ----
+    const a2 = await rowLift();
+    const before = JSON.stringify(deskCardsOf(store.getState(), ws));
+    const paneRects = await js<Array<{ left: number; right: number; top: number; bottom: number }>>(`[...document.querySelectorAll('.pane:not(.wide)')].map((p) => { const r = p.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; })`);
+    const underBefore = await js<number>(`(() => { const rs = ${JSON.stringify(paneRects)}; return __t.nearCards().filter((c) => rs.some((p) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top)).length; })()`);
+    const clicked = await clickAt('#hide-notes');
+    await delay(1500);
+    const hidden = await panes();
+    const label = await js<string>(`__t.text('#hide-notes')`);
+    const underAfter = await js<number>(`(() => { const rs = ${JSON.stringify(paneRects)}; return __t.nearCards().filter((c) => rs.some((p) => c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top)).length; })()`);
+    record(clicked && a2 !== null && hidden.length === 2 && hidden.every((p) => !p.shown), `Hide notes, clicked, draws no pane (${hidden.filter((p) => p.shown).length} of ${hidden.length} shown)`);
+    record(JSON.stringify(deskCardsOf(store.getState(), ws)) === before, 'and the store’s desk is the same before and after');
+    record(label === 'Show 2 notes', `and the button reads "${label}"`);
+    record(underBefore === 0 && underAfter > 0, `while hidden the field deals cards into the space the panes covered (${underBefore} there before, ${underAfter} after)`);
+    ctx.focusApp(win);
+    await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+    press(win, 'H');
+    await delay(1200);
+    const shownAgain = await panes();
+    const stored = deskCardsOf(store.getState(), ws);
+    record(
+      shownAgain.length === 2 && shownAgain.every((p) => p.shown) && stored.every((c) => shownAgain.some((p) => p.id === c.noteId && p.left === `${c.x}px` && p.top === `${c.y}px`)),
+      `H shows both panes again at their places (${shownAgain.filter((p) => p.shown).length} shown)`,
+    );
+    // Hidden again, then a reload: the state is the window's, so it is gone.
+    press(win, 'H');
+    await delay(400);
+    win.webContents.reload();
+    await boot();
+    if (store.getState().viewId !== 'issues') await view('issues');
+    const afterReload = await panes();
+    record(afterReload.length === 2 && afterReload.every((p) => p.shown), `after a reload the panes are shown (${afterReload.filter((p) => p.shown).length} of ${afterReload.length})`);
+
+    // ---- 3. H typed into a text field ----
+    ctx.focusApp(win);
+    await js(`document.getElementById('search').focus(); true`);
+    press(win, 'h');
+    await delay(500);
+    const typed = await js<{ value: string; shown: number }>(`({ value: document.getElementById('search').value, shown: [...document.querySelectorAll('.pane')].filter((p) => p.offsetParent !== null).length })`);
+    record(typed.value === 'h' && typed.shown === 2, `H typed into the search box types a letter and hides nothing ("${typed.value}", ${typed.shown} panes shown)`);
+    await js(`(() => { const box = document.getElementById('search'); box.value = ''; box.dispatchEvent(new Event('input')); box.blur(); return true; })()`);
+    await delay(800);
+
+    // ---- 2. Hide notes in Spread ----
+    await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`);
+    await delay(1200);
+    const deskBefore = JSON.stringify(deskCardsOf(store.getState(), ws));
+    // Spread draws the held notes this view holds; a neighbour lifted from
+    // another view is counted, not drawn, so the count is read, not assumed.
+    const spreadBefore = await js<number>(`[...document.querySelectorAll('#desk .card:not([hidden])')].filter((c) => getComputedStyle(c).display !== 'none').length`);
+    await clickAt('#hide-notes');
+    await delay(500);
+    const spreadHidden = await js<{ cards: number; shown: number }>(`(() => { const cs = [...document.querySelectorAll('#desk .card:not([hidden])')]; return { cards: cs.length, shown: cs.filter((c) => getComputedStyle(c).display !== 'none').length }; })()`);
+    await clickAt('#hide-notes');
+    await delay(500);
+    const spreadShown = await js<number>(`[...document.querySelectorAll('#desk .card:not([hidden])')].filter((c) => getComputedStyle(c).display !== 'none').length`);
+    record(spreadBefore > 0 && spreadHidden.cards === spreadBefore && spreadHidden.shown === 0 && spreadShown === spreadBefore && JSON.stringify(deskCardsOf(store.getState(), ws)) === deskBefore, `in Spread the same button hides and shows the desk's cards, and the desk is unchanged (${spreadBefore} shown, ${spreadHidden.shown} while hidden, ${spreadShown} after)`);
+    await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
+    await delay(1500);
+
+    // ---- 5. The mark: on every view, drawn in full where the view does not hold it ----
+    const marked = await clickAt(`.pane[data-note-id="${a}"] .pane-every`);
+    await delay(600);
+    const isEvery = isOnEveryView(store.getState(), ws, a ?? '');
+    await view('features');
+    let body = '';
+    for (let i = 0; i < 20; i += 1) {
+      body = await js<string>(`(() => { const n = document.querySelector('.pane[data-note-id="${a}"] .pane-note'); return n ? n.textContent : ''; })()`);
+      if (body.length > 40 && !/not in this view/.test(body)) break;
+      await delay(200);
+    }
+    const pressed = await js<string | null>(`(() => { const b = document.querySelector('.pane[data-note-id="${a}"] .pane-every'); return b ? b.getAttribute('aria-pressed') : null; })()`);
+    // The status line shows the note's own status beside "not in this view":
+    // only a card read from Deck's index has one. The body alone could be the
+    // text the pane already loaded on Issues.
+    const status = await js<string>(`__t.text('.pane[data-note-id="${a}"] .pane-status')`);
+    record(
+      marked && isEvery && body.length > 40 && !/This note is on the desk but not in this view/.test(body) && pressed === 'true' && /^\S.* · not in this view$/.test(status),
+      `a click on a pane's mark keeps it on every view: on Features its pane is there with the note's body and status, and the mark is pressed (${body.length} characters, "${status}", pressed ${pressed})`,
+    );
+    await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`);
+    await delay(1500);
+    const elsewhere = await js<{ card: boolean; flag: string | null; says: string }>(`(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); return { card: !!c, flag: c ? c.dataset.elsewhere : null, says: c ? getComputedStyle(c, '::after').content : '' }; })()`);
+    record(elsewhere.card && elsewhere.flag === 'true' && /not in this view/.test(elsewhere.says), `in Spread on Features it is a card that says it is not in this view (${elsewhere.says})`);
+    await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
+    await delay(1500);
+    ctx.focusApp(win);
+    await js(`document.querySelector('.pane[data-note-id="${a}"] .pane-head').focus(); true`);
+    press(win, 'V');
+    await delay(700);
+    const unmarked = !isOnEveryView(store.getState(), ws, a ?? '') && own('features').includes(a ?? '');
+    await view('issues');
+    record(unmarked && !(await js<boolean>(`!!document.querySelector('.pane[data-note-id="${a}"]')`)), `V on its header gives it back to Features alone, and it is gone from Issues (${own('features').join(', ')} on Features)`);
+
+    // ---- 6. Stacking across the two lists ----
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    await delay(600);
+    const e = await rowLift();
+    store.dispatch({ type: 'set-every-view', noteId: e ?? '', on: true });
+    await delay(500);
+    const o = await rowLift();
+    const eHead = `.pane[data-note-id="${e}"] .pane-id`;
+    const covered = await js<{ x: number; y: number } | null>(`(() => { const p = document.querySelector('.pane[data-note-id="${e}"] .pane-body'); if (!p) return null; const r = p.getBoundingClientRect(); for (let y = r.top + 6; y < r.bottom - 6; y += 8) for (let x = r.left + 8; x < r.right - 20; x += 8) { const hit = document.elementFromPoint(x, y); const pane = hit && hit.closest('.pane'); if (pane && pane.dataset.noteId === ${JSON.stringify(o)}) return { x, y }; } return null; })()`);
+    const underFirst = drawn().at(-1) === o;
+    await clickAt(eHead);
+    await delay(700);
+    const nowOver = covered === null ? null : await js<string | null>(`(() => { const hit = document.elementFromPoint(${covered?.x ?? 0}, ${covered?.y ?? 0}); const p = hit && hit.closest('.pane'); return p ? p.dataset.noteId : null; })()`);
+    record(underFirst && covered !== null && drawn().at(-1) === e && nowOver === e, `a press on a note on every view lying under this view's own pane raises it above, and the store agrees (${e} over ${o}: ${nowOver}, top of the store ${drawn().at(-1)})`);
+
+    // ---- 7. Escape leaves the notes on every view ----
+    ctx.focusApp(win);
+    await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+    press(win, 'Escape');
+    await delay(800);
+    const said = await js<string>(`__t.text('#field-say')`);
+    record(drawn().join() === (e ?? '') && /1 note on every view stayed/.test(said), `Escape puts back this view's own notes and leaves the note on every view, and says so (${drawn().join(', ')}; "${said}")`);
+
+    // ---- 8. A desk panel keeps its view, and a throw onto it lands there ----
+    store.dispatch({ type: 'put-on-desk', noteId: 'ISS-0008', x: 30, y: 30, viewId: 'issues' });
+    const deskPanel = ctx.createWindow('satellite', `deck://${ws}/issues?panel=desk`, 'desk');
+    deskPanel.setBounds({ x: 1330, y: 0, width: 520, height: 420 });
+    try {
+      await once(deskPanel, 'did-finish-load');
+      await ctx.untilBooted(deskPanel);
+      await delay(1500);
+      await view('features');
+      const panelDesk = (await deskPanel.webContents.executeJavaScript(`window.__deckDesk()`)) as string[];
+      record(panelDesk.includes('ISS-0008') && store.getState().viewId === 'features', `a desk panel opened on Issues still draws the Issues desk after the focus window switches to Features (${panelDesk.join(', ')})`);
+      const moveFrom = (await deskPanel.webContents.executeJavaScript(`(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === 'ISS-0008'); if (!c) return null; const r = c.getBoundingClientRect(); return { x: r.left + 30, y: r.top + 12 }; })()`)) as { x: number; y: number } | null;
+      const wasAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === 'ISS-0008');
+      if (moveFrom !== null) {
+        await pointer(deskPanel, drag(moveFrom, { x: moveFrom.x + 90, y: moveFrom.y + 50 }, 8));
+        await delay(700);
+      }
+      const nowAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === 'ISS-0008');
+      record(moveFrom !== null && wasAt !== undefined && nowAt !== undefined && (nowAt.x !== wasAt.x || nowAt.y !== wasAt.y) && viewCardsOf(store.getState(), ws, 'features').length === 0, `a card dragged in that panel moves on the Issues desk (${wasAt?.x},${wasAt?.y} to ${nowAt?.x},${nowAt?.y})`);
+      const featuresBefore = JSON.stringify(viewCardsOf(store.getState(), ws, 'features'));
+      const thrown = await js<string | null>(`(async () => {
+        const g = window.__deckGlass;
+        const id = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).find((n) => n.startsWith('FEAT-'));
+        const card = id ? g.cardFor(id) : null;
+        if (!card) return null;
+        await g.hooks.throwTo({ kind: 'window', windowId: ${deskPanel.id}, carries: 'desk', label: 'desk', displayId: 0 }, card, 'right');
+        return id;
+      })()`);
+      await delay(700);
+      record(thrown !== null && own('issues').includes(thrown) && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore, `a note thrown onto that desk panel from Features lands on the Issues desk, and the Features desk is unchanged (${thrown})`);
+    } finally {
+      if (!deskPanel.isDestroyed()) deskPanel.destroy();
+    }
+
+    // ---- 9. The tablet draws the Mac's current view's desk ----
+    store.dispatch({ type: 'select-view', viewId: 'issues' });
+    store.dispatch({ type: 'put-on-desk', noteId: 'TASK-0057', x: 50, y: 50, viewId: 'tests' });
+    await delay(800);
+    const tablet = ctx.openServedPage();
+    try {
+      await once(tablet, 'did-finish-load');
+      await ctx.untilBooted(tablet);
+      await delay(1500);
+      await tablet.webContents.executeJavaScript(`(() => { const b = [...document.querySelectorAll('#switcher button')].find((e) => e.dataset.viewId === 'features'); if (b) b.click(); return true; })()`);
+      await delay(1500);
+      const tabletView = (await tablet.webContents.executeJavaScript(`window.__deckLastState ? window.__deckLastState.viewId : null`)) as string | null;
+      const tabletDesk = (await tablet.webContents.executeJavaScript(`window.__deckDesk()`)) as string[];
+      const macDesk = deskCardsOf(store.getState(), ws).map((c) => c.noteId);
+      record(tabletDesk.join() === macDesk.join() && macDesk.length > 0, `the tablet browsing its own view draws the desk of the Mac's current view (${tabletDesk.join(', ')} against ${macDesk.join(', ')}; the tablet's view ${tabletView})`);
+      const sentAt = Date.now();
+      store.dispatch({ type: 'select-view', viewId: 'tests' });
+      let followed = -1;
+      for (let i = 0; i < 40 && followed < 0; i += 1) {
+        const seen = (await tablet.webContents.executeJavaScript(`window.__deckDesk()`)) as string[];
+        if (seen.includes('TASK-0057')) followed = Date.now() - sentAt;
+        else await delay(50);
+      }
+      record(followed >= 0 && followed < 1000, `and when the Mac switches to Tests the tablet draws the Tests desk (${followed}ms)`);
+    } finally {
+      if (!tablet.isDestroyed()) tablet.destroy();
+    }
+
+    // ---- 10. A state file from before desks per view ----
+    const legacy = JSON.parse(JSON.stringify(store.getState())) as Record<string, unknown>;
+    delete legacy['viewDesks'];
+    legacy['deskCards'] = { [ws]: [{ noteId: 'FEAT-0002', x: 40, y: 40 }, { noteId: 'FEAT-0008', x: 80, y: 300 }] };
+    legacy['viewId'] = 'issues';
+    store.dispatch({ type: 'restore', state: legacy as unknown as DeckState });
+    await view('issues');
+    const onIssues = await js<Array<{ id: string; pressed: string | null }>>(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, pressed: p.querySelector('.pane-every').getAttribute('aria-pressed') }))`);
+    await view('features');
+    const onFeatures = await js<Array<{ id: string; pressed: string | null }>>(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, pressed: p.querySelector('.pane-every').getAttribute('aria-pressed') }))`);
+    const same = (list: Array<{ id: string; pressed: string | null }>): boolean => list.map((p) => p.id).sort().join() === 'FEAT-0002,FEAT-0008' && list.every((p) => p.pressed === 'true');
+    record(same(onIssues) && same(onFeatures), `a state from before desks per view draws the same panes on Issues and on Features, each marked on every view (${onIssues.map((p) => p.id).join(', ')} | ${onFeatures.map((p) => p.id).join(', ')})`);
+  } finally {
+    reset();
+    await delay(600);
+  }
 }
 
 async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(code: string) => Promise<T>): Promise<void> {
@@ -945,7 +1216,7 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
       if (!addressNow.includes(`note=${encodeURIComponent(card.id)}`)) {
         console.log('DIAG throw', card.id, JSON.stringify(await js(`({ status: __t.text('#status'), say: __t.text('#field-say'), trace: (window.__deckTraceLog || []).slice(-10) })`)), JSON.stringify(readerTarget));
       }
-      record(!(store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === card.id), 'and the focus window’s desk is unchanged');
+      record(!deskCardsOf(store.getState(), prepared.id).some((c) => c.noteId === card.id), 'and the focus window’s desk is unchanged');
     } else {
       await pointer(win, [{ type: 'up', x: edgeX, y: card.y }]);
     }
@@ -971,7 +1242,7 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
         record(!cut.thrown && /sent to the desk on/.test(cut.said) && /^desk on/.test(cut.landed), `under reduced motion the landing is a cut, and the target's name is highlighted ("${cut.landed}")`);
         await js(`window.__deckReducedMotion = false`);
         await delay(1300);
-        record((store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === second.id), `a note thrown at the desk panel is on the desk (${second.id})`);
+        record(deskCardsOf(store.getState(), prepared.id).some((c) => c.noteId === second.id), `a note thrown at the desk panel is on the desk (${second.id})`);
         const inPanel = (await desk.webContents.executeJavaScript(`[...document.querySelectorAll('#desk .card:not([hidden])')].map((c) => c.dataset.noteId)`)) as string[];
         record(inPanel.includes(second.id), 'and the desk panel window shows it');
       } else {
@@ -986,7 +1257,7 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
       await once(tablet, 'did-finish-load');
       await ctx.untilBooted(tablet);
       await delay(1200);
-      const fourth = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards()`)).find((c) => !(store.getState().deskCards[prepared.id] ?? []).some((d) => d.noteId === c.id));
+      const fourth = (await js<Array<{ id: string; x: number; y: number }>>(`__t.visibleCards()`)).find((c) => !deskCardsOf(store.getState(), prepared.id).some((d) => d.noteId === c.id));
       if (fourth === undefined) {
         record(false, 'a card was in sight to throw to the tablet');
       } else {
@@ -1008,7 +1279,7 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
           ]);
           let shown = -1;
           for (let i = 0; i < 40 && shown < 0; i += 1) {
-            const seen = (await tablet.webContents.executeJavaScript(`((window.__deckLastState || {}).deskCards || {})[${JSON.stringify(prepared.id)}] || []`)) as Array<{ noteId: string }>;
+            const seen = ((await tablet.webContents.executeJavaScript(`window.__deckDesk ? window.__deckDesk() : []`)) as string[]).map((noteId) => ({ noteId }));
             if (seen.some((c) => c.noteId === fourth.id)) shown = Date.now() - sentAt;
             else await delay(50);
           }
@@ -1081,7 +1352,7 @@ async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(c
     if (rowNote !== null) {
       const landed = focusIsReader
         ? (ctx.addressOf(reader.id) ?? '').includes(`note=${encodeURIComponent(rowNote)}`)
-        : (store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === rowNote);
+        : deskCardsOf(store.getState(), prepared.id).some((c) => c.noteId === rowNote);
       record(landed, `and Enter sends ${rowNote} to the ${asked.focus}`);
     }
   } finally {
@@ -1154,7 +1425,7 @@ async function recordOrbit(
   record(differing.length === 0, `Deck's links match the cockpit's for ${sample.length} notes${differing.length > 0 ? `: ${differing.slice(0, 3).join(' | ')}` : ''}`);
 
   // On screen.
-  store.dispatch({ type: 'clear-desk' });
+  store.dispatch({ type: 'clear-desk', scope: 'workspace' });
   const toggle = await js<{ x: number; y: number } | null>(`__t.rect('#surface-toggle button[data-surface="orbit"]')`);
   if (toggle === null) {
     record(false, 'the surface toggle offers the orbit');
@@ -1194,7 +1465,7 @@ async function recordOrbit(
   } else {
     await pointer(win, [...click({ x: fieldBox.left + dot.x, y: fieldBox.top + dot.y }), { type: 'move', x: fieldBox.left + 20, y: fieldBox.top + 20 }]);
     await delay(1500);
-    const landed = (store.getState().deskCards[prepared.id] ?? []).some((c) => c.noteId === dot.id);
+    const landed = deskCardsOf(store.getState(), prepared.id).some((c) => c.noteId === dot.id);
     record(landed, `landing on the dot for ${dot.id} lifts it onto the desk`);
     record(store.getState().noteId === dot.id, 'and opens it: the store, and so the address, name it');
     record(await js<boolean>(`!!document.querySelector('.pane[data-note-id="${dot.id}"]')`), 'and it is a pane, read by the reader Deck has');
@@ -1219,7 +1490,7 @@ async function recordOrbit(
       record(Math.abs(norm(before - after.yaw)) < 0.01 || between > 0, `and flies there rather than cutting (${between} frames in between)`);
     }
   }
-  store.dispatch({ type: 'clear-desk' });
+  store.dispatch({ type: 'clear-desk', scope: 'workspace' });
   await delay(600);
   // The three treatments over the same data, a picture of each.
   for (const treatment of ['constellation', 'glass', 'blocks']) {
