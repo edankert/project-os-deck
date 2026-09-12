@@ -83,3 +83,24 @@ Edwin said to run the window suites and, four runs later, stopped them: "I am us
 **This is no longer only an irritation; it makes the smoke run unable to answer a question.** Four consecutive runs of the same code gave four different failure sets, and the failures clustered on checks that need the window to hold the keyboard — one reported "the window had lost the keyboard" in its own message, another measured a flight as a cut because no frames were recorded, another found Enter had reached nothing. A run whose result depends on whether a person is typing cannot verify anything, which is a stronger reason to fix this than the interruption was.
 
 **It also blocks [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]**, which cannot be closed until its checks can be run repeatably, and [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]], whose numbers are meaningless taken while another application is stealing the display.
+
+## The offscreen spike, answered 2026-09-12
+
+Step 4 of the plan above asked for a spike on offscreen rendering, and named two reasons it might not work. It was run, against Electron 32 on macOS, as a 40-line probe rather than against the real harness. **It works, and better than expected.**
+
+| what was tested | result |
+|---|---|
+| a real click through `sendInputEvent` | delivered — the handler ran |
+| real keys through `sendInputEvent`, into an element the page focused itself | delivered — `a`, `ArrowRight` and `Enter` all arrived |
+| `element.focus()` | worked; `document.activeElement` was the input |
+| `requestAnimationFrame` | **60 frames a second**, not throttled |
+| layout (`getBoundingClientRect`) | correct |
+| `capturePage` | returned a PNG |
+| `win.isVisible()` | **false** — nothing appeared on screen |
+| `document.hasFocus()` | **false** |
+
+**So the first of the two doubts was wrong and the second stands.** The rAF cadence is not degraded offscreen, which was the reason to believe a frame measurement could not be taken there. What is false is `document.hasFocus()`, which `measure.ts` checks before it records a frame and which a handful of checks assert directly.
+
+**What this changes.** A run that opens no window and takes no keyboard is reachable without a container, and most of the suite would work in it unaltered. It does not remove the need for the tagging this issue describes — the checks that assert `document.hasFocus()` have to be tagged either way — but it removes the argument that offscreen is only good for the non-measuring half.
+
+**It is not built.** [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] took the container route, which was Edwin's choice on the day. This is recorded so the spike does not have to be run again.
