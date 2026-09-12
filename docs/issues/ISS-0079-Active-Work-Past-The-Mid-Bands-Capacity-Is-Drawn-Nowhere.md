@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0079
 aliases: ["ISS-0079"]
 title: "A note the view's own rule puts in the mid band, past that band's sixty-four slots, is drawn in no band at all — not even behind the person — so on a large view most of the active work is missing from the field and only a count says so"
-status: triage
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -12,7 +12,7 @@ source: ["Edwin 2026-09-12: 'Maybe we need more bands and allow cards to be brou
 severity: high
 component: renderer
 parent: ""
-related: ["[[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0014-The-Hands]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
+related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0014-The-Hands]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
 tests: []
 ---
 
@@ -92,3 +92,10 @@ No trigger applies: no new dependency, env var, path or exposure. A fourth band 
 
 - [ ] Edwin confirms the fourth band, and whether it is drawn as small cards or as tiles.
 - [ ] Then tasks under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]], taken with [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]: the geometry is derived from what each band holds rather than listed per band, `dealField` places the remainder, and the measurement is retaken on all three workspaces.
+## Planned, 2026-09-12
+
+**Edwin confirmed the fourth band, and it is drawn as small cards rather than tiles.** Planned into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] and recorded in [[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]], which takes option 1 of the three above and names the other two as rejected.
+
+The band is called the **far band** in the plan, `'far'` in `BandName`, standing between the middle and the quiet band. The name is provisional and is one of two open questions the feature puts to Edwin. Its notes are cards because they are active work and a person has to be able to tell what they are; they are smaller and less detailed than a mid card because the derived shape and the detail thresholds say so, not because the renderer has a rule about them.
+
+Two tasks build it. [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] makes `dealField` place the middle's remainder instead of counting and dropping it, and gives every band a capacity and a remainder. [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]] draws it. The geometry this note said had to be derived is [[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]].

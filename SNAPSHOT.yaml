@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-11T18:00Z"
+updated: "2026-09-12T18:00Z"
 
 template:
   replace_me: false
@@ -27,7 +27,7 @@ retention:
   # Read by tools/scripts/sync-snapshot.py (ADR-0018). Absent = feature off.
   derive_fields: true      # title/goal derived from the note
   prune_window: 25         # keep N most recent terminal items per collection
-  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage. Later on 2026-09-11 FEAT-0016 (zoom) and FEAT-0017 (an opened note in the middle of its neighbours) were planned from REFERENCE-FOCUS-ZOOM-AND-VERBS, and ISS-0069 (the verb buttons' full-height column) was filed at triage for Edwin's choice. Later on 2026-09-11 FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours) were planned, built and tested at Edwin's request; both are at review, waiting on the walk TST-0052. ISS-0069 (where the approve and decline buttons go) waits on Edwin's choice. On 2026-09-12 Edwin ran Deck and filed six issues at triage from what he saw (ISS-0070 to ISS-0075); three of them revise decisions inside FEAT-0017, so its review is not finished."
+  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage. Later on 2026-09-11 FEAT-0016 (zoom) and FEAT-0017 (an opened note in the middle of its neighbours) were planned from REFERENCE-FOCUS-ZOOM-AND-VERBS, and ISS-0069 (the verb buttons' full-height column) was filed at triage for Edwin's choice. Later on 2026-09-11 FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours) were planned, built and tested at Edwin's request; both are at review, waiting on the walk TST-0052. ISS-0069 (where the approve and decline buttons go) waits on Edwin's choice. On 2026-09-12 Edwin ran Deck and filed six issues at triage from what he saw (ISS-0070 to ISS-0075); three of them revise decisions inside FEAT-0017, so its review is not finished. Later on 2026-09-12 FEAT-0018 was PLANNED from six of those issues after Edwin agreed the whole plan: a fourth band for active work the middle had no room for, a capacity and a stated remainder on every band including the quiet one, a derived geometry per band, a hit test and a keyboard route for the canvas, and detail keyed to apparent size. Nine tasks, three suites, one walk, ADR-0005 at proposed. Nothing is built."
 
 docs_system:
   source_of_truth: SNAPSHOT.yaml
@@ -44,27 +44,27 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 4
+  ADR: 5
   CHG:
     last_date: 0
   DES: 2
-  FEAT: 17
+  FEAT: 18
   ISS: 79
   PHASE: 4
   REQ: 0
   RISK: 4
   REL: 0
-  TASK: 71
-  TST: 52
+  TASK: 80
+  TST: 56
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0017"
-  task: ""
+  feature: "FEAT-0018"
+  task: "TASK-0072"
   issue: ""
-  note: "2026-09-11, later: FEAT-0016 (the mouse wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) PLANNED from Edwin's request, building recommendations 1 and 2 of REFERENCE-FOCUS-ZOOM-AND-VERBS. Order: TASK-0064 (the zoom's pure transform, suite zoom), TASK-0065 (wheel, pinch, keys, compass), TASK-0066 (zoom smoke checks); then TASK-0067 (the ring's pure layout, suite focus-ring; can run beside FEAT-0016), TASK-0068 (the note in the middle, the dock, Escape twice), TASK-0069 (the ring of mini notes and lines), TASK-0070 (the orbit), TASK-0071 (smoke checks, and the rewrite of existing lift checks). Walk TST-0052 covers both. Recommendation 3 (the verb buttons) is NOT planned: ISS-0069 at triage names the layout defect and the three options, and waits on Edwin. Open question for Edwin in FEAT-0017: what 'the associated notes should show their connections' should show. Earlier the same day: FEAT-0015 built and at review, waiting on its walk TST-0048 and Edwin's answer on whether a saved desk remembers its view. 2026-09-12: Edwin ran Deck and reported seven things about the middle, the quiet band and the zoom, and one about the smoke run taking the keyboard. He asked for a review and suggestions, so NOTHING IS PLANNED and nothing is built: ISS-0070 (one note drawn twice), ISS-0071 (the middle ignores the size the person chose), ISS-0072 (a drag throws the arrangement away), ISS-0073 (the quiet band cannot be clicked), ISS-0074 (zoom adds no detail) and ISS-0075 (the smoke run steals focus 23 times) were filed with their options written out. LATER THE SAME DAY Edwin reviewed all six, moved them to open, and recorded a decision on five: move the cards instead of copying and drop the ghost (0070); the layout is no longer constrained to the visible window (0071); notes may fall off the edge, nothing clamped, nothing folded (0072); default the smoke run to no-focus (0075). On 0073 he asked for a measurement rather than choosing. On 0074 he recorded nothing, so the excerpt question is still his. Later on 2026-09-12 he settled the blocker — 'turning moves the note and the whole ring', so the arrangement is anchored to the cylinder and the pane is drawn flat at a bearing — dropped ISS-0074 step 4, and asked two questions about ISS-0073 that became ISS-0076 (the band's shape should follow how much it holds) and ISS-0077 (Glass never used Spread's pool; he remembered right, and FEAT-0009's recorded reason for declining it expires when the canvas goes). ONE THING STILL OWED on 0072: a way back to an arrangement dragged out of sight, now cheap because it is at a bearing the compass can name. ISS-0070, ISS-0071 and ISS-0072 each REVISE a decision inside FEAT-0017, which is at review: it should not reach done until they are settled. ISS-0075 and ISS-0074 steps 1 to 3 are ready to plan now; ISS-0070 to ISS-0072 are unblocked and need FEAT-0017's decisions rewritten first; Later on 2026-09-12 Edwin asked what the quiet band was for and whether there should be MORE bands with cards brought up to the front. DES-0002 answers the first: the band is 'terminal work, suppressed items, the 70% of this corpus that is finished', placed behind you so it 'stays one gesture away'. Pull-forward is the second and FEAT-0014 ALREADY BUILT IT — it is unreachable from the quiet band for exactly ISS-0073's reason. ISS-0079 is the new work: active notes past the mid band's 64 slots are drawn nowhere. Order: settle ISS-0079 (a fourth band) with ISS-0076 (derived geometry), then ISS-0073 (anything visible is clickable, which DES-0002 already decided), then measure, and only then ISS-0077."
+  note: "2026-09-12: FEAT-0018 PLANNED, nothing built. Edwin agreed the whole plan -- 'Fully agree, plan the full solution and on ISS-0078: do as suggested' -- after six issues about the Glass field. The field has two holes. Active work past the mid band's 64 slots is drawn NOWHERE (ISS-0079): dealField counts it as midOverflow and drops it, so on Your Trainer's Issues view hundreds of ACTIVE notes have no position at all. And a finished note is painted on a canvas no pointer or keyboard reads (ISS-0073), which is a REGRESSION against DES-0002's own rule 'anything visible is clickable'. ADR-0005 (proposed) decides three things together: a FOURTH BAND, the far band, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet band included (Edwin's 'do as suggested' on ISS-0078 -- a capacity, NEVER a deletion, the band stays drawn); and each band's shape DERIVED from its own population in this deal (ISS-0076), adapting by SIZE AND DETAIL with the depth fixed, recomputed on a view or workspace change only. ORDER, pure layer first as this repo does everywhere: TASK-0072 (the deal and the capacities, suite field, TST-0053), TASK-0073 (the derived geometry, suite slots, TST-0054), TASK-0074 (detail by apparent width, new suite detail, TST-0055; independent of the other two), then TASK-0075 (the renderer draws four bands and states four remainders), TASK-0076 (tileAt, cursor, callout, one roving tab stop), TASK-0077 (a tile large enough becomes a card), TASK-0078 (smoke, real pointer and keyboard), TASK-0079 (THE MEASUREMENT, all three workspaces, throttled and not), and only then TASK-0080 (a free list, and only if the measurement asks). Walk TST-0056. NO NEW GESTURE is built for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and was unreachable only because there was nothing to grab. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3 (step 4, an excerpt, stays dropped); ISS-0077 stays open behind TASK-0079's numbers, and its two corrections must survive -- a pool caps CHURN not the LIVE COUNT, and CardPool is POSITIONAL so it would break PHASE-0002's ticked exit criterion 2. TWO QUESTIONS FOR EDWIN, neither blocking TASK-0072: what the fourth band should be called (the plan says 'far'), and how PHASE-0002 exit criterion 1 should now read, since the quiet band's count sits beside a remainder. PHASE-0002's frame-time criterion is re-opened by design. STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 are at review waiting on walks TST-0048 and TST-0052; ISS-0070, ISS-0071 and ISS-0072 revise decisions inside FEAT-0017 and are not planned yet; ISS-0075 (the smoke run steals focus) and ISS-0069 (where the verb buttons go) are unplanned; ISS-0068 is at triage."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -222,6 +222,15 @@ items:
       requirements: []
       tasks: ["TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071"]
       note: "ADDED 2026-09-11 from Edwin's requests about selecting in the orbit and in Glass, building REFERENCE-FOCUS-ZOOM-AND-VERBS recommendation 2. A lift grows the card into a pane where it stood (300 ms), then moves it to the middle (700 ms); the neighbours (context read) move by angle and distance to a ring of up to 16 mini notes (15 plus '+N more'), keeping their circular order, with a solid line to what it links to and a dashed line from what links to it; a mini note is a door. REVISITS DES-0002 by Edwin's request (rev 7 dropped re-arranging around an opened note: 'does not survive a second note and collapses at three'): only the note on top of the desk is in the middle, the other held notes wait as headers in a dock at the left edge, and the field dims and keeps its slots. The focus is the TOP OF THE DRAWN DESK plus a per-window switch; nothing new in the store or the address. Escape first leaves the middle, a second Escape sweeps. While a note is in the middle its neighbourhood does not take the front band; leaving deals it there and turns to face it. Amends DES-0002, FEAT-0010, TASK-0035, TASK-0036, TASK-0054, FEAT-0015, FEAT-0001, TASK-0004, PHASE-0002 exit criterion 3 and the walk TST-0024, each by an appended paragraph in a task step. The same focus in the orbit, drift stopped. Tablet unchanged. No RISK note. Open question: what 'the associated notes should show their connections' should show."
+    FEAT-0018:
+      file: "docs/features/glass-bands/FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached.md"
+      title: "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080"]
+      note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the far band, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion and owes a rewording of criterion 1. Two open questions for Edwin: the fourth band's name, and that rewording."
   tasks:
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
@@ -580,47 +589,110 @@ items:
       owner: user:edwin
       parent: "FEAT-0017"
       phase: PHASE-0002
+    TASK-0072:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth.md"
+      title: "Every band has a capacity and the deal places a fourth: the middle's remainder stands in the far band, the quiet band caps like the rest, and no note is counted and then dropped"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0073:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0073-Each-Bands-Shape-Follows-What-It-Holds.md"
+      title: "Each band's shape follows what it holds: one pure function from a band's population to its depth, rows, columns and box size, recomputed on a view or workspace change and never inside a deal"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0074:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band.md"
+      title: "Detail follows apparent size, not the band: one pure function turns the width a card is drawn at into how much of the note is shown, and the promotion threshold lives in the same table"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0075:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder.md"
+      title: "The field draws four bands and states every remainder: the far band's cards, detail from apparent width, the bar's sentence carrying all four counts, and the shape recomputed only on a view or workspace change"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0076:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too.md"
+      title: "Anything visible is clickable, on the canvas too: a hit test for the quiet band's tiles, a cursor and a callout under the pointer, and a roving tab stop that walks the shelf"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0077:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card.md"
+      title: "A tile large enough becomes a real card: past the promotion threshold a quiet note stops being painted and gets an element, so it is clickable, tabbable and readable with no code of its own"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0078:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward.md"
+      title: "The smoke run clicks a finished note with a real pointer, pulls it forward, walks the shelf with the keyboard, and finds a note in the fourth band that used to be drawn nowhere"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0079:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces.md"
+      title: "The field is measured again on all three workspaces, throttled as well as not, and the numbers decide whether a free list is owed"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0080:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map.md"
+      title: "A free list behind Glass's note-to-element map, built only if the measurement asks: a removed card's element is kept and reused, a note keeps its element while it is on screen, and CardPool stays Spread's"
+      status: backlog
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
   issues:
     ISS-0079:
       file: "docs/issues/ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere.md"
       title: "A note the view's own rule puts in the mid band, past that band's sixty-four slots, is drawn in no band at all — not even behind the person — so on a large view most of the active work is missing from the field and only a count says so"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: high
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin: 'Maybe we need more bands and allow cards to be brought up to the active front band????'. THE FIELD'S REAL HOLE. Front holds 20 slots, mid 64; dealField increments midOverflow and DROPS the entry, with no path from a full mid band to anywhere — the front band has spare slots for a pull, the mid band has none. On Your Trainer's Issues view (409 notes) that is hundreds of ACTIVE notes with no position in a field whose claim is that depth carries priority, while finished work at least has a place. DES-0002's own review said it on 2026-09-05 ('past 40 mid slots a subject note falls into the quiet, which then means both finished and did not fit. Both need a stated rule'); Deck answered half — the bar states both counts — and left the note placeless. Three ways: a FOURTH BAND for the remainder (recommended, and it needs ISS-0076's derived geometry because four hand-written sets of constants is worse than three), overflow into the quiet band (what the prototype did; conflates finished with did-not-fit), or page the mid band. BandTable.rows is already data, so a band costs a Band value and a geometry, not a rule engine."
+      note: "Filed 2026-09-12 from Edwin: 'Maybe we need more bands and allow cards to be brought up to the active front band????'. THE FIELD'S REAL HOLE. Front holds 20 slots, mid 64; dealField increments midOverflow and DROPS the entry, with no path from a full mid band to anywhere — the front band has spare slots for a pull, the mid band has none. On Your Trainer's Issues view (409 notes) that is hundreds of ACTIVE notes with no position in a field whose claim is that depth carries priority, while finished work at least has a place. DES-0002's own review said it on 2026-09-05 ('past 40 mid slots a subject note falls into the quiet, which then means both finished and did not fit. Both need a stated rule'); Deck answered half — the bar states both counts — and left the note placeless. Three ways: a FOURTH BAND for the remainder (recommended, and it needs ISS-0076's derived geometry because four hand-written sets of constants is worse than three), overflow into the quiet band (what the prototype did; conflates finished with did-not-fit), or page the mid band. BandTable.rows is already data, so a band costs a Band value and a geometry, not a rule engine. PLANNED 2026-09-12 into FEAT-0018 as TASK-0072 (dealField places the remainder) and TASK-0075 (the renderer draws it), with the geometry derived in TASK-0073; decided in ADR-0005, option 1. The band is called the FAR band in the plan and the name is one of two open questions for Edwin."
     ISS-0078:
       file: "docs/issues/ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything.md"
       title: "The quiet band is the only band that insists on drawing every note it holds, where the front and mid bands cap what they place and state the rest as a count, and drawing it buys nothing a person can use"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin: 'Do we really need the quite band???'. THE RECORD ALREADY PLANNED FOR THIS: PHASE-0002 carries a week-of-use exit criterion whose stated purpose is exactly this question, and it says a bad answer 'would retire the quiet band's placement, not the phase'. Deck already caps the front and mid bands and states the rest ('and N more in front, N more in the middle — all listed in the navigator'); the quiet band is the ONLY band that draws everyone. Of its three jobs, the count costs nothing and stays, push-behind (FEAT-0014) needs a PLACE and not a shelf and will hold a handful, and only 'the corpus has an inside' needs the tiles — the job that has never worked, since a tile cannot be clicked, tabbed to or read. RECOMMENDATION WITHDRAWN the same day. Two things read after it was written: DES-0002 promises the band 'stays ONE GESTURE AWAY', which argues for fixing the gesture rather than removing the band, and its rev 1 hit this exact defect ('quiet cards carried pointer-events: none... Fixed by making anything visible clickable'), so ISS-0073 is a REGRESSION against a decision already taken. ISS-0079 then found the field's real hole — hundreds of ACTIVE notes with no band at all — which is worse than finished notes in a band that is hard to reach. Once a fourth band gives those a place the quiet band is the far end of a gradient, not the odd one out. WHAT SURVIVES: the quiet band is the only band that draws every member, and 'place what fits, count the rest, say so' should apply to it too — a capacity, not a deletion."
+      note: "Filed 2026-09-12 from Edwin: 'Do we really need the quite band???'. THE RECORD ALREADY PLANNED FOR THIS: PHASE-0002 carries a week-of-use exit criterion whose stated purpose is exactly this question, and it says a bad answer 'would retire the quiet band's placement, not the phase'. Deck already caps the front and mid bands and states the rest ('and N more in front, N more in the middle — all listed in the navigator'); the quiet band is the ONLY band that draws everyone. Of its three jobs, the count costs nothing and stays, push-behind (FEAT-0014) needs a PLACE and not a shelf and will hold a handful, and only 'the corpus has an inside' needs the tiles — the job that has never worked, since a tile cannot be clicked, tabbed to or read. RECOMMENDATION WITHDRAWN the same day. Two things read after it was written: DES-0002 promises the band 'stays ONE GESTURE AWAY', which argues for fixing the gesture rather than removing the band, and its rev 1 hit this exact defect ('quiet cards carried pointer-events: none... Fixed by making anything visible clickable'), so ISS-0073 is a REGRESSION against a decision already taken. ISS-0079 then found the field's real hole — hundreds of ACTIVE notes with no band at all — which is worse than finished notes in a band that is hard to reach. Once a fourth band gives those a place the quiet band is the far end of a gradient, not the odd one out. WHAT SURVIVES: the quiet band is the only band that draws every member, and 'place what fits, count the rest, say so' should apply to it too — a capacity, not a deletion. ANSWERED 2026-09-12: Edwin wrote 'on ISS-0078: do as suggested', so the quiet band gains a capacity and states its remainder like every other band. A CAPACITY, NEVER A DELETION -- the band stays drawn. Recorded in ADR-0005 as a rule over all four bands; built by TASK-0072 and TASK-0075. The withdrawn recommendation is not planned."
     ISS-0076:
       file: "docs/issues/ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects.md"
       title: "The quiet band's shape is a constant sized for the largest workspace on the fleet, so a project of three hundred notes puts its finished work on a shelf built for a thousand and pushes it further away than it needs to be"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin on ISS-0073: 'make the ring size adaptive based on the number of notes in a project'. QUIET is a frozen constant — 40 columns by 25 rows, 1000 a layer, depth 760 — and its only adaptivity runs one way: a bigger corpus steps BACK, a smaller one never comes forward. The measured spread is eight to one in visible tiles (Your Trainer 286 of 2,734 notes, cockpit 229 of 1,570, this repo 35 of 261). Suggestion: quietShapeFor(count) as a pure function driven by the DEAL's deep-band population, not the project's note count, since Issues and Phases differ by two orders of magnitude in one repo. Three things to settle: adapt by SIZE AND DETAIL with the band staying behind the person (depth is priority, and done work must not read as active), recompute on a view or workspace change only (a shape recomputed per deal never sits still), and note that this reframes ISS-0073 from yes-or-no into a threshold — 35 tiles as cards is 245 elements on 729 and free, 286 is 2,000 on 2,303 and doubles the document."
+      note: "Filed 2026-09-12 from Edwin on ISS-0073: 'make the ring size adaptive based on the number of notes in a project'. QUIET is a frozen constant — 40 columns by 25 rows, 1000 a layer, depth 760 — and its only adaptivity runs one way: a bigger corpus steps BACK, a smaller one never comes forward. The measured spread is eight to one in visible tiles (Your Trainer 286 of 2,734 notes, cockpit 229 of 1,570, this repo 35 of 261). Suggestion: quietShapeFor(count) as a pure function driven by the DEAL's deep-band population, not the project's note count, since Issues and Phases differ by two orders of magnitude in one repo. Three things to settle: adapt by SIZE AND DETAIL with the band staying behind the person (depth is priority, and done work must not read as active), recompute on a view or workspace change only (a shape recomputed per deal never sits still), and note that this reframes ISS-0073 from yes-or-no into a threshold — 35 tiles as cards is 245 elements on 729 and free, 286 is 2,000 on 2,303 and doubles the document. CONFIRMED 2026-09-12 (adapt by size and detail, the band stays where it is) and PLANNED into FEAT-0018 as TASK-0073, covering all four bands rather than the quiet one alone. Its third next action is answered: ISS-0078 did not remove the shelf, so there is a shape to derive."
     ISS-0077:
       file: "docs/issues/ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool.md"
       title: "Glass creates and destroys one DOM element per note and never uses the card pool Spread built to prove the approach, so the retrofit FEAT-0005 warned about is exactly what making finished notes clickable now costs"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin asking whether the pool was not the intended solution. HE REMEMBERED RIGHT. CardPool (renderer/cards.ts) opens with the reason — retrofitting means rewriting the renderer that assumed one element per note — and its ONLY caller is renderer.ts, Spread's desk; glass.ts has its own cardEls map and makeCard. NOT a slip: FEAT-0009 records 'The hybrid is kept. Nothing here asks for the pool DES-0002 proposed', which was true because the canvas did the pool's job past the mid band (front+mid is about 84 slots). ISS-0073 takes the canvas away and the reason expires. Two corrections to carry: a pool caps element CHURN and not the LIVE COUNT, so it makes a turn smooth without making a frame cheaper; and CardPool is POSITIONAL (pool[i] to cards[i]), which would break PHASE-0002's ticked exit criterion 2 ('11 of 12 cards kept their elements across a switch, none reused'). The shape to reach for is a FREE LIST behind Glass's existing note-to-element map, not CardPool itself. Owed only if ISS-0073 is answered by making finished notes cards; measure first."
+      note: "Filed 2026-09-12 from Edwin asking whether the pool was not the intended solution. HE REMEMBERED RIGHT. CardPool (renderer/cards.ts) opens with the reason — retrofitting means rewriting the renderer that assumed one element per note — and its ONLY caller is renderer.ts, Spread's desk; glass.ts has its own cardEls map and makeCard. NOT a slip: FEAT-0009 records 'The hybrid is kept. Nothing here asks for the pool DES-0002 proposed', which was true because the canvas did the pool's job past the mid band (front+mid is about 84 slots). ISS-0073 takes the canvas away and the reason expires. Two corrections to carry: a pool caps element CHURN and not the LIVE COUNT, so it makes a turn smooth without making a frame cheaper; and CardPool is POSITIONAL (pool[i] to cards[i]), which would break PHASE-0002's ticked exit criterion 2 ('11 of 12 cards kept their elements across a switch, none reused'). The shape to reach for is a FREE LIST behind Glass's existing note-to-element map, not CardPool itself. Owed only if ISS-0073 is answered by making finished notes cards; measure first. STILL CONDITIONAL 2026-09-12, and planned as TASK-0080 under FEAT-0018, NOT STARTED until TASK-0079's measurement says so. Both corrections survive into the task: churn not live count, and a free list behind Glass's cardEls map rather than the positional CardPool."
     ISS-0070:
       file: "docs/issues/ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle.md"
       title: "While a note stands in the middle, each of its neighbours is on screen twice — as a small ring note and as its own dimmed field card — and the opened note itself leaves a dashed frame in its slot, so one note is two things on the deck"
@@ -660,7 +732,7 @@ items:
       severity: high
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin running Deck: 'The completed issue notes you cannot select'. drawCards skips every deep-band slot so no element exists; paintCanvas draws them as 58x16 rectangles; the only canvas hit test, dotAt, is guarded by arrangement === 'orbit' at both callers, so the orbit got the hit test the field never did. No tab stop either. Four steps that stack: tileAt beside dotAt with the orbit's own click rule, a tile that grows under the pointer, zoom promoting a tile to a real card (settle with ISS-0074), and a roving tab stop for the shelf. 2026-09-12 Edwin asked a DIFFERENT question instead of choosing: what does it cost to make finished notes ordinary cards, and can the document hold only what is visible? His two follow-ups became ISS-0076 (adaptive band shape) and ISS-0077 (the pool Glass never used). Three quarters of the answer is already measured (PHASE-0002, 2026-09-10): 286 tiles visible at the worst moment against 2,303 elements, a card is about seven elements, so roughly 2,000 more — the document doubles. Headroom is thin: 2.2 ms of script per frame on a Mac Studio, 6.6 ms throttled 4x, laptop reading still owed. NEXT IS A MEASUREMENT, not a build."
+      note: "Filed 2026-09-12 from Edwin running Deck: 'The completed issue notes you cannot select'. drawCards skips every deep-band slot so no element exists; paintCanvas draws them as 58x16 rectangles; the only canvas hit test, dotAt, is guarded by arrangement === 'orbit' at both callers, so the orbit got the hit test the field never did. No tab stop either. Four steps that stack: tileAt beside dotAt with the orbit's own click rule, a tile that grows under the pointer, zoom promoting a tile to a real card (settle with ISS-0074), and a roving tab stop for the shelf. 2026-09-12 Edwin asked a DIFFERENT question instead of choosing: what does it cost to make finished notes ordinary cards, and can the document hold only what is visible? His two follow-ups became ISS-0076 (adaptive band shape) and ISS-0077 (the pool Glass never used). Three quarters of the answer is already measured (PHASE-0002, 2026-09-10): 286 tiles visible at the worst moment against 2,303 elements, a card is about seven elements, so roughly 2,000 more — the document doubles. Headroom is thin: 2.2 ms of script per frame on a Mac Studio, 6.6 ms throttled 4x, laptop reading still owed. NEXT IS A MEASUREMENT, not a build. PLANNED 2026-09-12 into FEAT-0018 as TASK-0076 (tileAt, cursor, callout, one roving tab stop) and TASK-0077 (a tile large enough becomes a card, which keeps the promoted set small by construction). The measurement is TASK-0079, a step in the feature rather than a gate in front of it. The pull is FEAT-0014's and is not rebuilt."
     ISS-0074:
       file: "docs/issues/ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note.md"
       title: "Zooming in makes a card and its type bigger and tells the person nothing new, because how much of a note is drawn is keyed to which band it stands in and never to how large it actually is on screen"
@@ -670,7 +742,7 @@ items:
       severity: medium
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin running Deck: 'zooming should also bring in more of the note's content'. The field already has detail-by-distance, but it is keyed to dataset.band (the slot's band, a property of priority), which the zoom does not change; applyZoom only multiplies x, y and scale. Second half is a data problem: CardModel carries no body or excerpt, so a large card runs out of things to show after subtitle, status, progress and frontmatter. Steps: key the detail to apparent width (data-detail beside data-band), put the thresholds in a pure tested function, promote a quiet-band tile to a real card (shared seam with ISS-0073), and only then decide whether Deck's index should carry an excerpt — that last one is a payload change PHASE-0002's first exit criterion measures and owes a RISK note. 2026-09-12: Edwin asked what step 4 gives him. Answer: very little, and it is DROPPED. A project-os note is written point-first so its first paragraph nearly repeats the subtitle the card already carries; steps 1 to 3 have not run out of things to show (subtitle, status, progress, face properties are all hidden today); the full note is one click away in a pane at the size ISS-0071 gives the person; and it costs the 2.39 MB payload the phase's first exit criterion measures, plus a decision about what an excerpt means in a vault. Build 1 to 3, use them, ask again with an example if a zoomed card still reads thin."
+      note: "Filed 2026-09-12 from Edwin running Deck: 'zooming should also bring in more of the note's content'. The field already has detail-by-distance, but it is keyed to dataset.band (the slot's band, a property of priority), which the zoom does not change; applyZoom only multiplies x, y and scale. Second half is a data problem: CardModel carries no body or excerpt, so a large card runs out of things to show after subtitle, status, progress and frontmatter. Steps: key the detail to apparent width (data-detail beside data-band), put the thresholds in a pure tested function, promote a quiet-band tile to a real card (shared seam with ISS-0073), and only then decide whether Deck's index should carry an excerpt — that last one is a payload change PHASE-0002's first exit criterion measures and owes a RISK note. 2026-09-12: Edwin asked what step 4 gives him. Answer: very little, and it is DROPPED. A project-os note is written point-first so its first paragraph nearly repeats the subtitle the card already carries; steps 1 to 3 have not run out of things to show (subtitle, status, progress, face properties are all hidden today); the full note is one click away in a pane at the size ISS-0071 gives the person; and it costs the 2.39 MB payload the phase's first exit criterion measures, plus a decision about what an excerpt means in a vault. Build 1 to 3, use them, ask again with an example if a zoomed card still reads thin. PLANNED 2026-09-12 into FEAT-0018: steps 1 and 2 as TASK-0074 (a pure detail.ts keyed to apparent width), step 3 as TASK-0077. Step 4 stays DROPPED. TASK-0074 also writes an amendment into FEAT-0016, whose scope put 'more detail at a larger scale' out of scope by name."
     ISS-0075:
       file: "docs/issues/ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times.md"
       title: "The smoke run takes the keyboard away from whatever the person is doing more than twenty times, because every keyboard check calls app.focus with steal and there is no way to run the checks that do not need it on their own"
@@ -1280,9 +1352,9 @@ items:
       status: active
       order: 2
       owner: user:edwin
-      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017"]
+      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017", "FEAT-0018"]
       requirements: []
-      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071"]
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080"]
       issues: ["ISS-0008"]
       note: "2026-09-11, later: FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) ADDED at Edwin's request from REFERENCE-FOCUS-ZOOM-AND-VERBS, eight tasks TASK-0064 to TASK-0071, suites TST-0050 and TST-0051, walk TST-0052; no new exit criterion, and criterion 3 is amended by TASK-0069 (a lift fills a ring first, the front band after leaving). FEAT-0017 revisits DES-0002 by Edwin's request. 2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
@@ -1657,6 +1729,38 @@ items:
       phase: PHASE-0002
       covers: ["FEAT-0016", "FEAT-0017"]
       note: "Acceptance walk for FEAT-0016 and FEAT-0017, added 2026-09-11. Zoom toward the pointer by wheel, pinch and keys, limits, the compass reset, the wheel over a pane scrolls it; a lift grows the pane in place then moves it to the middle with a ring of mini notes and lines; a mini note is a door; the dock; Escape twice; '+N more' and Tab; reduced motion; the orbit's version with no drift; restart; git status clean. Rests at active; the verdict is a ledger event."
+    TST-0053:
+      file: "docs/features/glass-bands/plan/tests/TST-0053-Every-Note-Has-A-Band-And-Every-Band-States-Its-Remainder.md"
+      title: "Every note the view holds has a band and every band states its remainder: the four lists plus the four counts add up, the middle's remainder is placed rather than dropped, and a pushed note is never the one a capacity drops"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0018"]
+      note: "Automated, so it carries no verdict: CI is the verdict. The discharge of ADR-0005's rule -- every band places at most its capacity and states what it did not place. Suite field, extending desktop/tests/field.test.mjs beside TST-0040's checks. PLANNED 2026-09-12, NOT COMMITTED with a suite yet."
+    TST-0054:
+      file: "docs/features/glass-bands/plan/tests/TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds.md"
+      title: "Each band's shape follows how much it holds: a table of populations from forty to twenty-seven hundred, both ends clamped, no band's depth moving, and today's constants returned at the large end"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0018"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Two properties matter more than the numbers: no band's depth varies with its population (a band adapts by size and detail), and at the large end the function returns today's FRONT, MID and QUIET exactly, so a large workspace's field is unchanged to the pixel. Suite slots. PLANNED 2026-09-12, NOT COMMITTED with a suite yet."
+    TST-0055:
+      file: "docs/features/glass-bands/plan/tests/TST-0055-Detail-Follows-Apparent-Size.md"
+      title: "Detail follows apparent size: the thresholds are monotonic, the unzoomed field resolves to exactly what it draws today, a zoomed mid card reaches its face line, and the promotion threshold is not above the brief one"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0018"]
+      note: "Automated, so it carries no verdict: CI is the verdict. New suite detail over a new module desktop/src/shared/detail.ts, so run-tests.py reports exit 2 until TASK-0074 writes it (ISS-0028). PLANNED 2026-09-12, NOT COMMITTED with a suite yet."
+    TST-0056:
+      file: "docs/tests/acceptance/TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward.md"
+      title: "Every note the view holds is somewhere in the field, and a finished note can be clicked, read and pulled to the front — the walk Edwin takes on a real workspace"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0018"]
+      note: "Acceptance walk for FEAT-0018, added 2026-09-12. Thirteen steps on Your Trainer and this repository: read the bar's four remainders, turn through four bands, click a far-band note, click a quiet-band tile, hover it, pull it forward across a view switch, zoom for detail, watch a tile promote and demote, walk the shelf by keyboard, compare the small workspace's larger tiles, change a status and check nothing reshapes, and check the orbit is untouched. Rests at active; the verdict is a ledger event."
   releases: {}
   workflows: {}
   changes:
@@ -1709,6 +1813,12 @@ items:
       status: accepted
       owner: user:edwin
       note: "Edwin, 2026-09-08: 'Decks own index, the Decks application are individual applications/views', and 'the issue with using the bases subset is that it is a subset which we know cannot represent everything, it might be possible to use it as an initial definition but we will need to be able to extend it probably significantly'. Option 4 of four for evaluation (mode source only; a cockpit records endpoint; the sidecar evaluates bases; Deck's own index -- chosen), plus a language of Deck's own rather than Obsidian's. Five sections: source, band, face, surfaces, verbs: registry. VERSION and EXTENSION NAMESPACE from version one; the three type spellings normalised; an unsupported construct REPORTED BY NAME, never an empty list. WITHDRAWS the review's proposal to file a records-endpoint issue in the cockpit. Consequences: RISK-0003 and RISK-0004; TASK-0029's table moves into the band section so the navigator, Spread and Glass read one rule; faces.ts becomes a reader; PHASE-0002 starts after the description feature; PHASE-0003 inherits a query language instead of inventing one. A VOCABULARY PAYLOAD is still owed by the cockpit and is filed there the day TASK-0044 starts."
+    ADR-0005:
+      file: "docs/decisions/ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place.md"
+      title: "The Glass field has four bands, every band places only what fits and states the rest on screen, and each band's shape is derived from how much it holds"
+      status: proposed
+      owner: user:edwin
+      note: "Edwin, 2026-09-12: 'Fully agree, plan the full solution and on ISS-0078: do as suggested', after 'Maybe we need more bands and allow cards to be brought up to the active front band????'. Option 1 of three (a fourth band with derived geometry -- chosen; overflow the middle into the quiet band, which is what the DES-0002 prototype did and which conflates finished with did-not-fit; page the middle). A RULE-ADR: every band places at most its own capacity and states on screen how many it did not place, over the four bands named in BandName/Band, discharged by TST-0053 which is authoritative on disagreement. Consequences: DES-0002 amended (four bands; 'anything visible is clickable' carried to the canvas), PHASE-0002 exit criterion 1's wording owed from Edwin (the count now sits beside a remainder), the frame-time criterion re-opened and retaken on all three workspaces, BandTable gains farCapacity and deepCapacity, the orbit untouched because it assigns its own slots, and ISS-0077 left open behind the measurement. Built by FEAT-0018."
   designs:
     DES-0001:
       file: "docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md"
@@ -1736,17 +1846,17 @@ items:
 
 metrics:
   counts:
-    features_total: 17
+    features_total: 18
     features_done: 13
     phases_total: 4
     phases_done: 0
-    tasks_total: 71
+    tasks_total: 80
     tasks_done: 70
-    tests_total: 36
+    tests_total: 39
     tests_passing: 2
     tests_failing: 0
-    issues_open: 6
-    issues_triage: 8
+    issues_open: 10
+    issues_triage: 4
     risks_open: 0
     releases_total: 0
-    decisions_total: 4
+    decisions_total: 5

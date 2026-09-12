@@ -12,7 +12,7 @@ source: ["Edwin 2026-09-12, running Deck: 'zooming should also bring in more of 
 severity: medium
 component: renderer
 parent: ""
-related: ["[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[PHASE-0002-Glass]]"]
+related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[PHASE-0002-Glass]]"]
 tests: []
 ---
 
@@ -83,3 +83,12 @@ Edwin asked, 2026-09-12: "I don't know what step 4 gives me?" Working it through
 - **It costs the measurement.** An excerpt on every note grows the payload that [[PHASE-0002-Glass]]'s first exit criterion measures — 2.39 MB and 86 ms cold on 1,549 notes today — and it forces a decision about what an excerpt means in an Obsidian vault, where notes have no `## Problem`.
 
 **So: build steps 1 to 3, use them, and only then ask again.** If a zoomed card still leaves you unable to tell what a note says, the example that proves it is worth more than this argument, and the excerpt comes back as its own issue with that example in it.
+## Planned, 2026-09-12
+
+**Steps 1 to 3 are planned into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]. Step 4 stays dropped.**
+
+[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]] is steps 1 and 2: a new pure module, `desktop/src/shared/detail.ts`, turns the width a card is drawn at into a detail level, the renderer sets `data-detail` beside `data-band`, and the two CSS rules move onto it. [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] is step 3, and it reads the promotion threshold from the same module.
+
+**One thing this changes elsewhere.** [[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]] put "more detail at a larger scale" out of scope by name and called it a later refinement. This is that refinement arriving; [[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]] writes an amendment paragraph into FEAT-0016's scope saying where the work went.
+
+The issue closes against steps 1 to 3 and records that step 4 was dropped rather than deferred.

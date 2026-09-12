@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0077
 aliases: ["ISS-0077"]
 title: "Glass creates and destroys one DOM element per note and never uses the card pool Spread built to prove the approach, so the retrofit FEAT-0005 warned about is exactly what making finished notes clickable now costs"
-status: triage
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -12,7 +12,7 @@ source: ["Edwin 2026-09-12, on ISS-0073: 'On the other issue, wasn't this suppos
 severity: medium
 component: renderer
 parent: ""
-related: ["[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
+related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
 tests: []
 ---
 
@@ -75,3 +75,10 @@ No trigger applies: no new dependency, env var, path or exposure. A free list ch
 - [ ] This is owed **only if** [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] is answered by making finished notes cards. If [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]] keeps the promoted set small, or the promotion is by apparent size ([[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]] step 3), the churn may never be large enough to matter. Measure before building.
 - [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]: a free list in `glass.ts`, a check that a turn across a large quiet band allocates no new elements after the first pass, and the measurement retaken.
 - [ ] **Settle [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] first.** If the quiet band is not drawn as cards, nothing creates hundreds of elements on a turn and the free list is not owed. The finding stays on the record for the next feature that draws many notes at once.
+## Planned, 2026-09-12
+
+**Still conditional, and now with a date on the decision.** Planned into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] as [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]], which is **not started** until [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]] has produced numbers. This note said to measure before building, and that is what the plan does.
+
+Both corrections this note makes survive into the task. A pool caps element **churn** and not the **live count**, so it makes a turn smooth without making a frame cheaper; if the measurement says the frame is what fails, the fix is the promotion threshold or a band's capacity, not a pool. And `CardPool` is positional, so it would break [[PHASE-0002-Glass]]'s exit criterion 2, which is already ticked on a card keeping its element across a view switch. The shape planned is a free list behind Glass's existing `cardEls` map, and `CardPool` stays Spread's.
+
+**If the numbers hold**, this issue closes against the measurement and its finding stays on the record for the next feature that draws many notes at once.

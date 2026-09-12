@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0078
 aliases: ["ISS-0078"]
 title: "The quiet band is the only band that insists on drawing every note it holds, where the front and mid bands cap what they place and state the rest as a count, and drawing it buys nothing a person can use"
-status: triage
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -12,7 +12,7 @@ source: ["Edwin 2026-09-12: 'Do we really need the quite band???'", "Edwin 2026-
 severity: medium
 component: renderer
 parent: ""
-related: ["[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0014-The-Hands]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
+related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0014-The-Hands]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
 tests: []
 ---
 
@@ -107,3 +107,10 @@ No trigger applies: no new dependency, env var, path or exposure. It removes wor
 - [ ] **Superseded in direction by [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]], which should be settled first.** What survives here is one question for Edwin: should every band, the quiet one included, place what fits and state the rest, the way the front and mid bands already do?
 - [ ] ~~Edwin decides between the three.~~ If he takes option 2 this is an [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]-sized decision rather than a bug fix: it amends DES-0002, answers one PHASE-0002 exit criterion and rewords another, so it is recorded as an ADR and this issue closes against it.
 - [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]], and [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]], [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]] and [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] are resolved against the decision rather than built.
+## Planned, 2026-09-12
+
+**Edwin answered the one question this note left open, and the answer is yes.** He wrote, on the plan: "Fully agree, plan the full solution and on ISS-0078: do as suggested." The suggestion was that every band, the quiet one included, places what fits and states the rest, the way the front and mid bands already do.
+
+**That is a capacity, never a deletion.** The quiet band stays drawn. It stops being the one band that promises to draw every note it holds, exactly as the front band stops at twenty. The withdrawn recommendation — stop drawing the shelf — is not planned and not built.
+
+Recorded in [[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]] as a rule over all four bands, and built by [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] (the capacity and the remainder in the deal) and [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]] (the bar's sentence and the compass). The ADR-sized decision this note anticipated exists, and it records the fourth band and the capacity rule together.

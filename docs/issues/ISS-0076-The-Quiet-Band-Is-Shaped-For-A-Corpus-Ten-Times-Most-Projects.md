@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0076
 aliases: ["ISS-0076"]
 title: "The quiet band's shape is a constant sized for the largest workspace on the fleet, so a project of three hundred notes puts its finished work on a shelf built for a thousand and pushes it further away than it needs to be"
-status: triage
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -12,7 +12,7 @@ source: ["Edwin 2026-09-12, on ISS-0073: 'I think we need to make the ring size 
 severity: medium
 component: renderer
 parent: ""
-related: ["[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
+related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
 tests: []
 ---
 
@@ -74,3 +74,10 @@ No trigger applies: no new dependency, env var, path or exposure. The shape feed
 - [ ] Edwin confirms the reading above: adapt by **size and detail** with the band staying behind the person, rather than by walking the band forward.
 - [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]: `quietShapeFor` as a pure function with a table test, recomputed on a view or workspace change only, and the measurement retaken on all three workspaces.
 - [ ] **Settle [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] first.** If the shelf is not drawn there is no shape to adapt and this issue dissolves.
+## Planned, 2026-09-12
+
+**Edwin confirmed the reading this note asked him to confirm: adapt by size and detail, with the band staying where it is.** Planned into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] as [[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]], and recorded in [[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]].
+
+The shape function is driven by the deal's population per band, as this note suggested, and not by the project's note count. It covers all four bands rather than the quiet one alone, because there are now four and hand-writing four sets of constants would be worse than three. No band's depth varies with its population: a small quiet band's tiles grow and the band stays behind the person, because depth carries priority and done work must not read as active. The shape is recomputed on a view change and on a workspace change only.
+
+**This issue's third next action is answered.** It said to settle [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] first, because a shelf that is not drawn has no shape. That issue's recommendation was withdrawn: the quiet band is still drawn and it gains a capacity, so there is a shape to derive.

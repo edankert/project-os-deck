@@ -12,7 +12,7 @@ source: ["Edwin 2026-09-12, running Deck: 'The completed issue notes you cannot 
 severity: high
 component: renderer
 parent: ""
-related: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[DES-0002-The-Glass-Cockpit]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[PHASE-0002-Glass]]"]
+related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[DES-0002-The-Glass-Cockpit]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[PHASE-0002-Glass]]"]
 tests: []
 ---
 
@@ -99,3 +99,12 @@ Edwin's question — what does it cost to make finished notes behave like the re
 
 **On the pool.** Filed as [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]. Short version: the pool was the intended solution, Spread built it and proved it, Glass does not use it, and that was a recorded decision rather than a slip — FEAT-0009 says "The hybrid is kept. Nothing here asks for the pool DES-0002 proposed", because the canvas was doing the pool's job for every note past the mid band. Taking the canvas away is what re-opens it. One correction worth carrying: a pool caps element **churn** and not the **live element count**, so it makes a turn smooth without making a frame cheaper.
 - [ ] **Still owed, and now on firmer ground.** [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] briefly recommended not drawing the band at all; that recommendation is withdrawn there. DES-0002's "anything visible is clickable" settles the direction, and [[FEAT-0014-The-Hands]]'s pull is the gesture that brings a finished note forward once it can be touched at all.
+## Planned, 2026-09-12
+
+**This issue is planned into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], and the measurement it was waiting for is a step in that feature rather than a gate in front of it.** Edwin agreed to the whole plan on 2026-09-12: "Fully agree, plan the full solution and on ISS-0078: do as suggested."
+
+Two tasks answer it. [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] adds `tileAt` beside `dotAt`, a cursor and a callout under the pointer, and a roving tab stop along the shelf; that is the smallest honest fix this note recommended first. [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] promotes a tile to an element once it is drawn large enough, which is the cheaper answer this note said might make the question moot, and it keeps the promoted set small by construction rather than turning 286 tiles into cards at once.
+
+**The pull is not rebuilt.** [[FEAT-0014-The-Hands]] already brings a note to the front band for the session and keeps it there across a view switch. It was unreachable from the quiet band only because there was nothing to grab, so the hit test is what delivers Edwin's "allow cards to be brought up to the active front band".
+
+**The measurement is [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]**, taken after the renderer work and on all three workspaces, throttled as well as not.
