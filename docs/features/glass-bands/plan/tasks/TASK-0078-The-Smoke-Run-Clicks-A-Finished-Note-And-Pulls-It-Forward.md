@@ -57,3 +57,22 @@ Every acceptance line of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible
 ## Notes
 
 `TST-0045` is an existing note and gains these checks rather than being replaced.
+
+## Where this stands
+
+**2026-09-12: the checks are written and have never been run.** `desktop/src/main/smoke-glass.ts` gains a FEAT-0018 section with fourteen checks, `desktop/src/renderer/glass.ts` gains `bandState()` for them to read, and both typechecks are clean. Nothing about them is proven until a window opens.
+
+**They are deliberately not run yet.** This task's own last step is "Ask Edwin before the first window-opening run", and the run takes the keyboard away from whatever he is doing 23 times ([[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]], which he has decided and which is not built). The node suites are what has been run: 465 checks, all passing.
+
+**What the checks cover**, each needing a real pointer or a real window:
+
+1. Every note the view holds is in a band or counted, read off the page rather than off `dealField`.
+2. The bar names every non-zero remainder and no other.
+3. The compass says what the quiet band holds.
+4. **A real click on a quiet-band tile puts that note on the desk.** This is [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]'s repro and the check that must be seen to fail against the code before this feature.
+5. The quiet band adds one tab stop; an arrow key walks the shelf; Enter lifts.
+6. Nothing is promoted at 1x; zooming promotes; no note is painted and drawn as an element in the same frame; zooming out paints them again. The third of those is the break [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] recorded that nothing in node could catch.
+7. Zooming a mid-band card shows more of its note — [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]'s repro.
+8. Lifting a note leaves every band's shape where it was.
+
+**Owed before this task is done:** the run itself, each break one per run, and the results written into [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].

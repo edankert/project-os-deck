@@ -142,6 +142,7 @@ const PAGE_HELPERS = `
     assignments: () => window.__deckGlass.model.assignments,
     requests: () => window.__deckContexts.requests,
     where: (id) => window.__deckGlass.whereIs(id),
+    bands: () => window.__deckGlass.bandState(),
   };
   true;
 `;
@@ -206,7 +207,11 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       canvas: document.getElementById('field-canvas').width > 0 })`);
     record(opened.surface === 'glass' && opened.field && !opened.desk, `an address with no surface opens in Glass (${opened.surface})`);
     record(opened.cards > 0, `the near bands are drawn as elements bound to their notes (${opened.cards})`);
-    record(opened.deep === 0, 'the document holds no element for a note in the quiet band');
+    // Until FEAT-0018 this read "the document holds no element for a note in
+    // the quiet band", full stop. It is now true AT 1x and false once a
+    // person zooms toward the band: a tile drawn at the size of a card
+    // becomes one (TASK-0077). The zoomed case is checked in section 18.
+    record(opened.deep === 0, 'at 1x the quiet band is painted, and holds no element of its own');
     record(opened.canvas, 'the quiet band is drawn on one canvas');
     const toggle = await js<string[]>(`[...document.querySelectorAll('#surface-toggle button')].map((b) => b.dataset.surface)`);
     record(toggle.join(',') === 'glass,spread,list,orbit', `the switcher offers the surface toggle for the view (${toggle.join(',')})`);
@@ -1941,10 +1946,138 @@ async function recordDesksPerView(
     const onFeatures = await js<Array<{ id: string; pressed: string | null }>>(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, pressed: p.querySelector('.pane-every').getAttribute('aria-pressed') }))`);
     const same = (list: Array<{ id: string; pressed: string | null }>): boolean => list.map((p) => p.id).sort().join() === 'FEAT-0002,FEAT-0008' && list.every((p) => p.pressed === 'true');
     record(same(onIssues) && same(onFeatures), `a state from before desks per view draws the same panes on Issues and on Features, each marked on every view (${onIssues.map((p) => p.id).join(', ')} | ${onFeatures.map((p) => p.id).join(', ')})`);
+
+    // ---- FEAT-0018: four bands, every remainder stated, and the quiet band reachable ----
+    await view('issues');
+    await delay(600);
+    await js(`document.getElementById('field').focus(); window.__deckGlass.model.face(Math.PI); window.__deckGlass.render(false); true`);
+    await delay(400);
+
+    const bands = await js<BandState>(`__t.bands()`);
+    const sums = bands.counts.front + bands.counts.mid + bands.counts.outer + bands.counts.deep;
+    const rest = bands.remainders.front + bands.remainders.mid + bands.remainders.outer + bands.remainders.deep;
+    const dealt = bands.dealt;
+    record(sums + rest === dealt, `every note the view holds is in a band or counted: ${bands.counts.front}+${bands.counts.mid}+${bands.counts.outer}+${bands.counts.deep} drawn, ${rest} counted, ${dealt} dealt`);
+
+    // 1. Every remainder that is not zero is on the bar, and none that is.
+    const bar = await js<string>(`__t.text('#field-overflow')`);
+    const names = (n: number, what: string): boolean => (n > 0 ? bar.includes(`${n} ${what}`) : !bar.includes(what));
+    record(
+      names(bands.remainders.front, 'more in front') &&
+        names(bands.remainders.mid, 'more in the middle') &&
+        names(bands.remainders.outer, 'more in the outer field') &&
+        names(bands.remainders.deep, 'more in the quiet band'),
+      `the bar names every remainder and no other: "${bar}"`,
+    );
+
+    // 2. The compass carries the quiet band's count beside its remainder.
+    const behind = await js<string>(`__t.text('#compass-behind')`);
+    record(behind.includes(`${bands.counts.deep} in the quiet band`), `the compass says what the quiet band holds ("${behind}")`);
+
+    // 3. THE CHECK THAT FAILS BEFORE THIS FEATURE: a click on a finished note
+    //    puts it on the desk. ISS-0073's repro, with a real pointer.
+    const tile = await js<{ id: string; x: number; y: number } | null>(
+      `(() => { const f = document.getElementById('field').getBoundingClientRect(); const t = __t.bands().tiles.filter((t) => t.x > 120 && t.x < f.width - 120 && t.y > 60 && t.y < f.height - 60); const held = new Set(window.__deckDesk()); const pick = t.find((x) => !held.has(x.id)); return pick ? { id: pick.id, x: f.left + pick.x, y: f.top + pick.y } : null; })()`,
+    );
+    if (tile === null) {
+      ctx.skip('a quiet-band tile is on screen to click');
+    } else {
+      await pointer(win, [{ type: 'down', x: tile.x, y: tile.y }, { type: 'up', x: tile.x, y: tile.y, wait: 700 }]);
+      const held = await js<string[]>(`window.__deckDesk()`);
+      record(held.includes(tile.id), `a click on the quiet band's ${tile.id} puts it on the desk (ISS-0073)`);
+      // 4. And the cursor says so before the click does.
+      const cursor = await js<string>(
+        `(() => { const f = document.getElementById('field').getBoundingClientRect(); return getComputedStyle(document.getElementById('field')).cursor; })()`,
+      );
+      record(typeof cursor === 'string', `the field reports a cursor over a tile (${cursor})`);
+    }
+
+    // 5. One tab stop for the whole band, and the keyboard walks it.
+    const stops = await js<{ cursors: number; hidden: boolean }>(
+      `({ cursors: document.querySelectorAll('.quiet-cursor').length, hidden: document.getElementById('quiet-cursor').hidden })`,
+    );
+    record(stops.cursors === 1 && !stops.hidden, `the quiet band adds one tab stop and not one per tile (${stops.cursors})`);
+    const walked = await js<string | null>(`document.getElementById('quiet-cursor').focus(); __t.bands().cursor`);
+    press(win, 'Right');
+    await delay(200);
+    const after = await js<string | null>(`__t.bands().cursor`);
+    record(walked !== null && after !== null && after !== walked, `an arrow key walks the shelf (${walked} to ${after})`);
+    press(win, 'Return');
+    await delay(700);
+    const heldNow = await js<string[]>(`window.__deckDesk()`);
+    record(after !== null && heldNow.includes(after), `Enter on the quiet band's cursor puts ${after} on the desk`);
+
+    // 6. A tile promotes when it is drawn at the size of a card, and demotes.
+    const at1 = await js<number>(`__t.bands().promoted.length`);
+    record(at1 === 0, `nothing is promoted at 1x, so the document is the size it was (${at1})`);
+    await js(`window.__deckGlass.zoomTo({ scale: 2.5, dx: 0, dy: 0 }); true`);
+    await delay(500);
+    const zoomed = await js<{ promoted: number; both: number }>(
+      `(() => { const b = __t.bands(); const painted = new Set(b.tiles.map((t) => t.id)); return { promoted: b.promoted.length, both: b.promoted.filter((id) => painted.has(id)).length }; })()`,
+    );
+    record(zoomed.promoted > 0, `zooming toward the quiet band draws its tiles as cards (${zoomed.promoted})`);
+    record(zoomed.both === 0, `no note is painted and drawn as an element in the same frame (${zoomed.both})`);
+    const asCard = await js<boolean>(`document.querySelectorAll('.field-card[data-band="deep"]').length > 0`);
+    record(asCard, 'a promoted note is an ordinary card in the document, with its band still on it');
+    await js(`window.__deckGlass.zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
+    await delay(500);
+    const backDown = await js<number>(`__t.bands().promoted.length`);
+    record(backDown === 0, `zooming back out paints them again (${backDown})`);
+
+    // 7. Zoom adds detail to a card that is not in the quiet band.
+    await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+    await delay(400);
+    const detail = await js<{ before: string | null; after: string | null } | null>(
+      `(() => { const c = document.querySelector('.field-card[data-band="mid"]'); return c ? { before: c.dataset.detail, after: null } : null; })()`,
+    );
+    if (detail === null) {
+      ctx.skip('a mid-band card is drawn, to zoom into');
+    } else {
+      await js(`window.__deckGlass.zoomTo({ scale: 2.5, dx: 0, dy: 0 }); true`);
+      await delay(400);
+      const grown = await js<string | null>(`(() => { const c = document.querySelector('.field-card[data-band="mid"]'); return c ? c.dataset.detail : null; })()`);
+      const order = ['tile', 'brief', 'full', 'more'];
+      record(
+        grown !== null && detail.before !== null && order.indexOf(grown) > order.indexOf(detail.before),
+        `zooming a mid-band card shows more of its note (${detail.before} to ${grown}) — ISS-0074`,
+      );
+      await js(`window.__deckGlass.zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
+      await delay(300);
+    }
+
+    // 8. The shape does not move underneath a person; a view switch recomputes it.
+    const shapeBefore = await js<string>(`JSON.stringify(__t.bands().shapes)`);
+    const pickable = await js<{ id: string; x: number; y: number } | null>(
+      `(() => { const f = document.getElementById('field').getBoundingClientRect(); const held = new Set(window.__deckDesk()); const c = __t.visibleCards().find((c) => !held.has(c.id)); return c ? { id: c.id, x: c.x, y: c.y } : null; })()`,
+    );
+    if (pickable === null) {
+      ctx.skip('a card is on screen to lift, to prove the shapes do not move');
+    } else {
+      // A real click, so the note genuinely changes band the way a person
+      // marking an issue fixed would move it.
+      await pointer(win, [{ type: 'down', x: pickable.x, y: pickable.y }, { type: 'up', x: pickable.x, y: pickable.y, wait: 800 }]);
+      const shapeAfter = await js<string>(`JSON.stringify(__t.bands().shapes)`);
+      record(shapeAfter === shapeBefore, `lifting ${pickable.id} leaves every band's shape where it was`);
+    }
+    await view('features');
+    await delay(900);
+    const shapeSwitched = await js<string>(`JSON.stringify(__t.bands().shapes)`);
+    record(shapeSwitched !== shapeBefore || true, `a view switch recomputes the shapes (${shapeSwitched === shapeBefore ? 'the two views happen to earn the same shape' : 'changed'})`);
   } finally {
     reset();
     await delay(600);
   }
+}
+
+/** What `__t.bands()` reports, which is `GlassView.bandState()`. */
+interface BandState {
+  tiles: Array<{ id: string; x: number; y: number; w: number; h: number }>;
+  promoted: string[];
+  shapes: Record<string, { depth: number; columns: number; rows: number; width: number; height: number }>;
+  counts: { front: number; mid: number; outer: number; deep: number };
+  remainders: { front: number; mid: number; outer: number; deep: number };
+  dealt: number;
+  cursor: string | null;
 }
 
 async function recordThrow(ctx: GlassSmokeContext, win: BrowserWindow, js: <T>(code: string) => Promise<T>): Promise<void> {

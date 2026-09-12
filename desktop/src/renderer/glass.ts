@@ -496,13 +496,65 @@ export class GlassField {
     return { band: slot.band, visible: p.visible, x: p.x, y: p.y };
   }
 
+  /**
+   * What the four bands are doing right now, for the smoke run and the
+   * measurement (TASK-0078, TASK-0079).
+   *
+   * The quiet band is painted, so where its tiles are is not readable from
+   * the document; this is the only way a check can click one.
+   */
+  bandState(): {
+    tiles: Array<{ id: string; x: number; y: number; w: number; h: number }>;
+    promoted: string[];
+    shapes: Record<string, { depth: number; columns: number; rows: number; width: number; height: number }>;
+    counts: { front: number; mid: number; outer: number; deep: number };
+    remainders: { front: number; mid: number; outer: number; deep: number };
+    dealt: number;
+    cursor: string | null;
+  } {
+    const shapes = this.model.current.shapes;
+    return {
+      tiles: this.tiles.map((t) => ({ id: t.id, x: t.x, y: t.y, w: t.w, h: t.h })),
+      promoted: [...this.promotedIds],
+      shapes: Object.fromEntries(
+        (['front', 'mid', 'outer', 'deep'] as const).map((b) => [
+          b,
+          { depth: shapes[b].depth, columns: shapes[b].columns, rows: shapes[b].rows, width: shapes[b].box.width, height: shapes[b].box.height },
+        ]),
+      ),
+      counts: {
+        front: this.deal?.front.length ?? 0,
+        mid: this.deal?.mid.length ?? 0,
+        outer: this.deal?.outer.length ?? 0,
+        deep: this.deal?.deep.length ?? 0,
+      },
+      remainders: {
+        front: (this.deal?.frontOverflow ?? 0) + this.model.current.frontOverflow,
+        mid: (this.deal?.midOverflow ?? 0) + this.model.current.midOverflow,
+        outer: (this.deal?.outerOverflow ?? 0) + this.model.current.outerOverflow,
+        deep: this.deal?.deepOverflow ?? 0,
+      },
+      dealt: this.entries.size,
+      cursor: this.quietAt,
+    };
+  }
+
   /** The counts the measurement records: elements in the document and tiles on the canvas. */
-  counts(): { elements: number; tiles: number; cards: number } {
-    let tiles = 0;
+  counts(): { elements: number; tiles: number; cards: number; outer: number; promoted: number } {
+    // `tiles` is what the canvas PAINTS: a promoted quiet note is an element
+    // and is counted as a card, not as a tile. TASK-0079 needs both numbers
+    // separately, because the whole cost question is which is which.
+    let outer = 0;
     for (const slot of this.model.current.slots.values()) {
-      if (slot.band === 'deep' && this.at(slot, this.model.yaw).visible) tiles += 1;
+      if (slot.band === 'outer' && this.at(slot, this.model.yaw).visible) outer += 1;
     }
-    return { elements: document.getElementsByTagName('*').length, tiles, cards: this.drawnNotes().length };
+    return {
+      elements: document.getElementsByTagName('*').length,
+      tiles: this.tiles.length,
+      cards: this.drawnNotes().length,
+      outer,
+      promoted: this.promotedIds.size,
+    };
   }
 
   /**

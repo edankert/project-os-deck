@@ -66,3 +66,13 @@ Taken on a Mac Studio, window in front. The throttled figure, 6.6 ms of script a
 ## Notes
 
 A measurement is not an afterthought here. It is the step that turns two of Edwin's questions — what does it cost to make finished notes clickable, and was the pool the answer — into numbers rather than arguments.
+
+## Where this stands
+
+**2026-09-12: the measurement is extended and has not been taken.** `desktop/src/main/measure.ts` now records what FEAT-0018 made different, and `counts()` separates the three numbers the cost question turns on: tiles still PAINTED, quiet notes PROMOTED to elements, and the outer field's cards. Two runs the old measurement never took are added — a turn with the **pointer moving**, because the tile hit test runs on `pointermove` and a turn that never moves the pointer never pays for it, and a turn **zoomed in on the quiet band**, because that is where promotion happens and where the element count is highest. Each band's chosen shape is recorded beside the numbers.
+
+**It has not been run, and it cannot be run quietly.** The measurement needs a window that is visible and holds the system's focus — by its own reasoning, since a background window's animation frames are suspended. That is Edwin's machine to interrupt, and it waits on his word.
+
+**What it decides.** [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] stays open until these numbers exist, and [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]] is not started without them.
+
+**What is already known without running it**, from the pure modules: nothing is promoted at 1x on any of the three workspaces, so the unzoomed document is the size it was. The question the run answers is what a turn costs while zoomed in on the quiet band, where up to 180 notes are elements at once.

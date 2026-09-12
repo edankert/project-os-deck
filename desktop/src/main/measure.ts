@@ -49,7 +49,13 @@ function delay(ms: number): Promise<void> {
  * version focused the window three seconds early and recorded no frames at
  * all in two of three workspaces, because something else took focus back.
  */
-async function measuredTurn(ctx: MeasureContext, win: BrowserWindow, speed: string): Promise<unknown> {
+async function measuredTurn(
+  ctx: MeasureContext,
+  win: BrowserWindow,
+  speed: string,
+  /** Called every 100 ms while the turn runs, to move the pointer over the field (TASK-0079). */
+  during: ((elapsed: number) => void) | null = null,
+): Promise<unknown> {
   const js = <T>(code: string): Promise<T> => win.webContents.executeJavaScript(code) as Promise<T>;
   let last: { frames: number; focused: boolean } | null = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -58,10 +64,19 @@ async function measuredTurn(ctx: MeasureContext, win: BrowserWindow, speed: stri
       await delay(100);
       if (i % 5 === 4) ctx.focusApp(win);
     }
-    last = await js<{ frames: number; focused: boolean }>(`window.__deckGlass.measureTurn(5000, ${speed})`);
-    if (last.focused && last.frames >= 200) return { ...last, attempts: attempt + 1 };
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (during !== null) {
+      const start = Date.now();
+      timer = setInterval(() => during(Date.now() - start), 100);
+    }
+    try {
+      last = await js<{ frames: number; focused: boolean }>(`window.__deckGlass.measureTurn(5000, ${speed})`);
+    } finally {
+      if (timer !== null) clearInterval(timer);
+    }
+    if (last.focused && last.frames >= 200) return { ...last, attempts: attempt + 1, pointerMoved: during !== null };
   }
-  return { ...last, attempts: 3 };
+  return { ...last, attempts: 3, pointerMoved: during !== null };
 }
 
 function once(win: BrowserWindow, event: string): Promise<void> {
@@ -171,7 +186,40 @@ export async function runMeasure(ctx: MeasureContext, roots: string[]): Promise<
       } catch (err) {
         throttled = { unavailable: err instanceof Error ? err.message : String(err) };
       }
-      glass = { turn, throttled4x: throttled, counts, view: 'issues', panes: await js<number>(`document.querySelectorAll('.pane').length`), reaching: reached, dealt: await js<number>(`window.__deckGlass.model.current.slots.size`) };
+      // FEAT-0018 added three things this measurement has to separate: the
+      // outer field's cards, the quiet-band notes PROMOTED to elements, and
+      // the tiles still painted. The whole cost question ISS-0073 asked is
+      // which of those a workspace ends up with (TASK-0079).
+      //
+      // Two runs the old measurement did not take. A turn with the POINTER
+      // MOVING, because the tile hit test runs on `pointermove` and a turn
+      // that never moves the pointer never pays for it. And a turn ZOOMED IN
+      // on the quiet band, because that is where promotion happens and where
+      // the element count is highest.
+      const box = win.getContentBounds();
+      const moving = await measuredTurn(ctx, win, 'Math.PI / 5', async (t) => {
+        const x = box.x + 200 + Math.round(300 * (0.5 + 0.5 * Math.sin(t / 200)));
+        win.webContents.sendInputEvent({ type: 'mouseMove', x: x - box.x, y: Math.round(box.height / 2) });
+      });
+      await js(`window.__deckGlass.zoomTo({ scale: 2.2, dx: 0, dy: 0 }); window.__deckGlass.model.face(Math.PI); window.__deckGlass.render(false); true`);
+      await delay(600);
+      const zoomedCounts = await js<unknown>(`window.__deckGlass.counts()`);
+      const zoomed = await measuredTurn(ctx, win, 'Math.PI / 8');
+      await js(`window.__deckGlass.zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
+      await delay(400);
+      const shapes = await js<unknown>(`__deckGlass.bandState().shapes`);
+      glass = {
+        turn,
+        throttled4x: throttled,
+        counts,
+        pointerMoving: moving,
+        zoomedIn: { turn: zoomed, counts: zoomedCounts },
+        shapes,
+        view: 'issues',
+        panes: await js<number>(`document.querySelectorAll('.pane').length`),
+        reaching: reached,
+        dealt: await js<number>(`window.__deckGlass.model.current.slots.size`),
+      };
       await js(`document.querySelector('#surface-toggle button[data-surface="orbit"]').click()`);
       for (let i = 0; i < 120; i += 1) {
         if (await js<boolean>(`/the link graph: \\d+ notes/.test(document.getElementById('front-label').textContent)`)) break;
