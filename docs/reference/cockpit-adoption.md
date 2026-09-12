@@ -6,7 +6,7 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-10
+updated: 2026-09-12
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
@@ -64,7 +64,8 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.stage.capture` | not yet | |
 | `shell.reader.render` | adopted | 2026-09-06: Deck shows the HTML the sidecar rendered and parses no Markdown of its own |
 | `shell.reader.actuators` | not yet | same verbs, same guards. 2026-09-08: [[FEAT-0013-The-First-Write]] is the feature that adopts this row. It reads the legal verbs from `GET /api/notes/actions` and draws the rows returned, restating no verb table (the cockpit's REQ-0026), and wires one transition end to end. The row moves to `adopted` when that transition is walked in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] |
-| `shell.reader.design` | not yet | |
+| `shell.reader.viewer` | not yet | **new 2026-09-12**: the cockpit's `~view/<rel>` frames any HTML page inside a workspace's `docs/`, served by `/framed/<rel>`. Nothing in Deck frames a file yet |
+| ~~`shell.reader.design`~~ | **retired upstream 2026-09-12** | the design bench was removed (cockpit [[project-os-cockpit#CHG-20260912-The-Design-Bench-Becomes-One-Viewer]]). Deck never adopted it, so nothing here breaks. A design is now a note with pictures in `__attachments__/`, which `shell.reader.render` already covers |
 | `shell.context.pane` | replaced by | the neighbourhood in Glass: since 2026-09-10 a held note's linked notes and backlinks take the front band, read from `/api/cockpit/context` (TASK-0036), and reach shows them as wires before a lift (TASK-0056); a context panel in Spread is still not built |
 | `shell.pages.overview` | not yet | the digest, the watermark and the unpushed commits have no home in DES-0002 yet (review, Part 2) |
 | `shell.pages.history` | not yet | |
@@ -103,7 +104,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.validation` | not yet | |
 | `api.read.state` | not yet | needs a Deck address grammar first |
 | `api.write.notes` | not yet | **Moved from `not applicable` on 2026-09-08.** The old position said "Deck adds no write path at all". [[ADR-0003-Deck-Writes-Through-The-Shell]] reverses that: Deck's shell writes through its main process to the sidecar on loopback, using these endpoints unchanged. [[FEAT-0013-The-First-Write]] adopts two of them — a tick with evidence and one status transition — and the rest wait for [[PHASE-0004-Parity]]. Deck's host still answers 405 to every method that is not a read, and the served page is offered no verb at all, which is a rule and not a wait |
-| `api.write.design` | not yet | |
+| ~~`api.write.design`~~ | **retired upstream 2026-09-12** | `/api/design/capture`, `comment`, `offer-review`, `verdict` and `/api/notes/choose-variant` are gone from the shared sidecar. **Deck calls none of them** — checked by grep over `desktop/src` on the day they went — so this is a narrowing of the API Deck shares, not a break. A design's Accept and Decline moved to `api.write.note`, which Deck tracks under `shell.reader.actuators` |
 | `api.write.agents` | not yet | |
 | `api.write.inbox` | not yet | |
 | `api.infra` | not yet | Deck is served from `/_static/` as a second page when it runs on a tablet |
