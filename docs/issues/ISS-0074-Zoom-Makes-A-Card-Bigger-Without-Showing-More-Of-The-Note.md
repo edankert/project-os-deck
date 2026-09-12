@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0074
 aliases: ["ISS-0074"]
 title: "Zooming in makes a card and its type bigger and tells the person nothing new, because how much of a note is drawn is keyed to which band it stands in and never to how large it actually is on screen"
-status: "open"
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -92,3 +92,7 @@ Edwin asked, 2026-09-12: "I don't know what step 4 gives me?" Working it through
 **One thing this changes elsewhere.** [[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]] put "more detail at a larger scale" out of scope by name and called it a later refinement. This is that refinement arriving; [[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]] writes an amendment paragraph into FEAT-0016's scope saying where the work went.
 
 The issue closes against steps 1 to 3 and records that step 4 was dropped rather than deferred.
+
+## Fixed, 2026-09-12
+
+Fixed by [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], steps 1 to 3; step 4, an excerpt in the index, stays dropped. `desktop/src/shared/detail.ts` decides how much of a note is drawn from the width it is actually drawn at, so zooming a card changes what it says and not only its size. **Seen to fail with the fix removed**: keyed back to the band, "zooming a mid-band card shows more of its note" reported "brief to brief".

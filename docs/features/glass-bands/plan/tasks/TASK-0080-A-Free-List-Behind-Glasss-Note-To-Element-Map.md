@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0080
 aliases: ["TASK-0080"]
 title: "A free list behind Glass's note-to-element map, built only if the measurement asks: a removed card's element is kept and reused, a note keeps its element while it is on screen, and CardPool stays Spread's"
-status: backlog
+status: cancelled
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -59,3 +59,11 @@ tests: []
 ## Notes
 
 **This task is not started without [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]'s numbers.** [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] says so itself: measure before building. If the numbers hold, this task is cancelled and the issue closes against the measurement.
+
+## Not built, 2026-09-12
+
+**The measurement said no, which is what it was there for.** This task was conditional on [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]] from the day it was planned: "only if task 8 says so".
+
+Zoomed in on the quiet band of Your Trainer's Issues view, with 135 notes promoting and demoting as the field turned, the turn held the display's 16.7 ms frame with 2.7 ms of script work — less than the same workspace costs at 1x with nothing promoted. The element churn a free list would remove is real and is not what a frame is spending its time on.
+
+**What stays on the record.** [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]'s finding is still true: Glass creates an element per note and does not use the pool Spread built, and `CardPool` is positional so it could never be used here as it stands. The next feature that draws many notes at once meets that again, with these numbers to argue from. Nothing is owed now.

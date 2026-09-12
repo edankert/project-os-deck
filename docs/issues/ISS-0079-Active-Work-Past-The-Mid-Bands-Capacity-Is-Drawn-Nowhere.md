@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0079
 aliases: ["ISS-0079"]
 title: "A note the view's own rule puts in the mid band, past that band's sixty-four slots, is drawn in no band at all — not even behind the person — so on a large view most of the active work is missing from the field and only a count says so"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -99,3 +99,7 @@ No trigger applies: no new dependency, env var, path or exposure. A fourth band 
 The band is called the **outer field** in the plan, `'outer'` in `BandName`, standing between the middle and the quiet band. The name is provisional and is one of two open questions the feature puts to Edwin. Its notes are cards because they are active work and a person has to be able to tell what they are; they are smaller and less detailed than a mid card because the derived shape and the detail thresholds say so, not because the renderer has a rule about them.
 
 Two tasks build it. [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] makes `dealField` place the middle's remainder instead of counting and dropping it, and gives every band a capacity and a remainder. [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]] draws it. The geometry this note said had to be derived is [[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]].
+
+## Fixed, 2026-09-12
+
+Fixed by [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]. The middle's remainder stands in the outer field, a fourth band between the middle and the quiet band, drawn as cards at depth 690. Measured on 2026-09-12: 12 outer-field cards on Your Trainer's Issues view, notes that had no position at all before.

@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0077
 aliases: ["ISS-0077"]
 title: "Glass creates and destroys one DOM element per note and never uses the card pool Spread built to prove the approach, so the retrofit FEAT-0005 warned about is exactly what making finished notes clickable now costs"
-status: open
+status: declined
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -82,3 +82,13 @@ No trigger applies: no new dependency, env var, path or exposure. A free list ch
 Both corrections this note makes survive into the task. A pool caps element **churn** and not the **live count**, so it makes a turn smooth without making a frame cheaper; if the measurement says the frame is what fails, the fix is the promotion threshold or a band's capacity, not a pool. And `CardPool` is positional, so it would break [[PHASE-0002-Glass]]'s exit criterion 2, which is already ticked on a card keeping its element across a view switch. The shape planned is a free list behind Glass's existing `cardEls` map, and `CardPool` stays Spread's.
 
 **If the numbers hold**, this issue closes against the measurement and its finding stays on the record for the next feature that draws many notes at once.
+
+## Answered by the measurement, 2026-09-12
+
+**Declined: the free list is not owed, and the finding stands.**
+
+[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]] took the numbers this issue was waiting for. Zoomed in on the quiet band of Your Trainer's Issues view, with 135 quiet notes drawn as cards and promoting and demoting as the field turned, the turn held the display's 16.7 ms frame with 2.7 ms of script work — **less than the same workspace costs at 1x with nothing promoted at all**. The churn a free list would remove is real and is not what a frame spends its time on.
+
+**Both corrections this issue insisted on turned out to matter, and in the direction it argued.** A pool caps element churn and not the live count, and it was the live count that grew — 2,848 elements at 1x, 4,467 zoomed in — while the frame did not move. So the thing a free list would have fixed was never the expensive thing.
+
+**What is still true, and is why this is declined rather than fixed.** Glass creates and destroys an element per note and does not use the pool `Spread` built, `CardPool` is positional and so could not be used here without breaking [[PHASE-0002-Glass]]'s ticked exit criterion that a card keeps its element across a view switch, and the shape to reach for is a free list behind Glass's existing map. The next feature that draws many notes at once meets this again, now with numbers to argue from.

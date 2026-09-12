@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0076
 aliases: ["ISS-0076"]
 title: "The quiet band's shape is a constant sized for the largest workspace on the fleet, so a project of three hundred notes puts its finished work on a shelf built for a thousand and pushes it further away than it needs to be"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -81,3 +81,7 @@ No trigger applies: no new dependency, env var, path or exposure. The shape feed
 The shape function is driven by the deal's population per band, as this note suggested, and not by the project's note count. It covers all four bands rather than the quiet one alone, because there are now four and hand-writing four sets of constants would be worse than three. No band's depth varies with its population: a small quiet band's tiles grow and the band stays behind the person, because depth carries priority and done work must not read as active. The shape is recomputed on a view change and on a workspace change only.
 
 **This issue's third next action is answered.** It said to settle [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] first, because a shelf that is not drawn has no shape. That issue's recommendation was withdrawn: the quiet band is still drawn and it gains a capacity, so there is a shape to derive.
+
+## Fixed, 2026-09-12
+
+Fixed by [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]. `bandShapeFor` derives each band's shape from what that band holds, in five quantised steps so one note moving cannot re-lay the field, adapting by size and detail with every band's depth fixed. Measured on 2026-09-12: this repository's quiet band now paints 6 large tiles where it painted 35 small ones, and the workspace got **faster** — 1.1 to 0.9 ms of script work per frame.

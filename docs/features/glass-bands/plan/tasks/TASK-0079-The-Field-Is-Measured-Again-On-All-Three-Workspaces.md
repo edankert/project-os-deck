@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0079
 aliases: ["TASK-0079"]
 title: "The field is measured again on all three workspaces, throttled as well as not, and the numbers decide whether a free list is owed"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -57,11 +57,11 @@ Taken on a Mac Studio, window in front. The throttled figure, 6.6 ms of script a
 
 ## Steps
 
-- [ ] Extend `desktop/src/main/measure.ts` with the counts that did not exist before: outer-field cards, promoted cards, tiles separately from elements.
-- [ ] Run all three workspaces, throttled and not, with Edwin's agreement before any window opens.
-- [ ] Write the table into the feature note and the sentence into this task's Outcome.
-- [ ] Record the decision on [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] in that issue.
-- [ ] Say whether the laptop reading is still owed.
+- [x] Extend `desktop/src/main/measure.ts` with the counts that did not exist before: outer-field cards, promoted cards, tiles separately from elements.
+- [x] Run all three workspaces, throttled and not, with Edwin's agreement before any window opens.
+- [x] Write the table into the feature note and the sentence into this task's Outcome.
+- [x] Record the decision on [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] in that issue.
+- [x] Say whether the laptop reading is still owed.
 
 ## Notes
 
@@ -88,3 +88,17 @@ A measurement is not an afterthought here. It is the step that turns two of Edwi
 **It cannot move to the box.** [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]'s container renders through software GL, and the offscreen route is no better for this: the spike recorded in [[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]] found `requestAnimationFrame` running at a full 60 a second offscreen, but an offscreen frame is painted to a bitmap rather than composited to a display, so the interval measures the harness and not the machine. The script work per frame would survive; the frame time, which is what [[PHASE-0002-Glass]]'s criterion asks about, would not.
 
 **So this waits on Edwin being away from the keyboard, and nothing else.** The run takes the window to the front for a few minutes and needs it to stay there.
+
+## Outcome
+
+**Done 2026-09-12, on Edwin's Mac, on his word.** The numbers are written into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] beside the 2026-09-10 run, and they decide [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]].
+
+**Every configuration holds the display's 16.7 ms frame**, at 1x and zoomed right in on the quiet band, on all three workspaces. The 95th percentile never passed 17.4 ms.
+
+**The answer on the free list is no.** The worry was that promotion would churn hundreds of elements on a turn. Zoomed in on Your Trainer, with 135 quiet notes drawn as cards and promoting and demoting as the field turned, the turn held 16.7 ms with 2.7 ms of script work — **less than that workspace costs at 1x**. [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]] is not built.
+
+**The tile hit test costs nothing a frame can feel.** With the pointer moving through the field — the run that had to be added, because the hit test runs on `pointermove` and a turn that never moves the pointer never pays for it — script work was 1.0, 1.5 and 2.6 ms, at or below the same turn with the pointer still.
+
+**The field is more expensive than it was and the number is small.** Your Trainer went from 2.2 to 3.0 ms of script work per frame, and from 6.6 to 7.8 ms at 4x CPU cost. That last figure is the one that stands in for a slower machine, and 10.5 ms at the 95th percentile still leaves six milliseconds of a frame. This repository got **faster**, 1.1 to 0.9 ms, because its quiet band now paints six large tiles where it painted thirty-five small ones.
+
+**One thing to fix before the next run.** `runMeasure` prints its results to stdout and writes them nowhere, so the first run's output was lost to a `tail` and the measurement had to be taken twice — five minutes of a person's screen for nothing. It should write the JSON to a file beside printing it. Filed as a follow-up rather than changed between two runs of the same measurement.

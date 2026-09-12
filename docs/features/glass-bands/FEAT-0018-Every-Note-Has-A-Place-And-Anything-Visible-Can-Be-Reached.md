@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0018
 aliases: ["FEAT-0018"]
 title: "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward"
-status: planned
+status: review
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -163,3 +163,49 @@ Run before any ID was allocated (`tools/skills/issue-intake/SKILL.md`, step 1).
 ## Where this stands
 
 **2026-09-12: planned, nothing built.** Nine tasks, three node suites, smoke checks and one walk, from six issues Edwin reviewed and agreed on the same day. The order is the pure layer first — the deal, the geometry, the detail thresholds — then the renderer, then the smoke run, then the measurement, and the free list only if the measurement asks for it. Two questions above are Edwin's: the fourth band's name and one exit criterion's wording. Neither blocks the first task.
+
+## Measured
+
+**2026-09-12, on Edwin's Mac, `npm run measure`.** The same five-second turn through the quiet band of the Issues view that [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] measured on 2026-09-10, with two runs added: one with the **pointer moving**, because the tile hit test runs on `pointermove`, and one **zoomed in on the quiet band**, because that is where a tile becomes an element.
+
+| Workspace | frame, median / p95 | script work, median / p95 | the same at 4x CPU cost | elements | tiles painted | outer-field cards | promoted |
+|---|---|---|---|---|---|---|---|
+| this repository | 16.7 / 17.3 ms | 0.9 / 1.2 ms | 3.3 / 4.7 ms | 902 | 6 | 0 | 0 |
+| project-os-cockpit | 16.7 / 17.2 ms | 1.9 / 2.6 ms | 5.5 / 7.1 ms | 1,557 | 24 | 0 | 0 |
+| Your Trainer | 16.7 / 17.4 ms | 3.0 / 4.0 ms | 7.8 / 10.5 ms | 2,848 | 29 | 12 | 0 |
+
+**Zoomed in on the quiet band**, which is the worst case this feature creates:
+
+| Workspace | frame, median | script work | elements | tiles painted | cards | promoted |
+|---|---|---|---|---|---|---|
+| this repository | 16.7 ms | 0.8 ms | 1,165 | 0 | 44 | 22 |
+| project-os-cockpit | 16.7 ms | 2.0 ms | 2,876 | 0 | 140 | 110 |
+| Your Trainer | 16.7 ms | 2.7 ms | 4,467 | 0 | 211 | 135 |
+
+**With the pointer moving**, the run the hit test had to be measured against: 1.0, 1.5 and 2.6 ms of script work — at or below the same turn with the pointer still. The tile hit test costs nothing a frame can feel.
+
+### How to read it
+
+**Every configuration holds the display's frame.** 16.7 ms is one refresh at 60 Hz, and no run missed it; the 95th percentile never passed 17.4 ms. Zoomed right in on Your Trainer, with 4,467 elements in the document and 135 quiet notes drawn as cards, the field still turned at the display's rate.
+
+**Nothing is promoted at 1x on any workspace, exactly as the pure modules said.** So a person who does not zoom sees the document they saw before: the promotion threshold is doing what [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] moved it to `full` to do.
+
+**The field costs more than it did, and the number is small.** Script work per frame on Your Trainer went from 2.2 to 3.0 ms, and at 4x CPU cost from 6.6 to 7.8 ms. The 4x figure is the one that matters, because it stands in for a slower machine, and 10.5 ms at the 95th percentile still leaves 6 ms of a frame. This repository got **faster** — 1.1 to 0.9 ms — because its quiet band now paints 6 large tiles where it painted 35 small ones.
+
+**The elements grew before anything was promoted**: 2,303 to 2,848 on Your Trainer at 1x. The outer field is 12 of those cards; the rest is the `more` level's line, which every card now carries whether or not it is drawn.
+
+### What it decides
+
+**[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] does not need a free list, and [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]] is not built.** The worry was that promotion would churn hundreds of elements on a turn. Zoomed in on Your Trainer, with 135 notes promoting and demoting as the field turned, the turn held 16.7 ms with 2.7 ms of script work — less than the same workspace costs at 1x. The churn is real and it is not what a frame is spending its time on. The finding stays on the record for the next feature that draws many notes at once; nothing is owed now.
+
+**[[PHASE-0002-Glass]]'s frame-time criterion is re-established on these numbers.** Taken on a Mac Studio, as the 2026-09-10 run was; the laptop reading is still owed and is still Edwin's.
+
+## Where this stands
+
+**2026-09-12: built, measured and at review.** Every task is resolved: TASK-0072 to TASK-0079 done, TASK-0080 cancelled by the measurement that was there to decide it, TASK-0081 done. 465 node checks passing, both typechecks clean, the smoke suite green on CI and in a local container, and three deliberate breaks each caught by the check they belong to.
+
+**Resolved:** [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]], [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]], [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]], [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] and [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]] steps 1 to 3. [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] is declined on the measurement's numbers.
+
+**What is owed before this is done**, and both are Edwin's: the walk [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]], and the independent review [[QUALITY]] asks for at this gate.
+
+**Two judgement calls a reviewer should look at first.** The outer field's capacity was raised to 64 and Your Trainer's Features view still counts 186 notes it could not place — whether the outer field should gain layers is recorded and not decided. And eleven of the smoke suite's fourteen new checks have no break of their own, because a run in the box costs half an hour; the three chosen are the ones nothing else covers.

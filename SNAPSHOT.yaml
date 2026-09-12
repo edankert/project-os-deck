@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 18
-  ISS: 79
+  ISS: 80
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -62,9 +62,9 @@ counters:
 focus:
   phase: "PHASE-0002"
   feature: "FEAT-0018"
-  task: "TASK-0078"
+  task: ""
   issue: ""
-  note: "2026-09-12: FEAT-0018 is SEVEN OF NINE TASKS BUILT, 465 node checks passing, both typechecks clean, nothing on Edwin's screen verified. Done: TASK-0072 (the deal places a fourth band and every band states its remainder), TASK-0073 (each band's shape follows what it holds, quantised into five steps so one note cannot re-lay the field), TASK-0074 (detail follows apparent width, thresholds read off the field), TASK-0075 (the renderer draws four bands, each card in its band's box, the bar names four remainders), TASK-0076 (tileAt, cursor, callout and ONE roving tab stop for the quiet band), TASK-0077 (a tile drawn at card size becomes a card). TASK-0078's fourteen smoke checks and TASK-0079's measurement extension are WRITTEN AND NEVER RUN: both need a real window. THE ONE DECISION WAITING ON EDWIN: run the window suites now, which takes his keyboard 23 times for some minutes, or build ISS-0075 first (he decided it on 2026-09-12 -- 'default the run to no-focus') so the smoke run stops stealing focus, and only the measurement interrupts him. TASK-0080 is not started and must not be: TASK-0079's numbers decide whether a free list is owed at all, and ISS-0077 stays open behind them. TWO FINDINGS FROM REAL NUMBERS, both recorded in the task Outcomes: the outer field's capacity was raised from 40 to its geometry's own 64 after Your Trainer's Features view placed 40 and counted 210, and 186 are still counted there -- whether the outer field should gain layers is Edwin's; and the promotion threshold moved from brief to full because at brief all 311 visible tiles on Your Trainer's Issues view promoted at 1x, about 2,200 more elements on a document of 2,303, which failed TASK-0077's own acceptance line that the promoted set be small. STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 revise FEAT-0017's decisions and are unplanned; ISS-0069 and ISS-0068 unplanned."
+  note: "2026-09-12: FEAT-0018 BUILT, MEASURED AND AT REVIEW. Every task resolved — TASK-0072 to TASK-0079 done, TASK-0080 CANCELLED by the measurement that existed to decide it, TASK-0081 (a Linux box for the smoke run) done. 465 node checks passing, both typechecks clean, the smoke suite green on CI under xvfb AND in a local container, and three deliberate breaks each caught by the check it belongs to. MEASURED on Edwin's Mac: every configuration holds the display's 16.7 ms frame, at 1x and zoomed right into the quiet band, on all three workspaces; nothing is promoted at 1x anywhere, so an unzoomed field is the document it always was; Your Trainer went 2.2 to 3.0 ms of script work per frame (6.6 to 7.8 at 4x CPU cost) and THIS REPOSITORY GOT FASTER, 1.1 to 0.9, because its quiet band paints 6 large tiles where it painted 35 small ones. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 DECLINED on the numbers — zoomed in on Your Trainer with 135 notes promoting and demoting as the field turned, the turn held 16.7 ms with 2.7 ms of work, LESS than the same workspace costs at 1x, so the churn a free list would remove is not what a frame spends its time on. OWED BEFORE DONE, both Edwin's: the walk TST-0056, and the independent review QUALITY.md asks for at this gate. TWO JUDGEMENT CALLS A REVIEWER SHOULD SEE FIRST: the outer field's capacity was raised to 64 and Your Trainer's Features view still counts 186 notes it could not place (whether the outer field should gain layers is recorded, not decided); and eleven of the fourteen new smoke checks have no break of their own, because a box run costs half an hour and the three chosen are the ones nothing else covers. NEW: ISS-0080 (the measurement prints its results and writes them nowhere, so a run was lost to a tail and had to be taken twice). STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 revise FEAT-0017's decisions and are unplanned; ISS-0075 (the smoke run steals focus 23 times) is decided and unbuilt, and its offscreen spike is now answered in the note; ISS-0069 and ISS-0068 unplanned."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -225,7 +225,7 @@ items:
     FEAT-0018:
       file: "docs/features/glass-bands/FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached.md"
       title: "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward"
-      status: planned
+      status: review
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -641,14 +641,14 @@ items:
     TASK-0079:
       file: "docs/features/glass-bands/plan/tasks/TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces.md"
       title: "The field is measured again on all three workspaces, throttled as well as not, and the numbers decide whether a free list is owed"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
     TASK-0080:
       file: "docs/features/glass-bands/plan/tasks/TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map.md"
       title: "A free list behind Glass's note-to-element map, built only if the measurement asks: a removed card's element is kept and reused, a note keeps its element while it is on screen, and CardPool stays Spread's"
-      status: backlog
+      status: cancelled
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -656,7 +656,7 @@ items:
     ISS-0079:
       file: "docs/issues/ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere.md"
       title: "A note the view's own rule puts in the mid band, past that band's sixty-four slots, is drawn in no band at all — not even behind the person — so on a large view most of the active work is missing from the field and only a count says so"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -666,7 +666,7 @@ items:
     ISS-0078:
       file: "docs/issues/ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything.md"
       title: "The quiet band is the only band that insists on drawing every note it holds, where the front and mid bands cap what they place and state the rest as a count, and drawing it buys nothing a person can use"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -676,7 +676,7 @@ items:
     ISS-0076:
       file: "docs/issues/ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects.md"
       title: "The quiet band's shape is a constant sized for the largest workspace on the fleet, so a project of three hundred notes puts its finished work on a shelf built for a thousand and pushes it further away than it needs to be"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -686,7 +686,7 @@ items:
     ISS-0077:
       file: "docs/issues/ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool.md"
       title: "Glass creates and destroys one DOM element per note and never uses the card pool Spread built to prove the approach, so the retrofit FEAT-0005 warned about is exactly what making finished notes clickable now costs"
-      status: open
+      status: declined
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -726,7 +726,7 @@ items:
     ISS-0073:
       file: "docs/issues/ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked.md"
       title: "A finished note cannot be opened from the Glass field at all: the quiet band is painted on a canvas that no pointer or keyboard handler reads, so the several hundred done notes are visible and unreachable"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -736,7 +736,7 @@ items:
     ISS-0074:
       file: "docs/issues/ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note.md"
       title: "Zooming in makes a card and its type bigger and tells the person nothing new, because how much of a note is drawn is keyed to which band it stands in and never to how large it actually is on screen"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -1851,12 +1851,12 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 81
-    tasks_done: 78
+    tasks_done: 79
     tests_total: 39
     tests_passing: 2
     tests_failing: 0
-    issues_open: 10
-    issues_triage: 4
+    issues_open: 4
+    issues_triage: 5
     risks_open: 0
     releases_total: 0
     decisions_total: 5

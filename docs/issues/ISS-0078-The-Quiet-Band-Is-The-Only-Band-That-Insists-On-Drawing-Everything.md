@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0078
 aliases: ["ISS-0078"]
 title: "The quiet band is the only band that insists on drawing every note it holds, where the front and mid bands cap what they place and state the rest as a count, and drawing it buys nothing a person can use"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -114,3 +114,7 @@ No trigger applies: no new dependency, env var, path or exposure. It removes wor
 **That is a capacity, never a deletion.** The quiet band stays drawn. It stops being the one band that promises to draw every note it holds, exactly as the front band stops at twenty. The withdrawn recommendation — stop drawing the shelf — is not planned and not built.
 
 Recorded in [[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]] as a rule over all four bands, and built by [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] (the capacity and the remainder in the deal) and [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]] (the bar's sentence and the compass). The ADR-sized decision this note anticipated exists, and it records the fourth band and the capacity rule together.
+
+## Fixed, 2026-09-12
+
+Fixed by [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], as Edwin asked on 2026-09-12: a capacity, never a deletion. Every band, the quiet one included, places what fits and states how many it could not, and the bar names each non-zero remainder. The band is still drawn. The recommendation withdrawn above was not built.

@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0073
 aliases: ["ISS-0073"]
 title: "A finished note cannot be opened from the Glass field at all: the quiet band is painted on a canvas that no pointer or keyboard handler reads, so the several hundred done notes are visible and unreachable"
-status: "open"
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -108,3 +108,7 @@ Two tasks answer it. [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too
 **The pull is not rebuilt.** [[FEAT-0014-The-Hands]] already brings a note to the front band for the session and keeps it there across a view switch. It was unreachable from the quiet band only because there was nothing to grab, so the hit test is what delivers Edwin's "allow cards to be brought up to the active front band".
 
 **The measurement is [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]**, taken after the renderer work and on all three workspaces, throttled as well as not.
+
+## Fixed, 2026-09-12
+
+Fixed by [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]. A quiet-band tile is hit-tested by `tileAt`, says which note it is on hover, and the band has one roving tab stop with an arrow walk and Enter. A tile drawn large enough becomes an ordinary card and gets its click from being an element. **Seen to fail with the fix removed**: with the field no longer consulting `tileAt`, "a click on the quiet band's ISS-0027 puts it on the desk" failed in the box and was the only new failure ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]).
