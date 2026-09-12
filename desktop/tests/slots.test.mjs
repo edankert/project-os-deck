@@ -9,6 +9,14 @@ import { desktopRoot, load } from './helpers.mjs';
 
 const {
   assignSlots,
+  norm,
+  bandShapeFor,
+  shapesFor,
+  outerSlots,
+  OUTER,
+  MID,
+  FRONT,
+  TILE_BOX,
   quietSlot,
   frontSlots,
   midSlots,
@@ -166,4 +174,115 @@ test('the mid band is dealt a heading to a column, so a sector reads as one head
   assert.deepEqual(sectors.map((s) => [s.key, s.count]), [['a', 5], ['b', 1], ['c', 3]]);
   // `c` has three, so it starts a fresh column: row 0.
   assert.equal(slots.get('c6').row, 0);
+});
+
+// ---- ISS-0076 / TASK-0073: each band's shape follows how much it holds ----
+
+test("the quiet band's shape steps with what it holds, and the largest step is today's", () => {
+  // ISS-0076: one geometry served three workspaces that differ eightfold in
+  // what they draw, and it was sized for the largest. The steps are stated
+  // rather than continuous so that marking one issue fixed cannot re-lay the
+  // field (FEAT-0018, decision 5).
+  const table = [40, 154, 418, 800, 2700].map((n) => {
+    const shape = bandShapeFor('deep', n);
+    return { n, columns: shape.columns, rows: shape.rows, width: shape.box.width, height: shape.box.height };
+  });
+  assert.deepEqual(table, [
+    { n: 40, columns: 8, rows: 6, width: 140, height: 39 },
+    { n: 154, columns: 14, rows: 11, width: 140, height: 39 },
+    { n: 418, columns: 22, rows: 19, width: 108, height: 30 },
+    { n: 800, columns: 32, rows: 25, width: 73, height: 20 },
+    { n: 2700, columns: 40, rows: 25, width: 58, height: 16 },
+  ]);
+});
+
+test("at the large end the four shapes are today's constants, to the number", () => {
+  // A workspace at Your Trainer's size draws exactly what it drew before this
+  // function existed, which is what makes the 2026-09-10 measurement still
+  // mean something.
+  const big = bandShapeFor('deep', 10_000);
+  assert.equal(big.columns, QUIET.columns);
+  assert.equal(big.rows, QUIET.rows);
+  assert.equal(big.depth, QUIET.depth);
+  assert.equal(big.rowStep, QUIET.rowStep);
+  assert.deepEqual(big.box, { width: TILE_BOX.width, height: TILE_BOX.height });
+  const mid = bandShapeFor('mid', 10_000);
+  assert.equal(mid.depth, MID.depth);
+  assert.equal(mid.columns, MID.columnsPerSide);
+  assert.equal(mid.rows, MID.rows);
+  const front = bandShapeFor('front', 10_000);
+  assert.equal(front.depth, FRONT.depth);
+  assert.equal(front.columns, FRONT.columns);
+  assert.equal(front.rows, FRONT.rows);
+  const outer = bandShapeFor('outer', 10_000);
+  assert.equal(outer.columns, OUTER.columnsPerSide);
+  assert.equal(outer.depth, OUTER.depth);
+});
+
+test('a quiet band of forty notes draws bigger tiles, at the same depth', () => {
+  // Edwin's steer on ISS-0076: adapt by size and detail, never by depth. A
+  // band that walked forward would make done work read as active.
+  const small = bandShapeFor('deep', 40);
+  assert.ok(small.box.width > TILE_BOX.width, `${small.box.width} is no bigger than today's ${TILE_BOX.width}`);
+  assert.ok(small.box.height > TILE_BOX.height);
+  assert.equal(small.depth, QUIET.depth, 'the quiet band moved toward the person');
+});
+
+test('no band changes its depth with what it holds', () => {
+  for (const band of ['front', 'mid', 'outer', 'deep']) {
+    const depths = new Set([0, 1, 40, 300, 1000, 5000].map((n) => bandShapeFor(band, n).depth));
+    assert.equal(depths.size, 1, `${band} moved: ${[...depths].join(', ')}`);
+  }
+});
+
+test('the outer field stands between the middle and the quiet band, whatever it holds', () => {
+  for (const n of [0, 1, 16, 48, 64, 500]) {
+    const outer = bandShapeFor('outer', n);
+    assert.ok(outer.depth > MID.depth, `outer ${outer.depth} is not behind the middle at ${n}`);
+    assert.ok(outer.depth < QUIET.depth, `outer ${outer.depth} is not in front of the quiet band at ${n}`);
+  }
+});
+
+test('a tile never grows past what a front card would read as', () => {
+  // The small-end clamp. A front card is 186 wide at depth 380 and lands 138
+  // pixels across; the largest tile lands 83 at depth 760. Without the clamp
+  // an eight-column band would ask for a box over 300 wide.
+  const small = bandShapeFor('deep', 1);
+  assert.equal(small.box.width, 140);
+  const front = project({ theta: 0, depth: FRONT.depth, y: 0 }, 0, VIEWPORT);
+  const quiet = project({ theta: Math.PI, depth: QUIET.depth, y: 0 }, Math.PI, VIEWPORT);
+  assert.ok(small.box.width * quiet.scale < CARD_BOX.width * front.scale * 0.7, 'a quiet tile reads as big as work that needs a person');
+});
+
+test('every slot a shape produces stays inside the quiet band’s stated span', () => {
+  for (const n of [1, 40, 154, 418, 800, 2700]) {
+    const shape = bandShapeFor('deep', n);
+    for (let i = 0; i < Math.min(n, shape.columns * shape.rows); i += 1) {
+      const slot = quietSlot(i, shape);
+      const fromBehind = Math.abs(norm(slot.theta - Math.PI));
+      assert.ok(fromBehind <= QUIET.span / 2 + 1e-9, `${n} notes: slot ${i} is ${(fromBehind / DEG).toFixed(1)}° from behind, past the band's ${(QUIET.span / 2 / DEG).toFixed(0)}°`);
+    }
+  }
+});
+
+test('a note moving between bands does not re-lay the field', () => {
+  // The shape is quantised precisely so this holds: 300 and 301 notes are the
+  // same shelf, so marking one issue fixed does not move every other tile.
+  for (const n of [40, 300, 500, 900, 2700]) {
+    assert.deepEqual(bandShapeFor('deep', n), bandShapeFor('deep', n + 1), `${n} and ${n + 1} gave different shapes`);
+    assert.deepEqual(bandShapeFor('deep', n), bandShapeFor('deep', n - 1), `${n} and ${n - 1} gave different shapes`);
+  }
+  const once = shapesFor({ front: 12, mid: 40, outer: 10, deep: 300 });
+  const again = shapesFor({ front: 12, mid: 40, outer: 10, deep: 300 });
+  assert.deepEqual(once, again, 'two deals of the same view gave different shapes');
+});
+
+test('a deal carries the shapes it used, so the renderer draws each note in its own box', () => {
+  const dealt = bands(12, 40, 40, 6);
+  const { shapes } = assignSlots(dealt);
+  assert.equal(shapes.deep.box.width, 140, 'a small quiet band was drawn with the large shape');
+  assert.equal(shapes.front.box.width, CARD_BOX.width);
+  const outer = outerSlots(shapes.outer);
+  assert.ok(outer.length >= 6, 'the outer field had no room for what it was dealt');
+  assert.ok(outer.every((s) => s.band === 'outer' && s.depth === OUTER.depth));
 });

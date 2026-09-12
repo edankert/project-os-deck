@@ -125,17 +125,171 @@ export function blocked(slot: { theta: number; depth: number }, obstacles: reado
   );
 }
 
+/**
+ * A band's shape: everything its slot generator needs, and the box a note in
+ * it is drawn in (ADR-0005, TASK-0073).
+ *
+ * Which fields matter depends on the band. `span` and `layerStep` are the
+ * quiet band's; `firstColumn` is the middle's and the outer field's, where
+ * columns run outward from straight ahead on both sides; the front band uses
+ * `columns` as a total and the others as a count per side or per row.
+ */
+export interface BandShape {
+  band: BandName;
+  depth: number;
+  rows: number;
+  rowStep: number;
+  columns: number;
+  columnStep: number;
+  firstColumn: number;
+  span: number;
+  layerStep: number;
+  box: { width: number; height: number };
+}
+
+/**
+ * How far a tile of a given box reaches round the cylinder, as the fraction
+ * of its own width that the quiet band's stated shape leaves between columns.
+ *
+ * Read off today's numbers rather than chosen: 40 columns across 156 degrees
+ * at depth 760 put their centres 53.0 units apart and the tile is 58 wide, so
+ * the tiles just touch. Every smaller shape keeps that relation, which is why
+ * a band of forty notes gets bigger tiles rather than a sparser shelf.
+ */
+const TILE_FILL = TILE_BOX.width / ((QUIET.span / (QUIET.columns - 1)) * QUIET.depth);
+
+/**
+ * The largest a quiet tile may be drawn.
+ *
+ * A front card is 186 wide at depth 380 and lands 138 pixels across; a box of
+ * 140 at depth 760 lands 83. So the biggest tile a small quiet band can get
+ * is comfortably readable and still plainly smaller than the work in front of
+ * a person, which is the point: depth carries priority, and finished work
+ * must not start reading as urgent (ISS-0076, Edwin's steer).
+ */
+const MAX_TILE_WIDTH = 140;
+
+/**
+ * The quiet band's five shapes, smallest first, each holding one layer.
+ *
+ * The shape is QUANTISED rather than continuous, and that is deliberate: a
+ * band whose geometry moved with every note would re-lay the field when one
+ * issue was marked fixed. Five steps mean a note crossing between bands
+ * changes nothing unless it crosses a step boundary, and the renderer
+ * computes the shape on a view or workspace change only (TASK-0075), so it
+ * cannot reshape the field under a person's hands even then.
+ *
+ * The last is today's `QUIET` exactly, so a workspace at Your Trainer's size
+ * draws what it drew before this function existed.
+ */
+const QUIET_STEPS: ReadonlyArray<{ columns: number; rows: number }> = Object.freeze([
+  { columns: 8, rows: 6 },
+  { columns: 14, rows: 11 },
+  { columns: 22, rows: 19 },
+  { columns: 32, rows: 25 },
+  { columns: QUIET.columns, rows: QUIET.rows },
+]);
+
+/** The outer field's four shapes: columns a side, so the fewer it holds the nearer the front they stand. */
+const OUTER_STEPS: ReadonlyArray<{ columnsPerSide: number }> = Object.freeze([
+  { columnsPerSide: 2 },
+  { columnsPerSide: 4 },
+  { columnsPerSide: 6 },
+  { columnsPerSide: OUTER.columnsPerSide },
+]);
+
+function quietShape(count: number): BandShape {
+  const step = QUIET_STEPS.find((s) => count <= s.columns * s.rows) ?? (QUIET_STEPS[QUIET_STEPS.length - 1] as { columns: number; rows: number });
+  const spacing = (QUIET.span / (step.columns - 1)) * QUIET.depth;
+  const width = Math.min(MAX_TILE_WIDTH, Math.round(spacing * TILE_FILL));
+  const height = Math.round(width * (TILE_BOX.height / TILE_BOX.width));
+  return {
+    band: 'deep',
+    // FIXED. Depth carries priority, so a small quiet band grows its tiles
+    // where it stands rather than walking toward the person.
+    depth: QUIET.depth,
+    rows: step.rows,
+    rowStep: Math.round(height * (QUIET.rowStep / TILE_BOX.height)),
+    columns: step.columns,
+    columnStep: QUIET.span / (step.columns - 1),
+    firstColumn: 0,
+    span: QUIET.span,
+    layerStep: QUIET.layerStep,
+    box: { width, height },
+  };
+}
+
+function outerShape(count: number): BandShape {
+  const step = OUTER_STEPS.find((s) => count <= s.columnsPerSide * 2 * OUTER.rows) ?? (OUTER_STEPS[OUTER_STEPS.length - 1] as { columnsPerSide: number });
+  return {
+    band: 'outer',
+    // FIXED, and between the middle's 620 and the quiet band's 760: the outer
+    // field is the middle one step further out, whatever it holds.
+    depth: OUTER.depth,
+    rows: OUTER.rows,
+    rowStep: OUTER.rowStep,
+    columns: step.columnsPerSide,
+    columnStep: OUTER.columnStep,
+    firstColumn: OUTER.firstColumn,
+    span: 0,
+    layerStep: 0,
+    box: { width: Math.round(CARD_BOX.width * 0.8), height: Math.round(CARD_BOX.height * 0.8) },
+  };
+}
+
+/**
+ * The shape a band takes for the number of notes it holds in this deal.
+ *
+ * **The front band and the middle do not adapt, and that is a decision.**
+ * ISS-0076 asked for all four in one pass, and the answer for these two is
+ * that they are already the size of what they hold: the front band has 20
+ * slots for a capacity of 12 and deals from the centre column outward, so
+ * three owed notes stand in the middle of the field at full size already.
+ * Shrinking a card because few are owed would make urgent work LESS
+ * prominent, which is backwards. The two bands that were wrong are the quiet
+ * band, sized for a corpus ten times most projects, and the outer field,
+ * which is new.
+ */
+export function bandShapeFor(band: BandName, count: number): BandShape {
+  const n = Math.max(0, Math.floor(count));
+  if (band === 'front') {
+    return { band, depth: FRONT.depth, rows: FRONT.rows, rowStep: FRONT.rowStep, columns: FRONT.columns, columnStep: FRONT.columnStep, firstColumn: 0, span: 0, layerStep: 0, box: { ...CARD_BOX } };
+  }
+  if (band === 'mid') {
+    return { band, depth: MID.depth, rows: MID.rows, rowStep: MID.rowStep, columns: MID.columnsPerSide, columnStep: MID.columnStep, firstColumn: MID.firstColumn, span: 0, layerStep: 0, box: { ...CARD_BOX } };
+  }
+  return band === 'outer' ? outerShape(n) : quietShape(n);
+}
+
+/** The shape of every band for one deal, which is what a generator set needs. */
+export interface BandShapes {
+  front: BandShape;
+  mid: BandShape;
+  outer: BandShape;
+  deep: BandShape;
+}
+
+/** The four shapes for the four band sizes of one deal. */
+export function shapesFor(counts: { front: number; mid: number; outer: number; deep: number }): BandShapes {
+  return {
+    front: bandShapeFor('front', counts.front),
+    mid: bandShapeFor('mid', counts.mid),
+    outer: bandShapeFor('outer', counts.outer),
+    deep: bandShapeFor('deep', counts.deep),
+  };
+}
+
 /** Every front slot, nearest the centre first. More than the band's capacity, so an obstacle eats a spare. */
-export function frontSlots(): Slot[] {
+export function frontSlots(shape: BandShape = bandShapeFor('front', 0)): Slot[] {
   const out: Slot[] = [];
-  const half = (FRONT.columns - 1) / 2;
-  for (let column = 0; column < FRONT.columns; column += 1) {
-    for (let row = 0; row < FRONT.rows; row += 1) {
+  const half = (shape.columns - 1) / 2;
+  for (let column = 0; column < shape.columns; column += 1) {
+    for (let row = 0; row < shape.rows; row += 1) {
       out.push({
         band: 'front',
-        theta: (column - half) * FRONT.columnStep,
-        depth: FRONT.depth,
-        y: (row - (FRONT.rows - 1) / 2) * FRONT.rowStep,
+        theta: (column - half) * shape.columnStep,
+        depth: shape.depth,
+        y: (row - (shape.rows - 1) / 2) * shape.rowStep,
         row,
         column,
         layer: 0,
@@ -150,16 +304,16 @@ export function frontSlots(): Slot[] {
  * Every mid slot, in the order a heading is dealt into them: the nearest
  * column on the left, the nearest on the right, then outwards.
  */
-export function midSlots(): Slot[] {
+export function midSlots(shape: BandShape = bandShapeFor('mid', 0)): Slot[] {
   const out: Slot[] = [];
-  for (let step = 0; step < MID.columnsPerSide; step += 1) {
+  for (let step = 0; step < shape.columns; step += 1) {
     for (const side of [-1, 1]) {
-      for (let row = 0; row < MID.rows; row += 1) {
+      for (let row = 0; row < shape.rows; row += 1) {
         out.push({
           band: 'mid',
-          theta: side * (MID.firstColumn + step * MID.columnStep),
-          depth: MID.depth,
-          y: (row - (MID.rows - 1) / 2) * MID.rowStep,
+          theta: side * (shape.firstColumn + step * shape.columnStep),
+          depth: shape.depth,
+          y: (row - (shape.rows - 1) / 2) * shape.rowStep,
           row,
           column: side * (step + 1),
           layer: 0,
@@ -177,16 +331,16 @@ export function midSlots(): Slot[] {
  * headings, so the outer field repeats the middle's angles at its own depth
  * and a sector that runs past the middle continues straight into it.
  */
-export function outerSlots(): Slot[] {
+export function outerSlots(shape: BandShape = bandShapeFor('outer', Number.MAX_SAFE_INTEGER)): Slot[] {
   const out: Slot[] = [];
-  for (let step = 0; step < OUTER.columnsPerSide; step += 1) {
+  for (let step = 0; step < shape.columns; step += 1) {
     for (const side of [-1, 1]) {
-      for (let row = 0; row < OUTER.rows; row += 1) {
+      for (let row = 0; row < shape.rows; row += 1) {
         out.push({
           band: 'outer',
-          theta: side * (OUTER.firstColumn + step * OUTER.columnStep),
-          depth: OUTER.depth,
-          y: (row - (OUTER.rows - 1) / 2) * OUTER.rowStep,
+          theta: side * (shape.firstColumn + step * shape.columnStep),
+          depth: shape.depth,
+          y: (row - (shape.rows - 1) / 2) * shape.rowStep,
           row,
           column: side * (step + 1),
           layer: 0,
@@ -198,18 +352,18 @@ export function outerSlots(): Slot[] {
 }
 
 /** The quiet tile at this index in the band, by the stated shape. */
-export function quietSlot(index: number): Slot {
-  const perLayer = QUIET.columns * QUIET.rows;
+export function quietSlot(index: number, shape: BandShape = bandShapeFor('deep', Number.MAX_SAFE_INTEGER)): Slot {
+  const perLayer = shape.columns * shape.rows;
   const layer = Math.floor(index / perLayer);
   const within = index % perLayer;
-  const row = Math.floor(within / QUIET.columns);
-  const column = within % QUIET.columns;
-  const step = QUIET.span / (QUIET.columns - 1);
+  const row = Math.floor(within / shape.columns);
+  const column = within % shape.columns;
+  const step = shape.columnStep;
   return {
     band: 'deep',
-    theta: norm(Math.PI + (column - (QUIET.columns - 1) / 2) * step),
-    depth: QUIET.depth + layer * QUIET.layerStep,
-    y: (row - (QUIET.rows - 1) / 2) * QUIET.rowStep,
+    theta: norm(Math.PI + (column - (shape.columns - 1) / 2) * step),
+    depth: shape.depth + layer * shape.layerStep,
+    y: (row - (shape.rows - 1) / 2) * shape.rowStep,
     row,
     column,
     layer,
@@ -233,6 +387,8 @@ export interface Assignment<T> {
   outerOverflow: number;
   /** Where each heading's first slot is, so the renderer can label a sector. */
   sectors: Array<{ key: string; slot: Slot; count: number }>;
+  /** The shapes this deal used, so the renderer draws each note in its band's own box. */
+  shapes: BandShapes;
 }
 
 /**
@@ -247,9 +403,10 @@ export function assignSlots<T>(
   bands: Bands<T>,
   obstacles: readonly Obstacle[] = [],
   headingOf: (item: T) => string = () => '',
+  shapes: BandShapes = shapesFor({ front: bands.front.length, mid: bands.mid.length, outer: bands.outer.length, deep: bands.deep.length }),
 ): Assignment<T> {
   const slots = new Map<T, Slot>();
-  const front = frontSlots().filter((s) => !blocked(s, obstacles));
+  const front = frontSlots(shapes.front).filter((s) => !blocked(s, obstacles));
   let frontOverflow = 0;
   bands.front.forEach((item, i) => {
     const slot = front[i];
@@ -257,7 +414,7 @@ export function assignSlots<T>(
     else slots.set(item, slot);
   });
 
-  const mid = midSlots().filter((s) => !blocked(s, obstacles));
+  const mid = midSlots(shapes.mid).filter((s) => !blocked(s, obstacles));
   const sectors: Array<{ key: string; slot: Slot; count: number }> = [];
   let midOverflow = 0;
   let at = 0;
@@ -267,7 +424,7 @@ export function assignSlots<T>(
     let end = index;
     while (end < bands.mid.length && headingOf(bands.mid[end] as T) === heading) end += 1;
     const size = end - index;
-    if (size >= 3 && at % MID.rows !== 0) at += MID.rows - (at % MID.rows);
+    if (size >= 3 && at % shapes.mid.rows !== 0) at += shapes.mid.rows - (at % shapes.mid.rows);
     const first = mid[at];
     if (first !== undefined) sectors.push({ key: heading, slot: first, count: size });
     for (let i = index; i < end; i += 1) {
@@ -283,7 +440,7 @@ export function assignSlots<T>(
   // the middle's remainder, and its headings are whatever ran past the
   // middle's slots. Breaking it into sectors again would start a new column
   // for a heading whose first cards are in the band in front of it.
-  const outer = outerSlots().filter((s) => !blocked(s, obstacles));
+  const outer = outerSlots(shapes.outer).filter((s) => !blocked(s, obstacles));
   let outerOverflow = 0;
   bands.outer.forEach((item, i) => {
     const slot = outer[i];
@@ -291,8 +448,8 @@ export function assignSlots<T>(
     else slots.set(item, slot);
   });
 
-  bands.deep.forEach((item, i) => slots.set(item, quietSlot(i)));
-  return { slots, frontOverflow, midOverflow, outerOverflow, sectors };
+  bands.deep.forEach((item, i) => slots.set(item, quietSlot(i, shapes.deep)));
+  return { slots, frontOverflow, midOverflow, outerOverflow, sectors, shapes };
 }
 
 export interface Viewport {
@@ -419,7 +576,7 @@ export class FieldModel<T> {
   private bands: Bands<T> = { front: [], mid: [], outer: [], deep: [] };
   private obstacles: Obstacle[] = [];
   private headingOf: (item: T) => string;
-  current: Assignment<T> = { slots: new Map(), frontOverflow: 0, midOverflow: 0, outerOverflow: 0, sectors: [] };
+  current: Assignment<T> = { slots: new Map(), frontOverflow: 0, midOverflow: 0, outerOverflow: 0, sectors: [], shapes: shapesFor({ front: 0, mid: 0, outer: 0, deep: 0 }) };
 
   constructor(headingOf: (item: T) => string = () => '') {
     this.headingOf = headingOf;
@@ -441,7 +598,7 @@ export class FieldModel<T> {
     // Placed positions replace the bands: a later turnEnd must not deal an
     // old set of bands over them.
     this.bands = { front: [], mid: [], outer: [], deep: [] };
-    this.current = { slots, frontOverflow: 0, midOverflow: 0, outerOverflow: 0, sectors: [] };
+    this.current = { slots, frontOverflow: 0, midOverflow: 0, outerOverflow: 0, sectors: [], shapes: this.current.shapes };
     return this.current;
   }
 

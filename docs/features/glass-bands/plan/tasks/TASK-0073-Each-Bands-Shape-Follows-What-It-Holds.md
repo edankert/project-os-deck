@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0073
 aliases: ["TASK-0073"]
 title: "Each band's shape follows what it holds: one pure function from a band's population to its depth, rows, columns and box size, recomputed on a view or workspace change and never inside a deal"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -52,16 +52,40 @@ tests: ["[[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]"]
 
 ## Steps
 
-- [ ] Write `bandShapeFor` in `desktop/src/shared/slots.ts` with the four bands and both clamps.
-- [ ] Make `frontSlots`, `midSlots`, the new outer-field generator and `quietSlot` take a shape rather than reading the constants.
-- [ ] Keep the constants exported as the large-end value, so existing callers and tests have something to name.
-- [ ] Extend `desktop/tests/slots.test.mjs` with the population table.
-- [ ] Break the function on purpose, one break per run, and record which checks fail in [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]: adapt by depth instead of size; drop the small clamp; drop the large clamp; return a shape whose slots leave the visible span.
-- [ ] Write the chosen numbers — the outer field's depth, both clamps, and the tile size at each end — in the Outcome.
-- [ ] Commit the suite and [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]] together.
+- [x] Write `bandShapeFor` in `desktop/src/shared/slots.ts` with the four bands and both clamps.
+- [x] Make `frontSlots`, `midSlots`, the new outer-field generator and `quietSlot` take a shape rather than reading the constants.
+- [x] Keep the constants exported as the large-end value, so existing callers and tests have something to name.
+- [x] Extend `desktop/tests/slots.test.mjs` with the population table.
+- [x] Break the function on purpose, one break per run, and record which checks fail in [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]: adapt by depth instead of size; drop the small clamp; drop the large clamp; return a shape whose slots leave the visible span.
+- [x] Write the chosen numbers — the outer field's depth, both clamps, and the tile size at each end — in the Outcome.
+- [x] Commit the suite and [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]] together.
 
 ## Notes
 
 The orbit places its own slots through `FieldModel.place`, so it never calls these generators and no shape reaches it.
 
 `project()` is unchanged. A shape decides where a slot is; the projection decides where that slot lands on screen, and every existing check of the projection stays valid.
+
+## Outcome
+
+**Done 2026-09-12. Each band's shape is now a pure function of what that band holds, and nothing on screen has changed yet, because no renderer reads the shapes.** 448 checks passing, both typechecks clean.
+
+**The numbers chosen.**
+
+| | |
+|---|---|
+| The outer field's depth | **690**, fixed, between the middle's 620 and the quiet band's 760. |
+| The outer field's box | **149 × 74**, four fifths of a front card, fixed. Its notes are unfinished work and have to be readable. |
+| The small-end clamp | a quiet tile never wider than **140**. A front card is 186 wide at depth 380 and lands 138 pixels across; a 140 box at depth 760 lands 83, so the biggest tile a small band gets is readable and still plainly smaller than the work in front of a person. |
+| The large-end clamp | today's `QUIET`: 40 columns, 25 rows, a 58 × 16 tile. |
+| The tile at each step | 140 × 39, 140 × 39, 108 × 30, 73 × 20, 58 × 16. |
+
+**The shape is quantised into five steps, not continuous, and that is the interesting decision.** The acceptance asked that a deal which moves one note between bands produce the same shape as the deal before it. A shape derived continuously from the count cannot do that: marking one issue fixed would move every tile on the shelf. Five stated steps mean the shape changes only when a band crosses a step, and the renderer computes it on a view or workspace change only ([[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]), so it cannot reshape the field under a person's hands even then. The step boundaries are the shapes' own one-layer capacities, so each step is "the smallest shelf that holds this band in one layer".
+
+**The tile grows to fill the span it is given, and the ratio was read off rather than chosen.** Forty columns across 156 degrees at depth 760 put tile centres 53.0 units apart, and the tile is 58 wide, so today's tiles just touch. `TILE_FILL` is that relation, and every smaller shape keeps it — which is why a band of forty notes gets bigger tiles rather than the same tiles spread more thinly.
+
+**The front band and the middle do not adapt, and the reason is in the code.** ISS-0076 asked for all four in one pass. The answer for these two is that they are already the size of what they hold: the front band has 20 slots for a capacity of 12 and deals from the centre column outward, so three owed notes already stand in the middle of the field at full size. Shrinking a card because few notes are owed would make urgent work *less* prominent, which is backwards. The two bands that were wrong are the quiet band, sized for a corpus ten times most projects, and the outer field, which is new. `bandShapeFor` still answers for all four, so the one thing that does not adapt is stated rather than unexplained.
+
+**`Assignment` carries the shapes it used.** The renderer has to draw a note in its band's own box, and a tile that is 140 wide in a small workspace and 58 in a large one cannot come from a constant. Passing the shapes back with the slots keeps the renderer from recomputing them and from disagreeing with the geometry.
+
+**`assignSlots` derives the shapes from the bands it was handed**, unless it is given them. That default is what makes every existing caller and check correct without change, and [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]] passes them explicitly so they are computed once per view rather than once per deal.

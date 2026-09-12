@@ -599,7 +599,7 @@ items:
     TASK-0073:
       file: "docs/features/glass-bands/plan/tasks/TASK-0073-Each-Bands-Shape-Follows-What-It-Holds.md"
       title: "Each band's shape follows what it holds: one pure function from a band's population to its depth, rows, columns and box size, recomputed on a view or workspace change and never inside a deal"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 80
-    tasks_done: 71
+    tasks_done: 72
     tests_total: 39
     tests_passing: 2
     tests_failing: 0
