@@ -613,7 +613,7 @@ items:
     TASK-0075:
       file: "docs/features/glass-bands/plan/tasks/TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder.md"
       title: "The field draws four bands and states every remainder: the outer field's cards, detail from apparent width, the bar's sentence carrying all four counts, and the shape recomputed only on a view or workspace change"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 80
-    tasks_done: 73
+    tasks_done: 74
     tests_total: 39
     tests_passing: 2
     tests_failing: 0

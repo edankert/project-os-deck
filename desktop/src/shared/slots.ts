@@ -546,17 +546,28 @@ function crossing(x: number, yaw: number, edgeAt: (theta: number) => number): nu
  * side is drawn larger, so 8% of random placements left one up to 22 px
  * under the pane (ISS-0058).
  */
-export function obstaclesFor(rect: { left: number; right: number }, yaw: number, viewport: Viewport): Obstacle[] {
+export function obstaclesFor(
+  rect: { left: number; right: number },
+  yaw: number,
+  viewport: Viewport,
+  shapes: BandShapes = shapesFor({ front: 0, mid: 0, outer: 0, deep: 0 }),
+): Obstacle[] {
   const out: Obstacle[] = [];
-  for (const depth of [FRONT.depth, MID.depth]) {
+  // The OUTER field is here too: TASK-0035 forbids a field card under a held
+  // note, and an outer-field card is a field card. Leaving it out put cards
+  // under panes at one depth and not the others, which is the defect ISS-0058
+  // reported for the two bands that were here.
+  for (const shape of [shapes.front, shapes.mid, shapes.outer]) {
+    const depth = shape.depth;
+    const half = shape.box.width / 2;
     const at = (theta: number): Projection => project({ theta, depth, y: 0 }, yaw, viewport);
     const from = crossing(rect.left, yaw, (theta) => {
       const p = at(theta);
-      return p.x + (CARD_BOX.width / 2) * p.scale;
+      return p.x + half * p.scale;
     });
     const to = crossing(rect.right, yaw, (theta) => {
       const p = at(theta);
-      return p.x - (CARD_BOX.width / 2) * p.scale;
+      return p.x - half * p.scale;
     });
     out.push({ from, to, nearest: depth, farthest: depth });
   }
@@ -630,9 +641,24 @@ export class FieldModel<T> {
 
   private assign(): Assignment<T> {
     this.assignments += 1;
-    this.current = assignSlots(this.bands, this.obstacles, this.headingOf);
+    this.current = assignSlots(this.bands, this.obstacles, this.headingOf, this.shapes ?? undefined);
     return this.current;
   }
+
+  /**
+   * The shapes every deal from here on uses, or null to derive them from what
+   * each band holds.
+   *
+   * Held by the model rather than worked out per deal, because a shape that
+   * moved with the count would re-lay the field when one note changed band
+   * (ADR-0005, FEAT-0018 decision 5). The renderer sets this when the view or
+   * the workspace changes and at no other time.
+   */
+  setShapes(shapes: BandShapes | null): void {
+    this.shapes = shapes;
+  }
+
+  private shapes: BandShapes | null = null;
 }
 
 /** How many dealt notes are out of sight at this yaw: the compass's behind-count. */

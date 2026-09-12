@@ -52,3 +52,10 @@ related: ["[[REFERENCE-DES-0002-REVIEW]]"]
 ## Adequacy (who verifies this test?)
 
 See `adequacy:` above.
+
+## Extended 2026-09-12 by [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]
+
+The obstacle check "over random panes and yaws, no visible card is drawn under a pane (ISS-0058)" now deals the **outer field** as well, and measures each card against its own band's box rather than against `CARD_BOX`. It found a real gap: `obstaclesFor` listed the front band's depth and the middle's, so a pane was no obstacle at the outer field's depth and cards were drawn under held notes there. Removing the outer field from that list again fails this check, which it did not before the check was extended.
+
+A second check was added, "a deal that moves one note between bands does not re-lay the field": the shapes are held by `FieldModel` and a deal uses the ones it was given. Its counts straddle a step boundary on purpose — 154 and 155 — because anywhere else the quantisation already makes one note harmless and a shape worked out per deal would pass.
+

@@ -424,12 +424,15 @@ function readBand(raw: unknown, refusals: Refusal[]): BandTable | null {
     rows,
     frontCapacity: positive(band['frontCapacity'], 12),
     midCapacity: positive(band['midCapacity'], 40),
-    // The outer field is the middle again, so it holds what the middle holds.
+    // The outer field's default is its geometry's own count, all 64 slots:
+    // it exists to place what the middle had no room for, so holding back
+    // spares the way the middle does would leave notes counted that it could
+    // have drawn. A pane over its slots is handled where the front band's is,
+    // by `Assignment.outerOverflow`.
     // The quiet band's default is the three layers its stated shape already
     // supports, so no workspace draws fewer tiles than it did before this
-    // capacity existed; TASK-0073 replaces both with the derived shape's own
-    // count.
-    outerCapacity: positive(band['outerCapacity'], 40),
+    // capacity existed.
+    outerCapacity: positive(band['outerCapacity'], 64),
     deepCapacity: positive(band['deepCapacity'], 3000),
     gathersOwed: band['gathersOwed'] === true,
   };

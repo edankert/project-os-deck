@@ -567,6 +567,9 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   position: absolute;
   left: 0;
   top: 0;
+  /* The box is set per band by the renderer, from the band's own shape
+     (TASK-0073). These are the front band's, so a card drawn before the
+     first deal is not zero-sized. */
   width: 186px;
   height: 92px;
   transform-origin: 50% 50%;
@@ -657,10 +660,39 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .field-card .fc-face { margin-top: auto; color: var(--ink-dim); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .field-card .fc-owed { color: var(--owed); font-size: 10.5px; }
 .field-card .fc-owed:empty { display: none; }
-/* Detail by distance: the middle band drops the face line and the owed verb. */
-.field-card[data-band="mid"] { background: rgba(30, 34, 46, 0.9); }
-.field-card[data-band="mid"] .fc-face,
-.field-card[data-band="mid"] .fc-owed { display: none; }
+/* Detail by APPARENT SIZE, not by band (TASK-0074, ISS-0074).
+ *
+ * How much of a note is drawn used to be keyed to the band the deal assigned,
+ * so the zoom — which changes the scale and never the band — made a card
+ * bigger and told a person nothing new. `data-detail` is set from the width
+ * the card is actually drawn at, so a mid card zoomed in says as much as a
+ * front card, and a front card pushed to the edge of sight says as little as
+ * a far one. `data-band` stays: the fog and the dimming still read it. */
+.field-card[data-band="mid"],
+.field-card[data-band="outer"] { background: rgba(30, 34, 46, 0.9); }
+.field-card[data-detail="tile"] .fc-title,
+.field-card[data-detail="tile"] .fc-mark,
+.field-card[data-detail="tile"] .fc-face,
+.field-card[data-detail="tile"] .fc-owed { display: none; }
+.field-card[data-detail="brief"] .fc-face,
+.field-card[data-detail="brief"] .fc-owed { display: none; }
+/* `more`: the level nothing has ever drawn, at any band or any zoom. Built
+ * from fields the card already carries — no excerpt, because CardModel holds
+ * no body text (ISS-0074 step 4 is dropped). */
+.field-card .fc-more { display: none; }
+.field-card[data-detail="more"] .fc-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 2px;
+  padding-top: 3px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  color: var(--ink-dim);
+  font-size: 10.5px;
+}
+.field-card[data-detail="more"] .fc-more .fc-prop { white-space: nowrap; }
+.field-card[data-detail="more"] .fc-more .fc-prop b { color: var(--ink); font-weight: 600; }
+.field-card[data-detail="more"] .fc-title { -webkit-line-clamp: 3; }
 .field-card[data-status="pending"],
 .field-card[data-status="blocked"] { border-left-color: var(--owed); }
 .field-card[data-status="done"],

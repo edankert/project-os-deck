@@ -52,3 +52,40 @@ test('the containers over the field let the pointer through, and a card takes it
   assert.ok(byName('.field-card').some((r) => /pointer-events:\s*auto/.test(r.body)));
   assert.ok(byName('.pane > *').some((r) => /pointer-events:\s*auto/.test(r.body)), 'a pane’s header and body take the pointer');
 });
+
+// ---- TASK-0075: detail is keyed to apparent size, not to the band ----
+
+test('no rule hides a card’s face line or owed verb by which band it is in', () => {
+  // ISS-0074: the one rule that decided how much of a note is drawn was keyed
+  // to `data-band`, which the zoom cannot reach. If this comes back, zooming
+  // in makes a card bigger and tells a person nothing new again.
+  const hiding = rules().filter(
+    (r) => /\[data-band=/.test(r.selector) && /\.fc-(face|owed|title|mark)\b/.test(r.selector) && /display\s*:\s*none/.test(r.body),
+  );
+  assert.deepEqual(hiding.map((r) => r.selector), [], 'detail is decided by band again');
+});
+
+test('every level the detail module names has a rule, and they hide progressively less', () => {
+  const byDetail = rules().filter((r) => /\[data-detail=/.test(r.selector));
+  const named = new Set();
+  for (const r of byDetail) for (const m of r.selector.matchAll(/\[data-detail="([a-z]+)"\]/g)) named.add(m[1]);
+  assert.deepEqual([...named].sort(), ['brief', 'more', 'tile'], 'a level has no rule, so it draws the same as the one below it');
+  const hidden = (level) =>
+    byDetail
+      .filter((r) => r.selector.includes(`[data-detail="${level}"]`) && /display\s*:\s*none/.test(r.body))
+      .flatMap((r) => [...r.selector.matchAll(/\.fc-([a-z]+)/g)].map((m) => m[1]));
+  const tile = new Set(hidden('tile'));
+  const brief = new Set(hidden('brief'));
+  assert.ok(tile.size > brief.size, 'a tile does not hide more than a brief card does');
+  for (const part of brief) assert.ok(tile.has(part), `brief hides .fc-${part} and tile does not`);
+});
+
+test('the more level draws something, and full draws nothing extra of its own', () => {
+  // `more` is the level nothing has ever drawn. If its rule is missing the
+  // field silently stops at `full` however far a person zooms.
+  const more = rules().filter((r) => r.selector.includes('[data-detail="more"]'));
+  assert.ok(more.length > 0, 'the level Edwin asked for has no rule at all');
+  assert.ok(more.some((r) => /\.fc-more/.test(r.selector) && /display\s*:\s*(flex|block|grid)/.test(r.body)));
+  const always = rules().find((r) => r.selector === '.field-card .fc-more');
+  assert.ok(always !== undefined && /display\s*:\s*none/.test(always.body), '.fc-more is drawn at every level');
+});

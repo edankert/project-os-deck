@@ -95,14 +95,19 @@ test('over random panes and yaws, no visible card is drawn under a pane (ISS-005
     const w = 280 + Math.floor(random() * 300);
     const left = Math.floor(random() * Math.max(1, width - w));
     const yaw = (random() * 2 - 1) * Math.PI;
-    const obstacles = obstaclesFor({ left, right: left + w }, yaw, viewport);
-    const { slots } = assignSlots(bands(12, 40, 0), obstacles);
+    // The OUTER field is dealt here too (ADR-0005): an outer-field card is a
+    // field card, so TASK-0035's rule covers it, and it is drawn in its own
+    // smaller box.
+    const dealt = bands(12, 40, 0, 30);
+    const shapes = shapesFor({ front: dealt.front.length, mid: dealt.mid.length, outer: dealt.outer.length, deep: 0 });
+    const obstacles = obstaclesFor({ left, right: left + w }, yaw, viewport, shapes);
+    const { slots } = assignSlots(dealt, obstacles, () => '', shapes);
     for (const [id, slot] of slots) {
       const p = project(slot, yaw, viewport);
       if (!p.visible) continue;
-      const r = cardRect(p);
+      const r = cardRect(p, shapes[slot.band].box);
       checked += 1;
-      assert.ok(r.right <= left + 0.5 || r.left >= left + w - 0.5, `${id} overlaps a pane at ${left}–${left + w} in a ${width}px field at yaw ${yaw.toFixed(3)} (${r.left.toFixed(1)}–${r.right.toFixed(1)})`);
+      assert.ok(r.right <= left + 0.5 || r.left >= left + w - 0.5, `${id} (${slot.band}) overlaps a pane at ${left}–${left + w} in a ${width}px field at yaw ${yaw.toFixed(3)} (${r.left.toFixed(1)}–${r.right.toFixed(1)})`);
     }
   }
   assert.ok(checked > 10000, `only ${checked} cards were checked`);
@@ -285,4 +290,27 @@ test('a deal carries the shapes it used, so the renderer draws each note in its 
   const outer = outerSlots(shapes.outer);
   assert.ok(outer.length >= 6, 'the outer field had no room for what it was dealt');
   assert.ok(outer.every((s) => s.band === 'outer' && s.depth === OUTER.depth));
+});
+
+test('a deal that moves one note between bands does not re-lay the field', () => {
+  // FEAT-0018 decision 5. The renderer sets the shapes when the view or the
+  // workspace changes; every deal after that uses them, however the counts
+  // move. Without this a note marked fixed would reshape the shelf under a
+  // person's hands.
+  // The counts straddle a step boundary ON PURPOSE. Anywhere else the
+  // quantisation already makes one note harmless, so a shape derived per deal
+  // would pass and the check would prove nothing; 154 and 155 are the one
+  // pair where held and derived differ.
+  const model = new FieldModel(() => '');
+  assert.notDeepEqual(bandShapeFor('deep', 154), bandShapeFor('deep', 155), 'the boundary this check relies on has moved');
+  model.setShapes(shapesFor({ front: 12, mid: 40, outer: 0, deep: 154 }));
+  const before = model.deal(bands(12, 40, 154)).shapes;
+  const after = model.deal(bands(12, 40, 155)).shapes;
+  assert.deepEqual(after, before, 'a deal worked the shapes out again instead of using the ones it was given');
+  assert.equal(after.deep.columns, 14);
+  // And a view switch is what recomputes them.
+  model.setShapes(shapesFor({ front: 12, mid: 40, outer: 0, deep: 35 }));
+  const switched = model.deal(bands(12, 40, 35)).shapes;
+  assert.notDeepEqual(switched.deep, before.deep, 'a view switch did not recompute the shapes');
+  assert.equal(switched.deep.columns, 8);
 });

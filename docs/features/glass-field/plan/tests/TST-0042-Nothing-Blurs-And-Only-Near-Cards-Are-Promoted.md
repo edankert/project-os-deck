@@ -48,3 +48,12 @@ The DES-0002 review measured the prototype's blur and found it came back as a ba
 ## Adequacy (who verifies this test?)
 
 See `adequacy:` above.
+
+## Extended 2026-09-12 by [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]
+
+Three checks were added to the same stylesheet suite, because they are the same kind of claim: a rule read off the built CSS rather than off the prose that explains it.
+
+- **No rule hides a card's face line or owed verb by which band it is in.** This is [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]'s defect stated as a rule. Putting the old `[data-band="mid"]` selector back fails it.
+- **Every level `desktop/src/shared/detail.ts` names has a rule, and they hide progressively less.** A level with no rule draws the same as the one below it, silently.
+- **The `more` level draws something.** It is the level nothing has ever drawn, so without a rule the field would stop at `full` however far a person zoomed, and nothing else would say so.
+

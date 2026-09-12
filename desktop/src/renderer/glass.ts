@@ -32,15 +32,16 @@ import {
   CARD_BOX,
   DEG,
   FieldModel,
-  TILE_BOX,
   cardRect,
   cardTransform,
   norm,
   obstaclesFor,
   project,
+  shapesFor,
 } from '../shared/slots.js';
 import { type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
 import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, unzoomPoint, wheelFactor, zoomAbout } from '../shared/zoom.js';
+import { detailFor } from '../shared/detail.js';
 import { DOCK_WIDTH, GATHER_MS, GROW_MS, type FocusLayout, type Point, type Rect, type RingNeighbour, chooseForRing, ease, focusLayout, seatRing } from '../shared/focus-ring.js';
 import { type RingItem, RingView } from './ring-view.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
@@ -60,7 +61,7 @@ import {
   edgeNear,
   recogniseThrow,
 } from '../shared/throw.js';
-import { bandFor, faceFor, faceText } from '../shared/faces.js';
+import { bandFor, faceFor, faceText, fieldsFor, specFor } from '../shared/faces.js';
 import type { GraphEdge, GraphNode } from '../shared/graph.js';
 import { type OrbitLayout, orbitSlot } from '../shared/orbit.js';
 
@@ -634,6 +635,8 @@ export class GlassField {
     }
     if (this.input.view === null) {
       this.deal = null;
+      this.shapeKey = '';
+      this.model.setShapes(null);
       this.model.deal({ front: [], mid: [], outer: [], deep: [] }, []);
     } else {
       this.deal = dealField(this.input.view.band, entries, { first: new Set(this.shared.keys()) });
@@ -643,6 +646,23 @@ export class GlassField {
       // in view and an owed note is counted instead; the owed count on the bar
       // and the navigator still show every owed note (ISS-0064).
       const frontOrder = frontForSlots(this.deal.front);
+      // The shapes are worked out when the VIEW or the WORKSPACE changes and
+      // at no other time (ADR-0005, FEAT-0018 decision 5). Not on a deal that
+      // moved one note: marking an issue fixed must move that issue and leave
+      // every other tile where it was. `input.groups` changing identity is not
+      // enough — the sidecar re-sends them whenever anything changes.
+      const shapeKey = `${this.workspaceId() ?? ''}|${this.input.view.id}`;
+      if (shapeKey !== this.shapeKey) {
+        this.shapeKey = shapeKey;
+        this.model.setShapes(
+          shapesFor({
+            front: this.deal.front.length,
+            mid: this.deal.mid.length,
+            outer: this.deal.outer.length,
+            deep: this.deal.deep.length,
+          }),
+        );
+      }
       this.model.deal(
         {
           front: frontOrder.map((e) => e.card.noteId),
@@ -753,7 +773,7 @@ export class GlassField {
       const zoom = this.zoom();
       const left = unzoomPoint({ x: r.left, y: 0 }, zoom).x;
       const right = unzoomPoint({ x: r.left + r.w, y: 0 }, zoom).x;
-      out.push(...obstaclesFor({ left, right }, this.model.yaw, this.viewport));
+      out.push(...obstaclesFor({ left, right }, this.model.yaw, this.viewport, this.model.current.shapes));
     }
     return out;
   }
@@ -821,7 +841,15 @@ export class GlassField {
   }
 
   private place(element: HTMLElement, p: Projection, slot: Slot, arriving: boolean): void {
-    element.style.transform = cardTransform(p);
+    // A card is drawn in its own band's box (TASK-0073), and shows as much of
+    // its note as that box's width on screen earns (TASK-0074). Neither is a
+    // rule about which band it is in: an outer-field card is smaller and says
+    // less because its box is smaller, and a mid card zoomed in says more.
+    const box = this.model.current.shapes[slot.band].box;
+    element.style.width = `${box.width}px`;
+    element.style.height = `${box.height}px`;
+    element.dataset['detail'] = detailFor(p.scale * box.width);
+    element.style.transform = cardTransform(p, box);
     element.style.zIndex = String(p.z);
     const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
     const target = !p.visible ? 0 : (slot.band === 'mid' ? 0.9 : 1) * (0.3 + 0.7 * fade);
@@ -846,7 +874,7 @@ export class GlassField {
     element.setAttribute('role', 'button');
     element.innerHTML =
       '<span class="fc-top"><span class="fc-id"></span><span class="fc-mark"></span></span>' +
-      '<span class="fc-title"></span><span class="fc-face"></span><span class="fc-owed"></span>';
+      '<span class="fc-title"></span><span class="fc-face"></span><span class="fc-owed"></span><span class="fc-more"></span>';
     element.addEventListener('pointerdown', (event) => this.pressCard(noteId, element, event));
     // A pointer that can hover reaches by resting: a mouse or a pen. Touch
     // cannot hover, so it reaches by press-and-hold instead (pressCard).
@@ -891,6 +919,38 @@ export class GlassField {
     setText(element, '.fc-mark', marks.join(' '));
     setText(element, '.fc-face', faceText(card, this.input.faces));
     setText(element, '.fc-owed', entry.inputs.owed ? (card.owedVerb ?? 'needs you') : '');
+    this.paintMore(element, card);
+  }
+
+  /**
+   * The `more` level's line: what a card shows once it is drawn large enough
+   * to hold it (TASK-0074, DETAIL_SHOWS.more).
+   *
+   * Status, progress and the properties the view's face names, all of which
+   * `CardModel` already carries and none of which the field has ever drawn.
+   * No excerpt: the card has no body text, and ISS-0074's step 4 is dropped.
+   */
+  private paintMore(element: HTMLElement, card: CardModel): void {
+    const more = element.querySelector('.fc-more') as HTMLElement;
+    const parts: Array<{ label: string | null; value: string }> = [];
+    if (card.status !== '') parts.push({ label: null, value: card.status });
+    if (card.progress !== null) parts.push({ label: null, value: `${card.progress.done}/${card.progress.total}` });
+    if (card.subtitle !== null && card.subtitle !== '') parts.push({ label: null, value: card.subtitle });
+    for (const field of fieldsFor(specFor(this.input.faces, card), card.frontmatter)) {
+      parts.push({ label: field.property, value: field.value });
+    }
+    // Built as elements rather than as markup: a note's own text reaches this
+    // line, and the field has never put note text through innerHTML.
+    const nodes = parts.map((part) => {
+      const span = document.createElement('span');
+      span.className = 'fc-prop';
+      if (part.label !== null) span.append(`${part.label} `);
+      const value = document.createElement('b');
+      value.textContent = part.value;
+      span.append(value);
+      return span;
+    });
+    more.replaceChildren(...nodes);
   }
 
   private drawSectors(): void {
@@ -928,8 +988,11 @@ export class GlassField {
       const p = this.at(slot, yaw);
       if (!p.visible) continue;
       const entry = this.entries.get(noteId);
-      const w = TILE_BOX.width * p.scale;
-      const h = TILE_BOX.height * p.scale;
+      // The tile's size comes from the quiet band's shape, so a small
+      // workspace's shelf is drawn in tiles a person can read (TASK-0073).
+      const box = this.model.current.shapes.deep.box;
+      const w = box.width * p.scale;
+      const h = box.height * p.scale;
       const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
       ctx.globalAlpha = (0.25 + 0.5 * fade) * (slot.layer === 0 ? 1 : 0.7);
       const status = entry === undefined ? 'planned' : bandFor(entry.card.status);
@@ -1163,7 +1226,7 @@ export class GlassField {
       if (!p.visible) continue;
       // Anchored on the card's edge along the bearing of the neighbour: the
       // rule DES-0002 settled in rev 5.
-      const rect = cardRect(origin);
+      const rect = cardRect(origin, this.boxOf(this.reach.noteId));
       const ax = p.x > origin.x ? rect.right : rect.left;
       ctx.beginPath();
       ctx.moveTo(ax, origin.y);
@@ -1171,6 +1234,12 @@ export class GlassField {
       ctx.stroke();
       this.wires.push({ x1: ax, y1: origin.y, x2: p.x, y2: p.y });
     }
+  }
+
+  /** The box a note is drawn in: its band's, or the front band's when it has no slot. */
+  private boxOf(noteId: string): { width: number; height: number } {
+    const slot = this.model.current.slots.get(noteId);
+    return this.model.current.shapes[slot?.band ?? 'front'].box;
   }
 
   private drawInstrument(): void {
@@ -1197,12 +1266,18 @@ export class GlassField {
     // in this view: a pull made in Features is still there while Issues shows.
     const state = this.hooks.state();
     this.el.letGo.hidden = pulledIn(state, state.workspaceId).length === 0 && pushedIn(state, state.workspaceId).length === 0;
+    // Every band says how many of its notes it could not place, and a band
+    // that placed everything says nothing (ADR-0005). The quiet band is in
+    // this sentence for the first time: it used to promise to draw all of it.
     const overflow: string[] = [];
-    if ((deal?.frontOverflow ?? 0) + this.model.current.frontOverflow > 0) {
-      overflow.push(`${(deal?.frontOverflow ?? 0) + this.model.current.frontOverflow} more in front`);
-    }
-    if ((deal?.midOverflow ?? 0) + this.model.current.midOverflow > 0) {
-      overflow.push(`${(deal?.midOverflow ?? 0) + this.model.current.midOverflow} more in the middle`);
+    const remainder: Array<[number, string]> = [
+      [(deal?.frontOverflow ?? 0) + this.model.current.frontOverflow, 'more in front'],
+      [(deal?.midOverflow ?? 0) + this.model.current.midOverflow, 'more in the middle'],
+      [(deal?.outerOverflow ?? 0) + this.model.current.outerOverflow, 'more in the outer field'],
+      [deal?.deepOverflow ?? 0, 'more in the quiet band'],
+    ];
+    for (const [count, what] of remainder) {
+      if (count > 0) overflow.push(`${count} ${what}`);
     }
     this.el.overflow.textContent = overflow.length === 0 ? '' : `and ${overflow.join(', ')} — all listed in the navigator`;
     this.el.pendingChip.hidden = this.input.pending === 0;
@@ -1233,12 +1308,17 @@ export class GlassField {
     // The quiet band's own count, on screen at all times (FEAT-0009), beside
     // everything out of sight, which is a different number (ISS-0063).
     const quiet = this.arrangement === 'orbit' ? 0 : [...this.model.current.slots.values()].filter((slot) => slot.band === 'deep').length;
-    const parts = [this.arrangement === 'orbit' ? `${behind} out of sight` : `${quiet} in the quiet band · ${behind} out of sight`];
+    // The quiet band now has a capacity, so what it holds and what it could
+    // not place are two numbers and both belong here (PHASE-0002, criterion 1).
+    const quietRest = this.arrangement === 'orbit' ? 0 : this.deal?.deepOverflow ?? 0;
+    const quietSaid = quietRest > 0 ? `${quiet} in the quiet band, ${quietRest} more counted` : `${quiet} in the quiet band`;
+    const parts = [this.arrangement === 'orbit' ? `${behind} out of sight` : `${quietSaid} · ${behind} out of sight`];
     if (pushed > 0) parts.push(`${pushed} pushed there by hand`);
     if (this.reach !== null && reachBehind > 0) parts.push(`${reachBehind} of ${this.reach.noteId}'s neighbours behind you`);
     this.el.behind.textContent = parts.join(' · ');
     this.el.compass.dataset['behind'] = String(behind);
     this.el.compass.dataset['quiet'] = String(quiet);
+    this.el.compass.dataset['quietRest'] = String(quietRest);
     this.el.compass.dataset['pushed'] = String(pushed);
   }
 
@@ -2172,6 +2252,8 @@ export class GlassField {
   private ringMore = 0;
   private ringCount = 0;
   private layoutCache: { key: string; layout: FocusLayout } | null = null;
+  /** The workspace and view the band shapes were worked out for. */
+  private shapeKey = '';
 
   /**
    * Open the middle for the note just lifted or brought forward, growing

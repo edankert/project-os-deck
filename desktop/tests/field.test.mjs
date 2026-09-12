@@ -297,7 +297,7 @@ test('a pushed note that is not finished work is in the quiet band and counted a
 
 test('a description that names no capacity gets the defaults', () => {
   for (const view of VIEWS) {
-    assert.equal(view.band.outerCapacity, 40, `${view.id} has no outer-field capacity`);
+    assert.equal(view.band.outerCapacity, 64, `${view.id} has no outer-field capacity`);
     assert.equal(view.band.deepCapacity, 3000, `${view.id} has no quiet-band capacity`);
   }
 });
