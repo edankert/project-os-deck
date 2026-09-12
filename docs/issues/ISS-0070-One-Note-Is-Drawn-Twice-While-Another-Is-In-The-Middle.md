@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0070
 aliases: ["ISS-0070"]
 title: "While a note stands in the middle, each of its neighbours is on screen twice — as a small ring note and as its own dimmed field card — and the opened note itself leaves a dashed frame in its slot, so one note is two things on the deck"
-status: triage
+status: "open"
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-12"
 source: ["Edwin 2026-09-12, running Deck: 'it shows associated notes around the note in the middle but this using a very small view of the notes, why not the same size view as when browsing?'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'; 'When opening a note the corresponding smaller version seems to turn into just a frame, this should not be the case, there should only be one note on the deck.'"]
 severity: high
 component: renderer
@@ -76,5 +76,14 @@ No trigger applies: no new dependency, env var, path, artifact or exposure. Opti
 
 ## Next Actions
 
-- [ ] **Edwin chooses option 1 or option 2, and says whether the ghost may go.** This waits on him.
+- [x] **Edwin chose option 1 and dropped the ghost, 2026-09-12.** Recorded below.
+- [ ] Amend [[DES-0002-The-Glass-Cockpit]]: the ghost is gone, and the slot a lifted note left is reserved rather than drawn.
 - [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]], with a smoke check that counts the drawn elements per note id while a note is in the middle and fails at two.
+
+## Decision record
+
+> [!note] Accept — 2026-09-12 (user:edwin)
+> 1. move the cards, do not copy!
+> Drop the filed-card ghost it doesn't work!
+
+**The capacity cost named in option 1 is gone.** It assumed the ring had to fit inside the visible field. [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]] and [[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]] were both answered on the same day with the opposite rule — the arrangement is laid out in a space larger than the window, and neighbours may stand off-screen — so full-size cards on the ring no longer cost places. What it costs instead is that some neighbours are off-screen until the person turns to them, which is the point of those two decisions.

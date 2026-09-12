@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0075
 aliases: ["ISS-0075"]
 title: "The smoke run takes the keyboard away from whatever the person is doing more than twenty times, because every keyboard check calls app.focus with steal and there is no way to run the checks that do not need it on their own"
-status: triage
+status: "open"
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-12"
 source: ["Edwin 2026-09-12: 'One other thing is can we change the testing so the deck is not constantly requesting focus?'"]
 severity: medium
 component: tests
@@ -68,5 +68,10 @@ One trigger applies: the runner gains a mode, which is a change to a front-door 
 
 ## Next Actions
 
-- [ ] Triage with Edwin: confirm the default for a run started by hand is the no-keyboard half.
-- [ ] Then a task: tag the steps, add the mode to `tools/scripts/run-smoke.sh`, make CI ask for the full run by name, and print the mode before the first window opens.
+- [x] **Edwin confirmed the default, 2026-09-12: "default the run to no-focus".** Recorded below.
+- [ ] A task: tag the steps that need a frontmost application, default `tools/scripts/run-smoke.sh` to the half that does not, put the full run behind a named flag, make CI pass that flag explicitly, and print the mode before the first window opens.
+
+## Decision record
+
+> [!note] Accept — 2026-09-12 (user:edwin)
+> default the run to no-focus

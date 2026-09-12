@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0071
 aliases: ["ISS-0071"]
 title: "The note in the middle is sized by whatever leaves room for the ring rather than by the person, and it jumps to 320 by 240 the moment it is dragged, because focusLayout searches for a pane size and ignores the one the desk record holds"
-status: triage
+status: "open"
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-12"
 source: ["Edwin 2026-09-12, running Deck: 'Then when moving the note out of the middle the main note size changes (this should never happen, move should not change the size)'; 'The main thing is that note is selected so this means that this is the user's main note, the user makes a decision on how big the note should be and this should be respected (note: new notes opened should open in that size)'"]
 severity: high
 component: renderer
@@ -54,7 +54,7 @@ The size is a result of the ring's search, the stored size is unread, and a move
 
 Two consequences to decide on, both Edwin's:
 
-- **A pane larger than the field leaves no ring at all.** A person who sizes a note to most of the window gets the note and "+N more" and nothing else. That is the correct reading of "the user's decision should be respected", and it should be said out loud rather than discovered.
+- **A pane larger than the field leaves no ring at all.** A person who sizes a note to most of the window gets the note and "+N more" and nothing else. That is the correct reading of "the user's decision should be respected", and it should be said out loud rather than discovered. **Answered 2026-09-12, and answered differently:** Edwin accepted the consequence and then removed its cause — the ring is no longer laid out inside the visible window, so a large note pushes its neighbours off-screen instead of pushing them out of the ring. See below.
 - **Where the remembered reading size lives.** It is a per-window preference, like the yaw and the zoom, not part of the address, and there is an argument for putting it in the store so a second window opens notes the same way. The cheap version is a field on the Glass surface object, lost on restart; the honest one is a store setting. Recommend the store setting, written when a person resizes the note in the middle.
 
 ## Evidence
@@ -74,5 +74,23 @@ No trigger applies for the layout change. The remembered reading size, if it goe
 
 ## Next Actions
 
-- [ ] **Edwin confirms that a large note may leave no room for the ring, and says whether the remembered reading size belongs in the store.** This waits on him.
-- [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]: `focusLayout` takes the pane size (pure, with its suite), the renderer passes the stored size, and a smoke check drags the note in the middle and fails if its width or height changes by a pixel.
+- [x] **Edwin accepted the consequences, 2026-09-12, and changed the frame the ring is laid out in.** Recorded below.
+- [ ] Settle the one thing his answer opens: whether the arrangement is anchored to the cylinder (turning moves the note and its ring together) or to a flat plane of its own. See "The frame the ring is laid out in" above; this is a FEAT-0017 decision and it blocks the tasks.
+- [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]: `focusLayout` takes the pane size and lays out beyond the viewport (pure, with its suite), the renderer passes the stored size, and a smoke check drags the note in the middle and fails if its width or height changes by a pixel.
+- [ ] The remembered reading size is still unanswered: a store setting is recommended, and nothing reads one today.
+
+## Decision record
+
+> [!note] Accept — 2026-09-12 (user:edwin)
+> I accept the consequences although there should always be space to the left and right of the note off-screen, so place the associated items there, do not use the current visible view as the constraint to layout the objects..
+
+## The frame the ring is laid out in
+
+Edwin's answer changes more than the pane's size. `focusLayout` today takes `field: Size`, the visible window, and refuses every place that falls outside it (`inside()`); his rule is that the window is not the constraint and there is space to the left and right of the note that a person turns to reach.
+
+Glass already has that space and it is the **cylinder**: a note stands at an angle (`theta`) around the person, turning changes the yaw, and anything past 78 degrees either side is out of sight. So the honest reading of "do not use the current visible view as the constraint" is that the ring's places are **bearings on the cylinder**, not pixels in the window, and the existing turn is how a person reaches a neighbour that is off to the side.
+
+One thing that does not follow, and has to be decided rather than assumed: **the note in the middle is a pane, and a pane is flat.** It is scrollable HTML at the size the person chose, and putting it on the cylinder would scale and skew it with perspective, which is exactly what makes a pane readable and a card not. Two ways, and they are a FEAT-0017 decision:
+
+1. **Anchor the pane to a bearing, draw it flat.** The pane keeps the person's size and no perspective, and its position follows the projection of its bearing. Turning moves the pane and its whole ring together, both can leave the screen, and the ring keeps its shape around the note. Recommended: it is the only one where "the associated notes move with it" stays true after a turn as well as after a drag.
+2. **Leave the pane fixed on screen and put only the ring on the cylinder.** Simpler, and wrong the first time somebody turns: the ring slides away from the note it belongs to.

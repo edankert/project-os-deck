@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0072
 aliases: ["ISS-0072"]
 title: "Dragging the note in the middle ends the arrangement instead of carrying it: the ring is discarded, the whole field is dealt again and turns, so one small drag moves every card on screen"
-status: triage
+status: "open"
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-12"
 source: ["Edwin 2026-09-12, running Deck: 'The user might move the note but that then means that the associated notes should also move with it ...'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'"]
 severity: high
 component: renderer
@@ -48,7 +48,7 @@ The first pixel of the drag ends the arrangement and re-deals the field.
 
 ## What to settle before this can be built
 
-1. **Where the group may go.** The ring today is centred on the field and sized to fit inside it. Once it can be dragged it will run off the edge. Either the group is clamped so the ring stays on the field (simple, but the drag stops short of where the hand went), or the ring is allowed off the edge and the neighbours that leave the field are folded into "+N more" (truer to a spatial field, more to build). Recommend clamping first.
+1. **Where the group may go. Answered 2026-09-12: neither option.** Edwin rejected clamping and rejected folding — "Neighbours / notes in general can fall of the edge and move out of vision ... there should be a huge space to play with". So a note dragged off the screen is still there, off the screen, and a person turns or drags to find it again. That makes one thing owed that neither original option needed: **a way back.** With nothing clamped, an arrangement can be dragged entirely out of sight and the window shows an empty field. The compass already resets the zoom and already counts what is behind; the cheapest honest answer is that it also names the note in the middle and returns to it, and that Escape still works from anywhere.
 2. **Whether the offset survives.** A moved arrangement is per-window state like the yaw and the zoom: not in the address, not persisted. Say so, or it will be asked again.
 3. **What a re-layout does.** The ring is worked out afresh whenever the field size, the dock or the neighbour count changes. If the group has been moved, that re-layout must keep the offset rather than snapping the note back to the middle.
 4. **Resizing.** The same argument applies to the corner: growing the note should push the ring out, not end the arrangement. Today a resize is untested against the middle at all.
@@ -72,5 +72,11 @@ No trigger applies: no new dependency, env var, path or exposure. A dragged grou
 
 ## Next Actions
 
-- [ ] **Edwin confirms that a drag carries the ring, and picks clamping or folding at the field's edge.** This waits on him.
-- [ ] Then FEAT-0017's decision 13 is rewritten and tasks follow: an offset in `focusLayout` (pure, with its suite), the drag handler moving the group, and a smoke check that drags the note in the middle and finds the ring still drawn with every neighbour at the same offset.
+- [x] **Edwin confirmed the drag carries the ring, 2026-09-12, and rejected both options at the field's edge: nothing is clamped and nothing is folded away.** Recorded below.
+- [ ] Settle with [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]] whether the arrangement is anchored to the cylinder or to a plane of its own; the two answers are one decision and neither can be built first.
+- [ ] Then FEAT-0017's decision 13 is rewritten and tasks follow: an offset in `focusLayout` (pure, with its suite), the drag handler moving the group, a way back to a note the person has dragged out of sight, and a smoke check that drags the note in the middle and finds the ring still drawn with every neighbour at the same offset.
+
+## Decision record
+
+> [!note] Accept — 2026-09-12 (user:edwin)
+> Neighbours / notes in general can fall of the edge and move out of vision ... there should be a huge space to play with.

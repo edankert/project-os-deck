@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0073
 aliases: ["ISS-0073"]
 title: "A finished note cannot be opened from the Glass field at all: the quiet band is painted on a canvas that no pointer or keyboard handler reads, so the several hundred done notes are visible and unreachable"
-status: triage
+status: "open"
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-12"
 source: ["Edwin 2026-09-12, running Deck: 'The completed issue notes you cannot select, they show as very small notes in the distance, what is that about?'"]
 severity: high
 component: renderer
@@ -65,5 +65,23 @@ No trigger applies: no new dependency, env var, path or exposure. A hit test ove
 
 ## Next Actions
 
-- [ ] Triage with Edwin: option 1 alone, or 1 plus 2 and 4.
-- [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]], with a smoke step that clicks a quiet-band tile with a real pointer and finds the note on the desk, shown to fail today.
+- [x] **Edwin asked a different question, 2026-09-12: what does it cost to make a finished note an ordinary card, and can the document hold only what is visible?** Recorded below, with the numbers already measured and the one that is missing.
+- [ ] **Measure it.** A build flag that deals the quiet band as cards, run through `desktop/src/main/measure.ts` on Your Trainer, reporting frame time, script work per frame and element count against the 2026-09-10 baseline, throttled as well as not. Until that number exists neither answer is honest.
+- [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] for whichever the measurement allows, with a smoke step that clicks a quiet-band note with a real pointer and finds it on the desk, shown to fail today.
+
+## Decision record
+
+> [!note] Accept — 2026-09-12 (user:edwin)
+> What is the cost of making completed items behave the same as normal items? I think we need to measure this. If there is a limit on DOM Elements can we make it so we make the DOM adaptive and only include items visible so when we rotate the new visible items become part of the BOM or would this bee too expensive?
+
+## What the cost already measured says
+
+Edwin's question — what does it cost to make finished notes behave like the rest, and can the document be cut to what is visible — has three quarters of an answer in [[PHASE-0002-Glass]]'s frame-time criterion, measured 2026-09-10 on Your Trainer.
+
+- **The visible quiet band is far smaller than the corpus: 286 tiles at the worst moment, against 2,303 elements in the document.** So the number to plan against is a few hundred cards, not the 1,549 notes of the cockpit's corpus. Culling to what is visible is not a new idea to be invented; the canvas already draws only the visible tiles.
+- **A field card is about seven elements** (the box, the top row, the id, the mark, the title, the face line, the owed line). 286 of them is roughly 2,000 more elements, which roughly doubles the document. That is the headline cost and it is the number the measurement has to confirm or refute.
+- **The headroom is thin where it matters.** The baseline holds a 16.7 ms median frame with 2.2 ms of script work per frame — but on a Mac Studio. The throttled estimate at 4x CPU cost is 6.6 ms of script work, and the laptop reading is still owed. Doubling the elements eats into the number that was already the uncertain one.
+
+**Two things Edwin's virtualisation idea runs into, and both are answerable.** The quiet band spans 156 degrees and a person sees 156 degrees, so when they are facing it, "only the visible ones" is nearly all of them: culling by angle saves little at the worst moment, and culling by **apparent size** would save more. And `drawCards` creates and removes an element per note as slots come and go, so turning into the quiet band would churn hundreds of elements per turn unless they come from a pool — which is what [[FEAT-0005-Spread-Cards-On-A-Desk]] built for Spread and the field never had.
+
+**A cheaper answer that may make the question moot:** [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]] proposes promoting a tile to a real card once it is large enough on screen. Then a quiet-band note is a card exactly when a person has zoomed or flown close enough to read it, the promoted set is small by construction, and the click and the tab stop come with the element. Worth measuring alongside the all-cards variant.

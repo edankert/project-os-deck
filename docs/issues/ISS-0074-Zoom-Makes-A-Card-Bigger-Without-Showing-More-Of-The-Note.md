@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0074
 aliases: ["ISS-0074"]
 title: "Zooming in makes a card and its type bigger and tells the person nothing new, because how much of a note is drawn is keyed to which band it stands in and never to how large it actually is on screen"
-status: triage
+status: "open"
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-12"
 source: ["Edwin 2026-09-12, running Deck: 'zooming should also bring in more of the note's content not just increase the note and its font size.'"]
 severity: medium
 component: renderer
@@ -69,5 +69,6 @@ Step 4 is the only trigger: an excerpt on every card grows the index payload, wh
 
 ## Next Actions
 
-- [ ] Triage with Edwin: steps 1 to 3 now, and whether step 4 (an excerpt in the index) is wanted at all.
+- [ ] **Still unanswered.** Edwin moved this to `open` on 2026-09-12 without a decision record, where the other five carry one. Steps 1 to 3 need no decision and can be planned. Step 4, an excerpt in Deck's index, is a payload change [[PHASE-0002-Glass]]'s first exit criterion measures and it does need his word.
+- [ ] Step 3 is the same seam as [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] and should be measured with it: a tile promoted to a card is clickable and tabbable for free, and the promoted set is small by construction.
 - [ ] Then tasks under [[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]] for steps 1 and 2 with a pure suite for the thresholds, and under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] for step 3.
