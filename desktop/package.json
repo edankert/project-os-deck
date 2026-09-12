@@ -12,6 +12,7 @@
     "start:lan": "npm run build && electron . --lan",
     "test": "npm run build && node --test --test-timeout 30000 tests/*.test.mjs",
     "smoke": "npm run build && electron . --smoke",
+    "measure": "npm run build && electron . --measure",
     "smoke:lan": "npm run build && electron . --smoke --lan"
   },
   "devDependencies": {

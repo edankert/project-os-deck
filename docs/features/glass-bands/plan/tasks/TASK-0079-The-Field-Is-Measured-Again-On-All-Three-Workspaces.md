@@ -76,3 +76,15 @@ A measurement is not an afterthought here. It is the step that turns two of Edwi
 **What it decides.** [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] stays open until these numbers exist, and [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]] is not started without them.
 
 **What is already known without running it**, from the pure modules: nothing is promoted at 1x on any of the three workspaces, so the unzoomed document is the size it was. The question the run answers is what a turn costs while zoomed in on the quiet band, where up to 180 notes are elements at once.
+
+## Ready to take, 2026-09-12
+
+**Everything is in place except the five minutes of Edwin's screen.**
+
+- `cd desktop && npm run measure` — the script was added so the run is one command rather than a remembered flag, mirroring `npm run smoke`.
+- All three workspaces are on the machine: this repository, `../project-os-cockpit` and `../your-trainer`, which is the default list `main.ts` uses when `--measure-workspaces` is not given.
+- `measure.ts` already records what FEAT-0018 made different — tiles painted, notes promoted, outer-field cards, each band's chosen shape — and takes two runs the old measurement never took: a turn with the pointer moving, because the tile hit test runs on `pointermove`, and a turn zoomed in on the quiet band, because that is where promotion happens.
+
+**It cannot move to the box.** [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]'s container renders through software GL, and the offscreen route is no better for this: the spike recorded in [[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]] found `requestAnimationFrame` running at a full 60 a second offscreen, but an offscreen frame is painted to a bitmap rather than composited to a display, so the interval measures the harness and not the machine. The script work per frame would survive; the frame time, which is what [[PHASE-0002-Glass]]'s criterion asks about, would not.
+
+**So this waits on Edwin being away from the keyboard, and nothing else.** The run takes the window to the front for a few minutes and needs it to stay there.
