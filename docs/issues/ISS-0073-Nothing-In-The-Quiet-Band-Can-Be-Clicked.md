@@ -25,6 +25,12 @@ tests: []
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "The completed issue notes you cannot select, they show as very small notes in the distance, what is that about?"
 
+## This is a regression against a rule DES-0002 already wrote
+
+[[DES-0002-The-Glass-Cockpit]] hit this in its first revision and fixed it: "**Rev 1:** quiet cards carried `pointer-events: none`. `FEAT-0143` is `done`, therefore always in the quiet band, therefore unclickable in every view. **Fixed by making anything visible clickable.**" The design also promised the band would stay "one gesture away".
+
+Deck reintroduced the same defect by a different route — the band became a canvas rather than elements with `pointer-events: none` — and the rule did not come with it. So this is not a new design question. **Anything visible is clickable** is the decision; what is owed is carrying it into the canvas.
+
 ## Cause
 
 `drawCards()` in `desktop/src/renderer/glass.ts` skips every slot whose band is `deep`, so no `.field-card` element is ever made for one. `paintCanvas()` draws those slots as filled rectangles on `.field-canvas` with an id when the tile is at least 26 pixels wide. The only canvas hit test in the file is `dotAt`, and its two callers both guard on `this.arrangement === 'orbit'`: in the orbit a dot is a note and a click lands on it ([[TASK-0004-Landing-Opens-The-Note]]), and in Glass nothing reads the canvas. So the orbit gained the hit test the field never got.
@@ -92,4 +98,4 @@ Edwin's question — what does it cost to make finished notes behave like the re
 **On making the shape adaptive.** Filed as [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]. The numbers say it matters more than it sounds: on this repository the worst moment puts 35 tiles on screen against 729 elements, and on Your Trainer 286 against 2,303. Making 35 tiles into cards costs about 245 elements and is free; making 286 into cards roughly doubles the document. So an adaptive band does not merely make the quiet band readable, it makes "a finished note is an ordinary card" affordable everywhere except the one largest workspace.
 
 **On the pool.** Filed as [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]. Short version: the pool was the intended solution, Spread built it and proved it, Glass does not use it, and that was a recorded decision rather than a slip — FEAT-0009 says "The hybrid is kept. Nothing here asks for the pool DES-0002 proposed", because the canvas was doing the pool's job for every note past the mid band. Taking the canvas away is what re-opens it. One correction worth carrying: a pool caps element **churn** and not the **live element count**, so it makes a turn smooth without making a frame cheaper.
-- [ ] **This may not need building at all.** [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]], filed the same day, asks whether the quiet band should be drawn at all; if it is not, what stands behind a person is a handful of hand-pushed cards, which are already clickable, and this issue mostly dissolves. Settle ISS-0078 first.
+- [ ] **Still owed, and now on firmer ground.** [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] briefly recommended not drawing the band at all; that recommendation is withdrawn there. DES-0002's "anything visible is clickable" settles the direction, and [[FEAT-0014-The-Hands]]'s pull is the gesture that brings a finished note forward once it can be touched at all.

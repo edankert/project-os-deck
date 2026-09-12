@@ -43,10 +43,32 @@ Three jobs are stated in the record. They are not equally load-bearing.
 
 Job 3 costs nothing and stays either way. Job 2 needs a place, not a shelf. **Only job 1 needs the tiles, and job 1 is the one that has never worked**: a note you cannot click, cannot tab to and cannot read is not a note that is "somewhere", it is a texture.
 
-## Three ways, and the middle one is recommended
+## What the quiet band was for, in DES-0002's own words
+
+Edwin, 2026-09-12: "Not sure now I know what the quiet band was supposed to be used for." The design says it in two places, and both matter.
+
+**What it holds:** "**Deep field** — the quiet: terminal work, suppressed items, the 70% of this corpus that is finished. Small, dim, blurred, still there."
+
+**Why it is behind you, and what it was promised to be:** "Rendered small and dim in front of you, 70% of this corpus is still a thousand rectangles between you and the nine things that matter. Placed **behind** you it costs nothing, **stays one gesture away**, and is counted on screen so it cannot be quietly lost."
+
+**One gesture away** is the whole claim, and the built band does not honour it. A canvas tile is nought gestures away, because no gesture reaches it.
+
+## The prototype had this exact bug, found it, and fixed it
+
+[[DES-0002-The-Glass-Cockpit]], recording why Edwin could not open a note in its first revision: "**Rev 1:** quiet cards carried `pointer-events: none`. `FEAT-0143` is `done`, therefore always in the quiet band, therefore unclickable in every view. **Fixed by making anything visible clickable.**"
+
+That is [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]], a year of revisions earlier, with the same cause read the same way and a rule written to prevent it. Deck reintroduced it by a different route — the band became a canvas instead of `pointer-events: none` — and the rule was not carried across. **So ISS-0073 is a regression against a decision already taken, not a new question.**
+
+## The recommendation below is withdrawn
+
+It said to stop drawing the shelf, on the grounds that the band buys nothing a person can use. Two things read after it was written say otherwise. The design's promise was that the band is one gesture away, which argues for fixing the gesture rather than removing the band. And [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]] found the field's actual hole: hundreds of **active** notes with no band at all, which is strictly worse than finished notes in a band that is hard to reach. Once a fourth band gives those a place, the quiet band is no longer the odd one out; it is the far end of a gradient, and the reason to draw it is the reason to draw the rest.
+
+**What stands from this issue** is the observation that made it worth writing: the quiet band is the only band that draws every member, and "place what fits, count the rest, say so" is a rule Deck already applies twice. That rule should apply to every band including the quiet one — which is a capacity, not a deletion.
+
+## Three ways, and the middle one was recommended and is now withdrawn
 
 1. **Keep it and make it work.** [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] plus [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]] plus, on the largest workspace, [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] and a measurement. The most work of the three, for the job the phase already doubted.
-2. **Stop drawing the shelf; keep the place. Recommended.** The deep band stops being painted as a field of tiles. The compass keeps its count. A note a hand pushed behind is still behind, and because there are a handful rather than hundreds it is drawn as an ordinary card — clickable, tabbable, no canvas. Finished work is reached the way front and mid overflow already is, through the navigator and search, and the bar says so in the sentence it already has. This keeps every job the record names except the one that never worked, and it applies Deck's own existing rule to the third band instead of inventing anything.
+2. **Stop drawing the shelf; keep the place. ~~Recommended.~~ Withdrawn 2026-09-12, see above.** The deep band stops being painted as a field of tiles. The compass keeps its count. A note a hand pushed behind is still behind, and because there are a handful rather than hundreds it is drawn as an ordinary card — clickable, tabbable, no canvas. Finished work is reached the way front and mid overflow already is, through the navigator and search, and the bar says so in the sentence it already has. This keeps every job the record names except the one that never worked, and it applies Deck's own existing rule to the third band instead of inventing anything.
 3. **Delete the band outright**, push-behind with it. Cheapest, and it retires a gesture [[FEAT-0014-The-Hands]] built and a premise [[DES-0002-The-Glass-Cockpit]] rests on. Not recommended.
 
 ## What option 2 does to the three open issues
@@ -82,5 +104,6 @@ No trigger applies: no new dependency, env var, path or exposure. It removes wor
 
 ## Next Actions
 
-- [ ] **Edwin decides between the three.** If he takes option 2 this is an [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]-sized decision rather than a bug fix: it amends DES-0002, answers one PHASE-0002 exit criterion and rewords another, so it is recorded as an ADR and this issue closes against it.
+- [ ] **Superseded in direction by [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]], which should be settled first.** What survives here is one question for Edwin: should every band, the quiet one included, place what fits and state the rest, the way the front and mid bands already do?
+- [ ] ~~Edwin decides between the three.~~ If he takes option 2 this is an [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]-sized decision rather than a bug fix: it amends DES-0002, answers one PHASE-0002 exit criterion and rewords another, so it is recorded as an ADR and this issue closes against it.
 - [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]], and [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]], [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]] and [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] are resolved against the decision rather than built.
