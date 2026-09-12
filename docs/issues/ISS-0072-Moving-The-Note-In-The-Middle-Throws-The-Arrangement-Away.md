@@ -73,7 +73,8 @@ No trigger applies: no new dependency, env var, path or exposure. A dragged grou
 ## Next Actions
 
 - [x] **Edwin confirmed the drag carries the ring, 2026-09-12, and rejected both options at the field's edge: nothing is clamped and nothing is folded away.** Recorded below.
-- [ ] Settle with [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]] whether the arrangement is anchored to the cylinder or to a plane of its own; the two answers are one decision and neither can be built first.
+- [x] **Settled 2026-09-12, Edwin: "turning moves the note and the whole ring".** The arrangement is anchored to the cylinder, so the ring's places are bearings; a neighbour off the edge of sight is reached by turning, which is what "a huge space to play with" already means in Glass. Recorded in [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]].
+- [ ] The way back is still owed, and it is now cheaper than it looked: with the arrangement on the cylinder, a note dragged out of sight is at a bearing, so the compass can name it and turn to it rather than needing a new mechanism.
 - [ ] Then FEAT-0017's decision 13 is rewritten and tasks follow: an offset in `focusLayout` (pure, with its suite), the drag handler moving the group, a way back to a note the person has dragged out of sight, and a smoke check that drags the note in the middle and finds the ring still drawn with every neighbour at the same offset.
 
 ## Decision record

@@ -75,7 +75,7 @@ No trigger applies for the layout change. The remembered reading size, if it goe
 ## Next Actions
 
 - [x] **Edwin accepted the consequences, 2026-09-12, and changed the frame the ring is laid out in.** Recorded below.
-- [ ] Settle the one thing his answer opens: whether the arrangement is anchored to the cylinder (turning moves the note and its ring together) or to a flat plane of its own. See "The frame the ring is laid out in" above; this is a FEAT-0017 decision and it blocks the tasks.
+- [x] **Settled 2026-09-12, Edwin: "turning moves the note and the whole ring" — option 1.** The pane is anchored to a bearing on the cylinder and drawn flat, at the person's size, with no perspective.
 - [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]: `focusLayout` takes the pane size and lays out beyond the viewport (pure, with its suite), the renderer passes the stored size, and a smoke check drags the note in the middle and fails if its width or height changes by a pixel.
 - [ ] The remembered reading size is still unanswered: a store setting is recommended, and nothing reads one today.
 
@@ -92,5 +92,13 @@ Glass already has that space and it is the **cylinder**: a note stands at an ang
 
 One thing that does not follow, and has to be decided rather than assumed: **the note in the middle is a pane, and a pane is flat.** It is scrollable HTML at the size the person chose, and putting it on the cylinder would scale and skew it with perspective, which is exactly what makes a pane readable and a card not. Two ways, and they are a FEAT-0017 decision:
 
-1. **Anchor the pane to a bearing, draw it flat.** The pane keeps the person's size and no perspective, and its position follows the projection of its bearing. Turning moves the pane and its whole ring together, both can leave the screen, and the ring keeps its shape around the note. Recommended: it is the only one where "the associated notes move with it" stays true after a turn as well as after a drag.
-2. **Leave the pane fixed on screen and put only the ring on the cylinder.** Simpler, and wrong the first time somebody turns: the ring slides away from the note it belongs to.
+1. **Anchor the pane to a bearing, draw it flat. CHOSEN 2026-09-12 by Edwin: "turning moves the note and the whole ring".** The pane keeps the person's size and no perspective, and its position follows the projection of its bearing. Turning moves the pane and its whole ring together, both can leave the screen, and the ring keeps its shape around the note.
+
+   Three things this decision makes concrete, and each is a FEAT-0017 task step rather than another question:
+   - **A flat pane at a bearing needs a rule for the edges of sight.** Past 78 degrees a slot is out of sight; a pane is a rectangle that does not shrink with distance, so it has to fade and stop taking the pointer on the same boundary rather than hanging at the screen's edge at full size.
+   - **The ring's places are bearings and heights, not pixels.** `focusLayout` returns points in a flat field today. It returns angles and heights around the focus's bearing instead, and `project` turns them into pixels the way every other slot is drawn — which is also what lets a neighbour stand off-screen, as [[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]] requires.
+   - **A drag on the pane becomes a turn plus a height change**, not a change of left and top. That is the same arithmetic the field's own drag already uses, so it is a reuse rather than a new mechanism.
+2. **Leave the pane fixed on screen and put only the ring on the cylinder.** Simpler, and wrong the first time somebody turns: the ring slides away from the note it belongs to. **Not chosen.**
+
+> [!note] Accept — 2026-09-12 (user:edwin)
+> 1. turning moves the note and the whole ring

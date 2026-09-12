@@ -48,9 +48,9 @@ Detail follows apparent size. A card grown past a stated width shows its face li
 1. **Key the detail to apparent width, not to the band.** `paintCard` already computes the projection; write a detail level from `p.scale * CARD_BOX.width` and set `data-detail="tile|brief|full"` beside `data-band`, moving the two CSS rules onto it. Small, self-contained, and it makes the zoom mean something immediately. The band keeps deciding **where** a note stands; apparent size decides **how much** of it is drawn.
 2. **Decide the thresholds once, in a pure function, with a test.** Otherwise they end up as three magic numbers in the renderer and a fourth in the canvas.
 3. **Give the quiet band a promotion.** At a large enough apparent size a tile stops being a canvas rectangle and becomes a real card. This is the same seam as [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] and the two should be settled together: a promoted tile is an element, so it is clickable and tabbable for free.
-4. **Then, and only if Edwin wants it, an excerpt.** Deck's own index (`desktop/src/main/note-index.ts`) reads the notes and could carry a first paragraph of a stated length. That is a new field on `CardModel`, a larger payload and a decision about vault notes as well as project-os notes, so it is its own piece of work and not part of the zoom.
+4. ~~**Then, and only if Edwin wants it, an excerpt.**~~ **Dropped 2026-09-12.** See below.
 
-Steps 1 to 3 use what Deck already has. Step 4 is where "more of the note's content" becomes literally true, and it should be planned separately.
+Steps 1 to 3 use what Deck already has.
 
 ## Evidence
 
@@ -69,6 +69,17 @@ Step 4 is the only trigger: an excerpt on every card grows the index payload, wh
 
 ## Next Actions
 
-- [ ] **Still unanswered.** Edwin moved this to `open` on 2026-09-12 without a decision record, where the other five carry one. Steps 1 to 3 need no decision and can be planned. Step 4, an excerpt in Deck's index, is a payload change [[PHASE-0002-Glass]]'s first exit criterion measures and it does need his word.
+- [x] **Edwin asked what step 4 gives him, 2026-09-12. The honest answer is: very little. It is dropped from this issue** — see "What step 4 would actually give you" below. Steps 1 to 3 stand and need no decision.
 - [ ] Step 3 is the same seam as [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] and should be measured with it: a tile promoted to a card is clickable and tabbable for free, and the promoted set is small by construction.
 - [ ] Then tasks under [[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]] for steps 1 and 2 with a pure suite for the thresholds, and under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] for step 3.
+
+## What step 4 would actually give you
+
+Edwin asked, 2026-09-12: "I don't know what step 4 gives me?" Working it through, the answer is **not much, and it is dropped.**
+
+- **The card would gain a first paragraph, and the first paragraph is nearly the subtitle.** Every project-os note is written point-first — a `## Problem` or `## Summary` whose opening sentence says what the note is about. `CardModel.subtitle` already carries the sidecar's one-line description of the same note. An excerpt would mostly repeat, in three lines, what one line already says.
+- **Steps 1 to 3 have not run out of things to show yet.** A card grown to 400 pixels can show the subtitle, the status, the progress and the properties the view's face names, and today it shows none of them because the detail is keyed to the band. Until that is built, nobody knows whether a zoomed card still feels thin.
+- **The full note is one click away, at the size you choose.** [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]] makes the opened pane the size the person set, with the whole rendered note in it. A card is a thing you scan to decide what to open; a pane is the thing you read.
+- **It costs the measurement.** An excerpt on every note grows the payload that [[PHASE-0002-Glass]]'s first exit criterion measures — 2.39 MB and 86 ms cold on 1,549 notes today — and it forces a decision about what an excerpt means in an Obsidian vault, where notes have no `## Problem`.
+
+**So: build steps 1 to 3, use them, and only then ask again.** If a zoomed card still leaves you unable to tell what a note says, the example that proves it is worth more than this argument, and the excerpt comes back as its own issue with that example in it.
