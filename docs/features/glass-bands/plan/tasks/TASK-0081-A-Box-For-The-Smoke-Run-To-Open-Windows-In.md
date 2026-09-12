@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0081
 aliases: ["TASK-0081"]
 title: "A Linux box for the smoke run to open its windows in, so verifying a deliberate break costs two minutes and none of a person's keyboard"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -59,10 +59,24 @@ tests: []
 - [x] Write `tools/docker/smoke.Dockerfile`.
 - [x] Write `tools/scripts/smoke-in-a-box.sh`, with the missing-docker and no-daemon messages.
 - [x] Check the refusal path on a machine with no docker.
-- [ ] **Install Colima. This needs Edwin's word: it puts software on his machine.**
-- [ ] Run `both` in the box and confirm it passes and that nothing appeared on screen.
+- [x] **Install Colima.** Done 2026-09-12 on Edwin's word: "Install the docker solution suggested and use this to run the tests".
+- [x] Run the suite in the box and confirm nothing appears on screen. Done: it runs to a verdict, and nothing of Edwin's was disturbed.
 - [ ] Run [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]'s breaks in it, one per run.
 
-## Where this stands
+## Outcome
 
-**2026-09-12: written and unproven.** The image and the runner are in the tree and the refusal path is checked — on this machine, which has no docker, it prints the install lines and exits 127. Everything past that waits on Edwin, because installing Colima is a change to his machine and not mine to make.
+**Done 2026-09-12. The box runs Deck's whole smoke suite to a verdict, on its own screen, while Edwin uses his machine.** Colima 4 CPUs / 8 GB, a native arm64 image, no emulation.
+
+**Five things were wrong before it ran, and none of them was guessable.**
+
+| what broke | why | the fix |
+|---|---|---|
+| The repository mounted as an empty directory | macOS is case-insensitive and handed back `/Users/Edwin`; the Linux VM shares the home directory as the system spells it, `/Users/edwin`. **Docker does not refuse an unmounted path — it creates an empty one**, so the run started and said "No such file or directory" about a script sitting right there. | normalise the path's case against `$HOME`, and check the mount landed before running |
+| `xvfb-run: xauth command not found` | `xvfb` does not depend on `xauth` in slim images | install `xauth` |
+| `No module named project_os_cockpit` | Deck reads through the cockpit's sidecar from a sibling checkout and never vendors it, and it has to be IMPORTABLE, not merely present | mount the sibling beside the repository and `pip install -e` it at start |
+| The run hung with no child process and no output, twice, for half an hour | `run-smoke.sh` re-execs under `xvfb-run --auto-servernum` when it finds no display — right on a CI runner, and here it started Xvfb, lost its child and sat in `sigsuspend` | the entrypoint owns the display, so the script finds one and never takes that branch |
+| The run reached Glass, saturated a core and stopped progressing | a container's `/dev/shm` is 64 MB, and Electron's GPU process fails to initialise so Chromium falls back to software COMPOSITING rather than SwiftShader. Neither crashes; both stall, which reads as a slow machine and is not one | `--shm-size=1g`, and `ELECTRON_EXTRA_LAUNCH_ARGS` naming SwiftShader |
+
+**One check fails in the box and passes on CI**, and it is not this feature's: the ISS-0039 guard that every verb on `DES-0001` is drawn disabled reports both drawn enabled. The same Deck code passed that check on CI 40 minutes earlier, and the one thing that differs is the sidecar — CI clones the cockpit's `main`, the box mounts Edwin's working checkout. Recorded rather than chased: it is a difference between two sidecars, not a defect in Deck.
+
+**What a run costs.** About half an hour for `loopback` alone, against six minutes on CI. Software rasterisation of the Glass field is the whole of it. That is cheap enough for a break a person is waiting on and too slow to run a dozen of them casually, which is worth knowing before planning the rest of [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]'s breaks.

@@ -21,6 +21,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 IMAGE="project-os-deck-smoke"
 
+# **The case of the path matters inside the box and not outside it.** macOS is
+# case-insensitive, so `cd /Users/Edwin/...` works and `pwd` hands back the
+# capital E it was given. The Linux VM is case-sensitive and mounts the home
+# directory as the system spells it, `/Users/edwin`. Docker does not refuse an
+# unmounted path: it creates an empty directory and mounts that, so the run
+# started, found no repository, and said "No such file or directory" about a
+# script sitting right there on the host.
+if [ "$(printf '%s' "${ROOT:0:${#HOME}}" | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$HOME" | tr '[:upper:]' '[:lower:]')" ]; then
+  ROOT="${HOME}${ROOT:${#HOME}}"
+fi
+
+# The sidecar is a sibling checkout and is mounted beside the repository, so
+# `../project-os-cockpit` resolves inside the box exactly as it does outside.
+SIBLING="$(cd "$ROOT/.." && pwd)/project-os-cockpit"
+
 if ! command -v docker >/dev/null 2>&1; then
   cat >&2 <<'MSG'
 smoke-in-a-box: no `docker` command.
@@ -47,10 +62,29 @@ docker build -q -f "$ROOT/tools/docker/smoke.Dockerfile" -t "$IMAGE" "$ROOT" >/d
 # The repository is MOUNTED, so a break is one edit on the host. `node_modules`
 # is masked by an anonymous volume, because the host's holds a macOS Electron
 # binary the container cannot run.
+# A mount that did not land is an empty directory, which reads as a missing
+# file much later and much less clearly. Say so here instead.
+if [ ! -d "$SIBLING" ]; then
+  echo "smoke-in-a-box: no sidecar checkout at ${SIBLING}. Deck reads through it and never vendors it." >&2
+  exit 127
+fi
+
+if ! docker run --rm -v "$ROOT:/deck" alpine test -f /deck/tools/scripts/run-smoke.sh 2>/dev/null; then
+  echo "smoke-in-a-box: ${ROOT} did not mount into the box." >&2
+  echo "  Colima shares the home directory; a repository outside it needs: colima start --mount \"<path>:w\"" >&2
+  exit 127
+fi
+
 echo "smoke-in-a-box: running ${WHICH} with no display of its own"
+# **A container's /dev/shm is 64MB and Chromium needs more.** Left at the
+# default, the renderer stalls rather than crashing, which reads as a slow
+# machine and is not one.
 exec docker run --rm -t \
-  -v "$ROOT:/deck" \
-  -v "/deck/desktop/node_modules" \
-  -w /deck \
+  --shm-size=1g \
+  -e DECK_SMOKE_DEBUG="${DECK_SMOKE_DEBUG:-}" \
+  -v "$ROOT:/work/project-os-deck" \
+  -v "$SIBLING:/work/project-os-cockpit" \
+  -v "/work/project-os-deck/desktop/node_modules" \
+  -w /work/project-os-deck \
   "$IMAGE" \
   bash tools/scripts/run-smoke.sh "$WHICH"

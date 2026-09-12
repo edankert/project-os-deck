@@ -18,14 +18,14 @@ FROM node:20-bookworm-slim
 # it on. Kept to the list Electron's own documentation names, so a missing
 # library is a change here rather than a mystery at run time.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      xvfb \
+      xvfb xauth x11-utils \
       libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
       libpango-1.0-0 libcairo2 libgtk-3-0 \
-      python3 ca-certificates \
+      python3 python3-pip python3-venv ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /deck
+WORKDIR /work/project-os-deck
 
 # The dependency install is its own layer, so editing source does not refetch
 # Electron's ~100MB binary on every run.
@@ -36,6 +36,14 @@ RUN cd desktop && npm ci --no-audit --no-fund
 # a test harness against a checkout we control.
 ENV ELECTRON_DISABLE_SANDBOX=1
 
-# The repository is mounted at run time rather than copied, so a break is one
-# edit on the host and one `docker run` — not a rebuild.
+# **The sidecar Deck reads through is a SIBLING checkout, never vendored**
+# (CLAUDE.md), and `sidecar.ts` runs `python -m project_os_cockpit`, so the
+# package has to be IMPORTABLE and not merely present. CI clones it beside the
+# repository and pip-installs it; the box mounts the one already on the host
+# and installs it at start, because a mounted path cannot be installed at
+# build time. `--break-system-packages` because Debian's python is externally
+# managed and this image exists to run one test suite.
+COPY tools/docker/smoke-entrypoint.sh /usr/local/bin/smoke-entrypoint
+RUN chmod +x /usr/local/bin/smoke-entrypoint
+ENTRYPOINT ["/usr/local/bin/smoke-entrypoint"]
 CMD ["bash", "tools/scripts/run-smoke.sh", "both"]
