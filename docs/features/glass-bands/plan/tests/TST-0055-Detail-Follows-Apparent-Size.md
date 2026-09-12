@@ -17,8 +17,8 @@ covers: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached
 issues: ["[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]"]
 tasks: ["[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]"]
 artifacts: []
-adequacy: ""
-mutation_score: ""
+adequacy: "Three deliberate breaks, one per run; all three caught, each substitution confirmed applied before its run."
+mutation_score: "3/3 breaks caught"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
@@ -46,10 +46,30 @@ How much of a note is drawn stops being a property of the band it stands in and 
 - The promotion threshold is exported from the same module and is not greater than the brief threshold.
 - A width of zero, a negative width and a width of ten thousand each return a level rather than throwing.
 
-## Evidence (fill after running)
+## Evidence
 
-- <the threshold table, and the chosen numbers>
+**Run 2026-09-12, `node --test tests/*.test.mjs`: 457 checks, 457 passing.** `desktop/tests/detail.test.mjs` holds 9 of them; both typechecks clean.
+
+**The widths the field actually draws, straight ahead at 1x on a 1600 by 900 window**, which is what the thresholds were read off rather than chosen against:
+
+| band | drawn at | level | promoted |
+|---|---|---|---|
+| front | 138 px | full | — |
+| mid | 119 px | brief | — |
+| outer field | 92 px | brief | — |
+| quiet, Your Trainer's 58 px tile | 34 px | tile | no |
+| quiet, a small workspace's 140 px tile | 83 px | brief | yes |
+
+The two rows that matter most are the last two. **The same threshold that makes the picture unchanged on a large workspace makes a small one's finished notes into real elements** — which is the reframing [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] needed, from a yes-or-no about cost into one number. Your Trainer keeps painting tiles until a person zooms; this repository's 35 quiet notes are cards from the start, and get their click and their tab stop from being elements at all.
 
 ## Adequacy (who verifies this test?)
 
-Three breaks, one per run, recorded by [[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]: thresholds out of order; a level that never reaches the most detailed; a promotion threshold above the brief threshold. Each must fail at least one check, and which one is written here.
+Three breaks, one per run, applied to `desktop/src/shared/detail.ts` and rebuilt. **All three caught**, each substitution confirmed applied before its run.
+
+| The break | What failed |
+|---|---|
+| 1. The thresholds are out of order — `brief` and `full` swapped. | 5 checks, including "at 1x the unzoomed field shows exactly what it shows today" |
+| 2. No width ever reaches `more` — the last branch removed, so every wide card stops at `full`. This is [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]'s defect in its purest form. | 2 checks, including "a card wide enough reaches more" |
+| 3. The promotion threshold is raised above the `brief` threshold, so a tile is promoted while it still shows only an id. | 3 checks, including "a quiet tile is promoted exactly when it first has something to say" |
+
+The monotonicity check is not broken by any of the three, which is correct: it constrains the function's shape and not its numbers, and breaks 1 and 3 keep it monotonic. It earns its place against a future edit that inserts a level in the wrong order.

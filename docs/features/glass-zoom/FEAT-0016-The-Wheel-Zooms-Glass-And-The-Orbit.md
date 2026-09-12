@@ -45,7 +45,7 @@ Four words are used throughout:
 
 **Out of scope.**
 
-- **More detail at a larger scale** (semantic zoom: a card shows more of its note when drawn larger). The reference calls it a later refinement.
+- **More detail at a larger scale** (semantic zoom: a card shows more of its note when drawn larger). The reference calls it a later refinement. **Amended 2026-09-12: the refinement landed, in [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]].** Edwin, running Deck: "zooming should also bring in more of the note's content not just increase the note and its font size" ([[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]). `desktop/src/shared/detail.ts` decides how much of a note is drawn from the width it is actually drawn at, so the zoom this feature built now changes what a card says and not only its size. Nothing here is undone: the zoom is still the pure view transform [[TASK-0064-The-Zoom-Is-A-Pure-View-Transform]] made, and the new module reads the width it produces rather than changing it.
 - **Pinch on the tablet's touch screen.** Safari reports a finger pinch as gesture events, not as a wheel. The served page zooms with a wheel or the keys when the tablet has them, and nothing else is built.
 - **A zoom that survives a reload, reaches another window, or enters an address.**
 - **Zooming the panes, the bars, the compass or the note in the middle of the ring** ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]). Those are read, not navigated.

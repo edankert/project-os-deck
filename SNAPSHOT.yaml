@@ -606,7 +606,7 @@ items:
     TASK-0074:
       file: "docs/features/glass-bands/plan/tasks/TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band.md"
       title: "Detail follows apparent size, not the band: one pure function turns the width a card is drawn at into how much of the note is shown, and the promotion threshold lives in the same table"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 80
-    tasks_done: 72
+    tasks_done: 73
     tests_total: 39
     tests_passing: 2
     tests_failing: 0
