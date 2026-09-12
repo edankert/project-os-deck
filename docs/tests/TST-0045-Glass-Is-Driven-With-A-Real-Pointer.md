@@ -103,3 +103,13 @@ Three things about `sendInputEvent`, each of which made a correct renderer look 
 7. N — The reach checks still read `reaching()` rather than the canvas the wires are drawn on (the first review's finding 6, second half, unaddressed).
 
 **The first review's findings.** Finding 2 is addressed and guarded, and so is finding 3. Finding 4 is partly addressed: the run is now recorded, but `command:` is still empty. Finding 5 is addressed by a retake when the window has lost the keyboard; in this reviewer's runs it was never needed. Finding 6's dealt check is fixed, and its reach half is not (finding 7 above).
+
+## FEAT-0018's checks, added 2026-09-12
+
+Fourteen checks for four bands, every remainder stated, and a reachable quiet band, in the same suite this note names.
+
+**Green on an isolated display**: `run-smoke.sh both`, run 34698491628, `ubuntu-latest` under `xvfb`, 12m12s, loopback and LAN. The check that matters is "a click on the quiet band's <id> puts it on the desk", which is [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]'s repro driven by a real pointer.
+
+**Three defects the run found before it went green**, none of which any node check could have seen: the quiet band's tab stop swallowed the click on its own tile, because it is a `<button>` and the field's `pointerdown` ignores anything inside one; the conservation check added two different overflow counts and so counted four notes twice; and the check picked tiles standing behind panes and cards, which are correctly unclickable.
+
+**The breaks are still owed.** Each new check has to be seen to fail with its fix removed, one break per run, and the quiet-band click has to be seen to fail against the code as it stood before FEAT-0018. Those runs wait on a local display that is not the one Edwin is typing on.
