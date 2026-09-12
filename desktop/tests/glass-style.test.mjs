@@ -89,3 +89,24 @@ test('the more level draws something, and full draws nothing extra of its own', 
   const always = rules().find((r) => r.selector === '.field-card .fc-more');
   assert.ok(always !== undefined && /display\s*:\s*none/.test(always.body), '.fc-more is drawn at every level');
 });
+
+// ---- TASK-0076: the quiet band's one tab stop ----
+
+test('the quiet band adds exactly one tab stop, whatever it holds', () => {
+  // The band is painted on a canvas, so it has no elements of its own. A
+  // thousand tab stops would not be a keyboard route, and no tab stop at all
+  // is exactly as bad by keyboard as by mouse (ISS-0073, DES-0002's rule).
+  const html = fs.readFileSync(path.join(desktopRoot, 'dist', 'web', 'index.html'), 'utf-8');
+  const cursors = [...html.matchAll(/class="quiet-cursor"/g)];
+  assert.equal(cursors.length, 1, 'the quiet band has no single tab stop, or has more than one');
+  const el = /<button[^>]*id="quiet-cursor"[^>]*>/.exec(html);
+  assert.ok(el !== null, 'the tab stop is not a button, so Enter and Space do not reach it');
+  assert.ok(/\bhidden\b/.test(el[0]), 'the tab stop is in the tab order before the band has anything in it');
+});
+
+test('the quiet cursor is drawn over the field and does not swallow the canvas', () => {
+  const cursor = rules().filter((r) => r.selector.split(',').some((sel) => sel.trim() === '.quiet-cursor'));
+  assert.ok(cursor.length > 0, 'the quiet band’s tab stop has no style, so it is invisible and unfindable');
+  assert.ok(cursor.some((r) => /position\s*:\s*absolute/.test(r.body)));
+  assert.ok(cursor.some((r) => /background\s*:\s*transparent/.test(r.body)), 'the cursor covers the tile it marks');
+});

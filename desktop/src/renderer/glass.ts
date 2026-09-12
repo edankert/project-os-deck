@@ -155,6 +155,7 @@ interface Elements {
   field: HTMLElement;
   canvas: HTMLCanvasElement;
   cards: HTMLElement;
+  quietCursor: HTMLElement;
   sectors: HTMLElement;
   panes: HTMLElement;
   frontLabel: HTMLElement;
@@ -190,6 +191,7 @@ export function glassElements(): Elements {
     field: must('field'),
     canvas: must('field-canvas') as HTMLCanvasElement,
     cards: must('field-cards'),
+    quietCursor: must('quiet-cursor'),
     sectors: must('field-sectors'),
     panes: must('field-panes'),
     frontLabel: must('front-label'),
@@ -836,6 +838,7 @@ export class GlassField {
     }
     this.el.cards.dataset['visible'] = String(tabStops);
     this.drawSectors();
+    this.drawQuietCursor();
     this.paintCanvas();
     this.drawInstrument();
   }
@@ -982,6 +985,7 @@ export class GlassField {
     }
     const yaw = this.model.yaw;
     const heldIds = new Set(this.held.map((c) => c.noteId));
+    this.tiles = [];
     ctx.textBaseline = 'middle';
     for (const [noteId, slot] of this.model.current.slots) {
       if (slot.band !== 'deep') continue;
@@ -993,6 +997,10 @@ export class GlassField {
       const box = this.model.current.shapes.deep.box;
       const w = box.width * p.scale;
       const h = box.height * p.scale;
+      // Remembered for the pointer, the way the orbit remembers its dots: the
+      // projection is already computed here, so the hit test costs a lookup
+      // rather than a second pass over the band (TASK-0076).
+      this.tiles.push({ x: p.x, y: p.y, w, h, id: noteId, depth: slot.depth });
       const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
       ctx.globalAlpha = (0.25 + 0.5 * fade) * (slot.layer === 0 ? 1 : 0.7);
       const status = entry === undefined ? 'planned' : bandFor(entry.card.status);
@@ -1136,6 +1144,103 @@ export class GlassField {
     return best;
   }
 
+  /**
+   * The quiet-band tile under this point, or null.
+   *
+   * DES-0002's rule is that anything visible is clickable; its first revision
+   * hit this exact defect and fixed it, and Deck lost the rule by moving the
+   * band onto a canvas. Modelled on `dotAt`, including the ordering: the
+   * NEAREST tile wins, so a tile on the first layer is picked over one on the
+   * third behind it.
+   */
+  private tileAt(x: number, y: number): string | null {
+    let best: string | null = null;
+    let bestDepth = Infinity;
+    for (const t of this.tiles) {
+      if (x < t.x - t.w / 2 || x > t.x + t.w / 2 || y < t.y - t.h / 2 || y > t.y + t.h / 2) continue;
+      if (t.depth < bestDepth) {
+        bestDepth = t.depth;
+        best = t.id;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * The quiet band's keyboard cursor: which note it is on, in the band's own
+   * order, or null when the keyboard has not entered the band.
+   */
+  private quietAt: string | null = null;
+
+  /** The quiet band's notes in shelf order: the order `quietSlot` deals them. */
+  private quietOrder(): string[] {
+    return this.deal === null ? [] : this.deal.deep.map((e) => e.card.noteId);
+  }
+
+  /**
+   * Put the single tab stop over the tile the cursor is on, or take it out of
+   * the tab order when the band is empty.
+   *
+   * One element, whatever the band holds. A thousand tab stops is not a
+   * keyboard route, and leaving the band out of the tab order is exactly as
+   * bad by keyboard as by mouse (TASK-0076).
+   */
+  private drawQuietCursor(): void {
+    const el = this.el.quietCursor;
+    const order = this.quietOrder();
+    if (this.arrangement === 'orbit' || order.length === 0) {
+      el.hidden = true;
+      this.quietAt = null;
+      return;
+    }
+    const id = this.quietAt !== null && order.includes(this.quietAt) ? this.quietAt : (order[0] as string);
+    this.quietAt = id;
+    const slot = this.model.current.slots.get(id);
+    if (slot === undefined || slot.band !== 'deep') {
+      el.hidden = true;
+      return;
+    }
+    const p = this.at(slot, this.model.yaw);
+    const box = this.model.current.shapes.deep.box;
+    el.hidden = false;
+    el.style.width = `${box.width}px`;
+    el.style.height = `${box.height}px`;
+    el.style.transform = cardTransform(p, box);
+    el.style.opacity = p.visible ? '1' : '0';
+    const entry = this.entries.get(id);
+    el.setAttribute('aria-label', `${id} ${entry?.card.title ?? ''}, in the quiet band. Arrow keys move along the shelf, Enter puts it on the desk.`);
+  }
+
+  /**
+   * Move the keyboard cursor along the shelf and turn to keep it in sight.
+   *
+   * Left and right step a column; up and down step a row, which is the shape's
+   * column count apart in the band's own order.
+   */
+  private moveQuietCursor(key: string): void {
+    const order = this.quietOrder();
+    if (order.length === 0) return;
+    const columns = this.model.current.shapes.deep.columns;
+    const at = this.quietAt === null ? 0 : Math.max(0, order.indexOf(this.quietAt));
+    const step = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -columns : columns;
+    const next = Math.max(0, Math.min(order.length - 1, at + step));
+    this.quietAt = order[next] as string;
+    const slot = this.model.current.slots.get(this.quietAt);
+    this.drawQuietCursor();
+    // Turn to keep the cursor in sight, the way landing on a note does.
+    if (slot !== undefined && Math.abs(norm(slot.theta - this.model.yaw)) > 20 * DEG) this.flyTo(slot.theta);
+  }
+
+  /** Enter on the quiet band's cursor: the note it is on goes on the desk, as a click does. */
+  private liftQuietCursor(): void {
+    const id = this.quietAt;
+    const entry = id === null ? undefined : this.entries.get(id);
+    if (entry !== undefined) void this.tap(entry);
+  }
+
+  /** Every quiet tile painted this frame, with where it landed. Rebuilt by `paintCanvas`. */
+  private tiles: Array<{ x: number; y: number; w: number; h: number; id: string; depth: number }> = [];
+
   private dotAt(x: number, y: number): string | null {
     let best: string | null = null;
     let bestD = Infinity;
@@ -1148,6 +1253,29 @@ export class GlassField {
       }
     }
     return best;
+  }
+
+  /**
+   * Say which note the tile under the pointer is: an id and a title, which is
+   * what a card's `brief` level shows (TASK-0076).
+   */
+  private showTileCallout(noteId: string | null, x: number, y: number): void {
+    const callout = this.el.callout;
+    const entry = noteId === null ? undefined : this.entries.get(noteId);
+    if (entry === undefined) {
+      callout.hidden = true;
+      return;
+    }
+    callout.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'callout-head';
+    head.textContent = `${entry.card.noteId}${entry.card.status === '' ? '' : ` · ${entry.card.status}`}`;
+    const body = document.createElement('div');
+    body.textContent = entry.card.title;
+    callout.append(head, body);
+    callout.hidden = false;
+    callout.style.left = `${Math.min(this.viewport.width - 370, x + 14)}px`;
+    callout.style.top = `${Math.max(8, y - 12)}px`;
   }
 
   /** Quote the sentence that made the link under the pointer. */
@@ -1350,9 +1478,15 @@ export class GlassField {
       const box = field.getBoundingClientRect();
       const x = event.clientX - box.left;
       const y = event.clientY - box.top;
-      const dot = this.dotAt(x, y);
-      field.style.cursor = dot !== null ? 'pointer' : '';
-      this.showCallout(dot !== null ? null : this.edgeAt(x, y), x, y);
+      // In the orbit a dot is a note; in the field a quiet-band tile is
+      // (TASK-0076). Both are painted, so neither is reachable by the DOM.
+      const hit = this.arrangement === 'orbit' ? this.dotAt(x, y) : this.tileAt(x, y);
+      field.style.cursor = hit !== null ? 'pointer' : '';
+      if (this.arrangement !== 'orbit') {
+        this.showTileCallout(hit, x, y);
+        return;
+      }
+      this.showCallout(hit !== null ? null : this.edgeAt(x, y), x, y);
     });
     field.addEventListener('pointerleave', () => this.showCallout(null, 0, 0));
     // Zoom (FEAT-0016): not passive, so the page and Electron's own page zoom stay put.
@@ -1364,7 +1498,9 @@ export class GlassField {
       const target = event.target as HTMLElement;
       if (target.closest('.field-card, .pane, button, .ring-card, .target-strip, .compass, .field-bar') !== null) return;
       const box = field.getBoundingClientRect();
-      if (this.arrangement === 'orbit' && this.dotAt(event.clientX - box.left, event.clientY - box.top) !== null) return;
+      const dx = event.clientX - box.left;
+      const dy = event.clientY - box.top;
+      if ((this.arrangement === 'orbit' ? this.dotAt(dx, dy) : this.tileAt(dx, dy)) !== null) return;
       if (!isIdentity(this.zoom())) this.zoomTo({ ...IDENTITY_ZOOM });
     });
     this.el.zoomReading.addEventListener('click', () => this.zoomTo({ ...IDENTITY_ZOOM }));
@@ -1401,12 +1537,12 @@ export class GlassField {
       // accident is unforgivable (DES-0002 rev 8). In the orbit a click on a
       // dot is a click on a note, and lands on it (TASK-0004).
       if (!this.turning) {
-        if (this.arrangement === 'orbit') {
-          const box = field.getBoundingClientRect();
-          const id = this.dotAt(event.clientX - box.left, event.clientY - box.top);
-          const entry = id === null ? undefined : this.entries.get(id);
-          if (entry !== undefined) void this.tap(entry);
-        }
+        const box = field.getBoundingClientRect();
+        const x = event.clientX - box.left;
+        const y = event.clientY - box.top;
+        const id = this.arrangement === 'orbit' ? this.dotAt(x, y) : this.tileAt(x, y);
+        const entry = id === null ? undefined : this.entries.get(id);
+        if (entry !== undefined) void this.tap(entry);
         return;
       }
       this.turning = false;
@@ -1415,10 +1551,37 @@ export class GlassField {
     };
     field.addEventListener('pointerup', end);
     field.addEventListener('pointercancel', end);
+    // The quiet band's one tab stop: the arrow keys walk the shelf, Enter
+    // lifts, Escape leaves the band (TASK-0076). Handled on the element, so
+    // the field's own arrow keys keep turning when the focus is anywhere else.
+    this.el.quietCursor.addEventListener('keydown', (event) => {
+      this.scheduleIdle();
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.moveQuietCursor(event.key);
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.liftQuietCursor();
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        this.el.field.focus();
+      }
+    });
+    this.el.quietCursor.addEventListener('click', (event) => {
+      event.preventDefault();
+      this.liftQuietCursor();
+    });
     field.addEventListener('keydown', (event) => {
       this.scheduleIdle();
       const target = event.target as HTMLElement;
       if (target.closest('.pane') !== null || target.tagName === 'INPUT') return;
+      if (target === this.el.quietCursor) return;
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         event.preventDefault();
         this.turnBy(event.key === 'ArrowLeft' ? -TURN_STEP : TURN_STEP);

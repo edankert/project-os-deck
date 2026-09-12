@@ -86,6 +86,12 @@
           <canvas class="field-canvas" id="field-canvas" aria-hidden="true"></canvas>
           <div class="field-sectors" id="field-sectors" aria-hidden="true"></div>
           <div class="field-cards" id="field-cards" role="list" aria-label="Cards in the field"></div>
+          <!-- ONE tab stop for the whole quiet band (TASK-0076). The band is
+               painted on the canvas, so it has no elements of its own; a
+               thousand tab stops would not be a keyboard route and no tab stop
+               at all is as bad by keyboard as by mouse. Arrow keys walk the
+               shelf, Enter lifts, Escape leaves. -->
+          <button type="button" class="quiet-cursor" id="quiet-cursor" hidden></button>
           <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
           <!-- The note in the middle's neighbours, as mini notes with a line to each (FEAT-0017).
                After the panes, so Tab goes from the note to its neighbours. -->

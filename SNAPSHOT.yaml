@@ -620,7 +620,7 @@ items:
     TASK-0076:
       file: "docs/features/glass-bands/plan/tasks/TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too.md"
       title: "Anything visible is clickable, on the canvas too: a hit test for the quiet band's tiles, a cursor and a callout under the pointer, and a roving tab stop that walks the shelf"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 80
-    tasks_done: 74
+    tasks_done: 75
     tests_total: 39
     tests_passing: 2
     tests_failing: 0

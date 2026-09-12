@@ -941,3 +941,22 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 }
 .field[data-treatment="blocks"] .sector-label { color: #3a2e20; }
 .edge-callout .callout-head { color: var(--ink-dim); font-size: 11px; margin-bottom: 4px; }
+
+/* The quiet band's single tab stop (TASK-0076). It sits over the tile the
+   keyboard cursor is on, and is the only element the band has: the tiles
+   themselves are painted on the canvas. */
+.quiet-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  color: transparent;
+  font-size: 1px;
+  z-index: 1200;
+}
+.quiet-cursor:focus-visible { outline: 2px solid var(--owed); outline-offset: 2px; }
