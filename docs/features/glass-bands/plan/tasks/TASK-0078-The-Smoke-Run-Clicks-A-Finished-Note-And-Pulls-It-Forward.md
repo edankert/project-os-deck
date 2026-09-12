@@ -96,3 +96,16 @@ Every acceptance line of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible
 **The results are not repeatable while a person is using the machine.** Four runs gave four different failure sets, and the failures moved around checks that need the window to hold the keyboard: "the window had lost the keyboard", a flight measured as a cut, Enter reaching nothing, a ring drawn with no neighbours. None is in this feature's section; all are older checks that assume focus. [[ISS-0068-The-Throw-Checks-Sometimes-Draw-No-Strip-And-Everything-After-Fails]] is the same shape of problem already on the record.
 
 **So this task is not done, and the reason is [[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]].** Its decision was taken on 2026-09-12 — "default the run to no-focus" — and building it is what makes this run mean anything. Owed after that: the run itself, each break one per run, and the results in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].
+
+## The suite passes on an isolated display, 2026-09-12
+
+**`bash tools/scripts/run-smoke.sh both` passed**, loopback and LAN, in 12 minutes 12 seconds — run 34698491628, step "The renderer guards, in a real window", on `ubuntu-latest` under `xvfb`. All fourteen FEAT-0018 checks are in it. That discharges this task's second acceptance line.
+
+**Why that run means something the local ones did not.** Nothing on that machine competes for the keyboard, so every check that needs a focused window gets one. The four local runs that gave four different failure sets were measuring Edwin's typing, not the code.
+
+**What is still owed**, and it needs a display that is not Edwin's:
+
+- Each new check seen to fail with its fix removed, one break per run, recorded in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].
+- The quiet-band click check seen to fail against the code as it stood before this feature.
+
+Each break is a run. On CI that is a push and twelve minutes each, which Edwin has ruled out leaning on ("We cannot depend on CI, it is too expensive to run all the time"). **The plan is a local Linux box** — Colima and a small container, running the same `xvfb` path CI already proves — so a break costs two minutes and nothing of his. It is not built yet, and installing it needs his word.
