@@ -40,8 +40,8 @@ This suite is the discharge of [[ADR-0005-Four-Bands-And-Every-Band-States-What-
 ## Expected results
 
 - For every view of all three workspaces, `front + mid + far + deep + frontOverflow + midOverflow + farOverflow + deepOverflow` equals the number of entries dealt.
-- A note whose band rule says `mid`, past `midCapacity`, is in the far band and not in `midOverflow`.
-- `midOverflow` is non-zero only when the far band is also full.
+- A note whose band rule says `mid`, past `midCapacity`, is in the outer field and not in `midOverflow`.
+- `midOverflow` is non-zero only when the outer field is also full.
 - The quiet band stops at `deepCapacity` and reports the rest as `deepOverflow`.
 - A note a hand pushed behind is in the quiet band and is never one of the notes `deepOverflow` counts.
 - A pulled note still takes a front-band spare slot; an owed note past the front capacity is still counted rather than demoted.
@@ -53,4 +53,4 @@ This suite is the discharge of [[ADR-0005-Four-Bands-And-Every-Band-States-What-
 
 ## Adequacy (who verifies this test?)
 
-Four breaks, one per run, recorded by [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]: drop the middle's remainder again; let the far band take everyone; let the quiet band take everyone; drop a pushed note by capacity. Each must fail at least one check, and which one is written here.
+Four breaks, one per run, recorded by [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]: drop the middle's remainder again; let the outer field take everyone; let the quiet band take everyone; drop a pushed note by capacity. Each must fail at least one check, and which one is written here.

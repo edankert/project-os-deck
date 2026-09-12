@@ -30,7 +30,7 @@ tests: ["[[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]"]
 
 **The function.** One entry point beside the constants — `bandShapeFor(band, count)` is a suggestion, the names are the implementer's — returning the shape that band's slot generator needs: depth, rows, columns (or columns a side), the steps between them, and the box a note is drawn in. Today's `FRONT`, `MID` and `QUIET` are its value at the large end, so a large workspace draws exactly what it draws now.
 
-**It adapts by size and detail, never by depth.** Edwin's steer on [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]: a small quiet band's tiles grow until they are readable and the band stays where it is. Depth carries priority in Glass, so a quiet band that walked forward would make done work read as active. The quiet band's depth, 760, is fixed; its columns, rows and tile size are what move. The same holds for the far band: its depth sits between the middle's 620 and the quiet band's 760 and does not move with its population.
+**It adapts by size and detail, never by depth.** Edwin's steer on [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]: a small quiet band's tiles grow until they are readable and the band stays where it is. Depth carries priority in Glass, so a quiet band that walked forward would make done work read as active. The quiet band's depth, 760, is fixed; its columns, rows and tile size are what move. The same holds for the outer field: its depth sits between the middle's 620 and the quiet band's 760 and does not move with its population.
 
 **It is computed once per view.** The renderer calls it when the view changes or the workspace changes, and never inside a deal that moved one note ([[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], decision 5). Marking one issue fixed must not reshape the field underneath a person. The function is pure, so where it is called is a property of the renderer and is checked in [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]].
 
@@ -45,7 +45,7 @@ tests: ["[[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]"]
 - At the large end it returns today's `FRONT`, `MID` and `QUIET` exactly, so a large workspace's field is unchanged to the pixel.
 - A quiet band of 40 notes draws tiles larger than today's 58 by 16, at the same depth of 760.
 - No band's depth varies with its population.
-- The far band's depth is between the middle's and the quiet band's, at every population.
+- The outer field's depth is between the middle's and the quiet band's, at every population.
 - Every slot the generators produce is inside the band's visible span, at every population in the table.
 - Two deals of the same view produce the same shape, and a deal that moves one note between bands produces the same shape as the deal before it.
 - `desktop/tests/slots.test.mjs` asserts all of the above, and [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]] names it.
@@ -57,7 +57,7 @@ tests: ["[[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]"]
 - [ ] Keep the constants exported as the large-end value, so existing callers and tests have something to name.
 - [ ] Extend `desktop/tests/slots.test.mjs` with the population table.
 - [ ] Break the function on purpose, one break per run, and record which checks fail in [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]: adapt by depth instead of size; drop the small clamp; drop the large clamp; return a shape whose slots leave the visible span.
-- [ ] Write the chosen numbers — the far band's depth, both clamps, and the tile size at each end — in the Outcome.
+- [ ] Write the chosen numbers — the outer field's depth, both clamps, and the tile size at each end — in the Outcome.
 - [ ] Commit the suite and [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]] together.
 
 ## Notes

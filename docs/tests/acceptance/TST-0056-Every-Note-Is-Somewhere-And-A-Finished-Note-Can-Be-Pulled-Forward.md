@@ -37,7 +37,7 @@ The walk that says whether this worked for a person rather than for a suite. Two
 1. Open Deck on Your Trainer, Glass, the Issues view — the largest view on the largest workspace, 409 notes with 34 owed.
 2. Read the bar. Note what each remainder says.
 3. Turn slowly, all the way round. Count the bands you pass through: front, middle, far, quiet.
-4. Find a note in the far band. It should be active work, not finished. Click it, and check it lands on the desk.
+4. Find a note in the outer field. It should be active work, not finished. Click it, and check it lands on the desk.
 5. Keep turning to face the quiet band. Click a tile. The note should lift, exactly as a card does.
 6. Rest the pointer on a neighbouring tile. It should say which note it is, and the cursor should change.
 7. Pull that note forward to the front band. Switch to another view and back. It should still be in front.
@@ -65,4 +65,4 @@ The walk that says whether this worked for a person rather than for a suite. Two
 
 ## Adequacy (who verifies this test?)
 
-This is a walk, so the automated half is [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]], which drives steps 4 to 10 with a real pointer and keyboard and is shown to fail with each fix removed. What this walk adds is the judgement no assertion makes: whether the far band reads as "still yours to do" and the quiet band as "done, and within reach".
+This is a walk, so the automated half is [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]], which drives steps 4 to 10 with a real pointer and keyboard and is shown to fail with each fix removed. What this walk adds is the judgement no assertion makes: whether the outer field reads as "still yours to do" and the quiet band as "done, and within reach".

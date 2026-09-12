@@ -13,7 +13,7 @@ source:
   - "Edwin 2026-09-12, on [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]: 'I think we need to make the ring size adaptive based on the number of notes in a project (review and suggest).'"
   - "[[DES-0002-The-Glass-Cockpit]] review, 2026-09-05: 'past 40 mid slots a subject note falls into \"the quiet\", which then means both finished and did not fit. Both need a stated rule.'"
 decided_option: "Option 1"
-decision: "The Glass field gains a fourth band, the far band, between the middle and the quiet band, and it holds the view's own active work that the middle had no room for. Every band, the quiet one included, places at most its own capacity and states on screen how many of its notes it could not place. Each band's shape — its depth, its rows and columns, and the size of what stands in it — is a pure function of how many notes that band holds in this deal, recomputed when the view or the workspace changes and never inside a deal that moved one note."
+decision: "The Glass field gains a fourth band, the outer field, between the middle and the quiet band, and it holds the view's own active work that the middle had no room for. Every band, the quiet one included, places at most its own capacity and states on screen how many of its notes it could not place. Each band's shape — its depth, its rows and columns, and the size of what stands in it — is a pure function of how many notes that band holds in this deal, recomputed when the view or the workspace changes and never inside a deal that moved one note."
 context: "A note the view's rule sends to the middle, past the middle's 64 slots, is drawn nowhere at all: `dealField` counts it as `midOverflow` and drops it. On Your Trainer's Issues view that is hundreds of active notes with no position in a field whose whole claim is that depth carries priority. Finished work at least has a shelf. At the same time the quiet band is the one band that draws every note it holds, up to 286 canvas tiles, and its shape is a frozen constant sized for the largest workspace on the fleet — a repository of 261 notes puts 35 tiles on a shelf built for a thousand."
 alternatives:
   - "Let the middle overflow into the quiet band, as the DES-0002 prototype did: the quiet band then means both 'finished' and 'did not fit', which are different things a person needs to tell apart"
@@ -40,7 +40,7 @@ Every band of the Glass field places at most its own capacity and states on scre
 
 ## Domain
 
-The four bands of the Glass field, named once as `BandName` in `desktop/src/shared/slots.ts` and as `Band` in `desktop/src/shared/description.ts`: `front`, `mid`, `far` and `deep`. The rule ranges over bands, not over views: a view chooses which notes go to which band through its description's `band` rows, and the capacities belong to the field.
+The four bands of the Glass field, named once as `BandName` in `desktop/src/shared/slots.ts` and as `Band` in `desktop/src/shared/description.ts`: `front`, `mid`, `outer` and `deep`. The rule ranges over bands, not over views: a view chooses which notes go to which band through its description's `band` rows, and the capacities belong to the field.
 
 ## Conformance
 
@@ -64,9 +64,9 @@ This was seen once before. DES-0002's own review said it on 2026-09-05, of the p
 
 **Option 1**, in three parts.
 
-**A fourth band.** `BandName` gains `far`, between `mid` and `deep`. It holds the view's own active work past the middle's capacity. Its notes are drawn as cards, smaller than a mid card, so a person can read what they are; its depth is behind the middle and in front of the quiet band, so depth still carries priority for every note in the view.
+**A fourth band.** `BandName` gains `outer`, between `mid` and `deep`. It holds the view's own active work past the middle's capacity. Its notes are drawn as cards, smaller than a mid card, so a person can read what they are; its depth is behind the middle and in front of the quiet band, so depth still carries priority for every note in the view.
 
-**Every band has a capacity and states its remainder.** The front and middle bands already do this. The far band and the quiet band gain the same. A quiet band with a capacity is still drawn and still holds the finished work; it simply stops promising to draw all of it, exactly as the front band stops at twenty. Edwin agreed to this on 2026-09-12: "on ISS-0078: do as suggested". It is a capacity and never a deletion.
+**Every band has a capacity and states its remainder.** The front and middle bands already do this. The outer field and the quiet band gain the same. A quiet band with a capacity is still drawn and still holds the finished work; it simply stops promising to draw all of it, exactly as the front band stops at twenty. Edwin agreed to this on 2026-09-12: "on ISS-0078: do as suggested". It is a capacity and never a deletion.
 
 **Every band's shape is derived from its own population.** One pure function turns "how many notes are in this band in this deal" into the band's depth, rows, columns and box size. Today's constants are its value at the large end. The band that adapts does so by **size and detail and not by depth**: a small quiet band's tiles grow until they are readable, and the band stays behind the person, because done work must not read as active. The shape is recomputed when the view or the workspace changes, and never inside a deal that moved one note, or the field would never sit still.
 
@@ -83,6 +83,6 @@ This was seen once before. DES-0002's own review said it on 2026-09-05, of the p
 - **PHASE-0002 exit criterion 1 needs its wording amended.** It reads "the quiet band is behind you with its count on screen". The count stays, and it now sits beside a remainder — "N in the quiet band, M not placed" — so the criterion should say so. This is Edwin's to word; see the feature's open questions.
 - **PHASE-0002's frame-time criterion is re-opened.** A fourth band of cards and promoted quiet tiles put more on screen than the number measured on 2026-09-10. The measurement is retaken on all three workspaces, throttled as well as not.
 - **The week-of-use criterion is not answered by this.** It asks whether anything was lost behind the person. A reachable quiet band is the condition under which that question is worth asking at all.
-- **`BandTable` gains a capacity per band** (`farCapacity`, `deepCapacity`) beside `frontCapacity` and `midCapacity`. `BandTable.rows` is already data, so the fourth band costs a value, a capacity and a geometry, not a new rule engine.
+- **`BandTable` gains a capacity per band** (`outerCapacity`, `deepCapacity`) beside `frontCapacity` and `midCapacity`. `BandTable.rows` is already data, so the fourth band costs a value, a capacity and a geometry, not a new rule engine.
 - **The orbit is untouched.** It assigns its own slots with `band: near.has(id) ? 'front' : 'deep'` and paints through `paintOrbit`, so it never reads the band geometry or the deal.
 - **[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] is not decided here.** The free list is built only if the retaken measurement asks for it.

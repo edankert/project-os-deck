@@ -43,7 +43,7 @@ The band geometry becomes a pure function, so its whole behaviour is a table a t
 - At the large end it returns today's `FRONT`, `MID` and `QUIET` exactly.
 - A quiet band of 40 notes draws larger tiles than today, at the same depth of 760.
 - No band's depth varies with its population, at any point in the table.
-- The far band's depth lies between the middle's and the quiet band's, at every population.
+- The outer field's depth lies between the middle's and the quiet band's, at every population.
 - Both clamps hold: below the small end boxes stop growing, above the large end the band steps back a layer as it does now.
 - Every slot produced is inside the band's visible span, at every population in the table.
 - Two deals of the same view produce the same shape.

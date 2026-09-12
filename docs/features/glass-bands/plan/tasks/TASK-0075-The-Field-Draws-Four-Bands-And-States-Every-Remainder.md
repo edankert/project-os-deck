@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0075
 aliases: ["TASK-0075"]
-title: "The field draws four bands and states every remainder: the far band's cards, detail from apparent width, the bar's sentence carrying all four counts, and the shape recomputed only on a view or workspace change"
+title: "The field draws four bands and states every remainder: the outer field's cards, detail from apparent width, the bar's sentence carrying all four counts, and the shape recomputed only on a view or workspace change"
 status: backlog
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
@@ -26,11 +26,11 @@ The renderer draws what the three pure modules now say: a fourth band of cards b
 
 ## Detail
 
-**The far band is drawn as cards, not tiles.** `drawCards()` in `desktop/src/renderer/glass.ts` today skips every slot whose band is `deep`; it now skips only `deep`, and `far` slots get elements like `front` and `mid`. They are smaller and less detailed because the shape and the detail function say so, not because the renderer has a rule about them.
+**The outer field is drawn as cards, not tiles.** `drawCards()` in `desktop/src/renderer/glass.ts` today skips every slot whose band is `deep`; it now skips only `deep`, and `outer` slots get elements like `front` and `mid`. They are smaller and less detailed because the shape and the detail function say so, not because the renderer has a rule about them.
 
 **Detail comes from apparent width.** `paintCard` sets `element.dataset['detail']` from `detailFor(p.scale * CARD_BOX.width)` beside the `data-band` it already sets. The two CSS rules in `desktop/src/renderer/deck.css` under the comment "Detail by distance" move from `[data-band="mid"]` onto `[data-detail]`, and the **more** level gains rules for the status, the progress and the face's properties. `data-band` stays, because the fog and the dimming read it.
 
-**The bar states four remainders.** It today prints "and N more in front, N more in the middle — all listed in the navigator". It now carries the far band's and the quiet band's too, in the same sentence and the same shape, and says nothing about a band whose remainder is zero. A quiet band that could not place everything is a first: the sentence has to read plainly, not as an apology.
+**The bar states four remainders.** It today prints "and N more in front, N more in the middle — all listed in the navigator". It now carries the outer field's and the quiet band's too, in the same sentence and the same shape, and says nothing about a band whose remainder is zero. A quiet band that could not place everything is a first: the sentence has to read plainly, not as an apology.
 
 **The compass keeps the quiet band's count and gains its remainder.** It prints "N in the quiet band · N out of sight". The quiet band now has a capacity, so the count and the remainder are different numbers and both belong there. [[PHASE-0002-Glass]] exit criterion 1 names this line; its wording is Edwin's, and this task does not edit the criterion.
 
@@ -53,7 +53,7 @@ The renderer draws what the three pure modules now say: a fourth band of cards b
 
 ## Steps
 
-- [ ] Draw `far` slots as cards in `drawCards()` and stop treating "not `deep`" as "front or mid".
+- [ ] Draw `outer` slots as cards in `drawCards()` and stop treating "not `deep`" as "front or mid".
 - [ ] Set `data-detail` in `paintCard` and move the "Detail by distance" CSS onto it; add the **more** level's rules.
 - [ ] Extend the bar's overflow sentence to four bands, and the compass to the quiet band's count and remainder.
 - [ ] Recompute the shapes where the view or the workspace changes, and nowhere else; state in the Outcome which call sites those are.
@@ -65,4 +65,4 @@ The renderer draws what the three pure modules now say: a fourth band of cards b
 
 `paintCanvas()` keeps drawing the quiet band's tiles. What changes there is their size, which comes from the shape, and their number, which comes from the capacity.
 
-The tile count the measurement reports (`mostTiles`) is now a count of the quiet band's tiles only; the far band's cards are counted as elements. [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]] needs both numbers, so keep them separate.
+The tile count the measurement reports (`mostTiles`) is now a count of the quiet band's tiles only; the outer field's cards are counted as elements. [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]] needs both numbers, so keep them separate.

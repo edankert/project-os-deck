@@ -12,7 +12,7 @@ source:
   - "Edwin 2026-09-12: 'Not sure now I know what the quiet band was supposed to be used for. Maybe we need more bands and allow cards to be brought up to the active front band????'"
   - "Edwin 2026-09-12, agreeing to the plan below: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.'"
   - "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]"
-goal: "A person can see and reach every note the Glass field holds. Active work past the middle's capacity stops vanishing: it stands in a fourth band of its own, in front of the quiet band. A finished note can be clicked, tabbed to and pulled forward, because what is painted on the canvas is hit-tested the way an element is. Each band's shape follows how much that band actually holds, instead of one constant sized for the largest workspace on the fleet, and every band states how many of its notes it could not place."
+goal: "Every note a Glass view holds is somewhere a person can see and point at. The work the middle had no room for stands in a fourth band, the outer field, rather than being counted and dropped, and a finished note behind you can be clicked, tabbed to and pulled forward. No band promises to draw all of it: each one places what its shape holds, says how many it left out, and takes that shape from how much it is actually holding."
 requirements: []
 tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]"]
 release: ""
@@ -36,8 +36,8 @@ related: ["[[PHASE-0002-Glass]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-W
 Three words are used throughout, and two of them are new.
 
 - A **band** is one ring of the field at one depth. Today there are three: the **front band** (what is owed), the **middle** (the view's own subject) and the **quiet band** (finished and suppressed work, behind the person).
-- The **far band** is the fourth, added here: the view's own active work that the middle had no room for. It stands behind the middle and in front of the quiet band, and its notes are cards, not tiles. The name is provisional and Edwin's to overturn; see the open questions.
-- A **remainder** is how many notes a band was dealt and did not place. The front band and the middle already state theirs on the bar; the far band and the quiet band gain the same.
+- The **outer field** is the fourth, added here: the view's own active work that the middle had no room for. It stands behind the middle and in front of the quiet band, and its notes are cards, not tiles. **Edwin chose the name on 2026-09-12.**
+- A **remainder** is how many notes a band was dealt and did not place. The front band and the middle already state theirs on the bar; the outer field and the quiet band gain the same.
 
 **No new gesture is needed to bring a finished note forward.** [[FEAT-0014-The-Hands]] already built **pull**: it brings a card to the front band for the session and the note stays there across a view switch. It is unreachable from the quiet band for one reason only — there is no element to drag. The hit test in [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] is what delivers Edwin's "allow cards to be brought up to the active front band", and nothing else is built for it.
 
@@ -45,7 +45,7 @@ Three words are used throughout, and two of them are new.
 
 **In scope.**
 
-- **A fourth band, and a capacity on every band** ([[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]). `dealField` places the middle's remainder into the far band instead of dropping it, the quiet band caps at a capacity of its own, and the deal reports a remainder per band.
+- **A fourth band, and a capacity on every band** ([[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]). `dealField` places the middle's remainder into the outer field instead of dropping it, the quiet band caps at a capacity of its own, and the deal reports a remainder per band.
 - **A shape per band, derived from what that band holds** ([[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]). One pure function, driven by the deal's population per band, recomputed on a view or workspace change only.
 - **Detail keyed to apparent size rather than to the band** ([[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]). Zooming in on a card shows more of the note, because the thresholds read the width the card is drawn at.
 - **The renderer drawing four bands and stating every remainder** ([[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]).
@@ -69,7 +69,7 @@ Three words are used throughout, and two of them are new.
 Each was taken while planning on 2026-09-12, from the six issue notes and Edwin's answers in them. Each is his to overturn, and the alternative is named where one was considered.
 
 1. **A fourth band, not an overflow into the quiet band and not paging** ([[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]], option 1). Overflowing into the quiet band makes it mean both "finished" and "did not fit"; paging adds a control and a piece of state and still leaves notes with no place.
-2. **The far band holds cards, not tiles.** Its notes are active work, and a person has to be able to tell what they are. They are drawn smaller than a mid card and at less detail, which is what the detail thresholds in [[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]] already decide. *Alternative:* tiles on the canvas, which would be cheaper and would reproduce exactly the defect [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] reports.
+2. **The outer field holds cards, not tiles.** Its notes are active work, and a person has to be able to tell what they are. They are drawn smaller than a mid card and at less detail, which is what the detail thresholds in [[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]] already decide. *Alternative:* tiles on the canvas, which would be cheaper and would reproduce exactly the defect [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] reports.
 3. **The quiet band gains a capacity and states its remainder.** This is "do as suggested" on [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]. It is a capacity and never a deletion: the band stays drawn, and it stops being the one band that promises to draw everything. What the capacity actually is falls out of the derived shape — a band draws what its shape has room for.
 4. **Geometry is derived per band, from that band's own population in this deal.** Not from the project's note count: the Issues view's quiet band and the Phases view's quiet band differ by two orders of magnitude inside one repository, and the deal already knows both numbers before it places anything.
 5. **The shape is recomputed on a view change and on a workspace change, and never inside a deal that moved one note.** Marking one issue fixed must not reshape the whole field underneath a person. *Alternative:* recompute per deal, which is a field that never sits still.
@@ -78,12 +78,12 @@ Each was taken while planning on 2026-09-12, from the six issue notes and Edwin'
 8. **Detail is keyed to apparent width, not to `dataset.band`.** The band keeps deciding **where** a note stands; how large it is drawn decides **how much** of it is shown. The thresholds live in one pure tested function, or they become three magic numbers in the renderer and a fourth in the canvas.
 9. **The keyboard gets a roving tab stop along the quiet band**, rather than one tab stop per tile. A thousand tab stops is not a keyboard route. "Visible and unreachable" is exactly as bad by keyboard as by mouse, which is why search alone is not the answer.
 10. **The free list is conditional on the measurement**, and it is a free list behind Glass's existing `cardEls` map rather than `CardPool`. A pool caps element **churn** and not the **live count**, so it makes a turn smooth without making a frame cheaper; and `CardPool` is positional, which would break a ticked exit criterion.
-11. **The name "far band" is provisional.** It has to be one word in `BandName`, it has to read in prose, and it has to sit between "mid" and "deep" without fighting "quiet". See the open questions.
+11. **The band is called the outer field, `'outer'` in `BandName`. Decided 2026-09-12 by Edwin.** "Mid" and "outer" are a pair, which is right, because the outer field holds the same kind of work as the middle and simply did not fit. The quiet band stays the odd name out on purpose: it describes a state, finished work, not a distance. Not chosen: `'far'` (a second distance word beside `deep`, which is what sent the question to Edwin), `'rest'` (ambiguous next to a quiet band), `'back'` (the quiet band is further back), `'waiting'` (nothing waits on anything).
 
 ## Acceptance
 
 - On every view of all three workspaces, the four band lists plus the four remainders add up to the number of notes the view holds. No note is dealt and then dropped.
-- A note the middle had no room for stands in the far band, drawn as a card, behind the middle and in front of the quiet band.
+- A note the middle had no room for stands in the outer field, drawn as a card, behind the middle and in front of the quiet band.
 - The bar states each band's remainder in the sentence it already uses, including the quiet band's.
 - Clicking a tile in the quiet band lifts that note, exactly as clicking a card does, and the note is then on the desk.
 - Resting the pointer on a tile says which note it is and shows the pointer cursor.
@@ -132,7 +132,7 @@ Run before any ID was allocated (`tools/skills/issue-intake/SKILL.md`, step 1).
 
 **Resolved by this feature when its tasks are done:**
 
-- [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]] — the far band, [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] and [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]].
+- [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]] — the outer field, [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] and [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]].
 - [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]] — the derived shape, [[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]].
 - [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] — the capacity and the remainder, [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] and [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]. Its withdrawn recommendation is not built.
 - [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] — [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] and [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]].
@@ -144,8 +144,8 @@ Run before any ID was allocated (`tools/skills/issue-intake/SKILL.md`, step 1).
 
 ## Open questions for Edwin
 
-- **The fourth band's name.** The plan calls it the **far band** (`'far'` in `BandName`), giving front, mid, far, deep, and in prose "front, middle, far, quiet". "Far" and "quiet" name different things — a distance and a state — which reads a little oddly next to each other. Alternatives considered and not chosen: `'rest'` (ambiguous next to a quiet band), `'back'` (the quiet band is further back), `'waiting'` (nothing is waiting on anything).
-- **PHASE-0002 exit criterion 1's new wording.** It says "the quiet band is behind you with its count on screen". The count now sits beside a remainder. The criterion is Edwin's to reword, and nothing here edits it.
+- ~~The fourth band's name.~~ **Answered 2026-09-12: the outer field, `'outer'`.** Decision 11 records why.
+- ~~PHASE-0002 exit criterion 1's new wording.~~ **Answered 2026-09-12.** It now reads: "Deck opens a workspace in Glass: the owed notes are in front, the view's subject fills the middle and the outer field, and the quiet band is behind you. Every note the view holds is in a band or counted on screen, and no band is silently short." The second sentence is the checkable half and is what [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]] walks.
 
 ## Links
 

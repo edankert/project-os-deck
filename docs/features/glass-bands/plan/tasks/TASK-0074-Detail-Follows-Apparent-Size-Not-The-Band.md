@@ -66,4 +66,4 @@ tests: ["[[TST-0055-Detail-Follows-Apparent-Size]]"]
 
 This task has no dependency on [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]] or [[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]] and can be built beside them. The renderer wiring is [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]'s.
 
-The far band gets its detail from this function like every other band, which is what makes "smaller than a mid card" a consequence of the geometry rather than a second rule.
+The outer field gets its detail from this function like every other band, which is what makes "smaller than a mid card" a consequence of the geometry rather than a second rule.
