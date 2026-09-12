@@ -27,7 +27,7 @@ retention:
   # Read by tools/scripts/sync-snapshot.py (ADR-0018). Absent = feature off.
   derive_fields: true      # title/goal derived from the note
   prune_window: 25         # keep N most recent terminal items per collection
-  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage. Later on 2026-09-11 FEAT-0016 (zoom) and FEAT-0017 (an opened note in the middle of its neighbours) were planned from REFERENCE-FOCUS-ZOOM-AND-VERBS, and ISS-0069 (the verb buttons' full-height column) was filed at triage for Edwin's choice. Later on 2026-09-11 FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours) were planned, built and tested at Edwin's request; both are at review, waiting on the walk TST-0052. ISS-0069 (where the approve and decline buttons go) waits on Edwin's choice."
+  note: "Snapshot keeps active work + recent changes for handoff; notes are the archive. On 2026-09-11 FEAT-0015 (a desk for each view, notes kept on every view, Hide notes) was planned and built at Edwin's request; it is at review, waiting on its walk TST-0048 and his answer on whether a saved desk remembers its view. ISS-0068 (an intermittent cascade in the throw checks) is at triage. Later on 2026-09-11 FEAT-0016 (zoom) and FEAT-0017 (an opened note in the middle of its neighbours) were planned from REFERENCE-FOCUS-ZOOM-AND-VERBS, and ISS-0069 (the verb buttons' full-height column) was filed at triage for Edwin's choice. Later on 2026-09-11 FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours) were planned, built and tested at Edwin's request; both are at review, waiting on the walk TST-0052. ISS-0069 (where the approve and decline buttons go) waits on Edwin's choice. On 2026-09-12 Edwin ran Deck and filed six issues at triage from what he saw (ISS-0070 to ISS-0075); three of them revise decisions inside FEAT-0017, so its review is not finished."
 
 docs_system:
   source_of_truth: SNAPSHOT.yaml
@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 17
-  ISS: 69
+  ISS: 75
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -64,7 +64,7 @@ focus:
   feature: "FEAT-0017"
   task: ""
   issue: ""
-  note: "2026-09-11, later: FEAT-0016 (the mouse wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) PLANNED from Edwin's request, building recommendations 1 and 2 of REFERENCE-FOCUS-ZOOM-AND-VERBS. Order: TASK-0064 (the zoom's pure transform, suite zoom), TASK-0065 (wheel, pinch, keys, compass), TASK-0066 (zoom smoke checks); then TASK-0067 (the ring's pure layout, suite focus-ring; can run beside FEAT-0016), TASK-0068 (the note in the middle, the dock, Escape twice), TASK-0069 (the ring of mini notes and lines), TASK-0070 (the orbit), TASK-0071 (smoke checks, and the rewrite of existing lift checks). Walk TST-0052 covers both. Recommendation 3 (the verb buttons) is NOT planned: ISS-0069 at triage names the layout defect and the three options, and waits on Edwin. Open question for Edwin in FEAT-0017: what 'the associated notes should show their connections' should show. Earlier the same day: FEAT-0015 built and at review, waiting on its walk TST-0048 and Edwin's answer on whether a saved desk remembers its view."
+  note: "2026-09-11, later: FEAT-0016 (the mouse wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) PLANNED from Edwin's request, building recommendations 1 and 2 of REFERENCE-FOCUS-ZOOM-AND-VERBS. Order: TASK-0064 (the zoom's pure transform, suite zoom), TASK-0065 (wheel, pinch, keys, compass), TASK-0066 (zoom smoke checks); then TASK-0067 (the ring's pure layout, suite focus-ring; can run beside FEAT-0016), TASK-0068 (the note in the middle, the dock, Escape twice), TASK-0069 (the ring of mini notes and lines), TASK-0070 (the orbit), TASK-0071 (smoke checks, and the rewrite of existing lift checks). Walk TST-0052 covers both. Recommendation 3 (the verb buttons) is NOT planned: ISS-0069 at triage names the layout defect and the three options, and waits on Edwin. Open question for Edwin in FEAT-0017: what 'the associated notes should show their connections' should show. Earlier the same day: FEAT-0015 built and at review, waiting on its walk TST-0048 and Edwin's answer on whether a saved desk remembers its view. 2026-09-12: Edwin ran Deck and reported seven things about the middle, the quiet band and the zoom, and one about the smoke run taking the keyboard. He asked for a review and suggestions, so NOTHING IS PLANNED and nothing is built: ISS-0070 (one note drawn twice), ISS-0071 (the middle ignores the size the person chose), ISS-0072 (a drag throws the arrangement away), ISS-0073 (the quiet band cannot be clicked), ISS-0074 (zoom adds no detail) and ISS-0075 (the smoke run steals focus 23 times) are all at triage with their options written out. ISS-0070, ISS-0071 and ISS-0072 each REVISE a decision inside FEAT-0017, which is at review: it should not reach done until they are settled."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -581,6 +581,66 @@ items:
       parent: "FEAT-0017"
       phase: PHASE-0002
   issues:
+    ISS-0070:
+      file: "docs/issues/ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle.md"
+      title: "While a note stands in the middle, each of its neighbours is on screen twice — as a small ring note and as its own dimmed field card — and the opened note itself leaves a dashed frame in its slot, so one note is two things on the deck"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: high
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-12 from Edwin running Deck: 'there should only be one note on the deck'. Three decisions add up to the double image: the ring paints its own 168x44 .ring-card per neighbour (TASK-0069), redeal returns early while a note is in the middle so every field card stays at opacity 0.28 (FEAT-0017 decisions 9 and 10), and a lifted note leaves .field-card.ghost, a dashed outline DES-0002 and TASK-0035 both ask for. Two options: MOVE the cards onto the ring instead of copying them (recommended; costs ring capacity, roughly 6-8 places instead of 16) or keep the ring's own cards, grow them to card size and skip drawing what they stand for. Either way the ghost goes, which REVERSES a DES-0002 decision and needs Edwin's word. WAITS ON EDWIN."
+    ISS-0071:
+      file: "docs/issues/ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose.md"
+      title: "The note in the middle is sized by whatever leaves room for the ring rather than by the person, and it jumps to 320 by 240 the moment it is dragged, because focusLayout searches for a pane size and ignores the one the desk record holds"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: high
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-12 from Edwin running Deck: the opened note is the person's main note and its size is their decision; a move is not a resize. focusLayout takes no pane size at all — it searches down from FOCUS_MAX 640x480 to FOCUS_MIN 280x160 until ENOUGH (6) ring places fit — so TASK-0054's stored w/h is unread, and paintPane swaps between focusRect and paneRect (320x240 default) the instant a drag starts leaveFocus. Fix inverts the order of sacrifice: the pane size is an argument, the ring grows its curve and then drops places to '+N more'. Two decisions for Edwin: a large note may leave no ring at all, and where the remembered reading size for newly opened notes lives (recommend a store setting). WAITS ON EDWIN."
+    ISS-0072:
+      file: "docs/issues/ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away.md"
+      title: "Dragging the note in the middle ends the arrangement instead of carrying it: the ring is discarded, the whole field is dealt again and turns, so one small drag moves every card on screen"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: high
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-12 from Edwin running Deck: 'the associated notes should also move with it'. Not a code defect: FEAT-0017 decision 13 says a drag leaves the middle, and the header drag calls leaveFocus() on the first move, which clears the ring, re-deals the field and turns to face the neighbourhood — which is also why the ring notes reappear as ordinary cards wherever the deal puts them. REWRITING decision 13 is part of the fix. Four things to settle: clamp the group to the field or fold the neighbours that leave it into '+N more' (recommend clamping), the offset is per-window state like the yaw, a re-layout keeps the offset, and a resize pushes the ring out rather than ending the arrangement. WAITS ON EDWIN."
+    ISS-0073:
+      file: "docs/issues/ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked.md"
+      title: "A finished note cannot be opened from the Glass field at all: the quiet band is painted on a canvas that no pointer or keyboard handler reads, so the several hundred done notes are visible and unreachable"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: high
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-12 from Edwin running Deck: 'The completed issue notes you cannot select'. drawCards skips every deep-band slot so no element exists; paintCanvas draws them as 58x16 rectangles; the only canvas hit test, dotAt, is guarded by arrangement === 'orbit' at both callers, so the orbit got the hit test the field never did. No tab stop either. Four steps that stack: tileAt beside dotAt with the orbit's own click rule (recommended first), a tile that grows under the pointer, zoom promoting a tile to a real card (settle with ISS-0074), and a roving tab stop for the shelf."
+    ISS-0074:
+      file: "docs/issues/ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note.md"
+      title: "Zooming in makes a card and its type bigger and tells the person nothing new, because how much of a note is drawn is keyed to which band it stands in and never to how large it actually is on screen"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-12 from Edwin running Deck: 'zooming should also bring in more of the note's content'. The field already has detail-by-distance, but it is keyed to dataset.band (the slot's band, a property of priority), which the zoom does not change; applyZoom only multiplies x, y and scale. Second half is a data problem: CardModel carries no body or excerpt, so a large card runs out of things to show after subtitle, status, progress and frontmatter. Steps: key the detail to apparent width (data-detail beside data-band), put the thresholds in a pure tested function, promote a quiet-band tile to a real card (shared seam with ISS-0073), and only then decide whether Deck's index should carry an excerpt — that last one is a payload change PHASE-0002's first exit criterion measures and owes a RISK note."
+    ISS-0075:
+      file: "docs/issues/ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times.md"
+      title: "The smoke run takes the keyboard away from whatever the person is doing more than twenty times, because every keyboard check calls app.focus with steal and there is no way to run the checks that do not need it on their own"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: tests
+      tests: []
+      note: "Filed 2026-09-12 from Edwin: 'can we change the testing so the deck is not constantly requesting focus?'. focusApp calls app.focus({ steal: true }) and is called 19 times in smoke-glass.ts, 4 in measure.ts, 1 in main.ts. pointer() and press() both use sendInputEvent, which needs no frontmost application, so most steps do not need focus at all; nothing separates the two kinds. Linux already escapes this — run-smoke.sh re-execs under xvfb-run — and macOS has no equivalent. Four steps: split the checks and default a hand-started run to the half that needs no focus, take focus once per suite instead of 23 times (measure first; the repeats were added for a reason nobody wrote down), print the mode before the first window opens, and spike offscreen rendering for everything except the frame measurement, which genuinely needs a visible focused window."
     ISS-0069:
       file: "docs/issues/ISS-0069-The-Verb-Buttons-Take-A-Full-Height-Column-Beside-The-Reader.md"
       title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
@@ -1646,7 +1706,7 @@ metrics:
     tests_passing: 2
     tests_failing: 0
     issues_open: 0
-    issues_triage: 4
+    issues_triage: 10
     risks_open: 0
     releases_total: 0
     decisions_total: 4
