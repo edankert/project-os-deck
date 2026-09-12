@@ -41,7 +41,7 @@ import {
 } from '../shared/slots.js';
 import { type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
 import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, unzoomPoint, wheelFactor, zoomAbout } from '../shared/zoom.js';
-import { detailFor } from '../shared/detail.js';
+import { detailFor, promoted } from '../shared/detail.js';
 import { DOCK_WIDTH, GATHER_MS, GROW_MS, type FocusLayout, type Point, type Rect, type RingNeighbour, chooseForRing, ease, focusLayout, seatRing } from '../shared/focus-ring.js';
 import { type RingItem, RingView } from './ring-view.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
@@ -802,8 +802,19 @@ export class GlassField {
     const heldIds = new Set(this.held.map((c) => c.noteId));
     const live = new Set<string>();
     let tabStops = 0;
+    this.promotedIds = new Set();
     for (const [noteId, slot] of this.model.current.slots) {
-      if (slot.band === 'deep') continue;
+      // A quiet tile drawn large enough to read stops being a rectangle on
+      // the canvas and becomes an ordinary card (TASK-0077). The threshold is
+      // the one that decides every other card's detail, and it is read from
+      // the same projection this loop already needs. The orbit's `deep` slots
+      // are its own and are dots, so nothing is promoted there.
+      if (slot.band === 'deep') {
+        if (this.arrangement === 'orbit') continue;
+        const p = this.at(slot, yaw);
+        if (!p.visible || !promoted(p.scale * this.model.current.shapes.deep.box.width, this.promotedBefore.has(noteId))) continue;
+        this.promotedIds.add(noteId);
+      }
       const entry = this.entries.get(noteId);
       if (entry === undefined) continue;
       live.add(noteId);
@@ -837,6 +848,11 @@ export class GlassField {
       else gone();
     }
     this.el.cards.dataset['visible'] = String(tabStops);
+    // Remembered for the next frame's hysteresis: a note already drawn as a
+    // card is demoted at a slightly smaller width than it was promoted at, so
+    // a zoom drifting across the threshold does not flicker.
+    this.promotedBefore = this.promotedIds;
+    this.el.cards.dataset['promoted'] = String(this.promotedIds.size);
     this.drawSectors();
     this.drawQuietCursor();
     this.paintCanvas();
@@ -989,6 +1005,9 @@ export class GlassField {
     ctx.textBaseline = 'middle';
     for (const [noteId, slot] of this.model.current.slots) {
       if (slot.band !== 'deep') continue;
+      // Never both: a promoted note is an element this frame, so the canvas
+      // leaves it alone.
+      if (this.promotedIds.has(noteId)) continue;
       const p = this.at(slot, yaw);
       if (!p.visible) continue;
       const entry = this.entries.get(noteId);
@@ -1237,6 +1256,10 @@ export class GlassField {
     const entry = id === null ? undefined : this.entries.get(id);
     if (entry !== undefined) void this.tap(entry);
   }
+
+  /** The quiet-band notes drawn as elements this frame, and the ones that were last frame. */
+  private promotedIds = new Set<string>();
+  private promotedBefore = new Set<string>();
 
   /** Every quiet tile painted this frame, with where it landed. Rebuilt by `paintCanvas`. */
   private tiles: Array<{ x: number; y: number; w: number; h: number; id: string; depth: number }> = [];

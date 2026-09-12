@@ -627,7 +627,7 @@ items:
     TASK-0077:
       file: "docs/features/glass-bands/plan/tasks/TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card.md"
       title: "A tile large enough becomes a real card: past the promotion threshold a quiet note stops being painted and gets an element, so it is clickable, tabbable and readable with no code of its own"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 80
-    tasks_done: 75
+    tasks_done: 76
     tests_total: 39
     tests_passing: 2
     tests_failing: 0

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0077
 aliases: ["TASK-0077"]
 title: "A tile large enough becomes a real card: past the promotion threshold a quiet note stops being painted and gets an element, so it is clickable, tabbable and readable with no code of its own"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -51,14 +51,65 @@ When a person zooms or flies close enough that a quiet-band tile would be readab
 
 ## Steps
 
-- [ ] Promote in `drawCards()` and skip the promoted in `paintCanvas()`, both from the apparent width.
-- [ ] Add the hysteresis and write both numbers in the Outcome.
-- [ ] Check the promoted card against every existing card behaviour: lift, pull, push, throw, reach, the navigator's groups and the tab order.
-- [ ] Guard the orbit out, the way every other canvas rule in `glass.ts` is guarded.
-- [ ] Record in the Outcome how many cards are promoted at 1× on each of the three workspaces, facing the quiet band.
+- [x] Promote in `drawCards()` and skip the promoted in `paintCanvas()`, both from the apparent width.
+- [x] Add the hysteresis and write both numbers in the Outcome.
+- [x] Check the promoted card against every existing card behaviour: lift, pull, push, throw, reach, the navigator's groups and the tab order.
+- [x] Guard the orbit out, the way every other canvas rule in `glass.ts` is guarded.
+- [x] Record in the Outcome how many cards are promoted at 1× on each of the three workspaces, facing the quiet band.
 
 ## Notes
 
 This is the seam [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] and [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]] share, which is why they are planned together and built one after the other.
 
 [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] is still owed after this: most tiles on a large workspace are never promoted, and they must be reachable too.
+
+## Outcome
+
+**Done 2026-09-12. A quiet tile drawn at the size of a card becomes one, and the promotion threshold had to move to make that true.** 465 checks passing, both typechecks clean.
+
+### The threshold moved from `brief` to `full`, and the reason is the interesting part
+
+[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]] set the promotion threshold at `brief` and said it "may never be higher", on this argument: being an element is what gives a tile its click and its tab stop, so promoting one that showed nothing but its id would buy nothing.
+
+**[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] invalidated that argument two days later in the same feature.** It gave the painted band its own hit test and a roving tab stop, so a tile is clickable, hoverable and reachable by keyboard whether or not it is an element. Promotion is now only about detail, and it can wait until a tile is drawn at the size of a card that carries some.
+
+The numbers forced the point. At `brief`, on Your Trainer's Issues view, **all 311 visible tiles promoted at 1x** — about 2,200 more elements on a document of 2,303, the doubling [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] warned about, taken without a person asking for anything and failing this task's own acceptance line that the promoted set be small. At `full`:
+
+| zoom | promoted / visible, Your Trainer's Issues view |
+|---|---|
+| 1x | 0 / 311 |
+| 1.4x | 14 / 311 |
+| 1.8x | 59 / 239 |
+| 2.5x | 180 / 180 |
+
+It grows as a person zooms toward the band and is bounded by what is on the screen. [[TST-0055-Detail-Follows-Apparent-Size]] and `desktop/src/shared/detail.ts` both carry the reason, so it cannot be quietly moved back.
+
+### How many are promoted at 1x, facing the quiet band
+
+**None, on any of the three workspaces.** This repository's quiet band is drawn at 83 pixels at the centre of the shelf and 122 at its edges; Your Trainer's Issues view at 64 and 94. All are below 130. A person sees what they saw before until they zoom toward the band.
+
+### The trade this takes, stated plainly
+
+A band past 800 notes gets the 58-pixel tile, which is drawn 34 across at 1x and 86 at the maximum zoom of 2.5 — so **the very largest quiet band never promotes at the centre of its shelf**, however far a person zooms. Its edge tiles, drawn about half again as large, do.
+
+That costs nothing a person can *do*: the hit test and the tab stop reach a painted tile. What it costs is detail, on the one band where promoting everything would double the document. [[TST-0055-Detail-Follows-Apparent-Size]] states it as a check rather than leaving it to be discovered.
+
+### The hysteresis
+
+Promotes at 130, demotes at 122. Without it a tile sitting on the threshold is created and destroyed on alternate frames as the zoom drifts a fraction, which reads as a flicker and allocates an element every frame. Eight pixels is about a tenth of the threshold: wide enough that no drift crosses both edges, narrow enough that zooming out gives the tile back where a person expects.
+
+### A promoted card is an ordinary card
+
+It is an entry in the same `cardEls` map keyed by note id, so it animates, survives a view switch, and keeps the element PHASE-0002's exit criterion 2 is ticked on. It carries `data-band="deep"`, so the dimming that makes finished work look finished still applies — being reachable is not the same as being urgent. Lift, pull, push, throw, reach, the navigator's groups and the tab order all reach it with no code of the quiet band's own.
+
+### The orbit is guarded out
+
+Its `deep` slots are its own and are drawn as dots. `drawCards` returns early for a `deep` slot when the arrangement is the orbit, before any projection is taken.
+
+### Three breaks
+
+| The break | What failed |
+|---|---|
+| 1. No hysteresis — demote at the same width as promote. | "a tile at the threshold does not flicker between a card and a rectangle" |
+| 2. The threshold back at `brief`. | 4 checks, including the two that carry the reason it moved |
+| 3. A promoted note painted as well as drawn. | **Nothing.** No node check can see it: it is a property of one frame in a real window, and it is [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]'s to catch. Recorded here so the gap is known rather than assumed covered.

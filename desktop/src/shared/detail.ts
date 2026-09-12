@@ -48,12 +48,35 @@ export const DETAIL_AT = Object.freeze({
  * The width past which a quiet tile stops being painted on the canvas and is
  * drawn as an element (TASK-0077).
  *
- * The same number as `brief`, and it may never be higher: a promoted tile
- * showing nothing but its id would gain a click and no meaning. Being an
- * element is what gives it the click and the tab stop ISS-0073 is about, so
- * the promotion and the first readable level are the same moment.
+ * **This was `brief` until the numbers were run, and the reason it moved is
+ * worth keeping.** TASK-0074 set it at `brief` on the argument that being an
+ * element is what gives a tile its click and its tab stop, so promoting one
+ * that showed only an id would buy nothing. TASK-0076 then gave the PAINTED
+ * band its own hit test and a roving tab stop, so a tile is clickable,
+ * hoverable and reachable by keyboard whether or not it is an element.
+ * Promotion is now only about DETAIL, and it can wait until a tile is drawn
+ * at the size of a card that carries some.
+ *
+ * At `brief` it did not wait. On Your Trainer's Issues view the quiet band's
+ * tiles are drawn between 83 and 122 pixels wide at 1x, so all 311 visible
+ * ones promoted at once: about 2,200 more elements on a document of 2,303,
+ * which is the doubling ISS-0073 warned about, taken without a person asking
+ * for anything. At `full` none promotes at 1x, 14 at 1.4x, 59 at 1.8x and
+ * 180 at 2.5x — it grows as a person zooms toward the band and is bounded by
+ * what is on the screen.
  */
-export const PROMOTE_AT = DETAIL_AT.brief;
+export const PROMOTE_AT = DETAIL_AT.full;
+
+/**
+ * How far a promoted tile must shrink before it is painted again.
+ *
+ * Without it a tile sitting exactly at the threshold is created and destroyed
+ * on alternate frames as the zoom drifts a fraction, which reads as a flicker
+ * and allocates an element every frame. Eight pixels is about a tenth of the
+ * threshold: wide enough that no drift crosses both edges, narrow enough that
+ * a person zooming out gets the tile back where they expect.
+ */
+export const DEMOTE_AT = PROMOTE_AT - 8;
 
 /**
  * What each level draws, as the parts of a card.
@@ -85,6 +108,7 @@ export function detailFor(width: number): DetailLevel {
 }
 
 /** Whether a quiet-band tile this wide should be drawn as an element instead of painted. */
-export function promoted(width: number): boolean {
-  return Number.isFinite(width) && width >= PROMOTE_AT;
+export function promoted(width: number, wasPromoted = false): boolean {
+  if (!Number.isFinite(width)) return false;
+  return wasPromoted ? width >= DEMOTE_AT : width >= PROMOTE_AT;
 }
