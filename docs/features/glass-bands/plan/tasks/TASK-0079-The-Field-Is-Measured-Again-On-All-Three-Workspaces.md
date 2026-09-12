@@ -36,7 +36,7 @@ tests: []
 
 Taken on a Mac Studio, window in front. The throttled figure, 6.6 ms of script at 4× CPU cost, is an estimate, and **the laptop reading is still owed** — it was owed on 2026-09-10 and it is owed now.
 
-**What to take, through `desktop/src/main/measure.ts`, on all three workspaces:** median and 95th-percentile frame time while turning, script work per frame, elements in the document, quiet-band tiles painted, far-band cards drawn, and promoted cards. Each unthrottled and at 4× CPU cost. Take a turn with the pointer moving, because the tile hit test runs on `pointermove` and a measurement that never moves the pointer misses it. Take one run zoomed in on the quiet band, because that is where promotion happens.
+**What to take, through `desktop/src/main/measure.ts`, on all three workspaces:** median and 95th-percentile frame time while turning, script work per frame, elements in the document, quiet-band tiles painted, outer-field cards drawn, and promoted cards. Each unthrottled and at 4× CPU cost. Take a turn with the pointer moving, because the tile hit test runs on `pointermove` and a measurement that never moves the pointer misses it. Take one run zoomed in on the quiet band, because that is where promotion happens.
 
 **Write the numbers into [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]**, in a "Measured" section beside the 2026-09-10 table, and say plainly which machine they came from.
 
@@ -57,7 +57,7 @@ Taken on a Mac Studio, window in front. The throttled figure, 6.6 ms of script a
 
 ## Steps
 
-- [ ] Extend `desktop/src/main/measure.ts` with the counts that did not exist before: far-band cards, promoted cards, tiles separately from elements.
+- [ ] Extend `desktop/src/main/measure.ts` with the counts that did not exist before: outer-field cards, promoted cards, tiles separately from elements.
 - [ ] Run all three workspaces, throttled and not, with Edwin's agreement before any window opens.
 - [ ] Write the table into the feature note and the sentence into this task's Outcome.
 - [ ] Record the decision on [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] in that issue.

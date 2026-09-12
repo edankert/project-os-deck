@@ -41,7 +41,7 @@ The renderer draws what the three pure modules now say: a fourth band of cards b
 ## Acceptance
 
 - A note the middle had no room for is drawn, as a card, at a depth between the middle's and the quiet band's.
-- A far-band card is smaller than a mid-band card and shows less of its note, and both facts follow from the shape and the detail function rather than from a branch in the renderer.
+- A outer-field card is smaller than a mid-band card and shows less of its note, and both facts follow from the shape and the detail function rather than from a branch in the renderer.
 - The bar names every non-zero remainder, including the quiet band's, and names none that is zero.
 - The compass shows the quiet band's count and its remainder as two numbers.
 - Zooming in on a mid-band card shows its face line and its owed verb; zooming further shows its status, its progress and its face's properties.

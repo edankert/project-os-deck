@@ -27,11 +27,22 @@ export interface FieldEntry {
 export interface FieldDeal {
   front: FieldEntry[];
   mid: FieldEntry[];
+  outer: FieldEntry[];
   deep: FieldEntry[];
   /** Front-band notes past the band's capacity. Counted and listed in the navigator, never demoted. */
   frontOverflow: number;
-  /** Mid-band notes past its capacity. Counted, never sent behind. */
+  /**
+   * Mid-band notes past the middle AND the outer field.
+   *
+   * Was "counted, never sent behind" when the middle had nowhere to overflow
+   * to. The middle's remainder is now PLACED, in the outer field (ADR-0005),
+   * and this counts only what neither band had room for.
+   */
   midOverflow: number;
+  /** Notes a view's own rows sent to the outer field, past its capacity. Zero for every description here. */
+  outerOverflow: number;
+  /** Quiet-band notes past its capacity. The quiet band no longer promises to draw all of it. */
+  deepOverflow: number;
   /** Every owed note the field holds, drawn or not: the count the front plane pins in place. */
   owed: number;
   /** Notes in the front band because a hand put them there and nothing else did. */
@@ -146,20 +157,41 @@ export function dealField(table: BandTable, entries: FieldEntry[], options: Deal
     .map((x) => x.entry);
   const front: FieldEntry[] = [];
   const mid: FieldEntry[] = [];
+  const subject: FieldEntry[] = [];
+  const outer: FieldEntry[] = [];
   const deep: FieldEntry[] = [];
+  const pushedAside: FieldEntry[] = [];
   const overflowing: FieldEntry[] = [];
   let midOverflow = 0;
+  let outerOverflow = 0;
+  let deepOverflow = 0;
   for (const entry of ordered) {
     const band = bandOf(table, entry.inputs);
     if (band === 'front') {
       if (front.length < table.frontCapacity) front.push(entry);
       else overflowing.push(entry);
     } else if (band === 'mid') {
-      if (mid.length < table.midCapacity) mid.push(entry);
-      else midOverflow += 1;
+      // Collected whole and split below, AFTER the navigator's order is
+      // restored, so the outer field continues the middle rather than holding
+      // whichever notes happened to be dealt last.
+      subject.push(entry);
+    } else if (band === 'outer') {
+      if (outer.length < table.outerCapacity) outer.push(entry);
+      else outerOverflow += 1;
     } else {
-      deep.push(entry);
+      // A hand's push is a deliberate act and the capacity never drops it:
+      // pushed notes are held back and placed first, so the quiet band's
+      // remainder is the far end of the record's own ordering (FEAT-0014).
+      if (entry.inputs.pushed === true) pushedAside.push(entry);
+      else deep.push(entry);
     }
+  }
+  // Every pushed note first, then as much of the rest as the band holds.
+  const quiet = [...pushedAside, ...deep];
+  deep.length = 0;
+  for (const entry of quiet) {
+    if (deep.length < table.deepCapacity) deep.push(entry);
+    else deepOverflow += 1;
   }
   // A pull the full band would swallow takes a spare slot instead: a gesture
   // that changes nothing a person can see is worse than a band one card
@@ -176,15 +208,26 @@ export function dealField(table: BandTable, entries: FieldEntry[], options: Deal
     }
   }
   // The middle keeps the navigator's order, heading by heading, so a sector
-  // is one heading and reads in the order the list does.
+  // is one heading and reads in the order the list does, and the OUTER FIELD
+  // CONTINUES IT: the two bands are one ordered sequence cut at the middle's
+  // capacity (ADR-0005). A note is counted only when neither band had room.
   const midOrder = new Map(entries.map((e, i) => [e.card.noteId, i]));
-  mid.sort((a, b) => (midOrder.get(a.card.noteId) ?? 0) - (midOrder.get(b.card.noteId) ?? 0));
+  subject.sort((a, b) => (midOrder.get(a.card.noteId) ?? 0) - (midOrder.get(b.card.noteId) ?? 0));
+  for (const entry of subject) {
+    if (mid.length < table.midCapacity) mid.push(entry);
+    else if (outer.length < table.outerCapacity) outer.push(entry);
+    else midOverflow += 1;
+  }
+  outer.sort((a, b) => (midOrder.get(a.card.noteId) ?? 0) - (midOrder.get(b.card.noteId) ?? 0));
   return {
     front,
     mid,
+    outer,
     deep,
     frontOverflow: counted.length,
     midOverflow,
+    outerOverflow,
+    deepOverflow,
     owed: entries.filter((e) => e.inputs.owed).length,
     handPlaced: front.filter((e) => e.inputs.pulled && !e.inputs.owed && !e.inputs.joinedToDesk).length,
     pushedBehind: deep.filter((e) => e.inputs.pushed && !e.inputs.suppressed).length,

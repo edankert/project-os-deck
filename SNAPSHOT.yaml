@@ -592,7 +592,7 @@ items:
     TASK-0072:
       file: "docs/features/glass-bands/plan/tasks/TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth.md"
       title: "Every band has a capacity and the deal places a fourth: the middle's remainder stands in the outer field, the quiet band caps like the rest, and no note is counted and then dropped"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 80
-    tasks_done: 70
+    tasks_done: 71
     tests_total: 39
     tests_passing: 2
     tests_failing: 0

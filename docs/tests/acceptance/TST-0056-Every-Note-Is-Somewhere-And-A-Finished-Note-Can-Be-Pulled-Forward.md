@@ -52,7 +52,7 @@ The walk that says whether this worked for a person rather than for a suite. Two
 
 - Every band you pass through has notes in it, and the bar's remainders account for the rest.
 - No note the view holds is unaccounted for: drawn, or counted in a remainder.
-- A far-band note is readable enough to tell what it is, and is clearly less prominent than the middle.
+- A outer-field note is readable enough to tell what it is, and is clearly less prominent than the middle.
 - A quiet-band tile can be clicked, hovered and pulled forward, and the pulled note stays in front across a view switch.
 - Zoom adds information rather than size alone.
 - The small workspace's quiet band is larger and no nearer.

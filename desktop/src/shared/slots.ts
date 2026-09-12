@@ -45,6 +45,17 @@ export const FRONT = Object.freeze({ depth: 380, rows: 4, rowStep: 104, columnSt
 /** The mid band: columns on both sides of the front band. */
 export const MID = Object.freeze({ depth: 620, rows: 4, rowStep: 118, firstColumn: 50 * DEG, columnStep: 22 * DEG, columnsPerSide: 8 });
 /**
+ * The outer field: the middle again, one step further out (ADR-0005).
+ *
+ * It holds the view's own active work the middle had no room for, so it keeps
+ * the middle's columns and takes a depth between the middle and the quiet
+ * band. Its notes are cards, not tiles: a person has to be able to read what
+ * a piece of unfinished work is. TASK-0073 replaces these numbers with a
+ * shape derived from how many notes the band actually holds.
+ */
+export const OUTER = Object.freeze({ depth: 690, rows: 4, rowStep: 108, firstColumn: 50 * DEG, columnStep: 22 * DEG, columnsPerSide: 8 });
+
+/**
  * The quiet band's shape, stated so a thousand tiles have one.
  *
  * Forty tiles to a row across 156 degrees centred behind the person, and
@@ -62,7 +73,7 @@ export const QUIET = Object.freeze({
   rowStep: 22,
 });
 
-export type BandName = 'front' | 'mid' | 'deep';
+export type BandName = 'front' | 'mid' | 'outer' | 'deep';
 
 export interface Slot {
   band: BandName;
@@ -159,6 +170,33 @@ export function midSlots(): Slot[] {
   return out;
 }
 
+/**
+ * Every outer-field slot, in the same order the middle takes its columns.
+ *
+ * The middle and the outer field are dealt from one continuous sequence of
+ * headings, so the outer field repeats the middle's angles at its own depth
+ * and a sector that runs past the middle continues straight into it.
+ */
+export function outerSlots(): Slot[] {
+  const out: Slot[] = [];
+  for (let step = 0; step < OUTER.columnsPerSide; step += 1) {
+    for (const side of [-1, 1]) {
+      for (let row = 0; row < OUTER.rows; row += 1) {
+        out.push({
+          band: 'outer',
+          theta: side * (OUTER.firstColumn + step * OUTER.columnStep),
+          depth: OUTER.depth,
+          y: (row - (OUTER.rows - 1) / 2) * OUTER.rowStep,
+          row,
+          column: side * (step + 1),
+          layer: 0,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 /** The quiet tile at this index in the band, by the stated shape. */
 export function quietSlot(index: number): Slot {
   const perLayer = QUIET.columns * QUIET.rows;
@@ -181,6 +219,7 @@ export function quietSlot(index: number): Slot {
 export interface Bands<T> {
   front: T[];
   mid: T[];
+  outer: T[];
   deep: T[];
 }
 
@@ -188,8 +227,10 @@ export interface Assignment<T> {
   slots: Map<T, Slot>;
   /** Front notes with no free slot, because an obstacle took it. Counted, never demoted. */
   frontOverflow: number;
-  /** Mid notes with no free slot. Counted, never sent behind. */
+  /** Mid notes with no free slot, because an obstacle took it. Counted, never sent behind. */
   midOverflow: number;
+  /** Outer-field notes with no free slot. Counted the same way. */
+  outerOverflow: number;
   /** Where each heading's first slot is, so the renderer can label a sector. */
   sectors: Array<{ key: string; slot: Slot; count: number }>;
 }
@@ -238,8 +279,20 @@ export function assignSlots<T>(
     index = end;
   }
 
+  // The outer field is dealt straight, not heading by heading: it is already
+  // the middle's remainder, and its headings are whatever ran past the
+  // middle's slots. Breaking it into sectors again would start a new column
+  // for a heading whose first cards are in the band in front of it.
+  const outer = outerSlots().filter((s) => !blocked(s, obstacles));
+  let outerOverflow = 0;
+  bands.outer.forEach((item, i) => {
+    const slot = outer[i];
+    if (slot === undefined) outerOverflow += 1;
+    else slots.set(item, slot);
+  });
+
   bands.deep.forEach((item, i) => slots.set(item, quietSlot(i)));
-  return { slots, frontOverflow, midOverflow, sectors };
+  return { slots, frontOverflow, midOverflow, outerOverflow, sectors };
 }
 
 export interface Viewport {
@@ -363,10 +416,10 @@ export function obstaclesFor(rect: { left: number; right: number }, yaw: number,
 export class FieldModel<T> {
   yaw = 0;
   assignments = 0;
-  private bands: Bands<T> = { front: [], mid: [], deep: [] };
+  private bands: Bands<T> = { front: [], mid: [], outer: [], deep: [] };
   private obstacles: Obstacle[] = [];
   private headingOf: (item: T) => string;
-  current: Assignment<T> = { slots: new Map(), frontOverflow: 0, midOverflow: 0, sectors: [] };
+  current: Assignment<T> = { slots: new Map(), frontOverflow: 0, midOverflow: 0, outerOverflow: 0, sectors: [] };
 
   constructor(headingOf: (item: T) => string = () => '') {
     this.headingOf = headingOf;
@@ -387,8 +440,8 @@ export class FieldModel<T> {
     this.assignments += 1;
     // Placed positions replace the bands: a later turnEnd must not deal an
     // old set of bands over them.
-    this.bands = { front: [], mid: [], deep: [] };
-    this.current = { slots, frontOverflow: 0, midOverflow: 0, sectors: [] };
+    this.bands = { front: [], mid: [], outer: [], deep: [] };
+    this.current = { slots, frontOverflow: 0, midOverflow: 0, outerOverflow: 0, sectors: [] };
     return this.current;
   }
 

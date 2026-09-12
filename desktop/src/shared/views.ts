@@ -34,6 +34,8 @@ function bandTable(gathersOwed: boolean): BandTable {
     gathersOwed,
     frontCapacity: 12,
     midCapacity: 40,
+    outerCapacity: 40,
+    deepCapacity: 3000,
     rows: [
       {
         when: { owed: true },

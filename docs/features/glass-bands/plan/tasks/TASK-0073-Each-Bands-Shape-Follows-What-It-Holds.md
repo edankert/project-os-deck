@@ -53,7 +53,7 @@ tests: ["[[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]"]
 ## Steps
 
 - [ ] Write `bandShapeFor` in `desktop/src/shared/slots.ts` with the four bands and both clamps.
-- [ ] Make `frontSlots`, `midSlots`, the new far-band generator and `quietSlot` take a shape rather than reading the constants.
+- [ ] Make `frontSlots`, `midSlots`, the new outer-field generator and `quietSlot` take a shape rather than reading the constants.
 - [ ] Keep the constants exported as the large-end value, so existing callers and tests have something to name.
 - [ ] Extend `desktop/tests/slots.test.mjs` with the population table.
 - [ ] Break the function on purpose, one break per run, and record which checks fail in [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]: adapt by depth instead of size; drop the small clamp; drop the large clamp; return a shape whose slots leave the visible span.

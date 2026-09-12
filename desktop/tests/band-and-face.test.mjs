@@ -169,14 +169,41 @@ test('nothing owed is ever demoted: past the front band it is COUNTED', () => {
   assert.equal(banded.deep.length, 0, 'an owed note was pushed behind the person');
 });
 
-test('mid overflow is counted and never falls into the quiet band', () => {
+test("the middle's remainder stands in the outer field, and never falls into the quiet band", () => {
   const view = VIEWS.find((v) => v.id === 'features');
   const subject = Array.from({ length: 60 }, (_, i) => ({ card: `note-${i}`, inputs: inputs() }));
   const banded = bandCards(view.band, subject);
   assert.equal(banded.mid.length, view.band.midCapacity);
-  assert.equal(banded.midOverflow, 60 - view.band.midCapacity);
+  // ADR-0005: placed, not counted. Before this the 20 past the middle were
+  // drawn nowhere at all, which is what ISS-0079 reported.
+  assert.equal(banded.outer.length, 60 - view.band.midCapacity);
+  assert.equal(banded.midOverflow, 0, 'the middle counted a note the outer field had room for');
   // "Behind you" has to mean finished, not "did not fit".
   assert.equal(banded.deep.length, 0);
+});
+
+test('a note is counted only when the middle and the outer field are both full', () => {
+  const view = VIEWS.find((v) => v.id === 'features');
+  const room = view.band.midCapacity + view.band.outerCapacity;
+  const subject = Array.from({ length: room + 7 }, (_, i) => ({ card: `note-${i}`, inputs: inputs() }));
+  const banded = bandCards(view.band, subject);
+  assert.equal(banded.mid.length, view.band.midCapacity);
+  assert.equal(banded.outer.length, view.band.outerCapacity);
+  assert.equal(banded.midOverflow, 7);
+  assert.equal(banded.deep.length, 0);
+  // Every note is in a band or counted exactly once, and no band is silently short.
+  const placed = banded.front.length + banded.mid.length + banded.outer.length + banded.deep.length;
+  const counted = banded.frontOverflow + banded.midOverflow + banded.outerOverflow + banded.deepOverflow;
+  assert.equal(placed + counted, subject.length);
+});
+
+test('the quiet band has a capacity like every other band, and states what it could not place', () => {
+  const view = VIEWS.find((v) => v.id === 'features');
+  const table = { ...view.band, deepCapacity: 25 };
+  const finished = Array.from({ length: 40 }, (_, i) => ({ card: `done-${i}`, inputs: inputs({ suppressed: true, inSubject: false }) }));
+  const banded = bandCards(table, finished);
+  assert.equal(banded.deep.length, 25, 'the quiet band is the one band that used to draw everyone');
+  assert.equal(banded.deepOverflow, 15);
 });
 
 test('the desk and the hands fill their columns, and owed beats every one of them', () => {
@@ -233,20 +260,32 @@ test('the band function runs over the REAL navigation payloads, and loses nothin
       entries.filter((e) => e.inputs.suppressed && !e.inputs.owed).length,
       `${file}: the quiet band does not hold exactly the finished work`,
     );
+    // ADR-0005's rule over all four bands: every note the view holds is in a
+    // band or counted, exactly once, and no band is silently short.
     assert.equal(
-      banded.front.length + banded.frontOverflow + banded.mid.length + banded.midOverflow + banded.deep.length,
+      banded.front.length +
+        banded.mid.length +
+        banded.outer.length +
+        banded.deep.length +
+        banded.frontOverflow +
+        banded.midOverflow +
+        banded.outerOverflow +
+        banded.deepOverflow,
       entries.length,
       `${file}: a note is in no band and in no overflow count`,
     );
   }
 });
 
-test("Your Trainer's Issues view overflows both bands, which is the normal case", () => {
+test("Your Trainer's Issues view fills the front band past its capacity and the middle into the outer field", () => {
   // 40 needing triage and 427 in all. If the overflow counts were zero here
   // the two checks above would be passing on data that never tests them.
   const { banded } = bandRealPayload('your-trainer-issues.json', 'issues');
   assert.ok(banded.frontOverflow > 0, `the front band did not overflow (${banded.front.length} in front)`);
-  assert.ok(banded.midOverflow > 0, `the middle band did not overflow (${banded.mid.length} in the middle)`);
+  assert.equal(banded.mid.length, 40, 'the middle did not fill, so the outer field is not being tested');
+  // The notes this line counts had NO POSITION AT ALL before ADR-0005: the
+  // deal counted them as midOverflow and dropped them (ISS-0079).
+  assert.ok(banded.outer.length > 0, 'the middle overflowed and the outer field took none of it');
   assert.ok(banded.deep.length > 100, `only ${banded.deep.length} finished issues went behind`);
 });
 

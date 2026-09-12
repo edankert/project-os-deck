@@ -60,7 +60,16 @@ export interface Refusal {
   reason: string;
 }
 
-export type Band = 'front' | 'mid' | 'deep';
+/**
+ * The four bands of the Glass field, nearest first (ADR-0005).
+ *
+ * `outer` is the middle's continuation: the view's own active work that the
+ * middle had no room for. A view's own rows never name it — they say front,
+ * mid or deep — and the field puts the middle's remainder there. A
+ * description that names it anyway is accepted, because `bandOf` returns
+ * whatever the rows say.
+ */
+export type Band = 'front' | 'mid' | 'outer' | 'deep';
 
 /**
  * What the payload says about a note, and what a person did to it, which is
@@ -109,6 +118,13 @@ export interface BandTable {
   /** About twelve cards stand in front, and about forty in the middle. */
   frontCapacity: number;
   midCapacity: number;
+  /**
+   * How many the outer field and the quiet band place before they count
+   * (ADR-0005). Every band places what fits and states the rest; the quiet
+   * band used to be the one band that promised to draw all of it.
+   */
+  outerCapacity: number;
+  deepCapacity: number;
   /**
    * Whether this view gathers what is owed itself, so the sidecar sends it no
    * Needs-you group.
@@ -408,6 +424,13 @@ function readBand(raw: unknown, refusals: Refusal[]): BandTable | null {
     rows,
     frontCapacity: positive(band['frontCapacity'], 12),
     midCapacity: positive(band['midCapacity'], 40),
+    // The outer field is the middle again, so it holds what the middle holds.
+    // The quiet band's default is the three layers its stated shape already
+    // supports, so no workspace draws fewer tiles than it did before this
+    // capacity existed; TASK-0073 replaces both with the derived shape's own
+    // count.
+    outerCapacity: positive(band['outerCapacity'], 40),
+    deepCapacity: positive(band['deepCapacity'], 3000),
     gathersOwed: band['gathersOwed'] === true,
   };
 }
@@ -532,11 +555,22 @@ export interface BandedCard<T> {
 export interface Banding<T> {
   front: T[];
   mid: T[];
+  outer: T[];
   deep: T[];
   /** Owed notes past the front band's capacity. Counted, never demoted. */
   frontOverflow: number;
-  /** Subject notes past the mid band's capacity. Counted, never sent to deep. */
+  /** Subject notes past the middle AND the outer field. Counted only when both are full. */
   midOverflow: number;
+  /**
+   * Notes a view's own rows sent to the outer field, past its capacity.
+   *
+   * Zero for every description in this repository, because none names the
+   * outer field: the middle's remainder is counted as `midOverflow`, once, so
+   * the four lists and the four remainders add up to what was dealt.
+   */
+  outerOverflow: number;
+  /** Quiet notes past the quiet band's capacity. Counted. */
+  deepOverflow: number;
 }
 
 /**
@@ -610,10 +644,12 @@ export function bandOf(table: BandTable, inputs: BandInputs): Band {
  * navigator lists every one of them regardless.
  *
  * **Mid overflow never falls into the quiet band**, because "behind you" has to
- * mean finished, not "did not fit".
+ * mean finished, not "did not fit". It falls into the OUTER FIELD instead
+ * (ADR-0005), the middle one step further out, and is counted only once that
+ * is full as well.
  */
 export function bandCards<T>(table: BandTable, cards: Array<{ card: T; inputs: BandInputs }>): Banding<T> {
-  const out: Banding<T> = { front: [], mid: [], deep: [], frontOverflow: 0, midOverflow: 0 };
+  const out: Banding<T> = { front: [], mid: [], outer: [], deep: [], frontOverflow: 0, midOverflow: 0, outerOverflow: 0, deepOverflow: 0 };
   for (const entry of cards) {
     const band = bandOf(table, entry.inputs);
     if (band === 'front') {
@@ -623,10 +659,19 @@ export function bandCards<T>(table: BandTable, cards: Array<{ card: T; inputs: B
     }
     if (band === 'mid') {
       if (out.mid.length < table.midCapacity) out.mid.push(entry.card);
+      else if (out.outer.length < table.outerCapacity) out.outer.push(entry.card);
+      // Counted ONCE, as the middle's, so the four lists and the four
+      // remainders add up to what was dealt.
       else out.midOverflow += 1;
       continue;
     }
-    out.deep.push(entry.card);
+    if (band === 'outer') {
+      if (out.outer.length < table.outerCapacity) out.outer.push(entry.card);
+      else out.outerOverflow += 1;
+      continue;
+    }
+    if (out.deep.length < table.deepCapacity) out.deep.push(entry.card);
+    else out.deepOverflow += 1;
   }
   return out;
 }

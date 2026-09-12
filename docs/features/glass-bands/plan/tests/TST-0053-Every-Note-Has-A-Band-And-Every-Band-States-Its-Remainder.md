@@ -17,8 +17,8 @@ covers: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached
 issues: ["[[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]]", "[[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]"]
 tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]"]
 artifacts: []
-adequacy: ""
-mutation_score: ""
+adequacy: "Four deliberate breaks, one per run; each failed at least one check and the failures are named below."
+mutation_score: "4/4 breaks caught"
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
@@ -39,7 +39,7 @@ This suite is the discharge of [[ADR-0005-Four-Bands-And-Every-Band-States-What-
 
 ## Expected results
 
-- For every view of all three workspaces, `front + mid + far + deep + frontOverflow + midOverflow + farOverflow + deepOverflow` equals the number of entries dealt.
+- For every view of all three workspaces, `front + mid + outer + deep + frontOverflow + midOverflow + outerOverflow + deepOverflow` equals the number of entries dealt.
 - A note whose band rule says `mid`, past `midCapacity`, is in the outer field and not in `midOverflow`.
 - `midOverflow` is non-zero only when the outer field is also full.
 - The quiet band stops at `deepCapacity` and reports the rest as `deepOverflow`.
@@ -47,10 +47,45 @@ This suite is the discharge of [[ADR-0005-Four-Bands-And-Every-Band-States-What-
 - A pulled note still takes a front-band spare slot; an owed note past the front capacity is still counted rather than demoted.
 - A description naming no capacity gets the defaults, and every existing view deals as it does today except that the middle's remainder is placed.
 
-## Evidence (fill after running)
+## Evidence
 
-- <paths and counts per workspace>
+**Run 2026-09-12, `node --test tests/*.test.mjs`: 439 checks, 439 passing.** `desktop/tests/field.test.mjs` holds 22 of them and `desktop/tests/band-and-face.test.mjs` 17. Both typechecks clean.
+
+The new checks in `desktop/tests/field.test.mjs`:
+
+- "the middle's remainder is PLACED in the outer field, not counted and dropped"
+- "the middle is counted only when the outer field is full too"
+- "the outer field continues the navigator order the middle keeps"
+- "the quiet band has a capacity like every other band, and states what it could not place"
+- "a note a hand pushed behind is never the one the quiet band drops"
+- "a pushed note that is not finished work is in the quiet band and counted as a hand's"
+- "a description that names no capacity gets the defaults"
+- "a pull still takes a front-band spare, and an owed note past the capacity is still counted"
+- "the outer field takes its own slots, behind the middle and in front of the quiet band"
+
+and in `desktop/tests/band-and-face.test.mjs`, over the real payloads of all three workspaces:
+
+- "the middle's remainder stands in the outer field, and never falls into the quiet band"
+- "a note is counted only when the middle and the outer field are both full"
+- "the quiet band has a capacity like every other band, and states what it could not place"
+- "the band function runs over the REAL navigation payloads, and loses nothing" — the conservation line, now over four bands and four remainders
+- "Your Trainer's Issues view fills the front band past its capacity and the middle into the outer field" — this is the fixture that proves the outer field is exercised by real data rather than by a constructed case
+
+**What the real payloads say.** On Your Trainer's Issues view the middle fills to 40 and the outer field takes the rest of the subject. Those notes had no position at all before this change: `dealField` counted them as `midOverflow` and dropped them, which is what [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]] reported.
+
+One check outside this feature had to move: `desktop/tests/evaluator.test.mjs` counts this repository's own features and asserted seventeen. FEAT-0018 made it eighteen. Its comment says a new feature should fail it, so the number was updated rather than the check loosened.
 
 ## Adequacy (who verifies this test?)
 
-Four breaks, one per run, recorded by [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]: drop the middle's remainder again; let the outer field take everyone; let the quiet band take everyone; drop a pushed note by capacity. Each must fail at least one check, and which one is written here.
+Four breaks, one per run, each applied to `desktop/src/shared/field.ts`, rebuilt, and run against `field` and `band-and-face` together. **All four were caught.**
+
+| The break | What failed |
+|---|---|
+| 1. The middle's remainder is dropped again — the outer branch removed, so a note past `midCapacity` goes straight to `midOverflow`. This restores [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]] exactly. | 3 checks: "the middle's remainder is PLACED in the outer field", "the middle is counted only when the outer field is full too", "the outer field continues the navigator order the middle keeps" |
+| 2. The outer field takes everyone — its capacity test replaced by `true`. | 1 check: "the middle is counted only when the outer field is full too" |
+| 3. The quiet band takes everyone — its capacity test replaced by `true`. This restores the behaviour [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] named. | 2 checks: "the quiet band has a capacity like every other band", "a note a hand pushed behind is never the one the quiet band drops" |
+| 4. A pushed note is no longer placed first — `[...pushedAside, ...deep]` reversed. | 1 check: "a note a hand pushed behind is never the one the quiet band drops" |
+
+**A note on how break 1 was found.** The first run of it reported every check passing, which would have meant the suite could not catch the defect the whole task exists to fix. The substitution had not applied: it was written against six spaces of indentation and the split had moved into a loop indented by four, so the file was rebuilt unchanged. A break that never happens looks exactly like a check that cannot fail. The mutation was re-applied, the changed lines printed before the run, and only then did the three checks fail.
+
+**What the conservation line does not catch.** Under break 1 the arithmetic still balances, because a dropped note is still counted in `midOverflow`. Conservation proves nothing is LOST; it does not prove anything is PLACED. That is why the three dedicated checks exist beside it.

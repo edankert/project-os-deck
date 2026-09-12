@@ -27,9 +27,9 @@ const {
 
 const VIEWPORT = { width: 1000, height: 700 };
 
-function bands(front, mid, deep) {
+function bands(front, mid, deep, outer = 0) {
   const make = (prefix, n) => Array.from({ length: n }, (_, i) => `${prefix}-${i}`);
-  return { front: make('F', front), mid: make('M', mid), deep: make('D', deep) };
+  return { front: make('F', front), mid: make('M', mid), outer: make('O', outer), deep: make('D', deep) };
 }
 
 test('2660 notes, Your Trainer’s size, all have a position and no two coincide', () => {
@@ -162,7 +162,7 @@ test('the compass counts every dealt note that is out of sight', () => {
 
 test('the mid band is dealt a heading to a column, so a sector reads as one heading', () => {
   const mid = ['a', 'a', 'a', 'a', 'a', 'b', 'c', 'c', 'c'];
-  const { slots, sectors } = assignSlots({ front: [], mid: mid.map((h, i) => `${h}${i}`), deep: [] }, [], (id) => id[0]);
+  const { slots, sectors } = assignSlots({ front: [], mid: mid.map((h, i) => `${h}${i}`), outer: [], deep: [] }, [], (id) => id[0]);
   assert.deepEqual(sectors.map((s) => [s.key, s.count]), [['a', 5], ['b', 1], ['c', 3]]);
   // `c` has three, so it starts a fresh column: row 0.
   assert.equal(slots.get('c6').row, 0);

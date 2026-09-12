@@ -86,8 +86,18 @@ test('over the real payloads, nothing owed leaves the front band and nothing unf
     assert.ok(deal.mid.every((e) => !e.inputs.owed), `${file}: an owed note is in the middle`);
     assert.ok(deal.deep.every((e) => !e.inputs.owed), `${file}: an owed note is behind`);
     assert.ok(deal.deep.every((e) => e.inputs.suppressed), `${file}: something unfinished is behind`);
+    assert.ok(deal.outer.every((e) => !e.inputs.owed), `${file}: an owed note is in the outer field`);
+    assert.ok(deal.outer.every((e) => !e.inputs.suppressed), `${file}: finished work is in the outer field, which is the middle's`);
+    // ADR-0005 over all four bands: in a band or counted, exactly once.
     assert.equal(
-      deal.front.length + deal.frontOverflow + deal.mid.length + deal.midOverflow + deal.deep.length,
+      deal.front.length +
+        deal.mid.length +
+        deal.outer.length +
+        deal.deep.length +
+        deal.frontOverflow +
+        deal.midOverflow +
+        deal.outerOverflow +
+        deal.deepOverflow,
       entries.length,
       `${file}: a note was dealt nowhere and counted nowhere`,
     );
@@ -206,9 +216,114 @@ test('a pull beside a pane on a narrow field keeps its slot, and an owed note is
   // A default pane at the left of an 800-pixel field, facing the front.
   const obstacles = obstaclesFor({ left: 16, right: 336 }, 0, { width: 800, height: 700 });
   const ids = (list) => list.map((e) => e.card.noteId);
-  const kept = assignSlots({ front: ids(frontForSlots(deal.front)), mid: [], deep: [] }, obstacles);
+  const kept = assignSlots({ front: ids(frontForSlots(deal.front)), mid: [], outer: [], deep: [] }, obstacles);
   assert.ok(kept.slots.has(quiet.card.noteId), 'the pull lost its slot to the pane');
   assert.ok(kept.frontOverflow > 0, 'the pane took no slot, so this measured nothing');
-  const naive = assignSlots({ front: ids(deal.front), mid: [], deep: [] }, obstacles);
+  const naive = assignSlots({ front: ids(deal.front), mid: [], outer: [], deep: [] }, obstacles);
   assert.equal(naive.slots.has(quiet.card.noteId), false, 'dealt in the fill order, the pull vanishes: the case this guards');
+});
+
+// ---- ADR-0005: four bands, a capacity each, and every remainder stated (TASK-0072) ----
+
+/** A view's table with the capacities this check wants, so a case fits on a screen. */
+function table(extra = {}) {
+  return { ...VIEWS.find((v) => v.id === 'features').band, ...extra };
+}
+
+/** `n` plain subject notes, in the order the navigator would list them. */
+function subject(n, prefix = 'S') {
+  const cards = Array.from({ length: n }, (_, i) => card(`${prefix}-${String(i).padStart(3, '0')}`));
+  return fieldEntries([{ key: 'g', label: 'a heading', needsHuman: false, suppressed: false, cards }]);
+}
+
+test("the middle's remainder is PLACED in the outer field, not counted and dropped", () => {
+  // ISS-0079: before ADR-0005 these twelve notes were incremented into
+  // midOverflow and left out of the deal, so a person turning all the way
+  // round never found them.
+  const deal = dealField(table({ midCapacity: 8, outerCapacity: 8 }), subject(12));
+  assert.equal(deal.mid.length, 8);
+  assert.equal(deal.outer.length, 4);
+  assert.equal(deal.midOverflow, 0, 'a note was counted that the outer field had room for');
+});
+
+test('the middle is counted only when the outer field is full too', () => {
+  const deal = dealField(table({ midCapacity: 8, outerCapacity: 8 }), subject(20));
+  assert.equal(deal.mid.length, 8);
+  assert.equal(deal.outer.length, 8);
+  assert.equal(deal.midOverflow, 4);
+  assert.equal(deal.outerOverflow, 0, 'no view sends a note to the outer field itself');
+});
+
+test('the outer field continues the navigator order the middle keeps', () => {
+  const deal = dealField(table({ midCapacity: 8, outerCapacity: 8 }), subject(16));
+  const order = [...deal.mid, ...deal.outer].map((e) => e.card.noteId);
+  assert.deepEqual(order, [...order].sort(), 'the two bands are not one ordered sequence cut at the capacity');
+  assert.equal(deal.mid.at(-1).card.noteId, 'S-007');
+  assert.equal(deal.outer[0].card.noteId, 'S-008', 'the outer field started somewhere other than where the middle stopped');
+});
+
+test('the quiet band has a capacity like every other band, and states what it could not place', () => {
+  // ISS-0078, Edwin 2026-09-12: a capacity, never a deletion. The band is
+  // still drawn and still holds the finished work.
+  const cards = Array.from({ length: 30 }, (_, i) => card(`D-${i}`, { status: 'done' }));
+  const entries = fieldEntries([{ key: 'done', label: 'finished', needsHuman: false, suppressed: true, cards }]);
+  const deal = dealField(table({ deepCapacity: 18 }), entries);
+  assert.equal(deal.deep.length, 18);
+  assert.equal(deal.deepOverflow, 12);
+});
+
+test('a note a hand pushed behind is never the one the quiet band drops', () => {
+  // FEAT-0014's push is a person's deliberate act. The capacity drops the far
+  // end of the record's own ordering, never a hand's.
+  const cards = Array.from({ length: 20 }, (_, i) => card(`D-${i}`, { status: 'done' }));
+  const entries = fieldEntries(
+    [{ key: 'done', label: 'finished', needsHuman: false, suppressed: true, cards }],
+    hand({ pushed: new Set(['D-19']) }),
+  );
+  const deal = dealField(table({ deepCapacity: 5 }), entries);
+  assert.equal(deal.deep.length, 5);
+  assert.equal(deal.deepOverflow, 15);
+  assert.ok(deal.deep.some((e) => e.card.noteId === 'D-19'), 'the capacity dropped a note a hand had pushed there');
+  assert.equal(deal.pushedBehind, 0, 'a suppressed note pushed by hand is not counted as hand-placed');
+});
+
+test('a pushed note that is not finished work is in the quiet band and counted as a hand’s', () => {
+  const cards = Array.from({ length: 3 }, (_, i) => card(`S-${i}`));
+  const entries = fieldEntries([{ key: 'g', label: 'a heading', needsHuman: false, suppressed: false, cards }], hand({ pushed: new Set(['S-1']) }));
+  const deal = dealField(table(), entries);
+  assert.deepEqual(deal.deep.map((e) => e.card.noteId), ['S-1']);
+  assert.equal(deal.pushedBehind, 1);
+});
+
+test('a description that names no capacity gets the defaults', () => {
+  for (const view of VIEWS) {
+    assert.equal(view.band.outerCapacity, 40, `${view.id} has no outer-field capacity`);
+    assert.equal(view.band.deepCapacity, 3000, `${view.id} has no quiet-band capacity`);
+  }
+});
+
+test('a pull still takes a front-band spare, and an owed note past the capacity is still counted', () => {
+  // ISS-0059 is not disturbed by the fourth band.
+  const owed = Array.from({ length: 14 }, (_, i) => card(`O-${i}`, { owed: true, owedVerb: 'review' }));
+  const entries = fieldEntries(
+    [{ key: 'g', label: 'a heading', needsHuman: false, suppressed: false, cards: [...owed, card('P-0')] }],
+    hand({ pulled: new Set(['P-0']) }),
+  );
+  const deal = dealField(table(), entries);
+  assert.equal(deal.front.length, 13, 'the pulled note did not take a spare slot');
+  assert.ok(deal.front.some((e) => e.card.noteId === 'P-0'));
+  assert.equal(deal.frontOverflow, 2);
+  assert.equal(deal.handPlaced, 1);
+});
+
+test('the outer field takes its own slots, behind the middle and in front of the quiet band', () => {
+  const deal = dealField(table({ midCapacity: 8, outerCapacity: 8 }), subject(16));
+  const ids = (list) => list.map((e) => e.card.noteId);
+  const { slots, outerOverflow } = assignSlots({ front: [], mid: ids(deal.mid), outer: ids(deal.outer), deep: [] });
+  assert.equal(outerOverflow, 0);
+  const mid = ids(deal.mid).map((id) => slots.get(id));
+  const outer = ids(deal.outer).map((id) => slots.get(id));
+  assert.ok(outer.every((s) => s.band === 'outer'), 'an outer-field note took a slot in another band');
+  assert.ok(outer.every((s) => s.depth > mid[0].depth), 'the outer field is not behind the middle');
+  assert.ok(outer.every((s) => s.depth < 760), 'the outer field is not in front of the quiet band');
 });

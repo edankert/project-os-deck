@@ -176,6 +176,8 @@ function readView(
       rows: [{ when: {}, band: 'mid', note: 'A vault note carries no project-os obligation, so nothing is in front.' }],
       frontCapacity: 12,
       midCapacity: 40,
+      outerCapacity: 40,
+      deepCapacity: 3000,
       gathersOwed: false,
     },
     face,

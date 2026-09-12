@@ -634,7 +634,7 @@ export class GlassField {
     }
     if (this.input.view === null) {
       this.deal = null;
-      this.model.deal({ front: [], mid: [], deep: [] }, []);
+      this.model.deal({ front: [], mid: [], outer: [], deep: [] }, []);
     } else {
       this.deal = dealField(this.input.view.band, entries, { first: new Set(this.shared.keys()) });
       // The order the front band takes its SLOTS in: the neighbourhood, then
@@ -647,6 +647,7 @@ export class GlassField {
         {
           front: frontOrder.map((e) => e.card.noteId),
           mid: this.deal.mid.map((e) => e.card.noteId),
+          outer: this.deal.outer.map((e) => e.card.noteId),
           deep: this.deal.deep.map((e) => e.card.noteId),
         },
         this.paneObstacles(),
