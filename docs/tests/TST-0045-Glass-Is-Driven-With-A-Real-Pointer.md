@@ -113,3 +113,17 @@ Fourteen checks for four bands, every remainder stated, and a reachable quiet ba
 **Three defects the run found before it went green**, none of which any node check could have seen: the quiet band's tab stop swallowed the click on its own tile, because it is a `<button>` and the field's `pointerdown` ignores anything inside one; the conservation check added two different overflow counts and so counted four notes twice; and the check picked tiles standing behind panes and cards, which are correctly unclickable.
 
 **The breaks are still owed.** Each new check has to be seen to fail with its fix removed, one break per run, and the quiet-band click has to be seen to fail against the code as it stood before FEAT-0018. Those runs wait on a local display that is not the one Edwin is typing on.
+
+## The breaks, 2026-09-12
+
+Three, one run each, in [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]'s container. Each was confirmed present in the tree before its run, and in every case the break's own check was **the only new failure**.
+
+| The break | What failed |
+|---|---|
+| The field stops consulting `tileAt` on `pointerup` — [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]'s defect | "a click on the quiet band's ISS-0027 puts it on the desk (ISS-0073)" |
+| `paintCanvas` stops skipping a promoted note | "no note is painted and drawn as an element in the same frame (8)" |
+| Detail keyed to the band rather than the drawn width — [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]'s defect | "zooming a mid-band card shows more of its note (brief to brief)" |
+
+The second closes a gap [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] recorded rather than hid: no node check can see a note painted and drawn as an element in the same frame.
+
+Eleven of the fourteen checks have no break of their own. A run in the box costs about half an hour, and the three chosen are the ones nothing else covers; the deal, the shapes and the thresholds underneath them are pure and are each broken deliberately in their own suites, where a break costs seconds.

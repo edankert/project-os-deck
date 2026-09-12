@@ -634,7 +634,7 @@ items:
     TASK-0078:
       file: "docs/features/glass-bands/plan/tasks/TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward.md"
       title: "The smoke run clicks a finished note with a real pointer, pulls it forward, walks the shelf with the keyboard, and finds a note in the fourth band that used to be drawn nowhere"
-      status: backlog
+      status: done
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
@@ -1851,7 +1851,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 81
-    tasks_done: 77
+    tasks_done: 78
     tests_total: 39
     tests_passing: 2
     tests_failing: 0

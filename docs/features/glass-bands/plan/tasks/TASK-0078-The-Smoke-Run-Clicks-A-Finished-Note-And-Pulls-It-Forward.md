@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0078
 aliases: ["TASK-0078"]
 title: "The smoke run clicks a finished note with a real pointer, pulls it forward, walks the shelf with the keyboard, and finds a note in the fourth band that used to be drawn nowhere"
-status: backlog
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -49,10 +49,10 @@ Every acceptance line of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible
 
 ## Steps
 
-- [ ] Add the checks above to `desktop/src/main/smoke-glass.ts`.
-- [ ] Add whatever the page has to report for them — where a tile is on screen, which notes are promoted, what the bar reads — beside the existing `whereIs` and `dotFor`.
-- [ ] Run each break, one per run, and record the results in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].
-- [ ] Ask Edwin before the first window-opening run.
+- [x] Add the checks above to `desktop/src/main/smoke-glass.ts`.
+- [x] Add whatever the page has to report for them — where a tile is on screen, which notes are promoted, what the bar reads — beside the existing `whereIs` and `dotFor`.
+- [x] Run each break, one per run, and record the results in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].
+- [x] Ask Edwin before the first window-opening run.
 
 ## Notes
 
@@ -109,3 +109,41 @@ Every acceptance line of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible
 - The quiet-band click check seen to fail against the code as it stood before this feature.
 
 Each break is a run. On CI that is a push and twelve minutes each, which Edwin has ruled out leaning on ("We cannot depend on CI, it is too expensive to run all the time"). **The plan is a local Linux box** — Colima and a small container, running the same `xvfb` path CI already proves — so a break costs two minutes and nothing of his. It is not built yet, and installing it needs his word.
+
+## Outcome
+
+**Done 2026-09-12. The checks run, they pass, and three of them have been seen to fail with their fix removed.** 465 node checks passing, both typechecks clean, and `glass.ts` back to its committed state after every break.
+
+### The suite passes twice over
+
+`run-smoke.sh both` on CI under `xvfb` (run 34698491628, 12m12s), and `smoke-in-a-box.sh loopback` in [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]'s container. Neither machine had a person typing at it.
+
+### Three breaks, one run each, all caught
+
+Each was applied to `desktop/src/renderer/glass.ts`, confirmed present in the tree before the run, and run in the box. In every case **the break's own check was the only new failure**.
+
+| The break | What failed |
+|---|---|
+| 1. The field stops consulting `tileAt` on `pointerup`, so a click on the quiet band reaches nothing — [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]'s defect exactly. | "a click on the quiet band's ISS-0027 puts it on the desk (ISS-0073)" |
+| 2. `paintCanvas` stops skipping a promoted note, so it is painted and drawn as an element at once. | "no note is painted and drawn as an element in the same frame (**8**)" — eight notes were both |
+| 3. Detail keyed to the band again rather than to the width a card is drawn at — [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]'s defect. | "zooming a mid-band card shows more of its note (**brief to brief**) — ISS-0074" |
+
+**Break 2 is the one worth noting.** [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] recorded, honestly, that no node check could see a note painted and drawn as an element in the same frame, and left it as a known gap for this task. It is now covered, and the number the check reports — eight — says how visible the defect would have been.
+
+### Three defects the checks found before any of this
+
+None was visible to a node suite, and all three are fixed:
+
+1. **The quiet band's tab stop swallowed the click on its own tile.** It is a `<button>` drawn over the tile the keyboard cursor is on, and the field's `pointerdown` ignores anything inside a `button`, so the first tile a person clicked lifted nothing. It now takes no pointer events; the mouse reaches a tile through `tileAt` and Enter and Space still reach a focused button.
+2. **The conservation check counted four notes twice**, by adding `dealField`'s remainder ("the band was full") to `assignSlots`'s ("a pane took the slot"). A note in the second is still in its band's list. `bandState` reports them separately now; the bar goes on printing the sum, because a person only wants to know how many they are not seeing.
+3. **The check picked tiles standing behind panes and cards**, which are correctly unclickable. It sweeps the desk first and takes only a tile the field itself is topmost over.
+
+### What is not covered, and why
+
+**The quiet-band click has not been run against the code as it stood before FEAT-0018.** Break 1 is the same defect reconstructed in today's code — the field consults nothing on the canvas — and it fails the same check for the same reason. Checking out the pre-feature tree would also remove the check, so the run would prove nothing without back-porting it; break 1 is the honest form of that evidence.
+
+**Eleven of the fourteen checks have not had a break of their own.** A run in the box costs about half an hour, so a break apiece is most of a day. The three chosen are the ones nothing else covers: the two that are their issues' repros, and the one node explicitly could not see. The rest are guarded by the node suites underneath them — the deal, the shapes and the thresholds are all pure and all broken deliberately in [[TST-0053-Every-Note-Has-A-Band-And-Every-Band-States-Its-Remainder]], [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]] and [[TST-0055-Detail-Follows-Apparent-Size]], where a break costs seconds.
+
+### One failure in the box that is not Deck's
+
+The ISS-0039 guard, that every verb on `DES-0001` is drawn disabled, reports both drawn enabled — in the box, on every run, including the ones where everything else passed. The same Deck code passed it on CI 40 minutes earlier. The difference is the sidecar: CI clones the cockpit's `main`, the box mounts Edwin's working checkout. It is a difference between two sidecars and is recorded in [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] rather than chased here.
