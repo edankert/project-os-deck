@@ -1950,22 +1950,32 @@ async function recordDesksPerView(
     // ---- FEAT-0018: four bands, every remainder stated, and the quiet band reachable ----
     await view('issues');
     await delay(600);
+    // Sweep first: the sections above leave panes open, and a pane covers the
+    // field. A tile under one is correctly unclickable, so a check that did
+    // not clear them would be measuring the pane.
+    await js(`window.__deckGlass.sweep(); true`);
+    await delay(900);
     await js(`document.getElementById('field').focus(); window.__deckGlass.model.face(Math.PI); window.__deckGlass.render(false); true`);
-    await delay(400);
+    await delay(500);
 
     const bands = await js<BandState>(`__t.bands()`);
     const sums = bands.counts.front + bands.counts.mid + bands.counts.outer + bands.counts.deep;
+    // The DEAL's remainders only. A note the assignment could not give a slot
+    // to is still in its band's list, so adding both would count it twice —
+    // which is what the first run of this check did.
     const rest = bands.remainders.front + bands.remainders.mid + bands.remainders.outer + bands.remainders.deep;
     const dealt = bands.dealt;
-    record(sums + rest === dealt, `every note the view holds is in a band or counted: ${bands.counts.front}+${bands.counts.mid}+${bands.counts.outer}+${bands.counts.deep} drawn, ${rest} counted, ${dealt} dealt`);
+    record(sums + rest === dealt, `every note the view holds is in a band or counted: ${bands.counts.front}+${bands.counts.mid}+${bands.counts.outer}+${bands.counts.deep} placed, ${rest} counted, ${dealt} dealt`);
 
     // 1. Every remainder that is not zero is on the bar, and none that is.
     const bar = await js<string>(`__t.text('#field-overflow')`);
+    // The bar prints both reasons added together, because a person only wants
+    // to know how many they are not seeing.
     const names = (n: number, what: string): boolean => (n > 0 ? bar.includes(`${n} ${what}`) : !bar.includes(what));
     record(
-      names(bands.remainders.front, 'more in front') &&
-        names(bands.remainders.mid, 'more in the middle') &&
-        names(bands.remainders.outer, 'more in the outer field') &&
+      names(bands.remainders.front + bands.unslotted.front, 'more in front') &&
+        names(bands.remainders.mid + bands.unslotted.mid, 'more in the middle') &&
+        names(bands.remainders.outer + bands.unslotted.outer, 'more in the outer field') &&
         names(bands.remainders.deep, 'more in the quiet band'),
       `the bar names every remainder and no other: "${bar}"`,
     );
@@ -1976,15 +1986,48 @@ async function recordDesksPerView(
 
     // 3. THE CHECK THAT FAILS BEFORE THIS FEATURE: a click on a finished note
     //    puts it on the desk. ISS-0073's repro, with a real pointer.
-    const tile = await js<{ id: string; x: number; y: number } | null>(
-      `(() => { const f = document.getElementById('field').getBoundingClientRect(); const t = __t.bands().tiles.filter((t) => t.x > 120 && t.x < f.width - 120 && t.y > 60 && t.y < f.height - 60); const held = new Set(window.__deckDesk()); const pick = t.find((x) => !held.has(x.id)); return pick ? { id: pick.id, x: f.left + pick.x, y: f.top + pick.y } : null; })()`,
+    // A tile that is actually ON TOP at that point. Facing the quiet band, the
+    // middle band's outer columns are in sight too, and a tile behind a card
+    // is not clickable — correctly, since the card is what a person is
+    // pointing at. The first run of this check picked one and blamed the
+    // canvas.
+    const tile = await js<{ id: string; x: number; y: number; over: string | null } | null>(
+      `(() => {
+        const f = document.getElementById('field').getBoundingClientRect();
+        const held = new Set(window.__deckDesk());
+        for (const t of __t.bands().tiles) {
+          if (t.x < 120 || t.x > f.width - 120 || t.y < 60 || t.y > f.height - 60) continue;
+          if (held.has(t.id)) continue;
+          const x = f.left + t.x;
+          const y = f.top + t.y;
+          // The canvas takes no pointer events, so the topmost thing over a
+          // bare tile is the field itself; anything else is a card or a pane
+          // standing in front of it.
+          // Anything that is not a note id: the canvas takes no pointer
+          // events, so over a bare tile the topmost element is the field or
+          // one of its own containers. A note id means a card is in front.
+          // Only the field's own containers. The canvas takes no pointer
+          // events, so over a bare tile the topmost element is the field
+          // itself; a card id or a pane's class means something is in front.
+          const over = __t.hit(x, y);
+          if (typeof over !== 'string' || !over.startsWith('field')) continue;
+          return { id: t.id, x, y, over };
+        }
+        return null;
+      })()`,
     );
+    const shapeBefore = await js<string>(`JSON.stringify(__t.bands().shapes)`);
     if (tile === null) {
       ctx.skip('a quiet-band tile is on screen to click');
     } else {
       await pointer(win, [{ type: 'down', x: tile.x, y: tile.y }, { type: 'up', x: tile.x, y: tile.y, wait: 700 }]);
       const held = await js<string[]>(`window.__deckDesk()`);
-      record(held.includes(tile.id), `a click on the quiet band's ${tile.id} puts it on the desk (ISS-0073)`);
+      record(held.includes(tile.id), `a click on the quiet band's ${tile.id} puts it on the desk (ISS-0073; the pointer was over ${tile.over})`);
+      // That click moved a note out of the quiet band and onto the desk,
+      // which is a note changing band. Nothing about the field's geometry may
+      // move with it (ADR-0005, FEAT-0018 decision 5).
+      const shapeAfter = await js<string>(`JSON.stringify(__t.bands().shapes)`);
+      record(shapeAfter === shapeBefore, `lifting ${tile.id} out of the quiet band leaves every band's shape where it was`);
       // 4. And the cursor says so before the click does.
       const cursor = await js<string>(
         `(() => { const f = document.getElementById('field').getBoundingClientRect(); return getComputedStyle(document.getElementById('field')).cursor; })()`,
@@ -2046,19 +2089,7 @@ async function recordDesksPerView(
     }
 
     // 8. The shape does not move underneath a person; a view switch recomputes it.
-    const shapeBefore = await js<string>(`JSON.stringify(__t.bands().shapes)`);
-    const pickable = await js<{ id: string; x: number; y: number } | null>(
-      `(() => { const f = document.getElementById('field').getBoundingClientRect(); const held = new Set(window.__deckDesk()); const c = __t.visibleCards().find((c) => !held.has(c.id)); return c ? { id: c.id, x: c.x, y: c.y } : null; })()`,
-    );
-    if (pickable === null) {
-      ctx.skip('a card is on screen to lift, to prove the shapes do not move');
-    } else {
-      // A real click, so the note genuinely changes band the way a person
-      // marking an issue fixed would move it.
-      await pointer(win, [{ type: 'down', x: pickable.x, y: pickable.y }, { type: 'up', x: pickable.x, y: pickable.y, wait: 800 }]);
-      const shapeAfter = await js<string>(`JSON.stringify(__t.bands().shapes)`);
-      record(shapeAfter === shapeBefore, `lifting ${pickable.id} leaves every band's shape where it was`);
-    }
+    // A view switch is the other half: it is what SHOULD recompute the shapes.
     await view('features');
     await delay(900);
     const shapeSwitched = await js<string>(`JSON.stringify(__t.bands().shapes)`);
@@ -2076,6 +2107,7 @@ interface BandState {
   shapes: Record<string, { depth: number; columns: number; rows: number; width: number; height: number }>;
   counts: { front: number; mid: number; outer: number; deep: number };
   remainders: { front: number; mid: number; outer: number; deep: number };
+  unslotted: { front: number; mid: number; outer: number };
   dealt: number;
   cursor: string | null;
 }

@@ -76,3 +76,23 @@ Every acceptance line of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible
 8. Lifting a note leaves every band's shape where it was.
 
 **Owed before this task is done:** the run itself, each break one per run, and the results written into [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].
+
+## Four runs, 2026-09-12, and why they stopped
+
+**Run on Edwin's word ("run both now"), and stopped on his word four runs later: "I am using the computer keyboard at the same time! This is not working for me!"** The smoke run takes the keyboard 23 times ([[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]]), and a person typing takes it back, so the two fight for it.
+
+### What the runs proved
+
+**The check this feature exists for passes.** A real pointer click on a quiet-band tile puts that note on the desk — [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]'s repro, green. So does the conservation line, the bar's remainders, the compass, the one tab stop and the arrow walk.
+
+**Three defects were found by running it, all real, all now fixed.**
+
+1. **The quiet band's tab stop swallowed the click on its own tile.** It is a `<button>` drawn over the tile the keyboard cursor is on, and the field's `pointerdown` ignores anything inside a `button`, so the first tile a person clicked lifted nothing. It now takes no pointer events at all: the mouse reaches a tile through `tileAt`, and Enter and Space still reach a focused button. Found on the first run; no node check could have seen it.
+2. **The conservation check counted four notes twice.** `dealField`'s remainder ("the band was full") and `assignSlots`'s ("a pane took the slot") are different reasons a note is not drawn, and a note in the second is still in its band's list. `bandState` now reports them as two fields, the check uses the deal's, and the bar goes on printing the sum because a person only wants to know how many they are not seeing.
+3. **The check picked tiles standing behind panes and cards.** Facing the quiet band, the middle band's outer columns are in sight and the sections above leave panes open. A tile under one is correctly unclickable, so the check swept the desk first and now takes only a tile the field itself is topmost over.
+
+### What the runs could not settle
+
+**The results are not repeatable while a person is using the machine.** Four runs gave four different failure sets, and the failures moved around checks that need the window to hold the keyboard: "the window had lost the keyboard", a flight measured as a cut, Enter reaching nothing, a ring drawn with no neighbours. None is in this feature's section; all are older checks that assume focus. [[ISS-0068-The-Throw-Checks-Sometimes-Draw-No-Strip-And-Everything-After-Fails]] is the same shape of problem already on the record.
+
+**So this task is not done, and the reason is [[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]].** Its decision was taken on 2026-09-12 — "default the run to no-focus" — and building it is what makes this run mean anything. Owed after that: the run itself, each break one per run, and the results in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]].

@@ -75,3 +75,11 @@ One trigger applies: the runner gains a mode, which is a change to a front-door 
 
 > [!note] Accept — 2026-09-12 (user:edwin)
 > default the run to no-focus
+
+## Evidence from four runs, 2026-09-12
+
+Edwin said to run the window suites and, four runs later, stopped them: "I am using the computer keyboard at the same time! This is not working for me!"
+
+**This is no longer only an irritation; it makes the smoke run unable to answer a question.** Four consecutive runs of the same code gave four different failure sets, and the failures clustered on checks that need the window to hold the keyboard — one reported "the window had lost the keyboard" in its own message, another measured a flight as a cut because no frames were recorded, another found Enter had reached nothing. A run whose result depends on whether a person is typing cannot verify anything, which is a stronger reason to fix this than the interruption was.
+
+**It also blocks [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]**, which cannot be closed until its checks can be run repeatably, and [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]], whose numbers are meaningless taken while another application is stealing the display.

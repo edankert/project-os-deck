@@ -508,7 +508,10 @@ export class GlassField {
     promoted: string[];
     shapes: Record<string, { depth: number; columns: number; rows: number; width: number; height: number }>;
     counts: { front: number; mid: number; outer: number; deep: number };
+    /** What the DEAL could not place: the band was full. These plus the four lists are every note. */
     remainders: { front: number; mid: number; outer: number; deep: number };
+    /** What the ASSIGNMENT could not place: a pane took the slot. These notes ARE in the lists above. */
+    unslotted: { front: number; mid: number; outer: number };
     dealt: number;
     cursor: string | null;
   } {
@@ -529,10 +532,15 @@ export class GlassField {
         deep: this.deal?.deep.length ?? 0,
       },
       remainders: {
-        front: (this.deal?.frontOverflow ?? 0) + this.model.current.frontOverflow,
-        mid: (this.deal?.midOverflow ?? 0) + this.model.current.midOverflow,
-        outer: (this.deal?.outerOverflow ?? 0) + this.model.current.outerOverflow,
+        front: this.deal?.frontOverflow ?? 0,
+        mid: this.deal?.midOverflow ?? 0,
+        outer: this.deal?.outerOverflow ?? 0,
         deep: this.deal?.deepOverflow ?? 0,
+      },
+      unslotted: {
+        front: this.model.current.frontOverflow,
+        mid: this.model.current.midOverflow,
+        outer: this.model.current.outerOverflow,
       },
       dealt: this.entries.size,
       cursor: this.quietAt,

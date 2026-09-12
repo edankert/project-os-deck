@@ -958,5 +958,11 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   color: transparent;
   font-size: 1px;
   z-index: 1200;
+  /* Keyboard only. It sits ON TOP of the tile it marks, and a button swallows
+     the pointer: the first click on the quiet band landed on the cursor and
+     lifted nothing (found by the smoke run, 2026-09-12). The mouse reaches a
+     tile through `tileAt`, and Enter and Space still reach a focused button
+     with no pointer events at all. */
+  pointer-events: none;
 }
 .quiet-cursor:focus-visible { outline: 2px solid var(--owed); outline-offset: 2px; }
