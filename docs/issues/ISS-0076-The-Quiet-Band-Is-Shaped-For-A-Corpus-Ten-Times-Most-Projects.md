@@ -73,3 +73,4 @@ No trigger applies: no new dependency, env var, path or exposure. The shape feed
 
 - [ ] Edwin confirms the reading above: adapt by **size and detail** with the band staying behind the person, rather than by walking the band forward.
 - [ ] Then a task under [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]: `quietShapeFor` as a pure function with a table test, recomputed on a view or workspace change only, and the measurement retaken on all three workspaces.
+- [ ] **Settle [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]] first.** If the shelf is not drawn there is no shape to adapt and this issue dissolves.
