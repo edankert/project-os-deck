@@ -76,7 +76,7 @@ Fields:
 - (optional) `review_verdict` (string): `approved | changes-requested`.
 
 Body sections:
-- **`## Impact` is a list of the screens this change altered**, and `tools/scripts/walk-sheet.py` parses it to build a release walk's survey (project-os-dev ADR-0045 decision 2). The shape a parser reads: one list item per screen, beginning with a `[[SUR-####]]` link or a bare `SUR-####` id, then a separator (`:`, `—` or `-`), then one sentence in the words a person using the product would use. Everything after the separator is printed verbatim on the sheet.
+- **`## Impact` is a list of the screens this change altered**, and `tools/scripts/walk-sheet.py` parses it to build a release walk's survey (project-os-dev ADR-0045 decision 2). The shape a parser reads: one list item per screen, beginning with a `[[SUR-####]]` link or a bare `SUR-####` id, then a separator (`:`, `—` or `-`), then one sentence in the words a person using the product would use. Everything after the separator is printed verbatim on the sheet. An item may name more than one screen, joined by `and`, `,`, `&` or `+` before the separator, and every screen it names gets that one sentence. Lines inside a fenced block are examples and are not read.
 - A change that altered no screen writes one item reading **`No screen changed`** followed by the reason. The parser recognises that phrase and asks for nothing else. A change note with no Impact list at all contributes nothing to the survey and is reported by `walk-sheet.py --check`.
 - ~~`## Acceptance checks reopened`~~ — **removed (ADR-0045 decision 1).** The survey no longer reads it. Why a check was reopened is the `reason:` on the ledger's invalidation event, which the ledger refuses to accept without. Old change notes keep the section; nothing parses it.
 
@@ -286,10 +286,10 @@ Body:
 | part | what a parser reads |
 |---|---|
 | `## Setup` | Everything under the heading, printed verbatim once at the top of the sitting. |
-| `## Steps` | The numbered items under it. A line matching `N.` at the start of a line begins step `N`; everything until the next such line belongs to it. |
+| `## Steps` | The numbered items under it. A line matching `N.` at the start of a line begins a step; everything until the next such line belongs to it. **The step's number is its position, not the digit written** — `1.` on every item gives steps 1, 2, 3, which is what markdown renders. Lines inside a fenced block belong to the step and are not read for tags. |
 | a step's first line | The screen: the first `SUR-####` id on it, or failing that the first surface title that matches a `SUR-*` note exactly. A step naming no screen is reported, not refused. |
 | an expectation line | Any line inside a step carrying at least one expectation tag. Strip the list marker and the tags; what remains is the quote. |
-| an expectation tag | `` `TST-####.N` `` or `` `TST-####` ``, in backticks, ASCII. `N` is the check's step number; the bare form cites a check whose steps are not numbered. Several tags on one line mean several checks expect the same thing in the same words. |
+| an expectation tag | `` `TST-####.N` `` or `` `TST-####` ``, in backticks, ASCII. `N` is the position of the cited check's step, counted the same way; the bare form cites a check whose steps are not numbered. Several tags on one line mean several checks expect the same thing in the same words. |
 | the quote | Compared against the lines of the tagged check's `## Expect` section after stripping list markers and collapsing whitespace. Nothing else may differ. |
 
 Any heading other than `## Setup` and `## Steps` is prose for the reader and is not parsed — `## Not covered here` is the conventional place to say which checks in the sitting the procedure does not yet reach.
