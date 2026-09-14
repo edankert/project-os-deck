@@ -75,6 +75,11 @@ Fields:
 - (optional) `review_date` (string/date): Date of the independent review.
 - (optional) `review_verdict` (string): `approved | changes-requested`.
 
+Body sections:
+- **`## Impact` is a list of the screens this change altered**, and `tools/scripts/walk-sheet.py` parses it to build a release walk's survey (project-os-dev ADR-0045 decision 2). The shape a parser reads: one list item per screen, beginning with a `[[SUR-####]]` link or a bare `SUR-####` id, then a separator (`:`, `—` or `-`), then one sentence in the words a person using the product would use. Everything after the separator is printed verbatim on the sheet.
+- A change that altered no screen writes one item reading **`No screen changed`** followed by the reason. The parser recognises that phrase and asks for nothing else. A change note with no Impact list at all contributes nothing to the survey and is reported by `walk-sheet.py --check`.
+- ~~`## Acceptance checks reopened`~~ — **removed (ADR-0045 decision 1).** The survey no longer reads it. Why a check was reopened is the `reason:` on the ledger's invalidation event, which the ledger refuses to accept without. Old change notes keep the section; nothing parses it.
+
 Where used:
 - Tracked in `SNAPSHOT.yaml` (`items.changes`) for agent context and linked from change notes.
 
@@ -221,6 +226,7 @@ An acceptance test is the thing a person walks. It carries the fields below and 
 - ~~`tier`~~ — **removed (ADR-0034).** There is no tier system: a check's section is derived from `covers:` and `command:` (`tools/instructions/TESTING.md`, "The three sections"). Readers still accept the field on legacy notes and ignore it.
 - ~~`burden`~~, ~~`migrated_from`~~, ~~`merged_from`~~ — **removed (ISS-0233).** Provenance of migrations that are finished, plus a field empty on every check in the fleet. Git holds the first two, with the shas ADR-0030 and ADR-0031 name; a field is the wrong place for a fact already immutable somewhere better.
 - (required) `area` (string): the human grouping — "The navigator", "Agents and sessions". One walk's worth of related checks.
+- (optional) `after` (list of check ids): the checks that should have passed before this one is walked — `after: ["TST-0044"]`. Read by `tools/scripts/walk-sheet.py` to order rows inside a sitting (`tools/instructions/TESTING.md`, "The walk", rule 4). It gates nothing: a check whose prerequisite has not passed still appears on the sheet and still blocks the release, it is simply printed later.
 - ~~`section`~~, ~~`ordinal`~~ — **removed (ISS-0224).** They were a check's position in `ACCEPTANCE_TESTS.md`, a document that exists in no migrated repo. Order is `id` and grouping is `area` alone. Measured before the removal, ordering by tier-then-id reproduced the old section order byte-for-byte in every repo, and no area spanned two sections anywhere; ADR-0034 then removed `tier` as well, leaving `id`.
 
 Where NOT used:
@@ -230,6 +236,63 @@ Where NOT used:
 
 Where used:
 - Tracked in `SNAPSHOT.yaml` (`items.tests`) for agent context and linked from test notes.
+
+## `surface.md` (`type: [[surface]]`)
+
+Purpose: name one place in the product once, so every check that touches it can say `area:` and mean the same place.
+
+Naming:
+- Filename should be `SUR-####-Short-Name.md`; `id` should match the `SUR-####` prefix.
+- `title` is the string a check's `area:` matches, so it is the part that must not drift. Renaming a surface and its checks happens in one commit (project-os-cockpit ISS-0250).
+
+Fields:
+- (required) `kind` (string): values in `tools/instructions/TAXONOMY.md`, "`kind` (surfaces)". **A surface is a screen unless this says otherwise**, and the four rules for the cases that get it wrong are stated there (project-os-dev ADR-0044).
+- (optional) `platforms` (list of strings): the platforms this surface exists on. Empty means all of them.
+- (optional) `parent` (link or string): the screen this one opens from. A dialog, sheet, panel or section carries it; a top-level screen does not.
+- (optional) `gallery` (list of strings): the screenshot keys that capture this surface — `key`, or `key:state` where that key captures it in one state, for example `gallery: [equipment-hub, "equipment-hub-dataonly:data-only"]`. Read by `tools/scripts/walk-sheet.py` to put a before and an after picture in the walk sheet's survey; where it looks for the image files is `tools/instructions/TESTING.md`, "The walk", rule 2.
+
+Where NOT used:
+- A `## Coverage` list of checks. The checks covering a surface are derived from their `area:` (ADR-0032).
+
+## `walk.md` — the walk order (`WALK.md`)
+
+Purpose: the one file per project that says in what order a release is walked. Instantiated from `walk.md` to `docs/tests/acceptance/WALK.md`, typed `[[reference]]`, resting at `active` (or `deprecated`). What a walk sheet does with it is stated once in `tools/instructions/TESTING.md`, "The walk"; this entry is the syntax alone.
+
+Frontmatter: the standing-document fields (`type`, `title`, `status`, `owner`, `created`, `updated`), plus one optional key:
+
+- (optional) `gallery` (string): a command that regenerates the project's screen gallery. The walk sheet prints it at the top of the survey, as the thing to run and compare before walking anything.
+
+Body: prose the walker reads once, then **one `### ` heading per sitting with one fenced `yaml` block under it**. The heading is the sitting's name as the sheet prints it. The block's keys:
+
+| key | required | what it holds |
+|---|---|---|
+| `surfaces` (list) | one of the two | The `area:` strings this sitting claims, or `SUR-*` ids whose note title is that area string. A check joins the **first** sitting in file order that claims its area. |
+| `checks` (list) | one of the two | Check ids pulled into this sitting regardless of area. |
+| `state` (string) | recommended | The product state the sitting needs and the cheapest way to reach it, in the same register as a check's Setup line. |
+| `bench` (list) | recommended | What must be physically present, signed in or installed before the sitting starts, one line each. |
+
+A sitting block with neither `surfaces` nor `checks` claims nothing, and the generator reports it. No key carries a duration.
+
+## `procedure.md` — a sitting's procedure (`docs/tests/acceptance/walk/`)
+
+Purpose: the written script for one sitting of a release walk — the setup stated once, then numbered steps, each expectation tagged with the check step it satisfies. Instantiated from `procedure.md` to `docs/tests/acceptance/walk/<name>.md`, typed `[[reference]]`, resting at `active`. What a procedure is for, what the validator refuses and what the sheet prints are stated once in `tools/instructions/TESTING.md`, "The walk", rule 9; this entry is the shape a parser reads.
+
+Frontmatter: the standing-document fields (`type`, `title`, `status`, `owner`, `created`, `updated`), plus one required key:
+
+- (required) `sitting` (string): the `### ` heading in `docs/tests/acceptance/WALK.md` this procedure walks, word for word. It is the only link between the two files, and a value naming no sitting is reported by `walk-sheet.py --check`.
+
+Body:
+
+| part | what a parser reads |
+|---|---|
+| `## Setup` | Everything under the heading, printed verbatim once at the top of the sitting. |
+| `## Steps` | The numbered items under it. A line matching `N.` at the start of a line begins step `N`; everything until the next such line belongs to it. |
+| a step's first line | The screen: the first `SUR-####` id on it, or failing that the first surface title that matches a `SUR-*` note exactly. A step naming no screen is reported, not refused. |
+| an expectation line | Any line inside a step carrying at least one expectation tag. Strip the list marker and the tags; what remains is the quote. |
+| an expectation tag | `` `TST-####.N` `` or `` `TST-####` ``, in backticks, ASCII. `N` is the check's step number; the bare form cites a check whose steps are not numbered. Several tags on one line mean several checks expect the same thing in the same words. |
+| the quote | Compared against the lines of the tagged check's `## Expect` section after stripping list markers and collapsing whitespace. Nothing else may differ. |
+
+Any heading other than `## Setup` and `## Steps` is prose for the reader and is not parsed — `## Not covered here` is the conventional place to say which checks in the sitting the procedure does not yet reach.
 
 ## `check.md` — removed (ADR-0031)
 
