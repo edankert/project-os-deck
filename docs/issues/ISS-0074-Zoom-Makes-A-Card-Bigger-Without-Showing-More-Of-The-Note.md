@@ -13,7 +13,7 @@ severity: medium
 component: renderer
 parent: ""
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0055-Detail-Follows-Apparent-Size]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Zoom makes a card bigger without showing more of the note

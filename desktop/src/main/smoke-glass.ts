@@ -17,6 +17,8 @@ import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type { DeckState, WindowRole } from '../shared/types.js';
 import { type DeckAction, deskCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
+import { bandShapeFor } from '../shared/slots.js';
+import { detailFor, holdsDetail } from '../shared/detail.js';
 
 export interface GlassSmokeContext {
   store: { dispatch(action: DeckAction): DeckState; getState(): DeckState };
@@ -2028,11 +2030,29 @@ async function recordDesksPerView(
       // move with it (ADR-0005, FEAT-0018 decision 5).
       const shapeAfter = await js<string>(`JSON.stringify(__t.bands().shapes)`);
       record(shapeAfter === shapeBefore, `lifting ${tile.id} out of the quiet band leaves every band's shape where it was`);
-      // 4. And the cursor says so before the click does.
-      const cursor = await js<string>(
-        `(() => { const f = document.getElementById('field').getBoundingClientRect(); return getComputedStyle(document.getElementById('field')).cursor; })()`,
+      // 4. And the pointer says so before the click does: the cursor turns to
+      // a pointer over a tile, and a callout names the note under it.
+      //
+      // This used to read `record(typeof cursor === 'string', ...)`, which
+      // passes whatever the renderer does. It was the only cover for the
+      // acceptance line "shows the pointer cursor", and it passed through a
+      // release in which the handler that sets the cursor could not run at all
+      // (ISS-0081, ISS-0083). A hover is a real pointer move, not a click.
+      await pointer(win, [{ type: 'move', x: tile.x, y: tile.y, wait: 350 }]);
+      const resting = await js<{ cursor: string; callout: string | null }>(
+        `(() => { const c = document.getElementById('callout'); return { cursor: getComputedStyle(document.getElementById('field')).cursor, callout: c.hidden ? null : c.textContent }; })()`,
       );
-      record(typeof cursor === 'string', `the field reports a cursor over a tile (${cursor})`);
+      record(resting.cursor === 'pointer', `resting on a tile shows the pointer cursor (${resting.cursor})`);
+      record(
+        resting.callout !== null && resting.callout.includes(tile.id),
+        `resting on a tile names the note under it (${resting.callout ?? 'no callout'})`,
+      );
+      // And moving off it takes both away again.
+      await pointer(win, [{ type: 'move', x: 4, y: 4, wait: 350 }]);
+      const away = await js<{ cursor: string; hidden: boolean }>(
+        `({ cursor: getComputedStyle(document.getElementById('field')).cursor, hidden: document.getElementById('callout').hidden })`,
+      );
+      record(away.cursor !== 'pointer' && away.hidden, `moving off the tile takes the cursor and the callout away (${away.cursor})`);
     }
 
     // 5. One tab stop for the whole band, and the keyboard walks it.
@@ -2050,6 +2070,51 @@ async function recordDesksPerView(
     const heldNow = await js<string[]>(`window.__deckDesk()`);
     record(after !== null && heldNow.includes(after), `Enter on the quiet band's cursor puts ${after} on the desk`);
 
+    // 5b. TASK-0083: and `p` on the shelf pulls that note to the FRONT band,
+    // which is Edwin's "allow cards to be brought up to the active front
+    // band". Before this the only route to a pull was to zoom a tile past the
+    // promotion threshold, which a crowded shelf never reaches (ISS-0082), so
+    // on a large workspace a finished note could not be pulled forward at all.
+    // This is the keyboard route; the drag route is checked below it.
+    const onShelf = await js<string | null>(`document.getElementById('quiet-cursor').focus(); __t.bands().cursor`);
+    if (onShelf === null) {
+      ctx.skip('pulling from the shelf: the quiet band has no cursor');
+    } else {
+      press(win, 'p');
+      await delay(1000);
+      const pulledSet = store.getState().session.pulled[prepared.id] ?? [];
+      record(pulledSet.includes(onShelf), `p on the shelf pulls the finished note ${onShelf} forward (store: ${pulledSet.join(', ')})`);
+      record(
+        (await js<{ band: string } | null>(`__t.where(${JSON.stringify(onShelf)})`))?.band === 'front',
+        `the finished note ${onShelf} stands in the front band, not on the desk`,
+      );
+      await view('issues');
+      await delay(1600);
+      await view('features');
+      await delay(2000);
+      record(
+        (await js<{ band: string } | null>(`__t.where(${JSON.stringify(onShelf)})`))?.band === 'front',
+        `the pulled finished note is still in front after a view switch`,
+      );
+    }
+
+    // 5c. TASK-0083: and a downward drag that BEGINS on a painted tile does
+    // the same, while a drag that begins anywhere else still turns the field.
+    const dragTile = await js<{ id: string; x: number; y: number } | null>(
+      `(() => { const b = __t.bands(); const t = b.tiles.find((t) => t.w > 8 && t.h > 6); return t ? { id: t.id, x: Math.round(t.x + t.w / 2), y: Math.round(t.y + t.h / 2) } : null; })()`,
+    );
+    if (dragTile === null) {
+      ctx.skip('dragging from the shelf: no tile is painted');
+    } else {
+      const yawBefore = await js<number>(`window.__deckGlass.model.yaw`);
+      await pointer(win, drag(dragTile, { x: dragTile.x, y: dragTile.y + 90 }, 10));
+      await delay(1200);
+      const draggedSet = store.getState().session.pulled[prepared.id] ?? [];
+      record(draggedSet.includes(dragTile.id), `dragging the tile ${dragTile.id} downward pulls it forward (store: ${draggedSet.join(', ')})`);
+      const yawAfter = await js<number>(`window.__deckGlass.model.yaw`);
+      record(Math.abs(yawAfter - yawBefore) < 0.01, `a downward drag on a tile pulls it and does not also turn the field (yaw ${yawBefore.toFixed(3)} to ${yawAfter.toFixed(3)})`);
+    }
+
     // 6. A tile promotes when it is drawn at the size of a card, and demotes.
     const at1 = await js<number>(`__t.bands().promoted.length`);
     record(at1 === 0, `nothing is promoted at 1x, so the document is the size it was (${at1})`);
@@ -2062,6 +2127,24 @@ async function recordDesksPerView(
     record(zoomed.both === 0, `no note is painted and drawn as an element in the same frame (${zoomed.both})`);
     const asCard = await js<boolean>(`document.querySelectorAll('.field-card[data-band="deep"]').length > 0`);
     record(asCard, 'a promoted note is an ordinary card in the document, with its band still on it');
+    // TASK-0084: and it is laid out large enough to DRAW what its detail level
+    // says it shows. It used to keep the tile's box and be magnified, so on a
+    // large shelf a 58 by 16 element was asked for `full` and clipped by
+    // `overflow: hidden` (ISS-0084). `scrollHeight` past `clientHeight` is the
+    // browser saying the content did not fit.
+    const fit = await js<Array<{ id: string; detail: string; w: number; h: number; over: number }>>(
+      `[...document.querySelectorAll('.field-card[data-band="deep"]')].map((c) => ({
+         id: c.dataset.noteId, detail: c.dataset.detail,
+         w: Math.round(c.getBoundingClientRect().width), h: Math.round(c.getBoundingClientRect().height),
+         over: c.scrollHeight - c.clientHeight,
+       }))`,
+    );
+    const clipped = fit.filter((c) => c.over > 1);
+    record(fit.length > 0 && clipped.length === 0, `every promoted card draws its ${fit[0]?.detail ?? '?'} without clipping it (${fit.length} promoted, ${clipped.length} clipped${clipped[0] === undefined ? '' : `, e.g. ${clipped[0].id} overflows by ${clipped[0].over}px in ${clipped[0].w}x${clipped[0].h}`})`);
+    // And the box it was given is the one the shared rule says that level
+    // needs, which is the same rule `detail.test.mjs` asserts.
+    const wrong = fit.filter((c) => !holdsDetail({ width: c.w, height: c.h }, detailFor(c.w)));
+    record(wrong.length === 0, `every promoted card's box holds the level its width earns (${wrong.length} short${wrong[0] === undefined ? '' : `, e.g. ${wrong[0].id} at ${wrong[0].w}x${wrong[0].h} for ${detailFor(wrong[0].w)}`})`);
     await js(`window.__deckGlass.zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
     await delay(500);
     const backDown = await js<number>(`__t.bands().promoted.length`);
@@ -2093,7 +2176,23 @@ async function recordDesksPerView(
     await view('features');
     await delay(900);
     const shapeSwitched = await js<string>(`JSON.stringify(__t.bands().shapes)`);
-    record(shapeSwitched !== shapeBefore || true, `a view switch recomputes the shapes (${shapeSwitched === shapeBefore ? 'the two views happen to earn the same shape' : 'changed'})`);
+    // This used to read `record(a !== b || true, ...)`, which passes whatever
+    // the renderer does (ISS-0083). Two views can legitimately earn the same
+    // shape, so comparing before and after is the wrong question. The right
+    // one is whether the shapes the renderer holds are the shapes this deal's
+    // own counts earn: `bandShapeFor` is the pure rule and it is shared, so
+    // the run can compute what the answer should be and check it.
+    const switched = await js<BandState>(`__t.bands()`);
+    const owed = bandShapeFor('deep', switched.counts.deep);
+    const held = switched.shapes['deep'];
+    record(
+      held !== undefined && held.columns === owed.columns && held.rows === owed.rows && held.width === owed.box.width && held.height === owed.box.height,
+      `after a view switch the quiet band's shape is the one its ${switched.counts.deep} notes earn (${held?.columns}x${held?.rows} at ${held?.width}, owed ${owed.columns}x${owed.rows} at ${owed.box.width}; the two views ${shapeSwitched === shapeBefore ? 'earn the same shape here' : 'earn different shapes'})`,
+    );
+    // Whether the two views happen to earn the SAME shape is not asserted
+    // either way: it depends on the workspace, and a run where they match is
+    // not a failure. It is printed above as part of the owed-shape check's
+    // message, which is the one that carries the claim.
   } finally {
     reset();
     await delay(600);

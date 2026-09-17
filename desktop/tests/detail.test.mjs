@@ -148,3 +148,60 @@ test('a tile at the threshold does not flicker between a card and a rectangle', 
   assert.equal(promoted(DEMOTE_AT - 1, true), false, 'a card zoomed well out never went back to being a tile');
   assert.equal(promoted(PROMOTE_AT, false), true);
 });
+
+// ---- TASK-0084: the box a card is laid out in holds the detail it is asked for ----
+
+test('a promoted tile is laid out large enough for the detail it was promoted to show', () => {
+  // ISS-0084. A promoted quiet note used to keep the TILE's box and be
+  // magnified by the transform, so on a large shelf a 58 by 16 element was
+  // asked for `full` — four rows into four pixels of content, clipped by
+  // `overflow: hidden`. The box it is laid out in must hold what it draws.
+  const { promotedBox, holdsDetail, MIN_BOX_FOR } = load('shared/detail.js');
+  const ratio = CARD_BOX.width / CARD_BOX.height;
+  for (const count of [24, 120, 326, 900, 2700]) {
+    const band = bandShapeFor('deep', count).box;
+    for (const factor of [1, 1.4, 1.8, 2.5]) {
+      const apparent = widthOf(QUIET.depth, band, factor);
+      if (!promoted(apparent)) continue;
+      const box = promotedBox(apparent, ratio);
+      const level = detailFor(box.width);
+      assert.ok(
+        holdsDetail(box, level),
+        `a ${count}-note shelf at ${factor}x promotes a ${Math.round(apparent)}px tile into a ${box.width} by ${box.height} box, which cannot draw ${level}`,
+      );
+    }
+  }
+  // The rule is the point, not the numbers: every level's own minimum holds.
+  for (const level of DETAIL_LEVELS) {
+    assert.ok(holdsDetail(MIN_BOX_FOR[level], level), `${level}'s own minimum box does not hold ${level}`);
+    assert.equal(
+      holdsDetail({ width: MIN_BOX_FOR[level].width, height: MIN_BOX_FOR[level].height - 1 }, level),
+      false,
+      `${level} is said to fit a box a pixel too short, so the check cannot fail`,
+    );
+  }
+});
+
+test('a promoted tile does not jump in apparent width as it crosses the threshold', () => {
+  // The card is laid out at the size it is already drawn at and then drawn
+  // with NO scale, so the apparent width on the frame before promotion and
+  // the frame after are the same number. A box that kept the band's width and
+  // kept the scale would be correct here and clipped above; one that took the
+  // mid band's box and kept the scale would not be clipped and would jump.
+  const { promotedBox } = load('shared/detail.js');
+  const ratio = CARD_BOX.width / CARD_BOX.height;
+  const band = bandShapeFor('deep', 24).box;
+  const apparent = widthOf(QUIET.depth, band, 1.6);
+  assert.equal(promoted(apparent), true, 'this case stopped promoting, so it checks nothing');
+  assert.equal(promotedBox(apparent, ratio).width, Math.round(apparent));
+});
+
+test('a promoted tile is taller than the flat tile it replaces, because it is a card', () => {
+  const { promotedBox } = load('shared/detail.js');
+  const ratio = CARD_BOX.width / CARD_BOX.height;
+  const band = bandShapeFor('deep', 24).box;
+  const apparent = widthOf(QUIET.depth, band, 1.6);
+  const box = promotedBox(apparent, ratio);
+  assert.ok(box.height > band.height * (apparent / band.width), 'a promoted card kept the tile\'s flat proportions');
+  assert.ok(box.height / box.width > band.height / band.width, 'a promoted card is no taller in proportion than a tile');
+});

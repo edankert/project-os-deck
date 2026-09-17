@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan — every note has a place, and anything visible can be reached"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-09-12
 updated: 2026-09-12

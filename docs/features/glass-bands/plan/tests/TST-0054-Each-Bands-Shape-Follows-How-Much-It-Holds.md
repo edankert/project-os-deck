@@ -19,9 +19,9 @@ tasks: ["[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]"]
 artifacts: []
 adequacy: "Four deliberate breaks, one per run; all four caught, and each substitution was confirmed applied before its run."
 mutation_score: "4/4 breaks caught"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-17
+review_verdict: approved
 related: ["[[TST-0041-The-Slot-Geometry-Places-Every-Note-And-Keeps-Obstacles-Clear]]", "[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]"]
 ---
 
@@ -76,3 +76,18 @@ Four breaks, one per run, applied to `desktop/src/shared/slots.ts` and rebuilt. 
 | 2. The tile-size clamp is dropped, so an eight-column band asks for a box over 300 wide and finished work reads as urgent. | 3 checks, including "a tile never grows past what a front card would read as" |
 | 3. The large end is no longer today's shape — the last step changed to 36 columns. | 3 checks, including [[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]]'s own "the quiet band has a stated shape", which is the right check to break |
 | 4. The shape spreads its slots past the band's span, by widening the column step 1.4 times. | 1 check: "every slot a shape produces stays inside the quiet band's stated span" |
+
+## Independent review, round one, 2026-09-17
+
+`reviewed_by: model:claude-opus-5`, `review_verdict: approved`. Fresh session, notes and diff only; same model family as the author, which is what `reviewed_by` records.
+
+**The suite guards what it claims.** Two deliberate breaks in `desktop/src/shared/slots.ts`, each rebuilt and run, each caught:
+
+| The break | What failed |
+|---|---|
+| The quiet band walks toward the person as it shrinks, against Edwin's steer on ISS-0076 | 3 checks in `slots`, 0 in `detail` |
+| `FieldModel` derives the shapes per deal instead of using the ones it was given (decision 5) | 1 check in `slots` |
+
+The second is the one worth naming: the check that catches it straddles the 154/155 step boundary deliberately, which is the only place where held and derived shapes differ, so it proves something a check placed anywhere else would not. The tree was restored with `git checkout --` after each and `git status` is clean.
+
+**What the suite cannot reach, and does not claim to.** Whether the RENDERER calls `setShapes` on a view change and at no other time is `glass.ts`, not this module. The smoke check that stands for it reads `record(shapeSwitched !== shapeBefore || true, ...)`, which is always true; that is recorded against the feature.

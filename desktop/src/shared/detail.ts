@@ -112,3 +112,51 @@ export function promoted(width: number, wasPromoted = false): boolean {
   if (!Number.isFinite(width)) return false;
   return wasPromoted ? width >= DEMOTE_AT : width >= PROMOTE_AT;
 }
+
+/**
+ * The smallest box, in CSS pixels, that can draw each level.
+ *
+ * A level is a list of rows (`DETAIL_SHOWS`), and rows need height as well as
+ * width. The widths are `DETAIL_AT`'s, because that is what the level means.
+ * The heights are the rows the level draws at the stylesheet's sizes plus
+ * `.field-card`'s 6px of padding above and below: an id row and a title are
+ * two rows, a face line and an owed verb make four, and `more` adds the
+ * status, the progress and the properties.
+ *
+ * This exists because a card used to be laid out in its band's box whatever
+ * detail it was asked for. That was harmless while detail followed the band,
+ * and stopped being harmless when TASK-0074 keyed detail to apparent width:
+ * a quiet tile promoted at 130 apparent pixels was still laid out in a 58 by
+ * 16 box and asked for `full`, so its title wrapped at 58 pixels and the rest
+ * was clipped by `overflow: hidden` (ISS-0084).
+ */
+export const MIN_BOX_FOR: Readonly<Record<DetailLevel, { width: number; height: number }>> = Object.freeze({
+  tile: Object.freeze({ width: 24, height: 14 }),
+  brief: Object.freeze({ width: DETAIL_AT.brief, height: 34 }),
+  full: Object.freeze({ width: DETAIL_AT.full, height: 62 }),
+  more: Object.freeze({ width: DETAIL_AT.more, height: 92 }),
+});
+
+/** Whether a box this size can draw this level without clipping it. */
+export function holdsDetail(box: { width: number; height: number }, level: DetailLevel): boolean {
+  const min = MIN_BOX_FOR[level];
+  return box.width >= min.width && box.height >= min.height;
+}
+
+/**
+ * The box a promoted quiet tile is laid out in (TASK-0084).
+ *
+ * A promoted note is a card, so it is laid out at the size it is drawn at and
+ * not magnified: the width it already had on screen, a card's proportions
+ * rather than a tile's flat ones, and never smaller than the level it is
+ * asked for needs. The caller draws it with no scale, so the apparent width
+ * across the promotion threshold does not jump.
+ */
+export function promotedBox(apparentWidth: number, cardRatio: number): { width: number; height: number } {
+  const width = Math.max(MIN_BOX_FOR.full.width, Math.round(apparentWidth));
+  const level = detailFor(width);
+  return {
+    width: Math.max(width, MIN_BOX_FOR[level].width),
+    height: Math.max(Math.round(width / cardRatio), MIN_BOX_FOR[level].height),
+  };
+}

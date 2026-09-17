@@ -14,9 +14,12 @@ source:
   - "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]"
 goal: "Every note a Glass view holds is somewhere a person can see and point at. The work the middle had no room for stands in a fourth band, the outer field, rather than being counted and dropped, and a finished note behind you can be clicked, tabbed to and pulled forward. No band promises to draw all of it: each one places what its shape holds, says how many it left out, and takes that shape from how much it is actually holding."
 requirements: []
-tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]", "[[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]"]
+tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]", "[[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]", "[[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]]", "[[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]"]
 release: ""
 acceptance_exception: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-17
+review_verdict: changes-requested
 design: "[[DES-0002-The-Glass-Cockpit]]"
 related: ["[[PHASE-0002-Glass]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]]", "[[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[DES-0002-The-Glass-Cockpit]]"]
 ---
@@ -39,7 +42,10 @@ Three words are used throughout, and two of them are new.
 - The **outer field** is the fourth, added here: the view's own active work that the middle had no room for. It stands behind the middle and in front of the quiet band, and its notes are cards, not tiles. **Edwin chose the name on 2026-09-12.**
 - A **remainder** is how many notes a band was dealt and did not place. The front band and the middle already state theirs on the bar; the outer field and the quiet band gain the same.
 
-**No new gesture is needed to bring a finished note forward.** [[FEAT-0014-The-Hands]] already built **pull**: it brings a card to the front band for the session and the note stays there across a view switch. It is unreachable from the quiet band for one reason only — there is no element to drag. The hit test in [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] is what delivers Edwin's "allow cards to be brought up to the active front band", and nothing else is built for it.
+**No new gesture is needed to bring a finished note forward.** [[FEAT-0014-The-Hands]] already built **pull**: it brings a card to the front band for the session and the note stays there across a view switch. It is unreachable from the quiet band for one reason only — there is no element to drag.
+
+> [!warning] Corrected 2026-09-17 by the round-one independent review
+> This paragraph used to end "the hit test in [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] is what delivers Edwin's 'allow cards to be brought up to the active front band', and nothing else is built for it". That was wrong. The hit test calls `tap`, which lifts the note onto the **desk**, and the desk is not the front band. Nothing built in this feature reaches `pull` from a tile, and on a large shelf nothing can, because the only route is promotion at a width a crowded shelf never gives a tile. [[ISS-0082-A-Finished-Note-On-A-Large-Workspace-Can-Never-Be-Pulled-To-The-Front-Band]] records it and [[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]] builds the two routes that do deliver Edwin's request.
 
 ## Scope
 
@@ -155,14 +161,14 @@ Run before any ID was allocated (`tools/skills/issue-intake/SKILL.md`, step 1).
 - Tasks: [[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]], [[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]], [[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]], [[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]], [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]], [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]], [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]], [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]], [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]
 - Suites: [[TST-0053-Every-Note-Has-A-Band-And-Every-Band-States-Its-Remainder]], [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]], [[TST-0055-Detail-Follows-Apparent-Size]]
 - Acceptance walk: `docs/tests/acceptance/` — [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]]
-- Smoke run: [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]
+- Smoke run: [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]], run in the box [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] built
 - Issues: [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]], [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]], [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]], [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]], [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]], [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]
 - Design amended: [[DES-0002-The-Glass-Cockpit]] — four bands rather than three, and "anything visible is clickable" carried to the canvas. The design is `proposed`, so the `design:` link here will raise the same `DESIGN-GATE` warning [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] already raises once this feature leaves the pending band. That warning is pre-existing and is not cleared by this work.
 - Code: `desktop/src/shared/slots.ts`, `desktop/src/shared/description.ts`, `desktop/src/shared/field.ts`, `desktop/src/renderer/glass.ts`, `desktop/src/renderer/deck.css`, `desktop/src/main/smoke-glass.ts`, `desktop/src/main/measure.ts`; new: `desktop/src/shared/detail.ts`, `desktop/tests/detail.test.mjs`
 
-## Where this stands
+## How this was planned
 
-**2026-09-12: planned, nothing built.** Nine tasks, three node suites, smoke checks and one walk, from six issues Edwin reviewed and agreed on the same day. The order is the pure layer first — the deal, the geometry, the detail thresholds — then the renderer, then the smoke run, then the measurement, and the free list only if the measurement asks for it. Two questions above are Edwin's: the fourth band's name and one exit criterion's wording. Neither blocks the first task.
+**2026-09-12: planned, nothing built.** This section is the planning record and is kept as written; what the feature stands at now is "Where this stands", below the measurement. Nine tasks, three node suites, smoke checks and one walk, from six issues Edwin reviewed and agreed on the same day. [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] was added while the work ran, which made ten; [[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]], [[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]] and [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]] were added by the round-one review, which makes thirteen. The order is the pure layer first — the deal, the geometry, the detail thresholds — then the renderer, then the smoke run, then the measurement, and the free list only if the measurement asks for it. Two questions above are Edwin's: the fourth band's name and one exit criterion's wording. Neither blocks the first task.
 
 ## Measured
 
@@ -206,6 +212,77 @@ Run before any ID was allocated (`tools/skills/issue-intake/SKILL.md`, step 1).
 
 **Resolved:** [[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]], [[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]], [[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]], [[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]] and [[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]] steps 1 to 3. [[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] is declined on the measurement's numbers.
 
-**What is owed before this is done**, and both are Edwin's: the walk [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]], and the independent review [[QUALITY]] asks for at this gate.
+**2026-09-17: the independent review ran and returned `changes-requested`.** Its full report is the section at the end of this note. Three findings refute an acceptance line and hold this feature out of `done`: resting the pointer on a tile does nothing, because the handler that would answer runs only in the orbit ([[ISS-0081-Resting-The-Pointer-On-A-Tile-Does-Nothing-Because-The-Handler-Only-Runs-In-The-Orbit]]); a finished note on a large workspace can never be pulled to the front band, which is Edwin's own request ([[ISS-0082-A-Finished-Note-On-A-Large-Workspace-Can-Never-Be-Pulled-To-The-Front-Band]]); and a promoted card is laid out in the tile's box, so the detail it was promoted to show is clipped ([[ISS-0084-A-Promoted-Tile-Is-Drawn-In-The-Tiles-Box-So-The-Detail-It-Was-Promoted-To-Show-Is-Clipped]]). [[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]], [[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]] and [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]] fix them.
+
+**Three findings are filed and do not block**, per `tools/instructions/QUALITY.md`: two smoke checks that cannot fail ([[ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor]]), three rules that survive being broken with every check passing ([[ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing]]), and the 186 notes the outer field leaves unplaced against this note's own title ([[ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place]], which is Edwin's decision).
+
+**What is owed before this is done**: the three fix tasks and a round-two review of those fixes only, and then the walk [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]], which is Edwin's.
 
 **Two judgement calls a reviewer should look at first.** The outer field's capacity was raised to 64 and Your Trainer's Features view still counts 186 notes it could not place — whether the outer field should gain layers is recorded and not decided. And eleven of the smoke suite's fourteen new checks have no break of their own, because a run in the box costs half an hour; the three chosen are the ones nothing else covers.
+
+## Independent review, round one, 2026-09-17
+
+`reviewed_by: model:claude-opus-5`, `review_verdict: changes-requested`. A fresh session with no memory of the authoring work, given the notes and `git diff 67f5bf0..e72deaa` only. Same model family as the author, which `reviewed_by` records; what was independent is the context and the session, not the weights (`tools/instructions/QUALITY.md`, "Independent review (clean-context)"). Electron was not launched, so nothing that needs `npm run smoke` or `npm run measure` was re-run; those findings are labelled below.
+
+### Blocking: resting the pointer on a tile does nothing, because the handler that would do it runs only in the orbit
+
+**`desktop/src/renderer/glass.ts:1552` returns before the tile code can run.** The `pointermove` listener registered at line 1551 opens with `if (this.arrangement !== 'orbit' || look !== null || event.buttons !== 0) return;`, and that guard was not touched by this feature. Inside that listener `this.arrangement` is therefore always `'orbit'`, so the branch added at lines 1566 to 1570 — `this.arrangement === 'orbit' ? this.dotAt(x, y) : this.tileAt(x, y)`, then `field.style.cursor = ...`, then `this.showTileCallout(hit, x, y)` — is unreachable in the Glass field, which is the only arrangement that paints quiet-band tiles.
+
+Two consequences. `showTileCallout` is never called from anywhere (`grep -n "showTileCallout" desktop/src/renderer/glass.ts` returns its definition at 1345 and one call at 1569, inside the dead branch). And `field.style.cursor` is assigned in exactly one place, line 1567, also inside it, so the cursor never becomes a pointer over a tile.
+
+This refutes the acceptance line "Resting the pointer on a tile says which note it is and shows the pointer cursor", and the two items in [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]'s scope reading "a pointer cursor, a hover callout". The click half of ISS-0073 is genuinely fixed: `pointerup` reaches `tileAt` through a different listener (line 1626) whose guard is `look`, and the smoke run broke that path deliberately and saw it fail.
+
+### Blocking: a finished note on a large workspace can never be pulled to the front band
+
+`this.pull(` has two call sites, `desktop/src/renderer/glass.ts:1930` (a drag on a `.field-card` element) and `:2038` (the `p` key on a focused `.field-card`). Both need the note to be an element. A painted tile is not one, `pointerdown` on the field starts a turn rather than a drag, and the quiet cursor's own `keydown` handler takes only the arrow keys, Enter, Space and Escape — not `p`. So the only route is promotion, and promotion needs 130 screen pixels of width:
+
+| quiet band | tile box | 1x | 1.5x | 2x | 2.5x (max zoom) |
+|---|---|---|---|---|---|
+| 24 notes | 140 | 83 | 124 | 166 promoted | 207 promoted |
+| 326 notes | 108 | 64 | 96 | 128 | 160 promoted |
+| 2700 notes | 58 | 34 | 51 | 69 | 86, never promoted |
+
+Widths at the centre of the shelf, computed from the built modules. `desktop/tests/detail.test.mjs` asserts the last row on purpose ("the very largest quiet band is never promoted at the centre, and that is the trade"), but the trade it records is detail, not reach — and reach is what it also costs. On Your Trainer a finished note at the centre of the shelf cannot be pulled forward by mouse or keyboard at any zoom.
+
+This refutes the acceptance line "A note in the quiet band can be pulled to the front band with the gesture [[FEAT-0014-The-Hands]] already built", and the Goal's sentence "a finished note behind you can be clicked, tabbed to and pulled forward". The note's own claim that "the hit test in TASK-0076 is what delivers Edwin's 'allow cards to be brought up to the active front band', and nothing else is built for it" is not right: the hit test calls `tap`, which lifts the note onto the desk, and the desk is not the front band.
+
+### Blocking: a promoted tile is drawn in the tile's box, so the detail it was promoted to show is clipped
+
+`place()` sets `element.style.width/height` from `this.model.current.shapes[slot.band].box`, which for a promoted quiet note is the tile box. `.field-card` carries `padding: 6px 9px` and `overflow: hidden` (`desktop/src/renderer/deck.css`). A promoted tile on a small quiet band is a 140x39 element with 27 pixels of content space, asked at `full` detail to draw the id row, the title, the face line and the owed verb; the face line has `margin-top: auto` and is clipped. On a large band, where edge tiles do promote, the element is 58x16 with 12 pixels of vertical padding — no content fits at all. No CSS rule targets `.field-card[data-band="deep"]`.
+
+The smoke check for this asserts only that such an element exists (`document.querySelectorAll('.field-card[data-band="deep"]').length > 0`), which is why it passed.
+
+### Two checks in the smoke suite cannot fail
+
+Both in `desktop/src/main/smoke-glass.ts`, in the FEAT-0018 section.
+
+1. `record(shapeSwitched !== shapeBefore || true, ...)` — `X || true` is always true. The check claims to verify that a view switch recomputes the band shapes, which is half of decision 5 and the half no node suite can reach.
+2. `record(typeof cursor === 'string', ...)` — `getComputedStyle(el).cursor` always returns a string. This is the check that stands for "shows the pointer cursor", and a check asserting `cursor === 'pointer'` would have caught the blocking finding above. Its `js` expression also computes a `getBoundingClientRect()` it never uses.
+
+So [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]'s "eleven of the fourteen checks have no break of their own ... the deal, the shapes and the thresholds underneath them are pure and are each broken deliberately in their own suites" is true of the other checks and false of these two: nothing is underneath a tautology. The three breaks that were run are well chosen — each is the only thing covering its claim — but the answer to "do the other eleven rest on anything" is: nine do, two do not.
+
+There is also no check at all for the hover callout, and none that pulls a quiet note to the front band, although [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]'s title says there is. The pull checks in the suite (lines 450 to 472) are FEAT-0014's, on a mid-band card.
+
+### On the reviewer's second question: is "state the remainder" enough?
+
+Reproduced. On `your-trainer-features.json`, 317 notes are dealt, 3 stand in front, 40 in the middle, 64 in the outer field, 24 behind, and **186 are counted and drawn nowhere** — 59% of the view. Conservation holds, and the acceptance line as written ("the four band lists plus the four remainders add up") is satisfied. The feature's title and Goal are not: "every note the view holds has a place in the field" and "every note a Glass view holds is somewhere a person can see and point at" are false for the majority of that view.
+
+The judgement this reviewer would record: stating the remainder is an adequate *mechanism* and an inadequate *discharge of the stated goal*. Either the outer field gains layers, or the title and Goal should say what the feature actually promises, which is that no note is dealt and then dropped silently. Leaving both the title and the 186 standing asks a later reader to believe two things that contradict each other.
+
+### Smaller findings, not blocking
+
+- **A stray empty file, `desktop/core`**, was committed by `de0cd42` and is not mentioned in any note. `git ls-files -s desktop/core` shows a zero-byte blob.
+- **`readBand`'s new defaults are unguarded.** Changing `outerCapacity: positive(band['outerCapacity'], 64)` to `1` in `desktop/src/shared/description.ts` leaves all 465 node checks passing. The test that asserts 64 reads `VIEWS`, which hardcodes it in `views.ts`; the `readBand` path (a workspace-supplied description, and `base-file.ts`) has no cover.
+- **The quiet cursor's `pointer-events: none` is unguarded.** Changing it to `auto` — which reintroduces the exact defect the smoke run found and the CSS comment records — leaves all 465 node checks passing. `desktop/tests/glass-style.test.mjs`'s check named "the quiet cursor is drawn over the field and does not swallow the canvas" asserts `position: absolute` and `background: transparent` and never the property its name is about.
+- **The keyboard cursor is drawn before anyone uses the keyboard.** `drawQuietCursor` sets `this.quietAt` to `order[0]` whenever it is null and unhides the element, so a 2px accent box sits on the first finished note at all times. The field it guards is documented as "null when the keyboard has not entered the band", which the code never allows.
+- **The band shapes are keyed on `workspace|view` alone** (`this.shapeKey`). Any deal that reaches the renderer with a new view id and stale or empty groups freezes that view's shapes for its whole life: `currentView` is assigned at `renderer.ts:688` and `currentGroups` only after the `await` at 703, and the `host.onState` subscriber at `renderer.ts:452` calls `drawDesk()` unconditionally. Not reproduced — it needs a state event during the fetch, or a failed fetch, and settling it needs a smoke check that switches view and compares `bandState().shapes` against `bandShapeFor('deep', counts.deep)`.
+- **Five issues went to `fixed` with `tests: []`.** ISS-0073, ISS-0074, ISS-0076, ISS-0078 and ISS-0079 name no verifying test, where most fixed issues in this repository do. The suites that verify them exist ([[TST-0053-Every-Note-Has-A-Band-And-Every-Band-States-Its-Remainder]], [[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]], [[TST-0055-Detail-Follows-Apparent-Size]], [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) and are not linked from them.
+- **This note has two `## Where this stands` sections**, at lines 163 and 203. The first still says "planned, nothing built" and "Nine tasks". A reader meets the stale one first.
+- **TASK-0081 is in `tasks:` and in the snapshot and in neither the Scope section nor the Links list.** It was added mid-flight and the scope was never amended.
+- **`docs/features/glass-bands/plan/PLAN.md` is still `draft` while the feature is `review`**; `validate-docs.sh` reports it as `PLAN-FOLLOWS`.
+- **The measurement has no artefact behind it.** [[ISS-0080-The-Measurement-Prints-Its-Numbers-And-Keeps-Them-Nowhere]] records that `runMeasure` writes nothing, and that one run was already lost to a trimmed pipe. So the numbers in "Measured" above, which re-establish PHASE-0002's frame-time criterion and cancel [[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]], are hand-copied from a terminal with no stored run. Not reproduced: `npm run measure` launches Electron and was not run.
+- **[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]] carries `review_verdict: changes-requested` from 2026-09-10 and is still `passing`.** Fourteen checks were added to it and TASK-0078 closed against it without that standing verdict being resolved.
+
+### What was checked and held
+
+`npm test` passes 465 of 465. `npm run typecheck` is clean. `validate-docs.sh` exits OK. Conservation of the deal was recomputed over all three fixtures and holds every time. Seven deliberate breaks in the pure modules were each caught by the suite that claims to guard them: the middle's remainder dropped rather than placed (3 failures), the quiet band's capacity removed (2), the quiet band walking forward as it shrinks (3), `detailFor`'s `full` threshold widened (2), the promotion hysteresis removed (1), `FieldModel` deriving shapes per deal rather than using the held ones (1), and pushed notes no longer held back from the quiet band's cap (1). The tree was restored with `git checkout --` after each and `git status` is clean.

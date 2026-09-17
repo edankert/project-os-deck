@@ -13,7 +13,7 @@ severity: medium
 component: renderer
 parent: ""
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds]]"]
 ---
 
 # The quiet band is shaped for a corpus ten times most projects

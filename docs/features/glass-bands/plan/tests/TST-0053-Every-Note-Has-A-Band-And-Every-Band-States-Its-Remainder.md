@@ -19,9 +19,9 @@ tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]"]
 artifacts: []
 adequacy: "Four deliberate breaks, one per run; each failed at least one check and the failures are named below."
 mutation_score: "4/4 breaks caught"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: model:claude-opus-5
+review_date: 2026-09-17
+review_verdict: approved
 related: ["[[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]]", "[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]"]
 ---
 
@@ -89,3 +89,19 @@ Four breaks, one per run, each applied to `desktop/src/shared/field.ts`, rebuilt
 **A note on how break 1 was found.** The first run of it reported every check passing, which would have meant the suite could not catch the defect the whole task exists to fix. The substitution had not applied: it was written against six spaces of indentation and the split had moved into a loop indented by four, so the file was rebuilt unchanged. A break that never happens looks exactly like a check that cannot fail. The mutation was re-applied, the changed lines printed before the run, and only then did the three checks fail.
 
 **What the conservation line does not catch.** Under break 1 the arithmetic still balances, because a dropped note is still counted in `midOverflow`. Conservation proves nothing is LOST; it does not prove anything is PLACED. That is why the three dedicated checks exist beside it.
+
+## Independent review, round one, 2026-09-17
+
+`reviewed_by: model:claude-opus-5`, `review_verdict: approved`. Fresh session, notes and diff only; same model family as the author, which is what `reviewed_by` records.
+
+**The suite guards what it claims.** Three deliberate breaks in `desktop/src/shared/field.ts`, each rebuilt and run, each caught:
+
+| The break | What failed |
+|---|---|
+| `dealField` drops the middle's remainder instead of placing it in the outer field (ISS-0079's defect) | 3 checks in `field` |
+| The quiet band takes every note again, with no capacity (ISS-0078's defect) | 2 checks in `field` |
+| Pushed notes are no longer held back from the quiet band's cap | 1 check in `field` |
+
+The tree was restored with `git checkout --` after each and `git status` is clean. Conservation was also recomputed independently over all three fixtures: `your-trainer-features.json` deals 317 notes as 3+40+64+24 placed and 186 counted, and the four lists plus the four remainders add up on every fixture.
+
+**One gap, filed against the feature rather than here.** `readBand`'s new defaults in `desktop/src/shared/description.ts` are not covered: changing `outerCapacity: positive(band['outerCapacity'], 64)` to `1` leaves all 465 checks passing, because the check that asserts 64 reads `VIEWS`, which hardcodes it in `views.ts`. The `readBand` path is what a workspace-supplied description and a `.base` file take.

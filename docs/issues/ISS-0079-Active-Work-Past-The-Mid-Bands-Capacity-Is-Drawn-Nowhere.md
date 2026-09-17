@@ -13,7 +13,7 @@ severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0014-The-Hands]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0053-Every-Note-Has-A-Band-And-Every-Band-States-Its-Remainder]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Active work past the mid band's capacity is drawn nowhere

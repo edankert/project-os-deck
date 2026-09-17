@@ -17,7 +17,7 @@ last_verified: 2026-09-11
 automation: "one command, run manually or by the deck-smoke CI job; not by run-tests.py, which has no sidecar"
 covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
 issues: []
-tasks: ["[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[TASK-0060-Hide-Notes-And-Show-Them-Again]]", "[[TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk]]", "[[TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk]]", "[[TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring]]"]
+tasks: ["[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[TASK-0060-Hide-Notes-And-Show-Them-Again]]", "[[TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk]]", "[[TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk]]", "[[TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]]", "[[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]"]
 artifacts: ["tools/scripts/run-smoke.sh"]
 adequacy: "Measured by breaking each fix on purpose, one break per run of the Glass section. After the second review, seven breaks each made their check fail (ISS-0065 lists them); the second reviewer's four breaks failed five checks. One check cannot fail when its fix is reverted, and says so: the reduced-motion lift from a turned field (ISS-0064), because a second deal hides the first. Before any review the run found five defects in Glass before a person saw them."
 mutation_score: "about 60 breaks run against the Glass section on 2026-09-10 and 2026-09-11, each seen to fail a check or recorded where one did not; not a full mutation run, which takes eight minutes a mutant"
@@ -127,3 +127,27 @@ Three, one run each, in [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]
 The second closes a gap [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] recorded rather than hid: no node check can see a note painted and drawn as an element in the same frame.
 
 Eleven of the fourteen checks have no break of their own. A run in the box costs about half an hour, and the three chosen are the ones nothing else covers; the deal, the shapes and the thresholds underneath them are pure and are each broken deliberately in their own suites, where a break costs seconds.
+
+## 2026-09-17: two checks that could not fail are gone, and seven were added
+
+FEAT-0018's round-one independent review found that two of the fourteen checks [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]] added pass whatever the renderer does ([[ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor]]): `record(typeof cursor === 'string', ...)` and `record(a !== b || true, ...)`. One of them was the only cover for "shows the pointer cursor", and it passed through a build in which the handler that sets the cursor could not run at all.
+
+**This corrects what this note claimed.** The adequacy line said eleven of the fourteen rest on pure suites broken deliberately underneath them. That was true of nine. Nothing rests underneath a tautology.
+
+**Replaced.**
+
+- The cursor check asserts `cursor === 'pointer'`.
+- The shape check compares the shape the renderer holds against the shape `bandShapeFor` says that band's own count earns, rather than comparing two views to each other — two views can legitimately earn the same shape, so the old comparison was the wrong question as well as unfalsifiable.
+
+**Added.**
+
+- Resting on a tile names the note under it, and moving off takes the cursor and the callout away.
+- `p` on the shelf's keyboard cursor pulls that finished note to the front band, and it stands in `front` rather than on the desk.
+- The pulled finished note is still in front after a view switch.
+- A downward drag that begins on a painted tile pulls it forward, and the field's yaw does not move while it does.
+- No promoted card's content overflows the box it is drawn in.
+- Every promoted card's measured box holds the level its width earns.
+
+**None of the seven has been run**, and neither has the whole suite since these changes. The run opens windows; Docker was not running on 2026-09-17, so the container [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] built was not available either. `npm test` (468 node checks) and both typechecks pass and cover none of this.
+
+**The `changes-requested` verdict of 2026-09-10 still stands in this note's frontmatter** and is not cleared by the above. [[PHASE-0002-Glass]] records why: Edwin asked to stop the review loop after the second round on 2026-09-10, and the verdicts stay recorded.

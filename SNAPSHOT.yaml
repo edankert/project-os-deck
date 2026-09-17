@@ -49,12 +49,12 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 18
-  ISS: 80
+  ISS: 86
   PHASE: 4
   REQ: 0
   RISK: 4
   REL: 0
-  TASK: 81
+  TASK: 84
   TST: 56
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
@@ -64,7 +64,7 @@ focus:
   feature: "FEAT-0018"
   task: ""
   issue: ""
-  note: "2026-09-12: FEAT-0018 BUILT, MEASURED AND AT REVIEW. Every task resolved — TASK-0072 to TASK-0079 done, TASK-0080 CANCELLED by the measurement that existed to decide it, TASK-0081 (a Linux box for the smoke run) done. 465 node checks passing, both typechecks clean, the smoke suite green on CI under xvfb AND in a local container, and three deliberate breaks each caught by the check it belongs to. MEASURED on Edwin's Mac: every configuration holds the display's 16.7 ms frame, at 1x and zoomed right into the quiet band, on all three workspaces; nothing is promoted at 1x anywhere, so an unzoomed field is the document it always was; Your Trainer went 2.2 to 3.0 ms of script work per frame (6.6 to 7.8 at 4x CPU cost) and THIS REPOSITORY GOT FASTER, 1.1 to 0.9, because its quiet band paints 6 large tiles where it painted 35 small ones. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 DECLINED on the numbers — zoomed in on Your Trainer with 135 notes promoting and demoting as the field turned, the turn held 16.7 ms with 2.7 ms of work, LESS than the same workspace costs at 1x, so the churn a free list would remove is not what a frame spends its time on. OWED BEFORE DONE, both Edwin's: the walk TST-0056, and the independent review QUALITY.md asks for at this gate. TWO JUDGEMENT CALLS A REVIEWER SHOULD SEE FIRST: the outer field's capacity was raised to 64 and Your Trainer's Features view still counts 186 notes it could not place (whether the outer field should gain layers is recorded, not decided); and eleven of the fourteen new smoke checks have no break of their own, because a box run costs half an hour and the three chosen are the ones nothing else covers. NEW: ISS-0080 (the measurement prints its results and writes them nowhere, so a run was lost to a tail and had to be taken twice). STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 revise FEAT-0017's decisions and are unplanned; ISS-0075 (the smoke run steals focus 23 times) is decided and unbuilt, and its offscreen spike is now answered in the note; ISS-0069 and ISS-0068 unplanned."
+  note: "2026-09-17: FEAT-0018'S INDEPENDENT REVIEW RAN AND RETURNED changes-requested, AND THE THREE BLOCKING FIXES ARE WRITTEN BUT UNRUN. Round one (model:claude-opus-5, clean context, notes + diff 67f5bf0..e72deaa only) is recorded in the feature note and in TST-0053/0054/0055, which it approved. THREE FINDINGS REFUTE AN ACCEPTANCE LINE and hold the feature out of done: ISS-0081, resting the pointer on a tile does NOTHING because the pointermove listener still opened with 'if (this.arrangement !== \'orbit\') return', so TASK-0076's whole tile branch was dead code and showTileCallout was never called from anywhere; ISS-0082, a finished note can only be pulled forward once PROMOTED, and a 2,700-note shelf has a 58px tile box that reaches 86px at maximum zoom, so on Your Trainer EDWIN'S OWN REQUEST cannot be performed at any zoom; ISS-0084, a promoted card is laid out in the TILE's box and merely magnified, so full detail is asked of a 58x16 element and clipped. THREE MORE FILED, NOT BLOCKING: ISS-0083 (two of the fourteen new smoke checks cannot fail -- 'typeof cursor === string' and 'a !== b || true' -- and the first was the ONLY cover for the cursor, so it passed through a build where the cursor could never be set), ISS-0085 (three rules survive being broken with all 465 checks passing, one of them the exact pointer-events defect the smoke run already found once), ISS-0086 (186 of 317 notes on Your Trainer's Features view are counted and drawn nowhere while this feature is called 'every note has a place' -- EDWIN'S DECISION: layers in the outer field, or narrow the title and goal). FIXES WRITTEN 2026-09-17 in TASK-0082, TASK-0083 and TASK-0084, all at doing: the hover guard now tests only look and buttons; the shelf's keyboard cursor takes p and b and a downward drag from a painted tile pulls, both calling FEAT-0014's own pull; and promotedBox/holdsDetail/MIN_BOX_FOR in detail.ts lay a promoted card out at the size it is drawn at with no scale. 468 node checks and both typechecks pass; three new checks in TST-0055 were each shown to FAIL when promotedBox is reverted. NOT VERIFIED: every renderer fix is covered only by smoke checks, seven of which are new, and THE SMOKE SUITE HAS NOT BEEN RUN -- it opens windows, and Docker was not running so TASK-0081's container was unavailable. OWED: a smoke run, then round two on those fixes only (ADR-0028: two rounds, no third), then the walk TST-0056, which is Edwin's. STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review with NO independent review recorded on any of them, waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 revise FEAT-0017's decisions and are unplanned; ISS-0075, ISS-0080, ISS-0069 and ISS-0068 unplanned."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -229,7 +229,7 @@ items:
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
-      tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081"]
+      tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
   tasks:
     TASK-0001:
@@ -652,7 +652,88 @@ items:
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
+    TASK-0082:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit.md"
+      title: "The hover callout and the pointer cursor run in the field as well as in the orbit, and the check that stands for the cursor asserts the cursor"
+      status: doing
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0083:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself.md"
+      title: "A finished note is pulled to the front band from the shelf as it is drawn, by the keyboard and by a drag, without first being zoomed into an element"
+      status: doing
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
+    TASK-0084:
+      file: "docs/features/glass-bands/plan/tasks/TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned.md"
+      title: "A promoted card is laid out at the size its apparent width earned rather than in the tile's box, so the detail it was promoted to show has room to be drawn"
+      status: doing
+      owner: user:edwin
+      parent: "FEAT-0018"
+      phase: PHASE-0002
   issues:
+    ISS-0086:
+      file: "docs/issues/ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place.md"
+      title: "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the feature's title and goal promise more than the field delivers"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: docs
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review, and recorded rather than decided when the feature was built. EDWIN'S DECISION, and the only finding of the round that is his. The deal on your-trainer-features.json: 317 notes, front 3, mid 40, outer 64, deep 24, UNPLACED 186 -- 59% of the view counted and drawn nowhere. The acceptance line is satisfied (nothing is dropped silently; the bar states every remainder) and the TITLE and GOAL are not ('every note the view holds has a place in the field'). Two ways: the outer field GAINS LAYERS, which is more work and would re-open TASK-0079's measurement because it puts more elements on screen; or the TITLE AND GOAL ARE NARROWED to what was built, which costs nothing. Doing neither leaves two sentences in the note that contradict each other."
+    ISS-0085:
+      file: "docs/issues/ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing.md"
+      title: "Three rules this feature added can each be broken with all 465 node checks still passing, and one of the three is the exact defect the smoke run already found once"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: tests
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review; each mutation was applied, rebuilt, run in full and reverted. THREE SURVIVORS. readBand's outerCapacity default 64 -> 1 passes everything, because the test asserting 64 reads VIEWS, which hardcodes it in views.ts -- the readBand path is what the VAULT PHASE will use. The quiet cursor's pointer-events: none -> auto passes everything, and that is the EXACT defect the smoke run found while TASK-0076 was being built. The glass-style check named 'does not swallow the canvas' asserts position and background and never pointer-events, so its name claims more than it checks."
+    ISS-0084:
+      file: "docs/issues/ISS-0084-A-Promoted-Tile-Is-Drawn-In-The-Tiles-Box-So-The-Detail-It-Was-Promoted-To-Show-Is-Clipped.md"
+      title: "A quiet tile promoted into a real card is laid out in the tile's box and only magnified, so the detail the promotion exists to show has no room and is clipped"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review. BLOCKS FEAT-0018. place() takes every card's box from shapes[slot.band], and zoom is a CSS scale() that MAGNIFIES a laid-out box rather than enlarging it. So a promoted quiet note keeps the tile's layout box -- 140x39 here, 58x16 on a large shelf -- while detailFor reads the magnified width and asks for FULL detail, because PROMOTE_AT and DETAIL_AT.full are the same 130px. Four rows of content into 27px, with overflow: hidden and no rule for [data-band='deep']. Against TASK-0077's 'still reads as finished work'. The smoke check asserts only that such an element EXISTS, which is why it passed. Fixed by TASK-0084."
+    ISS-0083:
+      file: "docs/issues/ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor.md"
+      title: "Two of the smoke run's fourteen new checks are written so that they pass whatever the renderer does, and one of them is the only cover for the pointer cursor"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: tests
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review. TWO TAUTOLOGIES in smoke-glass.ts: record(typeof cursor === 'string', ...) at 2035, and record(shapeSwitched !== shapeBefore || true, ...) at 2096. The first is the ONLY cover for 'shows the pointer cursor' and, written as cursor === 'pointer', would have caught ISS-0081 before review. The second is the only cover for a view switch recomputing band shapes, the half no node suite can reach. ALSO: no check for the hover callout at all, and none that pulls a quiet note forward, though TASK-0078's title says so -- the pull checks at 450-472 are FEAT-0014's, on a mid card. So TST-0045's 'eleven rest on pure suites underneath' is true of NINE; nothing rests under a tautology. Fixed by TASK-0082 and TASK-0083."
+    ISS-0082:
+      file: "docs/issues/ISS-0082-A-Finished-Note-On-A-Large-Workspace-Can-Never-Be-Pulled-To-The-Front-Band.md"
+      title: "A finished note in the quiet band can only be pulled to the front band once it has been promoted to an element, so on a large workspace it can never be pulled forward at all"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: high
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review. BLOCKS FEAT-0018, and it is EDWIN'S OWN REQUEST that fails: 'allow cards to be brought up to the active front band'. Both pull call sites (glass.ts:1930 drag, :2038 the p key) need a .field-card element; the quiet cursor's keydown takes arrows, Enter, Space, Escape and no p. So the only door is promotion at 130px, and zoom stops at 2.5x: a 2,700-note shelf has a 58px box and reaches 86px at the limit, NEVER PROMOTED. detail.test.mjs asserts that row deliberately as a trade about DETAIL; the trade it does not record is that the same threshold is the only door to a PULL. The feature note's sentence 'the hit test in TASK-0076 is what delivers Edwin's allow cards to be brought up' is wrong -- the hit test calls tap, which lifts onto the DESK, not the front band. Fixed by TASK-0083."
+    ISS-0081:
+      file: "docs/issues/ISS-0081-Resting-The-Pointer-On-A-Tile-Does-Nothing-Because-The-Handler-Only-Runs-In-The-Orbit.md"
+      title: "Resting the pointer on a quiet-band tile shows neither the note's name nor the pointer cursor, because the handler that would show them returns before it reaches the tile code"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: high
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review. BLOCKS FEAT-0018. The pointermove listener at glass.ts:1551 opens 'if (this.arrangement !== 'orbit' || look !== null || event.buttons !== 0) return;' -- a guard this feature never touched -- so TASK-0076's tile branch at 1566-1570 is DEAD in the only arrangement that paints tiles. showTileCallout is never called from anywhere; field.style.cursor is assigned in exactly one place, inside the same dead branch. Refutes the acceptance line 'Resting the pointer on a tile says which note it is and shows the pointer cursor'. The CLICK half of ISS-0073 is genuinely fixed and unaffected: pointerup reaches tileAt through a different listener at 1626, guarded on look rather than the arrangement, and the smoke run broke that path and saw it fail. Fixed by TASK-0082."
     ISS-0079:
       file: "docs/issues/ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere.md"
       title: "A note the view's own rule puts in the mid band, past that band's sixty-four slots, is drawn in no band at all — not even behind the person — so on a large view most of the active work is missing from the field and only a count says so"
@@ -1850,13 +1931,13 @@ metrics:
     features_done: 13
     phases_total: 4
     phases_done: 0
-    tasks_total: 81
+    tasks_total: 84
     tasks_done: 79
     tests_total: 39
     tests_passing: 2
     tests_failing: 0
-    issues_open: 4
-    issues_triage: 5
+    issues_open: 8
+    issues_triage: 7
     risks_open: 0
     releases_total: 0
     decisions_total: 5

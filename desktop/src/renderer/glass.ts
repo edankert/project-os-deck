@@ -41,7 +41,7 @@ import {
 } from '../shared/slots.js';
 import { type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
 import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, unzoomPoint, wheelFactor, zoomAbout } from '../shared/zoom.js';
-import { detailFor, promoted } from '../shared/detail.js';
+import { detailFor, promoted, promotedBox } from '../shared/detail.js';
 import { DOCK_WIDTH, GATHER_MS, GROW_MS, type FocusLayout, type Point, type Rect, type RingNeighbour, chooseForRing, ease, focusLayout, seatRing } from '../shared/focus-ring.js';
 import { type RingItem, RingView } from './ring-view.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
@@ -924,11 +924,18 @@ export class GlassField {
     // its note as that box's width on screen earns (TASK-0074). Neither is a
     // rule about which band it is in: an outer-field card is smaller and says
     // less because its box is smaller, and a mid card zoomed in says more.
-    const box = this.model.current.shapes[slot.band].box;
+    const band = this.model.current.shapes[slot.band].box;
+    // A promoted quiet tile is the exception, because it is the one card whose
+    // band box says how a TILE is painted rather than how a CARD is laid out.
+    // It is laid out at the size it is already drawn at, with no scale, so the
+    // detail it was promoted to show has room (TASK-0084, ISS-0084).
+    const lift = this.promotedIds.has(element.dataset['noteId'] ?? '');
+    const box = lift ? promotedBox(p.scale * band.width, CARD_BOX.width / CARD_BOX.height) : band;
+    const draw = lift ? { ...p, scale: 1 } : p;
     element.style.width = `${box.width}px`;
     element.style.height = `${box.height}px`;
-    element.dataset['detail'] = detailFor(p.scale * box.width);
-    element.style.transform = cardTransform(p, box);
+    element.dataset['detail'] = detailFor(lift ? box.width : p.scale * box.width);
+    element.style.transform = cardTransform(draw, box);
     element.style.zIndex = String(p.z);
     const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
     const target = !p.visible ? 0 : (slot.band === 'mid' ? 0.9 : 1) * (0.3 + 0.7 * fade);
@@ -1287,7 +1294,7 @@ export class GlassField {
     el.style.transform = cardTransform(p, box);
     el.style.opacity = p.visible ? '1' : '0';
     const entry = this.entries.get(id);
-    el.setAttribute('aria-label', `${id} ${entry?.card.title ?? ''}, in the quiet band. Arrow keys move along the shelf, Enter puts it on the desk.`);
+    el.setAttribute('aria-label', `${id} ${entry?.card.title ?? ''}, in the quiet band. Arrow keys move along the shelf, Enter puts it on the desk, p pulls it to the front band.`);
   }
 
   /**
@@ -1315,6 +1322,25 @@ export class GlassField {
     const id = this.quietAt;
     const entry = id === null ? undefined : this.entries.get(id);
     if (entry !== undefined) void this.tap(entry);
+  }
+
+  /**
+   * `p` and `b` on the quiet band's cursor, the same two keys a focused card
+   * takes: the note under the cursor is pulled to the front band or pushed
+   * behind (TASK-0083).
+   *
+   * This is the keyboard half of the answer to ISS-0082. A tile is paint, so
+   * there is no element for `cardKey` to be bound to, and before this the only
+   * route to `pull` was to zoom a tile past the promotion threshold -- which a
+   * crowded shelf never reaches at any zoom. `pull` and `push` themselves are
+   * FEAT-0014's and are not copied: this finds the note and calls them.
+   */
+  private handQuietCursor(key: string): void {
+    const id = this.quietAt;
+    const entry = id === null ? undefined : this.entries.get(id);
+    if (entry === undefined) return;
+    if (key === 'p' || key === 'P') void this.pull(entry);
+    else void this.push(entry);
   }
 
   /** The quiet-band notes drawn as elements this frame, and the ones that were last frame. */
@@ -1450,7 +1476,16 @@ export class GlassField {
   /** The box a note is drawn in: its band's, or the front band's when it has no slot. */
   private boxOf(noteId: string): { width: number; height: number } {
     const slot = this.model.current.slots.get(noteId);
-    return this.model.current.shapes[slot?.band ?? 'front'].box;
+    const band = this.model.current.shapes[slot?.band ?? 'front'].box;
+    // A promoted tile is laid out at its apparent size and drawn with no
+    // scale (TASK-0084), so the rect a wire starts from is that box, not the
+    // band's. `cardRect` multiplies by the projection's scale, so the box it
+    // is handed here is divided back out to leave the same number.
+    if (slot === undefined || !this.promotedIds.has(noteId)) return band;
+    const p = this.at(slot, this.model.yaw);
+    if (p.scale <= 0) return band;
+    const drawn = promotedBox(p.scale * band.width, CARD_BOX.width / CARD_BOX.height);
+    return { width: drawn.width / p.scale, height: drawn.height / p.scale };
   }
 
   private drawInstrument(): void {
@@ -1537,24 +1572,39 @@ export class GlassField {
 
   private wire(): void {
     const field = this.el.field;
-    let look: { x: number; yaw: number; id: number; moved: boolean } | null = null;
+    let look: { x: number; y: number; yaw: number; id: number; moved: boolean; tile: string | null; hand: boolean } | null = null;
     field.addEventListener('pointerdown', (event) => {
       const target = event.target as HTMLElement;
       if (target.closest('.field-card, .pane, button, .target-strip') !== null) return;
       if (event.button !== 0) return;
       this.scheduleIdle();
       this.el.field.classList.remove('turning');
-      look = { x: event.clientX, yaw: this.model.yaw, id: event.pointerId, moved: false };
+      // A press that lands on a painted quiet tile remembers which note it was,
+      // so a downward drag from there can pull that note forward the way a drag
+      // on a card does (TASK-0083). A press anywhere else on the field is a
+      // turn, which is every press the field saw before this.
+      const box = field.getBoundingClientRect();
+      const tile = this.arrangement === 'orbit' ? null : this.tileAt(event.clientX - box.left, event.clientY - box.top);
+      look = { x: event.clientX, y: event.clientY, yaw: this.model.yaw, id: event.pointerId, moved: false, tile, hand: false };
       field.setPointerCapture(event.pointerId);
     });
-    // In the orbit: resting on a link quotes it; a dot is a note to lift.
+    // Resting on something painted says what it is: in the orbit a link is
+    // quoted and a dot named, in the field a quiet-band tile is named
+    // (TASK-0076). The guard is about whether a person is RESTING -- a turn in
+    // progress, or a button held, is not resting. It used to also require the
+    // orbit, which made the field's whole half of this listener dead code
+    // (ISS-0081); the two branches below are what tell the arrangements apart.
     field.addEventListener('pointermove', (event) => {
-      if (this.arrangement !== 'orbit' || look !== null || event.buttons !== 0) return;
+      if (look !== null || event.buttons !== 0) return;
       // A pointer over the orbit is a person looking: the drift waits, or the
       // link under the pointer turns away while its sentence is being read.
       if (this.idle.frame !== null) this.el.field.classList.remove('turning');
       this.scheduleIdle();
       if ((event.target as HTMLElement).closest('.field-card, .pane, .compass, .field-bar') !== null) {
+        // Over an element the field's own cursor and callout say nothing: the
+        // element carries its own, and a stale pointer cursor underneath it
+        // would claim the background is clickable when it is not.
+        field.style.cursor = '';
         this.showCallout(null, 0, 0);
         return;
       }
@@ -1571,7 +1621,10 @@ export class GlassField {
       }
       this.showCallout(hit !== null ? null : this.edgeAt(x, y), x, y);
     });
-    field.addEventListener('pointerleave', () => this.showCallout(null, 0, 0));
+    field.addEventListener('pointerleave', () => {
+      field.style.cursor = '';
+      this.showCallout(null, 0, 0);
+    });
     // Zoom (FEAT-0016): not passive, so the page and Electron's own page zoom stay put.
     field.addEventListener('wheel', (event) => this.onWheel(event), { passive: false });
     // A double-click on the background returns to 1×; on a card, a pane, a
@@ -1605,6 +1658,20 @@ export class GlassField {
     field.addEventListener('pointermove', (event) => {
       if (look === null || event.pointerId !== look.id) return;
       const dx = event.clientX - look.x;
+      // A drag that began on a tile and goes down pulls that note to the front
+      // band, on the same threshold and the same mostly-vertical test a card's
+      // drag uses (TASK-0083). It fires once: `hand` keeps the rest of the
+      // drag from pulling the same note again.
+      if (look.tile !== null && !look.hand && !look.moved) {
+        const dy = event.clientY - look.y;
+        if (dy >= PULL_THRESHOLD_PX && dy > Math.abs(dx)) {
+          const entry = this.entries.get(look.tile);
+          look.hand = true;
+          if (entry !== undefined) void this.pull(entry);
+          return;
+        }
+      }
+      if (look.hand) return;
       if (Math.abs(dx) > CLICK_SLOP_PX) look.moved = true;
       if (!look.moved) return;
       this.cancelFlight();
@@ -1615,7 +1682,9 @@ export class GlassField {
     });
     const end = (event: PointerEvent): void => {
       if (look === null || event.pointerId !== look.id) return;
+      const pulled = look.hand;
       look = null;
+      if (pulled) return;
       // A click on the background changes nothing: sweeping a desk by
       // accident is unforgivable (DES-0002 rev 8). In the orbit a click on a
       // dot is a click on a note, and lands on it (TASK-0004).
@@ -1649,6 +1718,12 @@ export class GlassField {
         event.preventDefault();
         event.stopPropagation();
         this.liftQuietCursor();
+        return;
+      }
+      if (event.key === 'p' || event.key === 'P' || event.key === 'b' || event.key === 'B') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.handQuietCursor(event.key);
         return;
       }
       if (event.key === 'Escape') {

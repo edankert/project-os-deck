@@ -13,7 +13,7 @@ severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[DES-0002-The-Glass-Cockpit]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 
 # Nothing in the quiet band can be clicked
