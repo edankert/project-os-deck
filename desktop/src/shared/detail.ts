@@ -114,14 +114,51 @@ export function promoted(width: number, wasPromoted = false): boolean {
 }
 
 /**
+ * The rows a card draws, in CSS pixels, at the stylesheet's own sizes.
+ *
+ * `deck.css` sets `body { font: 13px/1.5 }`, so `line-height: 1.5` is
+ * inherited as a NUMBER and each row is its own font size times 1.5. The
+ * title is the exception: it sets `line-height: 1.25` and clamps to two
+ * lines, three at `more`.
+ *
+ * These numbers are checked against the stylesheet in
+ * `desktop/tests/glass-style.test.mjs`, so the two cannot drift apart
+ * silently. The arithmetic is corroborated by a number that has been on
+ * screen since FEAT-0009: a front-band card is `CARD_BOX`, 186 by 92, and it
+ * draws `full` without clipping. `full` comes out at 92.
+ */
+const ROW = Object.freeze({
+  /** `.fc-top`: the id at 10.5px and the mark at 11px, on the inherited 1.5. */
+  top: 11 * 1.5,
+  /** `.fc-title`: 12.5px at `line-height: 1.25`, per line. */
+  titleLine: 12.5 * 1.25,
+  /** `.fc-face` and `.fc-owed`: 10.5px on the inherited 1.5. */
+  small: 10.5 * 1.5,
+  /** `.fc-more`: 2px margin, 3px padding, a 1px rule, and one small row. */
+  more: 2 + 3 + 1 + 10.5 * 1.5,
+});
+
+/** `.field-card { padding: 6px 9px }`, top and bottom. */
+const CARD_PADDING_Y = 12;
+
+/** How many lines `.fc-title` is clamped to at each level (`-webkit-line-clamp`). */
+const TITLE_LINES: Readonly<Record<DetailLevel, number>> = Object.freeze({ tile: 0, brief: 2, full: 2, more: 3 });
+
+function heightFor(level: DetailLevel): number {
+  const shows = DETAIL_SHOWS[level];
+  let h = CARD_PADDING_Y + ROW.top + ROW.titleLine * TITLE_LINES[level];
+  if (shows.includes('face')) h += ROW.small;
+  if (shows.includes('owed')) h += ROW.small;
+  if (shows.includes('properties')) h += ROW.more;
+  return Math.ceil(h);
+}
+
+/**
  * The smallest box, in CSS pixels, that can draw each level.
  *
- * A level is a list of rows (`DETAIL_SHOWS`), and rows need height as well as
+ * A level is a list of rows (`DETAIL_SHOWS`), and rows need HEIGHT as well as
  * width. The widths are `DETAIL_AT`'s, because that is what the level means.
- * The heights are the rows the level draws at the stylesheet's sizes plus
- * `.field-card`'s 6px of padding above and below: an id row and a title are
- * two rows, a face line and an owed verb make four, and `more` adds the
- * status, the progress and the properties.
+ * The heights are the rows above.
  *
  * This exists because a card used to be laid out in its band's box whatever
  * detail it was asked for. That was harmless while detail followed the band,
@@ -129,12 +166,17 @@ export function promoted(width: number, wasPromoted = false): boolean {
  * a quiet tile promoted at 130 apparent pixels was still laid out in a 58 by
  * 16 box and asked for `full`, so its title wrapped at 58 pixels and the rest
  * was clipped by `overflow: hidden` (ISS-0084).
+ *
+ * **The heights were wrong when this was first written**, at 62 for `full`
+ * where the rows need 92, and low enough that `promotedBox`'s floor never
+ * engaged at all — so the rule was stated and did nothing. Round two of the
+ * independent review found it by adding the stylesheet up (ISS-0087).
  */
 export const MIN_BOX_FOR: Readonly<Record<DetailLevel, { width: number; height: number }>> = Object.freeze({
-  tile: Object.freeze({ width: 24, height: 14 }),
-  brief: Object.freeze({ width: DETAIL_AT.brief, height: 34 }),
-  full: Object.freeze({ width: DETAIL_AT.full, height: 62 }),
-  more: Object.freeze({ width: DETAIL_AT.more, height: 92 }),
+  tile: Object.freeze({ width: 24, height: heightFor('tile') }),
+  brief: Object.freeze({ width: DETAIL_AT.brief, height: heightFor('brief') }),
+  full: Object.freeze({ width: DETAIL_AT.full, height: heightFor('full') }),
+  more: Object.freeze({ width: DETAIL_AT.more, height: heightFor('more') }),
 });
 
 /** Whether a box this size can draw this level without clipping it. */
@@ -147,10 +189,14 @@ export function holdsDetail(box: { width: number; height: number }, level: Detai
  * The box a promoted quiet tile is laid out in (TASK-0084).
  *
  * A promoted note is a card, so it is laid out at the size it is drawn at and
- * not magnified: the width it already had on screen, a card's proportions
- * rather than a tile's flat ones, and never smaller than the level it is
- * asked for needs. The caller draws it with no scale, so the apparent width
- * across the promotion threshold does not jump.
+ * not magnified: the width it already had on screen, and a height that is a
+ * card's proportions OR what the level it is asked for needs, whichever is
+ * larger. The caller draws it with no scale, so the apparent width across the
+ * promotion threshold does not jump.
+ *
+ * **The height floor is the part that does the work**, not the proportions: a
+ * card's own ratio gives 64 pixels at the promotion threshold and the rows
+ * need 92.
  */
 export function promotedBox(apparentWidth: number, cardRatio: number): { width: number; height: number } {
   const width = Math.max(MIN_BOX_FOR.full.width, Math.round(apparentWidth));

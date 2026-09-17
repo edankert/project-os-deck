@@ -109,4 +109,37 @@ test('the quiet cursor is drawn over the field and does not swallow the canvas',
   assert.ok(cursor.length > 0, 'the quiet band’s tab stop has no style, so it is invisible and unfindable');
   assert.ok(cursor.some((r) => /position\s*:\s*absolute/.test(r.body)));
   assert.ok(cursor.some((r) => /background\s*:\s*transparent/.test(r.body)), 'the cursor covers the tile it marks');
+  // The half this check is NAMED for and never asserted (ISS-0085). The
+  // cursor sits over the canvas the hit test reads, so taking pointer events
+  // is the exact defect the smoke run found while TASK-0076 was being built:
+  // every click meant for a tile lands on the cursor instead.
+  assert.ok(
+    cursor.some((r) => /pointer-events\s*:\s*none/.test(r.body)),
+    'the quiet cursor takes pointer events, so it swallows the clicks meant for the tiles behind it',
+  );
+});
+
+test('the card row heights detail.ts computes are the stylesheet\'s own', () => {
+  // `MIN_BOX_FOR` is arithmetic over the stylesheet's numbers, written in
+  // `detail.ts` because that is where the thresholds live. Two copies of a
+  // number drift, so this is the check that they are one number. Round two of
+  // the review found the heights set at 62 for `full` where the rows need 92
+  // (ISS-0087); nothing but reading the stylesheet would have caught it.
+  const all = rules();
+  const one = (sel, re, what) => {
+    const found = all.filter((r) => r.selector.split(',').some((s2) => s2.trim() === sel));
+    assert.ok(found.length > 0, `${sel}: the rule detail.ts reads is gone`);
+    assert.ok(found.some((r) => re.test(r.body)), `${sel}: ${what}`);
+  };
+  one('body', /font\s*:\s*13px\/1\.5/, 'the inherited line-height is no longer 1.5, so every row height in detail.ts is wrong');
+  one('.field-card', /padding\s*:\s*6px\s+9px/, 'the 12px of vertical padding CARD_PADDING_Y assumes is gone');
+  one('.field-card', /overflow\s*:\s*hidden/, 'a card no longer clips, so the box-fits-detail rule is moot and should be deleted rather than left standing');
+  one('.field-card .fc-id', /font-size\s*:\s*10\.5px/, 'the id row size ROW.top assumes has changed');
+  one('.field-card .fc-mark', /font-size\s*:\s*11px/, 'the mark size ROW.top assumes has changed');
+  one('.field-card .fc-title', /font-size\s*:\s*12\.5px/, 'the title size ROW.titleLine assumes has changed');
+  one('.field-card .fc-title', /line-height\s*:\s*1\.25/, 'the title line-height ROW.titleLine assumes has changed');
+  one('.field-card .fc-title', /-webkit-line-clamp\s*:\s*2/, 'the title no longer clamps at two lines, so TITLE_LINES is wrong');
+  one('.field-card .fc-face', /font-size\s*:\s*10\.5px/, 'the face row size ROW.small assumes has changed');
+  one('.field-card .fc-owed', /font-size\s*:\s*10\.5px/, 'the owed row size ROW.small assumes has changed');
+  one('.field-card[data-detail="more"] .fc-title', /-webkit-line-clamp\s*:\s*3/, 'more no longer draws a third title line, so TITLE_LINES.more is wrong');
 });

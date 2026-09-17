@@ -171,15 +171,34 @@ test('a promoted tile is laid out large enough for the detail it was promoted to
       );
     }
   }
-  // The rule is the point, not the numbers: every level's own minimum holds.
+  // `holdsDetail(MIN_BOX_FOR[level], level)` would be `x >= x` whatever the
+  // numbers are, so it is not asserted here. What IS asserted is that the
+  // numbers are the ones the stylesheet's rows add up to — the front-band
+  // card has drawn `full` in 92 pixels since FEAT-0009, and that is the
+  // number `full` must land on. Round two of the review found these heights
+  // set at 62, low enough that `promotedBox`'s floor never engaged and the
+  // rule did nothing (ISS-0087).
+  assert.equal(MIN_BOX_FOR.full.height, CARD_BOX.height, 'full detail no longer needs what a front-band card gives it');
+  assert.ok(MIN_BOX_FOR.more.height > MIN_BOX_FOR.full.height, 'more draws a third title line and a properties block in no more room than full');
+  assert.ok(MIN_BOX_FOR.brief.height > MIN_BOX_FOR.tile.height, 'brief draws a title in no more room than an id');
   for (const level of DETAIL_LEVELS) {
-    assert.ok(holdsDetail(MIN_BOX_FOR[level], level), `${level}'s own minimum box does not hold ${level}`);
-    assert.equal(
-      holdsDetail({ width: MIN_BOX_FOR[level].width, height: MIN_BOX_FOR[level].height - 1 }, level),
-      false,
-      `${level} is said to fit a box a pixel too short, so the check cannot fail`,
-    );
+    assert.equal(MIN_BOX_FOR[level].width, level === 'tile' ? 24 : DETAIL_AT[level], `${level}'s minimum width is not the width that defines it`);
   }
+});
+
+test('the promoted box floor is what does the work, not a card\'s proportions', () => {
+  // The floor was dead code when this was first written: a card's ratio gave
+  // more height than the stated minimum at every width, so the `Math.max`
+  // never chose the minimum and a promoted card was 64 pixels tall where its
+  // rows needed 92 (ISS-0087). At the promotion threshold the floor must win.
+  const { promotedBox, MIN_BOX_FOR: MIN } = load('shared/detail.js');
+  const ratio = CARD_BOX.width / CARD_BOX.height;
+  const atThreshold = promotedBox(PROMOTE_AT, ratio);
+  assert.equal(atThreshold.height, MIN.full.height, 'the floor did not win at the promotion threshold');
+  assert.ok(atThreshold.height > Math.round(PROMOTE_AT / ratio), 'a card\'s proportions alone would have been enough, so the floor is decoration');
+  // And at `more`, where a third title line and the properties block land.
+  const atMore = promotedBox(DETAIL_AT.more, ratio);
+  assert.equal(atMore.height, MIN.more.height, 'the floor did not win at the `more` threshold');
 });
 
 test('a promoted tile does not jump in apparent width as it crosses the threshold', () => {

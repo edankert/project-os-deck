@@ -1294,7 +1294,7 @@ export class GlassField {
     el.style.transform = cardTransform(p, box);
     el.style.opacity = p.visible ? '1' : '0';
     const entry = this.entries.get(id);
-    el.setAttribute('aria-label', `${id} ${entry?.card.title ?? ''}, in the quiet band. Arrow keys move along the shelf, Enter puts it on the desk, p pulls it to the front band.`);
+    el.setAttribute('aria-label', `${id} ${entry?.card.title ?? ''}, in the quiet band. Arrow keys move along the shelf, Enter puts it on the desk, p pulls it to the front band, b pushes it behind.`);
   }
 
   /**

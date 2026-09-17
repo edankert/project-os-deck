@@ -2096,23 +2096,82 @@ async function recordDesksPerView(
         (await js<{ band: string } | null>(`__t.where(${JSON.stringify(onShelf)})`))?.band === 'front',
         `the pulled finished note is still in front after a view switch`,
       );
+      // Put the section back where it was. This check is the only one here
+      // that leaves the view, and everything below it — the drag, promotion,
+      // and the shape comparison against `shapeBefore`, which was taken on
+      // Issues — reads whichever view is current.
+      await view('issues');
+      await delay(900);
+      await js(`document.getElementById('field').focus(); window.__deckGlass.model.face(Math.PI); window.__deckGlass.render(false); true`);
+      await delay(600);
     }
 
     // 5c. TASK-0083: and a downward drag that BEGINS on a painted tile does
     // the same, while a drag that begins anywhere else still turns the field.
+    // `__t.bands().tiles` reports each tile's CENTRE in the FIELD's own
+    // coordinates, so a press needs the field's offset added and nothing else.
+    // The first version of this check wrote `t.x + t.w / 2` and no offset,
+    // which pressed a point that was neither the tile's centre nor, on a field
+    // that is not at the window's origin, anywhere near the tile. The click
+    // check above gets this right, and its "is anything in front of it" test
+    // is reused here rather than restated.
     const dragTile = await js<{ id: string; x: number; y: number } | null>(
-      `(() => { const b = __t.bands(); const t = b.tiles.find((t) => t.w > 8 && t.h > 6); return t ? { id: t.id, x: Math.round(t.x + t.w / 2), y: Math.round(t.y + t.h / 2) } : null; })()`,
+      `(() => {
+        const f = document.getElementById('field').getBoundingClientRect();
+        const held = new Set(window.__deckDesk());
+        for (const t of __t.bands().tiles) {
+          if (t.w <= 8 || t.h <= 6) continue;
+          if (t.x < 120 || t.x > f.width - 120 || t.y < 120 || t.y > f.height - 160) continue;
+          if (held.has(t.id)) continue;
+          const x = Math.round(f.left + t.x);
+          const y = Math.round(f.top + t.y);
+          const over = __t.hit(x, y);
+          if (typeof over !== 'string' || !over.startsWith('field')) continue;
+          return { id: t.id, x, y };
+        }
+        return null;
+      })()`,
     );
     if (dragTile === null) {
-      ctx.skip('dragging from the shelf: no tile is painted');
+      ctx.skip('dragging from the shelf: no tile is painted clear of everything else');
     } else {
-      const yawBefore = await js<number>(`window.__deckGlass.model.yaw`);
       await pointer(win, drag(dragTile, { x: dragTile.x, y: dragTile.y + 90 }, 10));
       await delay(1200);
       const draggedSet = store.getState().session.pulled[prepared.id] ?? [];
       record(draggedSet.includes(dragTile.id), `dragging the tile ${dragTile.id} downward pulls it forward (store: ${draggedSet.join(', ')})`);
-      const yawAfter = await js<number>(`window.__deckGlass.model.yaw`);
-      record(Math.abs(yawAfter - yawBefore) < 0.01, `a downward drag on a tile pulls it and does not also turn the field (yaw ${yawBefore.toFixed(3)} to ${yawAfter.toFixed(3)})`);
+      // And the turn still works from a tile. A DOWNWARD drag cannot tell us
+      // that: `drag` interpolates in a straight line, so a drag that only goes
+      // down has no horizontal travel and could never have turned the field
+      // whatever the code does — the first version of this check asserted the
+      // yaw had not moved, which was true by construction. A sideways drag
+      // from the same kind of place is the one that can fail, and the one that
+      // would catch a press on a tile swallowing the turn.
+      const turnFrom = await js<{ x: number; y: number } | null>(
+        `(() => {
+          const f = document.getElementById('field').getBoundingClientRect();
+          for (const t of __t.bands().tiles) {
+            if (t.w <= 8 || t.x < 200 || t.x > f.width - 200) continue;
+            const x = Math.round(f.left + t.x);
+            const y = Math.round(f.top + t.y);
+            const over = __t.hit(x, y);
+            if (typeof over !== 'string' || !over.startsWith('field')) continue;
+            return { x, y };
+          }
+          return null;
+        })()`,
+      );
+      if (turnFrom === null) {
+        ctx.skip('turning from a tile: no tile is painted clear of everything else');
+      } else {
+        const yawBefore = await js<number>(`window.__deckGlass.model.yaw`);
+        await pointer(win, drag(turnFrom, { x: turnFrom.x - 220, y: turnFrom.y }, 12));
+        await delay(900);
+        const yawAfter = await js<number>(`window.__deckGlass.model.yaw`);
+        record(
+          Math.abs(yawAfter - yawBefore) > 0.05,
+          `a sideways drag that begins on a tile still turns the field (yaw ${yawBefore.toFixed(3)} to ${yawAfter.toFixed(3)})`,
+        );
+      }
     }
 
     // 6. A tile promotes when it is drawn at the size of a card, and demotes.
