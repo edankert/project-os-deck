@@ -36,7 +36,7 @@ The check that should have caught this is `record(typeof cursor === 'string', ..
 
 - Resting the pointer on a quiet-band tile in the Glass field shows the pointer cursor.
 - Resting on a tile shows a callout naming the note under the pointer, and moving off it hides the callout again.
-- The orbit's own hover behaviour, a link quoted and a dot named, is unchanged.
+- The orbit's own hover behaviour, a link quoted and a dot named, is unchanged. **Amended 2026-09-17 after round two of the review:** one thing in the orbit did change, and it is the change the fix wanted everywhere. Moving the pointer from a dot onto a card, a pane, the compass or the bar now clears the pointer cursor, where before it was left behind claiming the background was clickable. The same clearing happens on `pointerleave`. Saying "unchanged" was wrong; this line says what changed and why it is right.
 - A turn in progress and a held button still suppress both, as they do in the orbit today.
 - The smoke check asserts `cursor === 'pointer'` rather than that a string was returned, and fails when the guard is closed again.
 

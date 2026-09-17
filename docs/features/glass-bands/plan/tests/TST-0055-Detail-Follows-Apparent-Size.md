@@ -17,8 +17,8 @@ covers: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached
 issues: ["[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]"]
 tasks: ["[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]"]
 artifacts: []
-adequacy: "Three deliberate breaks, one per run; all three caught, each substitution confirmed applied before its run."
-mutation_score: "3/3 breaks caught"
+adequacy: "Eight deliberate breaks across two rounds; all eight caught. The first three, 2026-09-12, were the threshold, the hysteresis and the level table. The next five, 2026-09-17, are the box-fits-detail rule: promotedBox returning the tile box (4 checks fail), deleting the MIN_BOX_FOR height floor (2), setting full back to 62 (2), the quiet cursor taking pointer events (1) and the title clamp dropping to one line (1). Each substitution was rebuilt before its run and the file restored with git checkout afterwards; the tree was clean after each."
+mutation_score: "8/8 breaks caught, 2026-09-12 and 2026-09-17"
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-17
 review_verdict: approved
@@ -90,4 +90,6 @@ Three checks, from [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promo
 - **A promoted tile does not jump in apparent width as it crosses the threshold.** The box is the apparent width, and the renderer draws it with no scale, so the frame before and the frame after are the same width.
 - **A promoted tile is taller than the flat tile it replaces**, because it is a card and a card has a card's proportions.
 
-**Adequacy, 2026-09-17.** Replacing `promotedBox` with the old behaviour — the band's box, magnified — makes all three fail. Restored, all 468 node checks pass and `git status` is clean. The rule is asserted rather than the numbers, so moving `PROMOTE_AT` or `DETAIL_AT` cannot silently break it again.
+**Adequacy, 2026-09-17, restated after round two.** The first version of this sentence said replacing `promotedBox` with the old behaviour makes all three checks fail. Round two showed that is true only of the band-box form of the defect: `promotedBox` returning a fixed 58 by 16 box makes checks 2 and 3 fail and **check 1 pass**, because check 1 took the level from the box's own width and `detailFor(58)` is `tile`, which 58 by 16 does hold. Check 1's width axis was true by construction for the same reason, and the loop asserting `holdsDetail(MIN_BOX_FOR[level], level)` was `x >= x`.
+
+**What replaced it.** The minimum heights are now computed from the stylesheet's own sizes, `full` is asserted to equal `CARD_BOX.height` — the 92 pixels a front-band card has drawn full detail in since [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] — and a fourth check asserts the height floor is what decides a promoted card's height rather than a card's proportions, which is the part that was dead code. Five breaks were run against the result and all five were caught; the counts are in `adequacy:`. Restored, all 470 node checks pass and `git status` is clean.

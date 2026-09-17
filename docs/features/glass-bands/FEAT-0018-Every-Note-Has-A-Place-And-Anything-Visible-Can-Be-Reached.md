@@ -216,7 +216,13 @@ Run before any ID was allocated (`tools/skills/issue-intake/SKILL.md`, step 1).
 
 **Three findings are filed and do not block**, per `tools/instructions/QUALITY.md`: two smoke checks that cannot fail ([[ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor]]), three rules that survive being broken with every check passing ([[ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing]]), and the 186 notes the outer field leaves unplaced against this note's own title ([[ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place]], which is Edwin's decision).
 
-**What is owed before this is done**: the three fix tasks and a round-two review of those fixes only, and then the walk [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]], which is Edwin's.
+**2026-09-17, later: round two ran on the fixes and returned `changes-requested`, and its findings are fixed.** Its report is the second review section at the end of this note. It confirmed the pull and the hover fixes and refuted the third: the promoted card was **still clipped**, because `MIN_BOX_FOR`'s heights were estimated rather than added up, and were low enough that `promotedBox`'s floor never applied at all ([[ISS-0087-The-Promoted-Card-Was-Still-Clipped-Because-Its-Minimum-Heights-Were-Guessed]]). It also found that two of the checks written that same day could not fail — the drag check pressed a point that was not the tile, and the yaw check was true by construction — which is the same species as round one's [[ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor]]. All of it is fixed in `223d582`, with five deliberate breaks each caught.
+
+**The gate stops here.** `tools/instructions/QUALITY.md` allows two rounds and ADR-0028 forbids a third, so the round-two fixes are not themselves reviewed. That is the rule's accepted cost and it is worth naming: the last change to this feature has had no independent eyes on it.
+
+**One gap no node suite can close.** Setting `lift` to `false` in `place()` restores [[ISS-0084-A-Promoted-Tile-Is-Drawn-In-The-Tiles-Box-So-The-Detail-It-Was-Promoted-To-Show-Is-Clipped]] exactly and leaves all 470 checks passing, because no node suite loads the renderer. The pure rule is guarded; that the renderer applies it is guarded only by the smoke run. This is not new to this feature — it is why [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]] exists — but it is the reason the smoke run is owed rather than optional here.
+
+**What is owed before this is done.** A smoke run, which settles every renderer claim above and eleven checks that have never been executed; then the walk [[TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward]], which is Edwin's; and [[ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place]], which is Edwin's decision about this note's own title.
 
 **Two judgement calls a reviewer should look at first.** The outer field's capacity was raised to 64 and Your Trainer's Features view still counts 186 notes it could not place — whether the outer field should gain layers is recorded and not decided. And eleven of the smoke suite's fourteen new checks have no break of their own, because a run in the box costs half an hour; the three chosen are the ones nothing else covers.
 
@@ -286,3 +292,49 @@ The judgement this reviewer would record: stating the remainder is an adequate *
 ### What was checked and held
 
 `npm test` passes 465 of 465. `npm run typecheck` is clean. `validate-docs.sh` exits OK. Conservation of the deal was recomputed over all three fixtures and holds every time. Seven deliberate breaks in the pure modules were each caught by the suite that claims to guard them: the middle's remainder dropped rather than placed (3 failures), the quiet band's capacity removed (2), the quiet band walking forward as it shrinks (3), `detailFor`'s `full` threshold widened (2), the promotion hysteresis removed (1), `FieldModel` deriving shapes per deal rather than using the held ones (1), and pushed notes no longer held back from the quiet band's cap (1). The tree was restored with `git checkout --` after each and `git status` is clean.
+
+## Independent review, round two, 2026-09-17
+
+`reviewed_by: model:claude-opus-5`, `review_verdict: changes-requested`. A fresh session with no memory of the authoring work or of round one's conversation, given the notes and `git diff e50baa1..fb4982b` only. Same model family as the author, which is what `reviewed_by` records; what was independent is the context and the session, not the weights (`tools/instructions/QUALITY.md`, "Independent review (clean-context)"). Round two is narrow by ADR-0028: it verifies the fixes to round one's three blocking findings and is not a fresh sweep. Electron was not launched, so `npm run smoke` and `npm run measure` were not run and every renderer claim below is read or computed rather than observed.
+
+### The hover fix answers ISS-0081
+
+The `pointermove` guard now reads `if (look !== null || event.buttons !== 0) return`, so the tile branch is reachable in the field, `showTileCallout` has a live caller and `field.style.cursor` is assigned over a tile. Running the listener in the field is safe: the only other thing inside it is `scheduleIdle()`, which returns at its first line unless the arrangement is the orbit, so no drift is started in the field. Two small consequences the notes do not state: the new `field.style.cursor = ''` over a card, a pane, the compass or the bar, and on `pointerleave`, also runs in the orbit, where TASK-0082's acceptance says the orbit's hover behaviour is "unchanged"; and the field now rebuilds the callout's DOM on every `pointermove` over a tile, with a linear scan of every painted tile before it, which nothing measures.
+
+### The pull fix answers ISS-0082, and its two drag checks do not test it
+
+Both routes reach FEAT-0014's `pull`. The keyboard route is sound end to end: `p` on the shelf's cursor calls `pull`, which dispatches `{type: 'pull'}`; the band table in `desktop/src/shared/views.ts` puts `when: {pulled: true}` at `front` above `when: {suppressed: true}` at `deep`, so a finished note does move; `pull` never touches the desk, and `dealField` gives a pull that overflows one of `PULL_SPARES`. The drag route fires once (`look.hand`), returns before the turn code, and `end()` returns before `tap`, so the note is not also put on the desk. A press that lands anywhere but a tile still turns the field, and a drag whose horizontal travel passes `CLICK_SLOP_PX` before its vertical travel reaches `PULL_THRESHOLD_PX` still turns.
+
+Two defects are in the checks, not the fix, and both are the species round one filed as ISS-0083.
+
+- **The drag check aims at the wrong pixel.** `desktop/src/main/smoke-glass.ts` builds `dragTile` from `__t.bands().tiles` as `{x: t.x + t.w/2, y: t.y + t.h/2}` and hands it straight to `pointer()`. `bandState().tiles` carries the projection's `p.x, p.y`, which are the tile's CENTRE in the field's own coordinates; the click check twelve lines above converts with `f.left + t.x` for exactly this reason, and `tileAt` is called as `this.tileAt(event.clientX - box.left, ...)`. So the press is sent to a point offset by the field's position in the window, and `+ t.w/2` moves it off the centre to the tile's corner besides. The check also takes the first tile in the list without the "is anything in front of it" test the click check carries and documents.
+- **The yaw check cannot fail.** `drag(from, to, 10)` interpolates linearly, and `to.x === from.x`, so every step has `dx === 0`. The turn needs `Math.abs(dx) > CLICK_SLOP_PX`, and idle drift does not run outside the orbit, so the yaw is unchanged whether or not the drag route exists.
+
+### The promoted-card fix is partial: ISS-0084's clipping is still there at the bottom of the promoted range
+
+`place()` and `boxOf` are correct for every non-promoted card: with `lift` false both compute exactly what they computed before. The promoted card is now laid out at its apparent width with `scale: 1`, which is the right shape of fix. What it gives that card is `promotedBox`'s height, `width / (186/92)` — a card's proportions. At the promotion threshold that is a 130 by 64 box, and the box is asked for `full`.
+
+`full` does not fit 64 pixels. `body` sets `font: 13px/1.5`, so line-height inherits as the number 1.5. `.fc-top` is 16.5, `.fc-title` is 15.6 for one line and 31.3 clamped at two, `.fc-face` is 15.8, `.fc-owed` is 15.8 when it is not empty, plus 12 of padding and 2 per gap. A one-line title with no owed verb needs 63.9 and just fits. A two-line title needs 79.5, and Deck's own note titles wrap at 112 pixels of content width. With an owed verb it is 97.3. `.field-card` carries `overflow: hidden`, so the surplus is clipped, which is ISS-0084's own complaint. The box only reaches 79.5 at an apparent width of about 161, and `more` at 210 asks for a third title line and the properties block in 104 pixels.
+
+`MIN_BOX_FOR`'s heights are meant to stop this and cannot. They are never reached: `promotedBox` takes `Math.max(width / 2.02, MIN_BOX_FOR[level].height)`, and `width / 2.02` is 64 at `full`'s 130 and 104 at `more`'s 210, both above the 62 and 92 the table states. Deleting the `Math.max` changes no output and no check notices. The heights are also below what the stylesheet needs, so `holdsDetail` returns true for boxes that clip.
+
+This refutes TASK-0084's first acceptance line, "A promoted card's box is large enough for the detail its `data-detail` asks for; nothing is clipped". Not reproduced in a browser: what settles it is the run's own new check, `every promoted card draws its <level> without clipping it`, which measures `scrollHeight - clientHeight` and has never been run.
+
+### What the new node checks guard, and what they do not
+
+- Reverting the renderer half of TASK-0084 — `const lift = false` in `place()`, which restores the band box, the scale and `detailFor(p.scale * box.width)` exactly as ISS-0084 describes them — leaves all 468 node checks passing. No node suite loads `renderer/glass`. The three new checks guard `detail.ts`, not the fix.
+- `a promoted tile is laid out large enough for the detail it was promoted to show` is true by construction on its width axis: it takes the level from the box's own width, and `MIN_BOX_FOR[level].width` is `DETAIL_AT[level]`, which is the table `detailFor` reads. Making `promotedBox` return the tile's box, `{width: 58, height: 16}` — the large-shelf form of the defect — leaves this check passing (`detailFor(58)` is `tile`, and 58 by 16 holds `tile`); the other two fail. TST-0055's "Replacing `promotedBox` with the old behaviour makes all three fail" holds only for the small-shelf form, the band's box.
+- The `MIN_BOX_FOR` loop inside that check is a tautology: `holdsDetail(MIN_BOX_FOR[level], level)` and its one-pixel-short twin are `x >= x` and `x - 1 >= x` whatever the numbers are. It guards that `holdsDetail` reads the height at all, and nothing about the numbers.
+- Removing the `MIN_BOX_FOR[level].height` floor from `promotedBox` leaves all 468 passing, as above.
+
+### On the notes
+
+- `p` and `b` both act on the shelf's cursor and the cursor's `aria-label` announces only `p`.
+- TASK-0083's "Two checks were added for the keyboard route and two for the drag" is three and two. The commit message, TST-0045's new section and its heading all say seven new smoke checks; the diff adds eleven `record(` calls and removes two, of which two are replacements, so nine are new.
+- TST-0055's `adequacy:` and `mutation_score:` still describe the three breaks of the earlier round and not the three checks added here.
+- Smoke step 5b switches the view to `issues` and then to `features` in the middle of the section, so 5c and the promotion checks in step 6 now run on a different view from the one they ran on before. Nothing in the notes records that.
+- The notes are accurate about what is unverified: every "not verified by a run" claim matches the diff, and the pure-layer verification TASK-0084 claims does hold for the mutation it names.
+
+### What was checked
+
+`cd desktop && npm test` — 468 checks, all passing. `npm run typecheck` — clean. `bash tools/scripts/validate-docs.sh` — OK, with the same pre-existing warnings. Four deliberate breaks were applied to `desktop/src/shared/detail.ts` and `desktop/src/renderer/glass.ts`, each rebuilt and run; the tree was restored with `git checkout --` after each and `git status --short` prints nothing.

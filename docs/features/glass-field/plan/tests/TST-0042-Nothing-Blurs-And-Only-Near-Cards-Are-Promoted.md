@@ -57,3 +57,12 @@ Three checks were added to the same stylesheet suite, because they are the same 
 - **Every level `desktop/src/shared/detail.ts` names has a rule, and they hide progressively less.** A level with no rule draws the same as the one below it, silently.
 - **The `more` level draws something.** It is the level nothing has ever drawn, so without a rule the field would stop at `full` however far a person zoomed, and nothing else would say so.
 
+## Added 2026-09-17: the card row sizes this stylesheet sets are the ones `detail.ts` computes with
+
+Two checks, from [[ISS-0087-The-Promoted-Card-Was-Still-Clipped-Because-Its-Minimum-Heights-Were-Guessed]] and [[ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing]].
+
+**`MIN_BOX_FOR` in `detail.ts` is arithmetic over numbers that live in this stylesheet**, so there are two copies of one fact and they can drift. The new check reads the built stylesheet and asserts each number the arithmetic assumes: `body`'s `13px/1.5`, `.field-card`'s `padding: 6px 9px` and `overflow: hidden`, the id, mark, title, face and owed font sizes, the title's `line-height: 1.25` and its two-line clamp, and the three-line clamp at `more`. Each failure message says which constant in `detail.ts` the change invalidates, rather than saying a regular expression did not match.
+
+**And the quiet cursor's `pointer-events: none` is asserted by the check that is named for it.** "The quiet cursor is drawn over the field and does not swallow the canvas" asserted `position` and `background` and never the property the second half of its name is about — so changing it to `auto`, which is the exact defect the smoke run found while [[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]] was being built, left every check passing.
+
+**Adequacy, 2026-09-17.** Changing `pointer-events: none` to `auto` fails one check; dropping `.fc-title`'s clamp from two lines to one fails one check. Both were rebuilt before the run and the file restored afterwards.

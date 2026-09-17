@@ -128,7 +128,7 @@ The second closes a gap [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] re
 
 Eleven of the fourteen checks have no break of their own. A run in the box costs about half an hour, and the three chosen are the ones nothing else covers; the deal, the shapes and the thresholds underneath them are pure and are each broken deliberately in their own suites, where a break costs seconds.
 
-## 2026-09-17: two checks that could not fail are gone, and seven were added
+## 2026-09-17: four checks that could not fail are gone, and eleven were written
 
 FEAT-0018's round-one independent review found that two of the fourteen checks [[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]] added pass whatever the renderer does ([[ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor]]): `record(typeof cursor === 'string', ...)` and `record(a !== b || true, ...)`. One of them was the only cover for "shows the pointer cursor", and it passed through a build in which the handler that sets the cursor could not run at all.
 
@@ -148,6 +148,10 @@ FEAT-0018's round-one independent review found that two of the fourteen checks [
 - No promoted card's content overflows the box it is drawn in.
 - Every promoted card's measured box holds the level its width earns.
 
-**None of the seven has been run**, and neither has the whole suite since these changes. The run opens windows; Docker was not running on 2026-09-17, so the container [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] built was not available either. `npm test` (468 node checks) and both typechecks pass and cover none of this.
+**Round two found two more that could not fail — both of them checks added above, on the same day.** The drag check pressed `t.x + t.w / 2` with no field offset, where `__t.bands().tiles` reports a tile's centre in the field's own coordinates; it pressed a point that was neither the tile's centre nor near the tile. And the check that a downward drag does not turn the field was true by construction: `drag` interpolates in a straight line, so a purely vertical drag has no horizontal travel and could never turn the field whatever the code does. Both are corrected: the drag converts the way the click check does and reuses its "is anything in front of it" test, and the yaw check is replaced by a sideways drag from a tile, which can fail and is the real regression risk.
+
+**The count, stated properly.** Eleven `record` calls were written across the two commits; two of them replace the two tautologies round one found, so nine are new. Two of the nine were themselves defective and are now rewritten.
+
+**None of the eleven has been run**, and neither has the whole suite since these changes. The run opens windows; Docker was not running on 2026-09-17, so the container [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] built was not available either. `npm test` (468 node checks) and both typechecks pass and cover none of this.
 
 **The `changes-requested` verdict of 2026-09-10 still stands in this note's frontmatter** and is not cleared by the above. [[PHASE-0002-Glass]] records why: Edwin asked to stop the review loop after the second round on 2026-09-10, and the verdicts stay recorded.

@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 18
-  ISS: 86
+  ISS: 88
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -64,7 +64,7 @@ focus:
   feature: "FEAT-0018"
   task: ""
   issue: ""
-  note: "2026-09-17: FEAT-0018'S INDEPENDENT REVIEW RAN AND RETURNED changes-requested, AND THE THREE BLOCKING FIXES ARE WRITTEN BUT UNRUN. Round one (model:claude-opus-5, clean context, notes + diff 67f5bf0..e72deaa only) is recorded in the feature note and in TST-0053/0054/0055, which it approved. THREE FINDINGS REFUTE AN ACCEPTANCE LINE and hold the feature out of done: ISS-0081, resting the pointer on a tile does NOTHING because the pointermove listener still opened with 'if (this.arrangement !== \'orbit\') return', so TASK-0076's whole tile branch was dead code and showTileCallout was never called from anywhere; ISS-0082, a finished note can only be pulled forward once PROMOTED, and a 2,700-note shelf has a 58px tile box that reaches 86px at maximum zoom, so on Your Trainer EDWIN'S OWN REQUEST cannot be performed at any zoom; ISS-0084, a promoted card is laid out in the TILE's box and merely magnified, so full detail is asked of a 58x16 element and clipped. THREE MORE FILED, NOT BLOCKING: ISS-0083 (two of the fourteen new smoke checks cannot fail -- 'typeof cursor === string' and 'a !== b || true' -- and the first was the ONLY cover for the cursor, so it passed through a build where the cursor could never be set), ISS-0085 (three rules survive being broken with all 465 checks passing, one of them the exact pointer-events defect the smoke run already found once), ISS-0086 (186 of 317 notes on Your Trainer's Features view are counted and drawn nowhere while this feature is called 'every note has a place' -- EDWIN'S DECISION: layers in the outer field, or narrow the title and goal). FIXES WRITTEN 2026-09-17 in TASK-0082, TASK-0083 and TASK-0084, all at doing: the hover guard now tests only look and buttons; the shelf's keyboard cursor takes p and b and a downward drag from a painted tile pulls, both calling FEAT-0014's own pull; and promotedBox/holdsDetail/MIN_BOX_FOR in detail.ts lay a promoted card out at the size it is drawn at with no scale. 468 node checks and both typechecks pass; three new checks in TST-0055 were each shown to FAIL when promotedBox is reverted. NOT VERIFIED: every renderer fix is covered only by smoke checks, seven of which are new, and THE SMOKE SUITE HAS NOT BEEN RUN -- it opens windows, and Docker was not running so TASK-0081's container was unavailable. OWED: a smoke run, then round two on those fixes only (ADR-0028: two rounds, no third), then the walk TST-0056, which is Edwin's. STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review with NO independent review recorded on any of them, waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 revise FEAT-0017's decisions and are unplanned; ISS-0075, ISS-0080, ISS-0069 and ISS-0068 unplanned."
+  note: "2026-09-17: FEAT-0018 REVIEWED TWICE, BOTH ROUNDS changes-requested, ALL FINDINGS FIXED, AND NOTHING IN THE RENDERER IS VERIFIED BECAUSE THE SMOKE SUITE HAS NOT BEEN RUN. Round one (clean context, notes + diff only) found THREE defects refuting an acceptance line: ISS-0081, the hover handler still opened with 'if (this.arrangement !== \'orbit\') return' so TASK-0076's tile branch was dead code and showTileCallout was never called from anywhere; ISS-0082, a finished note could only be pulled forward once PROMOTED, and Your Trainer's 58px tile box reaches 86px at maximum zoom, so EDWIN'S OWN REQUEST could not be performed at any zoom; ISS-0084, a promoted card was laid out in the TILE's box and merely magnified, so full detail was clipped. Fixed in fb4982b (TASK-0082, TASK-0083, TASK-0084). ROUND TWO then confirmed the first two and REFUTED THE THIRD FIX: the card was STILL CLIPPED because MIN_BOX_FOR's heights were estimated, not added up -- full at 62 where the stylesheet's rows need 92 -- and were low enough that promotedBox's floor NEVER APPLIED, so the rule was dead code (ISS-0087). It also found TWO OF THE CHECKS WRITTEN THAT DAY COULD NOT FAIL: the drag check pressed t.x + t.w/2 with no field offset, which is not the tile, and the 'a downward drag does not turn the field' check was true by construction because drag() interpolates in a straight line. Fixed in 223d582: MIN_BOX_FOR is computed from deck.css's own sizes, full lands on 92 which is CARD_BOX.height (a front-band card has drawn full detail in 92px since FEAT-0009, so the arithmetic has a witness); TST-0042 now reads the BUILT stylesheet so the two copies cannot drift; the drag converts coordinates the way the click check does; the yaw check is replaced by a sideways drag that CAN fail. FIVE BREAKS RUN, ALL FIVE CAUGHT. 470 node checks and both typechecks pass. THE GATE STOPS HERE -- QUALITY.md allows two rounds and ADR-0028 forbids a third, so 223d582 itself has had no independent eyes; that is the rule's accepted cost and it is named in the feature note. ONE GAP NO NODE SUITE CAN CLOSE: setting lift = false in place() restores ISS-0084 exactly and leaves all 470 passing, because no node suite loads the renderer. OWED: A SMOKE RUN -- eleven checks have never been executed and every renderer claim rests on them; Docker's daemon was not running, so TASK-0081's container was unavailable and starting Docker Desktop is Edwin's call. THEN the walk TST-0056, Edwin's. EDWIN'S DECISION, UNTOUCHED: ISS-0086, 186 of 317 notes on Your Trainer's Features view are counted and drawn nowhere while this feature is titled 'every note has a place' -- layers in the outer field, or narrow the title. ALSO FILED, NOT BLOCKING: ISS-0083, ISS-0085, ISS-0088 (the hover now scans every tile and rebuilds the callout on every pointer move, and TASK-0079's pointer measurement was taken while that code could not run). STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review with NO independent review recorded on any of them, waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 unplanned; ISS-0075, ISS-0080, ISS-0069, ISS-0068 unplanned."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -674,6 +674,26 @@ items:
       parent: "FEAT-0018"
       phase: PHASE-0002
   issues:
+    ISS-0088:
+      file: "docs/issues/ISS-0088-The-Hover-Rebuilds-The-Callout-On-Every-Pointer-Move-Over-The-Shelf.md"
+      title: "Now that the hover handler runs in the field, every pointer move over the quiet band scans every painted tile and rebuilds the callout's elements, and no measurement covers it"
+      status: triage
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: low
+      component: renderer
+      tests: []
+      note: "Filed 2026-09-17 from FEAT-0018's round-two independent review, as a consequence of TASK-0082's fix. Opening the hover guard means tileAt (a linear scan of every painted tile) and showTileCallout (replaceChildren plus two fresh elements) now run on EVERY pointer move in the field, including moves within the same tile. TASK-0079's 'pointer moving' measurement -- 1.0, 1.5 and 2.6 ms, at or below the same turn with the pointer still -- was taken while this listener STILL RETURNED IMMEDIATELY in the field, so it does not cover this code. Not measured; npm run measure takes a person's screen. Two cheap guards would settle it without a measurement: return early when the tile under the pointer is unchanged, and rebuild the callout's children only when the note it names changes."
+    ISS-0087:
+      file: "docs/issues/ISS-0087-The-Promoted-Card-Was-Still-Clipped-Because-Its-Minimum-Heights-Were-Guessed.md"
+      title: "The fix for the clipped promoted card left it clipped, because the minimum heights were guessed rather than added up and were low enough that the floor meant to apply them never applied at all"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: renderer
+      tests: ["[[TST-0055-Detail-Follows-Apparent-Size]]", "[[TST-0042-Nothing-Blurs-And-Only-Near-Cards-Are-Promoted]]"]
+      note: "Filed 2026-09-17 from FEAT-0018's round-two independent review: ISS-0084's fix was answered with a rule that DID NOTHING. MIN_BOX_FOR's heights were estimated, not added up -- full at 62 where its rows need 92 -- so a promoted card at the threshold was 130x64 and STILL CLIPPED; and because a card's proportions give more height than the estimate at every width (64 vs 62, 104 vs 92), promotedBox's Math.max NEVER chose the floor, which made it dead code. The right number was already on screen: CARD_BOX is 186x92 and a front-band card has drawn full in 92px since FEAT-0009. FIXED in 223d582: heightFor adds the rows DETAIL_SHOWS names at deck.css's own sizes, full lands on 92, TST-0055 asserts the equality with CARD_BOX.height, and TST-0042 now reads the BUILT stylesheet so the two copies of those numbers cannot drift. Five mutations all caught, including the two that survived before. The ON-SCREEN result is still unverified: the smoke check that measures a real promoted card has not been run."
     ISS-0086:
       file: "docs/issues/ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place.md"
       title: "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the feature's title and goal promise more than the field delivers"
@@ -1936,8 +1956,8 @@ metrics:
     tests_total: 39
     tests_passing: 2
     tests_failing: 0
-    issues_open: 8
-    issues_triage: 7
+    issues_open: 9
+    issues_triage: 8
     risks_open: 0
     releases_total: 0
     decisions_total: 5
