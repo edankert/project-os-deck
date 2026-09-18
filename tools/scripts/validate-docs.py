@@ -147,7 +147,15 @@ ALLOWED_STATUS = {
     # asserted by ACCEPTANCE-STATUS rather than left implicit: the gates are
     # keyed on statuses an acceptance test does not hold.
     "check": {"draft", "active", "retired"},
-    "release": {"draft", "released", "reverted"},
+    # `abandoned` is a release that was prepared and will not ship. The state
+    # existed before the word did: `your-trainer`'s REL-0013 held v2.1.7 at
+    # `draft` for 23 days (created 2026-08-16, measured 2026-09-08) with
+    # `superseded_by:` naming its successor, so
+    # every surface that counts open releases counted it and every reader had
+    # to work out from the successor link that it was over. Terminal, and the
+    # note is kept deliberately -- it is the only record of why a version
+    # number was skipped.
+    "release": {"draft", "released", "reverted", "abandoned"},
     # `plan` is consumed by validate_plan_notes through load_allowed_status(). It
     # belongs in the defaults like every other type: without it, a repo whose
     # STATUSES.md lacks a `[[plan]]` section gets an empty allowed set and
@@ -435,6 +443,10 @@ TERMINAL_TYPES = {
 #: Flat status collections, with the note types each is compared against.
 #: validate_status_tables walks this, so adding a status table means adding a row
 #: here rather than remembering to write another check by hand.
+#: The issue statuses ISSUE-REPORTER and ISSUE-QUESTION check (ADR-0047).
+#: `deferred` is parked work, not an open question, so it is left out.
+OPEN_ISSUE_STATUSES = {"triage", "open"}
+
 FLAT_STATUS_TABLES = {
     # Registered rather than exempted: every value in it IS a test status, and
     # the point of the collection is that an acceptance test must not hold one.
@@ -446,6 +458,7 @@ FLAT_STATUS_TABLES = {
     "DESCOPED_STATUSES": (DESCOPED_STATUSES, ("requirement",)),
     "TEST_RUNNER_STATUSES": (TEST_RUNNER_STATUSES, ("test",)),
     "REQ_UNADVANCED_STATUSES": (REQ_UNADVANCED_STATUSES, ("requirement",)),
+    "OPEN_ISSUE_STATUSES": (OPEN_ISSUE_STATUSES, ("issue",)),
 }
 
 
@@ -488,6 +501,9 @@ _NON_STATUS_COLLECTIONS = frozenset({
     "_SETTLED_MARKS",
     "_SETTLED_WORDS",
     "MANUAL_DECLARATION_KEYS",
+    # File suffixes a design may show (DESIGN-ASSET, 2026-09-12). Caught by
+    # this guard on the day it was added, like the four above it.
+    "DESIGN_IMAGE_SUFFIXES",
 })
 
 
@@ -808,7 +824,21 @@ PROMOTIONS = {
     # invented without a status table. Cheaper to clear than TEST-ENTRYPOINT
     # and dated the same day for one cutover rather than two.
     "STATUS-TYPE": "2026-11-12",
+    # ADR-0047 (project-os-dev): an issue says who reported it, and one that
+    # waits on the owner states the question. Only issues created on or after
+    # ISSUE_RULES_FROM are checked, so the fleet's existing issues are not
+    # flagged; FEAT-0036 brings those up to the rule by hand. The month is for
+    # repos that sync the template after the cutover. ISSUE-QUESTION reads
+    # prose for "waits on the owner", which is a heuristic, so it warns for
+    # the full 90 days ADR-0011 allows before it may error.
+    "ISSUE-REPORTER": "2026-10-19",
+    "ISSUE-QUESTION": "2026-12-17",
 }
+
+#: Issues created before this date are not checked by ISSUE-REPORTER or
+#: ISSUE-QUESTION (ADR-0047 landed in the template on 2026-09-18).
+ISSUE_RULES_FROM = "2026-09-19"
+REPORTED_BY_RE = re.compile(r"^(user:\S+|review|agent)$")
 
 
 def promotion_emit(report, gate, grandfathered, item_id):
@@ -1649,6 +1679,60 @@ def validate_brief(root, report):
         )
 
 
+def validate_review_and_issue_fields(note_index, grandfathered, report):
+    """REVIEW-ROUND, ISSUE-REPORTER and ISSUE-QUESTION (ADR-0047).
+
+    REVIEW-ROUND: a gate runs at most two rounds (QUALITY.md), so a recorded
+    round is 1 or 2. It is an error from the start: the field is new, so no
+    note carries a bad value yet.
+
+    ISSUE-REPORTER: an open issue created on or after ISSUE_RULES_FROM names
+    who reported it, as `user:<name>`, `review` or `agent`, so a reader can
+    tell the owner's issues from the ones agents filed.
+
+    ISSUE-QUESTION: such an issue that says it waits on the owner carries a
+    `question:` with the question, its options and a recommendation. Measured
+    2026-09-18: 16 open issues in your-trainer said they waited on Edwin, and
+    most did not state a question he could answer.
+    """
+    seen = set()
+    for note_id, (path, fm) in sorted(note_index.items()):
+        if path in seen or not isinstance(fm, dict):
+            continue
+        seen.add(path)
+        rnd = fm.get("review_round")
+        if has_value(rnd) and str(rnd).strip().strip("\"'") not in ("1", "2"):
+            report.error("REVIEW-ROUND", "%s records review_round %r; a gate runs at most two rounds, so it is 1 or 2 "
+                         "(QUALITY.md, ADR-0028)" % (note_id, rnd))
+        if note_type(fm) != "issue":
+            continue
+        status = str(fm.get("status", "") or "").strip().strip("\"'")
+        created = str(fm.get("created", "") or "").strip().strip("\"'")
+        if status not in OPEN_ISSUE_STATUSES or not created or created < ISSUE_RULES_FROM:
+            continue
+        reporter = str(fm.get("reported_by", "") or "").strip().strip("\"'")
+        if not REPORTED_BY_RE.match(reporter):
+            promotion_emit(report, "ISSUE-REPORTER", grandfathered, note_id)(
+                "ISSUE-REPORTER", "%s has no valid `reported_by:` (user:<name>, review or agent; got %r). "
+                "Becomes an error on %s (ADR-0047)" % (note_id, reporter, PROMOTIONS["ISSUE-REPORTER"]))
+        if has_value(fm.get("question")):
+            continue
+        owner = str(fm.get("owner", "") or "")
+        name = owner.split(":", 1)[1].strip() if owner.startswith("user:") else ""
+        waits = r"\b(owner|user)'?s (call|decision|input)\b|\bwaits? on (the )?(owner|user)\b|\bneeds? (the )?(owner|user)'?s? (input|decision)\b"
+        if name:
+            waits += r"|\b%s'?s (call|decision|input|choice)\b|\b(for|ask|awaiting|needs?|waits? on) %s\b" % ((re.escape(name),) * 2)
+        try:
+            body = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if re.search(waits, body, re.I):
+            promotion_emit(report, "ISSUE-QUESTION", grandfathered, note_id)(
+                "ISSUE-QUESTION", "%s says it waits on the owner but has no `question:`. State the question, the "
+                "options and a recommendation, or decide it. Becomes an error on %s (ADR-0047)"
+                % (note_id, PROMOTIONS["ISSUE-QUESTION"]))
+
+
 def validate_release_contents(note_index, report):
     """RELEASE-FEATURES — a release must name features that exist, by the name
     they actually have.
@@ -1717,18 +1801,64 @@ def validate_release_contents(note_index, report):
                         % (note_id, target, fid, target_path.stem, path))
 
 
+#: Image suffixes a design may show. A note that embeds one of these HAS
+#: something to look at, which is what DESIGN-ASSET is really asking.
+DESIGN_IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif")
+
+#: A Markdown image (``![alt](path)``) or an Obsidian embed (``![[path]]``).
+#: Both are checked because both are normal: an agent writes the first, and
+#: Obsidian writes the second when a person pastes a picture into a note.
+DESIGN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)[^)]*\)|!\[\[([^\]|#]+)")
+
+
+def design_shows_something(path):
+    """True when a design note embeds at least one picture in its body.
+
+    Read as text rather than rendered: this script is the fleet's gate and
+    must not depend on a Markdown library. The suffix test is the whole of
+    it — a reference to `plate-3.png` is a picture whether or not the file
+    resolves, and whether the file EXISTS is a different question from
+    whether the design shows anything, deliberately not conflated here.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:                                     # pragma: no cover
+        return False
+    body = text.split("\n---\n", 2)[-1] if text.startswith("---") else text
+    for match in DESIGN_IMAGE_RE.finditer(body):
+        target = (match.group(1) or match.group(2) or "").strip().lower()
+        if target.split("?")[0].split("#")[0].endswith(DESIGN_IMAGE_SUFFIXES):
+            return True
+    return False
+
+
 def validate_design_notes(root, docs_dir, report):
-    """DESIGN-ASSET — a design must point at an artifact that exists.
+    """DESIGN-ASSET — a design past ``draft`` must have something to look at.
 
-    A design note is a claim about a rendered surface, and the render is the
-    artifact named by ``asset:``. A note whose asset is missing, or an artifact
-    no note claims, is the design equivalent of a dangling link: nothing errors
-    today, the design surface renders an empty pane tomorrow, and the reason is
-    a typo committed weeks earlier.
+    A design note is a claim about something a person can look at. **That used
+    to mean an HTML artifact and now it usually means pictures in the note.**
 
-    Both directions are checked. The orphan direction matters as much as the
-    missing one: an unclaimed 139KB artifact sitting in ``docs/designs/`` is
-    either a design nobody wrote a note for, or a leftover from a rename.
+    *Amended 2026-09-12 (project-os-cockpit REQ-0065, ADR-0043).* This check
+    required ``asset:`` on every design past ``draft``, which made the normal
+    case fail: most designs are screenshots or mockups, and the honest place
+    for those is Markdown images in the note itself. Requiring an HTML file
+    taught authors to produce one — measured before the change, ``your-health``
+    DES-0002 was a 4.6 MB page carrying 51 base64 PNGs, because an artifact
+    could not reference an image file beside it.
+
+    So the rule is the one the check always meant: **something to look at**,
+    which is an ``asset:`` *or* an image embedded in the note. A design with
+    neither, past ``draft``, is still an error — that is the case the check
+    exists for, a note offered for review with nothing to review.
+
+    A declared ``asset:`` must still resolve to a file. That is a dangling
+    link and stays an error.
+
+    The orphan direction is a warning and now counts anything the note
+    references, not only ``asset:``: once pages and pictures live beside
+    notes, an HTML file a note merely links to is claimed as surely as one it
+    declares. What remains reportable is a file no note mentions at all —
+    a leftover from a rename, which is what this direction was for.
     """
     designs_dir = docs_dir / "designs"
     if not designs_dir.is_dir():
@@ -1749,8 +1879,11 @@ def validate_design_notes(root, docs_dir, report):
             # note is often written before its artifact exists -- this note's
             # first real use was exactly that -- and forcing an empty placeholder
             # file to satisfy a check is how a gate teaches people to fake it.
-            if status != "draft":
-                report.error("DESIGN-ASSET", "%s is '%s' and declares no asset:; a design offered for review needs a rendered artifact (draft is exempt) (%s)" % (the_id, status or "unset", rel))
+            #
+            # Pictures in the note are the OTHER way to have something to look
+            # at, and since 2026-09-12 they are the normal way.
+            if status != "draft" and not design_shows_something(note_path):
+                report.error("DESIGN-ASSET", "%s is '%s' and shows nothing: it declares no asset: and embeds no image; a design offered for review needs something to look at, which is pictures in the note or an HTML page in asset: (draft is exempt) (%s)" % (the_id, status or "unset", rel))
             continue
         target = (note_path.parent / asset).resolve()
         if not target.is_file():
@@ -1758,9 +1891,25 @@ def validate_design_notes(root, docs_dir, report):
             continue
         claimed.add(target)
 
+    # A note that merely LINKS a page claims it too. Before markdown-first,
+    # `asset:` was the only way to point at a page and this set was built from
+    # it alone; now a note may link one the way it links anything else, and
+    # reporting that as an orphan would report the new normal.
+    for note_path in sorted(designs_dir.rglob("*.md")):
+        fm = parse_frontmatter(note_path) or {}
+        if note_type(fm) != "design":
+            continue
+        try:
+            text = note_path.read_text(encoding="utf-8")
+        except OSError:                                 # pragma: no cover
+            continue
+        for ref in re.findall(r"\(([^)\s]+\.html)[^)]*\)|\[\[([^\]|#]+\.html)", text):
+            target = (ref[0] or ref[1]).strip()
+            claimed.add((note_path.parent / target).resolve())
+
     for artifact in sorted(designs_dir.rglob("*.html")):
         if artifact.resolve() not in claimed:
-            report.warn("DESIGN-ORPHAN", "%s is not claimed by any design note's asset:; it is either an unwritten design or a leftover from a rename" % artifact.relative_to(root))
+            report.warn("DESIGN-ORPHAN", "%s is claimed by no design note -- not by an asset:, and not by a link in any note's body; it is either an unwritten design or a leftover from a rename" % artifact.relative_to(root))
 
 
 def validate_plan_notes(root, docs_dir, allowed_status, grandfathered, report):
@@ -1982,6 +2131,7 @@ def validate(root, report):
     validate_decision_rule(root, items, note_index, report)
     validate_design_notes(root, docs_dir, report)
     validate_release_contents(note_index, report)
+    validate_review_and_issue_fields(note_index, grandfathered, report)
     validate_plan_notes(root, docs_dir, allowed_status, grandfathered, report)
 
     def resolves(ref_id):
