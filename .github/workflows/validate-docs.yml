@@ -68,6 +68,7 @@ jobs:
           set -e
           for t in tools/scripts/test-*.sh; do echo "== $t"; bash "$t"; done
           python3 -B tools/scripts/test-retention.py
+          python3 -B tools/scripts/test-walk-preparation.py
       - name: Verify generated adapter artifacts are current
         run: |
           if [ -f tools/scripts/generate-adapters.py ]; then
