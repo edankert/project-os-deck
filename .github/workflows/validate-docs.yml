@@ -58,6 +58,16 @@ jobs:
           if [ -f tools/scripts/test-codex-adapter.sh ]; then
             bash tools/scripts/test-codex-adapter.sh
           fi
+      # The template's own test scripts guard the validator, the sync and the
+      # hooks every repo receives. Before this they ran only in project-os-dev,
+      # one TST note per script (project-os-dev ISS-0065). They test the
+      # template's code, so they run only here, not in the repos that copy it.
+      - name: Run the template's own test scripts (the template repository only)
+        if: github.repository == 'edankert/project-os'
+        run: |
+          set -e
+          for t in tools/scripts/test-*.sh; do echo "== $t"; bash "$t"; done
+          python3 -B tools/scripts/test-retention.py
       - name: Verify generated adapter artifacts are current
         run: |
           if [ -f tools/scripts/generate-adapters.py ]; then
