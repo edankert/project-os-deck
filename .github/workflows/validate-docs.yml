@@ -22,6 +22,19 @@ jobs:
         with:
           distribution: temurin
           java-version-file: .java-version
+      # A Python repo's test commands need the repo and its dev dependencies
+      # installed, or every one comes back unrunnable, which fails this job on
+      # CI. Same construction as the JDK step above: only when the repo is a
+      # Python project. yourtrainer-mcp's pytest suites were marked manual
+      # because they could not run here (project-os-dev TASK-0137, 2026-09-18).
+      - name: Set up the Python project this repo is
+        if: hashFiles('pyproject.toml') != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install it with its dev dependencies, so its test commands can run
+        if: hashFiles('pyproject.toml') != ''
+        run: python -m pip install --upgrade pip && (python -m pip install -e ".[dev]" || python -m pip install -e .)
       - name: Validate SNAPSHOT.yaml <-> docs consistency
         run: bash tools/scripts/validate-docs.sh --repo-root "$GITHUB_WORKSPACE"
       # --ci runs the repo's declared ci.suite_command once. A repo's test notes
