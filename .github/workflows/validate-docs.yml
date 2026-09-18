@@ -11,17 +11,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # A repo that builds with Gradle needs the JDK it targets, and the runner
+      # default is not it: your-health targets Java 21 and CI failed with
+      # "invalid source release: 21" for four minutes before anything said so.
+      # The version belongs to the repo, in .java-version; a repo without one
+      # (or without a Gradle wrapper) skips this and keeps the runner default.
+      - name: Set up the JDK this repo targets
+        if: hashFiles('gradlew') != '' && hashFiles('.java-version') != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version-file: .java-version
       - name: Validate SNAPSHOT.yaml <-> docs consistency
         run: bash tools/scripts/validate-docs.sh --repo-root "$GITHUB_WORKSPACE"
-      - name: Run every TST-* command (an executable test records no verdict; this run is the verdict, ADR-0025)
+      # --ci runs the repo's declared ci.suite_command once. A repo's test notes
+      # carry filtered commands -- 26 of your-health's are the same Gradle task
+      # with different --tests filters, each a subset of the whole suite -- and
+      # running them one by one on a cold runner is 45 minutes for an answer one
+      # run already gives. The filtered set runs in the pre-push hook, locally.
+      # A repo declaring no ci.suite_command still runs every command here.
+      - name: Run the declared suite (an executable test records no verdict; this run is the verdict, ADR-0025)
         run: |
           if [ -f tools/scripts/run-tests.py ]; then
-            python3 tools/scripts/run-tests.py --repo-root "$GITHUB_WORKSPACE"
+            python3 tools/scripts/run-tests.py --repo-root "$GITHUB_WORKSPACE" --ci
           fi
       - name: Verify SNAPSHOT.yaml derived fields match the notes
         run: |
           if [ -f tools/scripts/sync-snapshot.py ]; then
             python3 tools/scripts/sync-snapshot.py --repo-root "$GITHUB_WORKSPACE" --check
+          fi
+      - name: Verify Codex adapter hook contracts
+        run: |
+          if [ -f tools/scripts/test-codex-adapter.sh ]; then
+            bash tools/scripts/test-codex-adapter.sh
           fi
       - name: Verify generated adapter artifacts are current
         run: |
