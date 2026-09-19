@@ -2,13 +2,14 @@
 type: "[[issue]]"
 id: ISS-0080
 aliases: ["ISS-0080"]
-title: "The measurement prints its numbers to stdout and writes them nowhere, so a run whose output is trimmed is a run that has to be taken again on somebody's screen"
-status: triage
+title: "A frame-rate measurement is lost if its terminal output is cut off, because the numbers are printed but never saved to a file"
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: "2026-09-19"
 source: ["Found while taking [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]'s measurement, 2026-09-12"]
+reported_by: agent
 severity: low
 component: tests
 parent: ""
@@ -16,11 +17,11 @@ related: ["[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "
 tests: []
 ---
 
-# The measurement prints its numbers and keeps them nowhere
+# The measurement's numbers are printed but never saved
 
 ## Problem
 
-**`runMeasure` ends with `console.log(JSON.stringify(...))` and writes no file.** The measurement takes a person's screen for several minutes and needs the window in front, so its output is expensive in a way no other check's is — and it survives only as long as whatever was reading stdout. On 2026-09-12 the first run's output went through a `tail` that kept the last seventy lines, two of the three workspaces were lost, and the measurement had to be taken a second time. Five minutes of somebody's machine, for nothing.
+**The frame-rate measurement prints its numbers to the terminal and saves them nowhere, so a run whose output is cut off has to be taken again.** `runMeasure` ends with `console.log(JSON.stringify(...))` and writes no file. The measurement takes a person's screen for several minutes and needs the window in front, so its output is expensive in a way no other check's is — and it survives only as long as whatever was reading stdout. On 2026-09-12 the first run's output went through a `tail` that kept the last seventy lines, two of the three workspaces were lost, and the measurement had to be taken a second time. Five minutes of somebody's machine, for nothing.
 
 ## Expected
 
@@ -42,3 +43,13 @@ No trigger applies: writing a file under the repository adds no dependency, env 
 ## Next Actions
 
 - [ ] Write the JSON to a dated file, print the path, and decide whether measurements are committed.
+
+## Checked against the code, 2026-09-19: still true, kept
+
+**What a user notices:** If the terminal output of a measurement is trimmed or closed, the numbers are gone, and several minutes of the person's screen have to be given up again.
+
+Evidence: `desktop/src/main/main.ts:570` is still `console.log(JSON.stringify({ measurements: results }, null, 2));`, and `grep -n "writeFileSync" desktop/src/main/main.ts desktop/src/main/measure.ts` finds no write of the measurement (only a screenshot at `:947` and a test fixture at `:1772`).
+
+**Belongs to:** PHASE-0002-Glass, no feature. Small fix: one write beside line 570, and a test that the file is written. **Next:** Write the JSON to a dated file under a gitignored `measurements/` directory and print its path last. Gitignored is an assumption; commit them instead if the phase criterion should cite them.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

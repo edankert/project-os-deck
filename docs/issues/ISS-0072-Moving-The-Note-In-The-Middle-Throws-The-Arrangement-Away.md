@@ -2,13 +2,14 @@
 type: "[[issue]]"
 id: ISS-0072
 aliases: ["ISS-0072"]
-title: "Dragging the note in the middle ends the arrangement instead of carrying it: the ring is discarded, the whole field is dealt again and turns, so one small drag moves every card on screen"
-status: "open"
+title: "Dragging the note open in the middle of Glass by a few pixels makes its neighbours vanish and moves every card on screen"
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-12"
+updated: "2026-09-19"
 source: ["Edwin 2026-09-12, running Deck: 'The user might move the note but that then means that the associated notes should also move with it ...'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'"]
+reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
@@ -16,11 +17,11 @@ related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]",
 tests: []
 ---
 
-# Moving the note in the middle throws the arrangement away
+# Dragging the opened note moves every card on screen
 
 ## Problem
 
-**A drag of a few pixels on the opened note ends the whole arrangement.** The ring disappears, the field is dealt again with the neighbourhood pushed into the front band, and the view turns to face it, so a person who meant to nudge one note sees every card on screen move. Edwin's reading is the opposite one: the opened note and the notes around it are one thing, and moving the note moves the group.
+**Dragging the note open in the middle by a few pixels makes its neighbours vanish, and every card on screen moves to a new place.** The ring disappears, the field is dealt again with the neighbourhood pushed into the front band, and the view turns to face it, so a person who meant to nudge one note sees every card on screen move. Edwin's reading is the opposite one: the opened note and the notes around it are one thing, and moving the note moves the group.
 
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "The user might move the note but that then means that the associated notes should also move with it ..."
@@ -81,3 +82,13 @@ No trigger applies: no new dependency, env var, path or exposure. A dragged grou
 
 > [!note] Accept — 2026-09-12 (user:edwin)
 > Neighbours / notes in general can fall of the edge and move out of vision ... there should be a huge space to play with.
+
+## Checked against the code, 2026-09-19: still true, kept
+
+**What a user notices:** A person nudges the opened note and the whole screen rearranges: the neighbours around it disappear and every card is dealt somewhere new. Edwin expects the neighbours to move with the note.
+
+Evidence: `desktop/src/renderer/glass.ts:2901-2902` still calls `this.leaveFocus()` on the first move of a drag, with the comment citing decision 13. `glass.ts:2613-2620` (`leaveFocus`) still drops the focus, sets `faceOnArrival` and calls `this.redeal(true)`.
+
+**Belongs to:** FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours (PHASE-0002-Glass). Bigger: it rewrites decision 13 and Edwin will want to see it. **Next:** Rewrite FEAT-0017's decision 13, then a task that moves the ring with the note and a way back to a note dragged out of sight, built together with ISS-0071.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

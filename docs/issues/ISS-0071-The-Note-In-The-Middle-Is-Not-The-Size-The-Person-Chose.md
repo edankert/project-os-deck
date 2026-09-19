@@ -2,13 +2,14 @@
 type: "[[issue]]"
 id: ISS-0071
 aliases: ["ISS-0071"]
-title: "The note in the middle is sized by whatever leaves room for the ring rather than by the person, and it jumps to 320 by 240 the moment it is dragged, because focusLayout searches for a pane size and ignores the one the desk record holds"
-status: "open"
+title: "The note open in the middle of Glass ignores the size the person gave it, and changes size as soon as it is dragged"
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-12"
+updated: "2026-09-19"
 source: ["Edwin 2026-09-12, running Deck: 'Then when moving the note out of the middle the main note size changes (this should never happen, move should not change the size)'; 'The main thing is that note is selected so this means that this is the user's main note, the user makes a decision on how big the note should be and this should be respected (note: new notes opened should open in that size)'"]
+reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
@@ -16,11 +17,11 @@ related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]",
 tests: []
 ---
 
-# The note in the middle is not the size the person chose
+# The opened note ignores the size the person gave it
 
 ## Problem
 
-**The pane in the middle takes whatever size leaves room for the ring, and the size a person set by dragging its corner is not read at all.** [[TASK-0054-A-Held-Note-Is-A-Pane]] built resizing and stores the width and height on the desk record, and the middle ignores that record. Worse, the two sizes swap visibly: drag the note in the middle and it snaps from as much as 640 by 480 down to its stored size, or to 320 by 240 when it has none. Edwin's rule is that the opened note is the person's main note, its size is their decision, and a move is not a resize.
+**The note open in the middle of Glass is drawn at whatever size leaves room for its neighbours, not at the size the person dragged it to.** [[TASK-0054-A-Held-Note-Is-A-Pane]] built resizing and stores the width and height on the desk record, and the middle ignores that record. Worse, the two sizes swap visibly: drag the note in the middle and it snaps from as much as 640 by 480 down to its stored size, or to 320 by 240 when it has none. Edwin's rule is that the opened note is the person's main note, its size is their decision, and a move is not a resize.
 
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "Then when moving the note out of the middle the main note size changes (this should never happen, move should not change the size)"
@@ -102,3 +103,13 @@ One thing that does not follow, and has to be decided rather than assumed: **the
 
 > [!note] Accept — 2026-09-12 (user:edwin)
 > 1. turning moves the note and the whole ring
+
+## Checked against the code, 2026-09-19: still true, kept
+
+**What a user notices:** A person resizes the opened note, opens another note, comes back, and finds the first note at a different size. Dragging the opened note by a few pixels also makes it jump to another size.
+
+Evidence: `desktop/src/shared/focus-ring.ts:144` still has `focusLayout(field, dock, wanted, startAngle, avoid)`, with no pane size, and still searches from `FOCUS_MAX` down to `FOCUS_MIN` (`:39-40`, `:175-191`). `desktop/src/renderer/glass.ts:2367-2384` still draws the focused pane from `focusRect` and every other pane from `paneRect`, so the size changes when the focus ends.
+
+**Belongs to:** FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours (PHASE-0002-Glass). Bigger: the ring moves onto the cylinder and Edwin will want to see it. **Next:** A FEAT-0017 task: `focusLayout` takes the pane size and returns bearings, with a smoke check that drags the opened note and fails if its size changes. Where the remembered reading size is stored is still open; the note recommends a store setting.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

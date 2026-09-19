@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0056
 aliases: ["ISS-0056"]
 title: "The seventh review approved all three features and found eight things nobody fixed, the largest being that the smoke run is gated by a workflow that has never executed"
-status: triage
+status: declined
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-09
-updated: 2026-09-09
+updated: "2026-09-19"
 source: ["The seventh independent review of PHASE-0001, 2026-09-09"]
+reported_by: review
 severity: medium
 component: tests
 parent: ""
@@ -64,3 +65,13 @@ Not a review round — an inaccuracy in a comment is the same class of fault as 
 **Still open and deliberately not fixed:** `loadQueryView` can be emptied with every gate green (dead until [[PHASE-0003-Vault]] makes it live), the tick's no-address refusal can be deleted, `typeCounts` is called from nowhere, the fixture has decayed by 20 notes, and the largest one — the smoke run is gated by a workflow that has never executed.
 
 **Verified after:** 322 node checks, both smoke configurations at exit 0.
+
+## Checked against the code, 2026-09-19: declined
+
+**What a user notices:** Nobody using Deck would notice any of what is left. The reviewer said so when filing it, and the largest item is settled.
+
+Evidence: The largest finding is settled: `.github/workflows/deck-smoke.yml` exists on the remote and `gh run list --workflow deck-smoke.yml` lists runs from 2026-09-09 to 2026-09-12. Four smaller ones were fixed on 2026-09-09 (section above). What is left is gaps in checks, not defects: `loadQueryView` is now called (`desktop/src/renderer/renderer.ts:705`, `:1607`); `typeCounts` is still called only from `desktop/tests/index.test.mjs:153` (defined at `desktop/src/shared/records.ts:230`); the tick refusal text at `renderer.ts:1406` is matched by no check (`grep -rn "can be ticked from Deck" desktop/src/main desktop/tests` finds nothing); and TST-0037 still has `command: ""`.
+
+**Belongs to:** PHASE-0001-Deck. **Next:** Nothing. A missing check that later lets a real bug through gets its own issue.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0081
 aliases: ["ISS-0081"]
 title: "Resting the pointer on a quiet-band tile shows neither the note's name nor the pointer cursor, because the handler that would show them returns before it reaches the tile code"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
+reported_by: review
 severity: high
 component: renderer
 parent: ""
@@ -57,3 +58,11 @@ No trigger applies: widening an existing guard adds no dependency, no env var, n
 ## Where this stands
 
 **2026-09-17: fix written, not yet verified by a run.** [[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]] opened the guard so the listener runs in the field, and replaced the check that could not fail with three that assert the cursor, the callout and their removal. None has been run: they are smoke checks and the suite opens windows. This stays `open` until a run settles it.
+
+## Checked against the code, 2026-09-19: already done
+
+Evidence: `desktop/src/renderer/glass.ts:1597-1621`: the field's `pointermove` listener now returns only on `look !== null || event.buttons !== 0`; the orbit guard is gone. Line 1617 sets `field.style.cursor = hit !== null ? 'pointer' : ''` and line 1619 calls `this.showTileCallout(hit, x, y)` when the arrangement is not the orbit. The smoke run has not executed this code: the fix is in commits `fb4982b` and `223d582`, which are among 18 commits not yet pushed (`git rev-list --count origin/main..main` is 18), and the last `deck-smoke` CI run (2026-09-12) failed on an unrelated DES-0001 verb check.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] (TASK-0082), PHASE-0002 Glass. **Next:** the first smoke run after the push confirms it; reopen this issue if `resting on a tile shows the pointer cursor` fails.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

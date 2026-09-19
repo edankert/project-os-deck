@@ -2,13 +2,14 @@
 type: "[[issue]]"
 id: ISS-0070
 aliases: ["ISS-0070"]
-title: "While a note stands in the middle, each of its neighbours is on screen twice — as a small ring note and as its own dimmed field card — and the opened note itself leaves a dashed frame in its slot, so one note is two things on the deck"
-status: "open"
+title: "While a note is open in Glass, each of its neighbours is shown twice, and the opened note leaves an empty dashed frame where it was"
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-12"
+updated: "2026-09-19"
 source: ["Edwin 2026-09-12, running Deck: 'it shows associated notes around the note in the middle but this using a very small view of the notes, why not the same size view as when browsing?'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'; 'When opening a note the corresponding smaller version seems to turn into just a frame, this should not be the case, there should only be one note on the deck.'"]
+reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
@@ -16,11 +17,11 @@ related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]",
 tests: []
 ---
 
-# One note is drawn twice while another is in the middle
+# An opened note's neighbours are shown twice, and the note leaves an empty frame
 
 ## Problem
 
-**Open a note in Glass and the same note can be on screen in two places at once.** Each neighbour gets a small ring note near the middle while its ordinary field card stays where it was, faded to about a quarter opacity, and the note that was opened leaves a dashed empty outline in the slot it came from. Edwin's rule after seeing it is one line: there should only be one note on the deck. The ring notes are also much smaller than a field card — 168 by 44 against 186 by 92 — so the neighbourhood is harder to read while it is the thing being looked at than it was before the note was opened.
+**Open a note in Glass and each of its neighbours is shown twice: as a small card around the opened note, and as its own faded card where it stood before.** Each neighbour gets a small ring note near the middle while its ordinary field card stays where it was, faded to about a quarter opacity, and the note that was opened leaves a dashed empty outline in the slot it came from. Edwin's rule after seeing it is one line: there should only be one note on the deck. The ring notes are also much smaller than a field card — 168 by 44 against 186 by 92 — so the neighbourhood is harder to read while it is the thing being looked at than it was before the note was opened.
 
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "it shows associated notes around the note in the middle but this using a very small view of the notes, why not the same size view as when browsing?"
@@ -87,3 +88,13 @@ No trigger applies: no new dependency, env var, path, artifact or exposure. Opti
 > Drop the filed-card ghost it doesn't work!
 
 **The capacity cost named in option 1 is gone.** It assumed the ring had to fit inside the visible field. [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]] and [[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]] were both answered on the same day with the opposite rule — the arrangement is laid out in a space larger than the window, and neighbours may stand off-screen — so full-size cards on the ring no longer cost places. What it costs instead is that some neighbours are off-screen until the person turns to them, which is the point of those two decisions.
+
+## Checked against the code, 2026-09-19: still true, kept
+
+**What a user notices:** Each neighbour of the opened note appears twice, in two sizes, and the opened note leaves a dashed empty outline in its old place. The small copies are harder to read than the cards the person was just browsing.
+
+Evidence: `desktop/src/shared/focus-ring.ts:37` still sizes the ring cards at 168 by 44 (`MINI`). `desktop/src/renderer/deck.css:596` still only fades the field cards (`.field.focusing .field-card { opacity: 0.28; }`), and `deck.css:710-715` with `desktop/src/renderer/glass.ts:989` still draws the ghost Edwin asked to drop on 2026-09-12.
+
+**Belongs to:** FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours (PHASE-0002-Glass). Bigger: it changes what Glass draws and Edwin will want to see it. **Next:** Amend DES-0002 to drop the ghost, then a FEAT-0017 task that moves the neighbours' own cards onto the ring, with a smoke check that fails when one note id is drawn twice.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

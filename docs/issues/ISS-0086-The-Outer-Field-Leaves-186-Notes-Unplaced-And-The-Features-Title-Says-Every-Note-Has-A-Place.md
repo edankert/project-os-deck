@@ -3,12 +3,14 @@ type: "[[issue]]"
 id: ISS-0086
 aliases: ["ISS-0086"]
 title: "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the feature's title and goal promise more than the field delivers"
-status: triage
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17", "Recorded and not decided when the feature was built, 2026-09-12"]
+reported_by: review
+question: "On Your Trainer's Features view 186 of 317 notes are counted but drawn nowhere; should the outer field gain more layers so they are drawn (more work, and the field needs re-measuring), or should FEAT-0018's title and Goal be narrowed to say no note is dropped silently and every band states what it could not place (no code)? Recommendation: narrow the title and Goal now, and file layers as a separate issue if you want them."
 severity: medium
 component: docs
 parent: ""
@@ -54,3 +56,13 @@ Adding layers to the outer field would put more elements on screen at once, whic
 ## Next Actions
 
 - [ ] Edwin decides: layers in the outer field, or narrow the title and the Goal.
+
+## Checked against the code, 2026-09-19: a question for Edwin
+
+**What a user notices:** On Your Trainer's Features view, 186 of 317 notes appear only as a count on the bar, while the feature's title says every note has a place in the field.
+
+Evidence: `desktop/src/shared/description.ts:435` still defaults the outer field to 64 notes, and `description.ts:665-672` counts the rest as a remainder rather than drawing them. FEAT-0018's `title:` (line 5) still reads "Every note the view holds has a place in the field", and its line 225 lists this issue as Edwin's decision.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], PHASE-0002 Glass. **Next:** Edwin chooses layers or narrower wording; narrowing is a docs-only edit to FEAT-0018, layers is bigger work he would want to see on screen.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

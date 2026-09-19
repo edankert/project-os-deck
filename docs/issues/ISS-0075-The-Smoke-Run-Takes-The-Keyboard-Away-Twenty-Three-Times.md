@@ -2,13 +2,14 @@
 type: "[[issue]]"
 id: ISS-0075
 aliases: ["ISS-0075"]
-title: "The smoke run takes the keyboard away from whatever the person is doing more than twenty times, because every keyboard check calls app.focus with steal and there is no way to run the checks that do not need it on their own"
-status: "open"
+title: "Running the smoke checks on the Mac pulls the keyboard away from whatever the person is typing in, about two dozen times a run"
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-12"
+updated: "2026-09-19"
 source: ["Edwin 2026-09-12: 'One other thing is can we change the testing so the deck is not constantly requesting focus?'"]
+reported_by: user:edwin
 severity: medium
 component: tests
 parent: ""
@@ -16,11 +17,11 @@ related: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[PHASE-0002-Glas
 tests: []
 ---
 
-# The smoke run takes the keyboard away more than twenty times
+# The smoke run on a Mac keeps taking the keyboard away
 
 ## Problem
 
-**A smoke run on a Mac interrupts whatever the person is doing, over and over, for several minutes.** `focusApp` calls `app.focus({ steal: true })` and it is called 19 times in the Glass suite and 4 more in the frame measurement, plus once when the first window is shown. Each call pulls the keyboard out of the editor or the terminal the person was typing in. Edwin cannot work while the checks run, which is why running them has had to be held until he says so.
+**Running `run-smoke.sh` on a Mac brings Deck to the front about two dozen times, and each time the keyboard leaves whatever the person was typing in.** `focusApp` calls `app.focus({ steal: true })` and it is called 19 times in the Glass suite and 4 more in the frame measurement, plus once when the first window is shown. Each call pulls the keyboard out of the editor or the terminal the person was typing in. Edwin cannot work while the checks run, which is why running them has had to be held until he says so.
 
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "One other thing is can we change the testing so the deck is not constantly requesting focus?"
@@ -104,3 +105,13 @@ Step 4 of the plan above asked for a spike on offscreen rendering, and named two
 **What this changes.** A run that opens no window and takes no keyboard is reachable without a container, and most of the suite would work in it unaltered. It does not remove the need for the tagging this issue describes — the checks that assert `document.hasFocus()` have to be tagged either way — but it removes the argument that offscreen is only good for the non-measuring half.
 
 **It is not built.** [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] took the container route, which was Edwin's choice on the day. This is recorded so the spike does not have to be run again.
+
+## Checked against the code, 2026-09-19: still true, kept
+
+**What a user notices:** Edwin cannot type while `run-smoke.sh` runs on his Mac, and a run's result depends on whether he is typing. The container script avoids this, but the plain command still does it.
+
+Evidence: `desktop/src/main/main.ts:1907` still calls `app.focus({ steal: true })`, and `grep -c "focusApp(" desktop/src/main/*.ts` still counts 19 in `smoke-glass.ts`, 4 in `measure.ts` and 1 in `main.ts`. `tools/scripts/run-smoke.sh:63` only avoids the screen on Linux, and it has no no-focus mode. `tools/scripts/smoke-in-a-box.sh` (TASK-0081, done) runs the same checks in a Linux container and takes no keyboard, but `run-smoke.sh` does not use it.
+
+**Belongs to:** PHASE-0002-Glass, no feature. Small fix: make `run-smoke.sh` on macOS hand over to `smoke-in-a-box.sh` by default, with a named flag for the run on the real screen. **Next:** A task for that default and a one-line message naming the mode before the first window opens; CI stays on Linux and is unaffected.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0084
 aliases: ["ISS-0084"]
 title: "A quiet tile promoted into a real card is laid out in the tile's box and only magnified, so the detail the promotion exists to show has no room and is clipped"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
+reported_by: review
 severity: medium
 component: renderer
 parent: ""
@@ -53,3 +54,11 @@ No trigger applies.
 ## Where this stands
 
 **2026-09-17: fixed in the pure layer and verified there; the renderer half is not yet verified by a run.** [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]] put `MIN_BOX_FOR`, `holdsDetail` and `promotedBox` in `detail.ts` and gave `place()` the exception. Three checks in [[TST-0055-Detail-Follows-Apparent-Size]] assert the rule and all three fail when the fix is reverted. The two smoke checks that measure a real promoted card have not been run. This stays `open` until a run settles that half.
+
+## Checked against the code, 2026-09-19: already done
+
+Evidence: `desktop/src/renderer/glass.ts:933`: `const box = lift ? promotedBox(p.scale * band.width, CARD_BOX.width / CARD_BOX.height) : band;`, so a promoted card is laid out at its apparent size rather than the tile's box. `promotedBox` and `MIN_BOX_FOR` are in `desktop/src/shared/detail.ts:147-179`. `bash tools/scripts/run-desktop-tests.sh detail` passes 15 of 15 today. The smoke run has not executed this code: the fix is in commits `fb4982b` and `223d582`, which are among 18 commits not yet pushed (`git rev-list --count origin/main..main` is 18), and the last `deck-smoke` CI run (2026-09-12) failed on an unrelated DES-0001 verb check.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] (TASK-0084), PHASE-0002 Glass. **Next:** the smoke check `every promoted card draws its <level> without clipping it` confirms the on-screen half on the first run after the push.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

@@ -3,17 +3,19 @@ type: "[[issue]]"
 id: ISS-0008
 aliases: ["ISS-0008"]
 title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
-status: triage
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-10
+updated: "2026-09-19"
 source: ["Independent review of the PHASE-0001 Spread work, 2026-09-07"]
+reported_by: review
 severity: medium
 component: tests
 parent: ""
 related: ["[[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]]", "[[ISS-0007-Four-Smaller-Defects-The-Review-Found-In-The-Renderer]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[REFERENCE-PHASE-0001-CLOSEOUT-REVIEW]]", "[[ISS-0013-The-Remove-Control-Is-Shown-In-The-Needs-You-Strip-And-Does-Nothing]]"]
 tests: []
+question: "Is the smoke run (now in CI on every push, and runnable locally in a Linux container) enough of a gate for the renderer, or should Deck also add a jsdom unit layer or move more logic into shared/? Options: accept the smoke run as the gate and decline this issue / add jsdom as a dev dependency / keep moving logic into shared/. Recommendation: accept the smoke run and decline, because both premises of this note have gone (the smoke runs in CI, and the CSP tag it named is now checked)."
 ---
 
 # Nothing in continuous integration exercises the renderer
@@ -63,3 +65,13 @@ The same holds for [[ISS-0005-A-Card-Jumps-When-The-Desk-Has-Scrolled]]'s drag f
 [[PHASE-0002-Glass]] is where it goes because Glass is a new renderer view — a field, a band function, a turn, a lifted note — and every line of that lives in the layer no automated suite loads. The gap this note describes gets wider there, not narrower. It stays at `triage` and grooming decides.
 
 **If it belongs somewhere else, it moves again.** [[PHASE-0004-Parity]] is the other candidate, on the argument that spending on test machinery is a parity concern rather than a Glass one.
+
+## Checked against the code, 2026-09-19: a question for Edwin
+
+**What a user notices:** Nobody using Deck notices this directly. What changes is how likely a renderer bug is to reach Edwin before a check catches it.
+
+Evidence: `ls desktop/tests` shows no suite that imports from `desktop/src/renderer/`; the only matches for `renderer/` are URL strings in `host.test.mjs:40` and `write-channel.test.mjs:495`. But the smoke run now runs in CI: `.github/workflows/deck-smoke.yml:70` runs `bash tools/scripts/run-smoke.sh both`, and `gh run list --workflow deck-smoke.yml` shows it running on every push since 2026-09-09. The Content-Security-Policy tag this note said nothing checks is now checked: `desktop/src/main/main.ts:1148-1154` calls `recordScriptInANoteDoesNotRun`, and `main.ts:1220` reads the tag. `tools/scripts/smoke-in-a-box.sh` (TASK-0081, done) runs the same checks locally in a container.
+
+**Belongs to:** PHASE-0002-Glass, no feature. **Next:** Edwin answers the question in `question:`; if he accepts the smoke run as the gate, set this note to `declined`.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

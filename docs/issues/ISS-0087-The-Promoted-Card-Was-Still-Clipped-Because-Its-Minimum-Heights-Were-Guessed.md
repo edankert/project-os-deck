@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0087
 aliases: ["ISS-0087"]
 title: "The fix for the clipped promoted card left it clipped, because the minimum heights were guessed rather than added up and were low enough that the floor meant to apply them never applied at all"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round two, 2026-09-17"]
+reported_by: review
 severity: medium
 component: renderer
 parent: ""
@@ -65,3 +66,11 @@ No trigger applies. One new coupling is worth naming: `detail.ts` now encodes nu
 ## Next Actions
 
 - [ ] Run the smoke suite and confirm no promoted card's `scrollHeight` passes its `clientHeight`.
+
+## Checked against the code, 2026-09-19: already done
+
+Evidence: `desktop/src/shared/detail.ts:147` `heightFor` adds up the rows each detail level draws; `detail.ts:175-179` builds `MIN_BOX_FOR` from it, so `full` is 92, equal to `CARD_BOX.height`. `bash tools/scripts/run-desktop-tests.sh detail` passes 15 of 15 and `bash tools/scripts/run-desktop-tests.sh glass-style` passes 10 of 10 today; those are the suites behind [[TST-0055-Detail-Follows-Apparent-Size]] and [[TST-0042-Nothing-Blurs-And-Only-Near-Cards-Are-Promoted]], which are still marked `active` rather than `passing`. The smoke run has not executed this code: the fix is in commits `fb4982b` and `223d582`, which are among 18 commits not yet pushed (`git rev-list --count origin/main..main` is 18), and the last `deck-smoke` CI run (2026-09-12) failed on an unrelated DES-0001 verb check.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] (TASK-0084), PHASE-0002 Glass. **Next:** mark TST-0055 and TST-0042 `passing` from today's run, and let the first smoke run after the push confirm no promoted card clips.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

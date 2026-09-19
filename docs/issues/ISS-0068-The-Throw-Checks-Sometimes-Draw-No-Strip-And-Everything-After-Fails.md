@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0068
 aliases: ["ISS-0068"]
 title: "The throw checks sometimes draw no target strip, and every Glass check after them fails in a cascade"
-status: triage
+status: declined
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: "2026-09-19"
 source: ["Smoke runs on 2026-09-11 while building FEAT-0015"]
+reported_by: agent
 severity: medium
 component: tests
 parent: ""
@@ -31,3 +32,13 @@ The `deck-smoke` continuous-integration job runs the same checks, so this can fa
 ## Next
 
 Catch it once with `DECK_SMOKE_DEBUG=1`, which prints the targets list, the card and the strip, and find the cause. Then make the throw section recover: when the strip does not appear, say why and leave the pointer released, so one failure stays one failure.
+
+## Checked against the code, 2026-09-19: declined
+
+**What a user notices:** Nobody using Deck sees this. It was an occasional failure of a test step, and it has not failed a CI run.
+
+Evidence: The check is still there at `desktop/src/main/smoke-glass.ts:2316`, and the pointer is already released when the strip does not appear (`smoke-glass.ts:2334-2335`, the `else` branch, since commit 2bba469). Of the last 30 `deck-smoke` runs, two failed (34706696189 and 34400070075), and `gh run view <id> --log-failed | grep -c "target strip appears"` is 0 for both. The failures this note saw were on Edwin's Mac while the run competed for the keyboard (ISS-0075's four-run evidence), and `tools/scripts/smoke-in-a-box.sh` now runs the checks where nothing competes.
+
+**Belongs to:** PHASE-0002-Glass, no feature. **Next:** Nothing. If the throw fails again in CI or in the box, file it again with the `DECK_SMOKE_DEBUG=1` output.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

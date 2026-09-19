@@ -3,17 +3,19 @@ type: "[[issue]]"
 id: ISS-0069
 aliases: ["ISS-0069"]
 title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
-status: triage
+status: open
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: "2026-09-19"
 source: ["Edwin 2026-09-11: 'On spread an list when selecting an item which needs to be approved or declined it opens a huge vertical area on the right, this should probably be handled differently and shown as just a strip somewhere??? Review and suggest.'", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]"]
+reported_by: user:edwin
 severity: medium
 component: renderer
 parent: ""
 related: ["[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]", "[[FEAT-0013-The-First-Write]]", "[[TASK-0049-The-Actuator-Row-And-One-Transition]]", "[[ISS-0045-A-Dead-Verb-Is-Drawn-Exactly-Like-A-Working-One]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[PHASE-0002-Glass]]"]
 tests: []
+question: "Where should the approve and decline buttons go in Spread and List? Options: (1) one line at the top of the reader, (2) on the note's pane header in Glass, (3) a bar across the bottom of the window. Recommendation: option 1, which fixes what was reported by moving one element; option 2 can follow in Glass."
 ---
 
 # The approve and decline buttons take a full-height column beside the reader
@@ -75,3 +77,13 @@ No trigger applies: the fix moves an element and adds no dependency, setting, pa
 
 - [ ] **Edwin chooses one of the three options.** This waits on him.
 - [ ] Then a task under [[FEAT-0013-The-First-Write]] (or under FEAT-0017 for option 2) moves the verbs and adds a smoke check that the verb strip's height is one line and that the reader's width is unchanged when a note offers verbs, shown to fail with the old placement.
+
+## Checked against the code, 2026-09-19: a question for Edwin
+
+**What a user notices:** In Spread and List, clicking a note that can be approved or declined opens a column as tall as the window between the desk and the reader, with only a few buttons at its top. The desk or list gets narrower.
+
+Evidence: `desktop/src/renderer/index.html:120` still puts `<div class="actuators">` directly inside `<div class="body">` (`:37`), beside `#reader` (`:121`), not inside it. `desktop/src/renderer/deck.css:70` makes `.body` a flex row, and `deck.css:413-421` styles `.actuators` as a strip with a bottom border, so it is stretched to full height as a column.
+
+**Belongs to:** FEAT-0013-The-First-Write (PHASE-0001-Deck); FEAT-0017 if option 2. **Next:** Edwin picks an option; option 1 is then a small fix (move one element, keep it out of what `openCard` replaces, add a smoke check on the strip's height).
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

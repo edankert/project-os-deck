@@ -2,13 +2,14 @@
 type: "[[issue]]"
 id: ISS-0085
 aliases: ["ISS-0085"]
-title: "Three rules this feature added can each be broken with all 465 node checks still passing, and one of the three is the exact defect the smoke run already found once"
-status: triage
+title: "If a workspace's own view description leaves out the outer field's size, and the default of 64 were broken, the outer field could shrink to one note and no check would fail"
+status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
+reported_by: review
 severity: medium
 component: tests
 parent: ""
@@ -16,11 +17,11 @@ related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reache
 tests: []
 ---
 
-# Three rules survive being broken
+# The outer field's default size has no check on the path a workspace uses
 
 ## Problem
 
-The review broke each of these on purpose, rebuilt, and ran the full node suite. All 465 checks passed every time.
+If the default outer-field size of 64 were broken, a workspace view that does not state its own size would show far fewer notes in the outer field, and no check would fail. The review broke each of these on purpose, rebuilt, and ran the full node suite. All 465 checks passed every time.
 
 **The outer field's capacity has no cover on the path a workspace uses.** Changing `outerCapacity: positive(band['outerCapacity'], 64)` to `1` in `desktop/src/shared/description.ts` changes nothing any check reads. The test that asserts 64 reads `VIEWS`, which hardcodes the number in `views.ts`. The `readBand` path — a description supplied by a workspace, and `base-file.ts` — is uncovered, and that is the path the Vault phase will use.
 
@@ -49,3 +50,13 @@ No trigger applies: these are test additions.
 
 - [ ] Assert `readBand`'s defaults directly, including `outerCapacity`.
 - [ ] Assert `pointer-events: none` on `.quiet-cursor`, and rename the check if it still claims more than it checks.
+
+## Checked against the code, 2026-09-19: still true, kept
+
+**What a user notices:** Nothing today. If the default outer-field size of 64 in `readBand` were broken, a view supplied by a workspace (the path the Vault phase will use) could put far fewer notes in the outer field, and every check would still pass.
+
+Evidence: Two of the three parts are done. `desktop/tests/glass-style.test.mjs:116-119` now asserts `pointer-events: none` on `.quiet-cursor`, so the check's name matches what it asserts. The third is not: `grep -rn outerCapacity desktop/tests/` finds only `field.test.mjs:300`, which reads the built-in `VIEWS`, and fixture tables that set it explicitly. `desktop/tests/descriptions.test.mjs:28` parses a band with no `outerCapacity` but never asserts the default that `desktop/src/shared/description.ts:435` (`positive(band['outerCapacity'], 64)`) supplies.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], PHASE-0002 Glass. **Next:** small fix: one assertion in `descriptions.test.mjs` that a parsed band with no `outerCapacity` gets 64.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

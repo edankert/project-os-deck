@@ -49,7 +49,7 @@ counters:
     last_date: 0
   DES: 2
   FEAT: 18
-  ISS: 88
+  ISS: 89
   PHASE: 4
   REQ: 0
   RISK: 4
@@ -677,7 +677,7 @@ items:
     ISS-0088:
       file: "docs/issues/ISS-0088-The-Hover-Rebuilds-The-Callout-On-Every-Pointer-Move-Over-The-Shelf.md"
       title: "Now that the hover handler runs in the field, every pointer move over the quiet band scans every painted tile and rebuilds the callout's elements, and no measurement covers it"
-      status: triage
+      status: declined
       owner: user:edwin
       phase: PHASE-0002
       severity: low
@@ -687,7 +687,7 @@ items:
     ISS-0087:
       file: "docs/issues/ISS-0087-The-Promoted-Card-Was-Still-Clipped-Because-Its-Minimum-Heights-Were-Guessed.md"
       title: "The fix for the clipped promoted card left it clipped, because the minimum heights were guessed rather than added up and were low enough that the floor meant to apply them never applied at all"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -697,7 +697,7 @@ items:
     ISS-0086:
       file: "docs/issues/ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place.md"
       title: "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the feature's title and goal promise more than the field delivers"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -706,8 +706,8 @@ items:
       note: "Filed 2026-09-17 from FEAT-0018's round-one independent review, and recorded rather than decided when the feature was built. EDWIN'S DECISION, and the only finding of the round that is his. The deal on your-trainer-features.json: 317 notes, front 3, mid 40, outer 64, deep 24, UNPLACED 186 -- 59% of the view counted and drawn nowhere. The acceptance line is satisfied (nothing is dropped silently; the bar states every remainder) and the TITLE and GOAL are not ('every note the view holds has a place in the field'). Two ways: the outer field GAINS LAYERS, which is more work and would re-open TASK-0079's measurement because it puts more elements on screen; or the TITLE AND GOAL ARE NARROWED to what was built, which costs nothing. Doing neither leaves two sentences in the note that contradict each other."
     ISS-0085:
       file: "docs/issues/ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing.md"
-      title: "Three rules this feature added can each be broken with all 465 node checks still passing, and one of the three is the exact defect the smoke run already found once"
-      status: triage
+      title: "If a workspace's own view description leaves out the outer field's size, and the default of 64 were broken, the outer field could shrink to one note and no check would fail"
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -717,7 +717,7 @@ items:
     ISS-0084:
       file: "docs/issues/ISS-0084-A-Promoted-Tile-Is-Drawn-In-The-Tiles-Box-So-The-Detail-It-Was-Promoted-To-Show-Is-Clipped.md"
       title: "A quiet tile promoted into a real card is laid out in the tile's box and only magnified, so the detail the promotion exists to show has no room and is clipped"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -727,7 +727,7 @@ items:
     ISS-0083:
       file: "docs/issues/ISS-0083-Two-Smoke-Checks-Cannot-Fail-And-One-Of-Them-Stands-For-The-Cursor.md"
       title: "Two of the smoke run's fourteen new checks are written so that they pass whatever the renderer does, and one of them is the only cover for the pointer cursor"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -737,7 +737,7 @@ items:
     ISS-0082:
       file: "docs/issues/ISS-0082-A-Finished-Note-On-A-Large-Workspace-Can-Never-Be-Pulled-To-The-Front-Band.md"
       title: "A finished note in the quiet band can only be pulled to the front band once it has been promoted to an element, so on a large workspace it can never be pulled forward at all"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -747,7 +747,7 @@ items:
     ISS-0081:
       file: "docs/issues/ISS-0081-Resting-The-Pointer-On-A-Tile-Does-Nothing-Because-The-Handler-Only-Runs-In-The-Orbit.md"
       title: "Resting the pointer on a quiet-band tile shows neither the note's name nor the pointer cursor, because the handler that would show them returns before it reaches the tile code"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -796,7 +796,7 @@ items:
       note: "Filed 2026-09-12 from Edwin asking whether the pool was not the intended solution. HE REMEMBERED RIGHT. CardPool (renderer/cards.ts) opens with the reason — retrofitting means rewriting the renderer that assumed one element per note — and its ONLY caller is renderer.ts, Spread's desk; glass.ts has its own cardEls map and makeCard. NOT a slip: FEAT-0009 records 'The hybrid is kept. Nothing here asks for the pool DES-0002 proposed', which was true because the canvas did the pool's job past the mid band (front+mid is about 84 slots). ISS-0073 takes the canvas away and the reason expires. Two corrections to carry: a pool caps element CHURN and not the LIVE COUNT, so it makes a turn smooth without making a frame cheaper; and CardPool is POSITIONAL (pool[i] to cards[i]), which would break PHASE-0002's ticked exit criterion 2 ('11 of 12 cards kept their elements across a switch, none reused'). The shape to reach for is a FREE LIST behind Glass's existing note-to-element map, not CardPool itself. Owed only if ISS-0073 is answered by making finished notes cards; measure first. STILL CONDITIONAL 2026-09-12, and planned as TASK-0080 under FEAT-0018, NOT STARTED until TASK-0079's measurement says so. Both corrections survive into the task: churn not live count, and a free list behind Glass's cardEls map rather than the positional CardPool."
     ISS-0070:
       file: "docs/issues/ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle.md"
-      title: "While a note stands in the middle, each of its neighbours is on screen twice — as a small ring note and as its own dimmed field card — and the opened note itself leaves a dashed frame in its slot, so one note is two things on the deck"
+      title: "While a note is open in Glass, each of its neighbours is shown twice, and the opened note leaves an empty dashed frame where it was"
       status: open
       owner: user:edwin
       phase: PHASE-0002
@@ -806,7 +806,7 @@ items:
       note: "Filed 2026-09-12 from Edwin running Deck: 'there should only be one note on the deck'. Three decisions add up to the double image: the ring paints its own 168x44 .ring-card per neighbour (TASK-0069), redeal returns early while a note is in the middle so every field card stays at opacity 0.28 (FEAT-0017 decisions 9 and 10), and a lifted note leaves .field-card.ghost, a dashed outline DES-0002 and TASK-0035 both ask for. Two options: MOVE the cards onto the ring instead of copying them (recommended; costs ring capacity, roughly 6-8 places instead of 16) or keep the ring's own cards, grow them to card size and skip drawing what they stand for. Either way the ghost goes, which REVERSES a DES-0002 decision. DECIDED 2026-09-12, Edwin: 'move the cards, do not copy!' and 'Drop the filed-card ghost it doesn't work!'. DES-0002 is amended as part of the work. The capacity cost option 1 carried is GONE, because ISS-0071 and ISS-0072 moved the layout out of the visible window on the same day."
     ISS-0071:
       file: "docs/issues/ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose.md"
-      title: "The note in the middle is sized by whatever leaves room for the ring rather than by the person, and it jumps to 320 by 240 the moment it is dragged, because focusLayout searches for a pane size and ignores the one the desk record holds"
+      title: "The note open in the middle of Glass ignores the size the person gave it, and changes size as soon as it is dragged"
       status: open
       owner: user:edwin
       phase: PHASE-0002
@@ -816,7 +816,7 @@ items:
       note: "Filed 2026-09-12 from Edwin running Deck: the opened note is the person's main note and its size is their decision; a move is not a resize. focusLayout takes no pane size at all — it searches down from FOCUS_MAX 640x480 to FOCUS_MIN 280x160 until ENOUGH (6) ring places fit — so TASK-0054's stored w/h is unread, and paintPane swaps between focusRect and paneRect (320x240 default) the instant a drag starts leaveFocus. Fix inverts the order of sacrifice: the pane size is an argument, the ring grows its curve and then drops places to '+N more'. DECIDED 2026-09-12, Edwin accepted the consequences and then changed the frame: 'there should always be space to the left and right of the note off-screen, so place the associated items there, do not use the current visible view as the constraint to layout the objects'. focusLayout stops refusing places outside the window. SETTLED 2026-09-12, Edwin: 'turning moves the note and the whole ring' — the pane is anchored to a BEARING on the cylinder and drawn FLAT at the person's size, no perspective. Three consequences are now task steps rather than questions: a flat pane needs a fade-and-stop rule at the 78-degree edge of sight, focusLayout returns angles and heights instead of pixels, and a drag on the pane becomes a turn plus a height change, which reuses the field's own arithmetic. The remembered reading size is still unanswered; recommend a store setting."
     ISS-0072:
       file: "docs/issues/ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away.md"
-      title: "Dragging the note in the middle ends the arrangement instead of carrying it: the ring is discarded, the whole field is dealt again and turns, so one small drag moves every card on screen"
+      title: "Dragging the note open in the middle of Glass by a few pixels makes its neighbours vanish and moves every card on screen"
       status: open
       owner: user:edwin
       phase: PHASE-0002
@@ -846,7 +846,7 @@ items:
       note: "Filed 2026-09-12 from Edwin running Deck: 'zooming should also bring in more of the note's content'. The field already has detail-by-distance, but it is keyed to dataset.band (the slot's band, a property of priority), which the zoom does not change; applyZoom only multiplies x, y and scale. Second half is a data problem: CardModel carries no body or excerpt, so a large card runs out of things to show after subtitle, status, progress and frontmatter. Steps: key the detail to apparent width (data-detail beside data-band), put the thresholds in a pure tested function, promote a quiet-band tile to a real card (shared seam with ISS-0073), and only then decide whether Deck's index should carry an excerpt — that last one is a payload change PHASE-0002's first exit criterion measures and owes a RISK note. 2026-09-12: Edwin asked what step 4 gives him. Answer: very little, and it is DROPPED. A project-os note is written point-first so its first paragraph nearly repeats the subtitle the card already carries; steps 1 to 3 have not run out of things to show (subtitle, status, progress, face properties are all hidden today); the full note is one click away in a pane at the size ISS-0071 gives the person; and it costs the 2.39 MB payload the phase's first exit criterion measures, plus a decision about what an excerpt means in a vault. Build 1 to 3, use them, ask again with an example if a zoomed card still reads thin. PLANNED 2026-09-12 into FEAT-0018: steps 1 and 2 as TASK-0074 (a pure detail.ts keyed to apparent width), step 3 as TASK-0077. Step 4 stays DROPPED. TASK-0074 also writes an amendment into FEAT-0016, whose scope put 'more detail at a larger scale' out of scope by name."
     ISS-0075:
       file: "docs/issues/ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times.md"
-      title: "The smoke run takes the keyboard away from whatever the person is doing more than twenty times, because every keyboard check calls app.focus with steal and there is no way to run the checks that do not need it on their own"
+      title: "Running the smoke checks on the Mac pulls the keyboard away from whatever the person is typing in, about two dozen times a run"
       status: open
       owner: user:edwin
       phase: PHASE-0002
@@ -857,7 +857,7 @@ items:
     ISS-0069:
       file: "docs/issues/ISS-0069-The-Verb-Buttons-Take-A-Full-Height-Column-Beside-The-Reader.md"
       title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -1117,7 +1117,7 @@ items:
     ISS-0056:
       file: "docs/issues/ISS-0056-What-The-Last-Review-Found-And-Nobody-Fixed.md"
       title: "The seventh review approved all three features and found eight things nobody fixed, the largest being that the smoke run is gated by a workflow that has never executed"
-      status: triage
+      status: declined
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -1377,7 +1377,7 @@ items:
     ISS-0008:
       file: "docs/issues/ISS-0008-Nothing-In-CI-Exercises-The-Renderer.md"
       title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
-      status: triage
+      status: open
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -1956,8 +1956,8 @@ metrics:
     tests_total: 39
     tests_passing: 2
     tests_failing: 0
-    issues_open: 9
-    issues_triage: 8
+    issues_open: 10
+    issues_triage: 0
     risks_open: 0
     releases_total: 0
     decisions_total: 5

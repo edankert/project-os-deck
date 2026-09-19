@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0083
 aliases: ["ISS-0083"]
 title: "Two of the smoke run's fourteen new checks are written so that they pass whatever the renderer does, and one of them is the only cover for the pointer cursor"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
+reported_by: review
 severity: medium
 component: tests
 parent: ""
@@ -69,3 +70,11 @@ No trigger applies.
 - Four checks were added for pulling a quiet note to the front band, two for the keyboard route and two for the drag.
 
 None of these has been run. They are smoke checks; the suite opens windows and Docker was not running, so [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]'s container was not available either. This stays `open` until a run settles them.
+
+## Checked against the code, 2026-09-19: already done
+
+Evidence: `grep -n "|| true\|typeof cursor === 'string'" desktop/src/main/smoke-glass.ts` finds only comments (2036, 2238). Line 2045 asserts `resting.cursor === 'pointer'`; lines 2046-2048 assert the callout names the note; line 2055 asserts moving off removes both. Lines 2242-2245 compare the renderer's shape with `bandShapeFor('deep', ...)` instead of `|| true`. The smoke run has not executed this code: the fix is in commits `fb4982b` and `223d582`, which are among 18 commits not yet pushed (`git rev-list --count origin/main..main` is 18), and the last `deck-smoke` CI run (2026-09-12) failed on an unrelated DES-0001 verb check.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] (TASK-0078), PHASE-0002 Glass. **Next:** the first smoke run after the push runs these checks for the first time.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

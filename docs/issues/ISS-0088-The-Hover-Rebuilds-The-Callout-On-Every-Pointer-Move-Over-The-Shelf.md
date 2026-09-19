@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0088
 aliases: ["ISS-0088"]
 title: "Now that the hover handler runs in the field, every pointer move over the quiet band scans every painted tile and rebuilds the callout's elements, and no measurement covers it"
-status: triage
+status: declined
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round two, 2026-09-17"]
+reported_by: review
 severity: low
 component: renderer
 parent: ""
@@ -45,3 +46,13 @@ No new dependency, env var, path or configuration. The hazard is a frame-time re
 ## Next Actions
 
 - [ ] Decide whether to guard first or measure first; the guards are small enough that measuring afterwards answers both.
+
+## Checked against the code, 2026-09-19: declined
+
+**What a user notices:** Nothing. Each pointer move over the shelf checks a few hundred rectangles and rebuilds a two-line callout, which costs far less than one frame.
+
+Evidence: `desktop/src/renderer/glass.ts:1242-1253` `tileAt` is a plain loop over `this.tiles`; `glass.ts:1371-1388` `showTileCallout` calls `replaceChildren()` and builds two elements on every call, with no check that the note changed. Both are still true. Neither is measured, but a few hundred bounds checks and two small elements per move are microseconds against a 16 ms frame.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] (TASK-0082), PHASE-0002 Glass. **Next:** none; reopen if `npm run measure` after the push shows hover over the shelf costing frame time.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).

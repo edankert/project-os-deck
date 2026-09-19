@@ -3,12 +3,13 @@ type: "[[issue]]"
 id: ISS-0082
 aliases: ["ISS-0082"]
 title: "A finished note in the quiet band can only be pulled to the front band once it has been promoted to an element, so on a large workspace it can never be pulled forward at all"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: "2026-09-19"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
+reported_by: review
 severity: high
 component: renderer
 parent: ""
@@ -64,3 +65,11 @@ No trigger applies. The fix adds a key and a drag route to surfaces that already
 ## Where this stands
 
 **2026-09-17: fix written, not yet verified by a run.** [[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]] added `p` and `b` to the shelf's keyboard cursor and a downward-drag route from a painted tile, both calling [[FEAT-0014-The-Hands]]'s own `pull`. Four smoke checks were added and none has been run. This stays `open` until a run settles it.
+
+## Checked against the code, 2026-09-19: already done
+
+Evidence: `desktop/src/renderer/glass.ts:1338-1343`: `handQuietCursor` calls `this.pull(entry)` on `p` from the shelf's keyboard cursor. `glass.ts:1658-1672`: a downward drag that began on a painted tile calls `this.pull(entry)` past `PULL_THRESHOLD_PX`. `grep -n 'this\.pull(' glass.ts` now finds four call sites (1342, 1670, 2005, 2113), two of them with no card element. `smoke-glass.ts:2089` checks the pulled finished note stands in the front band. The smoke run has not executed this code: the fix is in commits `fb4982b` and `223d582`, which are among 18 commits not yet pushed (`git rev-list --count origin/main..main` is 18), and the last `deck-smoke` CI run (2026-09-12) failed on an unrelated DES-0001 verb check.
+
+**Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]] (TASK-0083), PHASE-0002 Glass. **Next:** the first smoke run after the push confirms it; the feature note's sentence about what the hit test delivers is FEAT-0018's close-out to correct.
+
+Checked as part of project-os-dev FEAT-0036 (TASK-0141).
