@@ -97,6 +97,12 @@ Fields:
   *The same reverse encoding still exists on `task`, `issue` and `requirement` (330 live edges fleet-wide against the feature's 62). Normalising those is decided in principle and not yet done; until then `VERIFY` ignores any linked test at `level: acceptance` so the merged type cannot trip the gate from those three.*
 - (optional) `release` (string): Milestone/release label.
 - (optional) `acceptance_exception` (string): Why this feature can never have an acceptance check — an engine with no user-facing surface, a phase of work, a repo that ships prose. **Said once, at scaffold time, when the reason is known.** Non-empty silences `FEATURE-UNCOVERED` for this feature permanently; empty (the template's default) means the feature is expected to be covered by the time it is `done`. This is an escape, not a switch: a reason that is not true is worse than the warning it removes.
+- (optional) `reviewed_by`, `review_date`, `review_verdict` (strings): the independent review of this feature reaching `done` (`tools/skills/independent-review/SKILL.md`). The same review records them on each linked test it checked.
+- (optional) `review_round` (integer, `1` or `2`): which round produced the verdict. A gate runs at most two rounds (`tools/instructions/QUALITY.md`); the validator refuses any other value (`REVIEW-ROUND`).
+
+Body sections:
+- `## Acceptance`: the observable criteria. `tools/scripts/review-packet.py` copies them word for word into the review packet, so write each as a claim a reviewer can refute.
+- `## Verification`: the author's last full test run before the review, as the command, the date and the result count. The packet carries it so the reviewer does not re-run the suite.
 
 Where used:
 - Tracked in `SNAPSHOT.yaml` (`items.features`) for agent context and linked from feature notes.
@@ -129,6 +135,10 @@ Fields:
 - (recommended) `component` (string): Subsystem/area label (project-defined).
 - (optional) `parent` (string/link): Link to a parent feature/epic note.
 - (optional) `tests` (list of links): `[[TST-...]]` links used to reproduce/verify the issue.
+- (required from 2026-09-19 on an open issue) `reported_by` (string): `user:<name>`, `review` or `agent` (validator ISSUE-REPORTER, ADR-0047).
+- (optional) `question` (string): when the issue waits on the owner, the question, its options and a recommendation. An open issue that says it waits on the owner without one draws ISSUE-QUESTION.
+
+The title and the first sentence of `## Problem` name what a user would notice (`tools/instructions/WRITING.md`). Before filing at all, apply the filing bar in `tools/instructions/QUALITY.md`.
 
 Where used:
 - Tracked in `SNAPSHOT.yaml` (`items.issues`) for agent context and linked from issue notes.
@@ -214,14 +224,15 @@ Fields:
 - (optional) `reviewed_by` (string): Independent reviewer identity (`model:...` or `user:...`), per `tools/skills/independent-review/SKILL.md`.
 - (optional) `review_date` (string/date): Date of the independent review.
 - (optional) `review_verdict` (string): `approved | changes-requested`.
+- (optional) `review_round` (integer, `1` or `2`): which round produced the verdict (`REVIEW-ROUND`).
 
 ### Acceptance fields (`level: acceptance` only)
 
 An acceptance test is the thing a person walks. It carries the fields below and rests at `status: active` (`tools/instructions/STATUSES.md` `[[test]]`); every one of them is meaningless on an executable test and the validator does not require them there.
 
-**The note holds intent. The verdict is not on it** (ADR-0037; why is `tools/instructions/TAXONOMY.md`, "Acceptance outcomes (the ledger's vocabulary)"). It lives as a dated, attributed event in `docs/releases/ledgers/`. Only the cockpit writes and reads that directory today; no release skill creates it or defines the file format.
+**The note holds intent. The verdict is not on it** (ADR-0037; why is `tools/instructions/TAXONOMY.md`, "Acceptance outcomes (the ledger's vocabulary)"). It lives as a dated, attributed event in `docs/releases/ledgers/`, whose README gives the file format with an example.
 
-**Seven fields were removed**: `mark`, `verdict_date`, `verdict_reason`, `invalidated_by`, `automation`, `covered_by`, `evidence`. Do not write them on a new note. The refusal is not uniform and you should not rely on it: the cockpit's validator rejects them (and five more) in a repo that keeps ledgers, while `tools/scripts/validate-docs.py` — the entrypoint pre-commit and CI run — rejects none of them and still reads `mark:`. Which way the two converge is an open decision. A repo with no ledger is untouched and keeps reading its scalar marks, because a schema change that broke every repo that had not migrated yet would be a worse failure than the one it fixes.
+**Twelve fields were removed**: `mark`, `verdict_date`, `verdict_reason`, `invalidated_by`, `automation`, `covered_by`, `evidence`, `section`, `ordinal`, `migrated_from`, `merged_from` and `burden`. Do not write them on a new note. In a repo that keeps ledgers the validator reports each one as `LEDGER-FIELD`, a warning until 2026-12-17 and an error after it. A repo with no ledger is untouched and keeps reading its scalar marks, because a schema change that broke every repo that had not migrated yet would be a worse failure than the one it fixes.
 
 - ~~`tier`~~ — **removed (ADR-0034).** There is no tier system: a check's section is derived from `covers:` and `command:` (`tools/instructions/TESTING.md`, "The three sections"). Readers still accept the field on legacy notes and ignore it.
 - ~~`burden`~~, ~~`migrated_from`~~, ~~`merged_from`~~ — **removed (ISS-0233).** Provenance of migrations that are finished, plus a field empty on every check in the fleet. Git holds the first two, with the shas ADR-0030 and ADR-0031 name; a field is the wrong place for a fact already immutable somewhere better.
