@@ -139,4 +139,4 @@ The decision itself is `focusPolicy` in `desktop/src/main/smoke-support.ts`, bes
 
 **One consequence Edwin should know.** [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]'s `command:` is `bash tools/scripts/run-smoke.sh both`. On a Mac with no Docker daemon that command now exits 127, which `run-tests.py` reports as an environment gap locally and fails on in CI. CI is Linux and is unaffected. Locally, the smoke checks now need either Docker running or `--on-screen`.
 
-**Guarded by** [[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]] (`bash tools/scripts/run-desktop-tests.sh smoke-support`). **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].
+**Guarded by** [[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]] (`bash tools/scripts/run-desktop-tests.sh smoke-support`). **Commit:** `4504e7b`. **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].

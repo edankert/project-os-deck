@@ -69,4 +69,4 @@ The other two parts were already done and are unchanged: `glass-style.test.mjs:1
 
 **The test fails without the fix.** Changing `outerCapacity: positive(band['outerCapacity'], 64)` to `1` in `desktop/src/shared/description.ts:435` and running `bash tools/scripts/run-desktop-tests.sh descriptions` fails: "AssertionError: the outer field no longer offers its 64 slots — actual: 1, expected: 64". With the default restored, the same command passes 18 of 18. Both runs were made on 2026-09-20.
 
-**Guarded by** [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] (`bash tools/scripts/run-desktop-tests.sh descriptions`). **Commit:** see the ISS-0085 commit on this branch. **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].
+**Guarded by** [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] (`bash tools/scripts/run-desktop-tests.sh descriptions`). **Commit:** `90cac9b`. **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].

@@ -64,4 +64,4 @@ Checked as part of project-os-dev FEAT-0036 (TASK-0141).
 
 **Not covered:** `main.ts` calling `saveMeasurement` is one line that only a real `npm run measure` exercises, and a measurement run takes Edwin's screen. The write itself is covered.
 
-**Guarded by** [[TST-0057-The-Measurement-Is-Kept-In-A-File]] (`bash tools/scripts/run-desktop-tests.sh measure-out`). **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].
+**Guarded by** [[TST-0057-The-Measurement-Is-Kept-In-A-File]] (`bash tools/scripts/run-desktop-tests.sh measure-out`). **Commit:** `c10932a`. **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].

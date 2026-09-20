@@ -8,7 +8,7 @@ owner: user:edwin
 created: 2026-09-20
 updated: 2026-09-20
 source: ["[[ISS-0089-Three-Small-Defects-From-The-Issue-Review-Are-Still-In-Deck]]", "project-os-dev PHASE-0007 step 3"]
-commit: ""
+commit: "90cac9b, c10932a, 4504e7b"
 pr: ""
 impacts: ["tools/scripts/run-smoke.sh", "desktop/src/main/smoke-support.ts", "desktop/src/main/main.ts", "desktop/src/main/measure.ts", "desktop/tests/smoke-support.test.mjs", "desktop/tests/measure-out.test.mjs", "desktop/tests/descriptions.test.mjs", ".gitignore", "docs/ARCHITECTURE.md"]
 issues: ["[[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]]", "[[ISS-0080-The-Measurement-Prints-Its-Numbers-And-Keeps-Them-Nowhere]]", "[[ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing]]", "[[ISS-0089-Three-Small-Defects-From-The-Issue-Review-Are-Still-In-Deck]]"]
