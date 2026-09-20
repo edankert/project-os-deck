@@ -7,7 +7,7 @@
 import type { ChildProcess } from 'node:child_process';
 import { recordGlass } from './smoke-glass.js';
 import { GraphService } from './graph-service.js';
-import { runMeasure } from './measure.js';
+import { runMeasure, saveMeasurement } from './measure.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -568,6 +568,17 @@ app.whenReady().then(async () => {
         roots,
       );
       console.log(JSON.stringify({ measurements: results }, null, 2));
+      // **Kept, not only printed** (ISS-0080). The numbers cost several
+      // minutes of somebody's screen; a trimmed pipe or a closed terminal used
+      // to cost them again. The path is the LAST line, so it is the one a
+      // person still has. A failed write is said out loud and does not throw
+      // away the run that has already been printed above.
+      try {
+        const written = saveMeasurement(argValue('--measure-out') ?? path.join(here, 'measurements'), results);
+        console.log(`deck: measurement written to ${written}`);
+      } catch (err) {
+        console.error(`deck: the measurement could not be written — ${err instanceof Error ? err.message : String(err)}`);
+      }
       shutdown();
       await waitForExit(stopping);
       app.exit(0);

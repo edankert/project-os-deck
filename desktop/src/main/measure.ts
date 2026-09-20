@@ -17,7 +17,9 @@
  * focused, and the meter in the page records a frame only while the document
  * is visible and has focus; each result says whether both held.
  */
+import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type { DeckAction } from '../shared/store-state.js';
 import type { DeckState, WindowRole } from '../shared/types.js';
@@ -260,4 +262,32 @@ export async function runMeasure(ctx: MeasureContext, roots: string[]): Promise<
     });
   }
   return results;
+}
+
+/**
+ * The file name a measurement taken at `when` is kept under.
+ *
+ * Seconds are in the name because two runs on one day are ordinary, and the
+ * colons an ISO timestamp carries are awkward in a shell, so they become
+ * hyphens: `2026-09-20T14-03-05Z.json`.
+ */
+export function measurementName(when: Date): string {
+  return `${when.toISOString().replace(/\.\d+Z$/, 'Z').replace(/:/g, '-')}.json`;
+}
+
+/**
+ * Keep the measurement's numbers, as well as printing them (ISS-0080).
+ *
+ * A measurement takes a person's screen for several minutes and needs the
+ * window in front, which makes its output expensive in a way no other check's
+ * is — and until this existed it survived only as long as whatever was reading
+ * stdout. On 2026-09-12 a run went through a `tail` that kept seventy lines,
+ * two of the three workspaces were lost, and the whole thing had to be taken
+ * again. Returns the path it wrote, so the caller can print it last.
+ */
+export function saveMeasurement(dir: string, results: unknown, when: Date = new Date()): string {
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, measurementName(when));
+  fs.writeFileSync(file, `${JSON.stringify({ measurements: results }, null, 2)}\n`, 'utf-8');
+  return file;
 }

@@ -3,18 +3,18 @@ type: "[[issue]]"
 id: ISS-0080
 aliases: ["ISS-0080"]
 title: "A frame-rate measurement is lost if its terminal output is cut off, because the numbers are printed but never saved to a file"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-19"
+updated: "2026-09-20"
 source: ["Found while taking [[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]'s measurement, 2026-09-12"]
 reported_by: agent
 severity: low
 component: tests
 parent: ""
 related: ["[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0057-The-Measurement-Is-Kept-In-A-File]]"]
 ---
 
 # The measurement's numbers are printed but never saved
@@ -42,7 +42,7 @@ No trigger applies: writing a file under the repository adds no dependency, env 
 
 ## Next Actions
 
-- [ ] Write the JSON to a dated file, print the path, and decide whether measurements are committed.
+- [x] Write the JSON to a dated file, print the path, and decide whether measurements are committed. Done 2026-09-20: written to `measurements/`, which is gitignored.
 
 ## Checked against the code, 2026-09-19: still true, kept
 
@@ -53,3 +53,15 @@ Evidence: `desktop/src/main/main.ts:570` is still `console.log(JSON.stringify({ 
 **Belongs to:** PHASE-0002-Glass, no feature. Small fix: one write beside line 570, and a test that the file is written. **Next:** Write the JSON to a dated file under a gitignored `measurements/` directory and print its path last. Gitignored is an assumption; commit them instead if the phase criterion should cite them.
 
 Checked as part of project-os-dev FEAT-0036 (TASK-0141).
+
+## Fixed, 2026-09-20
+
+**A measurement run now writes its numbers to `measurements/<timestamp>.json` under the repository and prints that path as its last line.** `saveMeasurement` in `desktop/src/main/measure.ts` makes the directory if it is not there, writes `{ measurements: [...] }` — the same object that is printed — and returns the path. `main.ts` calls it right after the `console.log` in the `--measure` branch, inside a `try`, so a write that fails says so and does not throw away numbers already on screen. `--measure-out <dir>` names a different directory.
+
+**The directory is gitignored.** A measurement is a reading of one machine on one day, with whatever else was running on it; a note that quotes a number quotes its date and machine with it. `/measurements/` is anchored in `.gitignore` for the reason the inbox entry there gives.
+
+**The test fails without the fix.** Taking the write out of `saveMeasurement` and leaving it returning the path fails three of the four checks in `desktop/tests/measure-out.test.mjs`, the first by name: "the measurement was printed and kept nowhere". With the write in place `bash tools/scripts/run-desktop-tests.sh measure-out` passes 4 of 4. Both runs were made on 2026-09-20.
+
+**Not covered:** `main.ts` calling `saveMeasurement` is one line that only a real `npm run measure` exercises, and a measurement run takes Edwin's screen. The write itself is covered.
+
+**Guarded by** [[TST-0057-The-Measurement-Is-Kept-In-A-File]] (`bash tools/scripts/run-desktop-tests.sh measure-out`). **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].

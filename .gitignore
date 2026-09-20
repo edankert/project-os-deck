@@ -33,3 +33,10 @@ tools/cockpit/.venv/
 
 # Node dependencies for the Electron shell (desktop/).
 node_modules/
+
+# Frame-rate and layout measurements written by `npm run measure` (ISS-0080).
+# A measurement is a reading of ONE machine on one day -- Edwin's Mac, with
+# whatever else was running -- so it is evidence a note quotes with its date,
+# not a file every clone should carry. Anchored, so a `docs/.../measurements/`
+# could never vanish from a fresh clone unnoticed.
+/measurements/
