@@ -6,7 +6,7 @@ title: "A description parses or says why not, the seven project-os views still m
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-09-20
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -14,7 +14,7 @@ level: unit
 entrypoint: "desktop/tests/descriptions.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh descriptions"
 covers: ["[[FEAT-0012-A-View-Is-A-Description]]"]
-issues: []
+issues: ["[[ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing]]"]
 tasks: ["[[TASK-0041-The-Description-Shape-And-Its-Parser]]", "[[TASK-0042-Seven-Descriptions-Equal-To-Todays-Views]]", "[[TASK-0046-A-Base-File-Reads-As-A-Description]]"]
 artifacts: []
 adequacy: "Defaulting a missing section instead of refusing it fails the malformed table. Accepting a bare unknown key fails the namespace check. Throwing on the first unreadable construct fails the several-at-once check, which asserts every refusal is reported. Reporting a TaskNotes view type as a generic parse failure fails the fixture check."
@@ -49,6 +49,7 @@ A view is now a document, and the parser that reads it must refuse what it canno
 - Assert the TaskNotes view types and keys come back as named unsupported constructs and do not prevent the rest of the file parsing.
 - Assert the four Comic card views produce a `face` naming the portrait, cover, scene or image the file names.
 - Assert the sidebar base's `or`-of-`and` filter parses.
+- Assert a band table that states no capacities gets all four defaults (12 front, 40 mid, 64 outer, 3000 deep), and that a table that states them is obeyed (ISS-0085).
 
 ## Expected results
 
@@ -58,7 +59,8 @@ A view is now a document, and the parser that reads it must refuse what it canno
 
 ## Evidence
 
-- `bash tools/scripts/run-desktop-tests.sh descriptions`: 17 checks pass, 2026-09-09.
+- `bash tools/scripts/run-desktop-tests.sh descriptions`: 17 checks pass, 2026-09-09; 18 pass on 2026-09-20 with the band-capacity defaults added.
+- The capacity check fails when the default is broken: `outerCapacity: positive(band['outerCapacity'], 64)` changed to `1` in `desktop/src/shared/description.ts` gives "actual: 1, expected: 64", 2026-09-20.
 - THIRTEEN base-file fixtures, not twelve: eleven from `~/Notes` and two from the cockpit's `docs/__bases__/`, copied 2026-09-09. `desktop/fixtures/bases/README.md` names where each came from.
 - All seven provider descriptions parse with zero refusals; each names `list` and `spread` and none names `glass`.
 - Every one of the thirteen yields at least one description. The TaskNotes plugin's four view types come back as named unsupported constructs and stop nothing; the four Comic card views name `note.portrait`, `note.cover`, `note.scene` and `note.image`; the sidebar base's `or`-of-`and` parses as three `and` branches under one `or`.

@@ -73,6 +73,32 @@ test('a source is mode or query, and a third kind is refused by name', () => {
   assert.match(named.reason, /query/);
 });
 
+test('a band table that states no capacities gets the four defaults, 12 / 40 / 64 / 3000', () => {
+  // **This is the path a WORKSPACE's own view takes**, and the one the Vault
+  // phase will use (ISS-0085). The only check that asserted 64 read the
+  // built-in `VIEWS`, where the number is written out again; `readBand`'s
+  // default had no cover at all, so the outer field could have been shrunk to
+  // one note with all 470 checks still passing.
+  const { description, refusals } = parseDescription(valid());
+  assert.deepEqual(refusals, []);
+  assert.equal(description.band.frontCapacity, 12);
+  assert.equal(description.band.midCapacity, 40);
+  assert.equal(description.band.outerCapacity, 64, 'the outer field no longer offers its 64 slots');
+  assert.equal(description.band.deepCapacity, 3000);
+
+  // And a capacity the table DOES state is the one that is used, so the check
+  // above cannot be satisfied by ignoring the table.
+  const stated = parseDescription(
+    valid({
+      band: { rows: [{ when: {}, band: 'mid' }], frontCapacity: 3, midCapacity: 7, outerCapacity: 9, deepCapacity: 11 },
+    }),
+  ).description;
+  assert.equal(stated.band.frontCapacity, 3);
+  assert.equal(stated.band.midCapacity, 7);
+  assert.equal(stated.band.outerCapacity, 9);
+  assert.equal(stated.band.deepCapacity, 11);
+});
+
 test('verbs is the word "registry", and a restated verb list names REQ-0026', () => {
   const { refusals } = parseDescription(valid({ verbs: ['approve', 'reject', 'defer'] }));
   const named = refusals.find((r) => r.where === 'verbs');

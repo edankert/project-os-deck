@@ -3,18 +3,18 @@ type: "[[issue]]"
 id: ISS-0085
 aliases: ["ISS-0085"]
 title: "If a workspace's own view description leaves out the outer field's size, and the default of 64 were broken, the outer field could shrink to one note and no check would fail"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: "2026-09-19"
+updated: "2026-09-20"
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
 reported_by: review
 severity: medium
 component: tests
 parent: ""
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]"]
-tests: []
+tests: ["[[TST-0030-A-Description-Parses-Or-Says-Why-Not]]", "[[TST-0042-Nothing-Blurs-And-Only-Near-Cards-Are-Promoted]]"]
 ---
 
 # The outer field's default size has no check on the path a workspace uses
@@ -48,8 +48,8 @@ No trigger applies: these are test additions.
 
 ## Next Actions
 
-- [ ] Assert `readBand`'s defaults directly, including `outerCapacity`.
-- [ ] Assert `pointer-events: none` on `.quiet-cursor`, and rename the check if it still claims more than it checks.
+- [x] Assert `readBand`'s defaults directly, including `outerCapacity`. Done 2026-09-20.
+- [x] Assert `pointer-events: none` on `.quiet-cursor`, and rename the check if it still claims more than it checks. Done before 2026-09-19.
 
 ## Checked against the code, 2026-09-19: still true, kept
 
@@ -60,3 +60,13 @@ Evidence: Two of the three parts are done. `desktop/tests/glass-style.test.mjs:1
 **Belongs to:** [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], PHASE-0002 Glass. **Next:** small fix: one assertion in `descriptions.test.mjs` that a parsed band with no `outerCapacity` gets 64.
 
 Checked as part of project-os-dev FEAT-0036 (TASK-0141).
+
+## Fixed, 2026-09-20
+
+**The outer field's default capacity of 64 is now asserted where a workspace's own view description would reach it.** `desktop/tests/descriptions.test.mjs` gained one check, "a band table that states no capacities gets the four defaults, 12 / 40 / 64 / 3000". It parses a description whose band table states no capacity and asserts all four defaults `readBand` supplies, then parses a second one that states all four and asserts those, so the check cannot pass by ignoring the table.
+
+The other two parts were already done and are unchanged: `glass-style.test.mjs:116-119` asserts `pointer-events: none` on `.quiet-cursor`, and that check's name matches what it asserts.
+
+**The test fails without the fix.** Changing `outerCapacity: positive(band['outerCapacity'], 64)` to `1` in `desktop/src/shared/description.ts:435` and running `bash tools/scripts/run-desktop-tests.sh descriptions` fails: "AssertionError: the outer field no longer offers its 64 slots — actual: 1, expected: 64". With the default restored, the same command passes 18 of 18. Both runs were made on 2026-09-20.
+
+**Guarded by** [[TST-0030-A-Description-Parses-Or-Says-Why-Not]] (`bash tools/scripts/run-desktop-tests.sh descriptions`). **Commit:** see the ISS-0085 commit on this branch. **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].
