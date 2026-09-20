@@ -33,7 +33,11 @@ import {
   transitionRequestFrom,
 } from '../shared/write-client.js';
 import { navigationFor } from '../shared/origin.js';
-import { defaultWorkspacePath, smokeVerdict } from './smoke-support.js';
+import { defaultWorkspacePath, focusPolicy, smokeVerdict } from './smoke-support.js';
+
+// Read once, at start, so every window in a run is treated the same way
+// (ISS-0075). `focusApp` consults it; `runSmoke` prints it.
+const FOCUS = focusPolicy(process.argv, process.env);
 
 // Pinned before anything reads it: Electron derives this from the app name,
 // and a later rename would strand the settings written under the old one.
@@ -688,6 +692,9 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
  * it back in the other, prints a JSON verdict and exits non-zero on failure.
  */
 async function runSmoke(): Promise<void> {
+  // Said before the first window opens, so the first sign of a run that takes
+  // the keyboard is a sentence rather than the window arriving (ISS-0075).
+  console.log(`deck: smoke run — ${FOCUS.why}`);
   const failures: string[] = [];
   /**
    * Checks that need a workspace and did not get one.
@@ -1913,8 +1920,22 @@ async function ipcInvoke(channel: string, ...args: unknown[]): Promise<unknown> 
   return handler({} as Electron.IpcMainInvokeEvent, ...args);
 }
 
-/** The smoke run's keyboard checks need Deck to be the application with the keyboard. */
+/**
+ * The smoke run's keyboard checks need Deck to be the application with the
+ * keyboard — unless this run was asked not to take it (ISS-0075).
+ *
+ * In no-focus mode the window is shown WITHOUT being activated, exactly as a
+ * satellite window already is, so nothing leaves the editor the person is
+ * typing in. `sendInputEvent` still reaches the window, so every pointer check
+ * runs; the checks that assert `document.hasFocus()` do not, and the runner
+ * says so before the first window opens.
+ */
 function focusApp(win: BrowserWindow): void {
+  if (!FOCUS.takesKeyboard) {
+    win.showInactive();
+    win.webContents.focus();
+    return;
+  }
   if (process.platform === 'darwin') app.focus({ steal: true });
   win.show();
   win.focus();

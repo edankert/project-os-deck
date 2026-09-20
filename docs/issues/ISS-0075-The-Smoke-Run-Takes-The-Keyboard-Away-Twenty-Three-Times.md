@@ -3,18 +3,18 @@ type: "[[issue]]"
 id: ISS-0075
 aliases: ["ISS-0075"]
 title: "Running the smoke checks on the Mac pulls the keyboard away from whatever the person is typing in, about two dozen times a run"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-19"
+updated: "2026-09-20"
 source: ["Edwin 2026-09-12: 'One other thing is can we change the testing so the deck is not constantly requesting focus?'"]
 reported_by: user:edwin
 severity: medium
 component: tests
 parent: ""
 related: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[PHASE-0002-Glass]]"]
-tests: []
+tests: ["[[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]]"]
 ---
 
 # The smoke run on a Mac keeps taking the keyboard away
@@ -70,7 +70,7 @@ One trigger applies: the runner gains a mode, which is a change to a front-door 
 ## Next Actions
 
 - [x] **Edwin confirmed the default, 2026-09-12: "default the run to no-focus".** Recorded below.
-- [ ] A task: tag the steps that need a frontmost application, default `tools/scripts/run-smoke.sh` to the half that does not, put the full run behind a named flag, make CI pass that flag explicitly, and print the mode before the first window opens.
+- [x] Done 2026-09-20, by a shorter route than the one written here: the Mac hands the whole run to the container instead of the steps being tagged, `--on-screen` and `--no-focus` are the named flags, and the mode is printed before the first window opens. CI is on Linux and needed no flag. See "Fixed, 2026-09-20" below.
 
 ## Decision record
 
@@ -115,3 +115,28 @@ Evidence: `desktop/src/main/main.ts:1907` still calls `app.focus({ steal: true }
 **Belongs to:** PHASE-0002-Glass, no feature. Small fix: make `run-smoke.sh` on macOS hand over to `smoke-in-a-box.sh` by default, with a named flag for the run on the real screen. **Next:** A task for that default and a one-line message naming the mode before the first window opens; CI stays on Linux and is unaffected.
 
 Checked as part of project-os-dev FEAT-0036 (TASK-0141).
+
+## Fixed, 2026-09-20
+
+**`bash tools/scripts/run-smoke.sh` on a Mac now runs in the container and takes nobody's keyboard.** The runner decides its mode before anything opens, prints one line saying which mode it is in, and on Darwin hands over to `tools/scripts/smoke-in-a-box.sh` — the container TASK-0081 built, which has a screen of its own. Linux is untouched, so CI runs exactly what it ran before, under `xvfb-run`.
+
+Two flags opt out, and both run here on the real screen:
+
+- `--on-screen` behaves as the command did before, and says so: "it WILL take the keyboard about two dozen times". This is the run for watching Deck being driven, and the only one that can answer a question about the real GPU.
+- `--no-focus` takes nothing. `focusApp` shows each window with `showInactive()` instead of `app.focus({ steal: true })`, which is what the satellite windows have always done. `sendInputEvent` still reaches a window that is not frontmost, so every pointer check runs; the checks that assert `document.hasFocus()` will fail, and the printed line says that before the run starts rather than leaving a person to read the failures as defects.
+
+The decision itself is `focusPolicy` in `desktop/src/main/smoke-support.ts`, beside the other decisions the smoke run makes about itself, so it can be driven without Electron. `run-smoke.sh` passes it on by exporting `DECK_SMOKE_NO_FOCUS=1`.
+
+**What this does not do.** The 24 `focusApp` calls are still 24 calls (step 2 of the plan above, "take focus once", is not done), and no step is tagged by whether it needs the keyboard (step 1). Neither is needed for the report this issue was filed on: in the container the calls cost nothing, because there is no other application to take focus from. The offscreen spike (step 4) stays recorded and unbuilt.
+
+**The tests fail without the fix.** `desktop/tests/smoke-support.test.mjs` gained eight checks: three over `focusPolicy`, five that run `run-smoke.sh` itself with `DECK_SMOKE_PLAN=1` and a stubbed `uname`, so a Mac can check the Linux branch and the other way round.
+
+- With `tools/scripts/run-smoke.sh` reverted to its previous version, five of the five runner checks fail (2026-09-20).
+- With the two `--no-focus` branches disabled in `focusPolicy`, two of the three policy checks fail (2026-09-20).
+- With both in place, `bash tools/scripts/run-desktop-tests.sh smoke-support` passes 13 of 13, and the whole suite passes 483 of 483 (2026-09-20).
+
+**Checked on the machine, 2026-09-20.** `bash tools/scripts/run-smoke.sh loopback` printed "in the container … so nothing takes your keyboard", reached `smoke-in-a-box.sh`, and exited 127 with "docker is installed but no daemon is running". No window opened and the keyboard never moved. Starting Docker is Edwin's call, so the checks themselves have still not been run.
+
+**One consequence Edwin should know.** [[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]'s `command:` is `bash tools/scripts/run-smoke.sh both`. On a Mac with no Docker daemon that command now exits 127, which `run-tests.py` reports as an environment gap locally and fails on in CI. CI is Linux and is unaffected. Locally, the smoke checks now need either Docker running or `--on-screen`.
+
+**Guarded by** [[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]] (`bash tools/scripts/run-desktop-tests.sh smoke-support`). **Worked under** [[TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck]].

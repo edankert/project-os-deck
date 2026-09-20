@@ -64,3 +64,9 @@ So the note says who invokes it — `automation:` — and records `last_verified
 **The CI job that does have all three** is `.github/workflows/deck-smoke.yml`: it installs Electron, installs xvfb, clones and installs the sidecar, and runs the script. That job is where a broken guard turns something red.
 
 **The script installs nothing.** Electron's binary missing is exit 127 with the command to run. An earlier version ran `npm ci` to make itself portable, and `npm ci` empties `node_modules` before fetching — so a failed install destroyed a working checkout.
+
+## The command runs somewhere else on a Mac now, 2026-09-20
+
+`bash tools/scripts/run-smoke.sh both` no longer opens windows on Edwin's screen. On macOS it hands the run to `tools/scripts/smoke-in-a-box.sh`, which runs the same checks in a Linux container ([[ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times]]). The checks, the verdict and this note's `command:` are unchanged, and so is CI, which is Linux and was already under `xvfb-run`.
+
+What changed locally: with no Docker daemon running, the command exits 127 — the same "environment gap" exit this note already describes for a missing Electron binary, which `run-tests.py` reports locally and fails on in CI. To run the checks on the real screen, add `--on-screen`.

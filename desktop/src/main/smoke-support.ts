@@ -52,3 +52,37 @@ export interface SmokeVerdict {
 export function smokeVerdict(failures: string[], skipped: string[], notApplicable: string[] = []): SmokeVerdict {
   return { ok: failures.length === 0 && skipped.length === 0, failures, skipped, notApplicable };
 }
+
+export interface FocusPolicy {
+  /** May the run pull the keyboard out of whatever the person is typing in? */
+  takesKeyboard: boolean;
+  /** Why, in a sentence the runner prints before the first window opens. */
+  why: string;
+}
+
+/**
+ * Whether this run is allowed to take the keyboard (ISS-0075).
+ *
+ * **The default is unchanged: it takes it.** The keyboard checks measure
+ * something real, and on macOS `win.focus()` does not take focus from another
+ * application, so without `app.focus({ steal: true })` Chromium holds back the
+ * renderer's focus events and a keyboard check measures nothing. What changed
+ * is that a person on a Mac no longer reaches that path by default:
+ * `tools/scripts/run-smoke.sh` hands over to `smoke-in-a-box.sh`, where the
+ * run has a screen of its own and there is no keyboard to take.
+ *
+ * `--no-focus` (or `DECK_SMOKE_NO_FOCUS=1`) is the escape hatch for a run on
+ * the real screen that must not interrupt: windows are shown without being
+ * activated, `sendInputEvent` still reaches them, and the checks that assert
+ * `document.hasFocus()` will fail. That is a different run, and the runner
+ * says so out loud rather than letting a person read the failures as defects.
+ */
+export function focusPolicy(argv: readonly string[], env: Record<string, string | undefined> = {}): FocusPolicy {
+  if (argv.includes('--no-focus')) {
+    return { takesKeyboard: false, why: '--no-focus: windows are shown without being activated, and the keyboard checks will fail' };
+  }
+  if (env['DECK_SMOKE_NO_FOCUS'] === '1') {
+    return { takesKeyboard: false, why: 'DECK_SMOKE_NO_FOCUS=1: windows are shown without being activated, and the keyboard checks will fail' };
+  }
+  return { takesKeyboard: true, why: 'the keyboard checks need Deck frontmost, so this run will take the keyboard' };
+}

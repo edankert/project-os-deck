@@ -8,7 +8,25 @@
 # Deck refuses to pretend it can record (ISS-0039) — and until TST-0037 named
 # this script, no gate ran any of them (ISS-0044).
 #
-# Usage: bash tools/scripts/run-smoke.sh [loopback|lan|both]
+# Usage: bash tools/scripts/run-smoke.sh [loopback|lan|both] [--on-screen|--no-focus]
+#
+# **On a Mac this hands over to `smoke-in-a-box.sh` and runs in the container**
+# (ISS-0075). The keyboard checks need Deck to be the frontmost application, so
+# a run on Edwin's own screen pulled the keyboard out of whatever he was typing
+# in about two dozen times, and four consecutive runs of the same code gave
+# four different failure sets depending on who won the fight for focus. The
+# container has a screen of its own and no keyboard to take. Two flags opt out:
+#
+#   --on-screen   run here, on the real screen, taking the keyboard as before.
+#                 This is the run for looking at Deck while it is driven, and
+#                 the only one that can answer a question about the real GPU.
+#   --no-focus    run here without taking the keyboard: windows are shown
+#                 without being activated. Pointer checks still run; the checks
+#                 that assert `document.hasFocus()` fail. A different run, and
+#                 the line printed before it starts says so.
+#
+# Linux is unaffected, and so is CI: there the `xvfb-run` re-exec below already
+# gives the run a screen of its own.
 #
 # It needs Electron's binary and a display. `run-desktop-tests.sh` sets
 # ELECTRON_SKIP_BINARY_DOWNLOAD=1 on purpose, because the node suites never
@@ -18,7 +36,18 @@
 # run has no verdict.
 set -euo pipefail
 
-WHICH="${1:-both}"
+WHICH="both"
+ON_SCREEN=""
+NO_FOCUS=""
+for arg in "$@"; do
+  case "$arg" in
+    loopback|lan|both) WHICH="$arg" ;;
+    --on-screen) ON_SCREEN=1 ;;
+    --no-focus) NO_FOCUS=1 ;;
+    *) echo "run-smoke: expected loopback, lan or both, with --on-screen or --no-focus; got '$arg'" >&2; exit 2 ;;
+  esac
+done
+
 # Resolved BEFORE the `cd`, because this script re-execs itself and is invoked
 # by a relative path from the repository root. Taking `$0` after changing
 # directory resolved it against `desktop/`, where it does not exist, so every
@@ -27,6 +56,34 @@ WHICH="${1:-both}"
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DESKTOP="$(cd "$SCRIPT_DIR/../../desktop" && pwd)"
+
+# **Which run this is, said before anything opens** (ISS-0075). Until now the
+# first sign of a run was the window arriving and the keyboard leaving.
+#
+# `DECK_SMOKE_PLAN=1` prints the decision and stops. It is how
+# `desktop/tests/smoke-support.test.mjs` checks the handover without a
+# container, and it is a fair way for a person to ask what a command will do.
+if [ -n "$NO_FOCUS" ]; then
+  MODE="on this screen, WITHOUT taking the keyboard; the checks that need Deck frontmost will fail"
+  export DECK_SMOKE_NO_FOCUS=1
+elif [ -n "$ON_SCREEN" ]; then
+  MODE="on this screen, and it WILL take the keyboard about two dozen times"
+elif [ "$(uname -s)" = "Darwin" ]; then
+  MODE="in the container (tools/scripts/smoke-in-a-box.sh), so nothing takes your keyboard; --on-screen runs it here instead"
+else
+  MODE="on this machine's display"
+fi
+echo "run-smoke: ${WHICH}, ${MODE}"
+if [ -n "${DECK_SMOKE_PLAN:-}" ]; then
+  exit 0
+fi
+
+# The handover itself. Inside the box `uname -s` is Linux, so the copy running
+# there takes the branch above and nothing recurses.
+if [ -z "$NO_FOCUS" ] && [ -z "$ON_SCREEN" ] && [ "$(uname -s)" = "Darwin" ]; then
+  exec bash "$SCRIPT_DIR/smoke-in-a-box.sh" "$WHICH"
+fi
+
 cd "$DESKTOP"
 
 if ! command -v node >/dev/null 2>&1; then
@@ -66,7 +123,9 @@ if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPL
     exit 127
   fi
   if command -v xvfb-run >/dev/null 2>&1; then
-    exec env DECK_SMOKE_UNDER_XVFB=1 xvfb-run --auto-servernum bash "$SELF" "$WHICH"
+    # The flags go through too: a re-exec that dropped them would silently run
+    # a different mode from the one just announced.
+    exec env DECK_SMOKE_UNDER_XVFB=1 xvfb-run --auto-servernum bash "$SELF" "$WHICH" ${NO_FOCUS:+--no-focus} ${ON_SCREEN:+--on-screen}
   fi
   echo "run-smoke: no display and no xvfb-run; install xvfb, or run this where there is a screen" >&2
   exit 127
