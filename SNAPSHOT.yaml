@@ -54,8 +54,8 @@ counters:
   REQ: 0
   RISK: 4
   REL: 0
-  TASK: 84
-  TST: 56
+  TASK: 85
+  TST: 57
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -64,7 +64,7 @@ focus:
   feature: "FEAT-0018"
   task: ""
   issue: ""
-  note: "2026-09-17: FEAT-0018 REVIEWED TWICE, BOTH ROUNDS changes-requested, ALL FINDINGS FIXED, AND NOTHING IN THE RENDERER IS VERIFIED BECAUSE THE SMOKE SUITE HAS NOT BEEN RUN. Round one (clean context, notes + diff only) found THREE defects refuting an acceptance line: ISS-0081, the hover handler still opened with 'if (this.arrangement !== 'orbit') return' so TASK-0076's tile branch was dead code and showTileCallout was never called from anywhere; ISS-0082, a finished note could only be pulled forward once PROMOTED, and Your Trainer's 58px tile box reaches 86px at maximum zoom, so EDWIN'S OWN REQUEST could not be performed at any zoom; ISS-0084, a promoted card was laid out in the TILE's box and merely magnified, so full detail was clipped. Fixed in fb4982b (TASK-0082, TASK-0083, TASK-0084). ROUND TWO then confirmed the first two and REFUTED THE THIRD FIX: the card was STILL CLIPPED because MIN_BOX_FOR's heights were estimated, not added up -- full at 62 where the stylesheet's rows need 92 -- and were low enough that promotedBox's floor NEVER APPLIED, so the rule was dead code (ISS-0087). It also found TWO OF THE CHECKS WRITTEN THAT DAY COULD NOT FAIL: the drag check pressed t.x + t.w/2 with no field offset, which is not the tile, and the 'a downward drag does not turn the field' check was true by construction because drag() interpolates in a straight line. Fixed in 223d582: MIN_BOX_FOR is computed from deck.css's own sizes, full lands on 92 which is CARD_BOX.height (a front-band card has drawn full detail in 92px since FEAT-0009, so the arithmetic has a witness); TST-0042 now reads the BUILT stylesheet so the two copies cannot drift; the drag converts coordinates the way the click check does; the yaw check is replaced by a sideways drag that CAN fail. FIVE BREAKS RUN, ALL FIVE CAUGHT. 470 node checks and both typechecks pass. THE GATE STOPS HERE -- QUALITY.md allows two rounds and ADR-0028 forbids a third, so 223d582 itself has had no independent eyes; that is the rule's accepted cost and it is named in the feature note. ONE GAP NO NODE SUITE CAN CLOSE: setting lift = false in place() restores ISS-0084 exactly and leaves all 470 passing, because no node suite loads the renderer. OWED: A SMOKE RUN -- eleven checks have never been executed and every renderer claim rests on them; Docker's daemon was not running, so TASK-0081's container was unavailable and starting Docker Desktop is Edwin's call. THEN the walk TST-0056, Edwin's. EDWIN'S DECISION, UNTOUCHED: ISS-0086, 186 of 317 notes on Your Trainer's Features view are counted and drawn nowhere while this feature is titled 'every note has a place' -- layers in the outer field, or narrow the title. ALSO FILED, NOT BLOCKING: ISS-0083, ISS-0085, ISS-0088 (the hover now scans every tile and rebuilds the callout on every pointer move, and TASK-0079's pointer measurement was taken while that code could not run). STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review with NO independent review recorded on any of them, waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 unplanned; ISS-0075, ISS-0080, ISS-0069, ISS-0068 unplanned."
+  note: "2026-09-20: THE ISS-0089 WORK ORDER IS CLOSED. All three of its issues are fixed under TASK-0085, each with a test that fails when the fix is taken out, and none was bigger than described. ISS-0085: descriptions.test.mjs asserts readBand's four band capacities (12/40/64/3000) on the path a workspace's own view takes, so shrinking the outer field's default now fails a check. ISS-0080: saveMeasurement writes measurements/<timestamp>.json beside the printed JSON and main.ts prints the path last; the directory is gitignored. ISS-0075: run-smoke.sh on macOS hands the whole run to smoke-in-a-box.sh, so an ordinary smoke run takes nobody's keyboard; --on-screen is the old behaviour by name, --no-focus shows windows with showInactive(), and the runner prints its mode before anything opens. CI is Linux and unchanged. 483 node checks and both typechecks pass; the validator passes. STILL OWED, UNCHANGED BY THIS WORK: the smoke run itself -- the handover reaches smoke-in-a-box.sh and stops at 'no daemon is running', so the eleven renderer checks owed since 2026-09-17 are still unexecuted and starting Docker is Edwin's call. 2026-09-17: FEAT-0018 REVIEWED TWICE, BOTH ROUNDS changes-requested, ALL FINDINGS FIXED, AND NOTHING IN THE RENDERER IS VERIFIED BECAUSE THE SMOKE SUITE HAS NOT BEEN RUN. Round one (clean context, notes + diff only) found THREE defects refuting an acceptance line: ISS-0081, the hover handler still opened with 'if (this.arrangement !== 'orbit') return' so TASK-0076's tile branch was dead code and showTileCallout was never called from anywhere; ISS-0082, a finished note could only be pulled forward once PROMOTED, and Your Trainer's 58px tile box reaches 86px at maximum zoom, so EDWIN'S OWN REQUEST could not be performed at any zoom; ISS-0084, a promoted card was laid out in the TILE's box and merely magnified, so full detail was clipped. Fixed in fb4982b (TASK-0082, TASK-0083, TASK-0084). ROUND TWO then confirmed the first two and REFUTED THE THIRD FIX: the card was STILL CLIPPED because MIN_BOX_FOR's heights were estimated, not added up -- full at 62 where the stylesheet's rows need 92 -- and were low enough that promotedBox's floor NEVER APPLIED, so the rule was dead code (ISS-0087). It also found TWO OF THE CHECKS WRITTEN THAT DAY COULD NOT FAIL: the drag check pressed t.x + t.w/2 with no field offset, which is not the tile, and the 'a downward drag does not turn the field' check was true by construction because drag() interpolates in a straight line. Fixed in 223d582: MIN_BOX_FOR is computed from deck.css's own sizes, full lands on 92 which is CARD_BOX.height (a front-band card has drawn full detail in 92px since FEAT-0009, so the arithmetic has a witness); TST-0042 now reads the BUILT stylesheet so the two copies cannot drift; the drag converts coordinates the way the click check does; the yaw check is replaced by a sideways drag that CAN fail. FIVE BREAKS RUN, ALL FIVE CAUGHT. 470 node checks and both typechecks pass. THE GATE STOPS HERE -- QUALITY.md allows two rounds and ADR-0028 forbids a third, so 223d582 itself has had no independent eyes; that is the rule's accepted cost and it is named in the feature note. ONE GAP NO NODE SUITE CAN CLOSE: setting lift = false in place() restores ISS-0084 exactly and leaves all 470 passing, because no node suite loads the renderer. OWED: A SMOKE RUN -- eleven checks have never been executed and every renderer claim rests on them; Docker's daemon was not running, so TASK-0081's container was unavailable and starting Docker Desktop is Edwin's call. THEN the walk TST-0056, Edwin's. EDWIN'S DECISION, UNTOUCHED: ISS-0086, 186 of 317 notes on Your Trainer's Features view are counted and drawn nowhere while this feature is titled 'every note has a place' -- layers in the outer field, or narrow the title. ALSO FILED, NOT BLOCKING: ISS-0083, ISS-0085, ISS-0088 (the hover now scans every tile and rebuilds the callout on every pointer move, and TASK-0079's pointer measurement was taken while that code could not run). STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review with NO independent review recorded on any of them, waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 unplanned; ISS-0075, ISS-0080, ISS-0069, ISS-0068 unplanned."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -673,7 +673,34 @@ items:
       owner: user:edwin
       parent: "FEAT-0018"
       phase: PHASE-0002
+    TASK-0085:
+      file: "docs/tasks/TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck.md"
+      title: "Fix the three defects the 2026-09-19 issue review left in Deck, each with a test that fails when the fix is taken out"
+      status: done
+      owner: user:edwin
+      parent: "ISS-0089"
+      phase: PHASE-0002
   issues:
+    ISS-0089:
+      file: "docs/issues/ISS-0089-Three-Small-Defects-From-The-Issue-Review-Are-Still-In-Deck.md"
+      title: "Three real defects found by the 2026-09-19 issue review are still in Deck, each small enough to fix with one test"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: medium
+      component: multiple
+      tests: []
+      note: "The work order for ISS-0085, ISS-0080 and ISS-0075, written by the 2026-09-19 issue review (project-os-dev FEAT-0036). Worked by TASK-0085. Each of the three issue notes carries the evidence, the fix, the test that guards it and the commit; this ticket only holds the checklist and the procedure."
+    ISS-0080:
+      file: "docs/issues/ISS-0080-The-Measurement-Prints-Its-Numbers-And-Keeps-Them-Nowhere.md"
+      title: "A frame-rate measurement is lost if its terminal output is cut off, because the numbers are printed but never saved to a file"
+      status: fixed
+      owner: user:edwin
+      phase: PHASE-0002
+      severity: low
+      component: tests
+      tests: ["[[TST-0057-The-Measurement-Is-Kept-In-A-File]]"]
+      note: "FIXED 2026-09-20 by TASK-0085: saveMeasurement writes measurements/<timestamp>.json and main.ts prints the path last; the directory is gitignored. Filed 2026-09-12 while taking TASK-0079's measurement: runMeasure ends with console.log and writes no file, so a run through a trimming pipe cost two of three workspaces and had to be taken again. The run takes a person's screen for several minutes, which is what makes losing it expensive. Fixed by TASK-0085."
     ISS-0088:
       file: "docs/issues/ISS-0088-The-Hover-Rebuilds-The-Callout-On-Every-Pointer-Move-Over-The-Shelf.md"
       title: "Now that the hover handler runs in the field, every pointer move over the quiet band scans every painted tile and rebuilds the callout's elements, and no measurement covers it"
@@ -707,13 +734,13 @@ items:
     ISS-0085:
       file: "docs/issues/ISS-0085-Three-Rules-The-Feature-Added-Survive-Being-Broken-With-Every-Check-Still-Passing.md"
       title: "If a workspace's own view description leaves out the outer field's size, and the default of 64 were broken, the outer field could shrink to one note and no check would fail"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
       component: tests
-      tests: []
-      note: "Filed 2026-09-17 from FEAT-0018's round-one independent review; each mutation was applied, rebuilt, run in full and reverted. THREE SURVIVORS. readBand's outerCapacity default 64 -> 1 passes everything, because the test asserting 64 reads VIEWS, which hardcodes it in views.ts -- the readBand path is what the VAULT PHASE will use. The quiet cursor's pointer-events: none -> auto passes everything, and that is the EXACT defect the smoke run found while TASK-0076 was being built. The glass-style check named 'does not swallow the canvas' asserts position and background and never pointer-events, so its name claims more than it checks."
+      tests: ["[[TST-0030-A-Description-Parses-Or-Says-Why-Not]]"]
+      note: "FIXED 2026-09-20 by TASK-0085: descriptions.test.mjs now asserts readBand's four capacity defaults, 12/40/64/3000, on the path a workspace's own description takes; breaking the 64 fails it. Filed 2026-09-17 from FEAT-0018's round-one independent review; each mutation was applied, rebuilt, run in full and reverted. THREE SURVIVORS. readBand's outerCapacity default 64 -> 1 passes everything, because the test asserting 64 reads VIEWS, which hardcodes it in views.ts -- the readBand path is what the VAULT PHASE will use. The quiet cursor's pointer-events: none -> auto passes everything, and that is the EXACT defect the smoke run found while TASK-0076 was being built. The glass-style check named 'does not swallow the canvas' asserts position and background and never pointer-events, so its name claims more than it checks."
     ISS-0084:
       file: "docs/issues/ISS-0084-A-Promoted-Tile-Is-Drawn-In-The-Tiles-Box-So-The-Detail-It-Was-Promoted-To-Show-Is-Clipped.md"
       title: "A quiet tile promoted into a real card is laid out in the tile's box and only magnified, so the detail the promotion exists to show has no room and is clipped"
@@ -847,13 +874,13 @@ items:
     ISS-0075:
       file: "docs/issues/ISS-0075-The-Smoke-Run-Takes-The-Keyboard-Away-Twenty-Three-Times.md"
       title: "Running the smoke checks on the Mac pulls the keyboard away from whatever the person is typing in, about two dozen times a run"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
       component: tests
-      tests: []
-      note: "Filed 2026-09-12 from Edwin: 'can we change the testing so the deck is not constantly requesting focus?'. focusApp calls app.focus({ steal: true }) and is called 19 times in smoke-glass.ts, 4 in measure.ts, 1 in main.ts. pointer() and press() both use sendInputEvent, which needs no frontmost application, so most steps do not need focus at all; nothing separates the two kinds. Linux already escapes this — run-smoke.sh re-execs under xvfb-run — and macOS has no equivalent. Four steps: split the checks and default a hand-started run to the half that needs no focus, take focus once per suite instead of 23 times (measure first; the repeats were added for a reason nobody wrote down), print the mode before the first window opens, and spike offscreen rendering for everything except the frame measurement, which genuinely needs a visible focused window. DECIDED 2026-09-12, Edwin: 'default the run to no-focus'."
+      tests: ["[[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]]"]
+      note: "FIXED 2026-09-20 by TASK-0085: run-smoke.sh on macOS hands the whole run to smoke-in-a-box.sh, so an ordinary run takes nobody's keyboard; --on-screen is the old behaviour by name and --no-focus shows windows with showInactive(); the runner prints its mode before anything opens. The 24 focusApp calls are still 24 calls and no step is tagged -- in the container they cost nothing. Filed 2026-09-12 from Edwin: 'can we change the testing so the deck is not constantly requesting focus?'. focusApp calls app.focus({ steal: true }) and is called 19 times in smoke-glass.ts, 4 in measure.ts, 1 in main.ts. pointer() and press() both use sendInputEvent, which needs no frontmost application, so most steps do not need focus at all; nothing separates the two kinds. Linux already escapes this — run-smoke.sh re-execs under xvfb-run — and macOS has no equivalent. Four steps: split the checks and default a hand-started run to the half that needs no focus, take focus once per suite instead of 23 times (measure first; the repeats were added for a reason nobody wrote down), print the mode before the first window opens, and spike offscreen rendering for everything except the frame measurement, which genuinely needs a visible focused window. DECIDED 2026-09-12, Edwin: 'default the run to no-focus'."
     ISS-0069:
       file: "docs/issues/ISS-0069-The-Verb-Buttons-Take-A-Full-Height-Column-Beside-The-Reader.md"
       title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
@@ -1862,6 +1889,14 @@ items:
       phase: PHASE-0002
       covers: ["FEAT-0018"]
       note: "Acceptance walk for FEAT-0018, added 2026-09-12. Thirteen steps on Your Trainer and this repository: read the bar's four remainders, turn through four bands, click a far-band note, click a quiet-band tile, hover it, pull it forward across a view switch, zoom for detail, watch a tile promote and demote, walk the shelf by keyboard, compare the small workspace's larger tiles, change a status and check nothing reshapes, and check the orbit is untouched. Rests at active; the verdict is a ledger event."
+    TST-0057:
+      file: "docs/tests/TST-0057-The-Measurement-Is-Kept-In-A-File.md"
+      title: "A measurement run writes its numbers to a file as well as printing them, so a trimmed terminal no longer costs the run"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["ISS-0080"]
+      note: "Automated, so it carries no verdict: CI is the verdict. Covers ISS-0080 -- saveMeasurement writes the printed object to measurements/<timestamp>.json, makes the directory, and does not overwrite an earlier run on the same day. Removing the write fails three of its four checks."
   releases: {}
   workflows: {}
   changes:
@@ -1951,12 +1986,12 @@ metrics:
     features_done: 13
     phases_total: 4
     phases_done: 0
-    tasks_total: 84
-    tasks_done: 79
-    tests_total: 39
+    tasks_total: 85
+    tasks_done: 80
+    tests_total: 40
     tests_passing: 2
     tests_failing: 0
-    issues_open: 10
+    issues_open: 6
     issues_triage: 0
     risks_open: 0
     releases_total: 0
