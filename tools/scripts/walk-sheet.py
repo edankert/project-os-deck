@@ -263,6 +263,7 @@ def load_checks(docs_root: Path, index=None, repo_root: Path | None = None) -> d
     `path` is recorded relative to ``repo_root`` so a row's link works from a
     checkout rather than from the machine the sheet was generated on.
     """
+    known_platforms = platforms(docs_root)
     vd = _validator()
     if index is None:
         index, _ = vd.build_note_index(docs_root)
@@ -293,6 +294,11 @@ def load_checks(docs_root: Path, index=None, repo_root: Path | None = None) -> d
                 pass
         readiness, readiness_problems = parse_check_readiness(
             fm.get("walk_readiness_for"), str(shown))
+        #: A misspelt platform hid the notice on every platform without a word
+        #: (FEAT-0033 review, 2026-09-24); procedures already refuse one.
+        readiness_problems += ["%s: `walk_readiness_for` names platform %s, and this repo "
+                               "keeps ledgers only for %s" % (shown, name, ", ".join(known_platforms))
+                               for name in sorted(readiness) if known_platforms and name not in known_platforms]
         out[note_id] = Check(
             id=note_id,
             title=_text(fm.get("title")),
@@ -1039,12 +1045,108 @@ def name_surfaces(steps: list[Step], surfaces: dict[str, Surface]) -> None:
                 break
 
 
+#: Every frontmatter map that declares something per step or per setup item.
+_DECLARATION_MAPS = ("requires", "step_platforms", "state_for", "capture_for", "use_capture",
+                     "timer_for", "readiness_for", "action_for", "setup_for", "setup_platforms")
+
+
+def _flow_keys(text: str) -> list[str]:
+    """The top-level keys of a one-line `{a: 1, b: [2, 3]}` map, quotes respected."""
+    body = text.strip()
+    if body.startswith("{"):
+        body = body[1:]
+    if body.endswith("}"):
+        body = body[:-1]
+    keys, depth, quote, start = [], 0, "", 0
+    for i, ch in enumerate(body + ","):
+        if quote:
+            if ch == quote:
+                quote = ""
+        elif ch in "\"'":
+            quote = ch
+        elif ch in "[{":
+            depth += 1
+        elif ch in "]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            part = body[start:i]
+            start = i + 1
+            if ":" in part:
+                keys.append(part.split(":", 1)[0].strip().strip("'\""))
+    return keys
+
+
+def duplicate_declarations(front: str, path: str) -> list[str]:
+    """A step or setup id declared twice inside one declaration map.
+
+    **Two instructions for one thing is the contradiction the validator can
+    see** (project-os-dev TASK-0125). The frontmatter parser keeps the last
+    value, so `state_for` with step 2 declared as both "Signed in as FREE"
+    and "Signed in as PRO" printed PRO and dropped FREE without a word.
+    Whether two different steps' prose disagrees ("any tier" against "PRO")
+    is the author's to resolve (ADR-0046: nothing is inferred from prose).
+    """
+    problems: list[str] = []
+    lines = front.splitlines()
+    for i, line in enumerate(lines):
+        found = re.match(r"^([A-Za-z_]+):\s*(.*)$", line)
+        if not found or found.group(1) not in _DECLARATION_MAPS:
+            continue
+        label, rest = found.group(1), found.group(2).strip()
+        keys: list[str] = []
+        if rest.startswith("{"):
+            text, j = rest, i + 1
+            while text.count("{") > text.count("}") and j < len(lines):
+                text += " " + lines[j].strip()
+                j += 1
+            keys = _flow_keys(text)
+        elif not rest or rest.startswith("#"):
+            child = None
+            for following in lines[i + 1:]:
+                if not following.strip() or following.lstrip().startswith("#"):
+                    continue
+                indent = len(following) - len(following.lstrip(" "))
+                if indent == 0:
+                    break
+                child = indent if child is None else child
+                if indent != child or following.strip().startswith("- "):
+                    continue
+                key = re.match(r"\s*([^:#\s][^:]*?)\s*:", following)
+                if key:
+                    keys.append(key.group(1).strip("'\""))
+        for key in sorted({k for k in keys if keys.count(k) > 1}):
+            problems.append("%s: `%s` declares %s twice; the parser would keep one and "
+                            "drop the other instruction without a word" % (path, label, key))
+    return problems
+
+
+def unknown_platforms(procedure: Procedure, known: list[str],
+                      setup_platform_names: set[str]) -> list[str]:
+    """Platform names this repo keeps no ledger for (rule 9, "Platform and state").
+
+    `andriod` in `step_platforms` took the step off both real platforms, and
+    nothing said so until one of its parts happened to be owed.
+    """
+    if not known:
+        return []
+    names: list[tuple[str, str]] = []
+    for step in procedure.steps:
+        names += [("step_platforms", name) for name in step.platforms]
+        names += [("readiness_for", name) for name in step.readiness_declared.get("platforms", [])]
+        names += [("action_for", name) for name in step.action_for]
+    names += [("setup_platforms", name) for name in setup_platform_names]
+    return ["%s: `%s` names platform %s, and this repo keeps ledgers only for %s"
+            % (procedure.path, label, name, ", ".join(known))
+            for label, name in sorted(set(names)) if name not in known]
+
+
 def load_procedures(docs_root: Path, repo_root: Path | None = None) -> list[Procedure]:
     """Every file under `docs/tests/acceptance/walk/`, parsed."""
     root = docs_root / PROCEDURES_REL
     if not root.is_dir():
         return []
     vd = _validator()
+    known_platforms = platforms(docs_root)
     out: list[Procedure] = []
     for path in sorted(root.glob("*.md")):
         fm = vd.parse_frontmatter(path)
@@ -1094,12 +1196,20 @@ def load_procedures(docs_root: Path, repo_root: Path | None = None) -> list[Proc
                                        ("action_for", actions, action_problems)):
             for number in sorted(set(mapping) - {str(step.number) for step in steps}):
                 target.append("%s: `%s` names absent step %s" % (shown_path, label, number))
-        out.append(Procedure(
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        end = next((i for i, line in enumerate(lines[1:], 1) if line.strip() == "---"), 0)
+        front = "\n".join(lines[1:end]) if lines and lines[0].strip() == "---" and end else ""
+        procedure = Procedure(
             path=shown_path, sitting=_text(fm.get("sitting")), setup=setup,
             steps=steps, setup_items=setup_items, requires=requires,
             parse_problems=(require_problems + step_problems + state_problems
                             + capture_problems + use_problems + timer_problems
-                            + setup_problems + readiness_problems + action_problems)))
+                            + setup_problems + readiness_problems + action_problems
+                            + duplicate_declarations(front, shown_path)))
+        procedure.parse_problems += unknown_platforms(
+            procedure, known_platforms, {name for item in setup_items for name in item.platforms})
+        out.append(procedure)
     return out
 
 
@@ -1152,14 +1262,29 @@ def claims(sitting: Sitting, check: Check, surfaces: dict[str, str]) -> bool:
             or surfaces.get(check.area, "") in sitting.surfaces)
 
 
+_PLACEMENTS: dict = {}
+
+
 def placement(checks: list[Check], sittings: list[Sitting],
               surfaces: dict[str, str]) -> dict[str, str]:
-    """`check id -> sitting name`; the first sitting to claim a check keeps it."""
+    """`check id -> sitting name`; the first sitting to claim a check keeps it.
+
+    Memoised for the run (project-os-dev ISS-0093): `--check` asked the same
+    question 475 times for one repo, 1.1 million `claims` calls. The key is the
+    check ids with the identity of the sitting and surface objects, which a
+    run never mutates; a copy returned per call keeps callers apart.
+    """
+    key = (tuple(c.id for c in checks), id(sittings), id(surfaces))
+    if key in _PLACEMENTS:
+        return dict(_PLACEMENTS[key][0])
     out: dict[str, str] = {}
     for sitting in sittings:
         for check in checks:
             if check.id not in out and claims(sitting, check, surfaces):
                 out[check.id] = sitting.name
+    #: The inputs are kept alive with the answer, so their ids cannot be
+    #: reused by other objects while the entry exists.
+    _PLACEMENTS[key] = (dict(out), sittings, surfaces)
     return out
 
 
@@ -1836,6 +1961,24 @@ def validate_preparation(procedure: Procedure, platform: str = "") -> list[str]:
             if number not in steps:
                 problems.append("%s: setup item %s names absent step %d"
                                 % (procedure.path, item.id, number))
+        #: A declaration that can never apply contradicts another one
+        #: (TASK-0125): the item is limited to platforms none of its steps run on.
+        targets = [steps[n] for n in item.steps if n in steps] if item.steps else list(steps.values())
+        if item.platforms and targets and not any(
+                not step.platforms or step.platforms & item.platforms for step in targets):
+            problems.append("%s: setup item %s is limited to %s, but none of its steps runs there"
+                            % (procedure.path, item.id, ", ".join(sorted(item.platforms))))
+    for step in procedure.steps:
+        if not step.platforms:
+            continue
+        limited = set(step.readiness_declared.get("platforms", []))
+        if limited and not limited & step.platforms:
+            problems.append("%s: step %d's `readiness_for` is limited to %s, but the step runs only on %s"
+                            % (procedure.path, step.number, ", ".join(sorted(limited)),
+                               ", ".join(sorted(step.platforms))))
+        for name in sorted(set(step.action_for) - step.platforms):
+            problems.append("%s: step %d has an `action_for` variant for %s, but the step runs only on %s"
+                            % (procedure.path, step.number, name, ", ".join(sorted(step.platforms))))
     for step in procedure.steps:
         if step.action_for and (not _ACTION_HEAD_RE.match(step.authored_head)
                                 or parse_tags(step.body[0])):
@@ -1855,6 +1998,93 @@ def validate_preparation(procedure: Procedure, platform: str = "") -> list[str]:
                 problems.append("%s: step %d must require evidence source step %d"
                                 % (procedure.path, step.number, source))
     return problems
+
+
+def expect_text(check: Check) -> list[str]:
+    """The check's `## Expect` lines, normalised, in the order the note writes them."""
+    out: list[str] = []
+    for line in (check.expect or "").splitlines():
+        text = normalise(line)
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
+def expect_for(check: Check, number: str) -> list[str]:
+    """The Expect lines a tag names: line N for step N when the check pairs them.
+
+    A check whose `## Expect` has exactly one line per numbered step pairs
+    them by position, and a tag `.N` names line N. Walks already read them so:
+    on your-trainer, 204 of 211 quotes citing such a check quote line N for
+    `.N` (2026-09-26). Any other check has no pairing, so a tag names all of
+    its Expect lines.
+    """
+    lines = expect_text(check)
+    steps = numbered_steps(check)
+    if number and lines and len(lines) == len(steps) and 1 <= int(number) <= len(lines):
+        return [lines[int(number) - 1]]
+    return lines
+
+
+def expand_tag_only(procedure: Procedure, checks: dict[str, Check]) -> None:
+    """Give each tag-only expectation line the check's current words.
+
+    project-os-dev ISS-0088, ADR-0049. A line may be only its tags,
+    `` - `TST-0480` ``, instead of quoting the check. It is replaced here, for
+    the sheet and for the cockpit's payload alike, by one line per line of the
+    check's own `## Expect`, each carrying that check's tags. So the walker
+    still reads the check's own words, which is what lets a tick stand as a
+    verdict on the check (ADR-0045), and editing the check no longer breaks
+    the procedure: it only changes what the next sheet prints.
+
+    A tag names the Expect lines `expect_for` gives: line N of a check that
+    pairs its steps with its Expect lines, else all of them. A check with no
+    Expect text, or a tag naming no check, leaves the line as written; the
+    audit reports the second.
+    """
+    for step in procedure.steps:
+        replaced = False
+        body: list[str] = []
+        expectations: list[Expectation] = []
+        pending = {id(e): e for e in step.expectations}
+        by_raw: dict[str, list[Expectation]] = {}
+        for e in step.expectations:
+            by_raw.setdefault(e.raw, []).append(e)
+        for i, line in enumerate(step.body):
+            queue = by_raw.get(line) or []
+            found = queue.pop(0) if queue else None
+            if found is None:
+                body.append(line)
+                continue
+            pending.pop(id(found), None)
+            owners = []
+            for check_id, _number in found.tags:
+                if check_id not in owners:
+                    owners.append(check_id)
+            texts = {}
+            for cid in owners:
+                if cid in checks:
+                    lines: list[str] = []
+                    for c, n in found.tags:
+                        if c == cid:
+                            lines += [x for x in expect_for(checks[cid], n) if x not in lines]
+                    texts[cid] = lines
+            if i == 0 or found.quote or not texts or not all(texts.get(cid) for cid in owners):
+                body.append(line)
+                expectations.append(found)
+                continue
+            prefix = line[:line.index("`")] if "`" in line else line
+            for cid in owners:
+                tags = [tag for tag in found.tags if tag[0] == cid]
+                tag_text = " ".join("`%s%s`" % (c, "." + n if n else "") for c, n in tags)
+                for text in texts[cid]:
+                    raw = "%s%s %s" % (prefix, text, tag_text)
+                    body.append(raw)
+                    expectations.append(Expectation(quote=text, raw=raw, tags=list(tags)))
+            replaced = True
+        if replaced:
+            step.body = body
+            step.expectations = expectations + list(pending.values())
 
 
 def audit_procedure(procedure: Procedure, sitting: Sitting, owed: list[Check],
@@ -1882,6 +2112,7 @@ def audit_procedure(procedure: Procedure, sitting: Sitting, owed: list[Check],
     #: corpus disagreed about one procedure. That is exactly what rule 7 says
     #: bundling this module prevents. Found by independent review, 2026-09-14.
     known = known or checks
+    expand_tag_only(procedure, known)
     where = placement(sorted(known.values(), key=lambda c: c.id), sittings, surfaces)
     want: dict[tuple[str, str], Check] = {}
     for check in owed:
@@ -1895,8 +2126,8 @@ def audit_procedure(procedure: Procedure, sitting: Sitting, owed: list[Check],
         remarks.append(
             "%s numbers its steps %s and the sheet prints them 1 to %d; a "
             "part is counted by position, so cite the position"
-            % (procedure.path, ", ".join(str(s.written) for s in procedure.steps),
-               len(procedure.steps)))
+            % (procedure.path, ", ".join(str(s.written) for s in applicable),
+               len(applicable)))
     for step in applicable:
         if not step.surface_id:
             remarks.append("step %d names no screen; a step says where it "
@@ -1983,7 +2214,9 @@ def _audit_tag(procedure: Procedure, step: Step, expectation: Expectation,
         #: needs this look like that today (project-os-dev ISS-0064).
         return []
     if expectation.quote not in wanted:
-        return ["%s quotes %s as %r, and that check's Expect says none of: %s"
+        return ["%s quotes %s as %r, and that check's Expect says none of: %s; "
+                "`python3 tools/scripts/walk-tags.py --refresh` re-quotes a line whose "
+                "check was reworded, or cite the step by its tag alone (ADR-0049)"
                 % (at, check_id, expectation.quote,
                    "; ".join(repr(w) for w in sorted(wanted)))]
     return []
@@ -2151,14 +2384,18 @@ def render_procedure(placed: Placed, out: list[str]) -> None:
                    % (placed.omitted, _plural(placed.omitted, "step"),
                       _plural(placed.omitted, "is", "are"),
                       _plural(placed.omitted, "it is", "they are")))
+        out.append("")
+        #: project-os-dev ISS-0086: the procedure's own text says "for step 21",
+        #: so a step keeps that number here, and the numbers skip.
+        out.append("Each step keeps its number in the procedure, so the numbers skip "
+                   "where steps are left out.")
     out.append("")
-    for position, step in enumerate(placed.steps, start=1):
+    for step in placed.steps:
         preparation = not any(expectation.owed for expectation in step.expectations)
         out.append("#### Step %d%s%s" % (
-            position,
+            step.number,
             " — %s" % step.surface_said if step.surface_said else "",
-            " (preparation; source step %d)" % step.number if preparation else
-            " (source step %d)" % step.number if position != step.number else ""))
+            " (preparation)" if preparation else ""))
         out.append("")
         if step.required_state:
             out.append("**Required state:** %s" % step.required_state)
@@ -2172,7 +2409,7 @@ def render_procedure(placed: Placed, out: list[str]) -> None:
             out.append("**Capture here for a later comparison:** %s" % step.capture_prompt)
             out.append("")
         if step.uses_capture:
-            out.append("**Compare with evidence from source %s.**" % ", ".join(
+            out.append("**Compare with evidence from %s.**" % ", ".join(
                 "step %d" % source for source in step.uses_capture))
             out.append("")
         if step.timer_seconds:
@@ -2444,8 +2681,8 @@ def check_repo(repo_root: Path, platform: str) -> tuple[list[str], list[str]]:
         problems.extend(found)
         remarks.extend(said)
     if read.procedures:
-        uncovered = sorted({placement(owed, read.sittings, read.surfaces).get(c.id, "")
-                            for c in owed} - seen - {""})
+        placed_all = placement(owed, read.sittings, read.surfaces)
+        uncovered = sorted({placed_all.get(c.id, "") for c in owed} - seen - {""})
         if uncovered:
             remarks.append("no procedure yet for: %s" % ", ".join(uncovered))
     #: **Every change note, not only the ones this release surveys.** The
@@ -2482,6 +2719,7 @@ def run_check(repo_root: Path, platform: str, quiet: bool = False) -> int:
         return 0
     wanted = [platform] if platform else platforms(docs_root)
     status = 0
+    printed: set[str] = set()
     for name in wanted:
         try:
             problems, remarks = check_repo(repo_root, name)
@@ -2494,11 +2732,18 @@ def run_check(repo_root: Path, platform: str, quiet: bool = False) -> int:
         except WalkError as exc:
             #: Everything else `read_repo` refuses is a broken ledger, and
             #: `--check` is the only thing that reads one on every commit.
-            print("walk-sheet --check (%s): %s" % (name, exc), file=sys.stderr)
+            print("ERROR [WALK] walk-sheet --check (%s): %s" % (name, exc), file=sys.stderr)
             status = 2
             continue
         for problem in problems:
-            print("walk-sheet --check (%s): %s" % (name, problem), file=sys.stderr)
+            #: A check's own readiness problem is the same on every platform;
+            #: printing it once per platform read as two findings (FEAT-0033 review).
+            if problem in printed:
+                continue
+            printed.add(problem)
+            #: `ERROR [WALK]`: the validator's line shape, so a reader
+            #: filtering for ERROR finds it (project-os-dev ISS-0089).
+            print("ERROR [WALK] walk-sheet --check (%s): %s" % (name, problem), file=sys.stderr)
         #: Remarks are printed when something is wrong, or when a person
         #: asked. `validate-docs.sh` runs this on every commit, and a repo
         #: with procedures would otherwise print its coverage shortfall to
