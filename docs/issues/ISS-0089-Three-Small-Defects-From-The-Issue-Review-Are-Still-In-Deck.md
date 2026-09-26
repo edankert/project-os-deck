@@ -16,6 +16,7 @@ component: "multiple"
 parent: ""
 related: []
 tests: []
+tasks: ["[[TASK-0085]]"]
 ---
 
 # Three small defects from the issue review are still in Deck
