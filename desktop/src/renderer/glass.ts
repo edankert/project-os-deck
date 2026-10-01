@@ -371,6 +371,16 @@ export class GlassField {
    * and nowhere else, and it is gone when the page is. Empty in the shell.
    */
   private localHeld: DeskCard[] = [];
+  /**
+   * The card each open document was opened with, for a note this view does
+   * not hold: one reached by a link, or by a row of another document's list.
+   * The view has no card for such a note, and Deck's index is asked for one
+   * only for the notes on the application's desk, a moment after they are put
+   * there. Until that answer came the document said the note could not be read
+   * here, and on a served page, whose own documents are on no desk, it said so
+   * for good. The card it was opened with is what it is read from meanwhile.
+   */
+  private readonly openedWith = new Map<string, CardModel>();
   /** In a narrow field: which one object is in front. */
   private narrowFront: 'collection' | 'document' | null = null;
   private shared = new Map<string, number>();
@@ -2416,6 +2426,7 @@ export class GlassField {
     // The keyboard follows a note opened with the keyboard, as soon as its
     // document is drawn (drawPanes): never left on a row behind it.
     if (takeKeyboard) this.keyboardTo = card.noteId;
+    this.openedWith.set(card.noteId, card);
     const state = this.hooks.state();
     const onDesk = this.heldNow(state);
     // A person who lifts a note wants to see it (decision 3).
@@ -2752,8 +2763,9 @@ export class GlassField {
       }
     }
     // A note on every view that this view does not hold: drawn in full from
-    // Deck's own index (decision 7).
-    return this.hooks.stranger(noteId);
+    // Deck's own index (decision 7). Before the index has answered, and on a
+    // served page for a document of its own, from the card it was opened with.
+    return this.hooks.stranger(noteId) ?? this.openedWith.get(noteId) ?? null;
   }
 
   private drawPanes(): void {
@@ -2773,6 +2785,7 @@ export class GlassField {
       pane.remove();
       this.paneEls.delete(noteId);
       this.rereads.delete(noteId);
+      this.openedWith.delete(noteId);
     }
     this.el.panes.dataset['count'] = String(this.held.length);
     this.placePanes();
