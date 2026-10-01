@@ -353,6 +353,8 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** Documents whose text was read before the notes last changed on disk, and is being read again. */
+  private readonly rereads = new Set<string>();
   /** The note whose document takes the keyboard as soon as it is drawn: one opened with the keyboard. */
   private keyboardTo: string | null = null;
   /** The workspace's edges, for what a relationship is called. Read when a list is first opened. */
@@ -2741,6 +2743,7 @@ export class GlassField {
       if (live.has(noteId)) continue;
       pane.remove();
       this.paneEls.delete(noteId);
+      this.rereads.delete(noteId);
     }
     this.el.panes.dataset['count'] = String(this.held.length);
     this.placePanes();
@@ -3115,7 +3118,7 @@ export class GlassField {
     const note = pane.querySelector('.pane-note') as HTMLElement;
     const state = pane.querySelector('.pane-state') as HTMLElement;
     const body = pane.querySelector('.pane-body') as HTMLElement;
-    const say = (kind: 'loading' | 'error' | 'missing' | 'ready', text: string, buttons: Array<[string, string]> = []): void => {
+    const say = (kind: 'loading' | 'error' | 'missing' | 'stale' | 'ready', text: string, buttons: Array<[string, string]> = []): void => {
       pane.dataset['state'] = kind;
       body.setAttribute('aria-busy', String(kind === 'loading'));
       state.hidden = kind === 'ready';
@@ -3147,10 +3150,20 @@ export class GlassField {
         const actions = pane.querySelector('.pane-actions') as HTMLElement;
         void this.hooks.dress(noteId, note, actions).catch(() => null);
       }
-      say('ready', '');
-      return;
+      if (!this.rereads.has(noteId)) {
+        say('ready', '');
+        return;
+      }
+      // The notes changed on disk since this was read: it is read again, and
+      // until the answer comes it stays as it is.
     }
     if (card === null) {
+      if (doc !== undefined) {
+        // It was read, and now neither this view nor Deck's index has the
+        // note: what was read stays, labelled, with nothing to write with.
+        say('stale', `This is ${noteId} as it was last read. This view does not hold it any more, and Deck cannot find it to read again: it was deleted, renamed or moved.`, [['close', 'close']]);
+        return;
+      }
       // The desk names a note this view does not hold and Deck's index has no
       // card for: it is said, and nothing stands in for it.
       note.replaceChildren();
@@ -3165,14 +3178,25 @@ export class GlassField {
       .document(card)
       .then((read) => {
         this.docs.set(noteId, read);
+        this.rereads.delete(noteId);
         delete note.dataset['filled'];
         if (this.active && this.paneEls.get(noteId) === pane) this.drawPanes();
       })
       .catch((err: unknown) => {
         if (this.paneEls.get(noteId) !== pane) return;
+        const reason = err instanceof Error ? err.message : String(err);
+        if (note.dataset['filled'] === 'true') {
+          // It was read before and cannot be read again: a note changed on
+          // disk, and this one was deleted, renamed, or the sidecar is not
+          // answering. The text a person is in the middle of is not taken
+          // away; it is labelled as what it now is, and nothing in it can
+          // be ticked or acted on (deck.css).
+          say('stale', `This is ${noteId} as it was last read. It could not be read again: ${reason}`, [['retry', 'retry'], ['close', 'close']]);
+          return;
+        }
         note.replaceChildren();
         delete note.dataset['filled'];
-        say('error', `${noteId} could not be read: ${err instanceof Error ? err.message : String(err)}`, [['retry', 'retry'], ['close', 'close']]);
+        say('error', `${noteId} could not be read: ${reason}`, [['retry', 'retry'], ['close', 'close']]);
       });
   }
 
@@ -4001,10 +4025,14 @@ export class GlassField {
 
   /** Forget the pane bodies, because the notes they came from changed on disk. */
   forgetBodies(): void {
-    this.docs.clear();
-    // Each document asks again the next time it is painted. Until the new
-    // text arrives it keeps showing the text it has: a note being read is not
-    // replaced by a "reading…" line because another note changed.
+    // Each open document asks again the next time it is painted. Until the
+    // new text arrives it keeps the text, the title and the details it has:
+    // a note being read is not replaced by a "reading…" line because another
+    // note changed, and one that cannot be read again is not emptied.
+    for (const noteId of [...this.docs.keys()]) {
+      if (this.paneEls.has(noteId)) this.rereads.add(noteId);
+      else this.docs.delete(noteId);
+    }
     for (const pane of this.paneEls.values()) delete pane.dataset['asked'];
   }
 

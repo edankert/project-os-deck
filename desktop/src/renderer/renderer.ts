@@ -21,7 +21,7 @@ import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
-import { changeText, filterText, memberIds, membershipChange, removedSelectionText, summarise } from '../shared/collection.js';
+import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, isNarrowed, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } from '../shared/write-client.js';
@@ -359,13 +359,20 @@ const glass = new GlassField(glassElements(), {
   },
   peekContext: (noteId) => {
     const state = host.state();
-    return state.workspaceId === null ? undefined : contexts.peek(state.workspaceId, noteId, indexRevision());
+    return state.workspaceId === null ? undefined : contextNow(state.workspaceId, noteId);
   },
   document: async (card): Promise<NoteDocument> => {
     const state = host.state();
     if (state.workspaceId === null) throw new Error('no workspace is open');
     if (card.rel === null) throw new Error('this card has no note behind it');
-    const note = await clientFor(state.workspaceId).note(card.rel);
+    const note = await clientFor(state.workspaceId)
+      .note(card.rel)
+      .catch((err: unknown) => {
+        // "404" and a line of JSON is the sidecar's answer, not something a
+        // person can act on: say what it means for the note.
+        if (err instanceof Error && /answered 404\b/.test(err.message)) throw new Error(`there is no note at ${card.rel} any more; it was deleted, renamed or moved`);
+        throw err;
+      });
     // The time Deck's own index holds for the file, which is what a write
     // sends as its guard against a note that changed underneath.
     documentNotes.set(card.noteId, { id: card.noteId, rel: card.rel, mtime: await readMtime(state.workspaceId, card.rel) });
@@ -790,6 +797,7 @@ async function loadView(workspace: Workspace, view: Description): Promise<void> 
   currentRefusals = [];
   pendingGroups = null;
   pendingCount = 0;
+  pendingMoves = false;
   pool.useFaces(view.face);
   renderSurfaceToggle();
   const source = sourceOf(view);
@@ -975,13 +983,15 @@ function drawNavigator(): void {
   // 30 notes is what the label promises.
   const shown = countDistinct(groups);
   const held = countDistinct(currentGroups);
-  navigator.render({
-    groups: glass.isActive() ? [...deskGroups(), ...glass.orbitGroups(), ...groups] : groups,
-    faces: currentView?.face ?? PLAIN_FACES,
-    folds: state.folds,
-    onDesk: new Set(deskHere(state).map((c) => c.noteId)),
-    currentNoteId: state.noteId,
-  });
+  collection.steady(() =>
+    navigator.render({
+      groups: glass.isActive() ? [...deskGroups(), ...glass.orbitGroups(), ...groups] : groups,
+      faces: currentView?.face ?? PLAIN_FACES,
+      folds: state.folds,
+      onDesk: new Set(deskHere(state).map((c) => c.noteId)),
+      currentNoteId: state.noteId,
+    }),
+  );
   el.navCount.textContent = `${shown} of ${held}`;
   drawCollection();
   drawRefusals();
@@ -1033,7 +1043,7 @@ function deskGroups(): CardGroup[] {
   const byId = new Map(currentCards.map((c) => [c.noteId, c]));
   const known = new Map<string, NoteContext>();
   for (const id of heldIds) {
-    const context = contexts.peek(ws, id, indexRevision());
+    const context = contextNow(ws, id);
     if (context !== undefined) known.set(id, context);
     for (const item of context === undefined ? [] : neighboursOf(context)) {
       if (!byId.has(item.id)) byId.set(item.id, cardFromContext(item));
@@ -1352,6 +1362,7 @@ async function cardByRel(rel: string): Promise<CardModel | null> {
  */
 function documentClosed(noteId: string): void {
   documentNotes.delete(noteId);
+  for (const key of lastContexts.keys()) if (key.endsWith(`\n${noteId}`)) lastContexts.delete(key);
   if (!glass.isActive()) return;
   drawNavigator();
   if (navigator.focusNote(noteId, true)) return;
@@ -1791,6 +1802,7 @@ async function prepareChange(): Promise<void> {
   const workspace = workspaceById(state.workspaceId);
   const view = currentView;
   if (workspace === null || view === null) return;
+  changeArriving = true;
   glass.forgetBodies();
   glass.forgetGraphEdges();
   glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount });
@@ -1802,11 +1814,44 @@ async function prepareChange(): Promise<void> {
     else return;
   } catch {
     return;
+  } finally {
+    changeArriving = false;
   }
   if (currentView !== view) return;
   pendingGroups = next;
   pendingCount = changedNotes(currentGroups, next);
+  pendingMoves = changeCount(membershipChange(currentGroups, next)) > 0;
   drawDesk();
+  // The collection says what will change and offers to apply it.
+  drawNavigator();
+}
+
+/**
+ * What a held note is joined to, as far as is known now.
+ *
+ * Every change on disk moves the index on, and the neighbourhoods read for
+ * the old index are then unknown until they are read again. Answering
+ * "unknown" for that moment emptied the "Joined to what you are holding"
+ * rows and sent the gathered cards back to their slots, and both came back a
+ * moment later: rows moved under the pointer on every save. So the last
+ * neighbourhood read stands until its replacement arrives. While a changed
+ * result is waiting to be applied it stands until the person applies it, so
+ * that no row moves before they ask (REQ-0001).
+ */
+const lastContexts = new Map<string, NoteContext>();
+/** A change on disk is being read: its result is not known yet. */
+let changeArriving = false;
+/** The result that is waiting differs from the list on screen: applying it would move a row. */
+let pendingMoves = false;
+
+function contextNow(ws: string, noteId: string): NoteContext | undefined {
+  const key = `${ws}\n${noteId}`;
+  const fresh = contexts.peek(ws, noteId, indexRevision());
+  const held = lastContexts.get(key);
+  const waiting = changeArriving || pendingMoves;
+  if (waiting && held !== undefined) return held;
+  if (fresh !== undefined) lastContexts.set(key, fresh);
+  return fresh ?? held;
 }
 
 /** How many notes differ between two deals: arrived, left, or moved group or status. */
@@ -1841,6 +1886,7 @@ function applyPending(): void {
   currentCards = flattenGroups(currentGroups);
   pendingGroups = null;
   pendingCount = 0;
+  pendingMoves = false;
   drewFromRevision = indexRevision();
   wroteTo = null;
   drawStale();

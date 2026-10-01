@@ -52,6 +52,13 @@ module.exports = function lib(d, win) {
     js(`(() => { const p = document.querySelector('.pane[data-note-id="${id}"]'); if (!p) return null; const r = p.getBoundingClientRect(); const b = p.querySelector('.pane-body'); return { left: r.left, top: r.top, width: r.width, height: r.height, state: p.dataset.state, focus: p.classList.contains('focus'), hidden: p.classList.contains('out-of-sight'), sight: Number(p.dataset.sight), title: p.querySelector('.pane-title').textContent, status: p.querySelector('.pane-status').textContent, chars: p.querySelector('.pane-note').textContent.length, scrollTop: b.scrollTop, scrollMax: b.scrollHeight - b.clientHeight }; })()`);
   const rows = () =>
     js(`[...document.querySelectorAll('#nav-list > div')].filter((e) => !e.hidden).map((e) => ({ id: e.dataset.noteId || null, group: e.dataset.groupKey || null, top: e.offsetTop, current: e.getAttribute('aria-current') === 'true', onDesk: e.dataset.onDesk === 'true' }))`);
+  /**
+   * Code that finds a row a pointer can really press: in view, not one of
+   * `skip`, and not under a heading that is stuck to the top of the list.
+   * Run it in a page with `js` (or `d.js(otherWindow, ...)`).
+   */
+  const rowInReach = (skip = []) =>
+    `(() => { const skip = new Set([...(window.__deckDesk ? window.__deckDesk() : []), ...[...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId), ...${JSON.stringify(skip)}]); for (const r of document.querySelectorAll('#nav-list .nav-row')) { if (r.hidden || skip.has(r.dataset.noteId)) continue; const b = r.getBoundingClientRect(); if (b.height === 0) continue; const x = b.left + Math.min(140, b.width / 2); const y = b.top + b.height / 2; const hit = document.elementFromPoint(x, y); if (hit && hit.closest('.nav-row') === r) return { id: r.dataset.noteId, x, y }; } return null; })()`;
   const summary = () => ({ checks: results.length, failed: results.filter((r) => !r.ok).map((r) => r.what) });
-  return { js, check, rect, text, field, glass, state, clickOn, park, background, view, keys, drawnTwice, pane, rows, summary, results };
+  return { js, check, rect, text, field, glass, state, clickOn, park, background, view, keys, drawnTwice, pane, rows, rowInReach, summary, results };
 };

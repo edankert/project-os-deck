@@ -324,7 +324,7 @@ module.exports = async function (d) {
   // ---- 10. A read that fails says so, and Retry reads it ----
   // A note this walk has not read yet: one already read is shown from what was read.
   const readAlready = [card.id, second, target && target.id, onRow.id].filter(Boolean);
-  const victim = await js(`(() => { const held = new Set([...window.__deckDesk(), ...${JSON.stringify(readAlready)}]); const r = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && !held.has(e.dataset.noteId) && e.getBoundingClientRect().top > 0 && e.getBoundingClientRect().bottom < document.getElementById('nav-list').getBoundingClientRect().bottom); const b = r.getBoundingClientRect(); return { id: r.dataset.noteId, x: b.left + 120, y: b.top + b.height / 2 }; })()`);
+  const victim = await js(t.rowInReach(readAlready));
   let blocking = true;
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, done) => done({ cancel: blocking && /\/api\/render\?/.test(details.url) }));
   await d.pointer(win, d.click(victim));
@@ -383,10 +383,12 @@ module.exports = async function (d) {
   const narrowList = await js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const c = document.getElementById('collection').getBoundingClientRect(); return { col: [Math.round(c.left - f.left), Math.round(c.width)], field: Math.round(f.width), rows: [...document.querySelectorAll('#nav-list .nav-row')].filter((e) => !e.hidden).length, count: document.getElementById('collection-count').textContent, panes: [...document.querySelectorAll('.pane')].filter((p) => !p.classList.contains('out-of-sight')).length }; })()`);
   check(narrowList.col[0] === 0 && narrowList.col[1] === narrowList.field && narrowList.rows > 0 && narrowList.count === `${sourceIds.size} notes` && narrowList.panes === 0, '"Collection" puts the list in front, full width, with the same exact count and rows', narrowList);
   await d.shot(win, '19-narrow-collection');
-  const nrow = await js(`(() => { const held = new Set(window.__deckDesk()); const l = document.getElementById('nav-list').getBoundingClientRect(); const r = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && !held.has(e.dataset.noteId) && e.getBoundingClientRect().top > l.top && e.getBoundingClientRect().bottom < l.bottom); const b = r.getBoundingClientRect(); return { id: r.dataset.noteId, x: b.left + 120, y: b.top + b.height / 2 }; })()`);
+  const nrow = await js(t.rowInReach());
   await d.pointer(win, d.click(nrow));
   await d.delay(1500);
   const narrowDoc = await js(`(() => { const shown = [...document.querySelectorAll('.pane')].filter((p) => !p.classList.contains('out-of-sight')); return { shown: shown.map((p) => p.dataset.noteId), state: shown[0] && shown[0].dataset.state, stored: window.__deckLastState.viewDesks[${JSON.stringify(ws)}].features.find((c) => c.noteId === ${JSON.stringify('__ID__')}) }; })()`.replace('__ID__', nrow.id));
+  d.log('narrow, after the row', await js(`({ row: ${JSON.stringify(nrow)}, held: window.__deckDesk(), bar: [...document.querySelectorAll('#narrow-bar button')].map((b) => b.textContent + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')), panes: [...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId + (p.classList.contains('out-of-sight') ? ' hidden' : '')), hit: (() => { const e = document.elementFromPoint(${nrow.x}, ${nrow.y}); return e ? e.className + ' / ' + (e.closest('.nav-row') ? e.closest('.nav-row').dataset.noteId : 'no row') : null; })(), status: document.getElementById('status').textContent })`));
+  await d.shot(win, '19b-narrow-after-row');
   check(narrowDoc.shown.length === 1 && narrowDoc.shown[0] === nrow.id && narrowDoc.state === 'ready' && narrowDoc.stored && narrowDoc.stored.w >= 280, 'a row opened there comes to the front as the one document, and the size stored for it is a reading size, not the narrow window', narrowDoc);
   win.setBounds(full);
   await d.delay(900);
@@ -421,7 +423,7 @@ module.exports = async function (d) {
     const onTop = await pj(`(() => { const r = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && e.getBoundingClientRect().top > document.getElementById('nav-list').getBoundingClientRect().top); const b = r.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + 120, b.top + b.height / 2); return { hit: hit ? hit.closest('.nav-row') !== null : false, offered: !document.getElementById('to-collection').hidden }; })()`);
     check(onTop.hit && !onTop.offered, 'where documents lie over the list, "collection" is offered by name and brings the list in front of them', onTop);
   }
-  const trow = await pj(`(() => { const shown = new Set([...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId)); const l = document.getElementById('nav-list').getBoundingClientRect(); const r = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && !shown.has(e.dataset.noteId) && e.getBoundingClientRect().top > l.top && e.getBoundingClientRect().bottom < l.bottom); if (!r) return null; const b = r.getBoundingClientRect(); return { id: r.dataset.noteId, x: b.left + 120, y: b.top + b.height / 2 }; })()`);
+  const trow = await pj(t.rowInReach());
   if (trow) {
     await d.pointer(page, d.click(trow));
     await d.delay(2000);

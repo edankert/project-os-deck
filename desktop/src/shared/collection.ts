@@ -237,12 +237,20 @@ export interface AnchorRow {
   id: string | null;
   /** The row's top edge, in the list's own scroll coordinates. */
   top: number;
+  /**
+   * The heading the row is under. A list shows one note in more than one
+   * place (on the desk, joined to a held note, needing a person, and under
+   * its own heading), so the note alone does not say which row was meant.
+   */
+  group?: string | null;
 }
 
 export interface ScrollAnchor {
   id: string;
   /** How far the list was scrolled past that row's top edge. */
   offset: number;
+  /** The heading that row was under, when the list said. */
+  group?: string | null;
 }
 
 /**
@@ -262,7 +270,8 @@ export function anchorAt(rows: readonly AnchorRow[], scrollTop: number): ScrollA
     // Nothing starts in view: the last note's row above the top is the one being read.
     best = row;
   }
-  return best === null || best.id === null ? null : { id: best.id, offset: scrollTop - best.top };
+  if (best === null || best.id === null) return null;
+  return best.group === undefined ? { id: best.id, offset: scrollTop - best.top } : { id: best.id, offset: scrollTop - best.top, group: best.group };
 }
 
 /**
@@ -271,7 +280,9 @@ export function anchorAt(rows: readonly AnchorRow[], scrollTop: number): ScrollA
  */
 export function scrollTopFor(anchor: ScrollAnchor | null, rows: readonly AnchorRow[]): number | null {
   if (anchor === null) return null;
-  const row = rows.find((r) => r.id === anchor.id);
+  // The row under the same heading when there is one: the same note's row
+  // under another heading is a different place in the list.
+  const row = rows.find((r) => r.id === anchor.id && anchor.group !== undefined && r.group === anchor.group) ?? rows.find((r) => r.id === anchor.id);
   return row === undefined ? null : Math.max(0, row.top + anchor.offset);
 }
 

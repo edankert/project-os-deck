@@ -262,9 +262,36 @@ export class CollectionView {
   // ---- the row a person was on ----
 
   private rows(): AnchorRow[] {
-    return Array.from(this.el.list.children)
+    let group: string | null = null;
+    // Measured from the list itself, in its own scroll coordinates. A row's
+    // `offsetTop` is measured from the collection, so it moved whenever a
+    // line above the list appeared or went, and the list was then scrolled
+    // to the wrong row by the height of that line.
+    const list = this.el.list;
+    const origin = list.getBoundingClientRect().top - list.scrollTop;
+    return Array.from(list.children)
       .filter((e): e is HTMLElement => e instanceof HTMLElement && !e.hidden)
-      .map((e) => ({ id: e.dataset['noteId'] ?? null, top: e.offsetTop }));
+      .map((e) => {
+        if (e.dataset['groupKey'] !== undefined) group = e.dataset['groupKey'];
+        return { id: e.dataset['noteId'] ?? null, top: e.getBoundingClientRect().top - origin, group };
+      });
+  }
+
+  /**
+   * Redraw the list without moving it: the row at the top of what is in view
+   * is at the same place afterwards, whatever arrived or left above it. A
+   * neighbourhood that is read a moment after a note is opened adds a whole
+   * heading of rows at the top, and without this the row under the pointer
+   * became another row. Not while it is collapsed: nothing is laid out then,
+   * and the row kept for opening it again is left alone.
+   */
+  steady(redraw: () => void): void {
+    const laidOut = this.active && this.el.list.offsetParent !== null;
+    const at = laidOut ? anchorAt(this.rows(), this.el.list.scrollTop) : null;
+    redraw();
+    if (at === null) return;
+    const top = scrollTopFor(at, this.rows());
+    if (top !== null && Math.abs(top - this.el.list.scrollTop) >= 1) this.el.list.scrollTop = top;
   }
 
   /** Remember which note's row the list is scrolled to. */

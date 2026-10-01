@@ -120,6 +120,32 @@ test('the scroll anchor is a note, so the list comes back to the same row and no
   assert.equal(anchorAt([{ id: null, top: 0 }], 0), null);
 });
 
+test('a note listed under two headings is kept by the heading its row was under', () => {
+  // The same note on the desk, and under its own heading further down.
+  const rows = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'B', top: 30, group: 'deck:held' },
+    { id: null, top: 60, group: 'g:high' },
+    { id: 'A', top: 90, group: 'g:high' },
+    { id: 'B', top: 120, group: 'g:high' },
+  ];
+  const anchor = anchorAt(rows, 110);
+  assert.deepEqual(anchor, { id: 'B', offset: -10, group: 'g:high' });
+  // A heading of four rows arrives above: the row under the same heading is the one returned to.
+  const grown = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'B', top: 30, group: 'deck:held' },
+    { id: null, top: 60, group: 'deck:joined' },
+    { id: 'C', top: 90, group: 'deck:joined' },
+    { id: null, top: 120, group: 'g:high' },
+    { id: 'A', top: 150, group: 'g:high' },
+    { id: 'B', top: 180, group: 'g:high' },
+  ];
+  assert.equal(scrollTopFor(anchor, grown), 170, 'not 20, which is the same note on the desk');
+  // Its heading is gone: the note's other row is better than losing the place.
+  assert.equal(scrollTopFor(anchor, grown.slice(0, 2)), 20);
+});
+
 test('a view with nothing stored draws the default collection, down the left of the field', () => {
   const field = { width: 996, height: 780 };
   const layout = defaultCollectionLayout(field);

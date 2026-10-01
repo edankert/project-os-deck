@@ -974,6 +974,11 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .pane-state p { margin: 0 0 8px; }
 .pane-state .action { margin-right: 6px; }
 .pane[data-state="error"] .pane-state, .pane[data-state="missing"] .pane-state { color: var(--alarm); }
+/* Text that was read and cannot be read again: said above it, and nothing in
+   it can be ticked or acted on, because the note it would write to is not
+   the note on screen any more. */
+.pane[data-state="stale"] .pane-state { color: var(--owed); padding: 6px 8px; border-left: 2px solid var(--owed); }
+.pane[data-state="stale"] .pane-actions, .pane[data-state="stale"] .tick { display: none; }
 /* The verbs the sidecar allows on this note, in the document and not in a
    column beside it (ISS-0069). Absent where Deck does not write. */
 .pane-actions {
@@ -1171,7 +1176,9 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   background: linear-gradient(135deg, transparent 50%, var(--line) 50%);
 }
 /* Inside the collection the list fills it and has no column of its own. */
-.collection .navigator { width: 100%; flex: 1 1 auto; min-height: 0; border-right: 0; background: transparent; user-select: none; }
+/* Nor the height a narrow window gives the column: there the list stopped
+   at two fifths of the window and left the rest of the collection empty. */
+.collection .navigator { width: 100%; max-height: none; flex: 1 1 auto; min-height: 0; border-right: 0; border-bottom: 0; background: transparent; user-select: none; }
 /* In Glass the list is on the desk, so the column beside the field is gone. */
 body[data-surface="glass"] .body > .navigator,
 body[data-surface="orbit"] .body > .navigator { display: none; }
@@ -1198,7 +1205,7 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 .narrow-bar .action[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); }
 .collection.narrow { border-radius: 0; border: 0; box-shadow: none; }
 .collection.narrow .collection-head { cursor: default; }
-.collection.narrow .collection-resize { display: none; }
+.collection.narrow .collection-resize, .collection.narrow .collection-tools { display: none; }
 .to-collection { border-color: var(--accent); }
 /* The one object in front fills a narrow field: the compass would lie over
    what is being read, and the bar already moves between the objects. */
