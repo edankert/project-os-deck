@@ -5,7 +5,7 @@
 //
 // It CHANGES NOTES ON DISK, so it runs only on a throwaway copy of a
 // workspace and refuses anything else:
-//   electron . --drive demos/collection-refresh.cjs --drive-out <dir> --workspace /tmp/deck-copy
+//   bash tools/scripts/walk-in-a-box.sh collection-refresh --copy
 const fs = require('node:fs');
 const path = require('node:path');
 const lib = require('./lib.cjs');
@@ -86,5 +86,5 @@ module.exports = async function (d) {
   const closed = await js(`({ held: window.__deckDesk().length, active: document.activeElement.id || document.activeElement.className, status: document.getElementById('status').textContent })`);
   check(closed.held === 0 && /collection-head/.test(closed.active) && /not in this list any more/.test(closed.status), 'closed, the keyboard goes to the collection and the status line says the note is not in the list any more', closed);
   await d.shot(win, '04-closed-with-no-row');
-  d.log('summary', t.summary());
+  t.finish();
 };

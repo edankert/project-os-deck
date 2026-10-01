@@ -60,5 +60,11 @@ module.exports = function lib(d, win) {
   const rowInReach = (skip = []) =>
     `(() => { const skip = new Set([...(window.__deckDesk ? window.__deckDesk() : []), ...[...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId), ...${JSON.stringify(skip)}]); for (const r of document.querySelectorAll('#nav-list .nav-row')) { if (r.hidden || skip.has(r.dataset.noteId)) continue; const b = r.getBoundingClientRect(); if (b.height === 0) continue; const x = b.left + Math.min(140, b.width / 2); const y = b.top + b.height / 2; const hit = document.elementFromPoint(x, y); if (hit && hit.closest('.nav-row') === r) return { id: r.dataset.noteId, x, y }; } return null; })()`;
   const summary = () => ({ checks: results.length, failed: results.filter((r) => !r.ok).map((r) => r.what) });
-  return { js, check, rect, text, field, glass, state, clickOn, park, background, view, keys, drawnTwice, pane, rows, rowInReach, summary, results };
+  /** The end of a walk: the count is logged, and a walk with a failed check fails as a whole. */
+  const finish = () => {
+    const s = summary();
+    d.log('summary', s);
+    if (s.failed.length > 0) throw new Error(`${s.failed.length} of ${s.checks} checks did not hold: ${s.failed.join(' | ')}`);
+  };
+  return { js, check, rect, text, field, glass, state, clickOn, park, background, view, keys, drawnTwice, pane, rows, rowInReach, summary, finish, results };
 };

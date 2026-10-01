@@ -2,7 +2,7 @@
 // on the field, the full note opening from a row and from a card, reading it,
 // what it is joined to, and the way back to the row (FEAT-0020).
 //
-//   electron . --drive demos/glass-desktop.cjs --drive-out <dir> [--workspace <path>]
+//   bash tools/scripts/walk-in-a-box.sh glass-desktop
 //
 // It follows TST-0063's steps as far as a script can. What a script cannot do
 // is listed at the end of its log: it is not a person's walk and records no
@@ -442,5 +442,5 @@ module.exports = async function (d) {
     'a screen reader: the names are present in the page, nobody has listened to them',
     'a touch screen: the served page was driven with a mouse pointer',
   ]);
-  d.log('summary', t.summary());
+  t.finish();
 };
