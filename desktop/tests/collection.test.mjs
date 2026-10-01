@@ -11,7 +11,7 @@ import { load } from './helpers.mjs';
 const {
   COLLECTION_MIN_WIDTH, COLLECTION_MIN_HEIGHT, COLLECTION_MAX_SIDE, COLLECTION_HEAD_HEIGHT,
   defaultCollectionLayout, normaliseCollection, fitCollection, memberIds, summarise, countText, filterText,
-  membershipChange, changeCount, changeText, removedSelectionText, anchorAt, scrollTopFor, nearestSurvivor,
+  membershipChange, changeCount, changeText, removedSelectionText, anchorAt, anchorUnder, anchorsFrom, scrollTopForFirst, steadyOrder, scrollTopFor, nearestSurvivor,
 } = load('shared/collection.js');
 const { reduce, initialState, normaliseState, persistable, collectionOf, DESK_ACTIONS, isRendererAction } = load('shared/store-state.js');
 const { servedState, TABLET_LOCAL_ACTIONS } = load('shared/served-state.js');
@@ -118,6 +118,80 @@ test('the scroll anchor is a note, so the list comes back to the same row and no
   // Past the last row: the last note is the one being read.
   assert.deepEqual(anchorAt(rows, 500), { id: 'D', offset: 362 });
   assert.equal(anchorAt([{ id: null, top: 0 }], 0), null);
+});
+
+test('the row under the pointer is the one that stays put when rows arrive above it', () => {
+  // The list at its top; the pointer rests on C's row, 40 pixels down it.
+  const rows = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'A', top: 30, group: 'deck:held' },
+    { id: null, top: 60, group: 'g:one' },
+    { id: 'B', top: 90, group: 'g:one' },
+    { id: 'C', top: 120, group: 'g:one' },
+  ];
+  const anchor = anchorUnder(rows, 0, 130);
+  assert.deepEqual(anchor, { id: 'C', offset: -120, group: 'g:one' });
+  // A note is opened: it gets a row on the desk, above. The top row has not
+  // moved, so anchoring on the top row would leave C 30 pixels lower, under
+  // nothing, with B under the pointer instead.
+  const grown = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'A', top: 30, group: 'deck:held' },
+    { id: 'B', top: 60, group: 'deck:held' },
+    { id: null, top: 90, group: 'g:one' },
+    { id: 'B', top: 120, group: 'g:one' },
+    { id: 'C', top: 150, group: 'g:one' },
+  ];
+  assert.equal(scrollTopFor(anchorAt(rows, 0), grown), 0, 'the top row alone would not scroll the list');
+  assert.equal(scrollTopFor(anchor, grown), 30, 'the list scrolls by the row that arrived, and C is under the pointer still');
+  // On a heading, or above the first row, there is no row to keep.
+  assert.equal(anchorUnder(rows, 0, 70), null);
+  assert.equal(anchorUnder(rows, 0, -5), null);
+  // Scrolled: the point is in the list's scroll coordinates.
+  assert.deepEqual(anchorUnder(rows, 100, 125), { id: 'C', offset: -20, group: 'g:one' });
+});
+
+test('when the pressed row leaves, the row below it is the one held still', () => {
+  // Two notes are open. The pointer presses B under "joined"; C is the row below it.
+  const rows = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'X', top: 30, group: 'deck:held' },
+    { id: null, top: 60, group: 'deck:joined' },
+    { id: 'A', top: 90, group: 'deck:joined' },
+    { id: 'B', top: 120, group: 'deck:joined' },
+    { id: 'C', top: 150, group: 'deck:joined' },
+  ];
+  const anchors = anchorsFrom(rows, 0, 130);
+  assert.deepEqual(anchors.map((a) => a.id), ['B', 'C']);
+  // B is opened: it gets a row on the desk and has none under "joined". One
+  // row arrived above and one left at the pointer, so C has not moved.
+  const after = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'X', top: 30, group: 'deck:held' },
+    { id: 'B', top: 60, group: 'deck:held' },
+    { id: null, top: 90, group: 'deck:joined' },
+    { id: 'A', top: 120, group: 'deck:joined' },
+    { id: 'C', top: 150, group: 'deck:joined' },
+    { id: 'NEW', top: 180, group: 'deck:joined' },
+  ];
+  assert.equal(scrollTopForFirst(anchors, after), 0, 'C is where it was, so the list does not scroll');
+  // Following B to its row on the desk would have scrolled the list back by sixty pixels' worth.
+  assert.equal(scrollTopFor(anchors[0], after), 0);
+  assert.notEqual(after.find((r) => r.id === 'B').top + anchors[0].offset, 0);
+  // Nothing under the pointer survives under its heading: the pressed note, wherever it is.
+  assert.equal(scrollTopForFirst(anchorsFrom(rows, 0, 130), [{ id: 'B', top: 400, group: 'g:other' }]), 280);
+  assert.equal(scrollTopForFirst([], after), null);
+  // A point on a heading has no row to start from.
+  assert.deepEqual(anchorsFrom(rows, 0, 70), []);
+});
+
+test('rows that come from the desk keep their order while a person is on the list', () => {
+  const previous = ['A', 'B', 'C', 'D'];
+  // B was opened and left the group; E and F arrived; the fresh order puts them first.
+  const fresh = ['F', 'E', 'D', 'C', 'A'];
+  assert.deepEqual(steadyOrder(previous, fresh, true), ['A', 'C', 'D', 'F', 'E'], 'survivors keep their order and arrivals follow, in the fresh order');
+  assert.deepEqual(steadyOrder(previous, fresh, false), fresh, 'with nobody on the list the fresh order is used');
+  assert.deepEqual(steadyOrder([], fresh, true), fresh);
 });
 
 test('a note listed under two headings is kept by the heading its row was under', () => {

@@ -123,7 +123,8 @@ module.exports = async function (d) {
   const twice = await t.drawnTwice();
   check(doc !== null && doc.state === 'ready' && doc.chars > 200 && doc.title.length > 0, 'the document holds the full authored text under its title, with no summary to click through', doc);
   check(twice.twice.length === 0 && twice.cardForHeld.length === 0, 'the open note is one object: no card is drawn for it and no neighbour is drawn twice', twice);
-  const row = await js(`(() => { const r = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && e.dataset.noteId === ${JSON.stringify(card.id)}); if (!r) return null; const l = document.getElementById('nav-list'); const b = r.getBoundingClientRect(); const lb = l.getBoundingClientRect(); return { current: r.getAttribute('aria-current'), onDesk: r.dataset.onDesk, inView: b.top >= lb.top - 1 && b.bottom <= lb.bottom + 1 }; })()`);
+  // A note has a row under more than one heading; one of them in view, below any heading stuck to the top, is what is asked.
+  const row = await js(`(() => { const rows = [...document.querySelectorAll('#nav-list .nav-row')].filter((e) => !e.hidden && e.dataset.noteId === ${JSON.stringify(card.id)}); if (rows.length === 0) return null; const lb = document.getElementById('nav-list').getBoundingClientRect(); const seen = rows.filter((r) => { const b = r.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + 100, b.top + b.height / 2); return b.top >= lb.top - 1 && b.bottom <= lb.bottom + 1 && hit && hit.closest('.nav-row') === r; }); const r = seen[0] || rows[0]; return { rows: rows.length, current: r.getAttribute('aria-current'), onDesk: r.dataset.onDesk, inView: seen.length > 0 }; })()`);
   check(row !== null && row.current === 'true' && row.onDesk === 'true' && row.inView, 'opening a card shows its row in the collection, marked as the open note', row);
 
   // The details: the path is there, and not in the heading.

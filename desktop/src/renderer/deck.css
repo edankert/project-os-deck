@@ -789,6 +789,10 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   border-radius: 8px;
 }
 .pane > * { pointer-events: auto; }
+/* A document that is still growing from the row or card it was opened from
+   lies under the pointer for a third of a second. It takes no press then, so
+   a press aimed at the next row reaches the row. */
+.pane.opening > * { pointer-events: none; }
 /* Toward the edge of sight a desk object dims under a veil of the ground's
    colour. It stays opaque: a faded document over a faded list showed both
    texts at once. */

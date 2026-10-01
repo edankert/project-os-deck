@@ -25,10 +25,12 @@ import {
   type CollectionSummary,
   type ScrollAnchor,
   anchorAt,
+  anchorsFrom,
   countText,
   defaultCollectionLayout,
   fitCollection,
   scrollTopFor,
+  scrollTopForFirst,
 } from '../shared/collection.js';
 import type { Rect } from '../shared/focus-ring.js';
 import { NARROW_BAR_HEIGHT } from '../shared/panes.js';
@@ -88,6 +90,10 @@ export interface CollectionElements {
 /** How far a pointer moves before a press on the header is a drag. */
 const SLOP_PX = 5;
 /** The collection stands under every document unless it was the last thing pressed. */
+/** The space after the list's last row (deck.css, `.nav-list`). */
+const LIST_END_SPACE = 12;
+/** How long after the pointer leaves the list it still counts as resting there. */
+const POINTER_GRACE_MS = 800;
 const Z_UNDER = 2990;
 const Z_OVER = 3990;
 
@@ -100,6 +106,10 @@ export class CollectionView {
   /** A drag or a resize in progress, drawn before the store hears of it. */
   private live: CollectionLayout | null = null;
   private onTop = false;
+  /** The pointer's height on screen while it is over the list, else null. */
+  private pointerY: number | null = null;
+  /** When the pointer left the list, while `pointerY` is still kept for the grace. */
+  private leftAt: number | null = null;
   /** The row the list was scrolled to when it was collapsed, by the note it is for. */
   private anchor: ScrollAnchor | null = null;
   /** In a narrow field: whether the collection is the one object in front, or out of the way. */
@@ -286,12 +296,53 @@ export class CollectionView {
    * and the row kept for opening it again is left alone.
    */
   steady(redraw: () => void): void {
-    const laidOut = this.active && this.el.list.offsetParent !== null;
-    const at = laidOut ? anchorAt(this.rows(), this.el.list.scrollTop) : null;
+    const list = this.el.list;
+    const laidOut = this.active && list.offsetParent !== null;
+    let at: ScrollAnchor[] = [];
+    if (laidOut) {
+      const rows = this.rows();
+      const box = list.getBoundingClientRect();
+      // The row a person is on is the one that stays put: the row under a
+      // resting pointer, else the row the keyboard is on, else the top row.
+      const focused = document.activeElement instanceof HTMLElement && list.contains(document.activeElement) ? document.activeElement.getBoundingClientRect() : null;
+      const y = this.restingY() ?? (focused !== null && focused.bottom > box.top && focused.top < box.bottom ? focused.top + focused.height / 2 : null);
+      at = y === null ? [] : anchorsFrom(rows, list.scrollTop, list.scrollTop + y - box.top);
+      const top = anchorAt(rows, list.scrollTop);
+      if (at.length === 0 && top !== null) at = [top];
+    }
     redraw();
-    if (at === null) return;
-    const top = scrollTopFor(at, this.rows());
-    if (top !== null && Math.abs(top - this.el.list.scrollTop) >= 1) this.el.list.scrollTop = top;
+    // Room made by an earlier redraw is given back first, and made again
+    // below if it is still needed.
+    list.style.removeProperty('padding-bottom');
+    if (at.length === 0) return;
+    const top = scrollTopForFirst(at, this.rows());
+    if (top === null) return;
+    // A short list cannot be scrolled far enough to keep the row in place: a
+    // list that fits has no scroll range at all, and a row arriving above
+    // then pushed every row down however this was asked. So the list is given
+    // the room, as empty space after its last row.
+    const short = top - (list.scrollHeight - list.clientHeight);
+    if (short > 0) list.style.paddingBottom = `${LIST_END_SPACE + Math.ceil(short)}px`;
+    if (Math.abs(top - list.scrollTop) >= 1) list.scrollTop = top;
+  }
+
+  /** Whether the pointer is resting on the list: what is derived from the desk keeps its order then. */
+  pointerOnList(): boolean {
+    return this.active && this.restingY() !== null;
+  }
+
+  /**
+   * Where the pointer rests on the list, or null. It counts as resting for a
+   * moment after it leaves: something drawn over the list for an instant, or
+   * a hand on its way back, is not a person who has gone elsewhere.
+   */
+  private restingY(): number | null {
+    if (this.pointerY === null) return null;
+    if (this.leftAt !== null && performance.now() - this.leftAt > POINTER_GRACE_MS) {
+      this.pointerY = null;
+      this.leftAt = null;
+    }
+    return this.pointerY;
   }
 
   /** Remember which note's row the list is scrolled to. */
@@ -354,6 +405,18 @@ export class CollectionView {
 
   private wire(): void {
     const { root, head, fold, resize } = this.el;
+    // Where the pointer rests over the list, for `steady`.
+    // A press counts as well as a move: a touch, and a pointer that was
+    // already there when the list was drawn, press without having moved.
+    for (const type of ['pointermove', 'pointerdown', 'pointerenter'] as const) {
+      this.el.list.addEventListener(type, (event) => {
+        this.pointerY = event.clientY;
+        this.leftAt = null;
+      });
+    }
+    this.el.list.addEventListener('pointerleave', () => {
+      this.leftAt = performance.now();
+    });
     // A press anywhere on the collection brings it above the documents.
     root.addEventListener('pointerdown', () => this.raise());
     // The keyboard arriving in it does the same: a row or a control that has

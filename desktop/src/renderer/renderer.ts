@@ -21,7 +21,7 @@ import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
-import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, summarise } from '../shared/collection.js';
+import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, isNarrowed, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } from '../shared/write-client.js';
@@ -1034,12 +1034,25 @@ function drawCollection(): void {
  * from outside the view is in none of the view's groups, so without these the
  * front band would hold cards no key could reach.
  */
+const deskOrder: { held: string[]; joined: string[]; shared: string[] } = { held: [], joined: [], shared: [] };
+
 function deskGroups(): CardGroup[] {
   const state = host.state();
   const ws = state.workspaceId;
   if (ws === null) return [];
-  const heldIds = deskHere(state).map((c) => c.noteId);
-  if (heldIds.length === 0) return [];
+  // While the pointer rests on the list, the rows that come from the desk
+  // keep the order they had and new ones are added after them. They are
+  // sorted afresh every time a note is opened or raised, and a person
+  // pressing rows one after another pressed whatever had just moved in
+  // under the pointer.
+  const hold = collection.pointerOnList();
+  const heldIds = steadyOrder(deskOrder.held, deskHere(state).map((c) => c.noteId), hold);
+  deskOrder.held = heldIds;
+  if (heldIds.length === 0) {
+    deskOrder.joined = [];
+    deskOrder.shared = [];
+    return [];
+  }
   const byId = new Map(currentCards.map((c) => [c.noteId, c]));
   const known = new Map<string, NoteContext>();
   for (const id of heldIds) {
@@ -1056,16 +1069,22 @@ function deskGroups(): CardGroup[] {
   // While a document is the focus, its neighbours are listed in the order
   // their cards stand round it, clockwise from the top (FEAT-0017).
   const ring = glass.neighbourOrder();
-  const joined = [...joinedTo(heldIds, known)].sort((a, b) => {
-    if (ring === null) return 0;
-    const ia = ring.indexOf(a);
-    const ib = ring.indexOf(b);
-    return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib);
-  });
+  const joined = steadyOrder(
+    deskOrder.joined,
+    [...joinedTo(heldIds, known)].sort((a, b) => {
+      if (ring === null) return 0;
+      const ia = ring.indexOf(a);
+      const ib = ring.indexOf(b);
+      return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib);
+    }),
+    hold,
+  );
+  deskOrder.joined = joined;
   if (joined.length > 0) {
     out.push({ key: 'deck:joined', label: 'Joined to what you are holding', needsHuman: false, suppressed: false, cards: joined.map(card) });
   }
-  const shared = [...sharedAmong(heldIds, known).keys()];
+  const shared = steadyOrder(deskOrder.shared, [...sharedAmong(heldIds, known).keys()], hold);
+  deskOrder.shared = shared;
   if (shared.length > 0) {
     out.push({ key: 'deck:shared', label: 'Joined to more than one held note', needsHuman: false, suppressed: false, cards: shared.map(card) });
   }

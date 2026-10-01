@@ -2847,7 +2847,12 @@ export class GlassField {
       { duration: OPEN_MS, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
     );
     this.openAnim = animation;
+    // While it grows it takes no pointer (deck.css): it grows from the row or
+    // the card that was pressed, so it is under the pointer, and a second
+    // press aimed at the next row would land on the document instead.
+    pane.classList.add('opening');
     const done = (): void => {
+      pane.classList.remove('opening');
       if (this.openAnim === animation) this.openAnim = null;
     };
     animation.onfinish = done;

@@ -275,6 +275,74 @@ export function anchorAt(rows: readonly AnchorRow[], scrollTop: number): ScrollA
 }
 
 /**
+ * The row at a point of the list, as an anchor: the note's row that `y` (in
+ * the list's scroll coordinates) falls in. This is the row a pointer rests on
+ * or the keyboard is on, and it is the one that must not move when the list
+ * is redrawn: a row that slid out from under a pointer between aiming and
+ * pressing opened the wrong note. Null when the point is on a heading or
+ * above the first row; the caller then keeps the top row instead.
+ */
+export function anchorUnder(rows: readonly AnchorRow[], scrollTop: number, y: number): ScrollAnchor | null {
+  let under: AnchorRow | null = null;
+  for (const row of rows) {
+    if (row.top > y) break;
+    under = row;
+  }
+  if (under === null || under.id === null) return null;
+  return under.group === undefined ? { id: under.id, offset: scrollTop - under.top } : { id: under.id, offset: scrollTop - under.top, group: under.group };
+}
+
+/**
+ * The row at a point and the rows after it, each as an anchor, nearest
+ * first. The row a person pressed may be the one that leaves: a note opened
+ * from "Joined to what you are holding" is on the desk a moment later and has
+ * no row there. The row below it is then the one to hold still, and so on
+ * down, so the next press lands on the row it was aimed at.
+ */
+export function anchorsFrom(rows: readonly AnchorRow[], scrollTop: number, y: number, most = 12): ScrollAnchor[] {
+  let at = -1;
+  for (let i = 0; i < rows.length; i += 1) {
+    if ((rows[i] as AnchorRow).top > y) break;
+    at = i;
+  }
+  const out: ScrollAnchor[] = [];
+  if (at === -1 || (rows[at] as AnchorRow).id === null) return out;
+  for (let i = at; i < rows.length && out.length < most; i += 1) {
+    const row = rows[i] as AnchorRow;
+    if (row.id === null) continue;
+    out.push(row.group === undefined ? { id: row.id, offset: scrollTop - row.top } : { id: row.id, offset: scrollTop - row.top, group: row.group });
+  }
+  return out;
+}
+
+/**
+ * Where to scroll so the first of these anchors that still has its row, under
+ * its heading, is where it was. When none has, the first anchor's note under
+ * any heading; null when that has no row either.
+ */
+export function scrollTopForFirst(anchors: readonly ScrollAnchor[], rows: readonly AnchorRow[]): number | null {
+  for (const anchor of anchors) {
+    const row = rows.find((r) => r.id === anchor.id && r.group === anchor.group);
+    if (row !== undefined) return Math.max(0, row.top + anchor.offset);
+  }
+  return scrollTopFor(anchors[0] ?? null, rows);
+}
+
+/**
+ * How a list that is derived from the desk keeps its order while a person is
+ * on it: the notes that were listed stay in the order they had, and notes
+ * that arrive are added after them, in the order `fresh` gives. With
+ * `hold` false the fresh order is used as it is.
+ */
+export function steadyOrder(previous: readonly string[], fresh: readonly string[], hold: boolean): string[] {
+  if (!hold) return [...fresh];
+  const now = new Set(fresh);
+  const kept = previous.filter((id) => now.has(id));
+  const had = new Set(kept);
+  return [...kept, ...fresh.filter((id) => !had.has(id))];
+}
+
+/**
  * Where to scroll so the anchor's row is where it was. Null when that note
  * has no row now; the caller then leaves the list where it is and says so.
  */

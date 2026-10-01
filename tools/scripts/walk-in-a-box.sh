@@ -98,6 +98,10 @@ elif [ "$COPY" = 1 ]; then
   ARGS="--workspace /tmp/deck-copy"
 fi
 
+# The commit the walk ran on, for its log: the box has no use for git otherwise.
+BUILD="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+if [ -n "$(git -C "$ROOT" status --porcelain -- desktop/src 2>/dev/null)" ]; then BUILD="${BUILD}+uncommitted"; fi
+
 echo "walk-in-a-box: ${WALK}${ARGS:+ on a throwaway copy}; pictures in desktop/dist/walks/${NAME}"
-exec docker run --rm --shm-size=1g "${MOUNTS[@]}" -w /work/project-os-deck/desktop "$IMAGE" \
+exec docker run --rm --shm-size=1g -e DECK_BUILD="$BUILD" -e DECK_SCALE_VIEW="${DECK_SCALE_VIEW:-}" "${MOUNTS[@]}" -w /work/project-os-deck/desktop "$IMAGE" \
   bash -c "set -o pipefail; npm run build >/dev/null && rm -rf 'dist/walks/$NAME' && ${PREPARE}timeout 1500 npx electron . --drive 'demos/$WALK.cjs' --drive-out 'dist/walks/$NAME' $ARGS 2>&1 | grep -v -E 'bus.cc|viz_main_impl|pip as the'"

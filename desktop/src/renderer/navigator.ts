@@ -17,6 +17,9 @@ import { type NavigatorPaint, type Row, rowsFor, totalRows } from '../shared/row
 export type { NavigatorPaint, Row };
 export { rowsFor };
 
+/** The height of a heading stuck to the top of the list: a row behind it is not in view. */
+const STUCK_HEADING = 28;
+
 export interface NavigatorHandlers {
   /** Put this note on the desk, or take it off if it is already there. */
   /** A row was chosen. `byKey` says the keyboard chose it, so the keyboard goes where the note opens. */
@@ -50,6 +53,8 @@ export class NavigatorList {
    * away from the card under the pointer.
    */
   private restoring = false;
+  /** True while a repaint puts the keyboard back: the list is not scrolled to the row. */
+  private still = false;
   /** The note whose row is marked, and until when, so a repaint keeps the mark. */
   private marked: { noteId: string; until: number } | null = null;
 
@@ -66,7 +71,7 @@ export class NavigatorList {
    * field is not flown anywhere (FEAT-0020, TASK-0098).
    */
   focusNote(noteId: string, quiet = false): boolean {
-    const index = this.rows.findIndex((r) => r.kind === 'card' && r.card.noteId === noteId);
+    const index = this.rowFor(noteId);
     if (index === -1) return false;
     const was = this.restoring;
     this.restoring = quiet || was;
@@ -89,9 +94,12 @@ export class NavigatorList {
    */
   reveal(noteId: string): 'row' | 'group' | 'absent' {
     for (const element of this.pool) element.classList.remove('holds-open');
-    const index = this.rows.findIndex((r) => r.kind === 'card' && r.card.noteId === noteId);
+    const index = this.rowFor(noteId);
     if (index !== -1) {
-      this.pool[index]?.scrollIntoView({ block: 'nearest' });
+      // Not scrolled when one of its rows is already in view: the list was
+      // being scrolled back to the top, to the note's row under "On the
+      // desk", every time a note was opened from a row further down.
+      if (!this.inView(index)) this.pool[index]?.scrollIntoView({ block: 'nearest' });
       return 'row';
     }
     const holds = (cards: CardModel[]): boolean => cards.some((c) => c.noteId === noteId || holds(c.children));
@@ -103,6 +111,33 @@ export class NavigatorList {
     element.classList.add('holds-open');
     element.scrollIntoView({ block: 'nearest' });
     return 'group';
+  }
+
+  /** Whether a row is wholly in the part of the list that is on screen, below a heading stuck to its top. */
+  private inView(index: number): boolean {
+    const element = this.pool[index];
+    if (element === undefined || element.hidden) return false;
+    const box = this.container.getBoundingClientRect();
+    const r = element.getBoundingClientRect();
+    return r.height > 0 && r.top >= box.top + STUCK_HEADING && r.bottom <= box.bottom;
+  }
+
+  /**
+   * The row to use for a note the list shows more than once: on the desk,
+   * joined to a held note, needing a person, and under its own heading. One
+   * that is already in view, so nothing has to move; else the last, which is
+   * the row under the view's own heading, the one that stays when the note
+   * is closed. -1 when the note has no row.
+   */
+  private rowFor(noteId: string): number {
+    let last = -1;
+    for (let i = 0; i < this.rows.length; i += 1) {
+      const row = this.rows[i] as Row;
+      if (row.kind !== 'card' || row.card.noteId !== noteId) continue;
+      if (this.inView(i)) return i;
+      last = i;
+    }
+    return last;
   }
 
   /** Mark a row for a moment, the reduced-motion arrival (TASK-0033). */
@@ -130,8 +165,13 @@ export class NavigatorList {
     if (element === undefined) return;
     element.tabIndex = 0;
     if (focus) {
-      element.focus({ preventScroll: false });
-      element.scrollIntoView({ block: 'nearest' });
+      // A repaint puts the keyboard back and scrolls nothing: where the list
+      // stands across a repaint is decided once, by whoever asked for the
+      // repaint (collection-view.ts, `steady`). Scrolling here took the list
+      // to the note's row under "On the desk" and moved every row a pointer
+      // was near.
+      element.focus({ preventScroll: this.still });
+      if (!this.still) element.scrollIntoView({ block: 'nearest' });
     }
   }
 
@@ -205,10 +245,12 @@ export class NavigatorList {
       const active = document.activeElement as HTMLElement | null;
       if (active?.dataset['noteId'] !== focusedNote) {
         this.restoring = true;
+        this.still = true;
         try {
           this.focusNote(focusedNote);
         } finally {
           this.restoring = false;
+          this.still = false;
         }
       }
     }
