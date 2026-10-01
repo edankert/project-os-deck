@@ -24,15 +24,21 @@ import {
   type CollectionLayout,
   type CollectionSummary,
   type ScrollAnchor,
+  type CardGrid,
+  type Presentation,
   anchorAt,
   anchorsFrom,
+  cardGrid,
   countText,
   defaultCollectionLayout,
   fitCollection,
+  gridText,
+  rowOfMember,
   scrollTopFor,
   scrollTopForFirst,
 } from '../shared/collection.js';
-import type { Rect } from '../shared/focus-ring.js';
+import { type Point, type Rect, SEAT } from '../shared/focus-ring.js';
+import type { CardModel } from '../shared/types.js';
 import { NARROW_BAR_HEIGHT } from '../shared/panes.js';
 
 export interface CollectionHooks {
@@ -50,6 +56,10 @@ export interface CollectionHooks {
   clearFilters(): void;
   /** The view is read again after it failed to load. */
   retry(): void;
+  /** The cards the collection shows have changed: the field draws again. */
+  seatsChanged(): void;
+  /** A member that is open or gathered elsewhere was asked for from its reference: bring it into view. */
+  locate(noteId: string): void;
 }
 
 /** What the collection says about itself. Everything here is derived; none of it is kept. */
@@ -66,6 +76,13 @@ export interface CollectionModel {
   state: 'loading' | 'ready' | 'error';
   /** What went wrong, when the view could not be read. */
   error: string;
+  /**
+   * The notes the list shows, each once, in the list's order: the same ids
+   * the count counts. The Cards presentation draws these and no others.
+   */
+  members: readonly string[];
+  /** A member's card. */
+  cardOf(noteId: string): CardModel | null;
 }
 
 export interface CollectionElements {
@@ -75,6 +92,10 @@ export interface CollectionElements {
   count: HTMLElement;
   filter: HTMLElement;
   fold: HTMLButtonElement;
+  asTable: HTMLButtonElement;
+  asCards: HTMLButtonElement;
+  /** Where the members stand as cards, in the Cards presentation. */
+  grid: HTMLElement;
   note: HTMLElement;
   places: HTMLElement;
   body: HTMLElement;
@@ -92,6 +113,10 @@ const SLOP_PX = 5;
 /** The collection stands under every document unless it was the last thing pressed. */
 /** The space after the list's last row (deck.css, `.nav-list`). */
 const LIST_END_SPACE = 12;
+/** The gap between two of the collection's cards, and between a card and the collection's edge. */
+const GRID_GAP = 10;
+/** How far the wheel turns for the cards to move by one row. */
+const GRID_WHEEL_ROW = 50;
 /** How long after the pointer leaves the list it still counts as resting there. */
 const POINTER_GRACE_MS = 800;
 const Z_UNDER = 2990;
@@ -115,6 +140,18 @@ export class CollectionView {
   /** In a narrow field: whether the collection is the one object in front, or out of the way. */
   private narrow: 'front' | 'back' | null = null;
   private model: CollectionModel | null = null;
+  /** The row of cards at the top of the Cards presentation. Session state: where a person scrolled to. */
+  private firstRow = 0;
+  /** The note whose card the grid opens at, once it is laid out: the row the table was on. */
+  private openAt: string | null = null;
+  private wheelLeft = 0;
+  /** Where the collection is drawn in the field, from the last `place`. */
+  private drawnAt = { x: 0, y: 0 };
+  /** The grid's area inside the collection, measured when its size changes and not on every frame. */
+  private gridArea: { key: string; left: number; top: number; width: number; height: number } | null = null;
+  private lastGrid: CardGrid | null = null;
+  private refs = '';
+  private placesText = '';
 
   constructor(el: CollectionElements, hooks: CollectionHooks) {
     this.el = el;
@@ -167,6 +204,7 @@ export class CollectionView {
     if (narrow !== null) {
       // One object in front, filling the field: a narrow window does not
       // shrink the list to share the space (DES-0003). Nothing is stored.
+      this.drawnAt = { x: 0, y: NARROW_BAR_HEIGHT };
       root.style.left = '0px';
       root.style.top = `${NARROW_BAR_HEIGHT}px`;
       root.style.width = `${field.width}px`;
@@ -177,6 +215,7 @@ export class CollectionView {
       return;
     }
     const l = this.layout();
+    this.drawnAt = { x: l.x + shift.x, y: l.y + shift.y };
     root.style.left = `${l.x + shift.x}px`;
     root.style.top = `${l.y + shift.y}px`;
     root.style.width = `${l.w}px`;
@@ -215,6 +254,19 @@ export class CollectionView {
     el.fold.title = collapsed ? 'Open the list again (Enter)' : 'Collapse to the header (Enter)';
     el.fold.setAttribute('aria-label', collapsed ? `Open ${model.name} again` : `Collapse ${model.name} to its header`);
     el.fold.hidden = this.narrow !== null;
+    // The same members three ways. Which one is on is said by the buttons,
+    // and the count beside the name is the same in all three.
+    const cards = this.showsCards();
+    el.root.classList.toggle('cards', cards);
+    el.grid.hidden = !cards;
+    el.asTable.setAttribute('aria-pressed', String(!collapsed && l.presentation === 'table'));
+    el.asCards.setAttribute('aria-pressed', String(!collapsed && l.presentation === 'cards'));
+    el.asTable.setAttribute('aria-label', `Show ${model.name} as the list of all ${model.summary.shown} notes`);
+    el.asCards.setAttribute('aria-label', `Show ${model.name} as cards`);
+    el.asTable.hidden = !this.hooks.canArrange();
+    el.asCards.hidden = !this.hooks.canArrange();
+    el.grid.setAttribute('aria-label', `${model.name} as cards: Page Down and Page Up show more, Home and End go to the first and the last`);
+    this.gridArea = null;
     // What is waiting to be applied, and what happened to the selection.
     const lines: Array<{ text: string; action?: { label: string; run: () => void } }> = [];
     if (model.change !== '') lines.push({ text: model.change, action: { label: 'apply', run: () => this.hooks.applyChange() } });
@@ -222,12 +274,16 @@ export class CollectionView {
     this.paintLines(el.note, lines);
     // Where the members are: the list reaches every one, the field only some.
     const s = model.summary;
-    el.places.textContent = model.state !== 'ready' || s.shown === 0
+    this.placesText = model.state !== 'ready' || s.shown === 0
       ? ''
       : s.listOnly === 0
         ? `all ${s.shown} have a place in the field`
         : `${s.inField} have a place in the field · ${s.listOnly} are in this list only`;
-    el.places.hidden = el.places.textContent === '';
+    // As cards, the line says which members are drawn and how to reach the rest (`seats`).
+    if (!cards) {
+      el.places.textContent = this.placesText;
+      el.places.hidden = this.placesText === '';
+    }
     // Waiting, failed and empty are three different things, and each says which.
     const state: Array<{ text: string; action?: { label: string; run: () => void } }> = [];
     if (model.state === 'loading') state.push({ text: `Reading ${model.name}…` });
@@ -345,6 +401,129 @@ export class CollectionView {
     return this.pointerY;
   }
 
+  /** Whether the members are drawn as cards now: the Cards presentation, open, with something to draw. */
+  private showsCards(): boolean {
+    const l = this.layout();
+    return this.active && l.presentation === 'cards' && (this.narrow !== null || !l.collapsed) && this.narrow !== 'back';
+  }
+
+  /**
+   * Change how the members are shown: the list, or cards. The members, the
+   * count, the filters and the selected note are what they were; only the
+   * drawing changes. The list comes back to the row it was on, and the cards
+   * open at that note.
+   */
+  setPresentation(presentation: Presentation): void {
+    if (!this.hooks.canArrange()) return;
+    const l = this.hooks.stored() ?? defaultCollectionLayout(this.field);
+    if (l.presentation === presentation && !l.collapsed) return;
+    if (l.presentation === 'table' && !l.collapsed) this.keepAnchor();
+    if (presentation === 'cards') this.openAt = this.anchor?.id ?? null;
+    this.commit({ ...l, presentation, collapsed: false });
+    if (this.model !== null) this.paint(this.model);
+    if (presentation === 'table') requestAnimationFrame(() => this.restoreAnchor());
+    this.hooks.seatsChanged();
+  }
+
+  /**
+   * The members as cards (glass.ts, `DeskFurniture.seats`): where each one
+   * drawn stands in the field. Only the rows in view are placed, and a member
+   * that is an open document or is gathered round one is not given a second
+   * card: a reference stands in its cell and brings the real one into view.
+   */
+  seats(taken: ReadonlySet<string>, held: ReadonlySet<string>): { at: Map<string, Point>; z: number; card(noteId: string): CardModel | null } | null {
+    const model = this.model;
+    if (model === null || !this.showsCards() || model.state !== 'ready') {
+      if (this.refs !== '') this.paintRefs([], '');
+      return null;
+    }
+    const { grid: element, root } = this.el;
+    // Measured from the page only when the collection's size or its lines change.
+    const key = `${this.narrow}|${root.style.width}|${root.style.height}|${this.el.note.hidden}|${this.el.state.hidden}`;
+    if (this.gridArea === null || this.gridArea.key !== key) {
+      this.gridArea = { key, left: element.offsetLeft + GRID_GAP, top: element.offsetTop + GRID_GAP, width: element.clientWidth - 2 * GRID_GAP, height: element.clientHeight - 2 * GRID_GAP };
+    }
+    const area = this.gridArea;
+    const card = { width: SEAT.width, height: SEAT.height };
+    const members = model.members;
+    let grid = cardGrid({ area, card, gap: GRID_GAP, count: members.length, firstRow: this.firstRow });
+    if (this.openAt !== null) {
+      grid = cardGrid({ area, card, gap: GRID_GAP, count: members.length, firstRow: rowOfMember(members.indexOf(this.openAt), grid.columns) });
+      this.openAt = null;
+    }
+    this.firstRow = grid.firstRow;
+    this.lastGrid = grid;
+    const at = new Map<string, Point>();
+    const refs: Array<{ id: string; why: string; x: number; y: number }> = [];
+    for (let i = 0; i < grid.drawn; i += 1) {
+      const id = members[grid.first + i] as string;
+      const c = grid.centres[i] as Point;
+      if (held.has(id)) refs.push({ id, why: 'open', x: c.x, y: c.y });
+      else if (taken.has(id)) refs.push({ id, why: 'gathered', x: c.x, y: c.y });
+      else at.set(id, { x: this.drawnAt.x + c.x, y: this.drawnAt.y + c.y });
+    }
+    const said = gridText(grid, members.length, refs.length);
+    this.paintRefs(refs, `${grid.first}|${refs.map((r) => `${r.id}${r.why}${Math.round(r.x)},${Math.round(r.y)}`).join(';')}|${said}`, said);
+    return { at, z: (this.onTop ? Z_OVER : Z_UNDER) + 1, card: (noteId) => model.cardOf(noteId) };
+  }
+
+  /** The references in the grid, and the line under it. Drawn only when they change. */
+  private paintRefs(refs: ReadonlyArray<{ id: string; why: string; x: number; y: number }>, signature: string, said = ''): void {
+    if (this.refs === signature) return;
+    this.refs = signature;
+    const { grid, places } = this.el;
+    grid.replaceChildren(
+      ...refs.map((ref) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'grid-ref';
+        button.dataset['noteId'] = ref.id;
+        button.style.left = `${ref.x - grid.offsetLeft - SEAT.width / 2}px`;
+        button.style.top = `${ref.y - grid.offsetTop - SEAT.height / 2}px`;
+        button.style.width = `${SEAT.width}px`;
+        button.style.height = `${SEAT.height}px`;
+        const id = document.createElement('span');
+        id.className = 'grid-ref-id';
+        id.textContent = ref.id;
+        const why = document.createElement('span');
+        why.textContent = ref.why === 'open' ? 'open as a document' : 'gathered round the open note';
+        button.append(id, why);
+        button.setAttribute('aria-label', `${ref.id} is ${ref.why === 'open' ? 'open as a document' : 'gathered round the open note'}: show it`);
+        button.addEventListener('click', () => this.hooks.locate(ref.id));
+        return button;
+      }),
+    );
+    if (signature !== '') {
+      places.textContent = said;
+      places.hidden = said === '';
+    }
+  }
+
+  /** Move through the cards by rows. */
+  private scrollGrid(rows: number): void {
+    const before = this.firstRow;
+    const most = this.lastGrid === null ? 0 : Math.max(0, this.lastGrid.totalRows - this.lastGrid.rows);
+    this.firstRow = Math.max(0, Math.min(most, this.firstRow + rows));
+    if (this.firstRow !== before) this.hooks.seatsChanged();
+  }
+
+  /** The wheel turned over the cards: a row for every so much of a turn, and never the field's zoom. */
+  wheel(deltaY: number): void {
+    if (!this.showsCards()) return;
+    this.wheelLeft += deltaY;
+    const rows = Math.trunc(this.wheelLeft / GRID_WHEEL_ROW);
+    if (rows === 0) return;
+    this.wheelLeft -= rows * GRID_WHEEL_ROW;
+    this.scrollGrid(rows);
+  }
+
+  /** What the Cards presentation is showing, for a check: the first member drawn, how many, and of how many. */
+  gridState(): { first: number; drawn: number; count: number; columns: number; rows: number; firstRow: number } | null {
+    if (!this.showsCards() || this.lastGrid === null || this.model === null) return null;
+    const g = this.lastGrid;
+    return { first: g.first, drawn: g.drawn, count: this.model.members.length, columns: g.columns, rows: g.rows, firstRow: g.firstRow };
+  }
+
   /** Remember which note's row the list is scrolled to. */
   keepAnchor(): void {
     this.anchor = anchorAt(this.rows(), this.el.list.scrollTop);
@@ -394,13 +573,16 @@ export class CollectionView {
   toggleCollapsed(): void {
     if (!this.hooks.canArrange() || this.narrow !== null) return;
     const l = this.hooks.stored() ?? defaultCollectionLayout(this.field);
-    if (!l.collapsed) this.keepAnchor();
+    // The list's row is kept only when it is the list that is on screen: as
+    // cards the list is not laid out, and has no row to measure.
+    if (!l.collapsed && l.presentation === 'table') this.keepAnchor();
     this.commit({ ...l, collapsed: !l.collapsed });
-    if (l.collapsed) {
+    if (l.collapsed && l.presentation === 'table') {
       // The list was not laid out while it was collapsed; scroll once it is.
       requestAnimationFrame(() => this.restoreAnchor());
     }
     if (this.model !== null) this.paint(this.model);
+    this.hooks.seatsChanged();
   }
 
   private wire(): void {
@@ -432,6 +614,33 @@ export class CollectionView {
     fold.addEventListener('click', (event) => {
       event.stopPropagation();
       this.toggleCollapsed();
+    });
+    this.el.asTable.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.setPresentation('table');
+    });
+    this.el.asCards.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.setPresentation('cards');
+    });
+    const { grid } = this.el;
+    grid.addEventListener(
+      'wheel',
+      (event) => {
+        event.preventDefault();
+        this.wheel(event.deltaY);
+      },
+      { passive: false },
+    );
+    grid.addEventListener('keydown', (event) => {
+      if (event.target !== grid) return;
+      const page = Math.max(1, (this.lastGrid?.rows ?? 1) - 1);
+      const by: Record<string, number> = { PageDown: page, PageUp: -page, ArrowDown: 1, ArrowUp: -1, Home: -1e6, End: 1e6 };
+      const rows = by[event.key];
+      if (rows === undefined) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.scrollGrid(rows);
     });
     head.addEventListener('pointerdown', (event) => this.grab(event));
     head.addEventListener('dblclick', (event) => {

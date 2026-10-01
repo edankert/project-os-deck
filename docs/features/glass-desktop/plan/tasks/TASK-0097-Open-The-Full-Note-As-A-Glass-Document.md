@@ -2,11 +2,11 @@
 type: "[[task]]"
 id: TASK-0097
 title: "Open the full note as a Glass document"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"]
 parent: "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"
 effort: medium

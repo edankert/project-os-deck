@@ -166,6 +166,28 @@ module.exports = async function (d) {
   const full = await turn('every document opened above still open');
   await d.shot(win, '05-turned-with-documents-open');
 
+  // ---- The collection as cards: every member reachable, only what is in view drawn ----
+  const asCards = await t.rect('#collection-as-cards');
+  if (asCards) {
+    await d.pointer(win, d.click(asCards));
+    await d.delay(900);
+    await t.park();
+    const g = await js(`window.__deckCollection.grid()`);
+    const drawn = await js(`({ cards: document.querySelectorAll('.field-card.in-collection').length, refs: document.querySelectorAll('.grid-ref').length, elements: ${glass}.counts().elements, said: document.getElementById('collection-places').textContent })`);
+    check(g !== null && g.count === (await js('window.__deckCollection.members().length')) && drawn.cards + drawn.refs === g.drawn && g.drawn <= g.columns * g.rows, 'as cards, the collection counts every member and draws only the rows in view', { members: g && g.count, drawnAtOnce: g && g.drawn, columns: g && g.columns, rows: g && g.rows, pages: g && Math.ceil(g.count / Math.max(1, g.drawn)), ...drawn });
+    await turn('the collection as cards, documents open');
+    // The last page is reached, and it ends at the last member.
+    await js(`document.getElementById('collection-grid').focus()`);
+    const endAt = Date.now();
+    d.press(win, 'End');
+    await d.delay(500);
+    const end = await js(`window.__deckCollection.grid()`);
+    check(end.first + end.drawn === end.count, 'End goes to the last cards: the last member is drawn', { ...end, ms: Date.now() - endAt });
+    await d.shot(win, '06-as-cards-last-page');
+    await d.pointer(win, d.click(await t.rect('#collection-as-table')));
+    await d.delay(700);
+  }
+
   // ---- Close, and the way back ----
   const top = await js(`window.__deckDesk().slice(-1)[0]`);
   await js(`document.querySelector('.pane[data-note-id="${top}"] .pane-head').focus()`);

@@ -11,6 +11,7 @@ source: ["[[TASK-0095-Model-An-Exact-Collection-On-The-Desk]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
 level: integration
+kind: manual
 entrypoint: "desktop/demos/collection-refresh.cjs"
 command: ""
 last_verified: 2026-10-01

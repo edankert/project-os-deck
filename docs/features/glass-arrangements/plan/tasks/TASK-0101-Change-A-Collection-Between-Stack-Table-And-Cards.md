@@ -2,11 +2,11 @@
 type: "[[task]]"
 id: TASK-0101
 title: "Change a collection between stack, table and cards"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"]
 parent: "[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"
 effort: medium

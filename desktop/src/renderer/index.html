@@ -81,6 +81,13 @@
           <!-- The orbit's three treatments, all drawn, switchable; which one stays is Edwin's call (TASK-0005). -->
           <div class="treatments" id="treatments" hidden role="group" aria-label="Treatment"></div>
           <span class="field-overflow" id="field-overflow"></span>
+          <!-- Arrangements of the desk (FEAT-0022). Each is shown before it is applied, and can be put back. -->
+          <div class="arrange" id="arrange" role="group" aria-label="Arrange the desk" hidden>
+            <button type="button" class="action" id="arrange-read">Read</button>
+            <button type="button" class="action" id="arrange-compare">Compare</button>
+            <button type="button" class="action" id="arrange-related">Show related</button>
+            <button type="button" class="action" id="arrange-undo" hidden>Undo arrangement</button>
+          </div>
           <!-- The two things Escape does, by name (DES-0003): leave the focus, and close every note. -->
           <button type="button" class="action" id="leave-focus" hidden title="Put the gathered cards back where they stand in the field, and keep every note open (Escape)">put cards back</button>
           <button type="button" class="action" id="sweep-desk" hidden title="Close every note on this view's desk; a note kept on every view stays (Escape, with no focus)">close all</button>
@@ -105,15 +112,36 @@
               <span class="collection-count" id="collection-count"></span>
               <span class="collection-filter" id="collection-filter" hidden></span>
               <span class="collection-tools" id="collection-tools">
+                <!-- The same members three ways (FEAT-0022): the list, cards on the desk, or the header alone. -->
+                <button type="button" id="collection-as-table" aria-pressed="true" title="Show these notes as the list">table</button>
+                <button type="button" id="collection-as-cards" aria-pressed="false" title="Show these notes as cards">cards</button>
                 <button type="button" class="collection-fold" id="collection-fold" aria-expanded="true">▾</button>
               </span>
             </header>
             <div class="collection-note" id="collection-note" role="status" hidden></div>
-            <div class="collection-body" id="collection-body"></div>
+            <div class="collection-body" id="collection-body">
+              <!-- Where the members stand as cards. The cards are the field's own, moved here; what is drawn
+                   in this element is only a reference to a member that is open or gathered elsewhere. -->
+              <div class="collection-grid" id="collection-grid" tabindex="0" role="group" hidden></div>
+            </div>
             <p class="collection-places" id="collection-places" hidden></p>
             <span class="collection-resize" id="collection-resize" aria-hidden="true"></span>
           </section>
           <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
+          <!-- An arrangement before it is applied: an outline where each object will stand, and what will
+               move, in words. Nothing on the desk has moved while this is shown (FEAT-0022). -->
+          <div class="arrange-preview" id="arrange-preview" hidden>
+            <div class="arrange-outlines" id="arrange-outlines" aria-hidden="true"></div>
+            <div class="arrange-bar" id="arrange-bar" role="dialog" aria-labelledby="arrange-title" aria-describedby="arrange-text">
+              <strong id="arrange-title"></strong>
+              <span id="arrange-text"></span>
+              <ul id="arrange-notes"></ul>
+              <span class="arrange-buttons">
+                <button type="button" class="action" id="arrange-apply">Apply</button>
+                <button type="button" class="action" id="arrange-cancel">Cancel</button>
+              </span>
+            </div>
+          </div>
           <!-- The lines from the focused document to the cards gathered round it (FEAT-0017).
                The cards themselves are the field's own, moved; nothing here draws a note. -->
           <div class="field-lines" id="field-lines" hidden></div>

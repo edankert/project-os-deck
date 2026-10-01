@@ -106,6 +106,80 @@ export function fitCollection(layout: CollectionLayout, field: { width: number; 
   };
 }
 
+/** What a collection's Cards presentation needs to know to lay its members out. */
+export interface CardGridInput {
+  /** The space the cards have: the collection's body, under its header and its controls. */
+  area: { left: number; top: number; width: number; height: number };
+  /** One card's size as it is drawn, and the gap between two. */
+  card: { width: number; height: number };
+  gap: number;
+  /** How many members there are to lay out. */
+  count: number;
+  /** The row of cards at the top of what is in view: 0 is the first. */
+  firstRow: number;
+}
+
+export interface CardGrid {
+  columns: number;
+  /** Rows that fit in the area, whole. */
+  rows: number;
+  /** Rows the whole membership takes. */
+  totalRows: number;
+  /** The row at the top, after it is kept in range. */
+  firstRow: number;
+  /** The index of the first member drawn, and how many are. */
+  first: number;
+  drawn: number;
+  /** The middle of each drawn card, in the same coordinates as `area`, by its place among the drawn. */
+  centres: Array<{ x: number; y: number }>;
+}
+
+/**
+ * The Cards presentation's layout (FEAT-0022, TASK-0101): the members in
+ * rows, as many as the area holds whole, starting at a row.
+ *
+ * Only the cards in view are placed, which is what bounds the drawing; every
+ * member has an index, so all of them are reached by moving the first row.
+ * Nothing here decides WHICH notes are members: the caller hands the count of
+ * the same ids the table lists.
+ */
+export function cardGrid(input: CardGridInput): CardGrid {
+  const { area, card, gap, count } = input;
+  const columns = Math.max(1, Math.floor((area.width + gap) / (card.width + gap)));
+  const rows = Math.max(1, Math.floor((area.height + gap) / (card.height + gap)));
+  const totalRows = Math.ceil(count / columns);
+  const firstRow = Math.max(0, Math.min(Math.max(0, totalRows - rows), Math.round(input.firstRow)));
+  const first = firstRow * columns;
+  const drawn = Math.max(0, Math.min(count - first, rows * columns));
+  // The cards are centred in the width they do not fill, so a resize does not leave a ragged right edge.
+  const used = columns * card.width + (columns - 1) * gap;
+  const inset = Math.max(0, (area.width - used) / 2);
+  const centres: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i < drawn; i += 1) {
+    const column = i % columns;
+    const row = Math.floor(i / columns);
+    centres.push({
+      x: area.left + inset + column * (card.width + gap) + card.width / 2,
+      y: area.top + row * (card.height + gap) + card.height / 2,
+    });
+  }
+  return { columns, rows, totalRows, firstRow, first, drawn, centres };
+}
+
+/** The row a member is on, so the grid can be opened at the note a person was on. */
+export function rowOfMember(index: number, columns: number): number {
+  return index < 0 ? 0 : Math.floor(index / Math.max(1, columns));
+}
+
+/** What the Cards presentation says under its cards: which are drawn, of how many, and where the rest are. */
+export function gridText(grid: CardGrid, count: number, elsewhere: number): string {
+  if (count === 0) return 'no notes to draw';
+  const parts = [grid.drawn === count ? `all ${count} drawn as cards` : `cards ${grid.first + 1} to ${grid.first + grid.drawn} of ${count}`];
+  if (grid.drawn < count) parts.push('the wheel or Page Down shows more; the table lists all');
+  if (elsewhere > 0) parts.push(`${elsewhere} of these ${elsewhere === 1 ? 'is' : 'are'} open or gathered elsewhere on the desk and ${elsewhere === 1 ? 'is' : 'are'} not drawn twice`);
+  return parts.join(' · ');
+}
+
 /**
  * Every note a set of groups holds, each once, in the order the list shows
  * them: a group's cards and what each card holds under it. This IS the

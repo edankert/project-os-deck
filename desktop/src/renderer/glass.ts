@@ -78,7 +78,9 @@ import {
   readingSizeFor,
   snapBelowHeaders,
 } from '../shared/panes.js';
-import { relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
+import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
+import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated } from '../shared/arrange.js';
+import type { CollectionLayout } from '../shared/collection.js';
 import {
   type Edge,
   type PointerSample,
@@ -133,6 +135,14 @@ export const MOVE_MS = 1000;
 const FOCUS_DIM = 0.28;
 /** A seated card stands above every field card (which reach 2760) and below every document (3000 and up). */
 const SEATED_Z = 2950;
+/** How long documents and the collection take to travel when an arrangement is applied or put back. */
+const ARRANGE_MS = 300;
+
+/** "A", "A and B", "A, B and C". */
+function listOf(names: readonly string[]): string {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
 /** How far a seated card is from being in the field before it stops taking the pointer and the Tab key. */
 const SEAT_IN_SIGHT_PX = 8;
 /** The room left round a document that fills the field. */
@@ -180,6 +190,27 @@ export interface DeskFurniture {
   focus(): void;
   /** Whether it is above the documents. */
   onTop(): boolean;
+  /**
+   * The notes it shows as cards, when it shows any (the collection's Cards
+   * presentation, FEAT-0022): where each stands in the field now. The cards
+   * are the field's OWN cards, moved there, so a note is never drawn a second
+   * time. `taken` are notes gathered round the focused document and `held`
+   * are open documents: neither is given a card here, and what stands in
+   * their place is the furniture's to draw. Null when it shows none.
+   */
+  seats?(taken: ReadonlySet<string>, held: ReadonlySet<string>): FurnitureSeats | null;
+  /** The wheel turned over one of the cards it placed. */
+  wheel?(deltaY: number): void;
+  /** Where it stands and how it is presented, as the store will be told: what an arrangement plans from. */
+  layout?(): CollectionLayout | null;
+}
+
+export interface FurnitureSeats {
+  at: ReadonlyMap<string, Point>;
+  /** The height the cards are drawn at: just above the furniture's own surface. */
+  z: number;
+  /** A member's card, for one the field's deal does not hold. */
+  card(noteId: string): CardModel | null;
 }
 
 /** One note joined to a document: which way the link runs, and what to call it. */
@@ -268,6 +299,19 @@ interface Elements {
   deskCount: HTMLElement;
   leaveFocus: HTMLButtonElement;
   sweepDesk: HTMLButtonElement;
+  arrange: HTMLElement;
+  arrangeRead: HTMLButtonElement;
+  arrangeCompare: HTMLButtonElement;
+  arrangeRelated: HTMLButtonElement;
+  arrangeUndo: HTMLButtonElement;
+  arrangePreview: HTMLElement;
+  arrangeOutlines: HTMLElement;
+  arrangeBar: HTMLElement;
+  arrangeTitle: HTMLElement;
+  arrangeText: HTMLElement;
+  arrangeNotes: HTMLElement;
+  arrangeApply: HTMLButtonElement;
+  arrangeCancel: HTMLButtonElement;
   compass: HTMLElement;
   lines: HTMLElement;
   findOpen: HTMLButtonElement;
@@ -310,6 +354,19 @@ export function glassElements(): Elements {
     deskCount: must('glass-desk-count'),
     leaveFocus: must('leave-focus') as HTMLButtonElement,
     sweepDesk: must('sweep-desk') as HTMLButtonElement,
+    arrange: must('arrange'),
+    arrangeRead: must('arrange-read') as HTMLButtonElement,
+    arrangeCompare: must('arrange-compare') as HTMLButtonElement,
+    arrangeRelated: must('arrange-related') as HTMLButtonElement,
+    arrangeUndo: must('arrange-undo') as HTMLButtonElement,
+    arrangePreview: must('arrange-preview'),
+    arrangeOutlines: must('arrange-outlines'),
+    arrangeBar: must('arrange-bar'),
+    arrangeTitle: must('arrange-title'),
+    arrangeText: must('arrange-text'),
+    arrangeNotes: must('arrange-notes'),
+    arrangeApply: must('arrange-apply') as HTMLButtonElement,
+    arrangeCancel: must('arrange-cancel') as HTMLButtonElement,
     compass: must('compass'),
     lines: must('field-lines'),
     findOpen: must('find-open') as HTMLButtonElement,
@@ -353,6 +410,17 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** An arrangement shown and not yet applied: session state, in this window only. */
+  private arranging: { kind: ArrangeKind; subjects: string[]; plan: ArrangePlan; basis: string; refreshed: boolean; from: HTMLElement | null } | null = null;
+  /** What the last applied arrangement moved, so it can be put back; and the view it was applied on. */
+  private undoRecord: ArrangeUndo | null = null;
+  private undoView: string | null = null;
+  /** The undo's question, while it is being asked: what changed since, and what would still go back. */
+  private undoAsk: UndoCheck | null = null;
+  private arrangeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The relationship being emphasised round a document: one of the source's own words. */
+  private emphasis: { noteId: string; kind: string } | null = null;
+  private emphasisMemo: { kind: string; noteId: string; edges: unknown; context: unknown; ids: Set<string> | null } | null = null;
   /** What the link lines were last built from, so a turn moves them and does not build them again (drawLinks). */
   private linksFrom: { geometry: string; contexts: unknown[] } | null = null;
   /** What each card element was last painted from, so an unchanged card is not painted again (paintCard). */
@@ -453,6 +521,10 @@ export class GlassField {
   private seatEntries = new Map<string, FieldEntry>();
   /** The seated notes as last drawn: id to the middle of its card, in field pixels. */
   private seatedAt = new Map<string, Point>();
+  /** The notes the collection shows as cards, by where each stands in the field (FEAT-0022). */
+  private gridAt = new Map<string, Point>();
+  /** A card for a collection member the deal does not hold, so it can be drawn in the collection. */
+  private readonly gridEntries = new Map<string, FieldEntry>();
   /**
    * The document being dragged and how far, so its neighbourhood is drawn
    * with it before the store hears. `x` and `y` are the place the store held
@@ -1076,6 +1148,28 @@ export class GlassField {
     const seats = this.seatPositions();
     const shift = this.deskShift();
     this.seatedAt = seats;
+    // What stands on the desk is placed first: the cards the collection shows
+    // are placed from where it stands on THIS frame.
+    const narrow = this.narrowMode();
+    for (const item of this.furnitureItems) item.place(this.viewport, shift, narrow === null ? null : narrow === 'collection' ? 'front' : 'back');
+    const grid = new Map<string, Point>();
+    let gridZ = SEATED_Z;
+    const taken = new Set(seats.keys());
+    for (const item of this.furnitureItems) {
+      const own = item.seats?.(taken, heldIds) ?? null;
+      if (own === null) continue;
+      gridZ = own.z;
+      for (const [noteId, at] of own.at) {
+        grid.set(noteId, at);
+        if (this.entries.has(noteId) || this.gridEntries.has(noteId)) continue;
+        const model = own.card(noteId);
+        if (model === null) continue;
+        this.gridEntries.set(noteId, { card: model, groupKey: '', groupLabel: '', inputs: { owed: false, suppressed: false, inSubject: true, held: false, joinedToDesk: false, pulled: false, pushed: false } });
+      }
+    }
+    this.gridAt = grid;
+    // In a narrow field the collection is drawn over the field, not on the desk, so the turn does not dim it.
+    const gridShift = narrow === null ? shift : { opacity: 1, visible: true };
     const live = new Set<string>();
     let tabStops = 0;
     this.promotedIds = new Set();
@@ -1097,13 +1191,14 @@ export class GlassField {
       // still holds that slot for it, which is what "reserved" means here.
       if (heldIds.has(noteId)) continue;
       const seat = seats.get(noteId);
+      const inCollection = seat === undefined ? grid.get(noteId) : undefined;
       // A quiet tile drawn large enough to read stops being a rectangle on
       // the canvas and becomes an ordinary card (TASK-0077). The threshold is
       // the one that decides every other card's detail, and it is read from
       // the same projection this loop already needs. The orbit's `deep` slots
       // are its own and are dots, so nothing is promoted there. A SEATED note
       // is a card whatever band it came from: it is being read, not shelved.
-      if (seat === undefined && slot.band === 'deep') {
+      if (seat === undefined && inCollection === undefined && slot.band === 'deep') {
         if (this.arrangement === 'orbit') continue;
         const p = this.at(slot, yaw);
         if (!p.visible || !promoted(p.scale * this.model.current.shapes.deep.box.width, this.promotedBefore.has(noteId))) continue;
@@ -1115,6 +1210,10 @@ export class GlassField {
       this.paintCard(element, entry, slot.band, seat !== undefined);
       if (seat !== undefined) {
         if (this.placeSeated(element, seat, shift, arriving && animate && !reduced)) tabStops += 1;
+        continue;
+      }
+      if (inCollection !== undefined) {
+        if (this.placeSeated(element, inCollection, gridShift, arriving && animate && !reduced, gridZ, 'in-collection')) tabStops += 1;
         continue;
       }
       const p = this.at(slot, yaw);
@@ -1131,6 +1230,16 @@ export class GlassField {
       this.paintCard(element, entry, 'front', true);
       if (this.placeSeated(element, seat, shift, arriving && !reduced)) tabStops += 1;
     }
+    // And a collection member the deal gave no slot: most of a large view.
+    for (const [noteId, at] of grid) {
+      if (live.has(noteId) || heldIds.has(noteId)) continue;
+      const entry = this.entries.get(noteId) ?? this.gridEntries.get(noteId);
+      if (entry === undefined) continue;
+      const { element, arriving } = draw(noteId, entry);
+      this.paintCard(element, entry, 'front', false);
+      if (this.placeSeated(element, at, gridShift, arriving && !reduced, gridZ, 'in-collection')) tabStops += 1;
+    }
+    for (const noteId of [...this.gridEntries.keys()]) if (!grid.has(noteId)) this.gridEntries.delete(noteId);
     for (const [noteId, element] of this.cardEls) {
       if (live.has(noteId)) continue;
       if (element.classList.contains('leaving')) continue;
@@ -1149,6 +1258,7 @@ export class GlassField {
     }
     this.el.cards.dataset['visible'] = String(tabStops);
     this.el.cards.dataset['seated'] = String(seats.size);
+    this.el.cards.dataset['inCollection'] = String(grid.size);
     // Remembered for the next frame's hysteresis: a note already drawn as a
     // card is demoted at a slightly smaller width than it was promoted at, so
     // a zoom drifting across the threshold does not flicker.
@@ -1161,8 +1271,6 @@ export class GlassField {
     // The desk moves with the turn, so its documents are placed every frame;
     // what they hold is painted only when the desk itself changes (drawPanes).
     this.placePanes();
-    const narrow = this.narrowMode();
-    for (const item of this.furnitureItems) item.place(this.viewport, shift, narrow === null ? null : narrow === 'collection' ? 'front' : 'back');
     this.drawNarrowBar(narrow);
     this.drawLinks();
     this.drawDeskFurniture();
@@ -1181,7 +1289,7 @@ export class GlassField {
     const lift = this.promotedIds.has(element.dataset['noteId'] ?? '');
     const box = lift ? promotedBox(p.scale * band.width, CARD_BOX.width / CARD_BOX.height) : band;
     const draw = lift ? { ...p, scale: 1 } : p;
-    element.classList.remove('seated');
+    element.classList.remove('seated', 'in-collection');
     element.style.width = `${box.width}px`;
     element.style.height = `${box.height}px`;
     element.dataset['detail'] = detailFor(lift ? box.width : p.scale * box.width);
@@ -1212,13 +1320,23 @@ export class GlassField {
    * while the document is dragged or the field is turned (ISS-0072). Returns
    * whether it is in the field, which is whether it takes the pointer and Tab.
    */
-  private placeSeated(element: HTMLElement, at: Point, shift: { opacity: number; visible: boolean }, arriving: boolean): boolean {
-    element.classList.add('seated');
+  private placeSeated(
+    element: HTMLElement,
+    at: Point,
+    shift: { opacity: number; visible: boolean },
+    arriving: boolean,
+    z: number = SEATED_Z,
+    where: 'seated' | 'in-collection' = 'seated',
+  ): boolean {
+    // Gathered round a document, or shown by the collection: the same card
+    // at the same size, told apart so each can be counted and styled.
+    element.classList.toggle('seated', where === 'seated');
+    element.classList.toggle('in-collection', where === 'in-collection');
     element.style.width = `${CARD_BOX.width}px`;
     element.style.height = `${CARD_BOX.height}px`;
     element.dataset['detail'] = detailFor(SEAT.width);
     element.style.transform = `translate3d(${(at.x - CARD_BOX.width / 2).toFixed(1)}px, ${(at.y - CARD_BOX.height / 2).toFixed(1)}px, 0) scale(${BROWSE_SCALE.toFixed(3)})`;
-    element.style.zIndex = String(SEATED_Z);
+    element.style.zIndex = String(z);
     const inSight =
       shift.visible &&
       at.x + SEAT.width / 2 > SEAT_IN_SIGHT_PX &&
@@ -1276,10 +1394,13 @@ export class GlassField {
     // the card and the faces themselves, so a card whose line, card and faces
     // are the ones it was last painted from is left alone. With 217 notes
     // seated round a document this was a quarter of a frame's work.
-    const inputs = `${band}|${entry.inputs.pulled}|${entry.inputs.owed}|${this.joined.has(card.noteId)}|${this.reach?.neighbours.has(card.noteId) === true}|${this.highlight === card.noteId || this.highlights.has(card.noteId)}|${shared}|${this.hooks.state().noteId === card.noteId}|${focus}|${card.status}|${card.title}|${card.owedVerb}`;
+    const emphasised = seated ? this.emphasisIds() : null;
+    const quiet = emphasised !== null && !emphasised.has(card.noteId);
+    const inputs = `${quiet}|${band}|${entry.inputs.pulled}|${entry.inputs.owed}|${this.joined.has(card.noteId)}|${this.reach?.neighbours.has(card.noteId) === true}|${this.highlight === card.noteId || this.highlights.has(card.noteId)}|${shared}|${this.hooks.state().noteId === card.noteId}|${focus}|${card.status}|${card.title}|${card.owedVerb}`;
     const painted = this.paintedFrom.get(element);
     if (painted !== undefined && painted.card === card && painted.faces === this.input.faces && painted.inputs === inputs) return;
     this.paintedFrom.set(element, { card, faces: this.input.faces, inputs });
+    element.classList.toggle('quiet', quiet);
     element.dataset['band'] = band;
     element.dataset['status'] = bandFor(card.status);
     element.dataset['face'] = faceFor(card, this.input.faces).kind;
@@ -1370,7 +1491,7 @@ export class GlassField {
       // Never both: a promoted note is an element this frame, so the canvas
       // leaves it alone. A held note is its document and a seated note is its
       // card beside the document, so neither is also a tile (ISS-0070).
-      if (this.promotedIds.has(noteId) || heldIds.has(noteId) || this.seatedAt.has(noteId)) continue;
+      if (this.promotedIds.has(noteId) || heldIds.has(noteId) || this.seatedAt.has(noteId) || this.gridAt.has(noteId)) continue;
       const p = this.at(slot, yaw);
       if (!p.visible) continue;
       const entry = this.entries.get(noteId);
@@ -1856,6 +1977,7 @@ export class GlassField {
     // What Escape does, as two named controls (DES-0003): each is offered
     // only while it would do something.
     this.el.leaveFocus.hidden = this.focusId() === null;
+    this.drawArrangeControls();
     this.el.sweepDesk.hidden = heldCount === 0 || (!this.hooks.canArrange() && this.localHeld.length === 0);
     const sharedCount = this.shared.size;
     this.el.deskCount.textContent =
@@ -2099,12 +2221,27 @@ export class GlassField {
         this.dragCancel();
         return;
       }
+      // A preview, or the question an undo asks, is a local thing: Escape
+      // withdraws it, and does not also leave the focus or close a note.
+      if (this.arranging !== null || this.undoAsk !== null) {
+        this.cancelArrange();
+        return;
+      }
       if (this.focusId() !== null) {
         this.leaveFocus();
         return;
       }
       void this.sweep();
     });
+    this.el.arrangeRead.addEventListener('click', () => this.startArrange('read', this.el.arrangeRead));
+    this.el.arrangeCompare.addEventListener('click', () => this.startArrange('compare', this.el.arrangeCompare));
+    this.el.arrangeRelated.addEventListener('click', () => this.startArrange('related', this.el.arrangeRelated));
+    this.el.arrangeUndo.addEventListener('click', () => void this.undoArrange(false));
+    this.el.arrangeApply.addEventListener('click', () => {
+      if (this.undoAsk !== null) void this.undoArrange(true);
+      else void this.applyArrange();
+    });
+    this.el.arrangeCancel.addEventListener('click', () => this.cancelArrange());
     // "Find": the desk comes back in front of the person, wherever it was
     // turned from or moved aside to (TASK-0104, ISS-0072's "way back").
     this.el.findOpen.addEventListener('click', () => this.findOpen(this.el.findOpen.dataset['noteId'] ?? null));
@@ -2536,9 +2673,332 @@ export class GlassField {
     return (this.narrowFront ?? 'document') === 'document' && this.held.length > 0 && !this.panesHidden ? 'document' : 'collection';
   }
 
+  /**
+   * Pick out one relationship round a document, or stop (null). The word is
+   * one the source wrote: a frontmatter key that joins the document to at
+   * least one neighbour. Nothing is removed and no link changes: the cards,
+   * lines and rows that are not part of it are dimmed, and all stay.
+   */
+  setEmphasis(noteId: string, kind: string | null): void {
+    this.emphasis = kind === null ? null : { noteId, kind };
+    this.emphasisMemo = null;
+    if (!this.active) return;
+    this.drawPanes();
+    this.render(false);
+    if (kind !== null) {
+      const ids = this.emphasisIds();
+      this.tell(`"${kind}": ${ids?.size ?? 0} of the notes joined to ${noteId} are picked out; the rest are dimmed and still listed`);
+    } else {
+      this.tell(`Every note joined to ${noteId} is shown the same again`);
+    }
+  }
+
+  /** The neighbours of the focused document that the emphasis picks out, or null when nothing is picked out. */
+  private emphasisIds(): Set<string> | null {
+    const e = this.emphasis;
+    const focus = this.focusId();
+    if (e === null || this.edges === null || focus !== e.noteId) return null;
+    const context = this.hooks.peekContext(focus);
+    const memo = this.emphasisMemo;
+    if (memo !== null && memo.kind === e.kind && memo.noteId === e.noteId && memo.edges === this.edges && memo.context === context) return memo.ids;
+    const ids = relationKinds(this.edges, focus, this.neighboursOf(focus).map((n) => n.id)).get(e.kind) ?? null;
+    this.emphasisMemo = { kind: e.kind, noteId: e.noteId, edges: this.edges, context, ids };
+    return ids;
+  }
+
+  // ---- arrangements: Read, Compare, Show related (FEAT-0022, TASK-0102) ----
+
+  /** What an arrangement is planned from: the field, the collection and every document on this desk. */
+  private arrangeInput(): ArrangeInput {
+    const state = this.hooks.state();
+    const preference = readingSizeOf(state, state.workspaceId, deskViewOf(state));
+    return {
+      field: { width: this.viewport.width, height: this.viewport.height },
+      collection: this.furnitureItems[0]?.layout?.() ?? null,
+      docs: this.held.map((c) => {
+        const size = readingSizeFor(c, preference);
+        return { noteId: c.noteId, x: c.x, y: c.y, w: size.w, h: size.h };
+      }),
+    };
+  }
+
+  /** The plan for a command on the documents it is about, or the sentence that says why there is none. */
+  private planFor(kind: ArrangeKind, subjects: readonly string[], input: ArrangeInput): ArrangePlan | { refused: string } {
+    const [first, second] = subjects;
+    if (kind === 'compare') return planCompare(input, first ?? '', second ?? '');
+    if (kind === 'read') return planRead(input, first ?? '');
+    return planRelated(input, first ?? '', first === undefined ? 0 : this.neighboursOf(first).filter((n) => !n.held).length);
+  }
+
+  /** Which documents a command is about: the one on top, and for Compare the one under it. */
+  private arrangeSubjects(kind: ArrangeKind): string[] {
+    const ids = this.held.map((c) => c.noteId);
+    if (kind === 'compare') return ids.slice(-2);
+    return ids.slice(-1);
+  }
+
+  /**
+   * Read, Compare or Show related was asked for: work it out and SHOW it.
+   * Nothing moves until Apply. A command that cannot be worked out says why.
+   */
+  startArrange(kind: ArrangeKind, from: HTMLElement | null = null): void {
+    if (!this.active || !this.hooks.canArrange()) return;
+    this.undoAsk = null;
+    const input = this.arrangeInput();
+    const subjects = this.arrangeSubjects(kind);
+    const plan = this.planFor(kind, subjects, input);
+    if ('refused' in plan) {
+      this.arranging = null;
+      this.drawArrange();
+      this.tell(plan.refused, true);
+      return;
+    }
+    const focusNow = this.focusId();
+    const nothing = plan.objects.length === 0 && plan.order.length === 0 && plan.focus === focusNow && (plan.list === null || plan.list === this.relatedOpen);
+    if (nothing) {
+      this.arranging = null;
+      this.drawArrange();
+      this.tell(`${plan.label}: everything is already where this would put it`);
+      return;
+    }
+    this.arranging = { kind, subjects, plan, basis: planBasis(input, String(this.input.pending)), refreshed: false, from };
+    this.drawArrange();
+    this.el.arrangeApply.focus({ preventScroll: true });
+  }
+
+  /**
+   * The desk, the window or the result changed while a preview was shown: the
+   * preview is worked out again from what is there now, and says that it was.
+   * A preview about a note that has been closed is withdrawn. A stale preview
+   * is never the one that gets applied (DES-0003).
+   */
+  private refreshArrange(): void {
+    const shown = this.arranging;
+    if (shown === null) return;
+    const input = this.arrangeInput();
+    const basis = planBasis(input, String(this.input.pending));
+    if (basis === shown.basis) return;
+    const gone = shown.subjects.filter((id) => !this.held.some((c) => c.noteId === id));
+    const plan = gone.length > 0 ? null : this.planFor(shown.kind, shown.subjects, input);
+    if (plan === null || 'refused' in plan) {
+      this.arranging = null;
+      this.drawArrange();
+      this.tell(`${shown.plan.label} was withdrawn: ${gone.length > 0 ? `${gone.join(' and ')} ${gone.length === 1 ? 'is' : 'are'} not open any more` : 'it can no longer be worked out'}. Nothing was moved.`, true);
+      return;
+    }
+    this.arranging = { ...shown, plan, basis, refreshed: true };
+    this.drawArrange();
+  }
+
+  /** Draw the preview: an outline where each object will stand, and what moves, in words. */
+  private drawArrange(): void {
+    const { arrangePreview, arrangeOutlines, arrangeTitle, arrangeText, arrangeNotes, arrangeApply, arrangeCancel } = this.el;
+    const ask = this.undoAsk;
+    const shown = this.arranging;
+    arrangePreview.hidden = shown === null && ask === null;
+    this.el.field.classList.toggle('previewing', shown !== null);
+    if (shown === null && ask === null) {
+      arrangeOutlines.replaceChildren();
+      return;
+    }
+    const line = (text: string): HTMLElement => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      return li;
+    };
+    if (ask !== null && this.undoRecord !== null) {
+      // The undo's question: what a person changed since, and what would still go back.
+      arrangeOutlines.replaceChildren();
+      const back = ask.cards.map((c) => c.noteId);
+      if (ask.collection !== null) back.push('the collection');
+      arrangeTitle.textContent = `Undo: ${this.undoRecord.label}`;
+      arrangeText.textContent =
+        back.length === 0
+          ? 'Nothing it moved is still where it put it, so there is nothing to put back.'
+          : `Since it was applied, something it moved has changed. Undo would put back ${listOf(back)} and leave the rest as it is.`;
+      arrangeNotes.replaceChildren(...ask.changed.map((c) => line(c)));
+      arrangeApply.textContent = 'Undo the rest';
+      arrangeApply.hidden = back.length === 0;
+      arrangeCancel.textContent = 'Keep as it is';
+      return;
+    }
+    if (shown === null) return;
+    const { plan } = shown;
+    const shift = this.deskShift();
+    arrangeOutlines.replaceChildren(
+      ...plan.objects.map((object) => {
+        const box = document.createElement('div');
+        box.className = 'arrange-outline';
+        box.dataset['object'] = object.id;
+        box.style.left = `${object.to.left + shift.x}px`;
+        box.style.top = `${object.to.top + shift.y}px`;
+        box.style.width = `${object.to.width}px`;
+        box.style.height = `${object.to.height}px`;
+        const label = document.createElement('span');
+        label.textContent = object.kind === 'collection' ? 'the collection' : object.id;
+        box.appendChild(label);
+        return box;
+      }),
+    );
+    const names = plan.objects.map((o) => (o.kind === 'collection' ? 'the collection' : o.id));
+    arrangeTitle.textContent = plan.label;
+    arrangeText.textContent =
+      (shown.refreshed ? 'The desk changed while this was shown, so it was worked out again. ' : '') +
+      (names.length === 0 ? 'Moves nothing.' : `Moves ${names.length} ${names.length === 1 ? 'object' : 'objects'}: ${listOf(names)}. Sizes and text are not changed.`);
+    arrangeNotes.replaceChildren(...plan.notes.map((n) => line(n)));
+    arrangeApply.textContent = 'Apply';
+    arrangeApply.hidden = false;
+    arrangeCancel.textContent = 'Cancel';
+  }
+
+  /** Apply the arrangement on screen: one change to the desk, kept so it can be put back. */
+  private async applyArrange(): Promise<void> {
+    const shown = this.arranging;
+    if (shown === null || !this.hooks.canArrange()) return;
+    // From the desk as it is this instant, never from the preview's copy.
+    this.refreshArrange();
+    const now = this.arranging;
+    if (now === null) return;
+    const { plan } = now;
+    const input = this.arrangeInput();
+    const state = this.hooks.state();
+    const preference = readingSizeOf(state, state.workspaceId, deskViewOf(state));
+    const record: ArrangeUndo = {
+      label: plan.label,
+      cards: plan.cards.map((to) => {
+        const card = this.held.find((c) => c.noteId === to.noteId) as DeskCard;
+        const size = readingSizeFor(card, preference);
+        return { noteId: to.noteId, before: { x: card.x, y: card.y }, after: { x: to.x, y: to.y }, size: { w: size.w, h: size.h } };
+      }),
+      orderBefore: this.held.map((c) => c.noteId),
+      collection: plan.collection !== null && input.collection !== null ? { before: input.collection, after: plan.collection } : null,
+      focusBefore: this.focusId(),
+      listBefore: this.relatedOpen,
+      emphasisBefore: this.emphasis,
+    };
+    this.arranging = null;
+    this.drawArrange();
+    this.moveTogether();
+    // Reading and comparing are not gathering: the cards go back to the field.
+    if (plan.focus === null) this.dropFocus();
+    else this.openFocus(plan.focus, null);
+    if (plan.list !== null) {
+      this.relatedOpen = plan.list;
+      void this.readEdges().then(() => this.active && this.drawPanes());
+    }
+    this.narrowFront = 'document';
+    await this.hooks.dispatch({ type: 'arrange', cards: plan.cards, order: plan.order, ...(plan.collection === null ? {} : { collection: plan.collection }) });
+    this.undoRecord = record;
+    this.undoView = deskViewOf(this.hooks.state());
+    if (this.active) this.redeal(false);
+    this.tell(`${plan.label}: applied. Undo arrangement puts it back.`);
+    const top = plan.subjects[plan.subjects.length - 1];
+    if (top !== undefined) this.paneEls.get(top)?.querySelector<HTMLElement>('.pane-head')?.focus({ preventScroll: true });
+  }
+
+  /** Withdraw the preview, or the undo's question. Nothing has moved, and nothing does. */
+  cancelArrange(): void {
+    const shown = this.arranging;
+    const asked = this.undoAsk !== null;
+    if (shown === null && !asked) return;
+    this.arranging = null;
+    this.undoAsk = null;
+    this.drawArrange();
+    this.tell(asked ? 'The arrangement was kept as it is' : `${shown?.plan.label ?? 'The arrangement'}: cancelled, nothing was moved`);
+    (asked ? this.el.arrangeUndo : (shown?.from ?? null))?.focus({ preventScroll: true });
+  }
+
+  /**
+   * Put back what the last arrangement moved: places, stacking, the
+   * collection's form, the focus, the open list and the emphasis. No note's
+   * text and no project action is touched: this undoes a layout.
+   *
+   * What a person has moved, resized or closed since is not the object the
+   * record describes. Those are named first, and put back only on a second,
+   * explicit press, which puts back the rest and leaves them alone.
+   */
+  async undoArrange(confirmed: boolean): Promise<void> {
+    const record = this.undoRecord;
+    if (record === null || !this.hooks.canArrange() || this.undoView !== deskViewOf(this.hooks.state())) return;
+    this.arranging = null;
+    const check: UndoCheck = checkUndo(record, this.arrangeInput());
+    if (check.changed.length > 0 && !confirmed) {
+      this.undoAsk = check;
+      this.drawArrange();
+      (check.cards.length > 0 || check.collection !== null ? this.el.arrangeApply : this.el.arrangeCancel).focus({ preventScroll: true });
+      return;
+    }
+    this.undoAsk = null;
+    this.undoRecord = null;
+    this.drawArrange();
+    this.moveTogether();
+    const open = new Set(this.held.map((c) => c.noteId));
+    this.relatedOpen = record.listBefore !== null && open.has(record.listBefore) ? record.listBefore : null;
+    this.emphasis = record.emphasisBefore !== null && open.has(record.emphasisBefore.noteId) ? record.emphasisBefore : null;
+    // The focus goes back only when its document will be on top again.
+    const topAfter = check.order.length > 0 ? check.order[check.order.length - 1] : this.held[this.held.length - 1]?.noteId;
+    if (record.focusBefore !== null && record.focusBefore === topAfter) this.openFocus(record.focusBefore, null);
+    else this.dropFocus();
+    await this.hooks.dispatch({ type: 'arrange', cards: check.cards, order: check.order, ...(check.collection === null ? {} : { collection: check.collection }) });
+    if (this.active) this.redeal(false);
+    this.tell(check.changed.length === 0 ? `Undone: ${record.label}` : `Undone in part: ${record.label}. Left as they are: ${check.changed.join('; ')}.`);
+    this.el.arrangeRead.focus({ preventScroll: true });
+  }
+
+  /** Let documents and the collection travel to their new places together; a cut under reduced motion. */
+  private moveTogether(): void {
+    if (this.hooks.reducedMotion()) return;
+    const field = this.el.field;
+    field.classList.add('arranging');
+    if (this.arrangeTimer !== null) clearTimeout(this.arrangeTimer);
+    this.arrangeTimer = setTimeout(() => {
+      this.arrangeTimer = null;
+      field.classList.remove('arranging');
+    }, ARRANGE_MS + 60);
+  }
+
+  /** The three commands and the undo: offered where the desk can be arranged, and each says why it cannot run. */
+  private drawArrangeControls(): void {
+    const { arrange, arrangeRead, arrangeCompare, arrangeRelated, arrangeUndo } = this.el;
+    arrange.hidden = !this.hooks.canArrange() || this.panesHidden;
+    if (arrange.hidden) return;
+    const ids = this.held.map((c) => c.noteId);
+    const top = ids[ids.length - 1];
+    const under = ids[ids.length - 2];
+    const set = (button: HTMLButtonElement, can: boolean, title: string): void => {
+      // Not `disabled`: a disabled button cannot be reached to learn why. It says why when pressed.
+      button.setAttribute('aria-disabled', String(!can));
+      button.title = title;
+    };
+    set(arrangeRead, top !== undefined, top === undefined ? 'Read needs an open note' : `Read ${top} with the collection beside it. Shown first; nothing moves until Apply.`);
+    set(arrangeCompare, under !== undefined, under === undefined ? 'Compare needs two open notes' : `Stand ${under} and ${top} side by side, each at its own size. Shown first; nothing moves until Apply.`);
+    set(arrangeRelated, top !== undefined, top === undefined ? 'Show related needs an open note' : `Gather what ${top} is joined to round it and open its complete list. Shown first; nothing moves until Apply.`);
+    const record = this.undoRecord !== null && this.undoView === deskViewOf(this.hooks.state()) ? this.undoRecord : null;
+    arrangeUndo.hidden = record === null;
+    if (record !== null) {
+      arrangeUndo.title = `Put back what "${record.label}" moved. It changes the layout only: no note's text and no project action.`;
+      arrangeUndo.setAttribute('aria-label', `Undo arrangement: ${record.label}`);
+    }
+  }
+
+  /** What the arrangement controls are showing, for a check. */
+  arrangeState(): { preview: { kind: ArrangeKind; label: string; objects: string[]; refreshed: boolean } | null; undo: string | null; asking: string[] | null; emphasis: { noteId: string; kind: string } | null } {
+    return {
+      preview: this.arranging === null ? null : { kind: this.arranging.kind, label: this.arranging.plan.label, objects: this.arranging.plan.objects.map((o) => o.id), refreshed: this.arranging.refreshed },
+      undo: this.undoRecord?.label ?? null,
+      asking: this.undoAsk?.changed ?? null,
+      emphasis: this.emphasis,
+    };
+  }
+
   /** Something that stands on the desk came above the documents or went under them. */
   furnitureChanged(): void {
     if (this.active) this.drawDeskFurniture();
+  }
+
+  /** What stands on the desk shows different cards now: the field is drawn again, and nothing is dealt. */
+  furnitureSeatsChanged(): void {
+    if (this.active) this.render(false);
   }
 
   /** Bring the collection in front, in a narrow field; elsewhere bring the desk round and show it. */
@@ -2786,9 +3246,12 @@ export class GlassField {
       this.paneEls.delete(noteId);
       this.rereads.delete(noteId);
       this.openedWith.delete(noteId);
+      if (this.emphasis?.noteId === noteId) this.emphasis = null;
     }
     this.el.panes.dataset['count'] = String(this.held.length);
     this.placePanes();
+    // A preview is about the desk as it was when it was shown.
+    this.refreshArrange();
     if (this.keyboardTo !== null) {
       const head = this.paneEls.get(this.keyboardTo)?.querySelector<HTMLElement>('.pane-head');
       if (head !== null && head !== undefined) {
@@ -2967,6 +3430,15 @@ export class GlassField {
     const links = pane.querySelector('.pane-links') as HTMLElement;
     links.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
+      const chip = target.closest<HTMLElement>('.kind-chip');
+      if (chip !== null) {
+        event.stopPropagation();
+        const kind = chip.dataset['kind'] ?? '';
+        this.setEmphasis(noteId, kind === '' || (this.emphasis?.noteId === noteId && this.emphasis.kind === kind) ? null : kind);
+        // The chips were redrawn: the keyboard goes back to the one that was pressed.
+        (Array.from(links.querySelectorAll<HTMLElement>('.kind-chip')).find((c) => c.dataset['kind'] === kind) ?? links.querySelector<HTMLElement>('.kind-chip'))?.focus({ preventScroll: true });
+        return;
+      }
       const row = target.closest<HTMLElement>('.link-row');
       const id = row?.dataset['noteId'];
       if (id === undefined) return;
@@ -3295,7 +3767,48 @@ export class GlassField {
     if (!open) return;
     const list = panel.querySelector('.link-list') as HTMLElement;
     const rows = this.relatedRows(noteId, neighbours);
-    const signature = rows.map((r) => `${r.id}|${r.direction}|${r.where}|${r.title}|${r.kind}`).join('\n');
+    // The relationships this document has, in the source's own words, as a
+    // way to pick one out (FEAT-0022). Picking one dims the rest; every row
+    // stays in the list, and the line under the chips says how many of how
+    // many are picked out.
+    const kinds = this.edges === null ? new Map<string, Set<string>>() : relationKinds(this.edges, noteId, neighbours.map((n) => n.id));
+    const picked = this.emphasis?.noteId === noteId && kinds.has(this.emphasis.kind) ? this.emphasis.kind : null;
+    const subset = picked === null ? null : (kinds.get(picked) as Set<string>);
+    const kindsEl = panel.querySelector('.link-kinds') as HTMLElement;
+    const kindsSignature = `${[...kinds].map(([k, ids]) => `${k}:${ids.size}`).join(',')}|${picked}|${rows.length}`;
+    kindsEl.hidden = kinds.size === 0;
+    if (kindsEl.dataset['signature'] !== kindsSignature) {
+      kindsEl.dataset['signature'] = kindsSignature;
+      const label = document.createElement('span');
+      label.className = 'kinds-label';
+      label.textContent = 'pick out';
+      const chips = [...kinds].map(([kind, ids]) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'kind-chip';
+        chip.dataset['kind'] = kind;
+        chip.textContent = `${kind} ${ids.size}`;
+        chip.setAttribute('aria-pressed', String(picked === kind));
+        chip.setAttribute('aria-label', `${picked === kind ? 'Stop picking out' : 'Pick out'} the ${ids.size} ${ids.size === 1 ? 'note' : 'notes'} joined to ${noteId} by "${kind}"`);
+        return chip;
+      });
+      const said = document.createElement('span');
+      said.className = 'kinds-said';
+      said.setAttribute('role', 'status');
+      const nodes: HTMLElement[] = [label, ...chips, said];
+      if (subset !== null) {
+        said.textContent = `"${picked}": ${subset.size} of ${rows.length} picked out. All ${rows.length} are still listed.`;
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'kind-chip kind-clear';
+        clear.dataset['kind'] = '';
+        clear.textContent = 'clear';
+        clear.setAttribute('aria-label', 'Stop picking out: show every related note the same');
+        nodes.push(clear);
+      }
+      kindsEl.replaceChildren(...nodes);
+    }
+    const signature = rows.map((r) => `${r.id}|${r.direction}|${r.where}|${r.title}|${r.kind}|${subset !== null && !subset.has(r.id)}`).join('\n');
     if (list.dataset['signature'] === signature) return;
     list.dataset['signature'] = signature;
     const kept = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.link-row')?.dataset['noteId'] ?? null;
@@ -3308,6 +3821,7 @@ export class GlassField {
         item.dataset['noteId'] = row.id;
         item.dataset['direction'] = row.direction;
         item.dataset['kind'] = row.kind;
+        item.classList.toggle('quiet', subset !== null && !subset.has(row.id));
         const go = document.createElement('button');
         go.type = 'button';
         go.className = 'link-go';
@@ -3496,6 +4010,12 @@ export class GlassField {
     if (target.closest('.pane, .collection, .narrow-bar, .field-bar, .compass, .target-strip, .edge-callout') !== null) return;
     event.preventDefault();
     this.scheduleIdle();
+    // A card the collection shows is part of the collection: the wheel over
+    // it moves through the collection's cards, and does not zoom the field.
+    if (target.closest('.field-card.in-collection') !== null) {
+      for (const item of this.furnitureItems) item.wheel?.(event.deltaY);
+      return;
+    }
     const sideways = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
     if (sideways) {
       const delta = event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX;
@@ -3782,7 +4302,8 @@ export class GlassField {
         return `${c.noteId}:${(r.left - shift.x).toFixed(1)},${(r.top - shift.y).toFixed(1)},${r.width}x${r.height},${c.wide === true}`;
       })
       .join(';');
-    const geometry = `${id}|${this.seating?.key ?? ''}|${this.seatedAt.size}|${places}`;
+    const emphasised = this.emphasisIds();
+    const geometry = `${id}|${this.seating?.key ?? ''}|${this.seatedAt.size}|${places}|${emphasised === null ? '' : `${this.emphasis?.kind}:${emphasised.size}`}`;
     const contexts = this.held.map((c) => this.hooks.peekContext(c.noteId));
     const built = this.linksFrom;
     if (built !== null && built.geometry === geometry && built.contexts.length === contexts.length && built.contexts.every((c, i) => c === contexts[i]) && this.links.count() > 0) {
@@ -3798,7 +4319,7 @@ export class GlassField {
     for (const [noteId, at] of this.seatedAt) {
       const n = neighbours.get(noteId);
       if (n === undefined) continue;
-      lines.push({ id: noteId, fromId: id, direction: n.direction, from, to: at });
+      lines.push({ id: noteId, fromId: id, direction: n.direction, from, to: at, quiet: emphasised !== null && !emphasised.has(noteId) });
       for (const { other, joined } of othersJoin) {
         const also = joined.get(noteId);
         if (also !== undefined) lines.push({ id: noteId, fromId: other.noteId, direction: also.direction, from: this.drawnRect(other), to: at, shared: true });

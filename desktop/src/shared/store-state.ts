@@ -71,6 +71,13 @@ export type DeckAction =
    * whole is ignored.
    */
   | { type: 'set-collection'; layout: CollectionLayout; viewId?: string }
+  /**
+   * An arrangement applied as ONE change (FEAT-0022): documents moved, the
+   * stacking they end in, and the collection's layout. It moves and re-forms
+   * what is on the desk and nothing else: it opens and closes no note, and
+   * changes no document's size.
+   */
+  | { type: 'arrange'; cards: Array<{ noteId: string; x: number; y: number }>; order?: string[]; collection?: CollectionLayout; viewId?: string }
   /** A pane brought to the top of its stack, which is the end of the desk's list. */
   | { type: 'raise-card'; noteId: string; viewId?: string }
   /** A pane moved to the reading column, or back out of it when `wide` is false. */
@@ -117,6 +124,7 @@ const RENDERER_ACTIONS = new Set([
   'widen-card',
   'set-every-view',
   'set-collection',
+  'arrange',
 ]);
 
 /**
@@ -135,6 +143,7 @@ export const DESK_ACTIONS: ReadonlySet<string> = new Set([
   'widen-card',
   'set-every-view',
   'set-collection',
+  'arrange',
 ]);
 
 export function isRendererAction(value: unknown): value is DeckAction {
@@ -522,6 +531,46 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
         return state;
       }
       return bump({ ...state, collections: { ...state.collections, [ws]: { ...(state.collections[ws] ?? {}), [view]: layout } } });
+    }
+    case 'arrange': {
+      if (state.workspaceId === null) return state;
+      const ws = state.workspaceId;
+      const view = viewOf(state, action);
+      if (view === null) return state;
+      let next = state;
+      // A place for a note that is not on this desk is ignored: an
+      // arrangement never opens a note.
+      for (const place of Array.isArray(action.cards) ? action.cards : []) {
+        if (typeof place?.noteId !== 'string' || !finite(place.x) || !finite(place.y)) continue;
+        const x = Math.max(0, round(place.x));
+        const y = Math.max(0, round(place.y));
+        next = updateCard(next, view, place.noteId, (c) => (c.x === x && c.y === y ? c : { ...c, x, y }));
+      }
+      // The stacking: each named document in turn goes on top, so they end in
+      // the order given, above everything the arrangement did not name.
+      const order = (Array.isArray(action.order) ? action.order : []).filter((id) => typeof id === 'string');
+      const drawn = deskCardsOf(next, ws, view).map((c) => c.noteId);
+      const named = order.filter((id) => drawn.includes(id));
+      const tail = drawn.slice(-named.length);
+      if (named.length > 0 && !named.every((id, i) => id === tail[i])) {
+        let z = topZ(deskCardsOf(next, ws, view));
+        for (const id of named) {
+          z += 1;
+          const height = z;
+          next = updateCard(next, view, id, (c) => ({ ...c, z: height }));
+        }
+      }
+      const layout = action.collection === undefined ? null : normaliseCollection(action.collection);
+      if (layout !== null) {
+        const known = collectionOf(next, ws, view);
+        const same =
+          known !== null &&
+          known.x === layout.x && known.y === layout.y && known.w === layout.w && known.h === layout.h &&
+          known.collapsed === layout.collapsed && known.presentation === layout.presentation;
+        if (!same) next = { ...next, collections: { ...next.collections, [ws]: { ...(next.collections[ws] ?? {}), [view]: layout } } };
+      }
+      // One change, however many objects it moved: one revision.
+      return next === state ? state : { ...next, revision: state.revision + 1 };
     }
     case 'raise-card': {
       if (state.workspaceId === null) return state;
