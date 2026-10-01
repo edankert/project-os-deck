@@ -70,7 +70,7 @@ It runs on this repository's own notes, on the Features view, and writes nothing
 
 ## Evidence
 
-**2026-10-01**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), on this repository at commit `598ecc9` plus the walk's own tidying: 54 checks recorded, 54 held, 23 pictures, workspace unchanged, 61 seconds. Run three times after the last fix to the application, with the same result each time.
+**2026-10-01**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), on this repository at commit `598ecc9` plus the walk's own tidying: 54 checks recorded, 54 held, 23 pictures, workspace unchanged, 61 seconds. Run twice after the last fix to the application, with the same result both times.
 
 The first complete run failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
 
