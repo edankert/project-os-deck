@@ -2,11 +2,11 @@
 type: "[[task]]"
 id: TASK-0096
 title: "Draw and operate the collection in Glass"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"]
 parent: "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"
 effort: medium

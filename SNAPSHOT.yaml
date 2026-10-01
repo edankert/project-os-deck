@@ -62,8 +62,8 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0020"
-  task: "TASK-0095"
+  feature: "FEAT-0022"
+  task: "TASK-0101"
   issue: ""
   note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. TASK-0104 (one object per note, chosen reading size, the neighbourhood moves with the document) is built and its node suites pass; its smoke run is being reconciled, so it is still in progress and ISS-0070/0071/0072 stay open until that evidence exists. FEAT-0020 is being built now, TASK-0095 first: the collection and the full document on the Glass desk. Then FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
 # Canonical state for tracked items (empty for a fresh template).
@@ -73,7 +73,7 @@ items:
     FEAT-0022:
       file: "docs/features/glass-arrangements/FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored.md"
       title: "Collections and documents can be arranged and restored"
-      status: planned
+      status: doing
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0003"]
@@ -288,14 +288,14 @@ items:
     TASK-0101:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0101-Change-A-Collection-Between-Stack-Table-And-Cards.md"
       title: "Change a collection between stack, table and cards"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
     TASK-0102:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements.md"
       title: "Preview, apply and undo Glass arrangements"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
@@ -323,7 +323,7 @@ items:
     TASK-0096:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0096-Draw-And-Operate-The-Collection-In-Glass.md"
       title: "Draw and operate the collection in Glass"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -331,14 +331,14 @@ items:
     TASK-0097:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0097-Open-The-Full-Note-As-A-Glass-Document.md"
       title: "Open the full note as a Glass document"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
     TASK-0098:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0098-Keep-Collection-Document-And-Field-In-Sync.md"
       title: "Keep collection, document and field in sync"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -346,7 +346,7 @@ items:
     TASK-0099:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0099-Walk-The-Glass-Desktop-At-Real-Scale.md"
       title: "Walk the Glass desktop at real scale"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002

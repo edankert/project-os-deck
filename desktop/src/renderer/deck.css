@@ -522,7 +522,11 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
    renderer never makes Glass active in one (surfaceNow), so the field area
    keeps its `hidden` attribute there. */
 
-.field-area { flex: 1 1 auto; min-width: 320px; display: flex; flex-direction: column; min-height: 0; }
+/* Sized from the room there is, never from what its bar holds: with a basis
+   of `auto` a bar that gained three buttons was wider than the window had
+   room for beside the rail, the area wrapped under the rail, and the field
+   was then too wide to be the narrow layout it should have been. */
+.field-area { flex: 1 1 0; min-width: 320px; display: flex; flex-direction: column; min-height: 0; }
 .field-bar {
   /* A fixed height: a button appearing in the bar must not resize the field,
      because a resized field is re-dealt and every card moves under the pointer. */
@@ -534,13 +538,18 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   gap: 10px;
   padding: 0 10px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  /* In a narrow window the bar holds more than fits. It scrolls sideways, so
+     every control stays in reach, and it never grows taller or wider. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
   white-space: nowrap;
-  overflow: hidden;
+  background: var(--panel);
   font-size: 12px;
 }
 .field-bar .spacer { flex: 1 1 auto; }
-.field-bar .action { padding: 1px 8px; line-height: 1.4; }
+.field-bar .action { padding: 1px 8px; line-height: 1.4; flex: 0 0 auto; }
+.field-bar::-webkit-scrollbar { display: none; }
 .front-label { color: var(--ink); font-weight: 600; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .treatments { flex: 0 0 auto; }
 .field.holding ~ .field-bar .front-label,
@@ -616,6 +625,8 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 /* A card gathered round the focused document: the same card it was in the
    field, at the size it is browsed at, drawn solid because it is being read. */
 .field-card.seated { background: #232838; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+/* A card the collection shows (FEAT-0022): the same card, standing in the collection and not in its slot. */
+.field-card.in-collection { background: #232838; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
 .field-card.seated.shared { box-shadow: 0 0 0 1px var(--owed) inset, 0 4px 14px rgba(0, 0, 0, 0.35); }
 .pane.highlight .pane-head { box-shadow: 0 0 0 2px var(--accent); }
 .field.animate .field-card { transition: transform 1s cubic-bezier(0.22, 0.8, 0.28, 1), opacity 1s ease; }
@@ -1164,6 +1175,37 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .collection-note { flex: 0 0 auto; padding: 6px 10px; font-size: 12px; line-height: 1.45; background: color-mix(in srgb, var(--accent) 16%, transparent); border-bottom: 1px solid var(--line); }
 .collection-line + .collection-line { margin-top: 4px; }
 .collection-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* The same members three ways (FEAT-0022). As cards, the list itself is not
+   drawn: its search and filters stay, and under them is the space the cards
+   stand in. The cards are the field's own (glass.ts), drawn just above this
+   surface; what this element draws is only a reference to a member that is
+   open or gathered elsewhere. */
+.collection-tools button[aria-pressed] { font-size: 11px; }
+.collection-body > .navigator { order: 1; }
+.collection-grid { order: 2; position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.collection-grid:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.collection.cards .nav-list { display: none; }
+.collection.cards .navigator { flex: 0 0 auto; }
+.grid-ref {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+.grid-ref:hover, .grid-ref:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.grid-ref-id { color: var(--ink); letter-spacing: 0.03em; }
 .collection-places { flex: 0 0 auto; margin: 0; padding: 4px 10px; border-top: 1px solid var(--line); color: var(--ink-dim); font-size: 11px; }
 .collection.collapsed .collection-body,
 .collection.collapsed .collection-note,
@@ -1211,6 +1253,77 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 .collection.narrow .collection-head { cursor: default; }
 .collection.narrow .collection-resize, .collection.narrow .collection-tools { display: none; }
 .to-collection { border-color: var(--accent); }
+
+/* ------------------------------------------------------------------------
+ * Arrangements (FEAT-0022): Read, Compare, Show related. Each is shown
+ * before it is applied: an outline where each object will stand, and a bar
+ * that names what moves.
+ * ------------------------------------------------------------------------ */
+.arrange { display: flex; gap: 4px; align-items: center; }
+.arrange .action[aria-disabled="true"] { opacity: 0.5; }
+.arrange-preview { position: absolute; inset: 0; pointer-events: none; z-index: 4300; }
+.arrange-outlines { position: absolute; inset: 0; }
+.arrange-outline {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.arrange-outline span {
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  padding: 1px 8px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #10131a;
+  font-size: 11px;
+  font-weight: 600;
+}
+.arrange-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: min(720px, calc(100% - 24px));
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 10px 12px;
+  background: #1f2330;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-size: 12.5px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+.arrange-bar ul { flex: 1 1 100%; margin: 0; padding-left: 18px; color: var(--ink-dim); }
+.arrange-bar ul:empty { display: none; }
+.arrange-buttons { margin-left: auto; display: flex; gap: 6px; }
+.arrange-buttons #arrange-apply { border-color: var(--accent); color: var(--ink); }
+/* Documents and the collection travel to their new places together. Left and
+   top are what the desk places them by; nothing here is animated at any other
+   time, so a turn and a drag stay immediate. */
+.field.arranging .pane, .field.arranging .collection { transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .field.arranging .pane, .field.arranging .collection { transition: none; }
+}
+
+/* Picking out one relationship (FEAT-0022): what is not part of it is dimmed. Nothing is removed. */
+.link-kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: 11.5px; }
+.kinds-label { color: var(--ink-dim); }
+.kind-chip { font: inherit; padding: 0 8px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--ink-dim); cursor: pointer; }
+.kind-chip:hover, .kind-chip:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.kind-chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink); }
+.kinds-said { flex: 1 1 100%; color: var(--ink-dim); }
+.kinds-said:empty { display: none; }
+.link-row.quiet { opacity: 0.45; }
+.link-line.quiet { opacity: 0.12; }
+.field-card.seated.quiet { filter: saturate(0.3) brightness(0.55); }
 /* The one object in front fills a narrow field: the compass would lie over
    what is being read, and the bar already moves between the objects. */
 .field.narrow .compass, .field.narrow .desk-beyond { display: none; }

@@ -434,6 +434,9 @@ const collection = new CollectionView(
     count: must('collection-count'),
     filter: must('collection-filter'),
     fold: must('collection-fold') as HTMLButtonElement,
+    asTable: must('collection-as-table') as HTMLButtonElement,
+    asCards: must('collection-as-cards') as HTMLButtonElement,
+    grid: must('collection-grid'),
     note: must('collection-note'),
     places: must('collection-places'),
     body: must('collection-body'),
@@ -452,6 +455,11 @@ const collection = new CollectionView(
     store: (layout) => void send({ type: 'set-collection', layout }),
     // What lies over what has changed, so whether "collection" is offered may have too.
     raised: () => glass.furnitureChanged(),
+    seatsChanged: () => glass.furnitureSeatsChanged(),
+    locate: (noteId) => {
+      // A member that is a document is found; one gathered round a document is brought into view.
+      if (!glass.findOpen(noteId)) glass.locate(noteId);
+    },
     applyChange: () => applyPending(),
     clearFilters: () => {
       el.search.value = '';
@@ -470,6 +478,9 @@ glass.addFurniture({
   rect: () => collection.rect(),
   lower: () => collection.lower(),
   onTop: () => collection.isOnTop(),
+  seats: (taken, held) => collection.seats(taken, held),
+  layout: () => (collection.isActive() ? collection.layout() : null),
+  wheel: (deltaY) => collection.wheel(deltaY),
   focus: () => {
     collection.raise();
     // The row the person was on, when there is one; else the search box.
@@ -480,6 +491,12 @@ glass.addFurniture({
 glass.sendTo = (card) => sendTo(card);
 glass.showInField = (noteId) => void showInField(noteId);
 (globalThis as unknown as { __deckGlass?: GlassField }).__deckGlass = glass;
+// For the checks: the collection's members as the page holds them, and what its Cards presentation is drawing.
+(globalThis as unknown as { __deckCollection?: unknown }).__deckCollection = {
+  members: () => [...collectionMembers],
+  grid: () => collection.gridState(),
+  layout: () => collection.layout(),
+};
 (globalThis as unknown as { __deckContexts?: ContextCache }).__deckContexts = contexts;
 
 /** What a card wears before a view has been chosen: what every card has. */
@@ -1007,6 +1024,26 @@ function drawNavigator(): void {
  * Everything here is worked out from the groups the view's source returned
  * and the store's narrowing. None of it is kept.
  */
+/** The members the collection was last painted with, for a check to read (`__deckCollection`). */
+let collectionMembers: string[] = [];
+
+/** A member's card, wherever in the groups it is: at the top or held under another note. */
+function memberCard(groups: readonly CardGroup[], noteId: string): CardModel | null {
+  const find = (cards: readonly CardModel[]): CardModel | null => {
+    for (const card of cards) {
+      if (card.noteId === noteId) return card;
+      const child = card.children.length > 0 ? find(card.children) : null;
+      if (child !== null) return child;
+    }
+    return null;
+  };
+  for (const group of groups) {
+    const found = find(group.cards);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
 function drawCollection(): void {
   const state = host.state();
   const narrowing = { query: state.query, filters: state.filters };
@@ -1020,6 +1057,9 @@ function drawCollection(): void {
     removed: removedSelection,
     state: viewState.state,
     error: viewState.error,
+    // The ids the count counts, in the list's order: what the Cards presentation draws.
+    members: (collectionMembers = memberIds(shown)),
+    cardOf: (noteId) => memberCard(shown, noteId),
   });
   // Outside Glass the list has no collection round it, and says the same
   // three things itself: it is being read, it could not be read, or nothing

@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Add collection forms and reversible arrangements"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"]
 implements: ["[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"]
 related: ["[[DES-0003-Collections-And-Documents-On-Glass]]"]
