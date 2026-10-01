@@ -447,6 +447,12 @@ export class GlassField {
   private dragOf: { noteId: string; dx: number; dy: number; x: number; y: number } | null = null;
   /** The document about to open, and the card or row it grows from. */
   private opening: { noteId: string; from: Rect | null } | null = null;
+  /**
+   * The document whose cards still owe a mark. It opened under reduced motion
+   * before the notes it is joined to had been read, so there was no card at a
+   * seat to mark, and the cards then arrived with nothing to say they had.
+   */
+  private seatsOweMark: string | null = null;
   private openAnim: Animation | null = null;
   private gatherTimer: ReturnType<typeof setTimeout> | null = null;
   private links!: LinkLines;
@@ -2179,8 +2185,13 @@ export class GlassField {
 
   /** Mark these cards for a moment. */
   highlightAll(ids: Iterable<string>): void {
-    this.highlights = new Set(ids);
+    this.markCards(ids);
     this.render(false);
+  }
+
+  /** Mark these cards from the next paint on, and take the mark off after a moment. */
+  private markCards(ids: Iterable<string>): void {
+    this.highlights = new Set(ids);
     const marked = this.highlights;
     setTimeout(() => {
       if (this.highlights === marked) {
@@ -2828,7 +2839,11 @@ export class GlassField {
     };
     if (this.hooks.reducedMotion()) {
       mark();
+      // The cards round it are marked too. A note opened before what it is
+      // joined to has been read has no card seated yet, so the mark is owed
+      // and `seatNeighbourhood` pays it when the cards take their seats.
       if (this.seatedAt.size > 0) this.highlightAll(this.seatedAt.keys());
+      else this.seatsOweMark = pane.dataset['noteId'] ?? null;
       return;
     }
     // Nothing in sight to grow from: a document already on the desk, brought forward.
@@ -3530,6 +3545,7 @@ export class GlassField {
    */
   private openFocus(noteId: string, from: Rect | null): void {
     this.focusOn = true;
+    this.seatsOweMark = null;
     this.opening = { noteId, from };
     this.moveDesk(this.model.yaw, { x: 0, y: 0 });
     this.startGather();
@@ -3559,6 +3575,7 @@ export class GlassField {
     this.seatEntries.clear();
     this.seatedAt = new Map();
     this.opening = null;
+    this.seatsOweMark = null;
     this.openAnim?.cancel();
     this.dragOf = null;
     this.deskPan = { x: 0, y: 0 };
@@ -3668,6 +3685,14 @@ export class GlassField {
         groupLabel: JOINED_GROUP.label,
         inputs: { owed: false, suppressed: false, inSubject: false, held: false, joinedToDesk: true, pulled: false, pushed: false },
       });
+    }
+    // Under reduced motion no card travels to its seat, so the cards that
+    // arrive are marked instead (decision 12). The opening marks the ones
+    // seated by then; these were seated after it, when the note's
+    // neighbourhood was read. Every caller paints straight after this.
+    if (this.seatsOweMark === id) {
+      this.seatsOweMark = null;
+      if (this.hooks.reducedMotion() && this.seating.offsets.size > 0) this.markCards(this.seating.offsets.keys());
     }
   }
 
