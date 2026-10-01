@@ -24,6 +24,8 @@ tags: [design, glass, views]
 
 # The glass cockpit
 
+**Current interaction direction:** [[DES-0003-Collections-And-Documents-On-Glass]] specifies the endorsed on-desk collections, full documents and reversible arrangements. [[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]] accepts their placement. For that work, DES-0003 and the current FEAT-0017 contract replace this note's fixed list/reader placement, empty ghost, forced mini-card size and drag-to-exit assumptions. The cylinder, bands and broader concept remain here. These are planned repairs and additions; the original prototype and historical measurements below do not prove them implemented.
+
 > **This is [[DES-0001]]'s GLASS treatment taken seriously as an application**, at Edwin's direction and with the headset dropped: a desktop surface, mouse and keyboard, one window. It is a whole cockpit — all eleven views, the console, the agent sessions, the workspace picker — not a decoration over the existing one.
 
 ## Problem

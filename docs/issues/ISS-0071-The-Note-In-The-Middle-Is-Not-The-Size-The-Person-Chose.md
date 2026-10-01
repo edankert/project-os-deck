@@ -7,14 +7,14 @@ status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-19"
+updated: 2026-10-01
 source: ["Edwin 2026-09-12, running Deck: 'Then when moving the note out of the middle the main note size changes (this should never happen, move should not change the size)'; 'The main thing is that note is selected so this means that this is the user's main note, the user makes a decision on how big the note should be and this should be respected (note: new notes opened should open in that size)'"]
 reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
-related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]", "[[PHASE-0002-Glass]]"]
-tests: []
+related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]", "[[PHASE-0002-Glass]]", "[[TASK-0104]]", "[[DES-0003]]"]
+tests: ["[[TST-0052]]"]
 ---
 
 # The opened note ignores the size the person gave it
@@ -56,7 +56,7 @@ The size is a result of the ring's search, the stored size is unread, and a move
 Two consequences to decide on, both Edwin's:
 
 - **A pane larger than the field leaves no ring at all.** A person who sizes a note to most of the window gets the note and "+N more" and nothing else. That is the correct reading of "the user's decision should be respected", and it should be said out loud rather than discovered. **Answered 2026-09-12, and answered differently:** Edwin accepted the consequence and then removed its cause — the ring is no longer laid out inside the visible window, so a large note pushes its neighbours off-screen instead of pushing them out of the ring. See below.
-- **Where the remembered reading size lives.** It is a per-window preference, like the yaw and the zoom, not part of the address, and there is an argument for putting it in the store so a second window opens notes the same way. The cheap version is a field on the Glass surface object, lost on restart; the honest one is a store setting. Recommend the store setting, written when a person resizes the note in the middle.
+- **Where the remembered reading size lives.** The 2026-10-01 design proposes a persisted per-view desk preference in the existing store. A note's saved size wins, followed by that preference and then the calibrated first-use default. Explicit resize updates the note and preference; movement and temporary narrow layouts do not. TASK-0104 owns implementation and compatibility checks; camera persistence is unchanged.
 
 ## Evidence
 
@@ -73,12 +73,16 @@ No sibling found (searched `docs/issues/` for "pane", "size", "resize", "focus")
 
 No trigger applies for the layout change. The remembered reading size, if it goes in the store, adds a field to the persisted state: it must read as absent from every state file written before it, the way `deskCards` did for [[FEAT-0015-Each-View-Keeps-Its-Own-Desk]].
 
+## Implementation ownership
+
+[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] owns the coupled repair under FEAT-0017. The current feature, plan and TST-0052 now state Edwin's chosen behavior; DES-0003 connects it to FEAT-0020. This issue remains open until the implementation and its regression evidence satisfy the decision. No runtime fix is claimed by the documentation update.
+
 ## Next Actions
 
 - [x] **Edwin accepted the consequences, 2026-09-12, and changed the frame the ring is laid out in.** Recorded below.
 - [x] **Settled 2026-09-12, Edwin: "turning moves the note and the whole ring" — option 1.** The pane is anchored to a bearing on the cylinder and drawn flat, at the person's size, with no perspective.
 - [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]: `focusLayout` takes the pane size and lays out beyond the viewport (pure, with its suite), the renderer passes the stored size, and a smoke check drags the note in the middle and fails if its width or height changes by a pixel.
-- [ ] The remembered reading size is still unanswered: a store setting is recommended, and nothing reads one today.
+- [ ] Implement and verify DES-0003's proposed persisted per-view reading-size preference in TASK-0104, including older state, another window on the same view and narrow-window restoration.
 
 ## Decision record
 
@@ -110,6 +114,6 @@ One thing that does not follow, and has to be decided rather than assumed: **the
 
 Evidence: `desktop/src/shared/focus-ring.ts:144` still has `focusLayout(field, dock, wanted, startAngle, avoid)`, with no pane size, and still searches from `FOCUS_MAX` down to `FOCUS_MIN` (`:39-40`, `:175-191`). `desktop/src/renderer/glass.ts:2367-2384` still draws the focused pane from `focusRect` and every other pane from `paneRect`, so the size changes when the focus ends.
 
-**Belongs to:** FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours (PHASE-0002-Glass). Bigger: the ring moves onto the cylinder and Edwin will want to see it. **Next:** A FEAT-0017 task: `focusLayout` takes the pane size and returns bearings, with a smoke check that drags the opened note and fails if its size changes. Where the remembered reading size is stored is still open; the note recommends a store setting.
+**Belongs to:** FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours (PHASE-0002-Glass). Bigger: the ring moves onto the cylinder and Edwin will want to see it. **Next:** A FEAT-0017 task: `focusLayout` takes the pane size and returns bearings, with a smoke check that drags the opened note and fails if its size changes. At that check the reading-size store remained open. The 2026-10-01 proposal and implementation owner are now recorded above; this historical code check is not evidence of their implementation.
 
 Checked as part of project-os-dev FEAT-0036 (TASK-0141).

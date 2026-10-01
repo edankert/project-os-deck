@@ -28,6 +28,7 @@ import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
 import { GlassField, type OrbitData, glassElements } from './glass.js';
+import { observeOsFixture, replayFixtureTrace, visualCheckpoint } from './fixture-trace.js';
 import type { GraphEdge } from '../shared/graph.js';
 import { ContextCache } from '../shared/neighbourhood.js';
 import { type Edge, type ThrowTarget, type WindowInfo, type DisplayInfo, targetsToward } from '../shared/throw.js';
@@ -380,6 +381,15 @@ const glass = new GlassField(glassElements(), {
 glass.sendTo = (card) => sendTo(card);
 glass.showInField = (noteId) => void showInField(noteId);
 (globalThis as unknown as { __deckGlass?: GlassField }).__deckGlass = glass;
+(globalThis as unknown as { __deckFixtureTrace?: (trace: Parameters<typeof replayFixtureTrace>[1],
+  outgoing: Parameters<typeof replayFixtureTrace>[2], captureVisual?: boolean) => ReturnType<typeof replayFixtureTrace> }).__deckFixtureTrace =
+  (trace, outgoing, captureVisual) => replayFixtureTrace(glass, trace, outgoing, captureVisual);
+(globalThis as unknown as { __deckVisualCheckpoint?: () => ReturnType<typeof visualCheckpoint> }).__deckVisualCheckpoint =
+  () => visualCheckpoint(glass);
+(globalThis as unknown as { __deckObserveOsFixture?: (durationMs: number, captureVisual?: boolean,
+  visualInputStride?: number) =>
+  ReturnType<typeof observeOsFixture> }).__deckObserveOsFixture =
+  (durationMs, captureVisual, visualInputStride = 1) => observeOsFixture(glass, durationMs, captureVisual, visualInputStride);
 (globalThis as unknown as { __deckContexts?: ContextCache }).__deckContexts = contexts;
 
 /** What a card wears before a view has been chosen: what every card has. */

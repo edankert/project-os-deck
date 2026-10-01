@@ -241,8 +241,8 @@ function bandRealPayload(file, viewId) {
 test('the band function runs over the REAL navigation payloads, and loses nothing', () => {
   // Recorded from the sidecar's own `nav_payload` by
   // tools/scripts/record-sidecar-fixture.py: this repository, and Your
-  // Trainer's two biggest views, where the front band overflows in the normal
-  // case rather than the rare one.
+  // Trainer's two biggest views. A separate surge case below exercises front
+  // overflow even when the live workspace has few notes needing a person.
   for (const [file, viewId] of [
     ['deck-features.json', 'features'],
     ['your-trainer-features.json', 'features'],
@@ -277,10 +277,13 @@ test('the band function runs over the REAL navigation payloads, and loses nothin
   }
 });
 
-test("Your Trainer's Issues view fills the front band past its capacity and the middle into the outer field", () => {
-  // 40 needing triage and 427 in all. If the overflow counts were zero here
-  // the two checks above would be passing on data that never tests them.
-  const { banded } = bandRealPayload('your-trainer-issues.json', 'issues');
+test('an Issues view with an owed surge fills the front band and the middle into the outer field', () => {
+  const { view, entries } = bandRealPayload('your-trainer-issues.json', 'issues');
+  const surge = Array.from({ length: view.band.frontCapacity + 10 }, (_, i) => ({
+    card: card({ noteId: `ISS-SURGE-${i}`, owed: true, owedVerb: 'triage' }),
+    inputs: inputs({ owed: true }),
+  }));
+  const banded = bandCards(view.band, [...surge, ...entries]);
   assert.ok(banded.frontOverflow > 0, `the front band did not overflow (${banded.front.length} in front)`);
   assert.equal(banded.mid.length, 40, 'the middle did not fill, so the outer field is not being tested');
   // The notes this line counts had NO POSITION AT ALL before ADR-0005: the

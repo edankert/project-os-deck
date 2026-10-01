@@ -20,6 +20,14 @@ function real(file, viewId) {
   return { groups: groupsFromNav(navFromPayload(raw, viewId)), view: VIEWS.find((v) => v.id === viewId) };
 }
 
+/** Keep capacity cases meaningful when the live Issues view has few owed notes. */
+function issuesWithOwedSurge() {
+  const { groups, view } = real('your-trainer-issues.json', 'issues');
+  const owed = Array.from({ length: view.band.frontCapacity + 24 }, (_, i) =>
+    card(`ISS-SURGE-${i}`, { owed: true, owedVerb: 'triage' }));
+  return { groups: [{ key: 'owed-surge', label: 'Needs triage', needsHuman: true, suppressed: false, cards: owed }, ...groups], view };
+}
+
 function hand(extra = {}) {
   return { held: new Set(), joined: new Set(), pulled: new Set(), pushed: new Set(), ...extra };
 }
@@ -104,8 +112,8 @@ test('over the real payloads, nothing owed leaves the front band and nothing unf
   }
 });
 
-test("Your Trainer's Issues view overflows the front band, and says by how much", () => {
-  const { groups, view } = real('your-trainer-issues.json', 'issues');
+test('an Issues view with an owed surge overflows the front band, and says by how much', () => {
+  const { groups, view } = issuesWithOwedSurge();
   const deal = dealField(view.band, fieldEntries(groups));
   assert.equal(deal.front.length, view.band.frontCapacity);
   assert.ok(deal.frontOverflow > 20, `only ${deal.frontOverflow} counted past the front band`);
@@ -170,7 +178,7 @@ test('a child the navigator folds away is dealt only when a person named it', ()
 });
 
 test('a pull into a full front band takes a spare slot and is counted as placed by hand (ISS-0059)', () => {
-  const { groups, view } = real('your-trainer-issues.json', 'issues');
+  const { groups, view } = issuesWithOwedSurge();
   const plain = dealField(view.band, fieldEntries(groups));
   const quiet = plain.mid[0] ?? plain.deep[0];
   assert.notEqual(quiet, undefined);
@@ -209,7 +217,7 @@ test('with notes held, what they share is dealt before the other neighbours, and
 });
 
 test('a pull beside a pane on a narrow field keeps its slot, and an owed note is counted instead (ISS-0064)', () => {
-  const { groups, view } = real('your-trainer-issues.json', 'issues');
+  const { groups, view } = issuesWithOwedSurge();
   const plain = dealField(view.band, fieldEntries(groups));
   const quiet = plain.mid[0];
   const deal = dealField(view.band, fieldEntries(groups, hand({ pulled: new Set([quiet.card.noteId]) })));

@@ -515,7 +515,7 @@
   },
   {
    "key": "PHASE-0002",
-   "label": "PHASE-0002 · Glass — the main view, where depth carries priority and a held note brings its neighbourhood to the front",
+   "label": "PHASE-0002 · Glass — the main view, where depth carries priority, a person arranges the field by hand, and a held note brings its neighbourhood to the front",
    "url": "/docs/phases/PHASE-0002-Glass.md",
    "status": "active",
    "type": "phase",
@@ -523,7 +523,7 @@
     {
      "id": "FEAT-0001",
      "title": "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck",
-     "status": "planned",
+     "status": "doing",
      "url": "/docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md",
      "subtitle": "Give Deck a view of the link graph as a whole — 16148 edges over 1537 notes, coloured by status band, entered by flying rather than by listing — so the structural questions the reader cannot currently ask (what does nothing link to, which clusters hang by one edge) have somewhere to be asked.",
      "type": "feature",
@@ -531,7 +531,7 @@
       {
        "id": "",
        "title": "Plan — the orbit view",
-       "status": "draft",
+       "status": "active",
        "url": "/docs/features/orbit-view/plan/PLAN.md",
        "subtitle": "",
        "type": "plan"
@@ -539,7 +539,7 @@
       {
        "id": "TASK-0001",
        "title": "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md",
        "subtitle": "",
        "type": "task"
@@ -547,7 +547,7 @@
       {
        "id": "TASK-0002",
        "title": "The layout is computed once and kept — and a new note takes a place without moving its neighbours",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/orbit-view/plan/tasks/TASK-0002-The-Layout-Is-Computed-Once-And-Kept.md",
        "subtitle": "",
        "type": "task"
@@ -555,7 +555,7 @@
       {
        "id": "TASK-0003",
        "title": "The field renders and flies — 1537 nodes and 16148 edges, coloured by status band, at a frame rate that survives a laptop",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/orbit-view/plan/tasks/TASK-0003-The-Field-Renders-And-Flies.md",
        "subtitle": "",
        "type": "task"
@@ -563,7 +563,7 @@
       {
        "id": "TASK-0004",
        "title": "Landing opens the note in the reader that already exists, so the field never becomes a second document pane",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/orbit-view/plan/tasks/TASK-0004-Landing-Opens-The-Note.md",
        "subtitle": "",
        "type": "task"
@@ -571,8 +571,379 @@
       {
        "id": "TASK-0005",
        "title": "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks",
-       "status": "backlog",
+       "status": "doing",
        "url": "/docs/features/orbit-view/plan/tasks/TASK-0005-The-Treatment-Is-Chosen-Not-Assumed.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0015",
+     "title": "Each view keeps its own desk, a note can be kept on every view, and one button hides every held note in a window",
+     "status": "review",
+     "url": "/docs/features/view-desks/FEAT-0015-Each-View-Keeps-Its-Own-Desk.md",
+     "subtitle": "A person can hide every note they are holding with one button and bring them all back with the same button, without putting any of them back. Each view (Issues, Features and the rest) keeps its own set of held notes, so switching view shows the notes held for that view; a note marked 'on every view' stays on the desk whichever view is chosen.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — each view keeps its own desk, and held notes can be hidden",
+       "status": "active",
+       "url": "/docs/features/view-desks/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0058",
+       "title": "The store keeps a desk for each view, and a state file written before this reads unchanged",
+       "status": "done",
+       "url": "/docs/features/view-desks/plan/tasks/TASK-0058-The-Store-Keeps-A-Desk-For-Each-View.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0059",
+       "title": "A note is kept on every view: the mark moves it between the view's own list and the workspace's, stacking crosses both, and saved desks follow",
+       "status": "done",
+       "url": "/docs/features/view-desks/plan/tasks/TASK-0059-A-Note-Is-Kept-On-Every-View.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0060",
+       "title": "Hide notes: one button hides every held note in this window and shows them again, and the field reclaims the space the panes covered",
+       "status": "done",
+       "url": "/docs/features/view-desks/plan/tasks/TASK-0060-Hide-Notes-And-Show-Them-Again.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0061",
+       "title": "Glass and Spread draw the view's own desk and the notes kept on every view, with the mark on the pane and the card",
+       "status": "done",
+       "url": "/docs/features/view-desks/plan/tasks/TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0062",
+       "title": "Desk panels, throws and the tablet use the right view's desk",
+       "status": "done",
+       "url": "/docs/features/view-desks/plan/tasks/TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0063",
+       "title": "The smoke run drives desks per view, the every-view mark and hide with a real pointer, and git status stays unchanged",
+       "status": "done",
+       "url": "/docs/features/view-desks/plan/tasks/TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0016",
+     "title": "The mouse wheel zooms Glass and the orbit toward the pointer, and three keys do the same from the keyboard",
+     "status": "review",
+     "url": "/docs/features/glass-zoom/FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit.md",
+     "subtitle": "In Glass and in the orbit a person zooms with the mouse wheel or a trackpad pinch, and whatever is under the pointer stays under it. The zoom runs from 0.6 to 2.5 times; the plus, minus and zero keys do the same from the keyboard, and the zoom belongs to the window, like the turn of the field.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — the mouse wheel zooms Glass and the orbit",
+       "status": "active",
+       "url": "/docs/features/glass-zoom/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0064",
+       "title": "The zoom is a pure view transform: it scales around a point, keeps that point still, stops at 0.6 and 2.5 times, and never loses the field off the screen",
+       "status": "done",
+       "url": "/docs/features/glass-zoom/plan/tasks/TASK-0064-The-Zoom-Is-A-Pure-View-Transform.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0065",
+       "title": "The wheel, a pinch and three keys zoom the field in Glass and the orbit, clicks still land on what is drawn, and no card is left under a pane",
+       "status": "done",
+       "url": "/docs/features/glass-zoom/plan/tasks/TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0066",
+       "title": "The smoke run zooms with a real wheel, a pinch and the keys, and each check is seen to fail with its fix removed",
+       "status": "done",
+       "url": "/docs/features/glass-zoom/plan/tasks/TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0017",
+     "title": "An opened note stands in the middle of its neighbours: in Glass and in the orbit a lifted note moves to the middle of the field, and the notes it is joined to gather on a ring around it",
+     "status": "review",
+     "url": "/docs/features/glass-focus/FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours.md",
+     "subtitle": "Lifting a note in Glass or the orbit grows its card into a pane where the card stood, then moves the pane to the middle of the field. The notes it links to and the notes that link to it gather on a ring around it as small cards, each with a line to the pane, and the rest of the field dims and steps back. Only the note on top of the desk stands in the middle; the other held notes wait as headers at the side. Escape leaves the middle, and a second Escape sweeps the desk as it does today.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — an opened note stands in the middle of its neighbours",
+       "status": "active",
+       "url": "/docs/features/glass-focus/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0067",
+       "title": "The ring is a pure layout: the pane's place, up to sixteen places that never overlap it, who gets one, the order they take, and a path by angle and distance",
+       "status": "done",
+       "url": "/docs/features/glass-focus/plan/tasks/TASK-0067-The-Ring-Is-A-Pure-Layout.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0068",
+       "title": "An opened note moves to the middle: its card grows into a pane where it stood, the pane moves to the middle, the other held notes wait in a dock, the field dims, and Escape leaves before it sweeps",
+       "status": "done",
+       "url": "/docs/features/glass-focus/plan/tasks/TASK-0068-An-Opened-Note-Moves-To-The-Middle.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0069",
+       "title": "The neighbours gather on a ring as mini notes, each with a line from the pane, and a mini note is a door to the next note",
+       "status": "done",
+       "url": "/docs/features/glass-focus/plan/tasks/TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0070",
+       "title": "The orbit opens a note the same way: the note in the middle, its direct links on the ring as mini notes, the orbit dimmed and still behind, and back at the same pixel after leaving",
+       "status": "done",
+       "url": "/docs/features/glass-focus/plan/tasks/TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0071",
+       "title": "The smoke run drives the note in the middle and its ring with a real pointer, and the checks that assumed a lift fills the front band are rewritten, not deleted",
+       "status": "done",
+       "url": "/docs/features/glass-focus/plan/tasks/TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0018",
+     "title": "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward",
+     "status": "review",
+     "url": "/docs/features/glass-bands/FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached.md",
+     "subtitle": "Every note a Glass view holds is somewhere a person can see and point at. The work the middle had no room for stands in a fourth band, the outer field, rather than being counted and dropped, and a finished note behind you can be clicked, tabbed to and pulled forward. No band promises to draw all of it: each one places what its shape holds, says how many it left out, and takes that shape from how much it is actually holding.",
+     "type": "feature",
+     "review_verdict": "changes-requested",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — every note has a place, and anything visible can be reached",
+       "status": "active",
+       "url": "/docs/features/glass-bands/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0072",
+       "title": "Every band has a capacity and the deal places a fourth: the middle's remainder stands in the outer field, the quiet band caps like the rest, and no note is counted and then dropped",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0073",
+       "title": "Each band's shape follows what it holds: one pure function from a band's population to its depth, rows, columns and box size, recomputed on a view or workspace change and never inside a deal",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0073-Each-Bands-Shape-Follows-What-It-Holds.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0074",
+       "title": "Detail follows apparent size, not the band: one pure function turns the width a card is drawn at into how much of the note is shown, and the promotion threshold lives in the same table",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0075",
+       "title": "The field draws four bands and states every remainder: the outer field's cards, detail from apparent width, the bar's sentence carrying all four counts, and the shape recomputed only on a view or workspace change",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0076",
+       "title": "Anything visible is clickable, on the canvas too: a hit test for the quiet band's tiles, a cursor and a callout under the pointer, and a roving tab stop that walks the shelf",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0077",
+       "title": "A tile large enough becomes a real card: past the promotion threshold a quiet note stops being painted and gets an element, so it is clickable, tabbable and readable with no code of its own",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0078",
+       "title": "The smoke run clicks a finished note with a real pointer, pulls it forward, walks the shelf with the keyboard, and finds a note in the fourth band that used to be drawn nowhere",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0079",
+       "title": "The field is measured again on all three workspaces, throttled as well as not, and the numbers decide whether a free list is owed",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0080",
+       "title": "A free list behind Glass's note-to-element map, built only if the measurement asks: a removed card's element is kept and reused, a note keeps its element while it is on screen, and CardPool stays Spread's",
+       "status": "cancelled",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0081",
+       "title": "A Linux box for the smoke run to open its windows in, so verifying a deliberate break costs two minutes and none of a person's keyboard",
+       "status": "done",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0082",
+       "title": "The hover callout and the pointer cursor run in the field as well as in the orbit, and the check that stands for the cursor asserts the cursor",
+       "status": "doing",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0083",
+       "title": "A finished note is pulled to the front band from the shelf as it is drawn, by the keyboard and by a drag, without first being zoomed into an element",
+       "status": "doing",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0084",
+       "title": "A promoted card is laid out at the size its apparent width earned rather than in the tile's box, so the detail it was promoted to show has room to be drawn",
+       "status": "doing",
+       "url": "/docs/features/glass-bands/plan/tasks/TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    },
+    {
+     "id": "FEAT-0019",
+     "title": "Native Glass is measured without population caps",
+     "status": "doing",
+     "url": "/docs/features/native-glass-evaluation/FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps.md",
+     "subtitle": "Determine whether a native Rust Glass can give every note a stable, reachable place with realistic readable content and smooth interaction on the current Mac Studio, and record whether the evidence warrants a native Deck migration.",
+     "type": "feature",
+     "children": [
+      {
+       "id": "",
+       "title": "Evaluate native Glass before choosing a migration",
+       "status": "active",
+       "url": "/docs/features/native-glass-evaluation/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0086",
+       "title": "Define the experiment, freeze the benchmark protocol and capture the current Deck baseline",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0086-Define-The-Native-Glass-Experiment-And-Baseline.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0087",
+       "title": "Export complete workspace fixtures and deterministic larger datasets",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0087-Export-Representative-Workspaces-For-Both-Renderers.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0088",
+       "title": "Boot an isolated Rust window with reproducible builds and measurement output",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0088-Boot-An-Isolated-Native-Glass-Executable.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0089",
+       "title": "Give every note a stable place and a route into view without population caps",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0089-Give-Every-Note-A-Stable-Reachable-Place.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0090",
+       "title": "Draw realistic card content with cached text and bounded graphics work",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0090-Draw-Readable-Cards-With-A-Native-Renderer.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0091",
+       "title": "Make the field interactive and open a representative native note reader",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0091-Exercise-Native-Glass-With-Real-Input-And-A-Reader.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0092",
+       "title": "Measure both implementations and record correctness, latency and resource limits",
+       "status": "doing",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0092-Measure-Native-Glass-Against-The-Current-Deck.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0093",
+       "title": "Report what the evidence supports and define the next architecture decision",
+       "status": "backlog",
+       "url": "/docs/features/native-glass-evaluation/plan/tasks/TASK-0093-Decide-What-The-Native-Glass-Evidence-Supports.md",
        "subtitle": "",
        "type": "task"
       }
@@ -581,15 +952,16 @@
     {
      "id": "FEAT-0009",
      "title": "The field where depth carries priority: Glass is the view Deck opens, and what needs you is in front",
-     "status": "planned",
+     "status": "done",
      "url": "/docs/features/glass-field/FEAT-0009-The-Field-Where-Depth-Carries-Priority.md",
      "subtitle": "Deck opens on Glass: the notes of the current view arranged in a field where distance says how much a note needs you, with what is owed in front, the view's own subject in the middle and the quiet work behind you. Switching view moves the same cards rather than loading a page, and the navigator beside the field stays the route for the keyboard and the screen reader.",
      "type": "feature",
+     "review_verdict": "changes-requested",
      "children": [
       {
        "id": "",
        "title": "Plan — the Glass field",
-       "status": "draft",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/PLAN.md",
        "subtitle": "",
        "type": "plan"
@@ -597,7 +969,7 @@
       {
        "id": "TASK-0029",
        "title": "The band section of every description, and the function that applies it: front, mid and deep per view, with overflow stated rather than silent",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/tasks/TASK-0029-The-Band-Function.md",
        "subtitle": "",
        "type": "task"
@@ -605,7 +977,7 @@
       {
        "id": "TASK-0030",
        "title": "The slot geometry: a cylinder of slots dealt from the bands, a shape for a thousand quiet tiles, and an obstacle that is a sector rather than a rectangle",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/tasks/TASK-0030-The-Slot-Geometry.md",
        "subtitle": "",
        "type": "task"
@@ -613,7 +985,7 @@
       {
        "id": "TASK-0031",
        "title": "The field renders and turns: near bands as bound cards, the quiet band on one canvas, fog instead of blur, and a card a real pointer can hit",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/tasks/TASK-0031-The-Field-Renders-And-Turns.md",
        "subtitle": "",
        "type": "task"
@@ -621,7 +993,7 @@
       {
        "id": "TASK-0032",
        "title": "A view switch re-arranges the same cards, and a change arriving mid-view is announced rather than applied",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/tasks/TASK-0032-A-View-Switch-Re-Arranges.md",
        "subtitle": "",
        "type": "task"
@@ -629,7 +1001,7 @@
       {
        "id": "TASK-0033",
        "title": "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboard route",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/tasks/TASK-0033-Glass-Is-Addressed-And-Opened-First.md",
        "subtitle": "",
        "type": "task"
@@ -637,7 +1009,7 @@
       {
        "id": "TASK-0034",
        "title": "The field is measured on the largest workspace, and the numbers go in the note",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-field/plan/tasks/TASK-0034-The-Field-Is-Measured-On-The-Largest-Workspace.md",
        "subtitle": "",
        "type": "task"
@@ -647,15 +1019,16 @@
     {
      "id": "FEAT-0010",
      "title": "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while you hold it",
-     "status": "planned",
+     "status": "done",
      "url": "/docs/features/glass-desk/FEAT-0010-Lifting-A-Note.md",
      "subtitle": "In Glass a click lifts a note out of the field onto the desk Deck already has, and while it is held the notes joined to it take the front band, so the relationships a person cannot see today are the first thing they see.",
      "type": "feature",
+     "review_verdict": "changes-requested",
      "children": [
       {
        "id": "",
        "title": "Plan — lifting a note",
-       "status": "draft",
+       "status": "done",
        "url": "/docs/features/glass-desk/plan/PLAN.md",
        "subtitle": "",
        "type": "plan"
@@ -663,7 +1036,7 @@
       {
        "id": "TASK-0035",
        "title": "A note is lifted out of the field onto the desk, its slot stays ghosted, and closing is three verbs none of which destroys anything",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-desk/plan/tasks/TASK-0035-A-Note-Is-Lifted-And-Put-Back.md",
        "subtitle": "",
        "type": "task"
@@ -671,7 +1044,7 @@
       {
        "id": "TASK-0036",
        "title": "The neighbourhood takes the front band while a note is held, the front plane says what it now means, and the owed count keeps its place",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-desk/plan/tasks/TASK-0036-The-Neighbourhood-Takes-The-Front-Band.md",
        "subtitle": "",
        "type": "task"
@@ -679,12 +1052,87 @@
       {
        "id": "TASK-0037",
        "title": "What these share: with several notes on the desk the field marks what is joined to more than one of them, and the desk bar counts it",
-       "status": "backlog",
+       "status": "done",
        "url": "/docs/features/glass-desk/plan/tasks/TASK-0037-What-These-Share.md",
        "subtitle": "",
        "type": "task"
       }
      ]
+    },
+    {
+     "id": "FEAT-0014",
+     "title": "The hands: a person arranges the field, throws a note to another screen, and reaches for a card to see what it is joined to",
+     "status": "done",
+     "url": "/docs/features/glass-hands/FEAT-0014-The-Hands.md",
+     "subtitle": "Glass stops being a picture the record paints and becomes a surface a person arranges: a note is pulled forward or pushed behind for the session, a held note is a pane that is moved, resized and stacked, a card is thrown off the field to a window on another screen or to the tablet, and reaching for a card shows what it is joined to before it is lifted. Nothing a hand does writes to the record.",
+     "type": "feature",
+     "review_verdict": "changes-requested",
+     "children": [
+      {
+       "id": "",
+       "title": "Plan — the hands",
+       "status": "done",
+       "url": "/docs/features/glass-hands/plan/PLAN.md",
+       "subtitle": "",
+       "type": "plan"
+      },
+      {
+       "id": "TASK-0053",
+       "title": "Pull forward and push behind: a card is placed in the front band or behind you by hand for the session, an owed note cannot be pushed out, and the front plane says how many notes a hand placed",
+       "status": "done",
+       "url": "/docs/features/glass-hands/plan/tasks/TASK-0053-Pull-Forward-And-Push-Behind.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0054",
+       "title": "A held note is a pane: moved, resized and stacked on the front plane by hand, its header always readable, and its place kept in the desk record Spread already saves",
+       "status": "done",
+       "url": "/docs/features/glass-hands/plan/tasks/TASK-0054-A-Held-Note-Is-A-Pane.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0055",
+       "title": "Throw to a screen: a drag that leaves the field toward another window lands the note in that window's reader or on its desk, opens a new reader window on an empty display, and reaches the tablet",
+       "status": "done",
+       "url": "/docs/features/glass-hands/plan/tasks/TASK-0055-Throw-To-A-Screen.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0056",
+       "title": "Reach: hovering a card on the desktop, or pressing and holding it on the tablet, draws wires to what it is joined to and counts the neighbours behind you, before anything is lifted",
+       "status": "done",
+       "url": "/docs/features/glass-hands/plan/tasks/TASK-0056-Reach.md",
+       "subtitle": "",
+       "type": "task"
+      },
+      {
+       "id": "TASK-0057",
+       "title": "The served page follows the store: Deck's host gains two read routes, a tablet shows the desk the Mac holds and follows the shell's focus when asked, and still cannot send anything back",
+       "status": "done",
+       "url": "/docs/features/glass-hands/plan/tasks/TASK-0057-The-Served-Page-Follows-The-Store.md",
+       "subtitle": "",
+       "type": "task"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "unattached-tasks",
+   "label": "Unattached tasks",
+   "url": null,
+   "status": null,
+   "items": [
+    {
+     "id": "TASK-0085",
+     "title": "Fix the three defects the 2026-09-19 issue review left in Deck, each with a test that fails when the fix is taken out",
+     "status": "done",
+     "url": "/docs/tasks/TASK-0085-Fix-The-Three-Defects-The-Issue-Review-Left-In-Deck.md",
+     "subtitle": "",
+     "type": "task"
     }
    ]
   }

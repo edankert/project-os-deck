@@ -7,14 +7,14 @@ status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-19"
+updated: 2026-10-01
 source: ["Edwin 2026-09-12, running Deck: 'it shows associated notes around the note in the middle but this using a very small view of the notes, why not the same size view as when browsing?'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'; 'When opening a note the corresponding smaller version seems to turn into just a frame, this should not be the case, there should only be one note on the deck.'"]
 reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
-related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[DES-0002-The-Glass-Cockpit]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]", "[[PHASE-0002-Glass]]"]
-tests: []
+related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[DES-0002-The-Glass-Cockpit]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]", "[[PHASE-0002-Glass]]", "[[TASK-0104]]", "[[DES-0003]]"]
+tests: ["[[TST-0052]]"]
 ---
 
 # An opened note's neighbours are shown twice, and the note leaves an empty frame
@@ -74,6 +74,10 @@ No sibling found (searched `docs/issues/` for "ghost", "ring", "twice", "duplica
 ## Risk scan
 
 No trigger applies: no new dependency, env var, path, artifact or exposure. Option 1 changes what the frame loop moves and should be measured against [[PHASE-0002-Glass]]'s frame-rate criterion before it is called done.
+
+## Implementation ownership
+
+[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] owns the coupled repair under FEAT-0017. The current feature, plan and TST-0052 now state Edwin's chosen behavior; DES-0003 connects it to FEAT-0020. This issue remains open until the implementation and its regression evidence satisfy the decision. No runtime fix is claimed by the documentation update.
 
 ## Next Actions
 

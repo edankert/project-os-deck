@@ -7,9 +7,9 @@ status: planned
 order: 3
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-10-01
 goal: "Deck carries what the cockpit does for a working day, adopted row by row from the cockpit's capability register, until Edwin does a real task in Deck instead of the cockpit and records which he would rather have used."
-features: []
+features: ["[[FEAT-0021]]"]
 requirements: []
 tasks: []
 issues: []
@@ -27,6 +27,8 @@ tags: [phase, parity, console, cockpit]
 Two words are used throughout. **Parity** means Deck does what the cockpit does for the task at hand; it does not mean a copy of the cockpit's layout. The **console** is the terminal a workspace shell or an agent session runs in, which [[DES-0002-The-Glass-Cockpit]] draws as furniture that floats over the field.
 
 ## Scope
+
+- **[[FEAT-0021-Project-To-Evidence-Levels-Guide-Deck]], explicit levels and evidence beside the claim.** After cockpit contracts are decided, an exact count opens its rows and a claim opens its verdicts, captures or source excerpts on Glass. Each evidence object names its source and date and marks missing or stale evidence. Existing linked notes already use FEAT-0020; new structured evidence and traces stay in this phase. Glass's spatial wheel remains separate from information-level navigation.
 
 - **The console, several at once, as furniture.** A console defaults to bottom-centre, drags anywhere, resizes, is translucent without blur, and the field flows around it. Several are open at once, because one terminal panel makes a second shell a tab and a tab means the first is gone. The cockpit's register row is `shell.terminal`: one PTY per workspace inside tmux, drawn with xterm.js over Electron IPC, in `desktop/src/ipc/terminal.ts` of the cockpit.
 - **Before the console is built, evaluate T3 Code's terminal instead of the cockpit's.** Edwin, 2026-09-07: "I want to see if we can introduce the t3.codes console solution instead of our current console." T3 Code (github.com/pingdotgg/t3code) is a Node server that owns the PTYs with node-pty and streams them over a WebSocket to an xterm.js client in a web app, with an Electron shell that bundles the server; the terminal lives in `apps/server/src/terminal/` and the client transport in `apps/web/src/wsTransport.ts`. That shape matches Deck's two hosts better than the cockpit's IPC-only terminal, because a console reachable over a WebSocket can be shown to the tablet host too, and it separates the PTY owner from the window that draws it, which is what the DES-0002 review asked for when it said the carousel must present a control plane rather than the PTY list. What has to be checked before choosing: whether its server can run beside the sidecar and be started by Deck's main process; whether sessions survive an app restart the way the cockpit's tmux sessions do; the WebGL context budget past a few consoles, which xterm.js documents at about sixteen per page; and the licence. The evaluation is a task in this phase and its outcome is an ADR, because the choice decides where PTYs live for every later feature.
@@ -58,6 +60,6 @@ Two words are used throughout. **Parity** means Deck does what the cockpit does 
 
 **Depends on [[PHASE-0002-Glass]].** The console is furniture in the field, so the field's obstacle rule and slot geometry exist first. Nothing here depends on the orbit arrangement or on FEAT-0001's measurements.
 
-**The features of this phase are not scaffolded yet.** They are cut from the adoption table when the phase opens, one feature per group of rows above, so that the register and not this note stays the list of what parity means. Two are certain: the console (with the T3 Code evaluation as its first task) and the pages.
+**Most features of this phase are not scaffolded yet.** [[FEAT-0021-Project-To-Evidence-Levels-Guide-Deck]] is one backlog note for the proposed project-to-evidence progression. It has no requirements, tasks or acceptance check until the cockpit decides DES-0015 and DES-0016 and this phase opens. Other features are cut from the adoption table when the phase opens, one feature per group of rows above, so the register remains the list of what parity means. Two are certain: the console (with the T3 Code evaluation as its first task) and the pages.
 
 **Order.** Deck, Glass, Parity, Vault, decided by Edwin on 2026-09-07 ([[ADR-0002-Glass-Is-The-Main-View]]).

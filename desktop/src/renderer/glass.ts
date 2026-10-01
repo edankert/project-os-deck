@@ -246,6 +246,7 @@ export class GlassField {
   /** The note being reached for, and the wires its neighbours get. */
   private reach: { noteId: string; neighbours: Set<string> } | null = null;
   private reachTimer: ReturnType<typeof setTimeout> | null = null;
+  private fixtureReachContexts: Record<string, NoteContext> | null = null;
   private highlight: string | null = null;
   /** Several cards marked at once, for a moment: a lift's neighbours under reduced motion. */
   private highlights = new Set<string>();
@@ -575,13 +576,18 @@ export class GlassField {
   measureTurn(
     ms: number,
     radiansPerSecond = Math.PI / 2,
-  ): Promise<{ frames: number; median: number; p95: number; visible: boolean; focused: boolean; mostTiles: number; mostElements: number; workMedian: number; workP95: number }> {
+    raw = false,
+  ): Promise<{ frames: number; median: number; p95: number; visible: boolean; focused: boolean; mostTiles: number; mostElements: number; workMedian: number; workP95: number;
+    rawFrames?: Array<{ atMs: number; intervalMs: number; workMs: number; focused: boolean; visible: boolean }>; focusLost?: boolean; visibilityLost?: boolean }> {
     return new Promise((resolve) => {
       this.frameTimes = [];
       // The work a frame costs, apart from the wait for the display: a 60 Hz
       // display holds every frame to 16.7 ms however little work it took, so
       // the frame time alone cannot show the headroom a slower machine needs.
       const work: number[] = [];
+      const rawFrames: Array<{ atMs: number; intervalMs: number; workMs: number; focused: boolean; visible: boolean }> = [];
+      let focusLost = false;
+      let visibilityLost = false;
       let last = performance.now();
       const start = last;
       // The worst moment, not the last one: the most tiles and elements on
@@ -590,20 +596,27 @@ export class GlassField {
       let mostElements = 0;
       let frame = 0;
       const step = (now: number): void => {
+        const intervalMs = now - last;
+        const visible = document.visibilityState === 'visible';
+        const focused = document.hasFocus();
+        if (!focused) focusLost = true;
+        if (!visible) visibilityLost = true;
         frame += 1;
         if (frame % 10 === 0) {
           const c = this.counts();
           mostTiles = Math.max(mostTiles, c.tiles, this.arrangement === 'orbit' ? this.dots.length : 0);
           mostElements = Math.max(mostElements, c.elements);
         }
-        if (document.visibilityState === 'visible' && document.hasFocus()) this.frameTimes?.push(now - last);
+        if (visible && focused) this.frameTimes?.push(intervalMs);
         const dt = now - last;
         last = now;
         const began = performance.now();
         this.model.turn((radiansPerSecond * dt) / 1000);
         this.el.field.classList.add('turning');
         this.render();
-        if (document.visibilityState === 'visible' && document.hasFocus()) work.push(performance.now() - began);
+        const workMs = performance.now() - began;
+        if (visible && focused) work.push(workMs);
+        if (raw) rawFrames.push({ atMs: now - start, intervalMs, workMs, focused, visible });
         if (now - start < ms) {
           requestAnimationFrame(step);
           return;
@@ -624,6 +637,7 @@ export class GlassField {
           mostElements,
           workMedian: cost(0.5),
           workP95: cost(0.95),
+          ...(raw ? { rawFrames, focusLost, visibilityLost } : {}),
         });
       };
       requestAnimationFrame(step);
@@ -1006,6 +1020,26 @@ export class GlassField {
     setText(element, '.fc-face', faceText(card, this.input.faces));
     setText(element, '.fc-owed', entry.inputs.owed ? (card.owedVerb ?? 'needs you') : '');
     this.paintMore(element, card);
+  }
+
+  /** Opt-in benchmark inventory of the face Deck would paint for every placed note. */
+  cardFieldInventory(): Array<{ key: string; id: string; title: string; mark: string; face: string; owed: string; more: string }> {
+    const fields = (element: HTMLElement, selector: string): string =>
+      element.querySelector(selector)?.textContent?.trim() ?? '';
+    const result = [];
+    const held = new Set(this.held.map((card) => card.noteId));
+    for (const [key, slot] of this.model.current.slots) {
+      const entry = this.entries.get(key);
+      if (entry === undefined) throw new Error(`placed note ${key} has no card entry`);
+      const element = document.createElement('article');
+      element.innerHTML = '<span class="fc-id"></span><span class="fc-title"></span><span class="fc-mark"></span>' +
+        '<span class="fc-face"></span><span class="fc-owed"></span><span class="fc-more"></span>';
+      this.paintCard(element, entry, slot, held.has(key));
+      result.push({ key, id: fields(element, '.fc-id'), title: fields(element, '.fc-title'),
+        mark: fields(element, '.fc-mark'), face: fields(element, '.fc-face'),
+        owed: fields(element, '.fc-owed'), more: fields(element, '.fc-more') });
+    }
+    return result;
   }
 
   /**
@@ -2134,6 +2168,11 @@ export class GlassField {
 
   // ---- reach ----
 
+  /** Supply the fixture's resolved links to the opt-in measurement field. */
+  setFixtureReachContexts(contexts: Record<string, NoteContext>): void {
+    this.fixtureReachContexts = contexts;
+  }
+
   /** A trace for the smoke run's diagnostics; silent unless the page asks for it. */
   private trace(...parts: unknown[]): void {
     const g = globalThis as unknown as { __deckTrace?: boolean; __deckTraceLog?: string[] };
@@ -2146,8 +2185,8 @@ export class GlassField {
     if (this.reachTimer !== null) clearTimeout(this.reachTimer);
     this.reachTimer = setTimeout(() => {
       this.reachTimer = null;
-      void this.hooks
-        .context(noteId)
+      void (this.fixtureReachContexts?.[noteId] === undefined
+        ? this.hooks.context(noteId) : Promise.resolve(this.fixtureReachContexts[noteId]))
         .then((context) => {
           // Still reaching for it? A pointer that moved on has let go.
           if (this.pendingReach !== noteId) return;

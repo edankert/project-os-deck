@@ -7,14 +7,14 @@ status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: "2026-09-19"
+updated: 2026-10-01
 source: ["Edwin 2026-09-12, running Deck: 'The user might move the note but that then means that the associated notes should also move with it ...'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'"]
 reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
-related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[PHASE-0002-Glass]]"]
-tests: []
+related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[PHASE-0002-Glass]]", "[[TASK-0104]]", "[[DES-0003]]"]
+tests: ["[[TST-0052]]"]
 ---
 
 # Dragging the opened note moves every card on screen
@@ -70,6 +70,10 @@ No sibling found (searched `docs/issues/` for "drag", "middle", "ring", "arrange
 ## Risk scan
 
 No trigger applies: no new dependency, env var, path or exposure. A dragged group re-lays the ring while the pointer is down, so it should be measured against [[PHASE-0002-Glass]]'s frame-rate criterion.
+
+## Implementation ownership
+
+[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] owns the coupled repair under FEAT-0017. The current feature, plan and TST-0052 now state Edwin's chosen behavior; DES-0003 connects it to FEAT-0020. This issue remains open until the implementation and its regression evidence satisfy the decision. No runtime fix is claimed by the documentation update.
 
 ## Next Actions
 

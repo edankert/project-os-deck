@@ -40,6 +40,14 @@ Primary entrypoints for this documentation system.
 - Ad-hoc prompt intake: `../tools/skills/ad-hoc-intake/SKILL.md`
 - Importing guidance: `../tools/instructions/IMPORTING.md`
 
+## Glass interaction planning
+
+- Interaction specification and visual plates: [DES-0003](designs/DES-0003-Collections-And-Documents-On-Glass.md).
+- Collection and full-document delivery: [FEAT-0020 plan](features/glass-desktop/plan/PLAN.md).
+- Collection presentations and reversible arrangements: [FEAT-0022 plan](features/glass-arrangements/plan/PLAN.md).
+- Later scenes and cross-screen recovery: [FEAT-0023](features/glass-scenes/FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens.md).
+- Online comparisons and rationale: [Glass interaction review](reference/glass-interaction-comparables-review-2026-10-01.md).
+
 ## Bases (optional views)
 
 Bases (`*.base`) used for navigation and context views in Obsidian (optional):

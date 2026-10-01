@@ -1,5 +1,5 @@
 version: 1
-updated: "2026-09-12T18:00Z"
+updated: "2026-09-30T21:10Z"
 
 template:
   replace_me: false
@@ -45,31 +45,71 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 5
+  ADR: 6
   CHG:
     last_date: 0
-  DES: 2
-  FEAT: 18
+  DES: 3
+  FEAT: 23
   ISS: 89
   PHASE: 4
-  REQ: 0
-  RISK: 4
+  REQ: 3
+  RISK: 7
   REL: 0
-  TASK: 85
-  TST: 57
+  TASK: 104
+  TST: 64
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0018"
+  feature: "FEAT-0020"
   task: ""
   issue: ""
-  note: "2026-09-20: THE ISS-0089 WORK ORDER IS CLOSED. All three of its issues are fixed under TASK-0085, each with a test that fails when the fix is taken out, and none was bigger than described. ISS-0085: descriptions.test.mjs asserts readBand's four band capacities (12/40/64/3000) on the path a workspace's own view takes, so shrinking the outer field's default now fails a check. ISS-0080: saveMeasurement writes measurements/<timestamp>.json beside the printed JSON and main.ts prints the path last; the directory is gitignored. ISS-0075: run-smoke.sh on macOS hands the whole run to smoke-in-a-box.sh, so an ordinary smoke run takes nobody's keyboard; --on-screen is the old behaviour by name, --no-focus shows windows with showInactive(), and the runner prints its mode before anything opens. CI is Linux and unchanged. 483 node checks and both typechecks pass; the validator passes. STILL OWED, UNCHANGED BY THIS WORK: the smoke run itself -- the handover reaches smoke-in-a-box.sh and stops at 'no daemon is running', so the eleven renderer checks owed since 2026-09-17 are still unexecuted and starting Docker is Edwin's call. 2026-09-17: FEAT-0018 REVIEWED TWICE, BOTH ROUNDS changes-requested, ALL FINDINGS FIXED, AND NOTHING IN THE RENDERER IS VERIFIED BECAUSE THE SMOKE SUITE HAS NOT BEEN RUN. Round one (clean context, notes + diff only) found THREE defects refuting an acceptance line: ISS-0081, the hover handler still opened with 'if (this.arrangement !== 'orbit') return' so TASK-0076's tile branch was dead code and showTileCallout was never called from anywhere; ISS-0082, a finished note could only be pulled forward once PROMOTED, and Your Trainer's 58px tile box reaches 86px at maximum zoom, so EDWIN'S OWN REQUEST could not be performed at any zoom; ISS-0084, a promoted card was laid out in the TILE's box and merely magnified, so full detail was clipped. Fixed in fb4982b (TASK-0082, TASK-0083, TASK-0084). ROUND TWO then confirmed the first two and REFUTED THE THIRD FIX: the card was STILL CLIPPED because MIN_BOX_FOR's heights were estimated, not added up -- full at 62 where the stylesheet's rows need 92 -- and were low enough that promotedBox's floor NEVER APPLIED, so the rule was dead code (ISS-0087). It also found TWO OF THE CHECKS WRITTEN THAT DAY COULD NOT FAIL: the drag check pressed t.x + t.w/2 with no field offset, which is not the tile, and the 'a downward drag does not turn the field' check was true by construction because drag() interpolates in a straight line. Fixed in 223d582: MIN_BOX_FOR is computed from deck.css's own sizes, full lands on 92 which is CARD_BOX.height (a front-band card has drawn full detail in 92px since FEAT-0009, so the arithmetic has a witness); TST-0042 now reads the BUILT stylesheet so the two copies cannot drift; the drag converts coordinates the way the click check does; the yaw check is replaced by a sideways drag that CAN fail. FIVE BREAKS RUN, ALL FIVE CAUGHT. 470 node checks and both typechecks pass. THE GATE STOPS HERE -- QUALITY.md allows two rounds and ADR-0028 forbids a third, so 223d582 itself has had no independent eyes; that is the rule's accepted cost and it is named in the feature note. ONE GAP NO NODE SUITE CAN CLOSE: setting lift = false in place() restores ISS-0084 exactly and leaves all 470 passing, because no node suite loads the renderer. OWED: A SMOKE RUN -- eleven checks have never been executed and every renderer claim rests on them; Docker's daemon was not running, so TASK-0081's container was unavailable and starting Docker Desktop is Edwin's call. THEN the walk TST-0056, Edwin's. EDWIN'S DECISION, UNTOUCHED: ISS-0086, 186 of 317 notes on Your Trainer's Features view are counted and drawn nowhere while this feature is titled 'every note has a place' -- layers in the outer field, or narrow the title. ALSO FILED, NOT BLOCKING: ISS-0083, ISS-0085, ISS-0088 (the hover now scans every tile and rebuilds the callout on every pointer move, and TASK-0079's pointer measurement was taken while that code could not run). STILL OPEN FROM EARLIER: FEAT-0015, FEAT-0016 and FEAT-0017 at review with NO independent review recorded on any of them, waiting on walks TST-0048 and TST-0052; ISS-0070 to ISS-0072 unplanned; ISS-0075, ISS-0080, ISS-0069, ISS-0068 unplanned."
+  note: "2026-10-01: TASK-0100 completed the Glass documentation plan and validation. DES-0003 details remain proposed. TASK-0104 repairs continuity before core FEAT-0020 integration; FEAT-0022 arrangements follow. FEAT-0023 scenes and FEAT-0021 structured evidence remain later work. Implementation and acceptance walks are pending. TASK-0092 remains unfinished native benchmark work under FEAT-0019."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
+    FEAT-0022:
+      file: "docs/features/glass-arrangements/FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored.md"
+      title: "Collections and documents can be arranged and restored"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: ["REQ-0003"]
+      tasks: ["TASK-0101", "TASK-0102", "TASK-0103"]
+    FEAT-0023:
+      file: "docs/features/glass-scenes/FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens.md"
+      title: "A Glass scene reopens and crosses screens without losing its work"
+      status: backlog
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: []
+    FEAT-0020:
+      file: "docs/features/glass-desktop/FEAT-0020-Collections-And-Full-Notes-Live-On-Glass.md"
+      title: "Collections and full notes live on the Glass desktop"
+      status: planned
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: ["REQ-0001", "REQ-0002"]
+      tasks: ["TASK-0095", "TASK-0096", "TASK-0097", "TASK-0098", "TASK-0099", "TASK-0100"]
+    FEAT-0021:
+      file: "docs/features/cockpit-levels/FEAT-0021-Project-To-Evidence-Levels-Guide-Deck.md"
+      title: "Project-to-evidence levels guide Deck after cockpit contracts are decided"
+      status: backlog
+      owner: user:edwin
+      phase: PHASE-0004
+      requirements: []
+      tasks: []
+    FEAT-0019:
+      file: "docs/features/native-glass-evaluation/FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps.md"
+      title: "Native Glass is measured without population caps"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0002
+      requirements: []
+      tasks: ["TASK-0086", "TASK-0087", "TASK-0088", "TASK-0089", "TASK-0090", "TASK-0091", "TASK-0092", "TASK-0093", "TASK-0094"]
     FEAT-0001:
       file: "docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md"
       title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck"
@@ -221,7 +261,7 @@ items:
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
-      tasks: ["TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071"]
+      tasks: ["TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0104"]
       note: "ADDED 2026-09-11 from Edwin's requests about selecting in the orbit and in Glass, building REFERENCE-FOCUS-ZOOM-AND-VERBS recommendation 2. A lift grows the card into a pane where it stood (300 ms), then moves it to the middle (700 ms); the neighbours (context read) move by angle and distance to a ring of up to 16 mini notes (15 plus '+N more'), keeping their circular order, with a solid line to what it links to and a dashed line from what links to it; a mini note is a door. REVISITS DES-0002 by Edwin's request (rev 7 dropped re-arranging around an opened note: 'does not survive a second note and collapses at three'): only the note on top of the desk is in the middle, the other held notes wait as headers in a dock at the left edge, and the field dims and keeps its slots. The focus is the TOP OF THE DRAWN DESK plus a per-window switch; nothing new in the store or the address. Escape first leaves the middle, a second Escape sweeps. While a note is in the middle its neighbourhood does not take the front band; leaving deals it there and turns to face it. Amends DES-0002, FEAT-0010, TASK-0035, TASK-0036, TASK-0054, FEAT-0015, FEAT-0001, TASK-0004, PHASE-0002 exit criterion 3 and the walk TST-0024, each by an appended paragraph in a task step. The same focus in the orbit, drift stopped. Tablet unchanged. No RISK note. Open question: what 'the associated notes should show their connections' should show."
     FEAT-0018:
       file: "docs/features/glass-bands/FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached.md"
@@ -233,6 +273,154 @@ items:
       tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
   tasks:
+    TASK-0100:
+      file: "docs/features/glass-desktop/plan/tasks/TASK-0100-Document-The-Glass-Interaction-Direction.md"
+      title: "Document the Glass interaction direction"
+      status: done
+      owner: user:edwin
+      parent: FEAT-0020
+      phase: PHASE-0002
+    TASK-0101:
+      file: "docs/features/glass-arrangements/plan/tasks/TASK-0101-Change-A-Collection-Between-Stack-Table-And-Cards.md"
+      title: "Change a collection between stack, table and cards"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0022
+      phase: PHASE-0002
+    TASK-0102:
+      file: "docs/features/glass-arrangements/plan/tasks/TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements.md"
+      title: "Preview, apply and undo Glass arrangements"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0022
+      phase: PHASE-0002
+    TASK-0103:
+      file: "docs/features/glass-arrangements/plan/tasks/TASK-0103-Walk-Collection-Forms-And-Arrangements-At-Scale.md"
+      title: "Walk collection forms and arrangements at scale"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0022
+      phase: PHASE-0002
+    TASK-0104:
+      file: "docs/features/glass-focus/plan/tasks/TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving.md"
+      title: "Preserve note identity, chosen size and neighbourhood while moving"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0017
+      phase: PHASE-0002
+    TASK-0095:
+      file: "docs/features/glass-desktop/plan/tasks/TASK-0095-Model-An-Exact-Collection-On-The-Desk.md"
+      title: "Model an exact derived collection on the desk"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0020
+      phase: PHASE-0002
+    TASK-0096:
+      file: "docs/features/glass-desktop/plan/tasks/TASK-0096-Draw-And-Operate-The-Collection-In-Glass.md"
+      title: "Draw and operate the collection in Glass"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0020
+      phase: PHASE-0002
+      depends: ["TASK-0095"]
+    TASK-0097:
+      file: "docs/features/glass-desktop/plan/tasks/TASK-0097-Open-The-Full-Note-As-A-Glass-Document.md"
+      title: "Open the full note as a Glass document"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0020
+      phase: PHASE-0002
+    TASK-0098:
+      file: "docs/features/glass-desktop/plan/tasks/TASK-0098-Keep-Collection-Document-And-Field-In-Sync.md"
+      title: "Keep collection, document and field in sync"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0020
+      phase: PHASE-0002
+      depends: ["TASK-0096", "TASK-0097"]
+    TASK-0099:
+      file: "docs/features/glass-desktop/plan/tasks/TASK-0099-Walk-The-Glass-Desktop-At-Real-Scale.md"
+      title: "Walk the Glass desktop at real scale"
+      status: backlog
+      owner: user:edwin
+      parent: FEAT-0020
+      phase: PHASE-0002
+      depends: ["TASK-0098"]
+    TASK-0094:
+      file: docs/features/native-glass-evaluation/plan/tasks/TASK-0094-Match-Decks-Visible-Glass-Work-In-A-Native-Compatibility-Mode.md
+      title: "Match Deck's visible Glass work in a native compatibility mode"
+      status: doing
+      owner: user:edwin
+      parent: FEAT-0019
+      phase: PHASE-0002
+      depends: ["TASK-0087", "TASK-0090", "TASK-0091"]
+      blocks: ["TASK-0092"]
+      tests: ["TST-0061"]
+    TASK-0086:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0086-Define-The-Native-Glass-Experiment-And-Baseline.md"
+      title: "Define the experiment, freeze the benchmark protocol and capture the current Deck baseline"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: []
+    TASK-0087:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0087-Export-Representative-Workspaces-For-Both-Renderers.md"
+      title: "Export complete workspace fixtures and deterministic larger datasets"
+      status: done
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0086"]
+      tests: ["TST-0060"]
+    TASK-0088:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0088-Boot-An-Isolated-Native-Glass-Executable.md"
+      title: "Boot an isolated Rust window with reproducible builds and measurement output"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0086"]
+    TASK-0089:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0089-Give-Every-Note-A-Stable-Reachable-Place.md"
+      title: "Give every note a stable place and a route into view without population caps"
+      status: done
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0087", "TASK-0088"]
+    TASK-0090:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0090-Draw-Readable-Cards-With-A-Native-Renderer.md"
+      title: "Draw realistic card content with cached text and bounded graphics work"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0089"]
+    TASK-0091:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0091-Exercise-Native-Glass-With-Real-Input-And-A-Reader.md"
+      title: "Make the field interactive and open a representative native note reader"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0090"]
+    TASK-0092:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0092-Measure-Native-Glass-Against-The-Current-Deck.md"
+      title: "Measure both implementations and record correctness, latency and resource limits"
+      status: doing
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0086", "TASK-0087", "TASK-0091"]
+    TASK-0093:
+      file: "docs/features/native-glass-evaluation/plan/tasks/TASK-0093-Decide-What-The-Native-Glass-Evidence-Supports.md"
+      title: "Report what the evidence supports and define the next architecture decision"
+      status: backlog
+      owner: user:edwin
+      phase: PHASE-0002
+      parent: FEAT-0019
+      depends: ["TASK-0092"]
     TASK-0001:
       file: "docs/features/orbit-view/plan/tasks/TASK-0001-The-Whole-Edge-List-Is-One-Payload.md"
       title: "The whole edge list is one payload — every link, with the offset that lets the edge quote the sentence that made it"
@@ -506,30 +694,9 @@ items:
       owner: user:edwin
       parent: "FEAT-0015"
       phase: PHASE-0002
-    TASK-0060:
-      file: "docs/features/view-desks/plan/tasks/TASK-0060-Hide-Notes-And-Show-Them-Again.md"
-      title: "Hide notes: one button hides every held note in this window and shows them again, and the field reclaims the space the panes covered"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0015"
-      phase: PHASE-0002
-    TASK-0061:
-      file: "docs/features/view-desks/plan/tasks/TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk.md"
-      title: "Glass and Spread draw the view's own desk and the notes kept on every view, with the mark on the pane and the card"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0015"
-      phase: PHASE-0002
     TASK-0062:
       file: "docs/features/view-desks/plan/tasks/TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk.md"
       title: "Desk panels, throws and the tablet use the right view's desk"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0015"
-      phase: PHASE-0002
-    TASK-0063:
-      file: "docs/features/view-desks/plan/tasks/TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide.md"
-      title: "The smoke run drives desks per view, the every-view mark and hide with a real pointer, and git status stays unchanged"
       status: done
       owner: user:edwin
       parent: "FEAT-0015"
@@ -541,51 +708,9 @@ items:
       owner: user:edwin
       parent: "FEAT-0016"
       phase: PHASE-0002
-    TASK-0065:
-      file: "docs/features/glass-zoom/plan/tasks/TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field.md"
-      title: "The wheel, a pinch and three keys zoom the field in Glass and the orbit, clicks still land on what is drawn, and no card is left under a pane"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0016"
-      phase: PHASE-0002
-    TASK-0066:
-      file: "docs/features/glass-zoom/plan/tasks/TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel.md"
-      title: "The smoke run zooms with a real wheel, a pinch and the keys, and each check is seen to fail with its fix removed"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0016"
-      phase: PHASE-0002
     TASK-0067:
       file: "docs/features/glass-focus/plan/tasks/TASK-0067-The-Ring-Is-A-Pure-Layout.md"
       title: "The ring is a pure layout: the pane's place, up to sixteen places that never overlap it, who gets one, the order they take, and a path by angle and distance"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0017"
-      phase: PHASE-0002
-    TASK-0068:
-      file: "docs/features/glass-focus/plan/tasks/TASK-0068-An-Opened-Note-Moves-To-The-Middle.md"
-      title: "An opened note moves to the middle: its card grows into a pane where it stood, the pane moves to the middle, the other held notes wait in a dock, the field dims, and Escape leaves before it sweeps"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0017"
-      phase: PHASE-0002
-    TASK-0069:
-      file: "docs/features/glass-focus/plan/tasks/TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes.md"
-      title: "The neighbours gather on a ring as mini notes, each with a line from the pane, and a mini note is a door to the next note"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0017"
-      phase: PHASE-0002
-    TASK-0070:
-      file: "docs/features/glass-focus/plan/tasks/TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way.md"
-      title: "The orbit opens a note the same way: the note in the middle, its direct links on the ring as mini notes, the orbit dimmed and still behind, and back at the same pixel after leaving"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0017"
-      phase: PHASE-0002
-    TASK-0071:
-      file: "docs/features/glass-focus/plan/tasks/TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring.md"
-      title: "The smoke run drives the note in the middle and its ring with a real pointer, and the checks that assumed a lift fills the front band are rewritten, not deleted"
       status: done
       owner: user:edwin
       parent: "FEAT-0017"
@@ -628,13 +753,6 @@ items:
     TASK-0077:
       file: "docs/features/glass-bands/plan/tasks/TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card.md"
       title: "A tile large enough becomes a real card: past the promotion threshold a quiet note stops being painted and gets an element, so it is clickable, tabbable and readable with no code of its own"
-      status: done
-      owner: user:edwin
-      parent: "FEAT-0018"
-      phase: PHASE-0002
-    TASK-0078:
-      file: "docs/features/glass-bands/plan/tasks/TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward.md"
-      title: "The smoke run clicks a finished note with a real pointer, pulls it forward, walks the shelf with the keyboard, and finds a note in the fourth band that used to be drawn nowhere"
       status: done
       owner: user:edwin
       parent: "FEAT-0018"
@@ -841,7 +959,7 @@ items:
       severity: high
       component: renderer
       tests: []
-      note: "Filed 2026-09-12 from Edwin running Deck: the opened note is the person's main note and its size is their decision; a move is not a resize. focusLayout takes no pane size at all — it searches down from FOCUS_MAX 640x480 to FOCUS_MIN 280x160 until ENOUGH (6) ring places fit — so TASK-0054's stored w/h is unread, and paintPane swaps between focusRect and paneRect (320x240 default) the instant a drag starts leaveFocus. Fix inverts the order of sacrifice: the pane size is an argument, the ring grows its curve and then drops places to '+N more'. DECIDED 2026-09-12, Edwin accepted the consequences and then changed the frame: 'there should always be space to the left and right of the note off-screen, so place the associated items there, do not use the current visible view as the constraint to layout the objects'. focusLayout stops refusing places outside the window. SETTLED 2026-09-12, Edwin: 'turning moves the note and the whole ring' — the pane is anchored to a BEARING on the cylinder and drawn FLAT at the person's size, no perspective. Three consequences are now task steps rather than questions: a flat pane needs a fade-and-stop rule at the 78-degree edge of sight, focusLayout returns angles and heights instead of pixels, and a drag on the pane becomes a turn plus a height change, which reuses the field's own arithmetic. The remembered reading size is still unanswered; recommend a store setting."
+      note: "Filed 2026-09-12 from Edwin running Deck: the opened note is the person's main note and its size is their decision; a move is not a resize. focusLayout takes no pane size at all — it searches down from FOCUS_MAX 640x480 to FOCUS_MIN 280x160 until ENOUGH (6) ring places fit — so TASK-0054's stored w/h is unread, and paintPane swaps between focusRect and paneRect (320x240 default) the instant a drag starts leaveFocus. Fix inverts the order of sacrifice: the pane size is an argument, the ring grows its curve and then drops places to '+N more'. DECIDED 2026-09-12, Edwin accepted the consequences and then changed the frame: 'there should always be space to the left and right of the note off-screen, so place the associated items there, do not use the current visible view as the constraint to layout the objects'. focusLayout stops refusing places outside the window. SETTLED 2026-09-12, Edwin: 'turning moves the note and the whole ring' — the pane is anchored to a BEARING on the cylinder and drawn FLAT at the person's size, no perspective. Three consequences are now task steps rather than questions: a flat pane needs a fade-and-stop rule at the 78-degree edge of sight, focusLayout returns angles and heights instead of pixels, and a drag on the pane becomes a turn plus a height change, which reuses the field's own arithmetic. The 2026-10-01 design proposes a persisted per-view reading-size preference with saved note size taking precedence; TASK-0104 owns implementation and compatibility checks."
     ISS-0072:
       file: "docs/issues/ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away.md"
       title: "Dragging the note open in the middle of Glass by a few pixels makes its neighbours vanish and moves every card on screen"
@@ -1462,7 +1580,28 @@ items:
       component: renderer
       tests: ["TST-0014"]
       note: "FIXED 2026-09-06 with one stylesheet rule: [hidden] { display: none !important; }. Found by Edwin walking TST-0008, and his counts are the diagnosis: switching from Features (30 cards) to Tests (13) repaints 13 and leaves 17 of the old view on screen; Issues, Publication and Library have 0 and change nothing. CAUSE: the pool hides a spare card with element.hidden, and .card { display: flex } in Deck's own stylesheet beats the browser rule for hidden elements, so the mark is set and the card stays visible. NOTHING IN THE RENDERER IS WRONG -- the pool's arithmetic is right, only the paint is. No test caught it because none of the seven suites renders anything, and the smoke run counted `.card:not([hidden])`, which returns the right number while the wrong number is on screen."
-  requirements: {}
+  requirements:
+    REQ-0003:
+      file: "docs/requirements/REQ-0003-Glass-Arrangements-Preserve-Membership-And-Reading-Size.md"
+      title: "Glass arrangements preserve membership and reading size"
+      status: draft
+      owner: user:edwin
+      phase: PHASE-0002
+      implements: FEAT-0022
+    REQ-0001:
+      file: "docs/requirements/REQ-0001-Glass-Collections-Remain-Exact-And-Interactive.md"
+      title: "Glass collections remain exact and interactive"
+      status: draft
+      owner: user:edwin
+      phase: PHASE-0002
+      implements: FEAT-0020
+    REQ-0002:
+      file: "docs/requirements/REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk.md"
+      title: "Glass opens the full note on its desk"
+      status: draft
+      owner: user:edwin
+      phase: PHASE-0002
+      implements: FEAT-0020
   phases:
     PHASE-0001:
       file: "docs/phases/PHASE-0001-Deck.md"
@@ -1481,9 +1620,9 @@ items:
       status: active
       order: 2
       owner: user:edwin
-      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017", "FEAT-0018"]
-      requirements: []
-      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0085"]
+      features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017", "FEAT-0018", "FEAT-0019", "FEAT-0020", "FEAT-0022", "FEAT-0023"]
+      requirements: [REQ-0001, REQ-0002, REQ-0003]
+      tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0085", "TASK-0086", "TASK-0087", "TASK-0088", "TASK-0089", "TASK-0090", "TASK-0091", "TASK-0092", "TASK-0093", "TASK-0094", "TASK-0095", "TASK-0096", "TASK-0097", "TASK-0098", "TASK-0099", "TASK-0100", "TASK-0101", "TASK-0102", "TASK-0103", "TASK-0104"]
       issues: ["ISS-0008", "ISS-0058", "ISS-0059", "ISS-0060", "ISS-0061", "ISS-0062", "ISS-0063", "ISS-0064", "ISS-0065", "ISS-0066", "ISS-0068", "ISS-0070", "ISS-0071", "ISS-0072", "ISS-0073", "ISS-0074", "ISS-0075", "ISS-0076", "ISS-0077", "ISS-0078", "ISS-0079", "ISS-0080", "ISS-0081", "ISS-0082", "ISS-0083", "ISS-0084", "ISS-0085", "ISS-0086", "ISS-0087", "ISS-0088"]
       note: "2026-09-11, later: FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) ADDED at Edwin's request from REFERENCE-FOCUS-ZOOM-AND-VERBS, eight tasks TASK-0064 to TASK-0071, suites TST-0050 and TST-0051, walk TST-0052; no new exit criterion, and criterion 3 is amended by TASK-0069 (a lift fills a ring first, the front band after leaving). FEAT-0017 revisits DES-0002 by Edwin's request. 2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
@@ -1503,12 +1642,30 @@ items:
       status: planned
       order: 3
       owner: user:edwin
-      features: []
+      features: [FEAT-0021]
       requirements: []
       tasks: []
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
+    RISK-0007:
+      file: "docs/risks/RISK-0007-Glass-Restoration-Loses-Identity-Or-Layout.md"
+      title: "Glass restoration loses identity or layout"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+    RISK-0005:
+      file: "docs/risks/RISK-0005-A-Native-Prototype-Wins-By-Doing-Less-Work.md"
+      title: "A native prototype wins by doing less work"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
+    RISK-0006:
+      file: "docs/risks/RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind.md"
+      title: "Native rendering leaves Decks reader and tablet behind"
+      status: open
+      owner: user:edwin
+      phase: PHASE-0002
     RISK-0002:
       file: "docs/risks/RISK-0002-Decks-Read-Only-Guarantee-Rests-On-The-Sidecars-Own-Checks.md"
       title: "Deck's read-only guarantee rests on the sidecar's own path checks for anything carried in a query string, and Deck does not know when those change"
@@ -1538,6 +1695,57 @@ items:
       phase: PHASE-0001
       note: "Risk scan for FEAT-0011, 2026-09-08, from Edwin's decision that Deck keeps its own index. Same shape as RISK-0002: Deck depends on behaviour in ANOTHER REPOSITORY and nothing in Deck watches it. The visible failure is two applications disagreeing about a number in front of one person -- the cockpit says 34 issues need triage and Deck says 31 -- after which he trusts neither. Three drifts: a rule mirrored wrongly at the start (the type spelling is the obvious one), a sidecar change nobody notices, and a DELIBERATE difference nobody wrote down. The third is the trap: cockpit ISS-0279 drops a note whose type: is a list, Deck must not reproduce it, so Deck's count will be right and the equality test will fail for a GOOD reason -- and somebody will loosen the assertion instead of recording it. MITIGATION: mirror with a citation to the upstream rule; pin the RESULT (a fixture of the sidecar's own library groups, with its date and commit) rather than the implementation; record every deliberate difference as a NAMED ROW; keep Deck's index claiming only which notes a query selects, with obligations, render, context and writes left to the sidecar."
   tests:
+    TST-0064:
+      file: "docs/tests/acceptance/TST-0064-Glass-Collections-And-Arrangements-Stay-Exact.md"
+      title: "Glass collections and arrangements stay exact"
+      status: active
+      owner: user:edwin
+      covers: ["FEAT-0022"]
+    TST-0063:
+      file: "docs/tests/acceptance/TST-0063-A-Collection-And-Full-Note-Share-Glass.md"
+      title: "A collection and full note share Glass"
+      status: active
+      owner: user:edwin
+      phase: PHASE-0002
+      covers: ["FEAT-0020"]
+    TST-0062:
+      file: "docs/features/native-glass-evaluation/plan/tests/TST-0062-The-Native-Scene-Keeps-Every-Note-Reachable.md"
+      title: "The native scene keeps every note reachable"
+      status: passing
+      owner: user:edwin
+      scope: feature
+      level: system
+      entrypoint: "prototypes/native-glass/src/scene.rs"
+    TST-0061:
+      file: "docs/features/native-glass-evaluation/plan/tests/TST-0061-The-Visual-Parity-Gate-Rejects-Mismatched-Work.md"
+      title: "The visual parity gate rejects mismatched work"
+      status: active
+      owner: user:edwin
+      scope: feature
+      level: system
+      entrypoint: "prototypes/native-glass/tools/test-verify-parity.mjs"
+    TST-0060:
+      file: "docs/features/native-glass-evaluation/plan/tests/TST-0060-The-Native-Glass-Fixtures-Reconcile-And-Regenerate.md"
+      title: "The native Glass fixtures reconcile and regenerate"
+      status: passing
+      owner: user:edwin
+      scope: feature
+      level: system
+      entrypoint: "prototypes/native-glass/tools/audit-fixture.mjs"
+    TST-0058:
+      file: "docs/tests/acceptance/TST-0058-Every-Note-Can-Be-Reached-In-The-Native-Prototype.md"
+      title: "Every note can be reached in the native prototype"
+      status: active
+      owner: user:edwin
+      scope: feature
+      level: acceptance
+    TST-0059:
+      file: "docs/features/native-glass-evaluation/plan/tests/TST-0059-The-Native-Glass-Evaluation-Is-Reproducible.md"
+      title: "The native Glass evaluation is reproducible"
+      status: ready
+      owner: user:edwin
+      scope: feature
+      level: system
     TST-0001:
       file: "docs/features/shell/plan/tests/TST-0001-The-Sidecar-Client-Reads-And-Never-Writes.md"
       title: "The sidecar client reads what Deck needs and has no way to write"
@@ -1901,6 +2109,12 @@ items:
   releases: {}
   workflows: {}
   changes:
+    CHG-20261001-Glass-Interaction-Delivery-Plan:
+      file: "docs/changes/CHG-20261001-Glass-Interaction-Delivery-Plan.md"
+      title: "Document the endorsed Glass interaction direction and delivery sequence"
+      status: merged
+      owner: user:edwin
+      note: "Documentation only: visual specification, requirements, delivery tasks and acceptance procedures. No runtime implementation or acceptance pass is claimed."
     CHG-20260909-Deck-Reads-Describes-And-Writes:
       file: "docs/changes/CHG-20260909-Deck-Reads-Describes-And-Writes.md"
       title: ""
@@ -1926,6 +2140,11 @@ items:
       owner: user:edwin
       note: "The phase's implementation. Deck opens, lists workspaces, draws a workspace's notes as cards and opens one in a reader -- all of it read-only, through three locks (a client with no write method, a proxy that answers 405 to anything that is not a read, and the sidecar's own loopback guard). New: desktop/, and tools/scripts/run-desktop-tests.sh, which each TST-* command names. Deck opens a SECOND PORT for its own host, loopback unless --lan. It REUSES a running sidecar after checking the root it reports, and stops only the ones it started (RISK-0001). Also fixes a mistake made when the phase opened: .cockpit/ was committed and is now ignored and untracked."
   decisions:
+    ADR-0006:
+      file: "docs/decisions/ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk.md"
+      title: "Collections and documents occupy the Glass desk"
+      status: accepted
+      owner: user:edwin
     ADR-0001:
       file: "docs/decisions/ADR-0001-Deck-Serves-Its-Own-Read-Only-Host.md"
       title: "Deck serves its own renderer over HTTP and proxies the sidecar read-only"
@@ -1957,6 +2176,11 @@ items:
       owner: user:edwin
       note: "Edwin, 2026-09-12: 'Fully agree, plan the full solution and on ISS-0078: do as suggested', after 'Maybe we need more bands and allow cards to be brought up to the active front band????'. Option 1 of three (a fourth band with derived geometry -- chosen; overflow the middle into the quiet band, which is what the DES-0002 prototype did and which conflates finished with did-not-fit; page the middle). A RULE-ADR: every band places at most its own capacity and states on screen how many it did not place, over the four bands named in BandName/Band, discharged by TST-0053 which is authoritative on disagreement. Consequences: DES-0002 amended (four bands; 'anything visible is clickable' carried to the canvas), PHASE-0002 exit criterion 1's wording owed from Edwin (the count now sits beside a remainder), the frame-time criterion re-opened and retaken on all three workspaces, BandTable gains outerCapacity and deepCapacity, the orbit untouched because it assigns its own slots, and ISS-0077 left open behind the measurement. Built by FEAT-0018."
   designs:
+    DES-0003:
+      file: "docs/designs/DES-0003-Collections-And-Documents-On-Glass.md"
+      title: "Collections and documents form one controllable Glass workspace"
+      status: proposed
+      owner: user:edwin
     DES-0001:
       file: "docs/designs/DES-0001-Nine-Ways-To-Read-The-Record.md"
       title: "Nine ways to read the record, and a tenth that was cut and then asked for — whole applications over one corpus"
@@ -1983,17 +2207,17 @@ items:
 
 metrics:
   counts:
-    features_total: 18
+    features_total: 23
     features_done: 13
     phases_total: 4
     phases_done: 0
-    tasks_total: 85
-    tasks_done: 80
-    tests_total: 40
-    tests_passing: 2
+    tasks_total: 104
+    tasks_done: 83
+    tests_total: 44
+    tests_passing: 4
     tests_failing: 0
     issues_open: 6
     issues_triage: 0
-    risks_open: 0
+    risks_open: 3
     releases_total: 0
-    decisions_total: 5
+    decisions_total: 6

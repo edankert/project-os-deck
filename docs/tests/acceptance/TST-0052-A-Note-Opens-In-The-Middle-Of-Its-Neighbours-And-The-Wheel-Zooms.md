@@ -6,17 +6,17 @@ title: "A note opened in Glass or the orbit stands in the middle of its neighbou
 status: active
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-01
 source: ["[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
 level: acceptance
-entrypoint: ""
+entrypoint: "Glass and Orbit in Deck desktop"
 command: ""
 last_verified: ""
 covers: ["[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
-issues: []
-tasks: ["[[TASK-0064-The-Zoom-Is-A-Pure-View-Transform]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]"]
+issues: ["[[ISS-0070]]", "[[ISS-0071]]", "[[ISS-0072]]"]
+tasks: ["[[TASK-0064-The-Zoom-Is-A-Pure-View-Transform]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0104]]"]
 artifacts: []
 adequacy: ""
 mutation_score: ""
@@ -27,81 +27,46 @@ related: ["[[PHASE-0002-Glass]]", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]", "[[TST-0
 area: "glass"
 ---
 
-# A note opens in the middle of its neighbours, and the wheel zooms
+# A focused document keeps its size and neighbourhood
 
 ## Purpose
 
-The walk that judges two features as things a person uses. It answers what Edwin asked on 2026-09-11. Does the mouse wheel zoom Glass and the orbit? When he selects a note in the orbit, does it open with its directly connected notes shown as mini notes? When he selects a note in Glass, does the opened note take the card's place and then move to the middle, with its associated notes around it and their connections shown? It also checks that Escape gets him back, and that nothing was written.
+Walk the existing spatial zoom and the repaired focus behavior. This procedure now reflects Edwin's decisions in ISS-0070/71/72. Its earlier ghost, mini-card and drag-to-exit expectations are replaced; no new pass is recorded.
 
 ## Setup
 
-Deck runs from this repository; there is no installed application yet.
+Start Deck with `npm start` in `desktop/` after TASK-0104 is implemented. Use a disposable copy of a real workspace containing a linked note with a long body, a second note sharing a neighbour, and a high-degree subject whose readable neighbourhood exceeds one viewport. Record the workspace's initial file state; it need not have started clean.
 
-- Once, ever: `cd desktop && npm install`.
-- To start: `cd desktop && npm start`. To stop: quit the application.
-- A mouse with a wheel, and a Mac trackpad if you have one.
-- **A terminal in the workspace with `git status` ready.** Run it once before you start and confirm the tree is clean.
-- Open this repository (`project-os-deck`) in Deck, Issues view, Glass.
-- **Not before** the six tasks this note lists have landed.
+Use a mouse or trackpad, keyboard, and the operating system's reduced-motion control. Open Glass in a view with a visible selectable card. Do not require an owed/front card: the source may legitimately report zero owed notes. Record the IDs used, display/window dimensions and build.
 
-## Procedure
+## Steps
 
-**Zoom.**
+1. Put the pointer over a visible card and zoom in and out to the limits. Use the zoom-reset control, pinch, Shift-wheel and `+`, `-`, `0`. Type `0` in a search field and double-click the empty field.
+2. Open the linked note. Inspect its former slot and each visible neighbour for duplicate cards or empty outlines. Read its full text and scroll to both ends; select a paragraph by dragging.
+3. Resize the document, then drag its header while watching its size and the neighbourhood. Drag far enough to put a neighbour outside the viewport, then recover it with the named locate/list route.
+4. Open the second note and follow the shared neighbour. Verify that an already held note is raised rather than duplicated. Close a document and recover the initiating row or reference.
+5. Open the high-degree subject. Use the complete relationship list and keyboard to reach a neighbour outside the visible area. Inspect a connection's source direction/context.
+6. Open a local control, then press Escape once. With no local control open, leave focus using Escape. Exercise the existing second-Escape sweep deliberately and verify that the first local Escape did not also sweep.
+7. Repeat the open, drag, resize and return routes using keyboard and reduced motion. Use Hide notes and switch away from the view and back.
+8. Switch to Orbit, open a linked dot and repeat the shared identity/size/movement checks. Leave it untouched for ten seconds, then leave focus and compare the background with its prior arrangement.
+9. Reload Deck and inspect saved pane dimensions and positions. Open a never-sized note in another window on the same view, then a note with its own saved size. Shrink and restore the viewport; verify that temporary presentation does not overwrite either saved size. Load a desk from before the reading preference existed and check the documented default. Compare source file state with the initial record.
 
-- Rest the pointer on a card at the side of the front band and turn the wheel toward you three notches. Then away from you until it stops. Then toward you until it stops. Watch the card under the pointer.
-- Read the compass. Press the zoom reading on it.
-- Pinch on the trackpad over the field. Look at the rest of the window: the top bar, the navigator.
-- Hold Shift and turn the wheel.
-- Lift a note, so a pane is open. Turn the wheel with the pointer over the pane's text. Press Escape twice.
-- Zoom in over a card that sits beside where a pane would be, lift a different note, and look for a card under its pane.
-- Press `+` twice, `-` once, then `0`. Click into the navigator's search box and type `0`.
-- Double-click the field's background.
-- Switch to Orbit. Zoom in on a cluster, rest on a link, then click a dot.
+## Expect
 
-**Opening a note in Glass.**
+- Field zoom preserves its pointer anchor and limits; reset restores the default. Shift-wheel turns the field, and text-field typing does not invoke camera shortcuts.
+- A focused note and each neighbour have one spatial representation. The source slot has no drawn ghost. A collection/list reference to a note is not an extra spatial card.
+- The document retains the person's chosen size while moving. A note uses its saved size when present; otherwise it uses the persisted per-view reading preference, then the calibrated first-use default. Another window on that view reads the preference, and temporary narrow layouts do not overwrite it. Text drag selects text and text scrolling never drives the camera at either boundary.
+- Dragging the document translates its neighbourhood with relative order intact. Unrelated cards are not re-dealt. Off-screen neighbours remain reachable without shrinking the reader.
+- Shared/held notes are reused. Connections state supported direction or meaning, and their list offers the same information to keyboard users.
+- Escape dismisses one local state, or leaves focus when no local state exists. It cannot dismiss a local control and sweep in one event. Closing one document retains the others and returns focus appropriately.
+- Reduced motion preserves the same final state without travel. Orbit stops drifting while focused and restores its stable background on leaving.
+- Existing persisted positions and chosen sizes survive reload. Focus and camera orientation remain session state.
+- Navigation and arranging do not change source notes. All findings name the IDs and build examined.
 
-- On Issues, click a card in the front band. Watch where the pane first appears and where it goes.
-- Look at the notes around it. Compare the lines. Rest the pointer on one line and read it. Rest on one mini note.
-- Click a mini note. Watch where the note you had open goes, and where it sits on the new ring.
-- Click the header at the left edge. Then try to drag it.
-- Press Escape once. Look at the panes and the front band. Press Escape again.
-- Find a note with many links (a phase or a feature) in the navigator and press Enter on it. Count the mini notes and find "+N more". Press Tab from the pane and walk the ring with Tab, then press Enter on one.
-- Lift a note, then press **H**. Press H again.
-- Turn on reduced motion (System Settings, Accessibility, Display, Reduce motion) and lift a note. Turn it off again.
+## Not this check
 
-**Opening a note in the orbit.**
+This check does not verify new collection presentations or arrangement undo (TST-0064), the complete collection/document workflow (TST-0063), saved scenes, structured evidence payloads or native benchmark results. It does not require a fixed count of sixteen tiny neighbour cards.
 
-- Switch to Orbit. Click a dot. Leave the mouse alone for ten seconds. Press Escape and compare the orbit with how it looked before.
+## Evidence
 
-**Afterwards.**
-
-- Quit Deck and start it again. Look at the panes.
-- Run `git status` in the workspace.
-
-## Expected results
-
-- The card under the pointer stays under the pointer as the field grows and shrinks, and the zoom stops at a limit each way.
-- The compass shows the zoom, for example "2.5×", and pressing it returns to normal size; at normal size the reading is gone.
-- A pinch zooms the field and nothing else in the window changes size.
-- Shift and the wheel turn the field without zooming.
-- The wheel over a pane scrolls its text.
-- After zooming, no card is left under a pane once the wheel stops.
-- `+`, `-` and `0` zoom in, out and back; typed in the search box, `0` is a letter.
-- A double-click on the background returns to normal size.
-- In the orbit the zoom works the same way, links still show their sentence and a dot can still be clicked.
-- The pane first appears where the card was, then moves to the middle within about a second. The card's place is a dashed outline.
-- The notes it links to and the notes linking to it stand on a ring around it as small cards with an id and title, none over the pane; lines to what it links to are solid and lines from what links to it are dashed. Resting on a line says which way the link runs and quotes its sentence. Resting on a mini note draws wires to its own neighbours.
-- A neighbour that was on the left of the field before the lift is on the left of the ring.
-- Clicking a mini note moves it to the middle; the previous note becomes a header at the left edge and, if the two are linked, sits on the opposite side of the new ring.
-- Clicking the header swaps it back; dragging it does nothing.
-- One Escape takes the note out of the middle: every pane is back where it was and the neighbourhood is in the front band, with the field turned to it. A second Escape empties the desk.
-- A note with many links shows 15 mini notes and "+N more"; Tab walks the ring and Enter opens one.
-- H takes the note out of the middle and hides the panes; H again shows them, with nothing in the middle.
-- With reduced motion nothing moves: the note and its ring appear in place and are highlighted.
-- In the orbit, the note opens in the middle over a dimmed orbit that does not drift; after Escape the orbit looks exactly as it did.
-- After the restart, the panes are where they were and nothing is in the middle.
-- `git status` is clean.
-
-## Evidence (fill after running)
-
-Not yet walked: planned 2026-09-11.
+Not walked against the repaired contract. Record a dated result through the acceptance ledger when implementation is ready; the former implementation's automated passes do not satisfy this procedure.
