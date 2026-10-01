@@ -2,7 +2,7 @@
 type: "[[requirement]]"
 id: REQ-0002
 title: "Glass opens the full note on its desk"
-status: draft
+status: approved
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
@@ -31,6 +31,10 @@ Opening a note in Glass must immediately expose its identified document surface.
 - [ ] A document and collection remain usable together; text dragging selects text, header dragging moves without resizing, and object scrolling never turns or zooms the field at its boundary. — evidence to be collected: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]]
 - [ ] Neighbourhood movement preserves readable size and shared identity; source-backed relationship labels have an exact accessible linked list and off-screen objects have a return route. — evidence to be collected: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]]
 - [ ] A narrow window or tablet provides explicit navigation between objects, visible keyboard focus and the existing read-only served-host authority. — evidence to be collected: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]]
+
+## Approval
+
+Approved for building on 2026-10-01. Edwin asked for this direction to be implemented in full and named DES-0003 as the baseline: “Treat DES-0003 as the implementation baseline; resolve routine design details using its principles and record your decisions.” The acceptance criteria above are the ones the implementation is built against. They are ticked only with evidence, at the feature's close-out.
 
 ## Traceability
 

@@ -20,14 +20,16 @@ import { SidecarClient, flattenGroups, groupsFromNav, isFinishedWork } from '../
 import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
-import { DESK_ACTIONS, deskCardsOf, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
+import { DESK_ACTIONS, collectionOf, deskCardsOf, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
+import { changeText, filterText, memberIds, membershipChange, removedSelectionText, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
-import { countDistinct, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
+import { countDistinct, isNarrowed, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } from '../shared/write-client.js';
 import { CardPool, type PlacedCard } from './cards.js';
 import { NavigatorList } from './navigator.js';
 import { Host } from './host-bridge.js';
-import { GlassField, type OrbitData, glassElements } from './glass.js';
+import { GlassField, type NoteDocument, type OrbitData, glassElements } from './glass.js';
+import { CollectionView } from './collection-view.js';
 import type { GraphEdge } from '../shared/graph.js';
 import { ContextCache } from '../shared/neighbourhood.js';
 import { type Edge, type ThrowTarget, type WindowInfo, type DisplayInfo, targetsToward } from '../shared/throw.js';
@@ -44,6 +46,7 @@ const el = {
   rail: must('rail'),
   navigator: must('navigator'),
   navList: must('nav-list'),
+  navState: must('nav-state'),
   refusals: must('refusals'),
   actuators: must('actuators'),
   stale: must('stale'),
@@ -211,6 +214,27 @@ let queryTimer: ReturnType<typeof setTimeout> | null = null;
 /** The note the reader is showing, with what a write to it needs. */
 let openNote: { id: string; rel: string; mtime: number | null } | null = null;
 /**
+ * The same for every note open as a document in Glass (FEAT-0020): its path
+ * and the modification time Deck's index held when the text was read. A tick
+ * or a verb in a document is sent with ITS note's time, so a note that changed
+ * underneath is refused by the sidecar exactly as it is from the reader.
+ */
+const documentNotes = new Map<string, { id: string; rel: string; mtime: number | null }>();
+
+/** What a write to this note needs: from its document when it has one, else from the reader. */
+function noteForWrite(noteId: string): { id: string; rel: string; mtime: number | null } | null {
+  return documentNotes.get(noteId) ?? (openNote !== null && openNote.id === noteId ? openNote : null);
+}
+/**
+ * Whether the view on screen is being read, was read, or could not be. An
+ * empty list and a list that failed to load look the same, and only one of
+ * them is a fact about the workspace (DES-0003, "Distinguish waiting from
+ * empty").
+ */
+let viewState: { state: 'loading' | 'ready' | 'error'; error: string } = { state: 'loading', error: '' };
+/** The note whose row was selected when a refreshed result was applied and it was no longer in it. */
+let removedSelection: string | null = null;
+/**
  * The index revision this window drew from.
  *
  * A window compares what it drew against what the store now says, and shows a
@@ -337,10 +361,25 @@ const glass = new GlassField(glassElements(), {
     const state = host.state();
     return state.workspaceId === null ? undefined : contexts.peek(state.workspaceId, noteId, indexRevision());
   },
-  noteHtml: async (card) => {
+  document: async (card): Promise<NoteDocument> => {
     const state = host.state();
-    if (state.workspaceId === null || card.rel === null) return '<p>This card has no note behind it.</p>';
-    return (await clientFor(state.workspaceId).note(card.rel)).html;
+    if (state.workspaceId === null) throw new Error('no workspace is open');
+    if (card.rel === null) throw new Error('this card has no note behind it');
+    const note = await clientFor(state.workspaceId).note(card.rel);
+    // The time Deck's own index holds for the file, which is what a write
+    // sends as its guard against a note that changed underneath.
+    documentNotes.set(card.noteId, { id: card.noteId, rel: card.rel, mtime: await readMtime(state.workspaceId, card.rel) });
+    return { html: note.html, frontmatter: note.frontmatter, relPath: note.relPath, title: note.title };
+  },
+  dress: async (noteId, note, actions) => {
+    const state = host.state();
+    attachTicks(note, noteId);
+    if (state.workspaceId !== null) await drawActuators(actions, state.workspaceId, noteId);
+  },
+  cardByRel: (rel) => cardByRel(rel),
+  closed: (noteId) => documentClosed(noteId),
+  revealed: (noteId) => {
+    navigator.reveal(noteId);
   },
   targets: (edge) => throwTargets(edge),
   throwTo: (target, card, edge) => throwTo(target, card, edge),
@@ -366,6 +405,59 @@ const glass = new GlassField(glassElements(), {
     );
     if (!response.ok) return '';
     return ((await response.json()) as { sentence?: string }).sentence ?? '';
+  },
+});
+/**
+ * The collection: the view's list as an object on the Glass desk (FEAT-0020).
+ * The navigator above is its body while Glass is on screen; it is put back
+ * beside the desk for Spread and List.
+ */
+const collection = new CollectionView(
+  {
+    root: must('collection'),
+    head: must('collection-head'),
+    name: must('collection-name'),
+    count: must('collection-count'),
+    filter: must('collection-filter'),
+    fold: must('collection-fold') as HTMLButtonElement,
+    note: must('collection-note'),
+    places: must('collection-places'),
+    body: must('collection-body'),
+    resize: must('collection-resize'),
+    navigator: el.navigator,
+    home: { parent: el.navigator.parentElement as HTMLElement, before: el.navigator.nextElementSibling },
+    list: el.navList,
+    state: el.navState,
+  },
+  {
+    canArrange: () => host.canArrange(),
+    stored: () => {
+      const state = host.state();
+      return collectionOf(state, state.workspaceId, deskViewHere());
+    },
+    store: (layout) => void send({ type: 'set-collection', layout }),
+    raised: () => undefined,
+    applyChange: () => applyPending(),
+    clearFilters: () => {
+      el.search.value = '';
+      void host.dispatch({ type: 'set-query', text: '' });
+      void host.dispatch({ type: 'set-filters', filters: { statuses: [], types: [] } });
+    },
+    retry: () => {
+      const state = host.state();
+      const workspace = workspaceById(state.workspaceId);
+      if (workspace !== null && currentView !== null) void loadView(workspace, currentView);
+    },
+  },
+);
+glass.addFurniture({
+  place: (field, shift, narrow) => collection.place(field, shift, narrow),
+  rect: () => collection.rect(),
+  lower: () => collection.lower(),
+  focus: () => {
+    // The row the person was on, when there is one; else the search box.
+    const current = host.state().noteId;
+    if (current === null || !navigator.focusNote(current, true)) el.search.focus();
   },
 });
 glass.sendTo = (card) => sendTo(card);
@@ -569,6 +661,9 @@ function applySurface(): void {
   document.body.dataset['surface'] = surface;
   const field = surface === 'glass' || surface === 'orbit';
   glass.setArrangement(surface === 'orbit' ? 'orbit' : 'bands');
+  // Before the field measures itself: the list leaves the column beside the
+  // field, and the field takes that room.
+  collection.setActive(field);
   glass.setActive(field);
   if (surface === 'orbit') void loadOrbit();
   paintSurfaceToggle();
@@ -688,6 +783,10 @@ async function loadView(workspace: Workspace, view: Description): Promise<void> 
   pool.useFaces(view.face);
   renderSurfaceToggle();
   const source = sourceOf(view);
+  // Said while it is being read: a list that has not arrived is not an empty list.
+  viewState = { state: 'loading', error: '' };
+  removedSelection = null;
+  drawCollection();
   try {
     if (source.kind === 'nav') {
       const payload = await client.nav(source.mode);
@@ -709,11 +808,13 @@ async function loadView(workspace: Workspace, view: Description): Promise<void> 
       ];
     }
     currentCards = flattenGroups(currentGroups);
+    viewState = { state: 'ready', error: '' };
     say(`${workspace.name} · ${view.label} · ${currentCards.length} notes`);
   } catch (err) {
     currentGroups = [];
     currentCards = [];
-    say(err instanceof Error ? err.message : String(err), true);
+    viewState = { state: 'error', error: err instanceof Error ? err.message : String(err) };
+    say(viewState.error, true);
   }
   renderFilters();
   applySurface();
@@ -872,9 +973,37 @@ function drawNavigator(): void {
     currentNoteId: state.noteId,
   });
   el.navCount.textContent = `${shown} of ${held}`;
+  drawCollection();
   drawRefusals();
   if (el.search.value !== state.query) el.search.value = state.query;
   syncFilters();
+}
+
+/**
+ * What the collection says about itself: the query's name, its exact count,
+ * what narrows it, how many of its members the field has a place for, and
+ * what is waiting to be applied (FEAT-0020, REQ-0001).
+ *
+ * Everything here is worked out from the groups the view's source returned
+ * and the store's narrowing. None of it is kept.
+ */
+function drawCollection(): void {
+  const state = host.state();
+  const narrowing = { query: state.query, filters: state.filters };
+  const shown = pinned ? currentGroups : narrowGroups(currentGroups, narrowing);
+  const summary = summarise(currentGroups, shown, !pinned && isNarrowed(narrowing), glass.isActive() ? glass.placedIds() : new Set(memberIds(currentGroups)));
+  collection.paint({
+    name: currentView?.label ?? 'this view',
+    summary,
+    filter: pinned ? '' : filterText(state.query, state.filters),
+    change: pendingGroups === null ? '' : changeText(membershipChange(currentGroups, pendingGroups)),
+    removed: removedSelection,
+    state: viewState.state,
+    error: viewState.error,
+  });
+  // Outside Glass the list has no collection round it, and says the same
+  // three things itself: it is being read, it could not be read, or nothing
+  // matches. (In Glass the collection paints this same element.)
 }
 
 /**
@@ -999,10 +1128,9 @@ function drawDesk(): void {
   el.glassAlsoHeld.textContent = also;
 
   if (glass.isActive()) {
-    // The reader is the reading column: shown for a widened pane, or on a
-    // served page once a note is opened, since a tablet holds no panes.
-    const wide = deskHere(state).some((c) => c.wide === true);
-    document.body.classList.toggle('reading', wide || (!host.canArrange() && state.noteId !== null));
+    // No reading column in Glass: a note is read in its document on the desk,
+    // on the Mac and on a tablet alike (ADR-0006).
+    document.body.classList.remove('reading');
     glass.update({
       groups: currentGroups,
       view: currentView,
@@ -1144,17 +1272,19 @@ async function followTheMac(state: ReturnType<typeof host.state>): Promise<void>
 
 /** A click in the navigator puts a note on the desk, or takes it off again. */
 async function toggleOnDesk(card: CardModel): Promise<void> {
+  if (glass.isActive()) {
+    // In Glass a row opens the note as a document, as a click on its card
+    // does, and the document grows from the row: the row is where the person
+    // was looking (DES-0003). Closing it is the document's ×, or Delete on
+    // the row. A tablet does the same in a document of its own, which is not
+    // on the Mac's desk and changes nothing there (TASK-0057).
+    await glass.lift(card, rowRect(card.noteId));
+    return;
+  }
   // A tablet reads the Mac's desk and does not change it (TASK-0057), so a
   // row on a served page opens the note and leaves the desk as it is.
   if (!host.canArrange() && host.followsTheStore()) {
-    if (glass.isActive()) glass.arriveAt(card.noteId);
     await openCard(card);
-    return;
-  }
-  if (glass.isActive()) {
-    // In Glass a row lifts the note, as a click on its card does. Putting it
-    // back is the pane's ×, or Delete on the row.
-    await glass.lift(card);
     return;
   }
   const cards = deskHere();
@@ -1171,6 +1301,56 @@ async function toggleOnDesk(card: CardModel): Promise<void> {
   await openCard(card);
 }
 
+/** Where a note's row is drawn, in the field's own coordinates, or null when it has none in sight. */
+function rowRect(noteId: string): { left: number; top: number; width: number; height: number } | null {
+  const row = Array.from(el.navList.querySelectorAll<HTMLElement>('.nav-row')).find((r) => !r.hidden && r.dataset['noteId'] === noteId);
+  const field = document.getElementById('field');
+  if (row === undefined || field === null) return null;
+  const r = row.getBoundingClientRect();
+  const f = field.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return null;
+  return { left: r.left - f.left, top: r.top - f.top, width: r.width, height: r.height };
+}
+
+/**
+ * The card for a note named by its path: where a link inside a document
+ * leads. The view's own card when the view holds the note; otherwise one
+ * built from Deck's index, so a link to a note outside the view still opens.
+ */
+async function cardByRel(rel: string): Promise<CardModel | null> {
+  const known = currentCards.find((c) => c.rel === rel);
+  if (known !== undefined) return known;
+  const ws = host.state().workspaceId;
+  if (ws === null) return null;
+  try {
+    const response = await fetch(`/deck/records/${encodeURIComponent(ws)}?rel=${encodeURIComponent(rel)}`);
+    if (!response.ok) return null;
+    const record = ((await response.json()) as { records?: NoteRecord[] }).records?.[0];
+    return record === undefined ? null : toCard(record, new Map());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A document was closed in Glass: the keyboard goes back to the row it was
+ * opened from, at the place the list was scrolled to. When that row is no
+ * longer in the list, that is said and the keyboard goes to the collection
+ * itself, never to some other note's row (FEAT-0020, TASK-0098).
+ */
+function documentClosed(noteId: string): void {
+  documentNotes.delete(noteId);
+  if (!glass.isActive()) return;
+  drawNavigator();
+  if (navigator.focusNote(noteId, true)) return;
+  if (navigator.reveal(noteId) === 'group') {
+    say(`${noteId} is closed; its row is folded away under the marked heading`);
+    return;
+  }
+  say(`${noteId} is closed; it is not in this list any more`);
+  collection.focusHead();
+}
+
 async function openCard(card: CardModel): Promise<void> {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
@@ -1179,6 +1359,9 @@ async function openCard(card: CardModel): Promise<void> {
   if (panel !== 'note') await host.dispatch({ type: 'focus-note', noteId: card.noteId });
   drawNavigator();
   drawDesk();
+  // In Glass the note is read in its document on the desk, in both hosts:
+  // there is no reader column beside the field any more (ADR-0006).
+  if (glass.isActive()) return;
   if (card.rel === null) {
     el.reader.replaceChildren(text('this card has no note behind it'));
     return;
@@ -1197,8 +1380,8 @@ async function openCard(card: CardModel): Promise<void> {
     // What this window drew from, so it can tell later that it is old.
     drewFromRevision = indexRevision();
     drawStale();
-    attachTicks(article);
-    await drawActuators(workspace.id, card.noteId);
+    attachTicks(article, card.noteId);
+    await drawActuators(el.actuators, workspace.id, card.noteId);
   } catch (err) {
     openNote = null;
     el.reader.replaceChildren(text(err instanceof Error ? err.message : String(err)));
@@ -1242,12 +1425,15 @@ function indexRevision(): number {
  * what project-os-cockpit#REQ-0026 forbids. A disabled row is drawn disabled
  * with the reason the row carried — not hidden, and not enabled.
  */
-async function drawActuators(workspaceId: string, noteId: string): Promise<void> {
-  el.actuators.replaceChildren();
+async function drawActuators(into: HTMLElement, workspaceId: string, noteId: string): Promise<void> {
+  // Drawn where the note is read: beside the reader in Spread and List, and
+  // inside the note's own document in Glass (FEAT-0020). The rows, the guard
+  // and the confirmation are the same in both; only the container differs.
+  into.replaceChildren();
   // ABSENT when Deck is served, not disabled. A greyed-out verb is a promise
   // that it could work, and on a tablet it never can (ADR-0003).
   if (!host.capabilities().write) {
-    el.actuators.hidden = true;
+    into.hidden = true;
     return;
   }
   let rows: ActuatorRow[] = [];
@@ -1265,14 +1451,14 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
     // common case: most notes at most times owe nobody a decision.
   }
   if (rows.length === 0) {
-    el.actuators.hidden = true;
+    into.hidden = true;
     return;
   }
-  el.actuators.hidden = false;
+  into.hidden = false;
   const caption = document.createElement('span');
   caption.className = 'why';
   caption.textContent = 'this note can be:';
-  el.actuators.appendChild(caption);
+  into.appendChild(caption);
   for (const row of rows) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -1298,12 +1484,12 @@ async function drawActuators(workspaceId: string, noteId: string): Promise<void>
     button.addEventListener('click', () => {
       void applyVerb(workspaceId, noteId, row, triaging);
     });
-    el.actuators.appendChild(button);
+    into.appendChild(button);
     if ((row.disabled || !canPerform(row)) && why !== '') {
       const said = document.createElement('span');
       said.className = 'why';
       said.textContent = why;
-      el.actuators.appendChild(said);
+      into.appendChild(said);
     }
   }
 }
@@ -1360,7 +1546,7 @@ async function applyVerb(
     workspaceId,
     id: noteId,
     to: row.to,
-    ...(openNote?.mtime === null || openNote?.mtime === undefined ? {} : { mtime: openNote.mtime }),
+    ...(noteForWrite(noteId)?.mtime === null || noteForWrite(noteId)?.mtime === undefined ? {} : { mtime: noteForWrite(noteId)?.mtime }),
     ...(reason === null ? {} : { note: reason }),
     ...(severity === null ? {} : { severity }),
   });
@@ -1381,7 +1567,7 @@ async function applyVerb(
  * `/api/notes/tick` finds the line by that text. Deck invents no id scheme and
  * tracks no line number.
  */
-function attachTicks(article: HTMLElement): void {
+function attachTicks(article: HTMLElement, noteId: string): void {
   if (!host.capabilities().write) return;
   const boxes = Array.from(article.querySelectorAll('input[type="checkbox"]'));
   if (boxes.length === 0) return;
@@ -1410,17 +1596,18 @@ function attachTicks(article: HTMLElement): void {
     control.textContent = 'tick';
     control.title = 'Resolve this criterion with evidence';
     control.addEventListener('click', () => {
-      void tickCriterion(criterion);
+      void tickCriterion(noteId, criterion);
     });
     element.parentElement?.insertBefore(control, element.nextSibling);
   }
 }
 
 /** Tick one criterion, collecting the evidence BEFORE the write is sent. */
-async function tickCriterion(criterion: string): Promise<void> {
+async function tickCriterion(noteId: string, criterion: string): Promise<void> {
   const state = host.state();
   const workspaceId = state.workspaceId;
-  if (workspaceId === null || openNote === null) return;
+  const note = noteForWrite(noteId);
+  if (workspaceId === null || note === null) return;
   // The endpoint wants evidence or a reason, and asking for it after a refusal
   // is worse than asking before: the reader has already done the thinking.
   const evidence = await askText(`evidence for "${short(criterion)}":`);
@@ -1430,20 +1617,20 @@ async function tickCriterion(criterion: string): Promise<void> {
   }
   const result = await host.write('tick', {
     workspaceId,
-    id: openNote.id,
+    id: note.id,
     criterion,
     evidence,
     // Every time. It is the only guard against ticking a note that changed
     // since this page was rendered.
-    ...(openNote.mtime === null ? {} : { mtime: openNote.mtime }),
+    ...(note.mtime === null ? {} : { mtime: note.mtime }),
   });
   if (!result.ok) {
     say(wordRefusal(result.error ?? ''), true);
-    if (/changed on disk/i.test(result.error ?? '')) await afterWrite(workspaceId, openNote.id);
+    if (/changed on disk/i.test(result.error ?? '')) await afterWrite(workspaceId, note.id);
     return;
   }
   say('ticked, with the evidence and the name you are writing under');
-  await afterWrite(workspaceId, openNote.id);
+  await afterWrite(workspaceId, note.id);
 }
 
 function short(text_: string): string {
@@ -1459,6 +1646,10 @@ function short(text_: string): string {
  */
 async function afterWrite(workspaceId: string, noteId: string): Promise<void> {
   wroteTo = noteId;
+  // A document showing the note reads it again: the person who ticked a box
+  // in it expects to see it ticked.
+  documentNotes.delete(noteId);
+  glass.forgetBodies();
   const card = currentCards.find((c) => c.noteId === noteId);
   if (card !== undefined) await openCard(card);
   const workspace = workspaceById(workspaceId);
@@ -1627,6 +1818,13 @@ function changedNotes(before: CardGroup[], after: CardGroup[]): number {
 /** The person acted on the chip: the held change is dealt, with the view switch's transitions. */
 function applyPending(): void {
   if (pendingGroups === null) return;
+  // The row a person was on is kept by the note it is for. When that note is
+  // no longer in the result it is named, and its document, if one is open,
+  // stays open: nothing is closed and no other row is taken in its place.
+  const state = host.state();
+  const selected = state.noteId;
+  collection.keepAnchor();
+  removedSelection = removedSelectionText(selected, pendingGroups, selected !== null && deskHere(state).some((c) => c.noteId === selected));
   currentGroups = pendingGroups;
   currentCards = flattenGroups(currentGroups);
   pendingGroups = null;
@@ -1637,6 +1835,8 @@ function applyPending(): void {
   renderFilters();
   drawNavigator();
   drawDesk();
+  // Back to the row that was at the top, wherever it is in the new order.
+  if (!collection.restoreAnchor() && collection.anchorId() !== null) collection.focusHead();
 }
 
 /** The name Deck writes with, shown and changeable. */

@@ -2,7 +2,7 @@
 type: "[[requirement]]"
 id: REQ-0003
 title: "Glass arrangements preserve membership and reading size"
-status: draft
+status: approved
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
@@ -31,6 +31,10 @@ Collection presentations and deliberate arrangements must preserve exact members
 - [ ] Apply and Undo arrangement change layout only, preserve readable text and source content, and announce incompatible changed state before applying a stale preview or undo. — evidence to be collected: [[TST-0064-Glass-Collections-And-Arrangements-Stay-Exact]]
 - [ ] Relationship emphasis uses supported source meanings and retains an exact accessible list of every neighbour. — evidence to be collected: [[TST-0064-Glass-Collections-And-Arrangements-Stay-Exact]]
 - [ ] All collection members and arranged objects remain reachable at large populations and narrow sizes; visible rendering limits never silently limit membership, and served-host authority stays read-only. — evidence to be collected: [[TST-0064-Glass-Collections-And-Arrangements-Stay-Exact]]
+
+## Approval
+
+Approved for building on 2026-10-01. Edwin asked for this direction to be implemented in full and named DES-0003 as the baseline: “Treat DES-0003 as the implementation baseline; resolve routine design details using its principles and record your decisions.” The acceptance criteria above are the ones the implementation is built against. They are ticked only with evidence, at the feature's close-out.
 
 ## Traceability
 

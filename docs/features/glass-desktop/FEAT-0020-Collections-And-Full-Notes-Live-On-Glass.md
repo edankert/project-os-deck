@@ -2,7 +2,7 @@
 type: "[[feature]]"
 id: FEAT-0020
 title: "Collections and full notes live on the Glass desktop"
-status: planned
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01

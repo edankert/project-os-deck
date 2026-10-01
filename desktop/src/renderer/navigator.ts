@@ -37,6 +37,8 @@ export class NavigatorList {
   private readonly handlers: NavigatorHandlers;
   private readonly pool: HTMLElement[] = [];
   private rows: Row[] = [];
+  /** The groups last painted, for finding which heading holds a note whose row is folded away. */
+  private groups: NavigatorPaint['groups'] = [];
   /** The one row the Tab key lands on: a roving tab stop, so 409 rows are one stop. */
   private stop = 0;
   private total = 0;
@@ -56,12 +58,50 @@ export class NavigatorList {
     container.addEventListener('keydown', (event) => this.onKey(event));
   }
 
-  /** Put the keyboard on the row drawing this note, if one does. */
-  focusNote(noteId: string): boolean {
+  /**
+   * Put the keyboard on the row drawing this note, if one does. `quiet` is
+   * for coming BACK to a row, when a document is closed: the keyboard returns
+   * to where the note was opened from, and that is not a fresh arrival, so the
+   * field is not flown anywhere (FEAT-0020, TASK-0098).
+   */
+  focusNote(noteId: string, quiet = false): boolean {
     const index = this.rows.findIndex((r) => r.kind === 'card' && r.card.noteId === noteId);
     if (index === -1) return false;
-    this.moveStop(index, true);
+    const was = this.restoring;
+    this.restoring = quiet || was;
+    try {
+      this.moveStop(index, true);
+    } finally {
+      this.restoring = was;
+    }
     return true;
+  }
+
+  /**
+   * Show the row for a note without moving the keyboard: the note was opened
+   * from a card in the field, and the list should show which row is its.
+   *
+   * A row in a group that is folded away is not drawn, and unfolding a group
+   * of hundreds because one of its notes was opened would be the list
+   * rearranging itself. So the group's heading is shown and marked instead,
+   * and the answer says which of the two happened.
+   */
+  reveal(noteId: string): 'row' | 'group' | 'absent' {
+    for (const element of this.pool) element.classList.remove('holds-open');
+    const index = this.rows.findIndex((r) => r.kind === 'card' && r.card.noteId === noteId);
+    if (index !== -1) {
+      this.pool[index]?.scrollIntoView({ block: 'nearest' });
+      return 'row';
+    }
+    const holds = (cards: CardModel[]): boolean => cards.some((c) => c.noteId === noteId || holds(c.children));
+    const group = this.groups.find((g) => holds(g.cards));
+    if (group === undefined) return 'absent';
+    const at = this.rows.findIndex((r) => r.kind === 'group' && r.key === `g:${group.key}`);
+    const element = this.pool[at];
+    if (element === undefined) return 'absent';
+    element.classList.add('holds-open');
+    element.scrollIntoView({ block: 'nearest' });
+    return 'group';
   }
 
   /** Mark a row for a moment, the reduced-motion arrival (TASK-0033). */
@@ -140,6 +180,7 @@ export class NavigatorList {
       return active.dataset['noteId'] ?? null;
     })();
     this.rows = rowsFor(paint);
+    this.groups = paint.groups;
     this.total = totalRows(paint.groups);
     if (this.stop >= this.rows.length) this.stop = 0;
     for (let i = 0; i < this.rows.length; i += 1) {

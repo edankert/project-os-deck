@@ -1,4 +1,5 @@
 /** Shapes shared by the main process, the preload bridge and the renderer. */
+import type { CollectionLayout } from './collection.js';
 
 /** What kind of workspace this is. The view provider is chosen by it. */
 export type WorkspaceKind = 'project-os' | 'vault';
@@ -177,6 +178,17 @@ export interface DeckState {
    * file written before this has none, and reads as an empty table.
    */
   readingSizes: Record<string, Record<string, ReadingSize>>;
+  /**
+   * Where each view's collection stands on the Glass desk and how it is
+   * presented, keyed by workspace id and then view id (FEAT-0020, ADR-0006).
+   * The collection is the view's derived list as an object on the desk. Only
+   * its place, size, collapse and presentation are here: its rows are derived
+   * from the view's source every time, so a desk reopened later shows what
+   * the source returns then. A view with no entry draws the default
+   * (`shared/collection.ts`), which is what a state file written before
+   * collections existed gets.
+   */
+  collections: Record<string, Record<string, CollectionLayout>>;
   /**
    * The view whose desk this state draws, when that is not `viewId`. Set only
    * on a served page: the tablet browses its own view and draws the desk of

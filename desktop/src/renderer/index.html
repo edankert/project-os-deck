@@ -49,6 +49,8 @@
         <!-- What this view could not be read as. Above the list, never instead of it:
              an empty view and a broken view look identical on screen. -->
         <div class="refusals" id="refusals" hidden></div>
+        <!-- Waiting, failed and empty are three different things, and each is said (DES-0003). -->
+        <div class="nav-state" id="nav-state" role="status" hidden></div>
         <div class="nav-list" id="nav-list" role="list"></div>
       </section>
 
@@ -79,6 +81,9 @@
           <!-- The orbit's three treatments, all drawn, switchable; which one stays is Edwin's call (TASK-0005). -->
           <div class="treatments" id="treatments" hidden role="group" aria-label="Treatment"></div>
           <span class="field-overflow" id="field-overflow"></span>
+          <!-- The two things Escape does, by name (DES-0003): leave the focus, and close every note. -->
+          <button type="button" class="action" id="leave-focus" hidden title="Put the gathered cards back where they stand in the field, and keep every note open (Escape)">put cards back</button>
+          <button type="button" class="action" id="sweep-desk" hidden title="Close every note on this view's desk; a note kept on every view stays (Escape, with no focus)">close all</button>
           <span class="glass-desk-count count" id="glass-desk-count"></span>
           <span class="also-held" id="glass-also-held"></span>
         </div>
@@ -92,6 +97,22 @@
                at all is as bad by keyboard as by mouse. Arrow keys walk the
                shelf, Enter lifts, Escape leaves. -->
           <button type="button" class="quiet-cursor" id="quiet-cursor" hidden></button>
+          <!-- The collection: this view's derived list as an object on the desk (FEAT-0020).
+               In Glass the navigator above is moved into its body; it has no rows of its own. -->
+          <section class="collection" id="collection" hidden>
+            <header class="collection-head" id="collection-head" tabindex="0" role="toolbar">
+              <span class="collection-name" id="collection-name"></span>
+              <span class="collection-count" id="collection-count"></span>
+              <span class="collection-filter" id="collection-filter" hidden></span>
+              <span class="collection-tools" id="collection-tools">
+                <button type="button" class="collection-fold" id="collection-fold" aria-expanded="true">▾</button>
+              </span>
+            </header>
+            <div class="collection-note" id="collection-note" role="status" hidden></div>
+            <div class="collection-body" id="collection-body"></div>
+            <p class="collection-places" id="collection-places" hidden></p>
+            <span class="collection-resize" id="collection-resize" aria-hidden="true"></span>
+          </section>
           <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
           <!-- The lines from the focused document to the cards gathered round it (FEAT-0017).
                The cards themselves are the field's own, moved; nothing here draws a note. -->
@@ -107,6 +128,8 @@
             <!-- The zoom, shown when it is not 1× (FEAT-0016). The wheel, +, - and 0 change it. -->
             <!-- Shown while the open note is turned away from or moved aside: brings the desk back (TASK-0104). -->
             <button type="button" class="action find-open" id="find-open" hidden title="Bring the desk back in front of you"></button>
+            <!-- Shown while the collection is turned away from, moved aside or behind a document (FEAT-0020). -->
+            <button type="button" class="action to-collection" id="to-collection" hidden title="Bring the collection back in front of you">collection</button>
             <button type="button" class="action zoom-reading" id="zoom-reading" hidden title="Back to 1× (0)">1.0×</button>
             <button type="button" class="action" id="look-ahead" title="Face the front band (Home)">look ahead</button>
             <button type="button" class="action" id="look-behind" title="Face the quiet band (End)">look behind</button>
@@ -114,6 +137,8 @@
           <div class="field-say" id="field-say" role="status" hidden></div>
           <!-- An empty front band is a statement, so it is said rather than left as a gap. -->
           <p class="field-empty" id="field-empty" hidden>Nothing in this view is owed right now. The view's own notes stand either side of you, and finished work is behind you.</p>
+          <!-- In a narrow field one object is in front at a time; this is the way between them (DES-0003). -->
+          <div class="narrow-bar" id="narrow-bar" hidden role="toolbar" aria-label="Collection and open notes"></div>
           <div class="target-strip" id="target-strip" hidden aria-live="polite"></div>
           <div class="edge-callout" id="edge-callout" hidden role="tooltip"></div>
         </div>

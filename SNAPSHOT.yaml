@@ -62,10 +62,10 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0017"
-  task: "TASK-0104"
+  feature: "FEAT-0020"
+  task: "TASK-0095"
   issue: ""
-  note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. In order: TASK-0104 repairs continuity under FEAT-0017 (one object per note, chosen reading size, the neighbourhood moves with the document), then FEAT-0020 (collection and full document on Glass), FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
+  note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. TASK-0104 (one object per note, chosen reading size, the neighbourhood moves with the document) is built and its node suites pass; its smoke run is being reconciled, so it is still in progress and ISS-0070/0071/0072 stay open until that evidence exists. FEAT-0020 is being built now, TASK-0095 first: the collection and the full document on the Glass desk. Then FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -89,7 +89,7 @@ items:
     FEAT-0020:
       file: "docs/features/glass-desktop/FEAT-0020-Collections-And-Full-Notes-Live-On-Glass.md"
       title: "Collections and full notes live on the Glass desktop"
-      status: planned
+      status: doing
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0001", "REQ-0002"]
@@ -316,7 +316,7 @@ items:
     TASK-0095:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0095-Model-An-Exact-Collection-On-The-Desk.md"
       title: "Model an exact derived collection on the desk"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -1582,21 +1582,21 @@ items:
     REQ-0003:
       file: "docs/requirements/REQ-0003-Glass-Arrangements-Preserve-Membership-And-Reading-Size.md"
       title: "Glass arrangements preserve membership and reading size"
-      status: draft
+      status: approved
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0022
     REQ-0001:
       file: "docs/requirements/REQ-0001-Glass-Collections-Remain-Exact-And-Interactive.md"
       title: "Glass collections remain exact and interactive"
-      status: draft
+      status: approved
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0020
     REQ-0002:
       file: "docs/requirements/REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk.md"
       title: "Glass opens the full note on its desk"
-      status: draft
+      status: approved
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0020

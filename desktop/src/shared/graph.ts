@@ -21,6 +21,14 @@
  * What Deck adds is the OFFSET of every link in its file, because an edge's
  * callout quotes the sentence that made it, and a note that links to
  * ISS-0209 three times has three different sentences to show.
+ *
+ * And, since FEAT-0020, the FIELD a link was written in. A link written in a
+ * note's frontmatter sits under a key the author chose: `parent`, `tests`,
+ * `implements`. That key is the only place the source itself says what a
+ * link MEANS, so it is what a relationship is labelled with; a link in the
+ * note's text carries no field, and is shown as a plain link with its
+ * direction (DES-0003: "A link can say parent, implements or verified by only
+ * when the current source reports that relationship").
  */
 import { bandFor } from './statuses.js';
 
@@ -85,6 +93,13 @@ export interface GraphEdge {
   resolved: boolean;
   /** A reference into another repository, which one sidecar cannot resolve. */
   crossRepo: boolean;
+  /**
+   * The frontmatter key the link was written under, as the author wrote it,
+   * or null for a link in the note's text. Never inferred: a link in a
+   * sentence that says "the parent of this task" is still a link in a
+   * sentence.
+   */
+  field: string | null;
 }
 
 export interface Graph {
@@ -96,15 +111,33 @@ function isTemplate(relPath: string): boolean {
   return relPath.startsWith('__templates__/');
 }
 
-/** Every link in a file, with where it starts. */
-export function linksIn(text: string): Array<{ target: string; offset: number }> {
-  const out: Array<{ target: string; offset: number }> = [];
+/** Every link in a file, with where it starts and the frontmatter key it was written under, if any. */
+export function linksIn(text: string): Array<{ target: string; offset: number; field: string | null }> {
+  const out: Array<{ target: string; offset: number; field: string | null }> = [];
   const frontmatterEnd = frontmatterLength(text);
+  // Which top-level key each line of the frontmatter belongs to: a key's own
+  // line, and the indented lines under it, such as the items of a list.
+  const keyAt: Array<{ from: number; to: number; key: string | null }> = [];
+  if (frontmatterEnd > 0) {
+    let at = 0;
+    let current: string | null = null;
+    for (const line of text.slice(0, frontmatterEnd).split('\n')) {
+      const top = /^([A-Za-z_][\w-]*):/.exec(line);
+      if (top !== null) current = top[1] ?? null;
+      else if (!/^\s/.test(line)) current = null;
+      keyAt.push({ from: at, to: at + line.length, key: current });
+      at += line.length + 1;
+    }
+  }
+  const fieldAt = (offset: number): string | null => {
+    if (offset >= frontmatterEnd) return null;
+    return keyAt.find((span) => offset >= span.from && offset <= span.to)?.key ?? null;
+  };
   for (const m of text.matchAll(WIKILINK)) {
     const at = m.index ?? 0;
     // `![[...]]` embeds an image or a note; the cockpit does not count it as a link.
     if (at > 0 && text[at - 1] === '!') continue;
-    out.push({ target: (m[1] ?? '').trim(), offset: at });
+    out.push({ target: (m[1] ?? '').trim(), offset: at, field: fieldAt(at) });
   }
   // Bare ids, in the frontmatter keys that are meant to point at notes.
   if (frontmatterEnd > 0) {
@@ -121,7 +154,7 @@ export function linksIn(text: string): Array<{ target: string; offset: number }>
           if (spans.some(([a, b]) => at >= (a as number) && at < (b as number))) continue;
           // The key's own name is not a reference.
           if (top !== null && at < (top[0]?.length ?? 0)) continue;
-          out.push({ target: id[0], offset: lineStart + at });
+          out.push({ target: id[0], offset: lineStart + at, field: key });
         }
       }
       lineStart += line.length + 1;
@@ -216,6 +249,7 @@ export function buildGraph(all: readonly GraphSource[]): Graph {
         offset: link.offset,
         resolved: target !== null,
         crossRepo: target === null && CROSS_REPO.test(link.target),
+        field: link.field,
       });
       if (target !== null) {
         const into = inbound.get(k(target)) ?? new Set<string>();

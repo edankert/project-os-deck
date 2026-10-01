@@ -46,6 +46,7 @@ import {
   norm,
   project,
   shapesFor,
+  thetaAtScreenX,
 } from '../shared/slots.js';
 import { type ContextItem, type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
 import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, wheelFactor, zoomAbout } from '../shared/zoom.js';
@@ -67,6 +68,8 @@ import {
 import { type LinkLine, LinkLines } from './link-lines.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 import {
+  NARROW_BAR_HEIGHT,
+  NARROW_FIELD_WIDTH,
   PANE_HEADER_HEIGHT,
   PANE_MIN_HEIGHT,
   PANE_MIN_WIDTH,
@@ -74,6 +77,7 @@ import {
   readingSizeFor,
   snapBelowHeaders,
 } from '../shared/panes.js';
+import { relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
 import {
   type Edge,
   type PointerSample,
@@ -130,6 +134,10 @@ const FOCUS_DIM = 0.28;
 const SEATED_Z = 2950;
 /** How far a seated card is from being in the field before it stops taking the pointer and the Tab key. */
 const SEAT_IN_SIGHT_PX = 8;
+/** The room left round a document that fills the field. */
+const FILL_MARGIN = 8;
+/** A link to a note, as the sidecar writes it in rendered text: the note's path under the docs root. */
+const NOTE_LINK_PREFIX = '/docs/';
 /** How much room is left round a card that "locate" brings into view. */
 const LOCATE_MARGIN = 28;
 /** Below this much of its opacity, or with less than this much of it in the field, a document is offered a "find". */
@@ -145,6 +153,31 @@ const BEYOND_WORDS: Record<(typeof BEYOND_SIDES)[number], string> = {
 };
 /** How long the desk takes to come round to where the person is facing, or to bring something into view. */
 export const DESK_MOVE_MS = 250;
+
+/** A note as the sidecar renders it: its text, the frontmatter it was written with, and where it is. */
+export interface NoteDocument {
+  html: string;
+  frontmatter: Record<string, unknown>;
+  /** Docs-root-relative path, shown under Details and never in the heading. */
+  relPath: string;
+  title: string;
+}
+
+/**
+ * Something else that stands on the desk beside the documents: the
+ * collection. The field places it with the desk on every frame, lays
+ * documents and seats out round it, and puts it under a document that is
+ * pressed. What it holds and how it is operated are its own business.
+ */
+export interface DeskFurniture {
+  place(field: { width: number; height: number }, shift: { x: number; y: number; opacity: number; visible: boolean }, narrow: 'front' | 'back' | null): void;
+  /** Where it stands on the desk, or null when it is not on screen. */
+  rect(): Rect | null;
+  /** A document was pressed or opened: this goes under it. */
+  lower(): void;
+  /** Put the keyboard on it. */
+  focus(): void;
+}
 
 /** One note joined to a document: which way the link runs, and what to call it. */
 export interface Neighbour {
@@ -178,8 +211,21 @@ export interface GlassHooks {
   /** A note's neighbourhood, at most one request per note per index revision. */
   context(noteId: string): Promise<NoteContext>;
   peekContext(noteId: string): NoteContext | undefined;
-  /** The sidecar's rendered HTML for a note, for a pane's body. */
-  noteHtml(card: CardModel): Promise<string>;
+  /** The note as the sidecar renders it, for a document's body. Rejects when it cannot be read. */
+  document(card: CardModel): Promise<NoteDocument>;
+  /**
+   * Make a rendered note live: the tick control beside each checkbox, and the
+   * verbs the sidecar allows on the note, drawn into `actions`. Both go
+   * through the shell's existing guards; a host that does not write adds
+   * neither.
+   */
+  dress(noteId: string, note: HTMLElement, actions: HTMLElement): Promise<void>;
+  /** The card for a note named by its path: where a link inside a document leads. */
+  cardByRel(rel: string): Promise<CardModel | null>;
+  /** A document was closed: the keyboard goes back to the row it was opened from. */
+  closed(noteId: string): void;
+  /** A note was opened: its row is shown in the collection. */
+  revealed(noteId: string): void;
   /** The places a throw toward this edge could land. Empty where there are no windows. */
   targets(edge: Edge): Promise<ThrowTarget[]>;
   throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promise<void>;
@@ -215,9 +261,13 @@ interface Elements {
   overflow: HTMLElement;
   pendingChip: HTMLButtonElement;
   deskCount: HTMLElement;
+  leaveFocus: HTMLButtonElement;
+  sweepDesk: HTMLButtonElement;
   compass: HTMLElement;
   lines: HTMLElement;
   findOpen: HTMLButtonElement;
+  toCollection: HTMLButtonElement;
+  narrowBar: HTMLElement;
   beyond: HTMLElement;
   zoomReading: HTMLButtonElement;
   heading: HTMLElement;
@@ -253,9 +303,13 @@ export function glassElements(): Elements {
     overflow: must('field-overflow'),
     pendingChip: must('pending-chip') as HTMLButtonElement,
     deskCount: must('glass-desk-count'),
+    leaveFocus: must('leave-focus') as HTMLButtonElement,
+    sweepDesk: must('sweep-desk') as HTMLButtonElement,
     compass: must('compass'),
     lines: must('field-lines'),
     findOpen: must('find-open') as HTMLButtonElement,
+    toCollection: must('to-collection') as HTMLButtonElement,
+    narrowBar: must('narrow-bar'),
     beyond: must('desk-beyond'),
     zoomReading: must('zoom-reading') as HTMLButtonElement,
     heading: must('compass-heading'),
@@ -290,7 +344,22 @@ export class GlassField {
   /** One element per note, keyed by note id and never repainted as another note. */
   private readonly cardEls = new Map<string, HTMLElement>();
   private readonly paneEls = new Map<string, HTMLElement>();
-  private readonly paneBodies = new Map<string, string>();
+  /** The rendered note for each document, read once per state of the workspace. */
+  private readonly docs = new Map<string, NoteDocument>();
+  /** Which document's details are open, in this window. */
+  private detailsOpen: string | null = null;
+  /** The workspace's edges, for what a relationship is called. Read when a list is first opened. */
+  private edges: GraphEdge[] | null = null;
+  private furnitureItems: DeskFurniture[] = [];
+  /**
+   * Documents a served page opened for itself. A tablet follows the Mac's
+   * desk and arranges nothing on it (ADR-0001, TASK-0057), but it can still
+   * read: a note opened on the tablet is a document in this list, drawn there
+   * and nowhere else, and it is gone when the page is. Empty in the shell.
+   */
+  private localHeld: DeskCard[] = [];
+  /** In a narrow field: which one object is in front. */
+  private narrowFront: 'collection' | 'document' = 'collection';
   private shared = new Map<string, number>();
   private joined = new Set<string>();
   private held: DeskCard[] = [];
@@ -456,7 +525,7 @@ export class GlassField {
     const box = this.el.field.getBoundingClientRect();
     const clear = (x: number, y: number): boolean => {
       const hit = document.elementFromPoint(box.left + x, box.top + y) as HTMLElement | null;
-      return hit !== null && hit.closest('.field-card, .pane, .compass, .field-say, .field-bar, .sector-label') === null;
+      return hit !== null && hit.closest('.field-card, .pane, .collection, .narrow-bar, .compass, .field-say, .field-bar, .sector-label') === null;
     };
     for (const seg of this.segments) {
       const x = (seg.x1 + seg.x2) / 2;
@@ -511,7 +580,7 @@ export class GlassField {
       if (d.r === 0 || d.x < 40 || d.y < 40 || d.x > this.viewport.width - 260 || d.y > this.viewport.height - 80) continue;
       if (this.dotAt(d.x, d.y) !== d.id) continue;
       const hit = document.elementFromPoint(box.left + d.x, box.top + d.y) as HTMLElement | null;
-      if (hit === null || hit.closest('.field-card, .pane, .compass, .field-say, .field-bar') !== null) continue;
+      if (hit === null || hit.closest('.field-card, .pane, .collection, .narrow-bar, .compass, .field-say, .field-bar') !== null) continue;
       return { x: d.x, y: d.y, id: d.id };
     }
     return null;
@@ -559,6 +628,15 @@ export class GlassField {
     if (!this.active) return;
     this.measure();
     this.redeal(viewChanged);
+  }
+
+  /**
+   * Every note that has a place in the field now, as a card or a tile, drawn
+   * or behind the person. The collection counts its members against this, so
+   * it can say how many are reachable only through the list (FEAT-0020).
+   */
+  placedIds(): Set<string> {
+    return new Set(this.model.current.slots.keys());
   }
 
   /** The note ids the field draws as elements now, for the smoke run and the measurement. */
@@ -737,6 +815,25 @@ export class GlassField {
     return this.hooks.state().workspaceId;
   }
 
+  /** The documents this window draws: the desk's, and on a served page the ones it opened for itself. */
+  private heldNow(state: DeckState): DeskCard[] {
+    const desk = this.hooks.desk(state);
+    if (this.hooks.canArrange() || this.localHeld.length === 0) return desk;
+    const onDesk = new Set(desk.map((c) => c.noteId));
+    return [...desk, ...this.localHeld.filter((c) => !onDesk.has(c.noteId))];
+  }
+
+  /** Bring a document to the top: through the store in the shell, in this page's own list on a served page. */
+  private async raise(noteId: string): Promise<void> {
+    if (this.hooks.canArrange()) {
+      await this.hooks.dispatch({ type: 'raise-card', noteId });
+      return;
+    }
+    const at = this.localHeld.findIndex((c) => c.noteId === noteId);
+    if (at === -1 || at === this.localHeld.length - 1) return;
+    this.localHeld.push(...this.localHeld.splice(at, 1));
+  }
+
   private redeal(animate: boolean): void {
     if (this.arrangement === 'orbit') {
       this.redealOrbit(animate);
@@ -744,7 +841,7 @@ export class GlassField {
     }
     const state = this.hooks.state();
     const ws = state.workspaceId;
-    this.held = this.hooks.desk(state);
+    this.held = this.heldNow(state);
     const heldIds = this.held.map((c) => c.noteId);
     const contexts = new Map<string, NoteContext>();
     const missing: string[] = [];
@@ -828,7 +925,7 @@ export class GlassField {
    */
   private redealOrbit(animate: boolean): void {
     const state = this.hooks.state();
-    this.held = this.hooks.desk(state);
+    this.held = this.heldNow(state);
     this.joined = new Set();
     this.shared = new Map();
     this.deal = null;
@@ -879,6 +976,15 @@ export class GlassField {
    * movement, `deskShift`, is added where it is drawn.
    */
   private paneRect(card: DeskCard): { left: number; top: number; w: number; h: number } {
+    // One object in front in a narrow field, and a document asked to fill the
+    // field (W): both are drawn over the whole field, for as long as that
+    // lasts, and the place and size the store holds are untouched.
+    if (this.narrowMode() !== null) {
+      return { left: 0, top: NARROW_BAR_HEIGHT, w: this.viewport.width, h: Math.max(PANE_MIN_HEIGHT, this.viewport.height - NARROW_BAR_HEIGHT) };
+    }
+    if (card.wide === true) {
+      return { left: FILL_MARGIN, top: FILL_MARGIN, w: Math.max(PANE_MIN_WIDTH, this.viewport.width - 2 * FILL_MARGIN), h: Math.max(PANE_MIN_HEIGHT, this.viewport.height - 2 * FILL_MARGIN) };
+    }
     const { w, h } = this.sizeOf(card);
     return {
       left: Math.max(0, Math.min(card.x, this.viewport.width - w)),
@@ -910,6 +1016,9 @@ export class GlassField {
   /** A document where it is drawn now, in field pixels: its place on the desk, the desk's movement, and a drag in progress. */
   private drawnRect(card: DeskCard): Rect {
     const r = this.paneRect(card);
+    // In a narrow field the object in front is not on the desk at all: it is
+    // drawn over the field and stays there whatever way the field is turned.
+    if (this.narrowMode() !== null) return { left: r.left, top: r.top, width: r.w, height: r.h };
     const shift = this.deskShift();
     const drag = this.dragOf !== null && this.dragOf.noteId === card.noteId && this.dragOf.x === card.x && this.dragOf.y === card.y ? this.dragOf : null;
     return { left: r.left + shift.x + (drag?.dx ?? 0), top: r.top + shift.y + (drag?.dy ?? 0), width: r.w, height: r.h };
@@ -1023,6 +1132,9 @@ export class GlassField {
     // The desk moves with the turn, so its documents are placed every frame;
     // what they hold is painted only when the desk itself changes (drawPanes).
     this.placePanes();
+    const narrow = this.narrowMode();
+    for (const item of this.furnitureItems) item.place(this.viewport, shift, narrow === null ? null : narrow === 'collection' ? 'front' : 'back');
+    this.drawNarrowBar(narrow);
     this.drawLinks();
     this.drawDeskFurniture();
   }
@@ -1544,7 +1656,7 @@ export class GlassField {
   }
 
   /** Quote the sentence that made the link under the pointer. */
-  private showCallout(edge: GraphEdge | null, x: number, y: number): void {
+  private showCallout(edge: GraphEdge | null, x: number, y: number, relation = ''): void {
     const callout = this.el.callout;
     if (edge === null) {
       callout.hidden = true;
@@ -1563,6 +1675,13 @@ export class GlassField {
       const body = document.createElement('div');
       body.textContent = sentence === '' ? '(the link sits in no sentence)' : sentence;
       callout.append(head, body);
+      // What joins the two notes, in the source's own words, when it says.
+      if (relation !== '') {
+        const how = document.createElement('div');
+        how.className = 'callout-relation';
+        how.textContent = relation;
+        callout.appendChild(how);
+      }
       callout.hidden = false;
       place();
     };
@@ -1696,6 +1815,10 @@ export class GlassField {
     this.el.pendingChip.hidden = this.input.pending === 0;
     this.el.pendingChip.textContent =
       this.input.pending === 1 ? '1 note changed — show it' : `${this.input.pending} notes changed — show them`;
+    // What Escape does, as two named controls (DES-0003): each is offered
+    // only while it would do something.
+    this.el.leaveFocus.hidden = this.focusId() === null;
+    this.el.sweepDesk.hidden = heldCount === 0 || (!this.hooks.canArrange() && this.localHeld.length === 0);
     const sharedCount = this.shared.size;
     this.el.deskCount.textContent =
       heldCount === 0
@@ -1742,7 +1865,7 @@ export class GlassField {
     let look: { x: number; y: number; yaw: number; id: number; moved: boolean; tile: string | null; hand: boolean } | null = null;
     field.addEventListener('pointerdown', (event) => {
       const target = event.target as HTMLElement;
-      if (target.closest('.field-card, .pane, button, .target-strip') !== null) return;
+      if (target.closest('.field-card, .pane, .collection, .narrow-bar, button, .target-strip') !== null) return;
       if (event.button !== 0) return;
       this.scheduleIdle();
       this.el.field.classList.remove('turning');
@@ -1767,7 +1890,7 @@ export class GlassField {
       // link under the pointer turns away while its sentence is being read.
       if (this.idle.frame !== null) this.el.field.classList.remove('turning');
       this.scheduleIdle();
-      if ((event.target as HTMLElement).closest('.field-card, .pane, .compass, .field-bar') !== null) {
+      if ((event.target as HTMLElement).closest('.field-card, .pane, .collection, .narrow-bar, .compass, .field-bar') !== null) {
         // Over an element the field's own cursor and callout say nothing: the
         // element carries its own, and a stale pointer cursor underneath it
         // would claim the background is clickable when it is not.
@@ -1799,7 +1922,7 @@ export class GlassField {
     field.addEventListener('dblclick', (event) => {
       if (!this.active) return;
       const target = event.target as HTMLElement;
-      if (target.closest('.field-card, .pane, button, .target-strip, .compass, .field-bar') !== null) return;
+      if (target.closest('.field-card, .pane, .collection, .narrow-bar, button, .target-strip, .compass, .field-bar') !== null) return;
       const box = field.getBoundingClientRect();
       const dx = event.clientX - box.left;
       const dy = event.clientY - box.top;
@@ -1942,6 +2065,13 @@ export class GlassField {
     // "Find": the desk comes back in front of the person, wherever it was
     // turned from or moved aside to (TASK-0104, ISS-0072's "way back").
     this.el.findOpen.addEventListener('click', () => this.findOpen(this.el.findOpen.dataset['noteId'] ?? null));
+    this.el.toCollection.addEventListener('click', () => this.showCollection());
+    this.el.leaveFocus.addEventListener('click', () => this.leaveFocus());
+    this.el.sweepDesk.addEventListener('click', () => {
+      // Sweeping from a document in focus leaves the focus first, as the key does.
+      this.leaveFocus();
+      void this.sweep();
+    });
     // One counter per edge of the field, for what is gathered round the
     // focused document and stands beyond that edge.
     for (const side of BEYOND_SIDES) {
@@ -1997,13 +2127,21 @@ export class GlassField {
    * their bearings. Under reduced motion it is a cut, and the arrival is
    * shown by a highlight rather than by nothing (TASK-0033).
    */
-  flyTo(yaw: number, highlight: string | null = null): void {
+  flyTo(yaw: number, highlight: string | null = null, carryDesk = false): void {
     this.cancelFlight();
     // A person asked for this direction; the orbit's drift waits again.
     this.scheduleIdle();
     this.highlight = highlight;
+    // `carryDesk`: the turn was asked for FROM the desk, by a row of the
+    // collection, so the desk stays where the person is working and the field
+    // turns under it. A turn made by hand leaves the desk where it stands.
+    const offset = norm(this.deskBearing - this.model.yaw);
+    const carry = (): void => {
+      if (carryDesk) this.deskBearing = norm(this.model.yaw + offset);
+    };
     if (this.hooks.reducedMotion()) {
       this.model.face(yaw);
+      carry();
       this.render(false);
       this.clearHighlightLater();
       return;
@@ -2017,6 +2155,7 @@ export class GlassField {
       const t = Math.min(1, (now - start) / duration);
       const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
       this.model.face(from + delta * eased);
+      carry();
       this.render(false);
       if (t < 1) {
         this.flight = requestAnimationFrame(step);
@@ -2072,7 +2211,37 @@ export class GlassField {
     this.trace('arriveAt', noteId);
     const slot = this.model.current.slots.get(noteId);
     if (slot === undefined) return;
-    this.flyTo(slot.theta, noteId);
+    this.flyTo(this.yawToShow(slot), noteId, true);
+  }
+
+  /**
+   * The yaw that draws a slot in the widest part of the field the desk does
+   * not cover. A row of the collection names a note, and its card should be
+   * seen beside the list and the documents, not flown to the middle of the
+   * field where a document is likely to be standing over it (TASK-0098).
+   * With no clear span worth the name, the card is brought straight ahead.
+   */
+  private yawToShow(slot: Slot): number {
+    const covered: Array<[number, number]> = [];
+    for (const rect of this.furniture()) covered.push([rect.left, rect.left + rect.width]);
+    if (!this.panesHidden && this.narrowMode() === null) {
+      for (const card of this.held) {
+        const r = this.paneRect(card);
+        covered.push([r.left, r.left + r.w]);
+      }
+    }
+    covered.sort((a, b) => a[0] - b[0]);
+    let best: [number, number] = [0, 0];
+    let at = 0;
+    for (const [left, right] of [...covered, [this.viewport.width, this.viewport.width] as [number, number]]) {
+      if (left - at > best[1] - best[0]) best = [at, left];
+      at = Math.max(at, right);
+    }
+    if (best[1] - best[0] < CARD_BOX.width) return slot.theta;
+    const x = (best[0] + best[1]) / 2;
+    // The angle from straight ahead at which this depth is drawn at `x`.
+    const phi = thetaAtScreenX(x, slot.depth, 0, this.viewport);
+    return norm(slot.theta - phi);
   }
 
   // ---- the hands on a card ----
@@ -2190,12 +2359,10 @@ export class GlassField {
     const { card } = entry;
     if (!this.hooks.canArrange()) {
       const slot = this.model.current.slots.get(card.noteId);
-      if (slot !== undefined && Math.abs(norm(slot.theta - this.model.yaw)) > 20 * DEG) {
+      if (slot !== undefined && !this.seatedAt.has(card.noteId) && Math.abs(norm(slot.theta - this.model.yaw)) > 20 * DEG) {
         this.flyTo(slot.theta, card.noteId);
         return;
       }
-      await this.hooks.open(card);
-      return;
     }
     await this.lift(card);
   }
@@ -2209,15 +2376,31 @@ export class GlassField {
    */
   async lift(card: CardModel, from: Rect | null = null): Promise<void> {
     const state = this.hooks.state();
-    const onDesk = this.hooks.desk(state);
+    const onDesk = this.heldNow(state);
     // A person who lifts a note wants to see it (decision 3).
     this.hooks.lifted();
-    // A served page follows the Mac's desk and opens nothing of its own.
-    if (this.hooks.canArrange()) this.openFocus(card.noteId, from ?? this.sourceRect(card.noteId));
-    if (!onDesk.some((c) => c.noteId === card.noteId)) {
-      // The size it opens at is written on its card, so resizing another
-      // note afterwards does not change this one (ISS-0071).
-      const size = readingSizeFor({}, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+    for (const item of this.furnitureItems) item.lower();
+    this.narrowFront = 'document';
+    // Read before the reach is let go: the opening grows from the card.
+    const source = from ?? this.sourceRect(card.noteId);
+    // The note is about to be a document and to have no card, so a reach for
+    // its card has nothing left to start from.
+    this.endReach(card.noteId);
+    this.openFocus(card.noteId, source);
+    // The size it opens at is written on its card, so resizing another note
+    // afterwards does not change this one (ISS-0071).
+    const size = readingSizeFor({}, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+    if (!this.hooks.canArrange()) {
+      // A served page reads in a document of its own and sends nothing back:
+      // the Mac's desk is exactly as it was (TASK-0057).
+      if (!onDesk.some((c) => c.noteId === card.noteId)) {
+        const at = this.nextPanePlace(onDesk, size);
+        this.localHeld.push({ noteId: card.noteId, x: at.x, y: at.y, w: size.w, h: size.h });
+      } else {
+        await this.raise(card.noteId);
+      }
+      if (this.active) this.redeal(false);
+    } else if (!onDesk.some((c) => c.noteId === card.noteId)) {
       const at = this.nextPanePlace(onDesk, size);
       await this.hooks.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: at.x, y: at.y, w: size.w, h: size.h });
     } else {
@@ -2228,6 +2411,9 @@ export class GlassField {
     // Asked for at once, so the neighbourhood arrives while the lift is still happening.
     void this.hooks.context(card.noteId).catch(() => null);
     await this.hooks.open(card);
+    // Its row is shown in the collection, so the list and the desk agree
+    // about which note is open (TASK-0098).
+    this.hooks.revealed(card.noteId);
   }
 
   /** Where a note's card is drawn now, when it is in sight: what its document opens from. */
@@ -2270,11 +2456,46 @@ export class GlassField {
     return right - left < PANE_MIN_WIDTH ? { left: 16, right: this.viewport.width - 16 } : { left, right };
   }
 
+  /** Put something else on the desk: the collection (FEAT-0020). */
+  addFurniture(item: DeskFurniture): void {
+    this.furnitureItems.push(item);
+  }
+
+  /** What else stands on the desk, as rectangles on it. */
+  private furniture(): Rect[] {
+    return this.furnitureItems.map((item) => item.rect()).filter((r): r is Rect => r !== null);
+  }
+
   /**
-   * What else stands on the desk, as rectangles on it: asked by whoever owns
-   * those objects. Nothing yet; the collection supplies its own (FEAT-0020).
+   * A field too narrow for two readable objects side by side shows one in
+   * front and offers the way to the others (DES-0003). Nothing is shrunk to
+   * fit, and nothing stored changes: a window made narrow for a moment does
+   * not rearrange the desk.
    */
-  furniture: () => Rect[] = () => [];
+  isNarrow(): boolean {
+    return this.viewport.width < NARROW_FIELD_WIDTH;
+  }
+
+  /** The one object in front in a narrow field, or null when the field is wide enough for the desk. */
+  private narrowMode(): 'collection' | 'document' | null {
+    if (!this.isNarrow() || this.arrangement === 'orbit') return null;
+    return this.narrowFront === 'document' && this.held.length > 0 && !this.panesHidden ? 'document' : 'collection';
+  }
+
+  /** Bring the collection in front, in a narrow field; elsewhere bring the desk round and show it. */
+  showCollection(): void {
+    this.narrowFront = 'collection';
+    const item = this.furnitureItems[0];
+    const rect = item?.rect() ?? null;
+    if (this.isNarrow() || rect === null) {
+      this.render(false);
+      item?.focus();
+      return;
+    }
+    const shown = { ...rect, left: rect.left + this.deskPan.x, top: rect.top + this.deskPan.y };
+    const by = revealShift(shown, this.viewport, 0);
+    this.moveDesk(this.model.yaw, { x: this.deskPan.x + by.x, y: this.deskPan.y + by.y }, () => item?.focus());
+  }
 
   async pull(entry: FieldEntry): Promise<void> {
     if (!this.hooks.canArrange()) return;
@@ -2546,10 +2767,15 @@ export class GlassField {
       // drawing every header above every body: that showed a lower pane's
       // header through the text of the pane on top of it (ISS-0066).
       pane.style.zIndex = String(3000 + index);
-      pane.style.opacity = String(shift.opacity);
+      const narrow = this.narrowMode();
+      // In a narrow field only the object in front is drawn: the top document,
+      // or none of them while the collection is in front.
+      const hidden = narrow === null ? !shift.visible : narrow === 'collection' || index !== this.held.length - 1;
+      pane.style.opacity = narrow === null ? String(shift.opacity) : '1';
       // Past the edge of sight a document is not drawn and takes no pointer,
       // the same boundary a card obeys.
-      pane.classList.toggle('out-of-sight', !shift.visible);
+      pane.classList.toggle('out-of-sight', hidden);
+      pane.classList.toggle('narrow', narrow !== null);
     });
   }
 
@@ -2601,53 +2827,60 @@ export class GlassField {
     return this.openAnim !== null;
   }
 
+  /**
+   * A document: one note's full text on the desk (FEAT-0020, TASK-0097).
+   *
+   * Its heading is the note's TITLE, then its id and its state; the path it
+   * is stored at is under Details and never in the heading (DES-0003). Under
+   * the heading, where the note supplies them, its goal and how far along it
+   * is. Then the whole authored text, as the sidecar renders it, with its
+   * links, its checkboxes and the verbs the sidecar allows. There is no
+   * summary to click through: opening a note is reading it.
+   */
   private makePane(noteId: string): HTMLElement {
     const pane = document.createElement('section');
     pane.className = 'pane';
     pane.dataset['noteId'] = noteId;
-    pane.setAttribute('aria-label', `${noteId}, held`);
     pane.innerHTML =
       '<header class="pane-head" tabindex="0" role="toolbar">' +
-      '<span class="pane-id"></span><span class="pane-status"></span><span class="pane-face"></span>' +
+      '<span class="pane-title"></span><span class="pane-id"></span><span class="pane-status"></span>' +
       '<span class="pane-tools">' +
       '<button type="button" class="pane-related" title="The notes this one is joined to (R)" aria-expanded="false"></button>' +
+      '<button type="button" class="pane-info" title="Where this note is stored, and its other details (D)" aria-expanded="false">details</button>' +
       '<button type="button" class="pane-every" title="Keep this note on every view (V)" aria-label="Keep this note on every view" aria-pressed="false">⧉</button>' +
       '<button type="button" class="pane-orbit" title="Show this in the link graph (O)" aria-label="Show this in the link graph">◎</button>' +
       '<button type="button" class="pane-send" title="Send to another window (S)" aria-label="Send to another window">↗</button>' +
-      '<button type="button" class="pane-widen" title="Read it in the column (W)" aria-label="Read in the reading column">⇥</button>' +
-      '<button type="button" class="pane-close" title="Put back (⌥ puts back every other)" aria-label="Put back">×</button>' +
+      '<button type="button" class="pane-widen" title="Fill the field with this note, or put it back at its size (W)" aria-label="Fill the field with this note" aria-pressed="false">⤢</button>' +
+      '<button type="button" class="pane-close" title="Close, and go back to its row (⌥ closes every other)" aria-label="Close this note">×</button>' +
       '</span></header>' +
-      '<div class="pane-links" hidden><ul class="link-list"></ul></div>' +
-      '<div class="pane-body"><div class="pane-note">…</div></div>' +
+      '<div class="pane-subject" hidden></div>' +
+      '<div class="pane-details" hidden></div>' +
+      '<div class="pane-links" hidden><div class="link-kinds" hidden></div><ul class="link-list"></ul></div>' +
+      '<div class="pane-body">' +
+      '<div class="pane-state" role="status" hidden></div>' +
+      '<div class="pane-actions" hidden></div>' +
+      '<article class="pane-note"></article>' +
+      '</div>' +
       '<span class="pane-resize" aria-hidden="true"></span>';
     const head = pane.querySelector('.pane-head') as HTMLElement;
     head.addEventListener('pointerdown', (event) => this.grabPane(noteId, pane, event));
     head.addEventListener('keydown', (event) => this.paneKey(noteId, event));
-    (pane.querySelector('.pane-close') as HTMLElement).addEventListener('click', (event) => {
-      event.stopPropagation();
+    const on = (selector: string, run: (event: MouseEvent) => void): void => {
+      (pane.querySelector(selector) as HTMLElement).addEventListener('click', (event) => {
+        event.stopPropagation();
+        run(event);
+      });
+    };
+    on('.pane-close', (event) => {
       if (event.altKey) void this.putBackOthers(noteId);
       else void this.putBack(noteId);
     });
-    (pane.querySelector('.pane-widen') as HTMLElement).addEventListener('click', (event) => {
-      event.stopPropagation();
-      void this.widen(noteId);
-    });
-    (pane.querySelector('.pane-every') as HTMLElement).addEventListener('click', (event) => {
-      event.stopPropagation();
-      void this.toggleEveryView(noteId);
-    });
-    (pane.querySelector('.pane-orbit') as HTMLElement).addEventListener('click', (event) => {
-      event.stopPropagation();
-      this.showInField(noteId);
-    });
-    (pane.querySelector('.pane-send') as HTMLElement).addEventListener('click', (event) => {
-      event.stopPropagation();
-      void this.sendFromPane(noteId);
-    });
-    (pane.querySelector('.pane-related') as HTMLElement).addEventListener('click', (event) => {
-      event.stopPropagation();
-      this.toggleRelated(noteId);
-    });
+    on('.pane-widen', () => void this.widen(noteId));
+    on('.pane-every', () => void this.toggleEveryView(noteId));
+    on('.pane-orbit', () => this.showInField(noteId));
+    on('.pane-send', () => void this.sendFromPane(noteId));
+    on('.pane-related', () => this.toggleRelated(noteId));
+    on('.pane-info', () => this.toggleDetails(noteId));
     const links = pane.querySelector('.pane-links') as HTMLElement;
     links.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
@@ -2658,14 +2891,41 @@ export class GlassField {
       if (target.closest('.link-open') !== null) void this.openNeighbour(noteId, id);
       else void this.showNeighbour(noteId, id);
     });
-    // Escape closes the list and nothing else: it is a local control, and the
-    // same key must not also leave the focus or sweep the desk (DES-0003).
-    links.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
+    // Escape closes the list or the details and nothing else: it is a local
+    // control, and the same key must not also leave the focus or sweep the
+    // desk (DES-0003).
+    const local = (panel: HTMLElement, close: () => void, back: string): void => {
+      panel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+        (pane.querySelector(back) as HTMLElement).focus();
+      });
+    };
+    local(links, () => this.toggleRelated(noteId, false), '.pane-related');
+    local(pane.querySelector('.pane-details') as HTMLElement, () => this.toggleDetails(noteId, false), '.pane-info');
+    // A link in the note's text opens the note it names, as a document, from
+    // where the link stands. A link out of the workspace is left to the
+    // window, which opens it in the person's own browser.
+    (pane.querySelector('.pane-note') as HTMLElement).addEventListener('click', (event) => {
+      const link = (event.target as HTMLElement).closest('a');
+      if (link === null) return;
+      const href = link.getAttribute('href') ?? '';
+      if (!href.startsWith(NOTE_LINK_PREFIX)) return;
       event.preventDefault();
+      void this.followLink(link, href);
+    });
+    (pane.querySelector('.pane-state') as HTMLElement).addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest('button');
+      if (button === null) return;
       event.stopPropagation();
-      this.toggleRelated(noteId, false);
-      (pane.querySelector('.pane-related') as HTMLElement).focus();
+      if (button.dataset['act'] === 'retry') {
+        delete pane.dataset['asked'];
+        this.drawPanes();
+      } else if (button.dataset['act'] === 'close') {
+        void this.putBack(noteId);
+      }
     });
     (pane.querySelector('.pane-resize') as HTMLElement).addEventListener('pointerdown', (event) =>
       this.resizePane(noteId, pane, event),
@@ -2674,55 +2934,227 @@ export class GlassField {
     // does: a pane whose header lies under another is still reachable by its
     // body (ISS-0066). The header's own press raises it in grabPane.
     pane.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0 || !this.hooks.canArrange()) return;
-      if ((event.target as HTMLElement).closest('.pane-head') !== null) return;
+      if (event.button !== 0) return;
+      for (const item of this.furnitureItems) item.lower();
+      if ((event.target as HTMLElement).closest('.pane-head') !== null && this.hooks.canArrange()) return;
       if (this.held[this.held.length - 1]?.noteId === noteId) return;
-      void this.hooks.dispatch({ type: 'raise-card', noteId });
+      void this.raise(noteId).then(() => {
+        if (!this.hooks.canArrange() && this.active) this.redeal(false);
+      });
     });
     return pane;
   }
 
   private paintPane(pane: HTMLElement, deskCard: DeskCard, index: number): void {
-    const card = this.cardFor(deskCard.noteId);
+    const noteId = deskCard.noteId;
+    const card = this.cardFor(noteId);
+    const doc = this.docs.get(noteId);
     const focus = this.focusId();
-    pane.classList.toggle('focus', focus === deskCard.noteId);
+    pane.classList.toggle('focus', focus === noteId);
     pane.classList.toggle('wide', deskCard.wide === true);
     pane.classList.toggle('top', index === this.held.length - 1);
     pane.dataset['status'] = card === null ? 'planned' : bandFor(card.status);
-    setText(pane, '.pane-id', deskCard.noteId);
-    const every = this.hooks.isEveryView(deskCard.noteId);
+    // The title a person knows the note by comes first; the id is beside it.
+    const title = card?.title ?? doc?.title ?? noteId;
+    setText(pane, '.pane-title', title);
+    setText(pane, '.pane-id', noteId);
+    const every = this.hooks.isEveryView(noteId);
     (pane.querySelector('.pane-every') as HTMLElement).setAttribute('aria-pressed', String(every));
     pane.classList.toggle('every-view', every);
+    const widen = pane.querySelector('.pane-widen') as HTMLElement;
+    widen.setAttribute('aria-pressed', String(deskCard.wide === true));
+    widen.setAttribute('aria-label', deskCard.wide === true ? 'Put this note back at its own size' : 'Fill the field with this note');
     // A note on every view that this view does not hold says so, beside its status.
-    const inView = this.entries.has(deskCard.noteId) || this.input.groups.some((g) => g.cards.some((c) => c.noteId === deskCard.noteId || findChild(c, deskCard.noteId) !== null));
+    const inView = this.entries.has(noteId) || this.input.groups.some((g) => g.cards.some((c) => c.noteId === noteId || findChild(c, noteId) !== null));
     pane.classList.toggle('elsewhere', card !== null && !inView);
     setText(pane, '.pane-status', card === null ? 'not in this view' : `${card.status || 'no status'}${inView ? '' : ' · not in this view'}`);
-    setText(pane, '.pane-face', card === null ? '' : faceText(card, this.input.faces));
+    pane.setAttribute('aria-label', `${title}, ${noteId}${card === null ? '' : `, ${card.status || 'no status'}`}`);
     const head = pane.querySelector('.pane-head') as HTMLElement;
-    head.setAttribute('aria-label', `${deskCard.noteId}${card === null ? '' : ` ${card.title}`}, held: arrow keys move, Alt and arrows resize, Enter gathers what it is joined to, R lists them, W widens, S sends, Delete puts back`);
-    this.paintRelated(pane, deskCard.noteId);
-    const body = pane.querySelector('.pane-note') as HTMLElement;
-    const cached = this.paneBodies.get(deskCard.noteId);
-    if (cached !== undefined) {
-      if (body.dataset['filled'] !== 'true') {
-        body.innerHTML = cached;
-        body.dataset['filled'] = 'true';
-      }
-    } else if (card !== null && body.dataset['asked'] !== 'true') {
-      body.dataset['asked'] = 'true';
-      void this.hooks
-        .noteHtml(card)
-        .then((html) => {
-          this.paneBodies.set(deskCard.noteId, html);
-          body.innerHTML = html;
-          body.dataset['filled'] = 'true';
-        })
-        .catch((err: unknown) => {
-          body.textContent = err instanceof Error ? err.message : String(err);
-        });
-    } else if (card === null) {
-      body.textContent = 'This note is on the desk but not in this view. Put it back, or switch to a view that holds it.';
+    head.setAttribute(
+      'aria-label',
+      `${title}, ${noteId}${card === null ? '' : `, ${card.status || 'no status'}`}${doc === undefined ? '' : `, stored at ${doc.relPath}`}: arrow keys move it, Alt and arrows resize it, Enter gathers what it is joined to, R lists them, D shows its details, W fills the field, S sends it, Delete closes it`,
+    );
+    this.paintSubject(pane, card, doc);
+    this.paintDetails(pane, noteId, card, doc);
+    this.paintRelated(pane, noteId);
+    this.fillDocument(pane, noteId, card);
+  }
+
+  /**
+   * The compact subject line under a document's heading: what the note is
+   * for and how far along it is, where the note itself says. Each part is
+   * labelled, and a part the note does not supply is left out rather than
+   * guessed (FEAT-0020, "when the existing data supports them").
+   */
+  private paintSubject(pane: HTMLElement, card: CardModel | null, doc: NoteDocument | undefined): void {
+    const subject = pane.querySelector('.pane-subject') as HTMLElement;
+    const facts: Array<[string, string]> = [];
+    if (card !== null) {
+      if (card.progress !== null) facts.push(['progress', `${card.progress.done} of ${card.progress.total} done${card.progress.stale > 0 ? `, ${card.progress.stale} stale` : ''}`]);
+      if (card.owed) facts.push(['needs you', card.owedVerb ?? 'a decision']);
+      if (card.severity !== null) facts.push(['severity', card.severity]);
+      if (card.lastVerified !== null) facts.push(['last verified', `${card.lastVerified}${card.stale ? ' (stale)' : ''}`]);
     }
+    const goal = doc === undefined ? null : plainValue(doc.frontmatter['goal']);
+    const said = goal ?? (card?.subtitle !== null && card?.subtitle !== undefined && card.subtitle !== '' ? card.subtitle : null);
+    const signature = `${facts.map((f) => f.join('=')).join('|')}|${said ?? ''}`;
+    subject.hidden = facts.length === 0 && said === null;
+    if (subject.dataset['signature'] === signature) return;
+    subject.dataset['signature'] = signature;
+    const nodes: HTMLElement[] = [];
+    if (said !== null) {
+      const line = document.createElement('p');
+      line.className = 'subject-goal';
+      line.textContent = said;
+      nodes.push(line);
+    }
+    if (facts.length > 0) {
+      const line = document.createElement('p');
+      line.className = 'subject-facts';
+      for (const [label, value] of facts) {
+        const fact = document.createElement('span');
+        fact.className = 'subject-fact';
+        fact.dataset['fact'] = label;
+        fact.append(`${label} `);
+        const b = document.createElement('b');
+        b.textContent = value;
+        fact.appendChild(b);
+        line.appendChild(fact);
+      }
+      nodes.push(line);
+    }
+    subject.replaceChildren(...nodes);
+  }
+
+  /** Details: where the note is stored and what its frontmatter says about it. Out of the heading, one press away. */
+  private paintDetails(pane: HTMLElement, noteId: string, card: CardModel | null, doc: NoteDocument | undefined): void {
+    const button = pane.querySelector('.pane-info') as HTMLElement;
+    const panel = pane.querySelector('.pane-details') as HTMLElement;
+    const open = this.detailsOpen === noteId;
+    button.setAttribute('aria-expanded', String(open));
+    panel.hidden = !open;
+    if (!open) return;
+    const rows: Array<[string, string]> = [];
+    const path = doc?.relPath ?? card?.rel ?? null;
+    rows.push(['stored at', path ?? 'this card has no note behind it']);
+    if (card !== null && card.noteType !== '') rows.push(['type', card.noteType]);
+    for (const key of ['phase', 'parent', 'owner', 'created', 'updated', 'priority', 'effort', 'release']) {
+      const value = doc === undefined ? null : plainValue(doc.frontmatter[key]);
+      if (value !== null) rows.push([key, value]);
+    }
+    const signature = rows.map((r) => r.join('=')).join('\n');
+    if (panel.dataset['signature'] === signature) return;
+    panel.dataset['signature'] = signature;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', `Details of ${noteId}`);
+    const list = document.createElement('dl');
+    for (const [label, value] of rows) {
+      const dt = document.createElement('dt');
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      list.append(dt, dd);
+    }
+    panel.replaceChildren(list);
+    panel.tabIndex = -1;
+  }
+
+  /** Open or close a document's details. */
+  private toggleDetails(noteId: string, open: boolean = this.detailsOpen !== noteId): void {
+    this.detailsOpen = open ? noteId : this.detailsOpen === noteId ? null : this.detailsOpen;
+    this.drawPanes();
+  }
+
+  /**
+   * Put the note's text in its document.
+   *
+   * The document's frame is there at once, named, with a line that says the
+   * text is being read; the text replaces that line the moment the sidecar
+   * answers, whatever the opening is doing. A read that fails says so and
+   * offers Retry and Close. Nothing else is ever shown in the text's place:
+   * not a summary, and not another note's text (DES-0003).
+   */
+  private fillDocument(pane: HTMLElement, noteId: string, card: CardModel | null): void {
+    const note = pane.querySelector('.pane-note') as HTMLElement;
+    const state = pane.querySelector('.pane-state') as HTMLElement;
+    const body = pane.querySelector('.pane-body') as HTMLElement;
+    const say = (kind: 'loading' | 'error' | 'missing' | 'ready', text: string, buttons: Array<[string, string]> = []): void => {
+      pane.dataset['state'] = kind;
+      body.setAttribute('aria-busy', String(kind === 'loading'));
+      state.hidden = kind === 'ready';
+      const signature = `${kind}|${text}`;
+      if (state.dataset['signature'] === signature) return;
+      state.dataset['signature'] = signature;
+      const line = document.createElement('p');
+      line.textContent = text;
+      const nodes: HTMLElement[] = [line];
+      for (const [act, label] of buttons) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'action';
+        button.dataset['act'] = act;
+        button.textContent = label;
+        nodes.push(button);
+      }
+      state.replaceChildren(...nodes);
+    };
+    const doc = this.docs.get(noteId);
+    if (doc !== undefined) {
+      if (note.dataset['filled'] !== 'true') {
+        // A note read again after a change on disk keeps the place it was
+        // being read at: the text is replaced, the scroll is not.
+        const at = body.scrollTop;
+        note.innerHTML = doc.html;
+        note.dataset['filled'] = 'true';
+        body.scrollTop = at;
+        const actions = pane.querySelector('.pane-actions') as HTMLElement;
+        void this.hooks.dress(noteId, note, actions).catch(() => null);
+      }
+      say('ready', '');
+      return;
+    }
+    if (card === null) {
+      // The desk names a note this view does not hold and Deck's index has no
+      // card for: it is said, and nothing stands in for it.
+      note.replaceChildren();
+      delete note.dataset['filled'];
+      say('missing', `${noteId} is on the desk and cannot be read here: this view does not hold it, or it has been deleted or renamed. It can be closed, or the view that holds it can be opened.`, [['close', 'close']]);
+      return;
+    }
+    if (pane.dataset['asked'] === 'true') return;
+    pane.dataset['asked'] = 'true';
+    if (note.dataset['filled'] !== 'true') say('loading', `Reading ${noteId}…`);
+    void this.hooks
+      .document(card)
+      .then((read) => {
+        this.docs.set(noteId, read);
+        delete note.dataset['filled'];
+        if (this.active && this.paneEls.get(noteId) === pane) this.drawPanes();
+      })
+      .catch((err: unknown) => {
+        if (this.paneEls.get(noteId) !== pane) return;
+        note.replaceChildren();
+        delete note.dataset['filled'];
+        say('error', `${noteId} could not be read: ${err instanceof Error ? err.message : String(err)}`, [['retry', 'retry'], ['close', 'close']]);
+      });
+  }
+
+  /** A link inside a document was followed: open the note it names, growing from the link. */
+  private async followLink(link: HTMLElement, href: string): Promise<void> {
+    const rel = decodeSafely(href.slice(NOTE_LINK_PREFIX.length).split('#')[0] ?? '');
+    const box = this.el.field.getBoundingClientRect();
+    const r = link.getBoundingClientRect();
+    const from: Rect = { left: r.left - box.left, top: r.top - box.top, width: r.width, height: r.height };
+    const card = rel === null ? null : await this.hooks.cardByRel(rel).catch(() => null);
+    if (card === null) {
+      this.tell(`that link names ${rel ?? 'a path'} which Deck has no note for`, true);
+      return;
+    }
+    if (!this.hooks.canArrange()) {
+      await this.hooks.open(card);
+      return;
+    }
+    await this.lift(card, from);
   }
 
   /**
@@ -2733,6 +3165,10 @@ export class GlassField {
    * the field, or a document of its own. This is what replaces "+N more": the
    * arrangement may be larger than the window, and the list is how each part
    * of it is named and reached, by pointer or by keyboard (TASK-0104).
+   *
+   * Each row says how the two notes are joined in the source's own word: the
+   * frontmatter key the link was written under, or "link" when it was written
+   * in the text and the source gives it no name (TASK-0098).
    */
   private paintRelated(pane: HTMLElement, noteId: string): void {
     const button = pane.querySelector('.pane-related') as HTMLElement;
@@ -2749,7 +3185,7 @@ export class GlassField {
     if (!open) return;
     const list = panel.querySelector('.link-list') as HTMLElement;
     const rows = this.relatedRows(noteId, neighbours);
-    const signature = rows.map((r) => `${r.id}|${r.direction}|${r.where}|${r.title}`).join('\n');
+    const signature = rows.map((r) => `${r.id}|${r.direction}|${r.where}|${r.title}|${r.kind}`).join('\n');
     if (list.dataset['signature'] === signature) return;
     list.dataset['signature'] = signature;
     const kept = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.link-row')?.dataset['noteId'] ?? null;
@@ -2761,13 +3197,15 @@ export class GlassField {
         item.className = 'link-row';
         item.dataset['noteId'] = row.id;
         item.dataset['direction'] = row.direction;
+        item.dataset['kind'] = row.kind;
         const go = document.createElement('button');
         go.type = 'button';
         go.className = 'link-go';
-        const said = row.direction === 'out' ? `${noteId} links to it` : row.direction === 'in' ? `it links to ${noteId}` : 'linked both ways';
-        go.setAttribute('aria-label', `${row.id} ${row.title}, ${said}${row.where === '' ? '' : `, ${row.where}`}. Show where it is.`);
+        go.setAttribute('aria-label', `${row.id} ${row.title}: ${row.sentence}${row.where === '' ? '' : `; ${row.where}`}. Show where it is.`);
+        go.title = row.sentence;
         for (const [cls, value] of [
           ['link-dir', row.direction === 'out' ? '→' : row.direction === 'in' ? '←' : '⇄'],
+          ['link-kind', row.kind],
           ['link-id', row.id],
           ['link-title', row.title],
           ['link-where', row.where],
@@ -2800,10 +3238,11 @@ export class GlassField {
     }
   }
 
-  /** The rows of a document's list: every neighbour, in one stable order, with where each one is. */
-  private relatedRows(noteId: string, neighbours: readonly Neighbour[]): Array<Neighbour & { where: string }> {
+  /** The rows of a document's list: every neighbour, in one stable order, with what joins it and where it is. */
+  private relatedRows(noteId: string, neighbours: readonly Neighbour[]): Array<Neighbour & { where: string; kind: string; sentence: string }> {
     const rank = (n: Neighbour): number => (n.direction === 'out' ? 0 : n.direction === 'both' ? 1 : 2);
     const focused = this.focusId() === noteId;
+    const edges = this.edges;
     return [...neighbours]
       .sort((a, b) => rank(a) - rank(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
       .map((n) => {
@@ -2816,14 +3255,20 @@ export class GlassField {
             where = edge.left > 0 ? 'beyond the left edge' : edge.right > 0 ? 'beyond the right edge' : edge.up > 0 ? 'above the field' : edge.down > 0 ? 'below the field' : '';
           }
         }
-        return { ...n, where };
+        // Until the workspace's links have been read there is no word for the
+        // relationship, only its direction, and no word is made up meanwhile.
+        const relations = edges === null ? [] : relationsBetween(edges, noteId, n.id);
+        return { ...n, where, kind: edges === null ? '' : relationLabel(relations), sentence: relationsSentence(noteId, n.id, relations, n.direction) };
       });
   }
 
   /** Open or close a document's list of related notes. One list at a time, in this window. */
   private toggleRelated(noteId: string, open: boolean = this.relatedOpen !== noteId): void {
     this.relatedOpen = open ? noteId : this.relatedOpen === noteId ? null : this.relatedOpen;
-    if (open) void this.hooks.context(noteId).then(() => this.active && this.drawPanes()).catch(() => null);
+    if (open) {
+      void this.hooks.context(noteId).then(() => this.active && this.drawPanes()).catch(() => null);
+      void this.readEdges().then(() => this.active && this.drawPanes());
+    }
     this.drawPanes();
   }
 
@@ -2934,7 +3379,11 @@ export class GlassField {
   private onWheel(event: WheelEvent): void {
     if (!this.active) return;
     const target = event.target as HTMLElement;
-    if (target.closest('.pane, .field-bar, .compass, .target-strip, .edge-callout') !== null) return;
+    // Over a document, the collection or anything else with its own content
+    // the wheel is that object's: it scrolls it, and at its end it does not
+    // go on to zoom or turn the field (DES-0003's input contract; the
+    // stylesheet's `overscroll-behavior: contain` is the other half).
+    if (target.closest('.pane, .collection, .narrow-bar, .field-bar, .compass, .target-strip, .edge-callout') !== null) return;
     event.preventDefault();
     this.scheduleIdle();
     const sideways = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
@@ -2957,6 +3406,9 @@ export class GlassField {
    */
   focusId(): string | null {
     if (!this.focusOn || this.panesHidden || !this.active) return null;
+    // A narrow field shows one object and has no room round it for cards:
+    // what the note is joined to is reached through its list.
+    if (this.isNarrow() && this.arrangement !== 'orbit') return null;
     const top = this.held[this.held.length - 1];
     if (top === undefined || top.wide === true) return null;
     return top.noteId;
@@ -3343,7 +3795,12 @@ export class GlassField {
         r.left > this.viewport.width - FIND_GRAB_PX ||
         r.top > this.viewport.height - PANE_HEADER_HEIGHT;
     }
-    this.el.findOpen.hidden = !away;
+    // The same for the collection: offered while the desk is turned away
+    // from or moved aside, so the list is always one press away.
+    const aside = Math.abs(this.deskPan.x) > 0.5 || Math.abs(this.deskPan.y) > 0.5;
+    const collection = this.furnitureItems.length > 0 && this.furnitureItems[0]?.rect() !== null;
+    this.el.toCollection.hidden = !(collection && this.narrowMode() === null && (!shift.visible || shift.opacity < FIND_BELOW_OPACITY || aside));
+    this.el.findOpen.hidden = !away || this.narrowMode() !== null;
     if (away && top !== null) {
       this.el.findOpen.textContent = `find ${top}`;
       this.el.findOpen.dataset['noteId'] = top;
@@ -3362,6 +3819,51 @@ export class GlassField {
       button.textContent = `${BEYOND_ARROW[side]} ${n} related`;
       button.setAttribute('aria-label', `${n} related ${n === 1 ? 'note' : 'notes'} ${BEYOND_WORDS[side]}: bring the nearest into view`);
     }
+  }
+
+  /**
+   * The bar a narrow field carries: the collection and each open note, by
+   * name, with the one in front marked. It is the explicit way between
+   * objects that DES-0003 asks for where they cannot be shown side by side.
+   */
+  private drawNarrowBar(narrow: 'collection' | 'document' | null): void {
+    const bar = this.el.narrowBar;
+    bar.hidden = narrow === null;
+    if (narrow === null) {
+      if (bar.dataset['signature'] !== '') {
+        bar.dataset['signature'] = '';
+        bar.replaceChildren();
+      }
+      return;
+    }
+    const top = this.held[this.held.length - 1]?.noteId ?? null;
+    const items: Array<{ key: string; label: string; front: boolean }> = [{ key: 'collection', label: 'Collection', front: narrow === 'collection' }];
+    for (const card of this.held) items.push({ key: card.noteId, label: card.noteId, front: narrow === 'document' && card.noteId === top });
+    const signature = items.map((i) => `${i.key}|${i.front}`).join(' ');
+    if (bar.dataset['signature'] === signature) return;
+    bar.dataset['signature'] = signature;
+    bar.replaceChildren(
+      ...items.map((item) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'action';
+        button.dataset['object'] = item.key;
+        button.textContent = item.label;
+        button.setAttribute('aria-pressed', String(item.front));
+        button.setAttribute('aria-label', item.key === 'collection' ? 'Show the collection' : `Show the open note ${item.key}`);
+        button.addEventListener('click', () => {
+          if (item.key === 'collection') {
+            this.showCollection();
+            return;
+          }
+          this.narrowFront = 'document';
+          void this.raise(item.key).then(() => {
+            if (this.active) this.redeal(false);
+          });
+        });
+        return button;
+      }),
+    );
   }
 
   /**
@@ -3404,18 +3906,30 @@ export class GlassField {
       this.showCallout(null, 0, 0);
       return;
     }
-    let edges: GraphEdge[] = this.arrangement === 'orbit' && this.orbit !== null ? this.orbit.edges : [];
-    if (edges.length === 0) {
-      if (this.graphEdgesFor === null) this.graphEdgesFor = this.hooks.graphEdges().catch(() => []);
-      edges = await this.graphEdgesFor;
+    const edges = await this.readEdges();
+    // A link the source names is shown before one written in a sentence.
+    const between = edges.filter((e) => (e.source === focus && e.target === id) || (e.source === id && e.target === focus));
+    const edge = between.find((e) => e.field !== null && e.field !== undefined) ?? between[0] ?? null;
+    if (this.focusId() === focus) this.showCallout(edge, at.x, at.y, relationsSentence(focus, id, relationsBetween(edges, focus, id), 'both'));
+  }
+
+  /** The workspace's links, read once per state of the workspace: what a relationship is called comes from them. */
+  private readEdges(): Promise<GraphEdge[]> {
+    if (this.arrangement === 'orbit' && this.orbit !== null) {
+      this.edges = this.orbit.edges;
+      return Promise.resolve(this.edges);
     }
-    const edge = edges.find((e) => e.source === focus && e.target === id) ?? edges.find((e) => e.source === id && e.target === focus) ?? null;
-    if (this.focusId() === focus) this.showCallout(edge, at.x, at.y);
+    if (this.graphEdgesFor === null) this.graphEdgesFor = this.hooks.graphEdges().catch(() => []);
+    return this.graphEdgesFor.then((edges) => {
+      this.edges = edges;
+      return edges;
+    });
   }
 
   /** The edge list is read again after the notes change on disk. */
   forgetGraphEdges(): void {
     this.graphEdgesFor = null;
+    this.edges = null;
   }
 
   /**
@@ -3435,14 +3949,11 @@ export class GlassField {
 
   /** Forget the pane bodies, because the notes they came from changed on disk. */
   forgetBodies(): void {
-    this.paneBodies.clear();
-    for (const pane of this.paneEls.values()) {
-      const body = pane.querySelector('.pane-note') as HTMLElement | null;
-      if (body !== null) {
-        delete body.dataset['asked'];
-        delete body.dataset['filled'];
-      }
-    }
+    this.docs.clear();
+    // Each document asks again the next time it is painted. Until the new
+    // text arrives it keeps showing the text it has: a note being read is not
+    // replaced by a "reading…" line because another note changed.
+    for (const pane of this.paneEls.values()) delete pane.dataset['asked'];
   }
 
   /**
@@ -3609,6 +4120,12 @@ export class GlassField {
       if (this.relatedOpen === noteId) this.paneEls.get(noteId)?.querySelector<HTMLElement>('.link-go, .pane-related')?.focus();
       return;
     }
+    if (event.key === 'd' || event.key === 'D') {
+      event.preventDefault();
+      this.toggleDetails(noteId);
+      if (this.detailsOpen === noteId) this.paneEls.get(noteId)?.querySelector<HTMLElement>('.pane-details')?.focus();
+      return;
+    }
     if (!this.hooks.canArrange()) return;
     const step = event.shiftKey ? 64 : 16;
     const arrows: Record<string, [number, number]> = {
@@ -3660,12 +4177,30 @@ export class GlassField {
 
   /** × on a pane: the note goes back into the slot it left. */
   async putBack(noteId: string): Promise<void> {
-    if (!this.hooks.canArrange()) return;
+    if (!this.hooks.canArrange()) {
+      // Only a document this page opened for itself: the Mac's are the Mac's.
+      const at = this.localHeld.findIndex((c) => c.noteId === noteId);
+      if (at === -1) return;
+      if (this.focusId() === noteId) this.leaveFocus();
+      if (this.relatedOpen === noteId) this.relatedOpen = null;
+      if (this.detailsOpen === noteId) this.detailsOpen = null;
+      this.localHeld.splice(at, 1);
+      if (this.held.filter((c) => c.noteId !== noteId).length === 0) this.narrowFront = 'collection';
+      if (this.active) this.redeal(false);
+      this.hooks.closed(noteId);
+      return;
+    }
     // Closing the focused document leaves the focus: its cards go back to
     // their slots, and every other document stays where it is (decision 10).
     if (this.focusId() === noteId) this.leaveFocus();
     if (this.relatedOpen === noteId) this.relatedOpen = null;
+    if (this.detailsOpen === noteId) this.detailsOpen = null;
     await this.hooks.dispatch({ type: 'take-off-desk', noteId });
+    // With no other document to show, a narrow field goes back to the list.
+    if (this.held.filter((c) => c.noteId !== noteId).length === 0) this.narrowFront = 'collection';
+    // The keyboard goes back to the row the note was opened from, or the
+    // collection says that row is gone (TASK-0098).
+    this.hooks.closed(noteId);
   }
 
   /**
@@ -3685,7 +4220,17 @@ export class GlassField {
 
   /** esc: sweep this view's desk. A note on every view stays, and the front plane says how many. */
   async sweep(): Promise<void> {
-    if (!this.hooks.canArrange() || this.held.length === 0) return;
+    if (!this.hooks.canArrange()) {
+      // A served page sweeps what it opened for itself, and nothing of the Mac's.
+      if (this.localHeld.length === 0) return;
+      const n = this.localHeld.length;
+      this.localHeld = [];
+      this.narrowFront = 'collection';
+      if (this.active) this.redeal(false);
+      this.tell(`${n} ${n === 1 ? 'note' : 'notes'} opened here ${n === 1 ? 'is' : 'are'} closed; the Mac's desk is as it was`);
+      return;
+    }
+    if (this.held.length === 0) return;
     const stayed = this.held.filter((c) => this.hooks.isEveryView(c.noteId)).length;
     await this.hooks.dispatch({ type: 'clear-desk' });
     this.tell(
@@ -3698,7 +4243,8 @@ export class GlassField {
   /** Make a held note the focus: Enter on its header, or a row of another document's list that names it. */
   private async bringForward(noteId: string): Promise<void> {
     this.openFocus(noteId, null);
-    await this.hooks.dispatch({ type: 'raise-card', noteId });
+    this.narrowFront = 'document';
+    await this.raise(noteId);
     // Already on top: no broadcast comes, so draw now.
     if (this.active) this.redeal(false);
   }
@@ -3711,15 +4257,21 @@ export class GlassField {
     this.tell(on ? `${noteId} is on every view` : `${noteId} is on this view only`);
   }
 
+  /**
+   * W, or ⤢ on a document: fill the field with it, or put it back at its own
+   * size. Until FEAT-0020 this moved the note's text to a column beside the
+   * field; the text is on the desk now, so the same control makes the
+   * document as large as the field instead. The size and place the store
+   * holds for it are not changed, and at most one document fills the field.
+   */
   async widen(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
-    // W on the focused document reads it in the column and leaves the focus.
+    // A document that fills the field has nothing gathered round it.
     if (this.focusId() === noteId) this.leaveFocus();
     const card = this.held.find((c) => c.noteId === noteId);
     const wide = card?.wide !== true;
     await this.hooks.dispatch({ type: 'widen-card', noteId, wide });
-    const model = this.cardFor(noteId);
-    if (wide && model !== null) await this.hooks.open(model);
+    if (wide) await this.hooks.dispatch({ type: 'raise-card', noteId });
   }
 
   private sendFromPane(noteId: string): Promise<void> {
@@ -3795,6 +4347,30 @@ function findChild(card: CardModel, noteId: string): CardModel | null {
     if (deeper !== null) return deeper;
   }
   return null;
+}
+
+/** A frontmatter value as a line of text: a string, a number, or a list of them, with `[[...]]` taken off. Null for anything else. */
+function plainValue(value: unknown): string | null {
+  const one = (v: unknown): string | null => {
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+    if (typeof v !== 'string') return null;
+    const text = v.trim().replace(/^\[\[([^|\]]+)(?:\|[^\]]*)?\]\]$/, '$1').trim();
+    return text === '' ? null : text;
+  };
+  if (Array.isArray(value)) {
+    const parts = value.map(one).filter((x): x is string => x !== null);
+    return parts.length === 0 ? null : parts.join(', ');
+  }
+  return one(value);
+}
+
+/** A path from a link, percent-decoded, or null when it is not text. */
+function decodeSafely(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
 }
 
 function setText(root: HTMLElement, selector: string, value: string): void {

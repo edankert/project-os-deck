@@ -134,7 +134,7 @@ export async function runMeasure(ctx: MeasureContext, roots: string[]): Promise<
     const hubs = [...built.nodes].sort((a, b) => b.inbound - a.inbound).slice(0, 3);
     const plus = {
       nodes: [...built.nodes, { id: 'MEASURE-NEW', rel: 'MEASURE-NEW.md', title: 'a note added', type: 'note', status: 'open', band: 'active', phase: hubs[0]?.phase ?? null, inbound: 0 }],
-      edges: [...built.edges, ...hubs.map((h, i) => ({ source: 'MEASURE-NEW', target: h.id, wrote: h.id, offset: i, resolved: true, crossRepo: false }))],
+      edges: [...built.edges, ...hubs.map((h, i) => ({ source: 'MEASURE-NEW', target: h.id, wrote: h.id, offset: i, resolved: true, crossRepo: false, field: null }))],
     };
     const addedAt = Date.now();
     const again = layoutOrbit(plus, laid);

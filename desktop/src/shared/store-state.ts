@@ -13,6 +13,7 @@
  */
 import type { Desk, DeskCard, DeckState, Filters, ReadingSize, SessionState } from './types.js';
 import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
+import { type CollectionLayout, normaliseCollection } from './collection.js';
 
 export type DeckAction =
   | { type: 'open-workspace'; workspaceId: string }
@@ -63,6 +64,13 @@ export type DeckAction =
    * resizing is the one act that says how large a person wants to read.
    */
   | { type: 'resize-card'; noteId: string; w: number; h: number; viewId?: string }
+  /**
+   * Where a view's collection stands on the desk, or how it is presented
+   * (FEAT-0020). The window sends the whole layout, since it knows the
+   * default a view with nothing stored is drawn with; a layout that is not
+   * whole is ignored.
+   */
+  | { type: 'set-collection'; layout: CollectionLayout; viewId?: string }
   /** A pane brought to the top of its stack, which is the end of the desk's list. */
   | { type: 'raise-card'; noteId: string; viewId?: string }
   /** A pane moved to the reading column, or back out of it when `wide` is false. */
@@ -108,6 +116,7 @@ const RENDERER_ACTIONS = new Set([
   'raise-card',
   'widen-card',
   'set-every-view',
+  'set-collection',
 ]);
 
 /**
@@ -125,6 +134,7 @@ export const DESK_ACTIONS: ReadonlySet<string> = new Set([
   'raise-card',
   'widen-card',
   'set-every-view',
+  'set-collection',
 ]);
 
 export function isRendererAction(value: unknown): value is DeckAction {
@@ -143,6 +153,7 @@ export function initialState(): DeckState {
     deskCards: {},
     viewDesks: {},
     readingSizes: {},
+    collections: {},
     query: '',
     filters: { statuses: [], types: [] },
     folds: {},
@@ -208,6 +219,12 @@ export function viewCardsOf(state: DeckState, workspaceId: string | null, viewId
 export function readingSizeOf(state: DeckState, workspaceId: string | null, viewId: string | null): ReadingSize | null {
   if (workspaceId === null || viewId === null) return null;
   return state.readingSizes[workspaceId]?.[viewId] ?? null;
+}
+
+/** Where this view's collection stands on the desk, or null when the default applies. */
+export function collectionOf(state: DeckState, workspaceId: string | null, viewId: string | null): CollectionLayout | null {
+  if (workspaceId === null || viewId === null) return null;
+  return state.collections[workspaceId]?.[viewId] ?? null;
 }
 
 /** Whether a held note is on every view of its workspace. */
@@ -490,6 +507,22 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const next: DeckState = { ...resized, readingSizes: { ...resized.readingSizes, [ws]: { ...(resized.readingSizes[ws] ?? {}), [view]: { w, h } } } };
       return resized === state ? bump(next) : next;
     }
+    case 'set-collection': {
+      if (state.workspaceId === null) return state;
+      const ws = state.workspaceId;
+      const view = viewOf(state, action);
+      const layout = normaliseCollection(action.layout);
+      if (view === null || layout === null) return state;
+      const known = collectionOf(state, ws, view);
+      if (
+        known !== null &&
+        known.x === layout.x && known.y === layout.y && known.w === layout.w && known.h === layout.h &&
+        known.collapsed === layout.collapsed && known.presentation === layout.presentation
+      ) {
+        return state;
+      }
+      return bump({ ...state, collections: { ...state.collections, [ws]: { ...(state.collections[ws] ?? {}), [view]: layout } } });
+    }
     case 'raise-card': {
       if (state.workspaceId === null) return state;
       const view = viewOf(state, action);
@@ -698,6 +731,22 @@ export function normaliseState(value: unknown): DeckState {
       readingSizes[ws] = out;
     }
   }
+  // Each view's collection (FEAT-0020). A file written before collections
+  // existed has none and every view draws the default; a layout that is not
+  // whole is dropped the same way, never half-read.
+  const collections: Record<string, Record<string, CollectionLayout>> = {};
+  const rawCollections = raw['collections'];
+  if (typeof rawCollections === 'object' && rawCollections !== null && !Array.isArray(rawCollections)) {
+    for (const [ws, views] of Object.entries(rawCollections as Record<string, unknown>)) {
+      if (typeof views !== 'object' || views === null || Array.isArray(views)) continue;
+      const out: Record<string, CollectionLayout> = {};
+      for (const [view, layout] of Object.entries(views as Record<string, unknown>)) {
+        const read = normaliseCollection(layout);
+        if (read !== null) out[view] = read;
+      }
+      collections[ws] = out;
+    }
+  }
   const folds: Record<string, boolean> = {};
   const rawFolds = raw['folds'];
   if (typeof rawFolds === 'object' && rawFolds !== null) {
@@ -714,6 +763,7 @@ export function normaliseState(value: unknown): DeckState {
     deskCards,
     viewDesks,
     readingSizes,
+    collections,
     query: typeof raw['query'] === 'string' ? raw['query'] : '',
     filters: normaliseFilters(raw['filters']),
     folds,

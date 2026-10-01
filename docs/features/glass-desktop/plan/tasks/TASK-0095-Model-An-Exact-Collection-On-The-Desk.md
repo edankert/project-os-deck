@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0095
 title: "Model an exact derived collection on the desk"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01

@@ -2,7 +2,7 @@
 type: "[[requirement]]"
 id: REQ-0001
 title: "Glass collections remain exact and interactive"
-status: draft
+status: approved
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
@@ -30,6 +30,10 @@ The current view's derived list must be a readable, interactive object on the ma
 - [ ] Collapsing, reopening and closing a selected document preserve collection size, selection and scroll anchor; changed results are announced before the person applies them, and removed selections are explained. — evidence to be collected: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]]
 - [ ] Collection wheel input scrolls rows without moving the field at a boundary; keyboard focus and an explicit return remain usable with overlapping objects and a narrow window. — evidence to be collected: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]]
 - [ ] Saved collection state holds query identity, filters and layout, then resolves current rows; an old desk without that state opens with safe defaults. — evidence to be collected: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]]
+
+## Approval
+
+Approved for building on 2026-10-01. Edwin asked for this direction to be implemented in full and named DES-0003 as the baseline: “Treat DES-0003 as the implementation baseline; resolve routine design details using its principles and record your decisions.” The acceptance criteria above are the ones the implementation is built against. They are ticked only with evidence, at the feature's close-out.
 
 ## Traceability
 

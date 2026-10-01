@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Put the collection and full note on Glass"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-10-01
 updated: 2026-10-01

@@ -46,6 +46,50 @@ test('a bare id counts only in a frontmatter key meant to point at notes', () =>
   assert.equal(frontmatterLength(text), text.indexOf('# Body'), 'the frontmatter ends where the body begins');
 });
 
+test('a link carries the frontmatter key it was written under, and a link in the text carries none', () => {
+  // The key is the only place a note says what a link MEANS (FEAT-0020,
+  // DES-0003): it is recorded as written and never guessed from prose.
+  const text = [
+    '---',
+    'id: TASK-0009',
+    'parent: "[[FEAT-0002-The-Shell]]"',
+    'tests: ["[[TST-0001]]", "[[TST-0002]]"]',
+    'related:',
+    '  - "[[ISS-0003]]"',
+    '  - ISS-0004',
+    'depends: FEAT-0005',
+    'summary: "see [[ISS-0006]], the parent of nothing"',
+    '---',
+    '# Body',
+    'The parent of this task is [[FEAT-0002-The-Shell]], and it tests [[TST-0001]].',
+    '',
+  ].join('\n');
+  const fields = (target) => linksIn(text).filter((l) => l.target === target).map((l) => l.field);
+  assert.deepEqual(fields('FEAT-0002-The-Shell'), ['parent', null], 'the same note is linked once under parent and once in a sentence');
+  assert.deepEqual(fields('TST-0001'), ['tests', null]);
+  assert.deepEqual(fields('TST-0002'), ['tests']);
+  // The items of a list belong to the key the list hangs from, wrapped or bare.
+  assert.deepEqual(fields('ISS-0003'), ['related']);
+  assert.deepEqual(fields('ISS-0004'), ['related']);
+  assert.deepEqual(fields('FEAT-0005'), ['depends']);
+  // A wikilink under a key that is not link-bearing is still a link, under that key.
+  assert.deepEqual(fields('ISS-0006'), ['summary']);
+  // Every link in the body has no field, whatever its sentence says.
+  const bodyStart = text.indexOf('# Body');
+  for (const link of linksIn(text)) assert.equal(link.field === null, link.offset >= bodyStart, `${link.target} at ${link.offset}`);
+});
+
+test('an edge keeps the field of the link that made it', () => {
+  const graph = buildGraph([
+    source('TASK-0009.md', '---\nid: TASK-0009\nparent: "[[FEAT-0002]]"\ntests: ["[[TST-0001]]"]\n---\nSee [[FEAT-0002]] and [[ISS-0003]].\n', { id: 'TASK-0009' }),
+    source('FEAT-0002.md', '---\nid: FEAT-0002\n---\n', { id: 'FEAT-0002' }),
+    source('TST-0001.md', '---\nid: TST-0001\n---\n', { id: 'TST-0001' }),
+    source('ISS-0003.md', '---\nid: ISS-0003\n---\n', { id: 'ISS-0003' }),
+  ]);
+  const made = graph.edges.filter((e) => e.source === 'TASK-0009').map((e) => `${e.target}:${e.field}`);
+  assert.deepEqual(made.sort(), ['FEAT-0002:null', 'FEAT-0002:parent', 'ISS-0003:null', 'TST-0001:tests']);
+});
+
 test('a target resolves by id, then alias, then file name, then title, then the id in a drifted slug', () => {
   const r = new Resolver([
     source('a/FEAT-0085-BleReliabilityLayer.md', '', { id: 'FEAT-0085', aliases: ['Ble'], title: 'The BLE layer' }),

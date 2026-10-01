@@ -40,3 +40,8 @@ node_modules/
 # not a file every clone should carry. Anchored, so a `docs/.../measurements/`
 # could never vanish from a fresh clone unnoticed.
 /measurements/
+
+# Worktrees an agent session makes for work done in isolation. Each is a
+# checkout of this same repository; committing one records a link to a
+# directory no other clone has.
+/.claude/worktrees/

@@ -125,7 +125,14 @@ body {
 .nav-filters { display: flex; align-items: center; gap: 6px; }
 .nav-filters select { flex: 1 1 auto; min-width: 0; }
 
-.nav-list { flex: 1 1 auto; overflow-y: auto; padding-bottom: 12px; }
+.nav-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 12px; }
+/* Waiting, failed and empty are three different things (DES-0003). */
+.nav-state { flex: 0 0 auto; padding: 8px 10px; color: var(--ink-dim); font-size: 12px; line-height: 1.45; border-bottom: 1px solid var(--line); }
+.nav-state[data-state="error"] { color: var(--alarm); }
+.nav-state p, .collection-line { margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.nav-state .action, .collection-line .action { padding: 0 8px; font-size: 11px; }
+/* A heading whose folded rows hold the note that is open on the desk. */
+.nav-group.holds-open { box-shadow: inset 3px 0 0 var(--accent); }
 
 .nav-group,
 .nav-row {
@@ -503,14 +510,13 @@ body[data-surface="orbit"] #desk-area,
 body[data-surface="list"] #desk-area { display: none; }
 body[data-surface="spread"] #field-area,
 body[data-surface="list"] #field-area { display: none; }
-/* In Glass the reader is the reading column, shown when a pane is widened
-   (TASK-0054), or on a served page when a note is opened. */
-body[data-surface="glass"]:not(.reading) .reader,
-body[data-surface="glass"]:not(.reading) .actuators,
-body[data-surface="orbit"]:not(.reading) .reader,
-body[data-surface="orbit"]:not(.reading) .actuators { display: none; }
-body[data-surface="orbit"].reading .reader,
-body[data-surface="glass"].reading .reader { width: min(520px, 38vw); max-width: 520px; min-width: 280px; flex: 0 0 min(520px, 38vw); }
+/* In Glass there is no reader beside the field: a note is read in its
+   document on the desk, with the verbs the sidecar allows inside it
+   (FEAT-0020, ADR-0006). */
+body[data-surface="glass"] .reader,
+body[data-surface="glass"] .actuators,
+body[data-surface="orbit"] .reader,
+body[data-surface="orbit"] .actuators { display: none; }
 body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 /* A popped-out panel carries one thing, and a field is not among them: the
    renderer never makes Glass active in one (surfaceNow), so the field area
@@ -765,11 +771,11 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .target-strip .target.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .target-strip .target.landed { border-color: var(--owed); }
 
-/* A held note is a pane on the front plane (TASK-0054). Panes stack whole, in
-   the desk's order (glass.ts, paintPane): the pane on top covers the panes
-   under it, header included (ISS-0066). A pane dropped on another's header
-   snaps below it, so a stack is laid down with its headers showing. The body
-   carries the pane's surface. */
+/* A held note is a document on the desk (TASK-0054, FEAT-0020). Documents
+   stack whole, in the desk's order (glass.ts, placePanes): the one on top
+   covers those under it, header included (ISS-0066). A document dropped on
+   another's header snaps below it, so a stack is laid down with its headers
+   showing. */
 .pane {
   position: absolute;
   pointer-events: none;
@@ -777,18 +783,20 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   flex-direction: column;
   min-width: 280px;
   min-height: 160px;
+  /* One small shadow round the whole document tells it from the field behind
+     it. No blur over the field and no backdrop filter (TST-0042). */
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
 }
 .pane > * { pointer-events: auto; }
-.pane.dragging .pane-head { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); }
+.pane.dragging { box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55); }
 /* Past the edge of sight the desk is not drawn and takes no pointer, on the
    boundary where a card stops being drawn. */
 .pane.out-of-sight { visibility: hidden; }
 .pane.focus .pane-head { border-top-color: var(--accent); }
-/* Widened: the note is in the reading column, and the pane shows only its header. */
-.pane.wide { height: 34px !important; min-height: 34px; }
-.pane.wide .pane-head { border-radius: 8px; border-bottom: 1px solid var(--line); }
-.pane.wide .pane-body,
-.pane.wide .pane-resize { display: none; }
+/* The one object in front in a narrow field: no corner to drag, no rounded edge. */
+.pane.narrow { border-radius: 0; box-shadow: none; }
+.pane.narrow .pane-resize, .pane.wide .pane-resize { display: none; }
 .pane-head {
   position: relative;
   flex: 0 0 34px;
@@ -814,9 +822,31 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .pane[data-status="archived"] .pane-head { border-left-color: var(--done); }
 .pane[data-status="active"] .pane-head { border-left-color: var(--accent); }
 .pane-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.pane-id { font-weight: 600; }
-.pane-status, .pane-face { color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; }
-.pane-tools { margin-left: auto; display: flex; gap: 2px; }
+/* The heading: the note's title first, then its id and its state. The path
+   it is stored at is under Details, never here (DES-0003). */
+.pane-title { flex: 0 1 auto; min-width: 3em; font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+/* The title gives way first: the id and the state are short and are never cut. */
+.pane-id { flex: 0 0 auto; color: var(--ink-dim); font-size: 11px; letter-spacing: 0.03em; }
+.pane-status {
+  flex: 0 0 auto;
+  max-width: 16em;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--ink-dim);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pane[data-status="pending"] .pane-status,
+.pane[data-status="blocked"] .pane-status { border-color: var(--owed); color: var(--owed); }
+.pane[data-status="done"] .pane-status,
+.pane[data-status="archived"] .pane-status { border-color: var(--done); color: var(--done); }
+.pane[data-status="active"] .pane-status { border-color: var(--accent); color: var(--accent); }
+.pane-tools { margin-left: auto; flex: 0 0 auto; display: flex; gap: 2px; }
+.pane-tools .pane-info { font-size: 11px; }
+.pane-tools button[aria-expanded="true"], .pane-tools .pane-widen[aria-pressed="true"] { background: var(--line); color: var(--ink); }
+.pane-tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pane-tools button {
   background: none;
   border: 0;
@@ -851,11 +881,36 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .link-row button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .link-go { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 6px; padding: 3px 6px; text-align: left; }
 .link-dir { flex: 0 0 1.2em; color: var(--accent); }
+/* What joins the two notes, in the word the source wrote: a frontmatter key, or "link". */
+.link-kind { flex: 0 0 auto; padding: 0 5px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-dim); font-size: 10.5px; }
+.link-kind:empty { display: none; }
+.link-row[data-kind="link"] .link-kind { border-style: dashed; }
 .link-id { flex: 0 0 auto; color: var(--ink-dim); font-size: 11px; letter-spacing: 0.03em; }
 .link-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .link-where { flex: 0 0 auto; color: var(--owed); font-size: 11px; }
 .link-open { flex: 0 0 auto; padding: 3px 8px; color: var(--ink-dim); font-size: 11px; }
 .link-none { padding: 6px 12px; color: var(--ink-dim); }
+/* What the note is for and how far along it is, where the note says. */
+.pane-subject, .pane-details {
+  flex: 0 0 auto;
+  background: #202432;
+  border: 1px solid var(--line);
+  border-top: 0;
+  padding: 6px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.pane-subject p { margin: 0; }
+.subject-goal { color: var(--ink); max-height: 4.4em; overflow: hidden; }
+.subject-facts { display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--ink-dim); }
+.subject-goal + .subject-facts { margin-top: 3px; }
+.subject-fact b { color: var(--ink); font-weight: 600; }
+.subject-fact[data-fact="needs you"] b { color: var(--owed); }
+.pane-details { max-height: 40%; overflow: auto; overscroll-behavior: contain; }
+.pane-details:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pane-details dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; }
+.pane-details dt { color: var(--ink-dim); }
+.pane-details dd { margin: 0; overflow-wrap: anywhere; user-select: text; }
 .pane-body {
   position: relative;
   flex: 1 1 auto;
@@ -865,22 +920,70 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
      dragging across its text selects the text (DES-0003's input contract). */
   overscroll-behavior: contain;
   user-select: text;
-  padding: 10px 14px;
-  font-size: 12.5px;
-  background: #1d212d;
+  padding: 14px 20px 20px;
+  /* The reading text: flat, on a surface the field does not show through. */
+  font-size: 14px;
+  line-height: 1.6;
+  background: #1c202b;
   border: 1px solid var(--line);
   border-top: 0;
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
+.pane.narrow .pane-body { border-radius: 0; }
+/* A column of about seventy characters, however wide the document is dragged. */
+.pane-note { max-width: 72ch; margin: 0 auto; }
+.pane-note > :first-child { margin-top: 0; }
+.pane-note h1 { font-size: 18px; line-height: 1.3; }
+.pane-note h2 { font-size: 15.5px; line-height: 1.3; margin-top: 1.4em; }
+.pane-note h3 { font-size: 14px; }
+.pane-note a { color: var(--accent); }
+.pane-note a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pane-note pre { background: var(--ground); padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; }
+.pane-note code { background: var(--ground); padding: 1px 4px; border-radius: 4px; font-size: 12.5px; }
+.pane-note table { border-collapse: collapse; font-size: 12.5px; display: block; overflow-x: auto; }
+.pane-note td, .pane-note th { border: 1px solid var(--line); padding: 4px 8px; }
+.pane-note img { max-width: 100%; }
+.pane-note .tick {
+  font: inherit;
+  font-size: 11px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.pane-note .tick:hover { border-color: var(--accent); }
+.pane-note .no-tick { margin: 0 0 8px; padding: 6px 8px; border-left: 2px solid var(--owed); font-size: 12px; opacity: 0.85; }
+/* The text is being read, or could not be: said where the text will be. */
+.pane-state { max-width: 72ch; margin: 0 auto 10px; color: var(--ink-dim); font-size: 13px; }
+.pane-state p { margin: 0 0 8px; }
+.pane-state .action { margin-right: 6px; }
+.pane[data-state="error"] .pane-state, .pane[data-state="missing"] .pane-state { color: var(--alarm); }
+/* The verbs the sidecar allows on this note, in the document and not in a
+   column beside it (ISS-0069). Absent where Deck does not write. */
+.pane-actions {
+  max-width: 72ch;
+  margin: 0 auto 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.pane-actions .verb { font: inherit; padding: 2px 10px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.pane-actions .verb:hover:not(:disabled) { border-color: var(--accent); }
+.pane-actions .verb:disabled { opacity: 0.45; cursor: not-allowed; }
+.pane-actions .why { opacity: 0.7; }
 /* Kept on every view (FEAT-0015): the mark is lit, and a view that does not hold the note says so. */
 .pane-every[aria-pressed="true"] { color: var(--accent); }
 .pane.every-view .pane-head { border-left: 3px solid color-mix(in srgb, var(--accent) 60%, var(--line)); }
 .pane.elsewhere .pane-body { border-style: dashed; }
 .pane.top .pane-head { border-top-color: color-mix(in srgb, var(--accent) 70%, var(--line)); }
-.pane-body h1 { font-size: 15px; }
-.pane-body h2 { font-size: 13.5px; }
-.pane-body pre { background: var(--ground); padding: 8px; border-radius: 6px; overflow-x: auto; }
 .pane-resize {
   position: absolute;
   right: 0;
@@ -948,6 +1051,7 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 }
 .field[data-treatment="blocks"] .sector-label { color: #3a2e20; }
 .edge-callout .callout-head { color: var(--ink-dim); font-size: 11px; margin-bottom: 4px; }
+.edge-callout .callout-relation { color: var(--ink-dim); font-size: 11px; margin-top: 4px; }
 
 /* The quiet band's single tab stop (TASK-0076). It sits over the tile the
    keyboard cursor is on, and is the only element the band has: the tiles
@@ -991,3 +1095,95 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .desk-beyond .beyond[data-side="up"] { top: 8px; left: 50%; transform: translateX(-50%); }
 .desk-beyond .beyond[data-side="down"] { bottom: 8px; left: 50%; transform: translateX(-50%); }
 .find-open { border-color: var(--owed); color: var(--owed); }
+
+/* ------------------------------------------------------------------------
+ * The collection (FEAT-0020, ADR-0006): the view's derived list as an object
+ * on the Glass desk. The list inside it is the navigator, moved here while
+ * Glass is on screen. Same materials as a document: a nearly opaque surface,
+ * one shadow, and nothing that softens the field behind it (TST-0042).
+ * ------------------------------------------------------------------------ */
+.collection {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  background: #1a1d26;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.collection.out-of-sight { visibility: hidden; }
+.collection.dragging { box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55); }
+.collection-head {
+  flex: 0 0 34px;
+  height: 34px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 10px;
+  background: #252a38;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  cursor: grab;
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+.collection-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.collection-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.collection-count { color: var(--ink-dim); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.collection-filter { color: var(--owed); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.collection-tools { margin-left: auto; flex: 0 0 auto; display: flex; gap: 2px; }
+.collection-tools button { background: none; border: 0; color: var(--ink-dim); font: inherit; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.collection-tools button:hover, .collection-tools button[aria-pressed="true"] { background: var(--line); color: var(--ink); }
+.collection-tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.collection-note { flex: 0 0 auto; padding: 6px 10px; font-size: 12px; line-height: 1.45; background: color-mix(in srgb, var(--accent) 16%, transparent); border-bottom: 1px solid var(--line); }
+.collection-line + .collection-line { margin-top: 4px; }
+.collection-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.collection-places { flex: 0 0 auto; margin: 0; padding: 4px 10px; border-top: 1px solid var(--line); color: var(--ink-dim); font-size: 11px; }
+.collection.collapsed .collection-body,
+.collection.collapsed .collection-note,
+.collection.collapsed .collection-places,
+.collection.collapsed .collection-resize { display: none; }
+.collection.collapsed .collection-head { border-bottom: 0; }
+.collection-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--line) 50%);
+}
+/* Inside the collection the list fills it and has no column of its own. */
+.collection .navigator { width: 100%; flex: 1 1 auto; min-height: 0; border-right: 0; background: transparent; user-select: none; }
+/* In Glass the list is on the desk, so the column beside the field is gone. */
+body[data-surface="glass"] .body > .navigator,
+body[data-surface="orbit"] .body > .navigator { display: none; }
+
+/* A narrow field: one object in front, and this bar to move between them. */
+.narrow-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  z-index: 4200;
+  font-size: 12px;
+}
+.narrow-bar .action { flex: 0 0 auto; padding: 2px 10px; }
+.narrow-bar .action[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); }
+.collection.narrow { border-radius: 0; border: 0; box-shadow: none; }
+.collection.narrow .collection-head { cursor: default; }
+.collection.narrow .collection-resize { display: none; }
+.to-collection { border-color: var(--accent); }

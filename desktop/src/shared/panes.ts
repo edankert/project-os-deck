@@ -32,6 +32,17 @@ export const PANE_MAX_SIDE = 4000;
 export const PANE_HEADER_HEIGHT = 34;
 /** The reading column a widened pane moves to, at the right of the field. */
 export const READING_COLUMN_WIDTH = 520;
+/**
+ * Below this width a field cannot hold the collection and a readable document
+ * side by side: the narrowest collection (260) and the narrowest readable
+ * document (280) with their margins, and room to tell them apart. Such a
+ * field shows one object in front at a time, with a bar to move between them
+ * (DES-0003, "A narrow viewport uses one foreground object with an explicit
+ * return, rather than shrinking prose to fit two objects").
+ */
+export const NARROW_FIELD_WIDTH = 720;
+/** The bar a narrow field carries along its top: the collection and each open note, by name. */
+export const NARROW_BAR_HEIGHT = 36;
 
 /**
  * The size a held note is drawn at, and where that size came from.
