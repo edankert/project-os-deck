@@ -11,6 +11,7 @@ source: ["[[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
 level: integration
+kind: manual
 entrypoint: "desktop/demos/glass-desktop.cjs"
 command: ""
 last_verified: 2026-10-01
