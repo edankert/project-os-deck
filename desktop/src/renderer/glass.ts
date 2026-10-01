@@ -353,6 +353,10 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** What the link lines were last built from, so a turn moves them and does not build them again (drawLinks). */
+  private linksFrom: { geometry: string; contexts: unknown[] } | null = null;
+  /** What each card element was last painted from, so an unchanged card is not painted again (paintCard). */
+  private readonly paintedFrom = new WeakMap<HTMLElement, { card: CardModel; faces: unknown; inputs: string }>();
   /** Documents whose text was read before the notes last changed on disk, and is being read again. */
   private readonly rereads = new Set<string>();
   /** The note whose document takes the keyboard as soon as it is drawn: one opened with the keyboard. */
@@ -1255,6 +1259,17 @@ export class GlassField {
 
   private paintCard(element: HTMLElement, entry: FieldEntry, band: string, seated: boolean): void {
     const { card } = entry;
+    const shared = this.shared.get(card.noteId) ?? 0;
+    const focus = seated ? this.focusId() : null;
+    // A turn redraws every card on every frame, and nothing a card SHOWS
+    // changes during one. Everything this method reads is in this line or is
+    // the card and the faces themselves, so a card whose line, card and faces
+    // are the ones it was last painted from is left alone. With 217 notes
+    // seated round a document this was a quarter of a frame's work.
+    const inputs = `${band}|${entry.inputs.pulled}|${entry.inputs.owed}|${this.joined.has(card.noteId)}|${this.reach?.neighbours.has(card.noteId) === true}|${this.highlight === card.noteId || this.highlights.has(card.noteId)}|${shared}|${this.hooks.state().noteId === card.noteId}|${focus}|${card.status}|${card.title}|${card.owedVerb}`;
+    const painted = this.paintedFrom.get(element);
+    if (painted !== undefined && painted.card === card && painted.faces === this.input.faces && painted.inputs === inputs) return;
+    this.paintedFrom.set(element, { card, faces: this.input.faces, inputs });
     element.dataset['band'] = band;
     element.dataset['status'] = bandFor(card.status);
     element.dataset['face'] = faceFor(card, this.input.faces).kind;
@@ -1263,10 +1278,8 @@ export class GlassField {
     element.classList.toggle('joined', this.joined.has(card.noteId));
     element.classList.toggle('reached', this.reach?.neighbours.has(card.noteId) === true);
     element.classList.toggle('highlight', this.highlight === card.noteId || this.highlights.has(card.noteId));
-    const shared = this.shared.get(card.noteId) ?? 0;
     element.classList.toggle('shared', shared >= 2);
     element.setAttribute('aria-current', String(this.hooks.state().noteId === card.noteId));
-    const focus = seated ? this.focusId() : null;
     const label = `${card.noteId} ${card.title}${entry.inputs.owed ? `, owed ${card.owedVerb ?? 'a decision'}` : ''}${focus === null ? '' : `, joined to ${focus}`}`;
     element.setAttribute('aria-label', label);
     setText(element, '.fc-id', card.noteId);
@@ -3737,8 +3750,28 @@ export class GlassField {
     const shift = this.deskShift();
     if (id === null || card === undefined || !shift.visible) {
       this.links.clear();
+      this.linksFrom = null;
       return;
     }
+    // Which lines there are, and where each runs on the desk, depends on the
+    // documents' places and sizes on the desk, on the seats, and on what each
+    // document is joined to. A turn changes none of these: it shifts the desk.
+    // So when all of them are what the lines were last built from, the lines
+    // are moved by the shift and not built again.
+    const places = this.held
+      .map((c) => {
+        const r = this.drawnRect(c);
+        return `${c.noteId}:${(r.left - shift.x).toFixed(1)},${(r.top - shift.y).toFixed(1)},${r.width}x${r.height},${c.wide === true}`;
+      })
+      .join(';');
+    const geometry = `${id}|${this.seating?.key ?? ''}|${this.seatedAt.size}|${places}`;
+    const contexts = this.held.map((c) => this.hooks.peekContext(c.noteId));
+    const built = this.linksFrom;
+    if (built !== null && built.geometry === geometry && built.contexts.length === contexts.length && built.contexts.every((c, i) => c === contexts[i]) && this.links.count() > 0) {
+      this.links.move({ x: shift.x, y: shift.y }, shift.opacity);
+      return;
+    }
+    this.linksFrom = { geometry, contexts };
     const from = this.drawnRect(card);
     const lines: LinkLine[] = [];
     const neighbours = new Map(this.neighboursOf(id).map((n) => [n.id, n]));
@@ -3759,7 +3792,10 @@ export class GlassField {
       const r = this.drawnRect(other);
       lines.push({ id: other.noteId, fromId: id, direction: n.direction, from, to: { x: r.left + r.width / 2, y: r.top + Math.min(r.height, PANE_HEADER_HEIGHT) / 2 } });
     }
-    this.links.paint(lines, shift.opacity);
+    // The desk's own shift is handed over apart from the lines: a turn moves
+    // the document and its cards together, so the lines move as one and none
+    // of them needs redrawing (link-lines.ts).
+    this.links.paint(lines, shift.opacity, { x: shift.x, y: shift.y });
   }
 
   /**
