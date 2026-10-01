@@ -19,7 +19,8 @@ export { rowsFor };
 
 export interface NavigatorHandlers {
   /** Put this note on the desk, or take it off if it is already there. */
-  toggle: (card: CardModel) => void;
+  /** A row was chosen. `byKey` says the keyboard chose it, so the keyboard goes where the note opens. */
+  toggle: (card: CardModel, byKey: boolean) => void;
   /** Fold a group away, or open one that was folded. */
   fold: (key: string, folded: boolean) => void;
   /**
@@ -160,7 +161,7 @@ export class NavigatorList {
     }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      this.handlers.toggle(row.card);
+      this.handlers.toggle(row.card, true);
       return;
     }
     if (row.expandable && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
@@ -255,7 +256,7 @@ export class NavigatorList {
       // The row's own card, not a lookup by id: the sidecar deliberately
       // repeats a note in more than one group (Needs-you and its phase), and
       // the map then holds whichever of them painted last (ISS-0015).
-      this.handlers.toggle(row.card);
+      this.handlers.toggle(row.card, false);
     });
     return element;
   }

@@ -1,0 +1,57 @@
+// What the scripted walks share: reading the page, pointing at things, and
+// recording a claim with what was observed. A walk is not the smoke run: it
+// keeps pictures and a log of a route through the real application, and each
+// `check` it records says what was seen, so a reader can tell a pass from a
+// failure without trusting the script's opinion.
+module.exports = function lib(d, win) {
+  const js = (code) => d.js(win, code);
+  const results = [];
+  const check = (ok, what, seen) => {
+    results.push({ ok: !!ok, what, seen });
+    d.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`, seen);
+    return !!ok;
+  };
+  const rect = (selector) =>
+    js(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) return null; const r = e.getBoundingClientRect(); if (r.width === 0 && r.height === 0) return null; return { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; })()`);
+  const text = (selector) => js(`(document.querySelector(${JSON.stringify(selector)}) || {}).textContent || ''`);
+  const field = () => rect('#field');
+  const glass = 'window.__deckGlass';
+  const state = () => js('window.__deckLastState');
+  const clickOn = async (selector, wait = 300) => {
+    const at = await rect(selector);
+    if (at === null) throw new Error(`nothing to click at ${selector}`);
+    await d.pointer(win, d.click(at));
+    await d.delay(wait);
+    return at;
+  };
+  /**
+   * A point of the field's own background, with room to drag from it: not on
+   * a card, a document, the collection, the compass or a painted tile.
+   */
+  const background = (room = 320) =>
+    js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const g = ${glass}; for (let y = f.bottom - 24; y > f.top + 40; y -= 22) for (let x = f.right - 30; x > f.left + ${room} + 20; x -= 26) { let clear = true; for (const dx of [0, -${room}]) { const e = document.elementFromPoint(x + dx, y); if (!e || (e.id !== 'field' && e.id !== 'field-canvas' && !e.classList.contains('field-cards') && !e.classList.contains('field-panes') && !e.classList.contains('field-sectors'))) { clear = false; break; } } if (clear && g.bandState().tiles.every((t) => Math.abs(t.x - (x - f.left)) > t.w / 2 + 2 || Math.abs(t.y - (y - f.top)) > t.h / 2 + 2)) return { x, y }; } return null; })()`);
+  /** Park the pointer where it rests on nothing that reacts. */
+  const park = async () => {
+    const f = await field();
+    await d.pointer(win, [{ type: 'move', x: f.right - 6, y: f.top + 6 }]);
+  };
+  const view = async (id) => {
+    await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === ${JSON.stringify(id)}).click()`);
+    await d.delay(1800);
+  };
+  const keys = async (list, wait = 120) => {
+    for (const key of list) {
+      d.press(win, key);
+      await d.delay(wait);
+    }
+  };
+  /** Every card drawn for each note id: more than one element for an id is a note drawn twice. */
+  const drawnTwice = () =>
+    js(`(() => { const n = new Map(); for (const e of document.querySelectorAll('.field-card:not(.leaving)')) n.set(e.dataset.noteId, (n.get(e.dataset.noteId) || 0) + 1); const held = window.__deckDesk(); return { twice: [...n].filter(([, c]) => c > 1).map(([id]) => id), cardForHeld: held.filter((id) => n.has(id)) }; })()`);
+  const pane = (id) =>
+    js(`(() => { const p = document.querySelector('.pane[data-note-id="${id}"]'); if (!p) return null; const r = p.getBoundingClientRect(); const b = p.querySelector('.pane-body'); return { left: r.left, top: r.top, width: r.width, height: r.height, state: p.dataset.state, focus: p.classList.contains('focus'), hidden: p.classList.contains('out-of-sight'), sight: Number(p.dataset.sight), title: p.querySelector('.pane-title').textContent, status: p.querySelector('.pane-status').textContent, chars: p.querySelector('.pane-note').textContent.length, scrollTop: b.scrollTop, scrollMax: b.scrollHeight - b.clientHeight }; })()`);
+  const rows = () =>
+    js(`[...document.querySelectorAll('#nav-list > div')].filter((e) => !e.hidden).map((e) => ({ id: e.dataset.noteId || null, group: e.dataset.groupKey || null, top: e.offsetTop, current: e.getAttribute('aria-current') === 'true', onDesk: e.dataset.onDesk === 'true' }))`);
+  const summary = () => ({ checks: results.length, failed: results.filter((r) => !r.ok).map((r) => r.what) });
+  return { js, check, rect, text, field, glass, state, clickOn, park, background, view, keys, drawnTwice, pane, rows, summary, results };
+};

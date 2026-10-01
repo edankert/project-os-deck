@@ -64,6 +64,7 @@ import {
   revealShift,
   seatNeighbours,
   seatsAround,
+  intersects,
 } from '../shared/focus-ring.js';
 import { type LinkLine, LinkLines } from './link-lines.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
@@ -175,8 +176,10 @@ export interface DeskFurniture {
   rect(): Rect | null;
   /** A document was pressed or opened: this goes under it. */
   lower(): void;
-  /** Put the keyboard on it. */
+  /** Put the keyboard on it, above the documents. */
   focus(): void;
+  /** Whether it is above the documents. */
+  onTop(): boolean;
 }
 
 /** One note joined to a document: which way the link runs, and what to call it. */
@@ -224,6 +227,8 @@ export interface GlassHooks {
   cardByRel(rel: string): Promise<CardModel | null>;
   /** A document was closed: the keyboard goes back to the row it was opened from. */
   closed(noteId: string): void;
+  /** Put the keyboard on a note's row in the list, or say why it has none. The document stays open. */
+  toRow(noteId: string): void;
   /** A note was opened: its row is shown in the collection. */
   revealed(noteId: string): void;
   /** The places a throw toward this edge could land. Empty where there are no windows. */
@@ -348,6 +353,8 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** The note whose document takes the keyboard as soon as it is drawn: one opened with the keyboard. */
+  private keyboardTo: string | null = null;
   /** The workspace's edges, for what a relationship is called. Read when a list is first opened. */
   private edges: GraphEdge[] | null = null;
   private furnitureItems: DeskFurniture[] = [];
@@ -359,7 +366,7 @@ export class GlassField {
    */
   private localHeld: DeskCard[] = [];
   /** In a narrow field: which one object is in front. */
-  private narrowFront: 'collection' | 'document' = 'collection';
+  private narrowFront: 'collection' | 'document' | null = null;
   private shared = new Map<string, number>();
   private joined = new Set<string>();
   private held: DeskCard[] = [];
@@ -2374,7 +2381,10 @@ export class GlassField {
    * if one is in sight, so a document never flies in from a place the person
    * was not looking at (DES-0003).
    */
-  async lift(card: CardModel, from: Rect | null = null): Promise<void> {
+  async lift(card: CardModel, from: Rect | null = null, takeKeyboard = false): Promise<void> {
+    // The keyboard follows a note opened with the keyboard, as soon as its
+    // document is drawn (drawPanes): never left on a row behind it.
+    if (takeKeyboard) this.keyboardTo = card.noteId;
     const state = this.hooks.state();
     const onDesk = this.heldNow(state);
     // A person who lifts a note wants to see it (decision 3).
@@ -2479,7 +2489,14 @@ export class GlassField {
   /** The one object in front in a narrow field, or null when the field is wide enough for the desk. */
   private narrowMode(): 'collection' | 'document' | null {
     if (!this.isNarrow() || this.arrangement === 'orbit') return null;
-    return this.narrowFront === 'document' && this.held.length > 0 && !this.panesHidden ? 'document' : 'collection';
+    // Until something is pressed, an open note is in front: a window that
+    // opens narrow shows what was being read, with the list one press away.
+    return (this.narrowFront ?? 'document') === 'document' && this.held.length > 0 && !this.panesHidden ? 'document' : 'collection';
+  }
+
+  /** Something that stands on the desk came above the documents or went under them. */
+  furnitureChanged(): void {
+    if (this.active) this.drawDeskFurniture();
   }
 
   /** Bring the collection in front, in a narrow field; elsewhere bring the desk round and show it. */
@@ -2727,6 +2744,13 @@ export class GlassField {
     }
     this.el.panes.dataset['count'] = String(this.held.length);
     this.placePanes();
+    if (this.keyboardTo !== null) {
+      const head = this.paneEls.get(this.keyboardTo)?.querySelector<HTMLElement>('.pane-head');
+      if (head !== null && head !== undefined) {
+        this.keyboardTo = null;
+        head.focus({ preventScroll: true });
+      }
+    }
     // A document that has just been opened grows from the card or the row it
     // came from. It is drawn in place first, so its text is there to read and
     // to scroll from the first frame, and the movement is laid over that.
@@ -2771,7 +2795,12 @@ export class GlassField {
       // In a narrow field only the object in front is drawn: the top document,
       // or none of them while the collection is in front.
       const hidden = narrow === null ? !shift.visible : narrow === 'collection' || index !== this.held.length - 1;
-      pane.style.opacity = narrow === null ? String(shift.opacity) : '1';
+      // Toward the edge of sight a document dims; it does not go see-through.
+      // Two faded objects lying over each other showed each other's text, so
+      // the fade is a veil of the ground's colour over an opaque surface.
+      const sight = narrow === null ? shift.opacity : 1;
+      pane.dataset['sight'] = String(sight);
+      pane.style.setProperty('--veil', String(1 - sight));
       // Past the edge of sight a document is not drawn and takes no pointer,
       // the same boundary a card obeys.
       pane.classList.toggle('out-of-sight', hidden);
@@ -2893,18 +2922,26 @@ export class GlassField {
     });
     // Escape closes the list or the details and nothing else: it is a local
     // control, and the same key must not also leave the focus or sweep the
-    // desk (DES-0003).
-    const local = (panel: HTMLElement, close: () => void, back: string): void => {
-      panel.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape') return;
-        event.preventDefault();
-        event.stopPropagation();
-        close();
-        (pane.querySelector(back) as HTMLElement).focus();
-      });
-    };
-    local(links, () => this.toggleRelated(noteId, false), '.pane-related');
-    local(pane.querySelector('.pane-details') as HTMLElement, () => this.toggleDetails(noteId, false), '.pane-info');
+    // desk (DES-0003). Anywhere in the document, not only inside the panel:
+    // R leaves the keyboard on the header's button when the list is empty,
+    // and Escape there closed nothing and left the focus instead. With both
+    // open, the one the keyboard is in closes first, then the list.
+    const details = pane.querySelector('.pane-details') as HTMLElement;
+    pane.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const listOpen = this.relatedOpen === noteId;
+      const detailsOpen = this.detailsOpen === noteId;
+      if (!listOpen && !detailsOpen) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (detailsOpen && (!listOpen || details.contains(event.target as Node))) {
+        this.toggleDetails(noteId, false);
+        (pane.querySelector('.pane-info') as HTMLElement).focus();
+      } else {
+        this.toggleRelated(noteId, false);
+        (pane.querySelector('.pane-related') as HTMLElement).focus();
+      }
+    });
     // A link in the note's text opens the note it names, as a document, from
     // where the link stands. A link out of the workspace is left to the
     // window, which opens it in the person's own browser.
@@ -2972,7 +3009,7 @@ export class GlassField {
     const head = pane.querySelector('.pane-head') as HTMLElement;
     head.setAttribute(
       'aria-label',
-      `${title}, ${noteId}${card === null ? '' : `, ${card.status || 'no status'}`}${doc === undefined ? '' : `, stored at ${doc.relPath}`}: arrow keys move it, Alt and arrows resize it, Enter gathers what it is joined to, R lists them, D shows its details, W fills the field, S sends it, Delete closes it`,
+      `${title}, ${noteId}${card === null ? '' : `, ${card.status || 'no status'}`}${doc === undefined ? '' : `, stored at ${doc.relPath}`}: arrow keys move it, Alt and arrows resize it, Enter gathers what it is joined to, R lists them, D shows its details, L goes to its row in the list, W fills the field, S sends it, Delete closes it and returns to its row`,
     );
     this.paintSubject(pane, card, doc);
     this.paintDetails(pane, noteId, card, doc);
@@ -3150,10 +3187,8 @@ export class GlassField {
       this.tell(`that link names ${rel ?? 'a path'} which Deck has no note for`, true);
       return;
     }
-    if (!this.hooks.canArrange()) {
-      await this.hooks.open(card);
-      return;
-    }
+    // In both hosts: a served page reads the linked note in a document of its
+    // own, as it does one opened from a row (lift).
     await this.lift(card, from);
   }
 
@@ -3798,8 +3833,22 @@ export class GlassField {
     // The same for the collection: offered while the desk is turned away
     // from or moved aside, so the list is always one press away.
     const aside = Math.abs(this.deskPan.x) > 0.5 || Math.abs(this.deskPan.y) > 0.5;
-    const collection = this.furnitureItems.length > 0 && this.furnitureItems[0]?.rect() !== null;
-    this.el.toCollection.hidden = !(collection && this.narrowMode() === null && (!shift.visible || shift.opacity < FIND_BELOW_OPACITY || aside));
+    const item = this.furnitureItems[0];
+    const at = item?.rect() ?? null;
+    const collection = at !== null;
+    // And while a document lies over it: a page smaller than the desk was
+    // arranged on shows the documents on top of the list, and its header may
+    // not be in reach to press.
+    const covered =
+      at !== null &&
+      item !== undefined &&
+      !item.onTop() &&
+      !this.panesHidden &&
+      this.held.some((c) => {
+        const r = this.paneRect(c);
+        return intersects(at, { left: r.left, top: r.top, width: r.w, height: r.h });
+      });
+    this.el.toCollection.hidden = !(collection && this.narrowMode() === null && (!shift.visible || shift.opacity < FIND_BELOW_OPACITY || aside || covered));
     this.el.findOpen.hidden = !away || this.narrowMode() !== null;
     if (away && top !== null) {
       this.el.findOpen.textContent = `find ${top}`;
@@ -3829,6 +3878,9 @@ export class GlassField {
   private drawNarrowBar(narrow: 'collection' | 'document' | null): void {
     const bar = this.el.narrowBar;
     bar.hidden = narrow === null;
+    // One object fills a narrow field, so the compass would lie over its
+    // text; the bar is what moves between objects there (deck.css).
+    this.el.field.classList.toggle('narrow', narrow !== null);
     if (narrow === null) {
       if (bar.dataset['signature'] !== '') {
         bar.dataset['signature'] = '';
@@ -4117,7 +4169,9 @@ export class GlassField {
     if (event.key === 'r' || event.key === 'R') {
       event.preventDefault();
       this.toggleRelated(noteId);
-      if (this.relatedOpen === noteId) this.paneEls.get(noteId)?.querySelector<HTMLElement>('.link-go, .pane-related')?.focus();
+      // Into the list when it has a row; else on the button that opened it.
+      const pane = this.paneEls.get(noteId);
+      if (this.relatedOpen === noteId) (pane?.querySelector<HTMLElement>('.link-go') ?? pane?.querySelector<HTMLElement>('.pane-related'))?.focus();
       return;
     }
     if (event.key === 'd' || event.key === 'D') {
@@ -4126,7 +4180,22 @@ export class GlassField {
       if (this.detailsOpen === noteId) this.paneEls.get(noteId)?.querySelector<HTMLElement>('.pane-details')?.focus();
       return;
     }
-    if (!this.hooks.canArrange()) return;
+    if (event.key === 'l' || event.key === 'L') {
+      // Back to the list without closing: the collection is brought into
+      // reach and the keyboard goes to this note's row.
+      event.preventDefault();
+      this.showCollection();
+      this.hooks.toRow(noteId);
+      return;
+    }
+    if (!this.hooks.canArrange()) {
+      // A served page arranges nothing, and closes only what it opened itself.
+      if ((event.key === 'Delete' || event.key === 'Backspace') && this.localHeld.some((c) => c.noteId === noteId)) {
+        event.preventDefault();
+        void this.putBack(noteId);
+      }
+      return;
+    }
     const step = event.shiftKey ? 64 : 16;
     const arrows: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0],

@@ -88,18 +88,21 @@ export function normaliseCollection(value: unknown): CollectionLayout | null {
 
 /**
  * A collection as it is DRAWN in a field that may be smaller than the one it
- * was arranged in: its header is always inside the field, and it is never
- * taller or wider than the field. For painting only; nothing stores it.
+ * was arranged in: never taller or wider than the field, and wholly inside
+ * it. Wholly, and not only its header: the corner it is resized by is at its
+ * bottom, and a list pushed half below the field could be neither read to its
+ * end nor made shorter. For painting only; nothing stores it.
  */
 export function fitCollection(layout: CollectionLayout, field: { width: number; height: number }): CollectionLayout {
   const w = Math.max(COLLECTION_MIN_WIDTH, Math.min(layout.w, field.width));
   const h = Math.max(COLLECTION_HEAD_HEIGHT, Math.min(layout.h, field.height));
+  const drawn = layout.collapsed ? COLLECTION_HEAD_HEIGHT : h;
   return {
     ...layout,
     w,
     h,
     x: Math.max(0, Math.min(layout.x, field.width - w)),
-    y: Math.max(0, Math.min(layout.y, field.height - COLLECTION_HEAD_HEIGHT)),
+    y: Math.max(0, Math.min(layout.y, field.height - drawn)),
   };
 }
 

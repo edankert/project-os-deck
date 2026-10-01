@@ -208,8 +208,13 @@ test('a field smaller than the collection draws it inside the field and changes 
   assert.equal(drawn.w, 640);
   assert.equal(drawn.h, 480);
   assert.ok(drawn.x >= 0 && drawn.x + drawn.w <= 640);
-  // Its header is always inside the field, so it can always be taken hold of.
-  assert.ok(drawn.y >= 0 && drawn.y <= 480 - COLLECTION_HEAD_HEIGHT);
+  // The whole of it is inside the field, so its last row and its corner are in reach.
+  assert.ok(drawn.y >= 0 && drawn.y + drawn.h <= 480);
+  const low = fitCollection({ x: 10, y: 900, w: 300, h: 300, collapsed: false, presentation: 'table' }, { width: 640, height: 480 });
+  assert.equal(low.y + low.h, 480, 'a collection stored below the field is not drawn with its corner out of reach');
+  // Collapsed it is only its header, and that is what is kept inside.
+  const header = fitCollection({ x: 10, y: 900, w: 300, h: 300, collapsed: true, presentation: 'table' }, { width: 640, height: 480 });
+  assert.equal(header.y, 480 - COLLECTION_HEAD_HEIGHT);
   // Room enough: drawn as stored.
   assert.deepEqual(fitCollection(LAYOUT, { width: 1920, height: 1080 }), LAYOUT);
 });

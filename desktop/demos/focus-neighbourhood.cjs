@@ -53,7 +53,7 @@ module.exports = async function (d) {
   await d.pointer(win, d.drag({ x: field.left + 300, y: field.bottom - 40 }, { x: field.left + 20, y: field.bottom - 40 }, 14));
   await d.delay(400);
   await d.shot(win, '06-turned-away');
-  d.log('turned away', await js(`({ yaw: ${glass}.model.yaw, find: document.getElementById('find-open').hidden ? null : document.getElementById('find-open').textContent, paneOpacity: document.querySelector('.pane.focus')?.style.opacity })`));
+  d.log('turned away', await js(`({ yaw: ${glass}.model.yaw, find: document.getElementById('find-open').hidden ? null : document.getElementById('find-open').textContent, paneSight: document.querySelector('.pane.focus')?.dataset.sight })`));
   const find = await js(`(() => { const b = document.getElementById('find-open'); if (b.hidden) return null; const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
   if (find) {
     await d.pointer(win, d.click(find));

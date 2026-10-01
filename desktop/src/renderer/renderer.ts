@@ -282,8 +282,8 @@ const pool = new CardPool(el.desk, {
 });
 
 const navigator = new NavigatorList(el.navList, {
-  toggle: (card) => {
-    void toggleOnDesk(card);
+  toggle: (card, byKey) => {
+    void toggleOnDesk(card, byKey);
   },
   fold: (key, folded) => {
     void host.dispatch({ type: 'set-fold', key, folded });
@@ -378,6 +378,13 @@ const glass = new GlassField(glassElements(), {
   },
   cardByRel: (rel) => cardByRel(rel),
   closed: (noteId) => documentClosed(noteId),
+  toRow: (noteId) => {
+    drawNavigator();
+    if (navigator.focusNote(noteId, true)) return;
+    if (navigator.reveal(noteId) === 'group') say(`${noteId}'s row is folded away under the marked heading`);
+    else say(`${noteId} is not in this list`);
+    collection.focusHead();
+  },
   revealed: (noteId) => {
     navigator.reveal(noteId);
   },
@@ -436,7 +443,8 @@ const collection = new CollectionView(
       return collectionOf(state, state.workspaceId, deskViewHere());
     },
     store: (layout) => void send({ type: 'set-collection', layout }),
-    raised: () => undefined,
+    // What lies over what has changed, so whether "collection" is offered may have too.
+    raised: () => glass.furnitureChanged(),
     applyChange: () => applyPending(),
     clearFilters: () => {
       el.search.value = '';
@@ -454,7 +462,9 @@ glass.addFurniture({
   place: (field, shift, narrow) => collection.place(field, shift, narrow),
   rect: () => collection.rect(),
   lower: () => collection.lower(),
+  onTop: () => collection.isOnTop(),
   focus: () => {
+    collection.raise();
     // The row the person was on, when there is one; else the search box.
     const current = host.state().noteId;
     if (current === null || !navigator.focusNote(current, true)) el.search.focus();
@@ -1271,14 +1281,16 @@ async function followTheMac(state: ReturnType<typeof host.state>): Promise<void>
 }
 
 /** A click in the navigator puts a note on the desk, or takes it off again. */
-async function toggleOnDesk(card: CardModel): Promise<void> {
+async function toggleOnDesk(card: CardModel, byKey = false): Promise<void> {
   if (glass.isActive()) {
     // In Glass a row opens the note as a document, as a click on its card
     // does, and the document grows from the row: the row is where the person
     // was looking (DES-0003). Closing it is the document's ×, or Delete on
     // the row. A tablet does the same in a document of its own, which is not
     // on the Mac's desk and changes nothing there (TASK-0057).
-    await glass.lift(card, rowRect(card.noteId));
+    // Opened with the keyboard, the keyboard goes to the document: its keys
+    // read, move and close it, and closing it comes back to this row.
+    await glass.lift(card, rowRect(card.noteId), byKey);
     return;
   }
   // A tablet reads the Mac's desk and does not change it (TASK-0057), so a

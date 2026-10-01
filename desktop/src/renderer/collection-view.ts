@@ -161,7 +161,7 @@ export class CollectionView {
       root.style.top = `${NARROW_BAR_HEIGHT}px`;
       root.style.width = `${field.width}px`;
       root.style.height = `${Math.max(0, field.height - NARROW_BAR_HEIGHT)}px`;
-      root.style.opacity = '1';
+      root.style.setProperty('--veil', '0');
       root.style.zIndex = String(Z_OVER);
       root.classList.remove('collapsed');
       return;
@@ -171,7 +171,8 @@ export class CollectionView {
     root.style.top = `${l.y + shift.y}px`;
     root.style.width = `${l.w}px`;
     root.style.height = `${l.collapsed ? COLLECTION_HEAD_HEIGHT : l.h}px`;
-    root.style.opacity = String(shift.opacity);
+    // Dimmed toward the edge of sight by a veil, never see-through (glass.ts, placePanes).
+    root.style.setProperty('--veil', String(1 - shift.opacity));
     root.style.zIndex = String(this.onTop ? Z_OVER : Z_UNDER);
     root.classList.toggle('collapsed', l.collapsed);
   }
@@ -181,6 +182,7 @@ export class CollectionView {
     if (!this.onTop) return;
     this.onTop = false;
     this.el.root.style.zIndex = String(Z_UNDER);
+    this.hooks.raised();
   }
 
   /** What the header and the lines under it say. */
@@ -285,7 +287,21 @@ export class CollectionView {
 
   /** Put the keyboard on the collection's header: where focus goes when the row it would return to is gone. */
   focusHead(): void {
+    this.raise();
     this.el.head.focus({ preventScroll: true });
+  }
+
+  /** Bring it above the documents, as a press on it does. */
+  raise(): void {
+    if (this.onTop) return;
+    this.onTop = true;
+    this.el.root.style.zIndex = String(Z_OVER);
+    this.hooks.raised();
+  }
+
+  /** Whether it is above the documents: false once a document has been pressed or opened since. */
+  isOnTop(): boolean {
+    return this.onTop;
   }
 
   // ---- the hands ----
@@ -312,12 +328,16 @@ export class CollectionView {
   private wire(): void {
     const { root, head, fold, resize } = this.el;
     // A press anywhere on the collection brings it above the documents.
-    root.addEventListener('pointerdown', () => {
-      if (!this.onTop) {
-        this.onTop = true;
-        root.style.zIndex = String(Z_OVER);
-      }
-      this.hooks.raised();
+    root.addEventListener('pointerdown', () => this.raise());
+    // The keyboard arriving in it does the same: a row or a control that has
+    // the keyboard is never left under a document (DES-0003).
+    // Only when it ARRIVES from outside. The list redraws its rows and puts
+    // the keyboard back on the one it was on, and that is not an arrival: it
+    // lifted the list over a document that had just been opened from it.
+    root.addEventListener('focusin', (event) => {
+      const from = event.relatedTarget;
+      if (this.onTop || !(from instanceof Node) || root.contains(from)) return;
+      this.raise();
     });
     fold.addEventListener('click', (event) => {
       event.stopPropagation();

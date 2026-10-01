@@ -789,6 +789,19 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   border-radius: 8px;
 }
 .pane > * { pointer-events: auto; }
+/* Toward the edge of sight a desk object dims under a veil of the ground's
+   colour. It stays opaque: a faded document over a faded list showed both
+   texts at once. */
+.pane::after, .collection::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ground);
+  opacity: var(--veil, 0);
+  pointer-events: none;
+  z-index: 5;
+}
 .pane.dragging { box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55); }
 /* Past the edge of sight the desk is not drawn and takes no pointer, on the
    boundary where a card stops being drawn. */
@@ -1187,3 +1200,6 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 .collection.narrow .collection-head { cursor: default; }
 .collection.narrow .collection-resize { display: none; }
 .to-collection { border-color: var(--accent); }
+/* The one object in front fills a narrow field: the compass would lie over
+   what is being read, and the bar already moves between the objects. */
+.field.narrow .compass, .field.narrow .desk-beyond { display: none; }
