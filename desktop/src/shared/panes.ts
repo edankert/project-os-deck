@@ -10,9 +10,16 @@
 /** Below this a pane's body cannot be read, so a resize stops here. */
 export const PANE_MIN_WIDTH = 280;
 export const PANE_MIN_HEIGHT = 160;
-/** A pane nobody has resized. */
-export const PANE_DEFAULT_WIDTH = 320;
-export const PANE_DEFAULT_HEIGHT = 240;
+/**
+ * The size a note opens at on a view where nobody has resized one yet.
+ *
+ * Until TASK-0104 this was 320 by 240, which holds about forty characters a
+ * line and eleven lines: a preview, not a reading size. DES-0003 asks for a
+ * column of roughly 60 to 80 characters, and 560 wide holds about seventy at
+ * the document's text size with its padding. TASK-0097 measures the line
+ * length in the running application and records what the walk decides.
+ */
+export const READING_FIRST_USE: Readonly<{ w: number; h: number }> = Object.freeze({ w: 560, h: 520 });
 /** Nothing larger than this is kept, so a desk saved on a wall screen still opens. */
 export const PANE_MAX_SIDE = 4000;
 /**
@@ -25,6 +32,42 @@ export const PANE_MAX_SIDE = 4000;
 export const PANE_HEADER_HEIGHT = 34;
 /** The reading column a widened pane moves to, at the right of the field. */
 export const READING_COLUMN_WIDTH = 520;
+
+/**
+ * The size a held note is drawn at, and where that size came from.
+ *
+ * The note's own size wins: a person dragged its corner, or it was stamped
+ * when the note was opened. Then the size the person last gave a note on this
+ * view. Then the first-use size. Moving a note never reaches this function's
+ * inputs, which is the whole of "a move is not a resize" (ISS-0071).
+ */
+export function readingSizeFor(
+  card: { w?: number; h?: number },
+  preference: { w: number; h: number } | null | undefined,
+): { w: number; h: number; from: 'note' | 'view' | 'first-use' } {
+  if (card.w !== undefined && card.h !== undefined) return { w: card.w, h: card.h, from: 'note' };
+  if (preference !== null && preference !== undefined) {
+    // A note with one side stored keeps that side: a desk saved by an older
+    // build may hold a width and no height.
+    return { w: card.w ?? preference.w, h: card.h ?? preference.h, from: card.w === undefined && card.h === undefined ? 'view' : 'note' };
+  }
+  return { w: card.w ?? READING_FIRST_USE.w, h: card.h ?? READING_FIRST_USE.h, from: card.w === undefined && card.h === undefined ? 'first-use' : 'note' };
+}
+
+/**
+ * A reading size as it is DRAWN in a field too small to hold it.
+ *
+ * For painting only. Nothing stores the result, so a window made narrow for a
+ * moment cannot overwrite the size a person chose or the view's preference
+ * (DES-0003, "A temporary narrow layout must not overwrite the saved size").
+ * Never below a pane's minimum, because below it the body cannot be read.
+ */
+export function fitToField(size: { w: number; h: number }, field: { width: number; height: number }, margin = 8): { w: number; h: number } {
+  return {
+    w: Math.max(PANE_MIN_WIDTH, Math.min(size.w, field.width - 2 * margin)),
+    h: Math.max(PANE_MIN_HEIGHT, Math.min(size.h, field.height - 2 * margin)),
+  };
+}
 
 /**
  * Where a pane lands when it is dropped, by the header rule.

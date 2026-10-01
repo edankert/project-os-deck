@@ -93,9 +93,11 @@
                shelf, Enter lifts, Escape leaves. -->
           <button type="button" class="quiet-cursor" id="quiet-cursor" hidden></button>
           <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
-          <!-- The note in the middle's neighbours, as mini notes with a line to each (FEAT-0017).
-               After the panes, so Tab goes from the note to its neighbours. -->
-          <div class="field-ring" id="field-ring" hidden></div>
+          <!-- The lines from the focused document to the cards gathered round it (FEAT-0017).
+               The cards themselves are the field's own, moved; nothing here draws a note. -->
+          <div class="field-lines" id="field-lines" hidden></div>
+          <!-- One counter per edge, for related notes that stand beyond it (TASK-0104). -->
+          <div class="desk-beyond" id="desk-beyond"></div>
           <div class="compass" id="compass">
             <div class="compass-dial" aria-hidden="true"><span class="compass-mark"></span></div>
             <div class="compass-text">
@@ -103,6 +105,8 @@
               <span id="compass-behind"></span>
             </div>
             <!-- The zoom, shown when it is not 1× (FEAT-0016). The wheel, +, - and 0 change it. -->
+            <!-- Shown while the open note is turned away from or moved aside: brings the desk back (TASK-0104). -->
+            <button type="button" class="action find-open" id="find-open" hidden title="Bring the desk back in front of you"></button>
             <button type="button" class="action zoom-reading" id="zoom-reading" hidden title="Back to 1× (0)">1.0×</button>
             <button type="button" class="action" id="look-ahead" title="Face the front band (Home)">look ahead</button>
             <button type="button" class="action" id="look-behind" title="Face the quiet band (End)">look behind</button>

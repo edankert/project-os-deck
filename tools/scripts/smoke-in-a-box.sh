@@ -62,6 +62,13 @@ docker build -q -f "$ROOT/tools/docker/smoke.Dockerfile" -t "$IMAGE" "$ROOT" >/d
 # The repository is MOUNTED, so a break is one edit on the host. `node_modules`
 # is masked by an anonymous volume, because the host's holds a macOS Electron
 # binary the container cannot run.
+#
+# `.cockpit/` is masked the same way (ISS-0090). The sidecar the box starts
+# writes its own address into `<workspace>/.cockpit/url`, and the workspace is
+# the mounted repository: a run in the box replaced the address a cockpit on
+# the host had written there with a port that exists only inside the box, so
+# the `cockpit` command and the hooks that read that file were pointed at
+# nothing until the host's cockpit was restarted.
 # A mount that did not land is an empty directory, which reads as a missing
 # file much later and much less clearly. Say so here instead.
 if [ ! -d "$SIBLING" ]; then
@@ -85,6 +92,7 @@ exec docker run --rm -t \
   -v "$ROOT:/work/project-os-deck" \
   -v "$SIBLING:/work/project-os-cockpit" \
   -v "/work/project-os-deck/desktop/node_modules" \
+  -v "/work/project-os-deck/.cockpit" \
   -w /work/project-os-deck \
   "$IMAGE" \
   bash tools/scripts/run-smoke.sh "$WHICH"

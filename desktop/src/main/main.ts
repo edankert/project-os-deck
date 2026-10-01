@@ -8,6 +8,7 @@ import type { ChildProcess } from 'node:child_process';
 import { recordGlass } from './smoke-glass.js';
 import { GraphService } from './graph-service.js';
 import { runMeasure, saveMeasurement } from './measure.js';
+import { runDrive } from './drive.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -47,7 +48,7 @@ const FOCUS = focusPolicy(process.argv, process.env);
 // affect each other.
 app.setPath(
   'userData',
-  process.argv.includes('--smoke') || process.argv.includes('--measure')
+  process.argv.includes('--smoke') || process.argv.includes('--measure') || process.argv.includes('--drive')
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'deck-smoke-'))
     : path.join(app.getPath('appData'), 'project-os-deck'),
 );
@@ -545,6 +546,36 @@ app.whenReady().then(async () => {
     await startHost();
     if (process.argv.includes('--smoke')) {
       await runSmoke();
+      return;
+    }
+    if (process.argv.includes('--drive')) {
+      // A scripted walk with a real pointer that keeps pictures (drive.ts).
+      const script = argValue('--drive');
+      const out = argValue('--drive-out');
+      if (!script || !out) throw new Error('--drive needs a script, and --drive-out a directory for its pictures');
+      const prepared = prepareWorkspace();
+      if (prepared === null) throw new Error('--drive could not open the workspace');
+      await ipcInvoke('deck:workspaces:open', prepared.id);
+      const ok = await runDrive(
+        {
+          store,
+          createWindow: (role, address, panel) => createWindow(role, address, panel),
+          untilBooted,
+          focusApp,
+          prepared,
+          origin: hostOrigin,
+          openServedPage: () => {
+            const page = new BrowserWindow({ width: 900, height: 700, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
+            void page.loadURL(`${hostOrigin}/`);
+            return page;
+          },
+        },
+        script,
+        out,
+      );
+      shutdown();
+      await waitForExit(stopping);
+      app.exit(ok ? 0 : 1);
       return;
     }
     if (process.argv.includes('--measure')) {

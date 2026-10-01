@@ -14,6 +14,13 @@
  * turns the bands into positions on a cylinder. This file draws what they
  * decided and turns the person's hands into store actions.
  *
+ * **One note is one object** (TASK-0104, ISS-0070). A note that is held is its
+ * document and nothing else: its field card is not drawn, and the slot it left
+ * is kept for it without anything being drawn there. The notes joined to the
+ * focused document are the field's own cards, moved to seats round it; no
+ * copy of a card is ever made. What stands on the desk does not push the
+ * field's cards about: the field keeps its slots and passes behind the desk.
+ *
  * **The containers are pointer-transparent and the cards are not.** DES-0002
  * lost two revisions to a click that never landed, because a `preserve-3d`
  * container is an invisible pane in front of everything it contains. Nothing
@@ -23,34 +30,48 @@
 import type { CardGroup, CardModel, DeckState, DeskCard } from '../shared/types.js';
 import type { Description, FaceSection } from '../shared/description.js';
 import type { DeckAction } from '../shared/store-state.js';
-import { pulledIn, pushedIn } from '../shared/store-state.js';
-import { type FieldDeal, type FieldEntry, dealField, fieldEntries, frontForSlots, pushRefusal } from '../shared/field.js';
+import { deskViewOf, pulledIn, pushedIn, readingSizeOf } from '../shared/store-state.js';
+import { type FieldDeal, type FieldEntry, JOINED_GROUP, dealField, fieldEntries, frontForSlots, pushRefusal } from '../shared/field.js';
 import {
-  type Obstacle,
   type Projection,
   type Slot,
   CARD_BOX,
   DEG,
+  FRONT,
   FieldModel,
+  PERSPECTIVE,
+  VISIBLE_HALF_ANGLE,
   cardRect,
   cardTransform,
   norm,
-  obstaclesFor,
   project,
   shapesFor,
 } from '../shared/slots.js';
-import { type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
-import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, unzoomPoint, wheelFactor, zoomAbout } from '../shared/zoom.js';
+import { type ContextItem, type NoteContext, cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
+import { IDENTITY_ZOOM, KEY_STEP, type Zoom, applyZoom, isIdentity, wheelFactor, zoomAbout } from '../shared/zoom.js';
 import { detailFor, promoted, promotedBox } from '../shared/detail.js';
-import { DOCK_WIDTH, GATHER_MS, GROW_MS, type FocusLayout, type Point, type Rect, type RingNeighbour, chooseForRing, ease, focusLayout, seatRing } from '../shared/focus-ring.js';
-import { type RingItem, RingView } from './ring-view.js';
+import {
+  BROWSE_SCALE,
+  GATHER_MS,
+  OPEN_MS,
+  SEAT,
+  type Point,
+  type Rect,
+  type SeatNeighbour,
+  beyondEdges,
+  ease,
+  revealShift,
+  seatNeighbours,
+  seatsAround,
+} from '../shared/focus-ring.js';
+import { type LinkLine, LinkLines } from './link-lines.js';
 import { REACH_HOLD_MS, REACH_REST_MS, joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 import {
-  PANE_DEFAULT_HEIGHT,
-  PANE_DEFAULT_WIDTH,
   PANE_HEADER_HEIGHT,
   PANE_MIN_HEIGHT,
   PANE_MIN_WIDTH,
+  fitToField,
+  readingSizeFor,
   snapBelowHeaders,
 } from '../shared/panes.js';
 import {
@@ -103,8 +124,39 @@ export const TURN_PER_PX = 0.0042;
 /** How long a view switch, a lift's turn and a throw's flight take. */
 export const MOVE_MS = 1000;
 
-function lerpRect(a: Rect, b: Rect, t: number): Rect {
-  return { left: a.left + (b.left - a.left) * t, top: a.top + (b.top - a.top) * t, width: a.width + (b.width - a.width) * t, height: a.height + (b.height - a.height) * t };
+/** How much of its opacity a card keeps while a document is the focus and the card is not gathered round it. */
+const FOCUS_DIM = 0.28;
+/** A seated card stands above every field card (which reach 2760) and below every document (3000 and up). */
+const SEATED_Z = 2950;
+/** How far a seated card is from being in the field before it stops taking the pointer and the Tab key. */
+const SEAT_IN_SIGHT_PX = 8;
+/** How much room is left round a card that "locate" brings into view. */
+const LOCATE_MARGIN = 28;
+/** Below this much of its opacity, or with less than this much of it in the field, a document is offered a "find". */
+const FIND_BELOW_OPACITY = 0.6;
+const FIND_GRAB_PX = 48;
+const BEYOND_SIDES = ['left', 'right', 'up', 'down'] as const;
+const BEYOND_ARROW: Record<(typeof BEYOND_SIDES)[number], string> = { left: '←', right: '→', up: '↑', down: '↓' };
+const BEYOND_WORDS: Record<(typeof BEYOND_SIDES)[number], string> = {
+  left: 'beyond the left edge',
+  right: 'beyond the right edge',
+  up: 'above the field',
+  down: 'below the field',
+};
+/** How long the desk takes to come round to where the person is facing, or to bring something into view. */
+export const DESK_MOVE_MS = 250;
+
+/** One note joined to a document: which way the link runs, and what to call it. */
+export interface Neighbour {
+  id: string;
+  title: string;
+  status: string;
+  /** 'out': the document links to it; 'in': it links to the document; 'both'. */
+  direction: 'out' | 'in' | 'both';
+  /** It is on the desk as a document of its own. */
+  held: boolean;
+  /** Joined to another held note as well. */
+  shared: boolean;
 }
 
 export interface GlassHooks {
@@ -136,10 +188,8 @@ export interface GlassHooks {
   reducedMotion(): boolean;
   /** The sentence an orbit edge's link sits in (TASK-0003). */
   sentence(edge: GraphEdge): Promise<string>;
-  /** The workspace's edge list, read once per index revision, for a ring line's sentence (FEAT-0017). */
+  /** The workspace's edge list, read once per index revision, for a line's sentence (FEAT-0017). */
   graphEdges(): Promise<GraphEdge[]>;
-  /** "+N more" on the ring: keyboard focus to the navigator's group of joined notes. */
-  focusJoined(): void;
 }
 
 export interface GlassInput {
@@ -166,7 +216,9 @@ interface Elements {
   pendingChip: HTMLButtonElement;
   deskCount: HTMLElement;
   compass: HTMLElement;
-  ring: HTMLElement;
+  lines: HTMLElement;
+  findOpen: HTMLButtonElement;
+  beyond: HTMLElement;
   zoomReading: HTMLButtonElement;
   heading: HTMLElement;
   behind: HTMLElement;
@@ -202,7 +254,9 @@ export function glassElements(): Elements {
     pendingChip: must('pending-chip') as HTMLButtonElement,
     deskCount: must('glass-desk-count'),
     compass: must('compass'),
-    ring: must('field-ring'),
+    lines: must('field-lines'),
+    findOpen: must('find-open') as HTMLButtonElement,
+    beyond: must('desk-beyond'),
     zoomReading: must('zoom-reading') as HTMLButtonElement,
     heading: must('compass-heading'),
     behind: must('compass-behind'),
@@ -250,9 +304,6 @@ export class GlassField {
   /** Several cards marked at once, for a moment: a lift's neighbours under reduced motion. */
   private highlights = new Set<string>();
   private viewport = { width: 800, height: 600 };
-  private lastHeldKey = '';
-  /** A note was lifted and the field has not yet turned to face its neighbourhood. */
-  private faceOnArrival = false;
   private frameTimes: number[] | null = null;
   private animateTimer: ReturnType<typeof setTimeout> | null = null;
   /** Which arrangement the field is in: the view's bands, or the orbit of the whole graph. */
@@ -273,36 +324,63 @@ export class GlassField {
    */
   private zoomBands: Zoom = { ...IDENTITY_ZOOM };
   private zoomOrbit: Zoom = { ...IDENTITY_ZOOM };
-  private zoomSettle: ReturnType<typeof setTimeout> | null = null;
   private zoomEase: number | null = null;
-  private wheelTurnEnd: ReturnType<typeof setTimeout> | null = null;
   /** Hide notes, in this window only: the panes are out of sight and cover nothing (FEAT-0015). */
   private panesHidden = false;
   /**
-   * The middle is in use (FEAT-0017): the note on top of the desk stands in
-   * the middle of its neighbours. A switch in the window, like the turn and
-   * the zoom: not in the store, not in an address, off after a reload
-   * (decision 2).
+   * Focus is on (FEAT-0017): the document on top of the desk has the notes it
+   * is joined to gathered round it. A switch in the window, like the turn and
+   * the zoom: not in the store, not in an address, off after a reload.
    */
   private focusOn = false;
-  /** The mini note clicked to get here: the note it came from, and the angle it stood at. */
-  private focusFrom: { noteId: string; angle: number } | null = null;
-  /** The opening in progress: when it began, and the card's rectangle it grows from. */
-  private focusAnim: { noteId: string; start: number; from: Rect | null; frame: number | null } | null = null;
-  /** The pane in the middle as it is drawn now, for `paintPane`. */
-  private focusRect: Rect | null = null;
-  private ringView!: RingView;
-  private ringReachTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Where the desk stands on the cylinder, in this window. The desk is flat
+   * and its objects keep the places the store holds for them; this is the
+   * bearing those places are drawn at. Turning away slides the desk aside
+   * with the front of the field and fades it at the edge of sight, exactly as
+   * a card there fades (ISS-0071: "turning moves the note and the whole
+   * ring"). Opening, raising or finding a document brings the desk round to
+   * where the person is facing. Not stored: a reload starts it at the front.
+   */
+  private deskBearing = 0;
+  /**
+   * How far the desk has been moved to look at something off to the side, in
+   * pixels. Set by "locate" and the edge counters, and put back to nothing by
+   * "find" and by opening a note. Not stored either.
+   */
+  private deskPan: Point = { x: 0, y: 0 };
+  private deskEase: number | null = null;
+  /**
+   * Where each neighbour of the focused document is seated, as an offset from
+   * the document's top left corner. Worked out when the focus, the document's
+   * size or the set of neighbours changes, and NOT when the document moves:
+   * that is what makes a drag carry the arrangement whole (ISS-0072).
+   */
+  private seating: { key: string; docId: string; offsets: Map<string, Point>; order: string[] } | null = null;
+  /** Cards for seated notes the view does not hold or the deal did not place. */
+  private seatEntries = new Map<string, FieldEntry>();
+  /** The seated notes as last drawn: id to the middle of its card, in field pixels. */
+  private seatedAt = new Map<string, Point>();
+  /**
+   * The document being dragged and how far, so its neighbourhood is drawn
+   * with it before the store hears. `x` and `y` are the place the store held
+   * when the drag began: once the store holds another, the drag is over.
+   */
+  private dragOf: { noteId: string; dx: number; dy: number; x: number; y: number } | null = null;
+  /** The document about to open, and the card or row it grows from. */
+  private opening: { noteId: string; from: Rect | null } | null = null;
+  private openAnim: Animation | null = null;
+  private gatherTimer: ReturnType<typeof setTimeout> | null = null;
+  private links!: LinkLines;
+  /** Which document's list of related notes is open, in this window. */
+  private relatedOpen: string | null = null;
   private graphEdgesFor: Promise<GraphEdge[]> | null = null;
   /** The reach's wires as last painted, for a check that reads the canvas where they are. */
   private wires: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
 
   constructor(el: Elements, hooks: GlassHooks) {
-    this.ringView = new RingView(el.ring, {
-      open: (id) => void this.openFromRing(id),
-      rest: (id) => this.restOnMini(id),
+    this.links = new LinkLines(el.lines, {
       restLine: (id, at) => void this.restOnLine(id, at),
-      more: () => this.hooks.focusJoined(),
     });
     this.el = el;
     this.hooks = hooks;
@@ -675,51 +753,31 @@ export class GlassField {
       if (context === undefined) missing.push(id);
       else contexts.set(id, context);
     }
+    // What the held notes are joined to is still marked on the field and
+    // listed in the navigator. It no longer MOVES anything: until TASK-0104 a
+    // held note's neighbourhood took the front band (TASK-0036), so putting a
+    // note on the desk, or leaving the focus, dealt every card on screen
+    // again. The neighbourhood is now gathered round the document a person
+    // focuses, and the field keeps its slots (FEAT-0017, decision 7).
     this.joined = joinedTo(heldIds, contexts);
     this.shared = sharedAmong(heldIds, contexts);
-    const known = new Set<string>();
-    for (const group of this.input.groups) for (const card of group.cards) known.add(card.noteId);
-    const extra: CardModel[] = [];
-    for (const context of contexts.values()) {
-      for (const item of neighboursOf(context)) {
-        if (!known.has(item.id) && !heldIds.includes(item.id)) extra.push(cardFromContext(item));
-      }
-    }
     const hand = {
-      held: new Set(heldIds),
-      joined: this.joined,
+      held: new Set<string>(),
+      joined: new Set<string>(),
       pulled: new Set(pulledIn(state, ws)),
       pushed: new Set(pushedIn(state, ws)),
     };
-    const entries = fieldEntries(this.input.groups, hand, extra);
+    const entries = fieldEntries(this.input.groups, hand);
     this.entries = new Map(entries.map((e) => [e.card.noteId, e]));
-    // While a note is in the middle the field keeps its slots: the
-    // neighbourhood stands on the ring instead of taking the front band, and
-    // leaving deals it once (FEAT-0017, decisions 9 and 10).
-    if (this.focusId() !== null) {
-      this.lastHeldKey = heldIds.join(' ');
-      this.render(false);
-      this.drawPanes();
-      this.drawFocus();
-      if (missing.length > 0) {
-        void Promise.all(missing.map((id) => this.hooks.context(id).catch(() => null))).then(() => {
-          if (this.active) this.redeal(true);
-        });
-      }
-      return;
-    }
     if (this.input.view === null) {
       this.deal = null;
       this.shapeKey = '';
       this.model.setShapes(null);
       this.model.deal({ front: [], mid: [], outer: [], deep: [] }, []);
     } else {
-      this.deal = dealField(this.input.view.band, entries, { first: new Set(this.shared.keys()) });
-      // The order the front band takes its SLOTS in: the neighbourhood, then
-      // what a hand just pulled, then what is owed. When panes leave fewer
-      // slots than the band holds, the pulled note a person is watching stays
-      // in view and an owed note is counted instead; the owed count on the bar
-      // and the navigator still show every owed note (ISS-0064).
+      this.deal = dealField(this.input.view.band, entries);
+      // The order the front band takes its SLOTS in: what a hand just pulled,
+      // then what is owed (ISS-0064).
       const frontOrder = frontForSlots(this.deal.front);
       // The shapes are worked out when the VIEW or the WORKSPACE changes and
       // at no other time (ADR-0005, FEAT-0018 decision 5). Not on a deal that
@@ -738,6 +796,8 @@ export class GlassField {
           }),
         );
       }
+      // Nothing on the desk is an obstacle: the field passes behind the desk
+      // and keeps its slots, so moving a document moves no card (TASK-0104).
       this.model.deal(
         {
           front: frontOrder.map((e) => e.card.noteId),
@@ -745,33 +805,12 @@ export class GlassField {
           outer: this.deal.outer.map((e) => e.card.noteId),
           deep: this.deal.deep.map((e) => e.card.noteId),
         },
-        this.paneObstacles(),
+        [],
       );
     }
-    // A lift turns the field to face what the note is joined to (TASK-0036).
-    const heldKey = heldIds.join(' ');
-    const before = this.lastHeldKey.split(' ').filter(Boolean).length;
-    if (heldIds.length > 0 && heldKey !== this.lastHeldKey && heldIds.length > before) this.faceOnArrival = true;
-    if (heldIds.length === 0) this.faceOnArrival = false;
-    this.lastHeldKey = heldKey;
+    this.seatNeighbourhood();
     this.render(animate);
     this.drawPanes();
-    this.drawFocus();
-    // Once every held note's neighbourhood is here, turn to face it.
-    if (this.faceOnArrival && missing.length === 0) {
-      this.faceOnArrival = false;
-      if (this.hooks.reducedMotion()) {
-        // Under reduced motion the turn is replaced by a highlight on the
-        // neighbours it would have turned to (TASK-0036, ISS-0061).
-        this.model.face(0);
-        // The cut is a turn, so the panes' sectors are dealt again for the new
-        // angle; without it cards stood under a pane (ISS-0064).
-        this.turnEnd();
-        this.highlightAll(this.joined);
-      } else {
-        this.faceFront();
-      }
-    }
     if (missing.length > 0) {
       void Promise.all(missing.map((id) => this.hooks.context(id).catch(() => null))).then(() => {
         if (this.active) this.redeal(true);
@@ -814,19 +853,33 @@ export class GlassField {
       }
     }
     this.model.place(slots);
+    const missing = this.held.map((c) => c.noteId).filter((id) => this.hooks.peekContext(id) === undefined);
+    this.seatNeighbourhood();
     this.render(animate);
     this.drawPanes();
-    this.drawFocus();
+    if (missing.length > 0) {
+      void Promise.all(missing.map((id) => this.hooks.context(id).catch(() => null))).then(() => {
+        if (this.active && this.arrangement === 'orbit') this.redealOrbit(true);
+      });
+    }
+  }
+
+  /** The size a held note is drawn at: its own, else the view's, else the first-use size. */
+  private sizeOf(card: DeskCard): { w: number; h: number } {
+    const state = this.hooks.state();
+    const size = readingSizeFor(card, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+    // Fitted for PAINTING only: a window made narrow for a moment must not
+    // overwrite the size a person chose (DES-0003).
+    return fitToField(size, this.viewport);
   }
 
   /**
-   * Where a pane is DRAWN: its stored place, clamped into the field. One
-   * function, used by the painter and by the obstacles, so the field keeps
-   * cards clear of the pane a person sees (ISS-0058).
+   * Where a document stands ON THE DESK: its stored place, clamped so its
+   * header is always inside the field, at its reading size. The desk's own
+   * movement, `deskShift`, is added where it is drawn.
    */
   private paneRect(card: DeskCard): { left: number; top: number; w: number; h: number } {
-    const w = card.w ?? PANE_DEFAULT_WIDTH;
-    const h = card.h ?? PANE_DEFAULT_HEIGHT;
+    const { w, h } = this.sizeOf(card);
     return {
       left: Math.max(0, Math.min(card.x, this.viewport.width - w)),
       top: Math.max(0, Math.min(card.y, this.viewport.height - PANE_HEADER_HEIGHT)),
@@ -835,22 +888,31 @@ export class GlassField {
     };
   }
 
-  private paneObstacles(): Obstacle[] {
-    // A hidden pane covers nothing, so the field deals into its space (decision 2).
-    if (this.arrangement === 'orbit' || this.panesHidden || this.focusId() !== null) return [];
-    const out: Obstacle[] = [];
-    for (const card of this.held) {
-      if (card.wide === true) continue;
-      const r = this.paneRect(card);
-      // A pane is on the screen and the zoom is not applied to it, so its
-      // edges are taken back to the unzoomed field before they become a
-      // sector: the part of the cylinder the pane really covers (FEAT-0016).
-      const zoom = this.zoom();
-      const left = unzoomPoint({ x: r.left, y: 0 }, zoom).x;
-      const right = unzoomPoint({ x: r.left + r.w, y: 0 }, zoom).x;
-      out.push(...obstaclesFor({ left, right }, this.model.yaw, this.viewport, this.model.current.shapes));
-    }
-    return out;
+  /**
+   * How far the whole desk is drawn from where its objects are stored, and how
+   * faded. The desk stands at a bearing; turning away from it moves it as far
+   * as a front-band card at that bearing moves, and it fades and stops taking
+   * the pointer on the boundary where such a card does.
+   */
+  private deskShift(): { x: number; y: number; opacity: number; visible: boolean } {
+    const phi = norm(this.deskBearing - this.model.yaw);
+    const scale = PERSPECTIVE / (PERSPECTIVE + Math.cos(phi) * FRONT.depth);
+    const visible = Math.abs(phi) < VISIBLE_HALF_ANGLE;
+    const fade = Math.max(0, Math.min(1, (VISIBLE_HALF_ANGLE - Math.abs(phi)) / (26 * DEG)));
+    return {
+      x: Math.sin(phi) * FRONT.depth * scale + this.deskPan.x,
+      y: this.deskPan.y,
+      opacity: visible ? 0.3 + 0.7 * fade : 0,
+      visible,
+    };
+  }
+
+  /** A document where it is drawn now, in field pixels: its place on the desk, the desk's movement, and a drag in progress. */
+  private drawnRect(card: DeskCard): Rect {
+    const r = this.paneRect(card);
+    const shift = this.deskShift();
+    const drag = this.dragOf !== null && this.dragOf.noteId === card.noteId && this.dragOf.x === card.x && this.dragOf.y === card.y ? this.dragOf : null;
+    return { left: r.left + shift.x + (drag?.dx ?? 0), top: r.top + shift.y + (drag?.dy ?? 0), width: r.w, height: r.h };
   }
 
   // ---- drawing ----
@@ -873,23 +935,13 @@ export class GlassField {
       this.el.field.classList.remove('animate');
     }
     const heldIds = new Set(this.held.map((c) => c.noteId));
+    const seats = this.seatPositions();
+    const shift = this.deskShift();
+    this.seatedAt = seats;
     const live = new Set<string>();
     let tabStops = 0;
     this.promotedIds = new Set();
-    for (const [noteId, slot] of this.model.current.slots) {
-      // A quiet tile drawn large enough to read stops being a rectangle on
-      // the canvas and becomes an ordinary card (TASK-0077). The threshold is
-      // the one that decides every other card's detail, and it is read from
-      // the same projection this loop already needs. The orbit's `deep` slots
-      // are its own and are dots, so nothing is promoted there.
-      if (slot.band === 'deep') {
-        if (this.arrangement === 'orbit') continue;
-        const p = this.at(slot, yaw);
-        if (!p.visible || !promoted(p.scale * this.model.current.shapes.deep.box.width, this.promotedBefore.has(noteId))) continue;
-        this.promotedIds.add(noteId);
-      }
-      const entry = this.entries.get(noteId);
-      if (entry === undefined) continue;
+    const draw = (noteId: string, entry: FieldEntry): { element: HTMLElement; arriving: boolean } => {
       live.add(noteId);
       let element = this.cardEls.get(noteId);
       const arriving = element === undefined;
@@ -899,10 +951,47 @@ export class GlassField {
         this.el.cards.appendChild(element);
       }
       element.classList.remove('leaving');
-      this.paintCard(element, entry, slot, heldIds.has(noteId));
+      return { element, arriving };
+    };
+    for (const [noteId, slot] of this.model.current.slots) {
+      // One note is one object (ISS-0070). A held note is its document, so no
+      // card is drawn for it and nothing marks the slot it left: the model
+      // still holds that slot for it, which is what "reserved" means here.
+      if (heldIds.has(noteId)) continue;
+      const seat = seats.get(noteId);
+      // A quiet tile drawn large enough to read stops being a rectangle on
+      // the canvas and becomes an ordinary card (TASK-0077). The threshold is
+      // the one that decides every other card's detail, and it is read from
+      // the same projection this loop already needs. The orbit's `deep` slots
+      // are its own and are dots, so nothing is promoted there. A SEATED note
+      // is a card whatever band it came from: it is being read, not shelved.
+      if (seat === undefined && slot.band === 'deep') {
+        if (this.arrangement === 'orbit') continue;
+        const p = this.at(slot, yaw);
+        if (!p.visible || !promoted(p.scale * this.model.current.shapes.deep.box.width, this.promotedBefore.has(noteId))) continue;
+        this.promotedIds.add(noteId);
+      }
+      const entry = this.entries.get(noteId);
+      if (entry === undefined) continue;
+      const { element, arriving } = draw(noteId, entry);
+      this.paintCard(element, entry, slot.band, seat !== undefined);
+      if (seat !== undefined) {
+        if (this.placeSeated(element, seat, shift, arriving && animate && !reduced)) tabStops += 1;
+        continue;
+      }
       const p = this.at(slot, yaw);
       this.place(element, p, slot, arriving && animate && !reduced);
       if (p.visible) tabStops += 1;
+    }
+    // A seated note the deal gave no slot: one from outside the view, or one a
+    // full band counted and did not place. It is drawn here and nowhere else.
+    for (const [noteId, seat] of seats) {
+      if (live.has(noteId) || heldIds.has(noteId)) continue;
+      const entry = this.entries.get(noteId) ?? this.seatEntries.get(noteId);
+      if (entry === undefined) continue;
+      const { element, arriving } = draw(noteId, entry);
+      this.paintCard(element, entry, 'front', true);
+      if (this.placeSeated(element, seat, shift, arriving && !reduced)) tabStops += 1;
     }
     for (const [noteId, element] of this.cardEls) {
       if (live.has(noteId)) continue;
@@ -921,6 +1010,7 @@ export class GlassField {
       else gone();
     }
     this.el.cards.dataset['visible'] = String(tabStops);
+    this.el.cards.dataset['seated'] = String(seats.size);
     // Remembered for the next frame's hysteresis: a note already drawn as a
     // card is demoted at a slightly smaller width than it was promoted at, so
     // a zoom drifting across the threshold does not flicker.
@@ -930,6 +1020,11 @@ export class GlassField {
     this.drawQuietCursor();
     this.paintCanvas();
     this.drawInstrument();
+    // The desk moves with the turn, so its documents are placed every frame;
+    // what they hold is painted only when the desk itself changes (drawPanes).
+    this.placePanes();
+    this.drawLinks();
+    this.drawDeskFurniture();
   }
 
   private place(element: HTMLElement, p: Projection, slot: Slot, arriving: boolean): void {
@@ -945,6 +1040,7 @@ export class GlassField {
     const lift = this.promotedIds.has(element.dataset['noteId'] ?? '');
     const box = lift ? promotedBox(p.scale * band.width, CARD_BOX.width / CARD_BOX.height) : band;
     const draw = lift ? { ...p, scale: 1 } : p;
+    element.classList.remove('seated');
     element.style.width = `${box.width}px`;
     element.style.height = `${box.height}px`;
     element.dataset['detail'] = detailFor(lift ? box.width : p.scale * box.width);
@@ -953,17 +1049,53 @@ export class GlassField {
     const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
     const target = !p.visible ? 0 : (slot.band === 'mid' ? 0.9 : 1) * (0.3 + 0.7 * fade);
     const dim = this.held.length > 0 && !this.joined.has(element.dataset['noteId'] ?? '') && slot.band !== 'front' ? 0.45 : 1;
+    // While a document is the focus, what is not gathered round it steps back.
+    const aside = this.focusId() !== null ? FOCUS_DIM : 1;
     if (arriving) {
       element.style.opacity = '0';
       requestAnimationFrame(() => {
-        element.style.opacity = String(target * dim);
+        element.style.opacity = String(target * dim * aside);
       });
     } else {
-      element.style.opacity = String(target * dim);
+      element.style.opacity = String(target * dim * aside);
     }
     element.style.pointerEvents = p.visible ? 'auto' : 'none';
     element.tabIndex = p.visible ? 0 : -1;
     element.setAttribute('aria-hidden', String(!p.visible));
+  }
+
+  /**
+   * Draw a card at its seat beside the focused document: flat, at the size a
+   * front-band card is browsed at, and moved only by the desk. The zoom and
+   * the turn's perspective do not reach it, so the arrangement keeps its shape
+   * while the document is dragged or the field is turned (ISS-0072). Returns
+   * whether it is in the field, which is whether it takes the pointer and Tab.
+   */
+  private placeSeated(element: HTMLElement, at: Point, shift: { opacity: number; visible: boolean }, arriving: boolean): boolean {
+    element.classList.add('seated');
+    element.style.width = `${CARD_BOX.width}px`;
+    element.style.height = `${CARD_BOX.height}px`;
+    element.dataset['detail'] = detailFor(SEAT.width);
+    element.style.transform = `translate3d(${(at.x - CARD_BOX.width / 2).toFixed(1)}px, ${(at.y - CARD_BOX.height / 2).toFixed(1)}px, 0) scale(${BROWSE_SCALE.toFixed(3)})`;
+    element.style.zIndex = String(SEATED_Z);
+    const inSight =
+      shift.visible &&
+      at.x + SEAT.width / 2 > SEAT_IN_SIGHT_PX &&
+      at.x - SEAT.width / 2 < this.viewport.width - SEAT_IN_SIGHT_PX &&
+      at.y + SEAT.height / 2 > SEAT_IN_SIGHT_PX &&
+      at.y - SEAT.height / 2 < this.viewport.height - SEAT_IN_SIGHT_PX;
+    if (arriving) {
+      element.style.opacity = '0';
+      requestAnimationFrame(() => {
+        element.style.opacity = String(shift.opacity);
+      });
+    } else {
+      element.style.opacity = String(shift.opacity);
+    }
+    element.style.pointerEvents = inSight ? 'auto' : 'none';
+    element.tabIndex = inSight ? 0 : -1;
+    element.setAttribute('aria-hidden', String(!inSight));
+    return inSight;
   }
 
   private makeCard(noteId: string): HTMLElement {
@@ -994,12 +1126,11 @@ export class GlassField {
     return element;
   }
 
-  private paintCard(element: HTMLElement, entry: FieldEntry, slot: Slot, held: boolean): void {
+  private paintCard(element: HTMLElement, entry: FieldEntry, band: string, seated: boolean): void {
     const { card } = entry;
-    element.dataset['band'] = slot.band;
+    element.dataset['band'] = band;
     element.dataset['status'] = bandFor(card.status);
     element.dataset['face'] = faceFor(card, this.input.faces).kind;
-    element.classList.toggle('ghost', held);
     element.classList.toggle('pulled', entry.inputs.pulled && !entry.inputs.owed);
     element.classList.toggle('owed', entry.inputs.owed);
     element.classList.toggle('joined', this.joined.has(card.noteId));
@@ -1008,7 +1139,8 @@ export class GlassField {
     const shared = this.shared.get(card.noteId) ?? 0;
     element.classList.toggle('shared', shared >= 2);
     element.setAttribute('aria-current', String(this.hooks.state().noteId === card.noteId));
-    const label = `${card.noteId} ${card.title}${entry.inputs.owed ? `, owed ${card.owedVerb ?? 'a decision'}` : ''}${held ? ', on the desk' : ''}`;
+    const focus = seated ? this.focusId() : null;
+    const label = `${card.noteId} ${card.title}${entry.inputs.owed ? `, owed ${card.owedVerb ?? 'a decision'}` : ''}${focus === null ? '' : `, joined to ${focus}`}`;
     element.setAttribute('aria-label', label);
     setText(element, '.fc-id', card.noteId);
     setText(element, '.fc-title', card.title);
@@ -1086,8 +1218,9 @@ export class GlassField {
     for (const [noteId, slot] of this.model.current.slots) {
       if (slot.band !== 'deep') continue;
       // Never both: a promoted note is an element this frame, so the canvas
-      // leaves it alone.
-      if (this.promotedIds.has(noteId)) continue;
+      // leaves it alone. A held note is its document and a seated note is its
+      // card beside the document, so neither is also a tile (ISS-0070).
+      if (this.promotedIds.has(noteId) || heldIds.has(noteId) || this.seatedAt.has(noteId)) continue;
       const p = this.at(slot, yaw);
       if (!p.visible) continue;
       const entry = this.entries.get(noteId);
@@ -1103,7 +1236,7 @@ export class GlassField {
       const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
       ctx.globalAlpha = (0.25 + 0.5 * fade) * (slot.layer === 0 ? 1 : 0.7);
       const status = entry === undefined ? 'planned' : bandFor(entry.card.status);
-      ctx.fillStyle = heldIds.has(noteId) ? 'rgba(122,162,247,0.15)' : '#1b1f2b';
+      ctx.fillStyle = '#1b1f2b';
       ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);
       ctx.fillStyle = TILE_COLOURS[status] ?? '#6b7390';
       ctx.fillRect(p.x - w / 2, p.y - h / 2, Math.max(1.5, 2.5 * p.scale), h);
@@ -1182,10 +1315,15 @@ export class GlassField {
     const drawn = [...this.model.current.slots].filter(([, slot]) => slot.band === 'deep');
     // Far first, so a near dot is drawn over a far one.
     drawn.sort((p, q) => q[1].depth - p[1].depth);
+    const heldIds = new Set(this.held.map((c) => c.noteId));
     for (const [id, _slot] of drawn) {
       const p = at.get(id);
       const node = nodes.get(id);
       if (p === undefined || node === undefined || !p.visible) continue;
+      // A held note is its document, and a seated note is its card beside the
+      // document: neither is also a dot (ISS-0070). Their links are still
+      // drawn to the place the layout keeps for them.
+      if (heldIds.has(id) || this.seatedAt.has(id)) continue;
       const r = (2 + 5 * Math.sqrt(node.inbound / maxInbound)) * p.scale * 1.4;
       const colour = palette.band[node.band] ?? palette.band['planned'] ?? '#888';
       if (this.treatment === 'blocks') {
@@ -1217,9 +1355,14 @@ export class GlassField {
       }
       this.dots.push({ x: p.x, y: p.y, r: Math.max(r, 5), id });
     }
-    // The cards are dots too, for the pointer's purposes.
+    // The cards are dots too, for the pointer's purposes: where each is drawn.
     for (const [id, slot] of this.model.current.slots) {
-      if (slot.band === 'deep') continue;
+      if (slot.band === 'deep' || heldIds.has(id)) continue;
+      const seat = this.seatedAt.get(id);
+      if (seat !== undefined) {
+        this.dots.push({ x: seat.x, y: seat.y, r: 0, id });
+        continue;
+      }
       const p = at.get(id);
       if (p !== undefined && p.visible) this.dots.push({ x: p.x, y: p.y, r: 0, id });
     }
@@ -1464,26 +1607,40 @@ export class GlassField {
   private paintWires(ctx: CanvasRenderingContext2D): void {
     this.wires = [];
     if (this.reach === null) return;
-    const from = this.model.current.slots.get(this.reach.noteId);
-    const origin = from === undefined ? null : this.at(from, this.model.yaw);
+    const origin = this.cardOnScreen(this.reach.noteId);
     if (origin === null || !origin.visible) return;
     ctx.strokeStyle = 'rgba(122,162,247,0.75)';
     ctx.lineWidth = 1.4;
     for (const id of this.reach.neighbours) {
-      const slot = this.model.current.slots.get(id);
-      if (slot === undefined) continue;
-      const p = this.at(slot, this.model.yaw);
-      if (!p.visible) continue;
+      const p = this.cardOnScreen(id);
+      if (p === null || !p.visible) continue;
       // Anchored on the card's edge along the bearing of the neighbour: the
       // rule DES-0002 settled in rev 5.
-      const rect = cardRect(origin, this.boxOf(this.reach.noteId));
-      const ax = p.x > origin.x ? rect.right : rect.left;
+      const ax = p.x > origin.x ? origin.x + origin.width / 2 : origin.x - origin.width / 2;
       ctx.beginPath();
       ctx.moveTo(ax, origin.y);
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
       this.wires.push({ x1: ax, y1: origin.y, x2: p.x, y2: p.y });
     }
+  }
+
+  /**
+   * Where a note's CARD is drawn now: at its seat beside the focused
+   * document, or at its slot in the field. Null for a note with neither, and
+   * for a held note, which is a document and has no card.
+   */
+  private cardOnScreen(noteId: string): { x: number; y: number; width: number; height: number; visible: boolean } | null {
+    if (this.held.some((c) => c.noteId === noteId)) return null;
+    const seat = this.seatedAt.get(noteId);
+    if (seat !== undefined) {
+      return { x: seat.x, y: seat.y, width: SEAT.width, height: SEAT.height, visible: this.deskShift().visible };
+    }
+    const slot = this.model.current.slots.get(noteId);
+    if (slot === undefined) return null;
+    const p = this.at(slot, this.model.yaw);
+    const rect = cardRect(p, this.boxOf(noteId));
+    return { x: p.x, y: p.y, width: rect.right - rect.left, height: rect.bottom - rect.top, visible: p.visible };
   }
 
   /** The box a note is drawn in: its band's, or the front band's when it has no slot. */
@@ -1504,12 +1661,9 @@ export class GlassField {
   private drawInstrument(): void {
     const deal = this.deal;
     const heldCount = this.held.length;
-    this.el.frontLabel.textContent =
-      this.arrangement === 'orbit'
-        ? this.orbitLabel()
-        : heldCount > 0
-          ? 'in front: what is joined to what you are holding'
-          : 'in front: what needs you';
+    // The front band is what needs a person, whatever is on the desk: a held
+    // note's neighbourhood gathers round its document now, not in this band.
+    this.el.frontLabel.textContent = this.arrangement === 'orbit' ? this.orbitLabel() : 'in front: what needs you';
     this.el.field.classList.toggle('holding', heldCount > 0);
     this.el.empty.hidden = this.arrangement === 'orbit' || !(deal !== null && deal.front.length === 0 && heldCount === 0 && Math.abs(norm(this.model.yaw)) < 30 * DEG);
     this.el.owedCount.hidden = this.arrangement === 'orbit';
@@ -1645,7 +1799,7 @@ export class GlassField {
     field.addEventListener('dblclick', (event) => {
       if (!this.active) return;
       const target = event.target as HTMLElement;
-      if (target.closest('.field-card, .pane, button, .ring-card, .target-strip, .compass, .field-bar') !== null) return;
+      if (target.closest('.field-card, .pane, button, .target-strip, .compass, .field-bar') !== null) return;
       const box = field.getBoundingClientRect();
       const dx = event.clientX - box.left;
       const dy = event.clientY - box.top;
@@ -1712,7 +1866,6 @@ export class GlassField {
       }
       this.turning = false;
       field.classList.remove('turning');
-      this.turnEnd();
     };
     field.addEventListener('pointerup', end);
     field.addEventListener('pointercancel', end);
@@ -1772,13 +1925,34 @@ export class GlassField {
       const target = event.target as HTMLElement;
       if (target.closest('input, select, textarea, form, #status') !== null) return;
       event.preventDefault();
-      // Escape leaves the middle first; a second Escape sweeps (FEAT-0017, decision 12).
+      // One key press ends one thing (decision 10). A drag in progress is put
+      // back; otherwise the focus is left and every document stays; only with
+      // neither does Escape sweep the desk. A list or a menu inside a document
+      // takes the key before it reaches here.
+      if (this.dragCancel !== null) {
+        this.dragCancel();
+        return;
+      }
       if (this.focusId() !== null) {
         this.leaveFocus();
         return;
       }
       void this.sweep();
     });
+    // "Find": the desk comes back in front of the person, wherever it was
+    // turned from or moved aside to (TASK-0104, ISS-0072's "way back").
+    this.el.findOpen.addEventListener('click', () => this.findOpen(this.el.findOpen.dataset['noteId'] ?? null));
+    // One counter per edge of the field, for what is gathered round the
+    // focused document and stands beyond that edge.
+    for (const side of BEYOND_SIDES) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'action beyond';
+      button.dataset['side'] = side;
+      button.hidden = true;
+      button.addEventListener('click', () => this.lookBeyond(side));
+      this.el.beyond.appendChild(button);
+    }
     this.el.lookAhead.addEventListener('click', () => this.faceFront());
     this.el.lookBehind.addEventListener('click', () => this.flyTo(Math.PI));
     this.el.letGo.addEventListener('click', () => {
@@ -1812,22 +1986,6 @@ export class GlassField {
     this.scheduleIdle();
     this.model.turn(by);
     this.render(!this.hooks.reducedMotion());
-    this.turnEnd();
-  }
-
-  private turnEnd(): void {
-    // The field keeps its slots while a note is in the middle (decision 9).
-    if (this.focusId() !== null) return;
-    // In the orbit a position is the kept layout's and no pane moves it, so
-    // there is nothing to deal again; dealing the bands here replaced the
-    // orbit with the view's last deal the first time a pane was on screen.
-    if (this.arrangement === 'orbit') return;
-    // Panes are fixed to the SCREEN, so after a turn the sectors they cover
-    // have moved round the cylinder: deal once, now the turn is over.
-    if (this.held.some((c) => c.wide !== true)) {
-      this.model.turnEnd(this.paneObstacles());
-      this.render(true);
-    }
   }
 
   faceFront(): void {
@@ -1847,7 +2005,6 @@ export class GlassField {
     if (this.hooks.reducedMotion()) {
       this.model.face(yaw);
       this.render(false);
-      this.turnEnd();
       this.clearHighlightLater();
       return;
     }
@@ -1867,7 +2024,6 @@ export class GlassField {
       }
       this.flight = null;
       this.el.field.classList.remove('turning');
-      this.turnEnd();
       this.clearHighlightLater();
     };
     this.flight = requestAnimationFrame(step);
@@ -1924,7 +2080,7 @@ export class GlassField {
   private pressCard(noteId: string, element: HTMLElement, event: PointerEvent): void {
     if (event.button !== 0) return;
     this.scheduleIdle();
-    const entry = this.entries.get(noteId);
+    const entry = this.entryOf(noteId);
     if (entry === undefined) return;
     event.stopPropagation();
     const startX = event.clientX;
@@ -2044,46 +2200,81 @@ export class GlassField {
     await this.lift(card);
   }
 
+  /**
+   * Open a note as a document on the desk, or bring its document forward when
+   * it is already there. `from` is where the opening is drawn from: the card
+   * that was clicked, or the row. With none given it is the note's own card
+   * if one is in sight, so a document never flies in from a place the person
+   * was not looking at (DES-0003).
+   */
   async lift(card: CardModel, from: Rect | null = null): Promise<void> {
     const state = this.hooks.state();
     const onDesk = this.hooks.desk(state);
     // A person who lifts a note wants to see it (decision 3).
     this.hooks.lifted();
-    // The note opens in the middle of its neighbours, growing from where its
-    // card stands, or from the middle when it is not in sight (FEAT-0017).
-    if (!this.hooks.canArrange()) {
-      // A served page follows the Mac's desk and opens nothing of its own.
-    } else {
-      if (from === null) {
-        const element = this.cardEls.get(card.noteId);
-        const box = this.el.field.getBoundingClientRect();
-        if (element !== undefined && !element.classList.contains('leaving') && element.style.pointerEvents === 'auto') {
-          const r = element.getBoundingClientRect();
-          from = { left: r.left - box.left, top: r.top - box.top, width: r.width, height: r.height };
-        } else if (this.arrangement === 'orbit') {
-          const dot = this.dotFor(card.noteId);
-          if (dot !== null) from = { left: dot.x - 6, top: dot.y - 6, width: 12, height: 12 };
-        }
-      }
-      if (this.focusFrom !== null && this.focusFrom.noteId === card.noteId) this.focusFrom = null;
-      this.openFocus(card.noteId, from);
-    }
+    // A served page follows the Mac's desk and opens nothing of its own.
+    if (this.hooks.canArrange()) this.openFocus(card.noteId, from ?? this.sourceRect(card.noteId));
     if (!onDesk.some((c) => c.noteId === card.noteId)) {
-      const at = this.nextPanePlace(onDesk);
-      await this.hooks.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: at.x, y: at.y });
+      // The size it opens at is written on its card, so resizing another
+      // note afterwards does not change this one (ISS-0071).
+      const size = readingSizeFor({}, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+      const at = this.nextPanePlace(onDesk, size);
+      await this.hooks.dispatch({ type: 'put-on-desk', noteId: card.noteId, x: at.x, y: at.y, w: size.w, h: size.h });
     } else {
       await this.hooks.dispatch({ type: 'raise-card', noteId: card.noteId });
+      // Already on top: no broadcast comes, so draw now.
+      if (this.active) this.redeal(false);
     }
     // Asked for at once, so the neighbourhood arrives while the lift is still happening.
     void this.hooks.context(card.noteId).catch(() => null);
     await this.hooks.open(card);
   }
 
-  /** Where a newly lifted pane goes: cascaded down the left, so every header stays readable. */
-  private nextPanePlace(onDesk: DeskCard[]): { x: number; y: number } {
-    const n = onDesk.length;
-    return { x: 16 + (n % 3) * 28, y: 16 + n * PANE_HEADER_HEIGHT };
+  /** Where a note's card is drawn now, when it is in sight: what its document opens from. */
+  private sourceRect(noteId: string): Rect | null {
+    const element = this.cardEls.get(noteId);
+    const box = this.el.field.getBoundingClientRect();
+    if (element !== undefined && !element.classList.contains('leaving') && element.style.pointerEvents === 'auto') {
+      const r = element.getBoundingClientRect();
+      return { left: r.left - box.left, top: r.top - box.top, width: r.width, height: r.height };
+    }
+    if (this.arrangement === 'orbit') {
+      const dot = this.dotFor(noteId);
+      if (dot !== null) return { left: dot.x - 6, top: dot.y - 6, width: 12, height: 12 };
+    }
+    return null;
   }
+
+  /**
+   * Where a newly opened document goes: across the middle of the field, each
+   * one a header lower and a step to the right of the last, so every header
+   * stays readable and there is room either side for what it is joined to.
+   */
+  private nextPanePlace(onDesk: DeskCard[], size: { w: number; h: number }): { x: number; y: number } {
+    const n = onDesk.length;
+    const free = this.freeSpan();
+    const fitted = fitToField(size, this.viewport);
+    const x = Math.max(free.left, Math.round(free.left + (free.right - free.left - fitted.w) / 2)) + (n % 4) * 28;
+    return { x: Math.max(0, x), y: 16 + (n % 8) * PANE_HEADER_HEIGHT };
+  }
+
+  /** The part of the field's width a new document is centred in: all of it, less what stands at its sides. */
+  private freeSpan(): { left: number; right: number } {
+    let left = 16;
+    let right = this.viewport.width - 16;
+    for (const rect of this.furniture()) {
+      // Something standing against an edge takes that side; anything else is passed over.
+      if (rect.left <= 24 && rect.left + rect.width < this.viewport.width / 2) left = Math.max(left, rect.left + rect.width + 16);
+      else if (rect.left + rect.width >= this.viewport.width - 24 && rect.left > this.viewport.width / 2) right = Math.min(right, rect.left - 16);
+    }
+    return right - left < PANE_MIN_WIDTH ? { left: 16, right: this.viewport.width - 16 } : { left, right };
+  }
+
+  /**
+   * What else stands on the desk, as rectangles on it: asked by whoever owns
+   * those objects. Nothing yet; the collection supplies its own (FEAT-0020).
+   */
+  furniture: () => Rect[] = () => [];
 
   async pull(entry: FieldEntry): Promise<void> {
     if (!this.hooks.canArrange()) return;
@@ -2116,7 +2307,7 @@ export class GlassField {
   }
 
   private cardKey(noteId: string, event: KeyboardEvent): void {
-    const entry = this.entries.get(noteId);
+    const entry = this.entryOf(noteId);
     if (entry === undefined) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -2143,6 +2334,11 @@ export class GlassField {
 
   entryFor(noteId: string): FieldEntry | undefined {
     return this.entries.get(noteId);
+  }
+
+  /** The entry a drawn card stands for: one the deal holds, or one seated beside the focus from outside it. */
+  private entryOf(noteId: string): FieldEntry | undefined {
+    return this.entries.get(noteId) ?? this.seatEntries.get(noteId);
   }
 
   // ---- reach ----
@@ -2309,6 +2505,100 @@ export class GlassField {
       this.paneEls.delete(noteId);
     }
     this.el.panes.dataset['count'] = String(this.held.length);
+    this.placePanes();
+    // A document that has just been opened grows from the card or the row it
+    // came from. It is drawn in place first, so its text is there to read and
+    // to scroll from the first frame, and the movement is laid over that.
+    const opening = this.opening;
+    if (opening !== null) {
+      const pane = this.paneEls.get(opening.noteId);
+      const card = this.held.find((c) => c.noteId === opening.noteId);
+      if (pane !== undefined && card !== undefined) {
+        this.opening = null;
+        this.playOpening(pane, opening.from, this.drawnRect(card));
+      }
+    }
+    this.drawLinks();
+    this.drawDeskFurniture();
+  }
+
+  /**
+   * Put every document where it is drawn now. Run on every frame of a turn,
+   * so it changes positions and nothing else: what a document holds is
+   * painted by `paintPane`, when the desk itself changes.
+   */
+  private placePanes(): void {
+    const shift = this.deskShift();
+    this.held.forEach((deskCard, index) => {
+      const pane = this.paneEls.get(deskCard.noteId);
+      if (pane === undefined) return;
+      const r = this.drawnRect(deskCard);
+      pane.style.left = `${r.left}px`;
+      pane.style.top = `${r.top}px`;
+      // A corner being dragged is the size on screen until the store answers.
+      if (!pane.classList.contains('resizing')) {
+        pane.style.width = `${r.width}px`;
+        pane.style.height = `${r.height}px`;
+      }
+      // Stacking is the desk's order: a raised pane is the last one, and it
+      // covers everything under it, header included. Headers stay readable
+      // because a pane dropped on one snaps below it (snapBelowHeaders), not by
+      // drawing every header above every body: that showed a lower pane's
+      // header through the text of the pane on top of it (ISS-0066).
+      pane.style.zIndex = String(3000 + index);
+      pane.style.opacity = String(shift.opacity);
+      // Past the edge of sight a document is not drawn and takes no pointer,
+      // the same boundary a card obeys.
+      pane.classList.toggle('out-of-sight', !shift.visible);
+    });
+  }
+
+  /**
+   * The opening: the document grows from the card or the row a person
+   * touched to where it stands, over `OPEN_MS`. It is the browser's own
+   * animation of a transform, laid over a document that is already in place,
+   * so nothing waits for it: the text scrolls and a link is followed while it
+   * runs, and opening another note stops it where it is. Under reduced motion
+   * nothing moves and the document is marked for a moment instead.
+   */
+  private playOpening(pane: HTMLElement, from: Rect | null, to: Rect): void {
+    this.openAnim?.cancel();
+    this.openAnim = null;
+    const mark = (): void => {
+      pane.classList.add('highlight');
+      setTimeout(() => pane.classList.remove('highlight'), 1600);
+    };
+    if (this.hooks.reducedMotion()) {
+      mark();
+      if (this.seatedAt.size > 0) this.highlightAll(this.seatedAt.keys());
+      return;
+    }
+    // Nothing in sight to grow from: a document already on the desk, brought forward.
+    if (from === null || typeof pane.animate !== 'function' || to.width <= 0 || to.height <= 0) {
+      mark();
+      return;
+    }
+    const animation = pane.animate(
+      [
+        {
+          transformOrigin: '0 0',
+          transform: `translate(${(from.left - to.left).toFixed(1)}px, ${(from.top - to.top).toFixed(1)}px) scale(${(from.width / to.width).toFixed(4)}, ${(from.height / to.height).toFixed(4)})`,
+        },
+        { transformOrigin: '0 0', transform: 'none' },
+      ],
+      { duration: OPEN_MS, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+    );
+    this.openAnim = animation;
+    const done = (): void => {
+      if (this.openAnim === animation) this.openAnim = null;
+    };
+    animation.onfinish = done;
+    animation.oncancel = done;
+  }
+
+  /** Whether a document is still being drawn open, for the smoke run. */
+  isOpening(): boolean {
+    return this.openAnim !== null;
   }
 
   private makePane(noteId: string): HTMLElement {
@@ -2320,12 +2610,14 @@ export class GlassField {
       '<header class="pane-head" tabindex="0" role="toolbar">' +
       '<span class="pane-id"></span><span class="pane-status"></span><span class="pane-face"></span>' +
       '<span class="pane-tools">' +
+      '<button type="button" class="pane-related" title="The notes this one is joined to (R)" aria-expanded="false"></button>' +
       '<button type="button" class="pane-every" title="Keep this note on every view (V)" aria-label="Keep this note on every view" aria-pressed="false">⧉</button>' +
       '<button type="button" class="pane-orbit" title="Show this in the link graph (O)" aria-label="Show this in the link graph">◎</button>' +
       '<button type="button" class="pane-send" title="Send to another window (S)" aria-label="Send to another window">↗</button>' +
       '<button type="button" class="pane-widen" title="Read it in the column (W)" aria-label="Read in the reading column">⇥</button>' +
       '<button type="button" class="pane-close" title="Put back (⌥ puts back every other)" aria-label="Put back">×</button>' +
       '</span></header>' +
+      '<div class="pane-links" hidden><ul class="link-list"></ul></div>' +
       '<div class="pane-body"><div class="pane-note">…</div></div>' +
       '<span class="pane-resize" aria-hidden="true"></span>';
     const head = pane.querySelector('.pane-head') as HTMLElement;
@@ -2352,6 +2644,29 @@ export class GlassField {
       event.stopPropagation();
       void this.sendFromPane(noteId);
     });
+    (pane.querySelector('.pane-related') as HTMLElement).addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.toggleRelated(noteId);
+    });
+    const links = pane.querySelector('.pane-links') as HTMLElement;
+    links.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const row = target.closest<HTMLElement>('.link-row');
+      const id = row?.dataset['noteId'];
+      if (id === undefined) return;
+      event.stopPropagation();
+      if (target.closest('.link-open') !== null) void this.openNeighbour(noteId, id);
+      else void this.showNeighbour(noteId, id);
+    });
+    // Escape closes the list and nothing else: it is a local control, and the
+    // same key must not also leave the focus or sweep the desk (DES-0003).
+    links.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleRelated(noteId, false);
+      (pane.querySelector('.pane-related') as HTMLElement).focus();
+    });
     (pane.querySelector('.pane-resize') as HTMLElement).addEventListener('pointerdown', (event) =>
       this.resizePane(noteId, pane, event),
     );
@@ -2369,44 +2684,8 @@ export class GlassField {
 
   private paintPane(pane: HTMLElement, deskCard: DeskCard, index: number): void {
     const card = this.cardFor(deskCard.noteId);
-    // Clamped at PAINT time, as Spread clamps a card, and never in the store:
-    // a desk arranged on a wide screen keeps its positions, and a pane the
-    // reading column or a smaller window would hide stays whole on screen.
-    // While a note is in the middle (FEAT-0017): it is drawn at the focus
-    // size there, and every other held note waits in the dock as its header,
-    // down the field's left edge. Stored places and sizes are untouched
-    // (decisions 11 and 13). A pane being dragged keeps where the hand put it.
     const focus = this.focusId();
-    const isFocus = focus === deskCard.noteId && this.focusRect !== null;
-    const docked = focus !== null && !isFocus && deskCard.wide !== true;
-    pane.classList.toggle('focus', isFocus);
-    pane.classList.toggle('docked', docked);
-    if (!pane.classList.contains('dragging')) {
-      if (isFocus && this.focusRect !== null) {
-        pane.style.left = `${this.focusRect.left}px`;
-        pane.style.top = `${this.focusRect.top}px`;
-        pane.style.width = `${this.focusRect.width}px`;
-        pane.style.height = `${this.focusRect.height}px`;
-      } else if (docked) {
-        const dockIndex = this.held.filter((c) => c.noteId !== focus && c.wide !== true).findIndex((c) => c.noteId === deskCard.noteId);
-        pane.style.left = '8px';
-        pane.style.top = `${8 + dockIndex * (PANE_HEADER_HEIGHT + 4)}px`;
-        pane.style.width = `${DOCK_WIDTH - 16}px`;
-        pane.style.height = `${PANE_HEADER_HEIGHT}px`;
-      } else {
-        const { left, top, w, h } = this.paneRect(deskCard);
-        pane.style.left = `${left}px`;
-        pane.style.top = `${top}px`;
-        pane.style.width = `${w}px`;
-        pane.style.height = `${h}px`;
-      }
-    }
-    // Stacking is the desk's order: a raised pane is the last one, and it
-    // covers everything under it, header included. Headers stay readable
-    // because a pane dropped on one snaps below it (snapBelowHeaders), not by
-    // drawing every header above every body: that showed a lower pane's
-    // header through the text of the pane on top of it (ISS-0066).
-    pane.style.zIndex = String(isFocus ? 3900 : 3000 + index);
+    pane.classList.toggle('focus', focus === deskCard.noteId);
     pane.classList.toggle('wide', deskCard.wide === true);
     pane.classList.toggle('top', index === this.held.length - 1);
     pane.dataset['status'] = card === null ? 'planned' : bandFor(card.status);
@@ -2420,7 +2699,8 @@ export class GlassField {
     setText(pane, '.pane-status', card === null ? 'not in this view' : `${card.status || 'no status'}${inView ? '' : ' · not in this view'}`);
     setText(pane, '.pane-face', card === null ? '' : faceText(card, this.input.faces));
     const head = pane.querySelector('.pane-head') as HTMLElement;
-    head.setAttribute('aria-label', `${deskCard.noteId}${card === null ? '' : ` ${card.title}`}, held: arrow keys move, Alt and arrows resize, Enter raises, W widens, S sends, Delete puts back`);
+    head.setAttribute('aria-label', `${deskCard.noteId}${card === null ? '' : ` ${card.title}`}, held: arrow keys move, Alt and arrows resize, Enter gathers what it is joined to, R lists them, W widens, S sends, Delete puts back`);
+    this.paintRelated(pane, deskCard.noteId);
     const body = pane.querySelector('.pane-note') as HTMLElement;
     const cached = this.paneBodies.get(deskCard.noteId);
     if (cached !== undefined) {
@@ -2445,6 +2725,139 @@ export class GlassField {
     }
   }
 
+  /**
+   * The complete list of what a document is joined to, in the document
+   * itself: the count on its header, and the rows when the list is open.
+   *
+   * Every neighbour has a row, whether its card is in sight, past the edge of
+   * the field, or a document of its own. This is what replaces "+N more": the
+   * arrangement may be larger than the window, and the list is how each part
+   * of it is named and reached, by pointer or by keyboard (TASK-0104).
+   */
+  private paintRelated(pane: HTMLElement, noteId: string): void {
+    const button = pane.querySelector('.pane-related') as HTMLElement;
+    const panel = pane.querySelector('.pane-links') as HTMLElement;
+    const known = this.hooks.peekContext(noteId) !== undefined;
+    const neighbours = this.neighboursOf(noteId);
+    const open = this.relatedOpen === noteId;
+    button.textContent = known ? `${neighbours.length} related` : '… related';
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', known ? `${neighbours.length} notes joined to ${noteId}: ${open ? 'hide' : 'show'} the list` : `The notes joined to ${noteId} are still being read`);
+    panel.hidden = !open;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', `Notes joined to ${noteId}`);
+    if (!open) return;
+    const list = panel.querySelector('.link-list') as HTMLElement;
+    const rows = this.relatedRows(noteId, neighbours);
+    const signature = rows.map((r) => `${r.id}|${r.direction}|${r.where}|${r.title}`).join('\n');
+    if (list.dataset['signature'] === signature) return;
+    list.dataset['signature'] = signature;
+    const kept = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.link-row')?.dataset['noteId'] ?? null;
+    const keptOpen = (document.activeElement as HTMLElement | null)?.classList.contains('link-open') === true;
+    const inPanel = panel.contains(document.activeElement);
+    list.replaceChildren(
+      ...rows.map((row) => {
+        const item = document.createElement('li');
+        item.className = 'link-row';
+        item.dataset['noteId'] = row.id;
+        item.dataset['direction'] = row.direction;
+        const go = document.createElement('button');
+        go.type = 'button';
+        go.className = 'link-go';
+        const said = row.direction === 'out' ? `${noteId} links to it` : row.direction === 'in' ? `it links to ${noteId}` : 'linked both ways';
+        go.setAttribute('aria-label', `${row.id} ${row.title}, ${said}${row.where === '' ? '' : `, ${row.where}`}. Show where it is.`);
+        for (const [cls, value] of [
+          ['link-dir', row.direction === 'out' ? '→' : row.direction === 'in' ? '←' : '⇄'],
+          ['link-id', row.id],
+          ['link-title', row.title],
+          ['link-where', row.where],
+        ] as const) {
+          const span = document.createElement('span');
+          span.className = cls;
+          span.textContent = value;
+          go.appendChild(span);
+        }
+        const openIt = document.createElement('button');
+        openIt.type = 'button';
+        openIt.className = 'link-open';
+        openIt.textContent = 'open';
+        openIt.setAttribute('aria-label', `Open ${row.id} as a document`);
+        item.append(go, openIt);
+        return item;
+      }),
+    );
+    if (rows.length === 0) {
+      const none = document.createElement('li');
+      none.className = 'link-none';
+      none.textContent = known ? 'This note links to no other note, and no note links to it.' : 'Reading what this note is joined to…';
+      list.appendChild(none);
+    }
+    // A repaint must not take the keyboard off the row it was on.
+    if (inPanel && kept !== null) {
+      const again = Array.from(list.querySelectorAll<HTMLElement>('.link-row')).find((r) => r.dataset['noteId'] === kept);
+      const control = again === undefined ? null : again.querySelector<HTMLElement>(keptOpen ? '.link-open' : '.link-go');
+      control?.focus({ preventScroll: true });
+    }
+  }
+
+  /** The rows of a document's list: every neighbour, in one stable order, with where each one is. */
+  private relatedRows(noteId: string, neighbours: readonly Neighbour[]): Array<Neighbour & { where: string }> {
+    const rank = (n: Neighbour): number => (n.direction === 'out' ? 0 : n.direction === 'both' ? 1 : 2);
+    const focused = this.focusId() === noteId;
+    return [...neighbours]
+      .sort((a, b) => rank(a) - rank(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .map((n) => {
+        let where = '';
+        if (n.held) where = 'open on the desk';
+        else if (focused) {
+          const at = this.seatedAt.get(n.id);
+          if (at !== undefined) {
+            const edge = beyondEdges([{ left: at.x - SEAT.width / 2, top: at.y - SEAT.height / 2, width: SEAT.width, height: SEAT.height }], this.viewport);
+            where = edge.left > 0 ? 'beyond the left edge' : edge.right > 0 ? 'beyond the right edge' : edge.up > 0 ? 'above the field' : edge.down > 0 ? 'below the field' : '';
+          }
+        }
+        return { ...n, where };
+      });
+  }
+
+  /** Open or close a document's list of related notes. One list at a time, in this window. */
+  private toggleRelated(noteId: string, open: boolean = this.relatedOpen !== noteId): void {
+    this.relatedOpen = open ? noteId : this.relatedOpen === noteId ? null : this.relatedOpen;
+    if (open) void this.hooks.context(noteId).then(() => this.active && this.drawPanes()).catch(() => null);
+    this.drawPanes();
+  }
+
+  /**
+   * Every note a held note is joined to, and which way each link runs: what
+   * it links to, what links to it, each once. The sidecar's answer, complete.
+   */
+  private neighboursOf(noteId: string): Neighbour[] {
+    const context = this.hooks.peekContext(noteId);
+    if (context === undefined) return [];
+    const heldIds = new Set(this.held.map((c) => c.noteId));
+    const by = new Map<string, Neighbour>();
+    const add = (item: ContextItem, direction: 'out' | 'in'): void => {
+      if (item.id === noteId) return;
+      const known = by.get(item.id);
+      if (known !== undefined) {
+        if (known.direction !== direction) known.direction = 'both';
+        return;
+      }
+      const card = this.cardFor(item.id);
+      by.set(item.id, {
+        id: item.id,
+        title: card?.title ?? item.title,
+        status: card?.status ?? item.status,
+        direction,
+        held: heldIds.has(item.id),
+        shared: this.shared.has(item.id),
+      });
+    };
+    for (const item of context.linked) add(item, 'out');
+    for (const item of context.backlinks) add(item, 'in');
+    return [...by.values()];
+  }
+
   /** The zoom of the arrangement on screen. */
   zoom(): Zoom {
     return this.arrangement === 'orbit' ? this.zoomOrbit : this.zoomBands;
@@ -2461,28 +2874,21 @@ export class GlassField {
    * reach and the smoke run all read what is on the screen.
    */
   private at(slot: { theta: number; depth: number; y: number }, yaw: number): Projection {
-    // While a note is in the middle the rest steps back: drawn at 0.85 of the
-    // person's zoom, about the middle (FEAT-0017, decision 9).
+    // While a document is the focus the rest of the field steps back: drawn
+    // at 0.85 of the person's zoom, about the middle (FEAT-0017, decision 7).
     const zoom = this.focusId() !== null ? zoomAbout(this.zoom(), 0.85, this.middle(), this.viewport) : this.zoom();
     return applyZoom(project(slot, yaw, this.viewport), zoom, this.viewport);
   }
 
-  /** A slot where it is drawn with no note in the middle: the angle a neighbour had before the lift. */
-  private atPlain(slot: { theta: number; depth: number; y: number }): Projection {
-    return applyZoom(project(slot, this.model.yaw, this.viewport), this.zoom(), this.viewport);
-  }
-
   /**
-   * Zoom by a factor about a point of the field, now (FEAT-0016). When the
-   * wheel has been still for 150 ms the field moves covered cards out from
-   * under the panes once, as after a turn: panes are fixed to the screen, so a
-   * zoom slides cards under them (decision 3).
+   * Zoom by a factor about a point of the field, now (FEAT-0016). The desk is
+   * not zoomed: a document's text stays the size the person reads at, and the
+   * field's cards pass behind it.
    */
   zoomBy(factor: number, pivot: { x: number; y: number }): void {
     this.cancelZoomEase();
     this.setZoom(zoomAbout(this.zoom(), factor, pivot, this.viewport));
     this.render(false);
-    this.settleZoom();
   }
 
   /** A key's step, or a reset: eased over 150 ms, a cut under reduced motion. */
@@ -2492,7 +2898,6 @@ export class GlassField {
     if (this.hooks.reducedMotion()) {
       this.setZoom(target);
       this.render(false);
-      this.settleZoom();
       return;
     }
     const start = performance.now();
@@ -2506,7 +2911,6 @@ export class GlassField {
         this.zoomEase = null;
         this.setZoom(target);
         this.render(false);
-        this.settleZoom();
       }
     };
     this.zoomEase = requestAnimationFrame(step);
@@ -2515,14 +2919,6 @@ export class GlassField {
   private cancelZoomEase(): void {
     if (this.zoomEase !== null) cancelAnimationFrame(this.zoomEase);
     this.zoomEase = null;
-  }
-
-  private settleZoom(): void {
-    if (this.zoomSettle !== null) clearTimeout(this.zoomSettle);
-    this.zoomSettle = setTimeout(() => {
-      this.zoomSettle = null;
-      this.turnEnd();
-    }, 150);
   }
 
   /** The middle of the field, where a key's zoom is centred. */
@@ -2547,23 +2943,17 @@ export class GlassField {
       this.cancelFlight();
       this.model.face(this.model.yaw + delta * TURN_PER_PX);
       this.render(false);
-      if (this.wheelTurnEnd !== null) clearTimeout(this.wheelTurnEnd);
-      this.wheelTurnEnd = setTimeout(() => {
-        this.wheelTurnEnd = null;
-        this.turnEnd();
-      }, 150);
       return;
     }
     const box = this.el.field.getBoundingClientRect();
     this.zoomBy(wheelFactor(event.deltaY, event.deltaMode, event.ctrlKey, this.viewport.height), { x: event.clientX - box.left, y: event.clientY - box.top });
   }
 
-  // ---- the note in the middle (FEAT-0017) ----
+  // ---- the focused document and what is gathered round it (FEAT-0017) ----
 
   /**
-   * The note in the middle: the top of this window's desk, while the middle
-   * is in use (decision 2). None while notes are hidden or the top pane is in
-   * the reading column.
+   * The document in focus: the top of this window's desk, while focus is on.
+   * None while notes are hidden or the top document is in the reading column.
    */
   focusId(): string | null {
     if (!this.focusOn || this.panesHidden || !this.active) return null;
@@ -2572,256 +2962,440 @@ export class GlassField {
     return top.noteId;
   }
 
-  /** The ring's notes in ring order, for the navigator; null with no note in the middle. */
-  ringOrder(): string[] | null {
-    return this.focusId() === null ? null : this.ringView.order();
+  /** The focus's neighbours clockwise from the top, for the navigator; null with no focus. */
+  neighbourOrder(): string[] | null {
+    const id = this.focusId();
+    return id === null || this.seating === null || this.seating.docId !== id ? null : [...this.seating.order];
   }
 
-  /** Where the middle is in use, and the pane's rectangle there: for the smoke run. */
-  focusState(): { noteId: string | null; pane: Rect | null; ring: Array<{ id: string; x: number; y: number }>; more: number; neighbours: number } {
+  /**
+   * What the focus looks like now, for the smoke run: the document as drawn,
+   * each neighbour's card and whether it is in the field, how many neighbours
+   * the note has in all, how many lines are drawn, and where the desk is.
+   */
+  focusState(): {
+    noteId: string | null;
+    pane: Rect | null;
+    seated: Array<{ id: string; x: number; y: number; inSight: boolean }>;
+    neighbours: number;
+    lines: number;
+    pan: Point;
+    bearing: number;
+  } {
     const id = this.focusId();
-    const ring = [...this.ringView.positions()].map(([noteId, p]) => ({ id: noteId, x: p.x, y: p.y }));
-    return { noteId: id, pane: id === null ? null : this.focusRect, ring, more: this.ringMore, neighbours: this.ringCount };
+    const card = id === null ? undefined : this.held.find((c) => c.noteId === id);
+    const seated = [...this.seatedAt].map(([noteId, at]) => ({
+      id: noteId,
+      x: at.x,
+      y: at.y,
+      inSight: this.cardEls.get(noteId)?.style.pointerEvents === 'auto',
+    }));
+    return {
+      noteId: id,
+      pane: card === undefined ? null : this.drawnRect(card),
+      seated,
+      neighbours: id === null ? 0 : this.neighboursOf(id).length,
+      lines: this.links.count(),
+      pan: { ...this.deskPan },
+      bearing: this.deskBearing,
+    };
   }
-  private ringMore = 0;
-  private ringCount = 0;
-  private layoutCache: { key: string; layout: FocusLayout } | null = null;
+
   /** The workspace and view the band shapes were worked out for. */
   private shapeKey = '';
 
   /**
-   * Open the middle for the note just lifted or brought forward, growing
-   * from where its card stands (decision 3). `from` is that card's rectangle
-   * in field coordinates, or null to grow from the middle.
+   * Make a note the focus as it is opened or brought forward. `from` is the
+   * card or the row its document grows from.
+   *
+   * The desk comes round to where the person is facing, with nothing looked
+   * aside at: a person who reaches for a note gets it in front of them
+   * whichever way they had turned.
    */
   private openFocus(noteId: string, from: Rect | null): void {
     this.focusOn = true;
-    this.cancelFocusAnim();
-    this.focusAnim = { noteId, start: performance.now(), from, frame: null };
+    this.opening = { noteId, from };
+    this.moveDesk(this.model.yaw, { x: 0, y: 0 });
+    this.startGather();
     this.scheduleIdle();
   }
 
-  private cancelFocusAnim(): void {
-    if (this.focusAnim?.frame != null) cancelAnimationFrame(this.focusAnim.frame);
-    this.focusAnim = null;
+  /** Let the cards move to their seats, or back to their slots, over `GATHER_MS`. A cut under reduced motion. */
+  private startGather(): void {
+    if (this.gatherTimer !== null) clearTimeout(this.gatherTimer);
+    this.gatherTimer = null;
+    if (this.hooks.reducedMotion()) {
+      this.el.field.classList.remove('gather');
+      return;
+    }
+    this.el.field.classList.add('gather');
+    this.gatherTimer = setTimeout(() => {
+      this.gatherTimer = null;
+      this.el.field.classList.remove('gather');
+    }, GATHER_MS + 50);
   }
 
-  /** Leave the middle with no deal and no turn: a switch of view or surface, or a note put back. */
+  /** Leave the focus with nothing drawn: a switch of view or surface, or notes hidden. */
   private dropFocus(): void {
     if (!this.focusOn) return;
     this.focusOn = false;
-    this.focusFrom = null;
-    this.cancelFocusAnim();
-    this.focusRect = null;
-    this.ringView.clear();
+    this.seating = null;
+    this.seatEntries.clear();
+    this.seatedAt = new Map();
+    this.opening = null;
+    this.openAnim?.cancel();
+    this.dragOf = null;
+    this.deskPan = { x: 0, y: 0 };
+    this.links.clear();
     this.el.field.classList.remove('focusing');
     this.scheduleIdle();
   }
 
   /**
-   * Leave the middle (Escape, and every other way out): the panes go back to
-   * their places, and the field is dealt once for the notes still held, by
-   * FEAT-0010's rule, and turns to face their neighbourhood (decision 10).
+   * Leave the focus (Escape, and closing the focused document). The cards
+   * gathered round the document go back to the slots they came from, and no
+   * other card moves: the field was never dealt for the focus, so there is
+   * nothing to deal again (FEAT-0017, decision 7; ISS-0072). Every document
+   * stays where it is.
    */
   leaveFocus(): void {
-    if (this.focusId() === null) {
-      this.dropFocus();
-      return;
-    }
+    if (!this.focusOn) return;
     this.dropFocus();
-    this.faceOnArrival = this.held.length > 0;
-    this.redeal(true);
+    if (!this.active) return;
+    this.startGather();
+    this.render(false);
+    this.drawPanes();
   }
 
   /**
-   * Draw the middle: the pane at its place, the dock, the dimmed field and
-   * the ring, at the stage the opening has reached.
+   * Seat the focus's neighbours round its document.
+   *
+   * Worked out when the focus, the document's size, the field's height or the
+   * set of neighbours changes, and kept as offsets from the document's corner
+   * otherwise: a document that is moved carries the arrangement as it is
+   * (ISS-0072). The document's size is read, never set (ISS-0071).
    */
-  private drawFocus(): void {
+  private seatNeighbourhood(): void {
     const id = this.focusId();
     this.el.field.classList.toggle('focusing', id !== null);
     if (id === null) {
       if (this.focusOn && this.held.length === 0) this.focusOn = false;
-      this.focusRect = null;
-      this.ringView.clear();
+      this.seating = null;
+      this.seatEntries.clear();
       return;
     }
+    const card = this.held.find((c) => c.noteId === id);
     const context = this.hooks.peekContext(id);
-    if (context === undefined) void this.hooks.context(id).then(() => this.active && this.drawFocus()).catch(() => null);
-    const dock = this.held.length > 1 ? DOCK_WIDTH : 0;
-    const neighbours = this.ringNeighbours(id, context);
-    this.ringCount = neighbours.length;
-    // With a note the person came from, the ring starts opposite the way they
-    // came, so that note sits there and the line between the two keeps its
-    // direction (decision 5).
-    const cameFromAngle = this.focusFrom !== null && neighbours.some((n) => n.cameFrom === true) ? this.focusFrom.angle + Math.PI : null;
-    // Worked out once per field size, dock, count and starting angle, not on
-    // every frame of the opening.
-    // The compass is drawn over the field's corner; no mini note stands under it.
-    const box = this.el.field.getBoundingClientRect();
-    const c = this.el.compass.getBoundingClientRect();
-    const avoid: Rect[] = c.width > 0 ? [{ left: c.left - box.left - 8, top: c.top - box.top - 8, width: c.width + 16, height: c.height + 16 }] : [];
-    const layoutKey = `${this.viewport.width}x${this.viewport.height}|${dock}|${neighbours.length}|${(cameFromAngle ?? -Math.PI / 2).toFixed(4)}|${avoid.map((r) => `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`).join(';')}`;
-    if (this.layoutCache === null || this.layoutCache.key !== layoutKey) this.layoutCache = { key: layoutKey, layout: focusLayout(this.viewport, dock, neighbours.length, cameFromAngle ?? -Math.PI / 2, avoid) };
-    const layout = this.layoutCache.layout;
-    const { chosen, more } = chooseForRing(neighbours, layout.places.length);
-    this.ringMore = more;
-    const { seats, morePlace } = seatRing(chosen, layout, more, cameFromAngle);
-    // The opening's stages: the card grows where it stands, then everything
-    // gathers (decision 3). Under reduced motion both are a cut (decision 16).
-    const reduced = this.hooks.reducedMotion();
-    const anim = this.focusAnim !== null && this.focusAnim.noteId === id ? this.focusAnim : null;
-    const elapsed = anim === null || reduced ? GROW_MS + GATHER_MS : performance.now() - anim.start;
-    const grown = this.grownRect(anim?.from ?? null, layout);
-    let pane: Rect;
-    if (elapsed < GROW_MS) {
-      const from = anim?.from ?? grown;
-      pane = lerpRect(from, grown, ease(elapsed / GROW_MS));
-    } else {
-      pane = lerpRect(grown, layout.pane, ease(Math.min(1, (elapsed - GROW_MS) / GATHER_MS)));
-    }
-    this.focusRect = pane;
-    const gather = Math.max(0, Math.min(1, (elapsed - GROW_MS) / GATHER_MS));
-    const byId = new Map(neighbours.map((n) => [n.id, n]));
-    const items: RingItem[] = seats.map((seat) => {
-      const n = byId.get(seat.id) as RingNeighbour & { title: string; start: Point };
-      return { id: seat.id, title: n.title, direction: n.direction, held: n.held === true, shared: n.shared === true, start: n.start, seat: seat.place };
-    });
-    this.ringView.paint({ centre: layout.centre, pane, items, t: gather, more: more > 0 && morePlace !== null ? { count: more, place: morePlace } : null, focusId: id });
-    this.drawPanes();
-    if (anim !== null && !reduced && elapsed < GROW_MS + GATHER_MS) {
-      if (anim.frame != null) cancelAnimationFrame(anim.frame);
-      anim.frame = requestAnimationFrame(() => {
-        if (this.focusAnim === anim) {
-          anim.frame = null;
-          this.drawFocus();
-        }
-      });
-    } else if (anim !== null) {
-      this.focusAnim = null;
-      if (reduced) {
-        this.ringView.highlight();
-        this.paneEls.get(id)?.classList.add('highlight');
-        setTimeout(() => this.paneEls.get(id)?.classList.remove('highlight'), 1600);
-      }
-    }
-  }
-
-  /** The pane at the end of the first stage: the focus size, standing where the card was. */
-  private grownRect(from: Rect | null, layout: FocusLayout): Rect {
-    if (from === null) return layout.pane;
-    const w = layout.pane.width;
-    const h = layout.pane.height;
-    const cx = from.left + from.width / 2;
-    const cy = from.top + from.height / 2;
-    return {
-      left: Math.max(0, Math.min(this.viewport.width - w, cx - w / 2)),
-      top: Math.max(0, Math.min(this.viewport.height - h, cy - h / 2)),
-      width: w,
-      height: h,
-    };
-  }
-
-  /**
-   * The note's neighbours as the ring needs them: which way each link runs,
-   * whether it is held, shared or owed, where it stood before the lift, and
-   * where it starts its move from (decisions 4 and 5).
-   */
-  private ringNeighbours(id: string, context: NoteContext | undefined): Array<RingNeighbour & { title: string; start: Point }> {
-    if (context === undefined) return [];
-    const out = new Map<string, 'out' | 'in' | 'both'>();
-    const titles = new Map<string, string>();
-    for (const item of context.linked) {
-      if (item.id === id) continue;
-      out.set(item.id, 'out');
-      titles.set(item.id, item.title);
-    }
-    for (const item of context.backlinks) {
-      if (item.id === id) continue;
-      out.set(item.id, out.get(item.id) === 'out' ? 'both' : 'in');
-      if (!titles.has(item.id)) titles.set(item.id, item.title);
+    if (card === undefined) return;
+    if (context === undefined) {
+      // Asked for, and seated when it arrives. Until then nothing is seated:
+      // the document is readable at once and does not wait for its neighbours.
+      if (this.seating !== null && this.seating.docId !== id) this.seating = null;
+      void this.hooks
+        .context(id)
+        .then(() => {
+          if (!this.active || this.focusId() !== id) return;
+          this.startGather();
+          this.seatNeighbourhood();
+          this.render(false);
+          this.drawPanes();
+        })
+        .catch(() => null);
+      return;
     }
     const heldIds = new Set(this.held.map((c) => c.noteId));
-    const middle = this.middle();
-    const result: Array<RingNeighbour & { title: string; start: Point }> = [];
-    for (const [nid, direction] of out) {
-      const slot = this.model.current.slots.get(nid);
-      const p = slot === undefined ? null : this.atPlain(slot);
-      const drawn = p !== null && p.visible;
-      const bearing = slot === undefined ? null : norm(slot.theta - this.model.yaw);
-      const angle = drawn && p !== null ? Math.atan2(p.y - middle.y, p.x - middle.x) : null;
-      const start = drawn && p !== null
-        ? { x: p.x, y: p.y }
-        : bearing !== null
-          ? { x: bearing < 0 ? 0 : this.viewport.width, y: middle.y }
-          : { x: middle.x, y: this.viewport.height };
-      const card = this.cardFor(nid);
-      result.push({
-        id: nid,
-        title: card?.title ?? titles.get(nid) ?? nid,
-        direction,
-        held: heldIds.has(nid),
-        shared: this.shared.has(nid),
-        owed: card?.owed === true,
-        cameFrom: this.focusFrom?.noteId === nid,
-        angle,
-        bearing,
-        start,
+    // A neighbour that is itself on the desk is a document already, and is
+    // not also given a card: the line runs to its document (decision 5).
+    const seatable = this.neighboursOf(id).filter((n) => !heldIds.has(n.id));
+    const r = this.paneRect(card);
+    const key = `${id}|${r.w}x${r.h}|${Math.round(this.viewport.height)}|${seatable.map((n) => n.id).sort().join(' ')}`;
+    if (this.seating !== null && this.seating.key === key) return;
+    const doc: Rect = { left: r.left, top: r.top, width: r.w, height: r.h };
+    const centre = { x: doc.left + doc.width / 2, y: doc.top + doc.height / 2 };
+    const seats = seatsAround({ doc, field: this.viewport, count: seatable.length, avoid: this.seatAvoid(id) });
+    // Where each card is drawn now, as an angle round the document as it is
+    // drawn now, so the cards keep the order they had round it.
+    const drawn = this.drawnRect(card);
+    const drawnCentre = { x: drawn.left + drawn.width / 2, y: drawn.top + drawn.height / 2 };
+    const before: SeatNeighbour[] = seatable.map((n) => {
+      const at = this.cardOnScreen(n.id);
+      const slot = this.model.current.slots.get(n.id);
+      return {
+        id: n.id,
+        angle: at !== null && at.visible ? Math.atan2(at.y - drawnCentre.y, at.x - drawnCentre.x) : null,
+        side: slot === undefined ? 0 : Math.sign(norm(slot.theta - this.model.yaw)),
+      };
+    });
+    const seated = seatNeighbours(before, seats, centre);
+    const clockwise = (p: Point): number => {
+      const a = Math.atan2(p.y - centre.y, p.x - centre.x) + Math.PI / 2;
+      return ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    };
+    this.seating = {
+      key,
+      docId: id,
+      offsets: new Map(seated.map(({ id: nid, seat }) => [nid, { x: seat.x - doc.left, y: seat.y - doc.top }])),
+      order: [...seated].sort((a, b) => clockwise(a.seat) - clockwise(b.seat) || a.seat.ring - b.seat.ring).map((x) => x.id),
+    };
+    // A card for every seated note the deal does not hold: one from outside
+    // the view, or one a full band counted and did not place.
+    this.seatEntries = new Map();
+    const items = new Map([...context.linked, ...context.backlinks].map((item) => [item.id, item]));
+    for (const n of seatable) {
+      if (this.entries.has(n.id)) continue;
+      const item = items.get(n.id);
+      const model = this.cardFor(n.id) ?? (item === undefined ? null : cardFromContext(item));
+      if (model === null) continue;
+      this.seatEntries.set(n.id, {
+        card: model,
+        groupKey: JOINED_GROUP.key,
+        groupLabel: JOINED_GROUP.label,
+        inputs: { owed: false, suppressed: false, inSubject: false, held: false, joinedToDesk: true, pulled: false, pushed: false },
       });
     }
-    return result;
+  }
+
+  /** What a seat must not stand under: the compass, the other documents, and whatever else is on the desk. */
+  private seatAvoid(focusId: string): Rect[] {
+    const out: Rect[] = [];
+    const box = this.el.field.getBoundingClientRect();
+    const c = this.el.compass.getBoundingClientRect();
+    if (c.width > 0) out.push({ left: c.left - box.left - 8, top: c.top - box.top - 8, width: c.width + 16, height: c.height + 16 });
+    for (const other of this.held) {
+      if (other.noteId === focusId) continue;
+      const r = this.paneRect(other);
+      out.push({ left: r.left, top: r.top, width: r.w, height: other.wide === true ? PANE_HEADER_HEIGHT : r.h });
+    }
+    out.push(...this.furniture());
+    return out;
+  }
+
+  /** Where each seated card is drawn now: the document as drawn, plus the card's offset from its corner. */
+  private seatPositions(): Map<string, Point> {
+    const out = new Map<string, Point>();
+    const id = this.focusId();
+    if (id === null || this.seating === null || this.seating.docId !== id) return out;
+    const card = this.held.find((c) => c.noteId === id);
+    if (card === undefined) return out;
+    const r = this.drawnRect(card);
+    for (const [noteId, offset] of this.seating.offsets) out.set(noteId, { x: r.left + offset.x, y: r.top + offset.y });
+    return out;
   }
 
   /**
-   * A mini note is a door (decision 7): clicking it opens that note in the
-   * middle. A held note's mini note brings its pane forward instead.
+   * The lines from the focused document to what is gathered round it.
+   *
+   * One line to each seated card, and one to each neighbour that is a
+   * document of its own. A card joined to a second open document gets a line
+   * to that one too: one card, and a connection for each note it is joined to
+   * (decision 5).
    */
-  private async openFromRing(id: string): Promise<void> {
-    const from = this.focusId();
-    const at = this.ringView.positions().get(id);
-    const centre = this.focusRect === null ? this.middle() : { x: this.focusRect.left + this.focusRect.width / 2, y: this.focusRect.top + this.focusRect.height / 2 };
-    this.focusFrom = from === null || at === undefined ? null : { noteId: from, angle: Math.atan2(at.y - centre.y, at.x - centre.x) };
-    const fromRect = at === undefined ? null : { left: at.x - 84, top: at.y - 22, width: 168, height: 44 };
-    if (this.held.some((c) => c.noteId === id)) {
-      this.openFocus(id, fromRect);
-      await this.hooks.dispatch({ type: 'raise-card', noteId: id });
+  private drawLinks(): void {
+    const id = this.focusId();
+    const card = id === null ? undefined : this.held.find((c) => c.noteId === id);
+    const shift = this.deskShift();
+    if (id === null || card === undefined || !shift.visible) {
+      this.links.clear();
       return;
     }
-    const context = from === null ? undefined : this.hooks.peekContext(from);
-    const item = context === undefined ? undefined : [...context.linked, ...context.backlinks].find((i) => i.id === id);
-    const card = this.cardFor(id) ?? (item === undefined ? null : cardFromContext(item));
-    if (card === null) return;
-    await this.lift(card, fromRect);
-  }
-
-  /** Resting on a mini note reaches for it: wires to those of its neighbours on screen (decision 20). */
-  private restOnMini(id: string | null): void {
-    if (this.ringReachTimer !== null) clearTimeout(this.ringReachTimer);
-    this.ringReachTimer = null;
-    if (id === null) {
-      this.ringView.wires(null, []);
-      return;
+    const from = this.drawnRect(card);
+    const lines: LinkLine[] = [];
+    const neighbours = new Map(this.neighboursOf(id).map((n) => [n.id, n]));
+    const others = this.held.filter((c) => c.noteId !== id && c.wide !== true);
+    const othersJoin = others.map((other) => ({ other, joined: new Map(this.neighboursOf(other.noteId).map((n) => [n.id, n])) }));
+    for (const [noteId, at] of this.seatedAt) {
+      const n = neighbours.get(noteId);
+      if (n === undefined) continue;
+      lines.push({ id: noteId, fromId: id, direction: n.direction, from, to: at });
+      for (const { other, joined } of othersJoin) {
+        const also = joined.get(noteId);
+        if (also !== undefined) lines.push({ id: noteId, fromId: other.noteId, direction: also.direction, from: this.drawnRect(other), to: at, shared: true });
+      }
     }
-    this.ringReachTimer = setTimeout(() => {
-      void this.hooks.context(id).then((context) => {
-        const from = this.ringView.positions().get(id);
-        if (from === undefined || this.focusId() === null) return;
-        const ring = this.ringView.positions();
-        const focus = this.focusId();
-        const to: Point[] = [];
-        for (const item of neighboursOf(context)) {
-          const onRing = ring.get(item.id);
-          if (onRing !== undefined && item.id !== id) to.push(onRing);
-          else if (item.id === focus && this.focusRect !== null) to.push({ x: this.focusRect.left + this.focusRect.width / 2, y: this.focusRect.top + this.focusRect.height / 2 });
-        }
-        this.ringView.wires(from, to);
-      }).catch(() => null);
-    }, REACH_REST_MS);
+    for (const other of others) {
+      const n = neighbours.get(other.noteId);
+      if (n === undefined) continue;
+      const r = this.drawnRect(other);
+      lines.push({ id: other.noteId, fromId: id, direction: n.direction, from, to: { x: r.left + r.width / 2, y: r.top + Math.min(r.height, PANE_HEADER_HEIGHT) / 2 } });
+    }
+    this.links.paint(lines, shift.opacity);
   }
 
   /**
-   * Resting on a ring line shows which way the link runs and the sentence it
-   * sits in (decision 8), from the workspace's edge list, read once per index
+   * Move the desk: bring it round to a bearing, or aside by a number of
+   * pixels, over `DESK_MOVE_MS`. A cut under reduced motion, and a cut when
+   * the desk is out of sight, where there is nothing to watch move.
+   */
+  private moveDesk(bearing: number, pan: Point, then: () => void = () => {}): void {
+    if (this.deskEase !== null) cancelAnimationFrame(this.deskEase);
+    this.deskEase = null;
+    const fromBearing = this.deskBearing;
+    const turn = norm(bearing - fromBearing);
+    const fromPan = { ...this.deskPan };
+    const still = Math.abs(turn) < 1e-4 && Math.abs(fromPan.x - pan.x) < 0.5 && Math.abs(fromPan.y - pan.y) < 0.5;
+    if (still || this.hooks.reducedMotion() || !this.active || !this.deskShift().visible || this.held.length === 0) {
+      this.deskBearing = norm(bearing);
+      this.deskPan = { ...pan };
+      if (this.active && !still) this.render(false);
+      then();
+      return;
+    }
+    const start = performance.now();
+    const step = (now: number): void => {
+      const t = Math.min(1, (now - start) / DESK_MOVE_MS);
+      const e = ease(t);
+      this.deskBearing = norm(fromBearing + turn * e);
+      this.deskPan = { x: fromPan.x + (pan.x - fromPan.x) * e, y: fromPan.y + (pan.y - fromPan.y) * e };
+      this.el.field.classList.add('desk-moving');
+      this.render(false);
+      if (t < 1) {
+        this.deskEase = requestAnimationFrame(step);
+        return;
+      }
+      this.deskEase = null;
+      this.el.field.classList.remove('desk-moving');
+      then();
+    };
+    this.deskEase = requestAnimationFrame(step);
+  }
+
+  /**
+   * Bring a seated neighbour into view and put the keyboard on its card: the
+   * named way to a card the arrangement has put past the edge of the field
+   * (TASK-0104). The desk moves the least that shows the card; nothing is
+   * resized and no card changes seat.
+   */
+  locate(noteId: string): boolean {
+    const id = this.focusId();
+    const card = id === null ? undefined : this.held.find((c) => c.noteId === id);
+    const offset = this.seating?.offsets.get(noteId);
+    if (id === null || card === undefined || offset === undefined) return false;
+    const r = this.paneRect(card);
+    // Where the card would be with the desk in front of the person, and the
+    // desk moved as far aside as it is now.
+    const shown: Rect = {
+      left: r.left + offset.x - SEAT.width / 2 + this.deskPan.x,
+      top: r.top + offset.y - SEAT.height / 2 + this.deskPan.y,
+      width: SEAT.width,
+      height: SEAT.height,
+    };
+    const by = revealShift(shown, this.viewport, LOCATE_MARGIN);
+    this.moveDesk(this.model.yaw, { x: this.deskPan.x + by.x, y: this.deskPan.y + by.y }, () => {
+      this.highlight = noteId;
+      this.render(false);
+      this.clearHighlightLater();
+      this.cardEls.get(noteId)?.focus({ preventScroll: true });
+    });
+    return true;
+  }
+
+  /**
+   * "Find open note": bring the desk back in front of the person, with the
+   * document in view, however far it was turned from or moved aside. The
+   * document keeps its place on the desk and its size.
+   */
+  findOpen(noteId: string | null = this.focusId() ?? this.held[this.held.length - 1]?.noteId ?? null): boolean {
+    const card = noteId === null ? undefined : this.held.find((c) => c.noteId === noteId);
+    if (noteId === null || card === undefined) return false;
+    const r = this.paneRect(card);
+    const by = revealShift({ left: r.left, top: r.top, width: r.w, height: Math.min(r.h, this.viewport.height) }, this.viewport, 0);
+    this.moveDesk(this.model.yaw, by, () => {
+      const pane = this.paneEls.get(noteId);
+      if (pane === undefined) return;
+      pane.classList.add('highlight');
+      setTimeout(() => pane.classList.remove('highlight'), 1600);
+      (pane.querySelector('.pane-head') as HTMLElement | null)?.focus({ preventScroll: true });
+    });
+    return true;
+  }
+
+  /** An edge counter was pressed: bring the nearest card beyond that edge into view. */
+  private lookBeyond(side: 'left' | 'right' | 'up' | 'down'): void {
+    let best: { id: string; far: number } | null = null;
+    for (const [id, at] of this.seatedAt) {
+      const rect = { left: at.x - SEAT.width / 2, top: at.y - SEAT.height / 2, width: SEAT.width, height: SEAT.height };
+      const edge = beyondEdges([rect], this.viewport);
+      if (edge[side] === 0) continue;
+      const far = side === 'left' ? -rect.left : side === 'right' ? rect.left - this.viewport.width : side === 'up' ? -rect.top : rect.top - this.viewport.height;
+      if (best === null || far < best.far) best = { id, far };
+    }
+    if (best !== null) this.locate(best.id);
+  }
+
+  /**
+   * What stands at the field's edges while a document is on the desk: a
+   * counter for each edge the arrangement runs past, and "find" when the
+   * document a person would look for is not in front of them.
+   */
+  private drawDeskFurniture(): void {
+    const shift = this.deskShift();
+    const top = this.focusId() ?? this.held[this.held.length - 1]?.noteId ?? null;
+    const card = top === null ? undefined : this.held.find((c) => c.noteId === top);
+    let away = false;
+    if (card !== undefined && !this.panesHidden) {
+      const r = this.drawnRect(card);
+      const aside = Math.abs(this.deskPan.x) > 0.5 || Math.abs(this.deskPan.y) > 0.5;
+      away =
+        !shift.visible ||
+        shift.opacity < FIND_BELOW_OPACITY ||
+        aside ||
+        r.left + r.width < FIND_GRAB_PX ||
+        r.left > this.viewport.width - FIND_GRAB_PX ||
+        r.top > this.viewport.height - PANE_HEADER_HEIGHT;
+    }
+    this.el.findOpen.hidden = !away;
+    if (away && top !== null) {
+      this.el.findOpen.textContent = `find ${top}`;
+      this.el.findOpen.dataset['noteId'] = top;
+      this.el.findOpen.setAttribute('aria-label', `Find the open note ${top}: bring the desk back in front of you`);
+    }
+    const rects = shift.visible
+      ? [...this.seatedAt.values()].map((at) => ({ left: at.x - SEAT.width / 2, top: at.y - SEAT.height / 2, width: SEAT.width, height: SEAT.height }))
+      : [];
+    const counts = beyondEdges(rects, this.viewport);
+    for (const side of BEYOND_SIDES) {
+      const button = this.el.beyond.querySelector<HTMLButtonElement>(`[data-side="${side}"]`);
+      if (button === null) continue;
+      const n = counts[side];
+      button.hidden = n === 0;
+      if (n === 0) continue;
+      button.textContent = `${BEYOND_ARROW[side]} ${n} related`;
+      button.setAttribute('aria-label', `${n} related ${n === 1 ? 'note' : 'notes'} ${BEYOND_WORDS[side]}: bring the nearest into view`);
+    }
+  }
+
+  /**
+   * A row of a document's list was chosen: show where that note is. A note
+   * that is a document is found; any other is seated round this document,
+   * which becomes the focus if it was not, and its card is brought into view.
+   */
+  private async showNeighbour(docId: string, noteId: string): Promise<void> {
+    if (this.held.some((c) => c.noteId === noteId)) {
+      await this.bringForward(noteId);
+      this.findOpen(noteId);
+      return;
+    }
+    if (this.focusId() !== docId) await this.bringForward(docId);
+    // The seats follow the context, which the list was built from, so the
+    // card is seated by now; a neighbour with no card at all is opened.
+    if (!this.locate(noteId)) await this.openNeighbour(docId, noteId);
+  }
+
+  /** Open one of a document's neighbours as a document of its own, growing from its card when that is in sight. */
+  private async openNeighbour(docId: string, noteId: string): Promise<void> {
+    if (this.held.some((c) => c.noteId === noteId)) {
+      await this.bringForward(noteId);
+      return;
+    }
+    const context = this.hooks.peekContext(docId);
+    const item = context === undefined ? undefined : [...context.linked, ...context.backlinks].find((i) => i.id === noteId);
+    const card = this.cardFor(noteId) ?? (item === undefined ? null : cardFromContext(item));
+    if (card !== null) await this.lift(card);
+  }
+
+  /**
+   * Resting on a line shows which way the link runs and the sentence it sits
+   * in (decision 6), from the workspace's edge list, read once per index
    * revision the first time a line is rested on.
    */
   private async restOnLine(id: string | null, at: Point): Promise<void> {
@@ -2852,7 +3426,7 @@ export class GlassField {
    */
   setHidden(hidden: boolean): void {
     if (this.panesHidden === hidden) return;
-    // Hide notes leaves the middle, then hides (FEAT-0017, decision 15).
+    // Hide notes leaves the focus, then hides: with no document in sight there is nothing to gather round.
     if (hidden) this.dropFocus();
     this.panesHidden = hidden;
     this.el.panes.hidden = hidden;
@@ -2871,6 +3445,15 @@ export class GlassField {
     }
   }
 
+  /**
+   * A press on a document's header: it is raised, and a drag moves it.
+   *
+   * Moving is not resizing and is not leaving the focus (ISS-0071, ISS-0072).
+   * The document keeps the size it has, and when it is the focus the cards
+   * gathered round it are drawn with it at every step, so the arrangement is
+   * the same arrangement when the drag ends. No card in the field moves:
+   * nothing is dealt. Escape during the drag puts the document back.
+   */
   private grabPane(noteId: string, pane: HTMLElement, event: PointerEvent): void {
     this.scheduleIdle();
     if (event.button !== 0) return;
@@ -2878,43 +3461,43 @@ export class GlassField {
     if (!this.hooks.canArrange()) return;
     event.stopPropagation();
     const head = event.currentTarget as HTMLElement;
-    // A docked header is brought forward when it is released without moving,
-    // and a drag on it moves nothing (FEAT-0017, decision 11).
-    if (pane.classList.contains('docked')) {
-      const x0 = event.clientX;
-      const y0 = event.clientY;
-      const release = (e: PointerEvent): void => {
-        head.removeEventListener('pointerup', release);
-        if (Math.hypot(e.clientX - x0, e.clientY - y0) > CLICK_SLOP_PX) return;
-        void this.bringForward(noteId);
-      };
-      head.addEventListener('pointerup', release);
-      return;
-    }
     // A press on a header raises the pane, drag or not.
     void this.hooks.dispatch({ type: 'raise-card', noteId });
     head.setPointerCapture(event.pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
-    const left = pane.offsetLeft;
-    const top = pane.offsetTop;
+    const held = this.held.find((c) => c.noteId === noteId);
+    if (held === undefined) return;
+    const base = this.paneRect(held);
     const fieldBox = this.el.field.getBoundingClientRect();
     const samples: PointerSample[] = [];
     let moved = false;
     let edge: Edge | null = null;
     let targets: ThrowTarget[] = [];
     let hovered: ThrowTarget | null = null;
+    const finish = (): void => {
+      head.removeEventListener('pointermove', move);
+      head.removeEventListener('pointerup', up);
+      head.removeEventListener('pointercancel', up);
+      pane.classList.remove('dragging');
+      this.el.field.classList.remove('desk-moving');
+      this.showStrip(null, []);
+      this.dragCancel = null;
+    };
     const move = (e: PointerEvent): void => {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       if (!moved && Math.hypot(dx, dy) <= CLICK_SLOP_PX) return;
       moved = true;
       pane.classList.add('dragging');
-      // Dragging the note in the middle leaves the middle, and the pane lands
-      // where it is dropped (decision 13).
-      if (this.focusId() === noteId) this.leaveFocus();
-      pane.style.left = `${left + dx}px`;
-      pane.style.top = `${top + dy}px`;
+      this.el.field.classList.add('desk-moving');
+      this.dragOf = { noteId, dx, dy, x: held.x, y: held.y };
+      this.dragCancel = (): void => {
+        finish();
+        this.dragOf = null;
+        this.render(false);
+      };
+      this.render(false);
       const point = { t: e.timeStamp, x: e.clientX - fieldBox.left, y: e.clientY - fieldBox.top };
       samples.push(point);
       const near = this.overStrip(e.clientX, e.clientY) ? edge : edgeNear(point, this.viewport, THROW_EDGE_PX);
@@ -2934,36 +3517,52 @@ export class GlassField {
       hovered = this.stripTargetAt(e.clientX, e.clientY, targets);
     };
     const up = (e: PointerEvent): void => {
-      head.removeEventListener('pointermove', move);
-      head.removeEventListener('pointerup', up);
-      head.removeEventListener('pointercancel', up);
-      pane.classList.remove('dragging');
-      this.showStrip(null, []);
-      if (!moved) return;
+      const drag = this.dragOf;
+      finish();
+      if (!moved || drag === null || e.type === 'pointercancel') {
+        this.dragOf = null;
+        this.render(false);
+        return;
+      }
       const card = this.cardFor(noteId);
       if (hovered !== null && card !== null) {
         const target = hovered;
-        pane.style.left = `${left}px`;
-        pane.style.top = `${top}px`;
+        this.dragOf = null;
+        this.render(false);
         this.tell(`${noteId} sent to the ${target.label}`);
         void this.hooks.throwTo(target, card, edge ?? 'right');
         return;
       }
-      const w = pane.offsetWidth;
       const others = this.held
         .filter((c) => c.noteId !== noteId)
-        .map((c) => ({ noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? PANE_DEFAULT_WIDTH }));
-      const snapped = snapBelowHeaders(
-        { noteId, x: Math.max(0, left + e.clientX - startX), y: Math.max(0, top + e.clientY - startY), w },
-        others,
-      );
-      void this.hooks.dispatch({ type: 'move-card', noteId, x: snapped.x, y: snapped.y });
+        .map((c) => {
+          const r = this.paneRect(c);
+          return { noteId: c.noteId, x: r.left, y: r.top, w: r.w };
+        });
+      const snapped = snapBelowHeaders({ noteId, x: Math.max(0, base.left + drag.dx), y: Math.max(0, base.top + drag.dy), w: base.w }, others);
+      // The drag stays drawn until the store has the new place: `drawnRect`
+      // drops it the moment the stored place changes, so the document is
+      // never drawn at the old place in between, nor at both offsets at once.
+      void this.hooks.dispatch({ type: 'move-card', noteId, x: snapped.x, y: snapped.y }).finally(() => {
+        if (this.dragOf === drag) {
+          this.dragOf = null;
+          this.render(false);
+        }
+      });
     };
     head.addEventListener('pointermove', move);
     head.addEventListener('pointerup', up);
     head.addEventListener('pointercancel', up);
   }
 
+  /** Put back the document being dragged, when one is: Escape's first job. */
+  private dragCancel: (() => void) | null = null;
+
+  /**
+   * The corner: the one way a document's size changes by pointer. The store
+   * is told once, when the corner is let go, and what it is told is also the
+   * size the next note opened on this view takes (ISS-0071).
+   */
   private resizePane(noteId: string, pane: HTMLElement, event: PointerEvent): void {
     if (event.button !== 0 || !this.hooks.canArrange()) return;
     event.stopPropagation();
@@ -2973,6 +3572,7 @@ export class GlassField {
     const startY = event.clientY;
     const w0 = pane.offsetWidth;
     const h0 = pane.offsetHeight;
+    pane.classList.add('resizing');
     const move = (e: PointerEvent): void => {
       pane.style.width = `${Math.max(PANE_MIN_WIDTH, w0 + e.clientX - startX)}px`;
       pane.style.height = `${Math.max(PANE_MIN_HEIGHT, h0 + e.clientY - startY)}px`;
@@ -2980,30 +3580,36 @@ export class GlassField {
     const up = (e: PointerEvent): void => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', up);
-      void this.hooks.dispatch({
-        type: 'resize-card',
-        noteId,
-        w: w0 + e.clientX - startX,
-        h: h0 + e.clientY - startY,
-      });
+      handle.removeEventListener('pointercancel', up);
+      const done = (): void => {
+        pane.classList.remove('resizing');
+        if (this.active) this.placePanes();
+      };
+      if (e.type === 'pointercancel') {
+        done();
+        return;
+      }
+      // The cards round a resized focus move out to make room, over the same
+      // time they took to gather.
+      this.startGather();
+      void this.hooks.dispatch({ type: 'resize-card', noteId, w: w0 + e.clientX - startX, h: h0 + e.clientY - startY }).finally(done);
     };
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
   }
 
   private paneKey(noteId: string, event: KeyboardEvent): void {
-    // Tab from the header of the note in the middle goes to its ring, clockwise
-    // from the top, rather than through every link in its text (decision 17).
-    if (event.key === 'Tab' && !event.shiftKey && this.focusId() === noteId && event.target === event.currentTarget) {
-      const first = this.el.ring.querySelector<HTMLElement>('.ring-card:not(.ring-more)');
-      if (first !== null) {
-        event.preventDefault();
-        first.focus();
-        return;
-      }
-    }
+    if (event.target !== event.currentTarget) return;
     const card = this.held.find((c) => c.noteId === noteId);
-    if (card === undefined || !this.hooks.canArrange()) return;
+    if (card === undefined) return;
+    if (event.key === 'r' || event.key === 'R') {
+      event.preventDefault();
+      this.toggleRelated(noteId);
+      if (this.relatedOpen === noteId) this.paneEls.get(noteId)?.querySelector<HTMLElement>('.link-go, .pane-related')?.focus();
+      return;
+    }
+    if (!this.hooks.canArrange()) return;
     const step = event.shiftKey ? 64 : 16;
     const arrows: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0],
@@ -3015,20 +3621,24 @@ export class GlassField {
     if (by !== undefined) {
       event.preventDefault();
       if (event.altKey) {
-        void this.hooks.dispatch({
-          type: 'resize-card',
-          noteId,
-          w: (card.w ?? PANE_DEFAULT_WIDTH) + by[0],
-          h: (card.h ?? PANE_DEFAULT_HEIGHT) + by[1],
-        });
+        // The keyboard's corner: the same act as dragging it, from the size
+        // the document has, not the size a narrow window is drawing it at.
+        const state = this.hooks.state();
+        const size = readingSizeFor(card, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+        this.startGather();
+        void this.hooks.dispatch({ type: 'resize-card', noteId, w: size.w + by[0], h: size.h + by[1] });
       } else {
-        void this.hooks.dispatch({ type: 'move-card', noteId, x: Math.max(0, card.x + by[0]), y: Math.max(0, card.y + by[1]) });
+        // From where it is drawn, so a document clamped into a small field
+        // moves from where the person sees it. The neighbourhood follows,
+        // because its seats are measured from the document.
+        const r = this.paneRect(card);
+        void this.hooks.dispatch({ type: 'move-card', noteId, x: Math.max(0, r.left + by[0]), y: Math.max(0, r.top + by[1]) });
       }
       return;
     }
     if (event.key === 'Enter') {
       event.preventDefault();
-      // Enter on a header puts that note in the middle (decisions 2 and 11).
+      // Enter on a header makes that document the focus and gathers what it is joined to.
       void this.bringForward(noteId);
     } else if (event.key === 'w' || event.key === 'W') {
       event.preventDefault();
@@ -3051,8 +3661,10 @@ export class GlassField {
   /** × on a pane: the note goes back into the slot it left. */
   async putBack(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
-    // × on the note in the middle puts it back and leaves the middle (decision 13).
-    if (this.focusId() === noteId) this.dropFocus();
+    // Closing the focused document leaves the focus: its cards go back to
+    // their slots, and every other document stays where it is (decision 10).
+    if (this.focusId() === noteId) this.leaveFocus();
+    if (this.relatedOpen === noteId) this.relatedOpen = null;
     await this.hooks.dispatch({ type: 'take-off-desk', noteId });
   }
 
@@ -3083,17 +3695,12 @@ export class GlassField {
     );
   }
 
-  /** Bring a held note forward into the middle: a docked header clicked, or Enter on a header. */
+  /** Make a held note the focus: Enter on its header, or a row of another document's list that names it. */
   private async bringForward(noteId: string): Promise<void> {
-    const pane = this.paneEls.get(noteId);
-    const box = this.el.field.getBoundingClientRect();
-    const r = pane?.getBoundingClientRect();
-    this.focusFrom = null;
-    this.openFocus(noteId, r === undefined ? null : { left: r.left - box.left, top: r.top - box.top, width: r.width, height: r.height });
+    this.openFocus(noteId, null);
     await this.hooks.dispatch({ type: 'raise-card', noteId });
     // Already on top: no broadcast comes, so draw now.
-    this.drawPanes();
-    this.drawFocus();
+    if (this.active) this.redeal(false);
   }
 
   /** ⧉ or V on a pane: keep the note on every view, or give it back to this one (decision 6). */
@@ -3106,8 +3713,8 @@ export class GlassField {
 
   async widen(noteId: string): Promise<void> {
     if (!this.hooks.canArrange()) return;
-    // W on the note in the middle reads it in the column and leaves the middle.
-    if (this.focusId() === noteId) this.dropFocus();
+    // W on the focused document reads it in the column and leaves the focus.
+    if (this.focusId() === noteId) this.leaveFocus();
     const card = this.held.find((c) => c.noteId === noteId);
     const wide = card?.wide !== true;
     await this.hooks.dispatch({ type: 'widen-card', noteId, wide });

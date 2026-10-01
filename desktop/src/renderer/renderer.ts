@@ -347,7 +347,7 @@ const glass = new GlassField(glassElements(), {
   applyPending: () => applyPending(),
   reducedMotion,
   graphEdges: async () => {
-    // The workspace's edge list, for a ring line's sentence (FEAT-0017). Glass
+    // The workspace's edge list, for a line's sentence (FEAT-0017). Glass
     // asks once per index revision and forgets it when the notes change.
     const state = host.state();
     if (state.workspaceId === null) return [];
@@ -357,15 +357,6 @@ const glass = new GlassField(glassElements(), {
       await new Promise((r) => setTimeout(r, 400));
     }
     return [];
-  },
-  focusJoined: () => {
-    // "+N more" on the ring: the keyboard goes to the navigator's list of
-    // every note joined to the one in the middle.
-    // The navigator keys a group row as `g:` and the group's key.
-    const group = document.querySelector<HTMLElement>('#nav-list .nav-group[data-group-key="g:deck:joined"]');
-    let next = group?.nextElementSibling ?? null;
-    while (next !== null && !next.classList.contains('nav-row')) next = next.nextElementSibling;
-    (next as HTMLElement | null)?.focus();
   },
   sentence: async (edge: GraphEdge) => {
     const state = host.state();
@@ -913,9 +904,9 @@ function deskGroups(): CardGroup[] {
   const out: CardGroup[] = [
     { key: 'deck:held', label: 'On the desk', needsHuman: false, suppressed: false, cards: heldIds.map(card) },
   ];
-  // While a note is in the middle, its neighbours are listed in ring order,
-  // clockwise from the top, as Tab reaches them (FEAT-0017, decision 17).
-  const ring = glass.ringOrder();
+  // While a document is the focus, its neighbours are listed in the order
+  // their cards stand round it, clockwise from the top (FEAT-0017).
+  const ring = glass.neighbourOrder();
   const joined = [...joinedTo(heldIds, known)].sort((a, b) => {
     if (ring === null) return 0;
     const ia = ring.indexOf(a);

@@ -1,41 +1,86 @@
-// TST-0051 — the ring keeps order, clears the pane and moves on arcs
-// (FEAT-0017, TASK-0067).
+// TST-0051 — the seats round an opened note clear the document, keep the
+// cards' order, and run on past the window's edge (FEAT-0017, TASK-0104).
 //
-// While a note is the focus it stands as a pane in the middle of the field,
-// and its neighbours stand around it as mini notes. The geometry is pure, so
-// every promise about it is checked here without a window.
+// While a note is the focus it is a document at the size the person chose,
+// and the notes it is joined to are the field's own cards, moved to seats
+// round it. The geometry is pure, so every promise about it is checked here
+// without a window.
+//
+// Until 2026-10-01 this suite checked the opposite contract: a pane sized
+// from the number of neighbours, sixteen 168 by 44 copies kept inside the
+// window, and "+N more" for the rest. Edwin reversed all three on 2026-09-12
+// (ISS-0070, ISS-0071, ISS-0072).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { MINI, FOCUS_MIN, RING_GAP, DOCK_WIDTH, GROW_MS, GATHER_MS, focusLayout, chooseForRing, seatRing, arcPoint, ease } = load('shared/focus-ring.js');
+const { SEAT, SEAT_GAP, EDGE_MARGIN, BROWSE_SCALE, OPEN_MS, GATHER_MS, seatsAround, seatNeighbours, revealShift, beyondEdges, edgeAnchor, ease } = load('shared/focus-ring.js');
+const { CARD_BOX, FRONT, project } = load('shared/slots.js');
 
-const rectOf = (p) => ({ left: p.x - MINI.width / 2, right: p.x + MINI.width / 2, top: p.y - MINI.height / 2, bottom: p.y + MINI.height / 2 });
-const hits = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-const neighbour = (id, extra = {}) => ({ id, direction: 'out', angle: null, bearing: null, ...extra });
+const rectOf = (p) => ({ left: p.x - SEAT.width / 2, right: p.x + SEAT.width / 2, top: p.y - SEAT.height / 2, bottom: p.y + SEAT.height / 2 });
+const edges = (r) => ({ left: r.left, right: r.left + r.width, top: r.top, bottom: r.top + r.height });
+const hits = (a, b) => a.left < b.right - 1e-6 && a.right > b.left + 1e-6 && a.top < b.bottom - 1e-6 && a.bottom > b.top + 1e-6;
+const centred = (field, width, height) => ({ left: (field.width - width) / 2, top: (field.height - height) / 2, width, height });
+const neighbour = (id, extra = {}) => ({ id, angle: null, side: 0, ...extra });
 
-test('no mini note overlaps the pane or another mini note, and every one is inside the field and outside the dock', () => {
-  const fields = [
-    { width: 700, height: 480 },
-    { width: 1000, height: 700 },
-    { width: 1320, height: 860 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1300 },
-  ];
-  for (const field of fields) {
-    for (const dock of [0, DOCK_WIDTH]) {
-      for (let n = 1; n <= 16; n += 1) {
-        const layout = focusLayout(field, dock, n);
-        const pane = { left: layout.pane.left, right: layout.pane.left + layout.pane.width, top: layout.pane.top, bottom: layout.pane.top + layout.pane.height };
-        assert.ok(layout.pane.width >= FOCUS_MIN.width && layout.pane.height >= FOCUS_MIN.height, `${field.width}x${field.height}: the pane is below the minimum`);
-        const where = `${field.width}x${field.height}, dock ${dock}, ${n} neighbours`;
-        assert.ok(layout.places.length <= n, where);
-        layout.places.forEach((p, i) => {
+const FIELDS = [
+  { width: 700, height: 480 },
+  { width: 1000, height: 700 },
+  { width: 1320, height: 860 },
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1300 },
+];
+const DOCS = [
+  [280, 160],
+  [560, 520],
+  [640, 480],
+  [900, 700],
+];
+
+test('a seated card is the size a front-band card is browsed at, not a smaller copy', () => {
+  // ISS-0070: "why not the same size view as when browsing?" The seat is the
+  // front band's box at the scale `project` gives a card straight ahead.
+  const ahead = project({ theta: 0, depth: FRONT.depth, y: 0 }, 0, { width: 1440, height: 900 });
+  assert.equal(BROWSE_SCALE, ahead.scale);
+  assert.equal(SEAT.width, CARD_BOX.width * ahead.scale);
+  assert.equal(SEAT.height, CARD_BOX.height * ahead.scale);
+  // The copies this replaces were 168 by 44: a third less tall than a card.
+  assert.ok(SEAT.height > 44 * 1.4, `a seat is ${SEAT.height} tall`);
+});
+
+test('every neighbour gets a seat, whatever the document size: the document is never asked to shrink', () => {
+  for (const field of FIELDS) {
+    for (const [w, h] of DOCS) {
+      if (w > field.width || h > field.height) continue;
+      const doc = centred(field, w, h);
+      for (const count of [1, 6, 16, 17, 40, 150]) {
+        const seats = seatsAround({ doc, field, count });
+        assert.equal(seats.length, count, `${field.width}x${field.height}, a ${w}x${h} document, ${count} neighbours`);
+      }
+    }
+  }
+});
+
+test('no seat lies over the document or another seat, and none is above or below the field', () => {
+  for (const field of FIELDS) {
+    for (const [w, h] of DOCS) {
+      if (w > field.width || h > field.height) continue;
+      const doc = centred(field, w, h);
+      const pane = edges(doc);
+      for (const count of [1, 5, 16, 40, 150]) {
+        const seats = seatsAround({ doc, field, count });
+        const where = `${field.width}x${field.height}, a ${w}x${h} document, ${count} neighbours`;
+        seats.forEach((p, i) => {
           const r = rectOf(p);
-          assert.ok(!hits(r, pane), `${where}: place ${i} overlaps the pane`);
-          assert.ok(r.left >= dock && r.right <= field.width && r.top >= 0 && r.bottom <= field.height, `${where}: place ${i} is off the field or in the dock`);
-          layout.places.forEach((q, j) => {
-            if (j > i) assert.ok(!hits(r, rectOf(q)), `${where}: places ${i} and ${j} overlap`);
+          assert.ok(!hits(r, pane), `${where}: seat ${i} lies over the document`);
+          // The gap is kept on at least one axis: a seat never touches the document.
+          const clearX = r.right <= pane.left - SEAT_GAP + 1e-6 || r.left >= pane.right + SEAT_GAP - 1e-6;
+          const clearY = r.bottom <= pane.top - SEAT_GAP + 1e-6 || r.top >= pane.bottom + SEAT_GAP - 1e-6;
+          assert.ok(clearX || clearY, `${where}: seat ${i} is closer to the document than the gap`);
+          // A seat above or below the field could never be turned to.
+          assert.ok(r.top >= EDGE_MARGIN - 1e-6 && r.bottom <= field.height - EDGE_MARGIN + 1e-6, `${where}: seat ${i} is above or below the field`);
+          seats.forEach((q, j) => {
+            if (j > i) assert.ok(!hits(r, rectOf(q)), `${where}: seats ${i} and ${j} overlap`);
           });
         });
       }
@@ -43,138 +88,168 @@ test('no mini note overlaps the pane or another mini note, and every one is insi
   }
 });
 
-test('16 neighbours get 16 places; 17 get 15 and "+2 more"; 40 get 15 and "+25 more"; a small field gets fewer, and nobody is lost', () => {
-  const field = { width: 1920, height: 1080 };
-  const many = (count) => Array.from({ length: count }, (_, i) => neighbour(`N-${String(i).padStart(3, '0')}`));
-  const sixteen = focusLayout(field, 0, 16);
-  assert.equal(sixteen.places.length, 16);
-  assert.deepEqual([chooseForRing(many(16), 16).chosen.length, chooseForRing(many(16), 16).more], [16, 0]);
-  const seventeen = chooseForRing(many(17), focusLayout(field, 0, 17).places.length);
-  assert.deepEqual([seventeen.chosen.length, seventeen.more], [15, 2]);
-  const forty = chooseForRing(many(40), focusLayout(field, 0, 40).places.length);
-  assert.deepEqual([forty.chosen.length, forty.more], [15, 25]);
-  const small = focusLayout({ width: 700, height: 480 }, DOCK_WIDTH, 16);
-  assert.ok(small.places.length < 16, `a small field held all ${small.places.length}`);
-  const smallChoice = chooseForRing(many(16), small.places.length);
-  assert.equal(smallChoice.chosen.length + smallChoice.more + (smallChoice.more > 0 ? 0 : 0), 16);
-});
-
-test('a field too narrow for a whole ring still holds as many places as fit on its top and bottom arcs', () => {
-  // The case the smoke run found: a dock beside the field, eight neighbours.
-  const layout = focusLayout({ width: 960, height: 780 }, DOCK_WIDTH, 8);
-  assert.ok(layout.places.length >= 4, `only ${layout.places.length} places`);
-});
-
-test('no place stands under what is drawn over the field, such as the compass', () => {
-  const compass = { left: 1000, top: 700, width: 300, height: 120 };
-  const layout = focusLayout({ width: 1320, height: 860 }, 0, 16, -Math.PI / 2, [compass]);
-  assert.ok(layout.places.length > 0);
-  for (const p of layout.places) {
-    const r = rectOf(p);
-    assert.ok(!hits(r, { left: compass.left, right: compass.left + compass.width, top: compass.top, bottom: compass.top + compass.height }), 'a place stood under the compass');
+test('seats in sight are filled before any seat beyond the field, and past the edges the seats go on', () => {
+  const field = { width: 1440, height: 860 };
+  const doc = centred(field, 560, 520);
+  let before = 0;
+  let firstBeyond = null;
+  for (let count = 1; count <= 200; count += 1) {
+    const seats = seatsAround({ doc, field, count });
+    const inSight = seats.filter((s) => s.onScreen).length;
+    // Asking for one more never takes a seat in sight away.
+    assert.ok(inSight >= before, `${count} neighbours hold ${inSight} seats in sight, fewer than ${before}`);
+    if (firstBeyond === null && inSight < count) firstBeyond = { count, inSight };
+    // Once any seat is beyond the edge, every seat in sight is taken.
+    if (firstBeyond !== null) assert.equal(inSight, firstBeyond.inSight, `${count} neighbours: a seat in sight was left empty`);
+    before = inSight;
+  }
+  assert.ok(firstBeyond !== null && firstBeyond.inSight >= 16, `the field holds ${firstBeyond?.inSight} seats in sight before any goes beyond it`);
+  // `onScreen` says what it means: the whole card is inside the field.
+  for (const seat of seatsAround({ doc, field, count: 200 })) {
+    const r = rectOf(seat);
+    assert.equal(seat.onScreen, r.left >= 0 && r.right <= field.width && r.top >= 0 && r.bottom <= field.height);
   }
 });
 
-test('who is left out follows the priority: came from, held, shared, owed, linked from, linking to, then id', () => {
-  const list = [
-    neighbour('Z-IN', { direction: 'in' }),
-    neighbour('Y-OUT', { direction: 'out' }),
-    neighbour('X-OWED', { owed: true, direction: 'in' }),
-    neighbour('W-SHARED', { shared: true, direction: 'in' }),
-    neighbour('V-HELD', { held: true, direction: 'in' }),
-    neighbour('U-FROM', { cameFrom: true, direction: 'in' }),
-    neighbour('A-OUT', { direction: 'out' }),
+test('a document against the left edge seats its neighbours to its right before sending any off to the left', () => {
+  const field = { width: 1440, height: 860 };
+  const doc = { left: 0, top: 170, width: 560, height: 520 };
+  const seats = seatsAround({ doc, field, count: 12 });
+  assert.ok(seats.every((s) => s.onScreen), 'twelve neighbours fit in sight beside, above and below the document');
+  assert.ok(seats.every((s) => s.x > doc.left), 'a seat was placed off to the left while seats in sight were free');
+});
+
+test('no seat stands under what is drawn over the field, such as the compass or another document', () => {
+  const field = { width: 1320, height: 860 };
+  const doc = centred(field, 560, 520);
+  const compass = { left: 940, top: 780, width: 372, height: 72 };
+  const other = { left: 20, top: 20, width: 320, height: 400 };
+  for (const count of [8, 30, 90]) {
+    for (const seat of seatsAround({ doc, field, count, avoid: [compass, other] })) {
+      assert.ok(!hits(rectOf(seat), edges(compass)), `${count} neighbours: a seat stands under the compass`);
+      assert.ok(!hits(rectOf(seat), edges(other)), `${count} neighbours: a seat stands under another document`);
+    }
+    assert.equal(seatsAround({ doc, field, count, avoid: [compass, other] }).length, count);
+  }
+});
+
+test('a field too short for one whole seat still seats every neighbour, in one row', () => {
+  const field = { width: 900, height: 40 };
+  const doc = { left: 300, top: 0, width: 300, height: 40 };
+  const seats = seatsAround({ doc, field, count: 7 });
+  assert.equal(seats.length, 7);
+  assert.equal(new Set(seats.map((s) => s.y)).size, 1, 'the seats are not in one row');
+  seats.forEach((p, i) => seats.forEach((q, j) => j > i && assert.ok(!hits(rectOf(p), rectOf(q)))));
+});
+
+test('the same request always returns the same seats, nearest the document first', () => {
+  const field = { width: 1440, height: 860 };
+  const doc = centred(field, 560, 520);
+  const a = seatsAround({ doc, field, count: 30 });
+  const b = seatsAround({ doc, field, count: 30 });
+  assert.deepEqual(a, b);
+  // Fewer neighbours take a prefix of the same seats: adding one neighbour
+  // adds one seat and moves no seat already taken.
+  assert.deepEqual(seatsAround({ doc, field, count: 12 }), a.slice(0, 12));
+  assert.deepEqual(seatsAround({ doc, field, count: 0 }), []);
+});
+
+test('the cards keep the circular order they had round the document, and are seated the same way every time', () => {
+  const field = { width: 1440, height: 860 };
+  const doc = centred(field, 560, 520);
+  const centre = { x: doc.left + doc.width / 2, y: doc.top + doc.height / 2 };
+  const ids = ['G', 'C', 'A', 'F', 'D', 'B', 'E', 'H'];
+  // Evenly round the document, in an order that is not the order of their ids.
+  const neighbours = ids.map((id, i) => neighbour(id, { angle: -Math.PI + (i * 2 * Math.PI) / ids.length }));
+  const seats = seatsAround({ doc, field, count: ids.length });
+  const seated = seatNeighbours(neighbours, seats, centre);
+  assert.equal(seated.length, ids.length);
+  assert.equal(new Set(seated.map((s) => `${s.seat.x},${s.seat.y}`)).size, ids.length, 'two cards share a seat');
+  const angle = (p) => (Math.atan2(p.y - centre.y, p.x - centre.x) + 2 * Math.PI) % (2 * Math.PI);
+  const byAngle = [...seated].sort((a, b) => angle(a.seat) - angle(b.seat)).map((s) => s.id);
+  const before = [...neighbours].sort((a, b) => ((a.angle + 2 * Math.PI) % (2 * Math.PI)) - ((b.angle + 2 * Math.PI) % (2 * Math.PI))).map((n) => n.id);
+  // The same cycle: one is a rotation of the other.
+  const at = byAngle.indexOf(before[0]);
+  assert.deepEqual([...byAngle.slice(at), ...byAngle.slice(0, at)], before);
+  // Deterministic, and independent of the order the neighbours were given in.
+  assert.deepEqual(seatNeighbours([...neighbours].reverse(), seats, centre), seated);
+});
+
+test('the arrangement is turned to the seating that moves the cards least', () => {
+  const field = { width: 1440, height: 860 };
+  const doc = centred(field, 560, 520);
+  const centre = { x: doc.left + doc.width / 2, y: doc.top + doc.height / 2 };
+  const seats = seatsAround({ doc, field, count: 6 });
+  // Each neighbour stood exactly where a seat is: it should be given that seat.
+  const neighbours = seats.map((seat, i) => neighbour(`N${i}`, { angle: Math.atan2(seat.y - centre.y, seat.x - centre.x) }));
+  const seated = new Map(seatNeighbours(neighbours, seats, centre).map((s) => [s.id, s.seat]));
+  seats.forEach((seat, i) => assert.deepEqual(seated.get(`N${i}`), seat, `N${i} was moved to another seat`));
+});
+
+test('a neighbour known only by its side goes to that side, and one with no place goes below, by id', () => {
+  const field = { width: 1440, height: 860 };
+  const doc = centred(field, 480, 300);
+  const centre = { x: doc.left + doc.width / 2, y: doc.top + doc.height / 2 };
+  const neighbours = [
+    neighbour('LEFT', { side: -1 }),
+    neighbour('RIGHT', { side: 1 }),
+    neighbour('NOWHERE-B'),
+    neighbour('NOWHERE-A'),
+    neighbour('ABOVE', { angle: -Math.PI / 2 }),
   ];
-  const { chosen, more } = chooseForRing(list, 6);
-  assert.deepEqual(chosen.map((n) => n.id), ['U-FROM', 'V-HELD', 'W-SHARED', 'X-OWED', 'A-OUT'], 'the wrong notes kept a place');
-  assert.equal(more, 2, 'Y-OUT and Z-IN are the two left out');
+  const seats = seatsAround({ doc, field, count: neighbours.length });
+  const seated = new Map(seatNeighbours(neighbours, seats, centre).map((s) => [s.id, s.seat]));
+  assert.ok(seated.get('LEFT').x < centre.x, 'the neighbour off to the left is seated on the right');
+  assert.ok(seated.get('RIGHT').x > centre.x, 'the neighbour off to the right is seated on the left');
+  assert.ok(seated.get('ABOVE').y <= seated.get('NOWHERE-A').y, 'a neighbour with no place is seated above one that stood above');
 });
 
-test('the neighbours keep their circular order, and the same input always seats them the same way', () => {
-  const layout = focusLayout({ width: 1600, height: 1000 }, 0, 8);
-  const angles = [2.9, -0.4, 1.2, -2.2, 0.3, 2.0, -1.3, 0.8];
-  const list = angles.map((angle, i) => neighbour(`N${i}`, { angle }));
-  const { seats } = seatRing(list, layout, 0);
-  const around = (p) => Math.atan2(p.y - layout.centre.y, p.x - layout.centre.x);
-  const cyclic = (ids) => {
-    const i = ids.indexOf('N0');
-    return [...ids.slice(i), ...ids.slice(0, i)].join(' ');
-  };
-  const before = [...list].sort((a, b) => ((a.angle + 2 * Math.PI) % (2 * Math.PI)) - ((b.angle + 2 * Math.PI) % (2 * Math.PI))).map((n) => n.id);
-  const after = [...seats].sort((a, b) => ((around(a.place) + 2 * Math.PI) % (2 * Math.PI)) - ((around(b.place) + 2 * Math.PI) % (2 * Math.PI))).map((s) => s.id);
-  assert.equal(cyclic(after), cyclic(before));
-  assert.deepEqual(seatRing(list, layout, 0), seats && seatRing(list, layout, 0));
-  // Each is seated near where it was: the turn that moves them least.
-  for (const s of seats) {
-    const n = list.find((x) => x.id === s.id);
-    const d = Math.abs(((around(s.place) - n.angle + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-    assert.ok(d < Math.PI / 2, `${s.id} was seated ${d.toFixed(2)} radians from where it was`);
-  }
+test('the least movement brings a card into the field, and a card already there moves nothing', () => {
+  const field = { width: 1000, height: 600 };
+  const size = { width: SEAT.width, height: SEAT.height };
+  assert.deepEqual(revealShift({ left: 300, top: 200, ...size }, field, 20), { x: 0, y: 0 });
+  // Past the right edge: moved left until it is a margin inside.
+  const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} is not ${b}`);
+  const right = revealShift({ left: 1400, top: 200, ...size }, field, 20);
+  close(1400 + right.x + SEAT.width, field.width - 20);
+  assert.equal(right.y, 0);
+  // Past the left edge and below the bottom at once.
+  const corner = revealShift({ left: -500, top: 900, ...size }, field, 20);
+  close(-500 + corner.x, 20);
+  close(900 + corner.y + SEAT.height, field.height - 20);
+  // Larger than the field: its top left is brought to the field's.
+  assert.deepEqual(revealShift({ left: 240, top: -80, width: 1400, height: 900 }, field, 0), { x: -240, y: 80 });
 });
 
-test('the note the person came from sits opposite the direction the new focus came from', () => {
-  const layout = focusLayout({ width: 1600, height: 1000 }, 0, 10);
-  // The places are spaced evenly along a rounded rectangle, not by angle, so
-  // "half a place's spacing" is half the widest angular gap between two places.
-  const angles = layout.places.map((p) => Math.atan2(p.y - layout.centre.y, p.x - layout.centre.x)).sort((a, b) => a - b);
-  const spacing = Math.max(...angles.map((a, i) => (i === 0 ? a + 2 * Math.PI - angles[angles.length - 1] : a - angles[i - 1])));
-  for (const target of [0, 1, 2.5, -2, -0.7]) {
-    const list = [neighbour('FROM', { cameFrom: true, angle: 0.1 }), ...Array.from({ length: 9 }, (_, i) => neighbour(`N${i}`, { angle: i * 0.6 }))];
-    const { seats } = seatRing(list, layout, 0, target);
-    const from = seats.find((s) => s.id === 'FROM');
-    const a = Math.atan2(from.place.y - layout.centre.y, from.place.x - layout.centre.x);
-    const d = Math.abs(((a - target + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-    assert.ok(d <= spacing / 2 + 1e-9, `aimed at ${target}, seated at ${a.toFixed(2)}`);
-  }
+test('the edge counters count what is wholly beyond each edge, and nothing that is partly in the field', () => {
+  const field = { width: 1000, height: 600 };
+  const r = (left, top) => ({ left, top, width: 100, height: 50 });
+  assert.deepEqual(beyondEdges([r(-300, 100), r(-100, 100), r(-99, 100), r(1000, 100), r(999, 100), r(400, -50), r(400, 600), r(400, 300)], field), {
+    left: 2,
+    right: 1,
+    up: 1,
+    down: 1,
+  });
+  assert.deepEqual(beyondEdges([], field), { left: 0, right: 0, up: 0, down: 0 });
 });
 
-test('a ring started at an angle puts its first place there, so one neighbour lands opposite the way the person came', () => {
-  for (const target of [0.3, 2.4, -1.9]) {
-    const layout = focusLayout({ width: 1600, height: 1000 }, 0, 1, target);
-    const { seats } = seatRing([neighbour('FROM', { cameFrom: true })], layout, 0, target);
-    const p = seats[0].place;
-    const a = Math.atan2(p.y - layout.centre.y, p.x - layout.centre.x);
-    const d = Math.abs(((a - target + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-    assert.ok(d < 0.05, `aimed at ${target}, the only place stood at ${a.toFixed(2)}`);
-  }
+test('a line leaves the document at its edge, toward the card it runs to', () => {
+  const pane = { left: 100, top: 100, width: 400, height: 200 };
+  assert.deepEqual(edgeAnchor(pane, { x: 900, y: 200 }), { x: 500, y: 200 });
+  assert.deepEqual(edgeAnchor(pane, { x: 300, y: -500 }), { x: 300, y: 100 });
+  const corner = edgeAnchor(pane, { x: 700, y: 400 });
+  assert.ok(Math.abs(corner.x - 500) < 1e-9 && Math.abs(corner.y - 300) < 1e-9);
+  // A card standing on the document's own middle has no direction to leave by.
+  assert.deepEqual(edgeAnchor(pane, { x: 300, y: 200 }), { x: 300, y: 200 });
 });
 
-test('a neighbour known only by its bearing goes on its side, and notes from outside the view sit at the bottom by id', () => {
-  const layout = focusLayout({ width: 1600, height: 1000 }, 0, 6);
-  const list = [
-    neighbour('LEFT', { bearing: -2.4 }),
-    neighbour('RIGHT', { bearing: 2.1 }),
-    neighbour('OUT-B'),
-    neighbour('OUT-A'),
-  ];
-  const { seats } = seatRing(list, layout, 0);
-  const at = (id) => seats.find((s) => s.id === id).place;
-  assert.ok(at('LEFT').x < layout.centre.x, 'the left neighbour was seated on the right');
-  assert.ok(at('RIGHT').x > layout.centre.x, 'the right neighbour was seated on the left');
-  assert.ok(at('OUT-A').y > layout.centre.y && at('OUT-B').y > layout.centre.y, 'a note from outside the view was not at the bottom');
-  assert.deepEqual(seatRing(list, layout, 0), seatRing([...list].reverse(), layout, 0), 'the input order changed the seating');
-});
-
-test('the path starts and ends exactly, goes the short way round, and never comes nearer the middle than its ends', () => {
-  const centre = { x: 500, y: 400 };
-  const start = { x: 900, y: 380 };
-  const end = { x: 520, y: 90 };
-  assert.deepEqual(arcPoint(start, end, centre, 0), start);
-  assert.deepEqual(arcPoint(start, end, centre, 1), end);
-  const r0 = Math.hypot(start.x - centre.x, start.y - centre.y);
-  const r1 = Math.hypot(end.x - centre.x, end.y - centre.y);
-  for (let i = 1; i < 20; i += 1) {
-    const p = arcPoint(start, end, centre, i / 20);
-    assert.ok(Math.hypot(p.x - centre.x, p.y - centre.y) >= Math.min(r0, r1) - 1e-9, 'the path cut across the middle');
-    assert.ok(p.y <= start.y + 1e-9, 'the path went the long way round, below the middle');
-  }
-});
-
-test('the easing is slow at both ends, symmetric, and the two stages make one second', () => {
+test('the easing is slow at both ends and symmetric, and the opening is inside the range DES-0003 asks to be tried', () => {
   assert.equal(ease(0), 0);
   assert.equal(ease(1), 1);
+  assert.ok(Math.abs(ease(0.5) - 0.5) < 1e-12);
+  assert.ok(Math.abs(ease(0.2) + ease(0.8) - 1) < 1e-12);
   assert.ok(ease(0.1) < 0.1 && ease(0.9) > 0.9);
-  for (const t of [0.2, 0.35, 0.5, 0.77]) assert.ok(Math.abs(ease(t) + ease(1 - t) - 1) < 1e-12, `not symmetric at ${t}`);
-  assert.equal(GROW_MS + GATHER_MS, 1000);
-  assert.ok(RING_GAP > 0);
+  // DES-0003: "Prototype 250–400 ms against the current one-second movement."
+  assert.ok(OPEN_MS >= 250 && OPEN_MS <= 400, `the opening takes ${OPEN_MS} ms`);
+  assert.ok(GATHER_MS >= 250 && GATHER_MS <= 400, `the gathering takes ${GATHER_MS} ms`);
 });

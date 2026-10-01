@@ -1,20 +1,23 @@
 /**
- * The ring: where an opened note and its neighbours stand while it is the
- * focus (FEAT-0017, TASK-0067).
+ * The neighbourhood: where an opened note's related cards stand while it is
+ * the focus (FEAT-0017, TASK-0104).
  *
- * The note opened is drawn as a pane in the middle of the field, and the notes
- * it links to and the notes linking to it stand around it as mini notes (small
- * cards with an id and a title). This module is the geometry only: the pane's
- * rectangle, the places on the ring, who gets a place, the order they keep,
- * and the arc each one moves along. Pure, so it is tested without a window.
+ * The note opened is a document at the size the person chose. The notes it
+ * links to and the notes linking to it are the SAME cards the field was
+ * already drawing, moved to seats around the document at the size they are
+ * browsed at. This module is the geometry only: which seats exist around a
+ * document, who takes which, and how far the desk must move to bring one into
+ * view. Pure, so it is tested without a window.
  *
- * DES-0002 rev 5 once moved neighbours off a ring because it overlapped the
- * open card. Here the ring is sized from the pane so that cannot happen: the
- * places lie on a superellipse (|x/a|⁴ + |y/b|⁴ = 1, a rounded rectangle)
- * whose half-axes are 2^¼ times the box a mini note must stay outside. On that
- * curve max(|x|/a, |y|/b) is never below 2^-¼, so every place is clear of the
- * pane on one axis or the other.
+ * Until 2026-10-01 this module sized the document from the number of
+ * neighbours and drew up to sixteen 168 by 44 copies inside the window
+ * (TASK-0067). Edwin reversed all three on 2026-09-12 (ISS-0070, ISS-0071,
+ * ISS-0072): the document keeps its size, the cards are moved and not copied,
+ * and the arrangement may be larger than the window. So a seat is refused only
+ * for lying over the document, over another seat, or above or below the
+ * field; to the left and right the seats run on past the window's edge.
  */
+import { CARD_BOX, FRONT, PERSPECTIVE } from './slots.js';
 
 export interface Size {
   width: number;
@@ -33,204 +36,165 @@ export interface Point {
   y: number;
 }
 
-/** A mini note: a line of id and a line of title. */
-export const MINI = Object.freeze({ width: 168, height: 44 });
-/** The pane in the middle, at most and at least (the least is a pane's own minimum, TASK-0054). */
-export const FOCUS_MAX = Object.freeze({ width: 640, height: 480 });
-export const FOCUS_MIN = Object.freeze({ width: 280, height: 160 });
-/** Space between the pane and a mini note, between two mini notes, and from the field's edge. */
-export const RING_GAP = 16;
+/**
+ * The scale a front-band card straight ahead is drawn at, which is the size a
+ * person browses at. A seated neighbour is drawn at exactly this scale, so
+ * gathering a card never makes it smaller than it was a moment before
+ * (ISS-0070: "why not the same size view as when browsing?").
+ */
+export const BROWSE_SCALE = PERSPECTIVE / (PERSPECTIVE + FRONT.depth);
+/** A seated card on screen: the front band's box at the browsing scale. */
+export const SEAT: Readonly<Size> = Object.freeze({
+  width: CARD_BOX.width * BROWSE_SCALE,
+  height: CARD_BOX.height * BROWSE_SCALE,
+});
+/** Space between the document and a seat, and between two seats. */
+export const SEAT_GAP = 14;
+/** Space kept clear at the top and the bottom of the field. */
 export const EDGE_MARGIN = 12;
-/** Where the other held notes wait, as headers, while one note is the focus. */
-export const DOCK_WIDTH = 240;
-/** At most this many places on the ring; beyond it one is "+N more". */
-export const RING_MAX = 16;
-/** The two stages of opening: the card grows where it is, then everything gathers. */
-export const GROW_MS = 300;
-export const GATHER_MS = 700;
-
-const SUPER = 2 ** 0.25;
-
-export interface FocusLayout {
-  /** The pane in the middle. */
-  pane: Rect;
-  /** The middle the ring turns about: the pane's centre. */
-  centre: Point;
-  /** Centres of the mini notes, clockwise from the top. */
-  places: Point[];
-}
-
-function inside(p: Point, area: { x0: number; x1: number; y0: number; y1: number; avoid: readonly Rect[] }): boolean {
-  const left = p.x - MINI.width / 2;
-  const top = p.y - MINI.height / 2;
-  if (left < area.x0 || left + MINI.width > area.x1 || top < area.y0 || top + MINI.height > area.y1) return false;
-  // Clear of what is drawn over the field, such as the compass.
-  return area.avoid.every((r) => left + MINI.width <= r.left || left >= r.left + r.width || top + MINI.height <= r.top || top >= r.top + r.height);
-}
-
-function overlaps(a: Point, b: Point): boolean {
-  return Math.abs(a.x - b.x) < MINI.width + RING_GAP && Math.abs(a.y - b.y) < MINI.height + RING_GAP;
-}
-
+/** Columns of seats offered on each side before the layout gives up. */
+const MOST_COLUMNS = 400;
 /**
- * `count` places on the curve for this pane, spaced evenly by DISTANCE along
- * it, clockwise from the top. Spaced by the curve's parameter instead, they
- * bunch at the corners and a 1920 by 1080 field held only 12. `grow` widens
- * the curve beyond the least that clears the pane, when more room is needed.
+ * How long the document takes to open from its card or its row, and how long
+ * the related cards take to gather. DES-0003 asks for a trial between 250 and
+ * 400 ms against the earlier 300 + 700; these are the trial values, and
+ * TASK-0097 records what the walk decides.
  */
-function ringFor(centre: Point, pane: Size, count: number, grow: number, startAngle: number = -Math.PI / 2): Point[] {
-  const a = (pane.width / 2 + RING_GAP + MINI.width / 2) * SUPER * grow;
-  const b = (pane.height / 2 + RING_GAP + MINI.height / 2) * SUPER * grow;
-  const at = (t: number): Point => {
-    const c = Math.cos(t);
-    const s = Math.sin(t);
-    return { x: centre.x + a * Math.sign(c) * Math.sqrt(Math.abs(c)), y: centre.y + b * Math.sign(s) * Math.sqrt(Math.abs(s)) };
-  };
-  // Screen y runs down, so an increasing angle from -π/2 is clockwise from the top.
-  const steps = 720;
-  const points: Point[] = [];
-  const length: number[] = [0];
-  for (let i = 0; i <= steps; i += 1) {
-    points.push(at(-Math.PI / 2 + (2 * Math.PI * i) / steps));
-    if (i > 0) {
-      const p = points[i] as Point;
-      const q = points[i - 1] as Point;
-      length.push((length[i - 1] as number) + Math.hypot(p.x - q.x, p.y - q.y));
-    }
-  }
-  const total = length[steps] as number;
-  // The first place stands where the curve crosses `startAngle` about the
-  // centre: the top, unless the ring is started opposite the way the person
-  // came, so the line between the two notes keeps its direction (decision 5).
-  let startIndex = 0;
-  let nearest = Infinity;
-  for (let i = 0; i < steps; i += 1) {
-    const p = points[i] as Point;
-    const d = Math.abs(Math.atan2(Math.sin(Math.atan2(p.y - centre.y, p.x - centre.x) - startAngle), Math.cos(Math.atan2(p.y - centre.y, p.x - centre.x) - startAngle)));
-    if (d < nearest) {
-      nearest = d;
-      startIndex = i;
-    }
-  }
-  const offset = length[startIndex] as number;
-  const out: Point[] = [];
-  for (let k = 0; k < count; k += 1) {
-    const want = (offset + (total * k) / count) % total;
-    let j = 0;
-    while (j < steps - 1 && (length[j + 1] as number) < want) j += 1;
-    const span = (length[j + 1] as number) - (length[j] as number);
-    const f = span === 0 ? 0 : (want - (length[j] as number)) / span;
-    const p = points[j] as Point;
-    const q = points[j + 1] as Point;
-    out.push({ x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f });
-  }
-  return out;
+export const OPEN_MS = 300;
+export const GATHER_MS = 400;
+
+export interface Seat extends Point {
+  /** How many seats stand between this one and the document, on its side. */
+  ring: number;
+  /** Whether the whole seat is inside the field as laid out. */
+  onScreen: boolean;
+}
+
+export interface SeatRequest {
+  /** The document as drawn, in field pixels. */
+  doc: Rect;
+  field: Size;
+  /** How many neighbours need a seat. */
+  count: number;
+  /** What is drawn over the field and must not hide a seat: the compass, another document. */
+  avoid?: readonly Rect[];
+}
+
+function seatRect(p: Point): Rect {
+  return { left: p.x - SEAT.width / 2, top: p.y - SEAT.height / 2, width: SEAT.width, height: SEAT.height };
+}
+
+export function intersects(a: Rect, b: Rect): boolean {
+  return a.left < b.left + b.width && a.left + a.width > b.left && a.top < b.top + b.height && a.top + a.height > b.top;
+}
+
+function angleAbout(centre: Point, p: Point): number {
+  return Math.atan2(p.y - centre.y, p.x - centre.x);
+}
+
+/** How far a rectangle is from another, edge to edge; 0 when they touch or overlap. */
+function gapBetween(a: Rect, b: Rect): number {
+  const dx = Math.max(0, a.left - (b.left + b.width), b.left - (a.left + a.width));
+  const dy = Math.max(0, a.top - (b.top + b.height), b.top - (a.top + a.height));
+  return Math.hypot(dx, dy);
 }
 
 /**
- * The pane's rectangle and the ring's places for a field and a dock, with
- * every place clear of `avoid`: what is drawn over the field, the compass.
+ * `count` seats around a document, nearest first.
  *
- * A readable note matters more than a full ring, because "+N more" lists the
- * rest: the largest pane (up to 640 by 480, keeping that shape, never below
- * 280 by 160) whose ring holds at least `ENOUGH` places, or every neighbour
- * when there are fewer. Each place is inside the field, outside the dock and
- * clear of every other, and the ring may stand further out than the least
- * that clears the pane when the places need the room. When no pane manages
- * that, the arrangement that holds the most: a small field gets fewer.
+ * The seats lie on a grid whose rows are a card and a gap apart, measured from
+ * the document's own middle. Columns stand to the left and to the right of the
+ * document and run outward without limit; where the field has room above or
+ * below the document, a row of seats stands there too. A seat is never laid
+ * over the document, over another seat, over anything in `avoid`, or outside
+ * the field's height, because a seat above or below the field could never be
+ * turned to. Seats inside the field are filled before seats beyond its left
+ * and right edges, so nothing is sent out of sight while a seat in sight is
+ * free.
+ *
+ * The document's size is an INPUT and nothing here changes it: more
+ * neighbours make the arrangement wider, never the document smaller.
  */
-export const ENOUGH = 6;
-
-export function focusLayout(field: Size, dock: number, wanted: number, startAngle: number = -Math.PI / 2, avoid: readonly Rect[] = []): FocusLayout {
-  const need = Math.max(0, Math.min(RING_MAX, Math.floor(wanted)));
-  const area = { x0: dock + EDGE_MARGIN, x1: field.width - EDGE_MARGIN, y0: EDGE_MARGIN, y1: field.height - EDGE_MARGIN, avoid };
-  const centre = { x: (area.x0 + area.x1) / 2, y: (area.y0 + area.y1) / 2 };
-  const clear = (places: Point[]): boolean => places.every((p, i) => places.every((q, j) => j <= i || !overlaps(p, q)));
-  // The most places this pane's ring can hold, up to `need`: a whole ring,
-  // standing further out if it must, or, where the field is too narrow for
-  // one, the places of a ring that land on the field and stand clear of each
-  // other, top and bottom arcs first. Whichever holds more.
-  const placesFor = (pane: Size): Point[] => {
-    let best: Point[] = [];
-    for (let count = need; count >= 1 && best.length < count; count -= 1) {
-      for (let grow = 1; grow <= 2; grow += 0.05) {
-        const ring = ringFor(centre, pane, count, grow, startAngle);
-        if (ring.every((p) => inside(p, area)) && clear(ring)) {
-          if (ring.length > best.length) best = ring;
-          break;
-        }
-      }
-    }
-    if (best.length === need) return best;
-    for (let spread = need; spread <= 3 * RING_MAX; spread += 1) {
-      const kept: Point[] = [];
-      for (const p of ringFor(centre, pane, spread, 1, startAngle)) {
-        if (kept.length < need && inside(p, area) && kept.every((q) => !overlaps(p, q))) kept.push(p);
-      }
-      if (kept.length > best.length) best = kept;
-      if (best.length === need) break;
-    }
-    return best;
-  };
-  const target = Math.min(need, ENOUGH);
-  let best: { pane: Size; places: Point[] } | null = null;
-  for (let step = 0; step <= 20 && need > 0; step += 1) {
-    const k = 1 - step / 20;
-    const pane = {
-      width: Math.max(FOCUS_MIN.width, Math.round(FOCUS_MAX.width * k)),
-      height: Math.max(FOCUS_MIN.height, Math.round(FOCUS_MAX.height * k)),
-    };
-    const places = placesFor(pane);
-    if (best === null || places.length > best.places.length) best = { pane, places };
-    if (places.length >= target) {
-      best = { pane, places };
-      break;
-    }
-    if (pane.width === FOCUS_MIN.width && pane.height === FOCUS_MIN.height) break;
+export function seatsAround(request: SeatRequest): Seat[] {
+  const count = Math.max(0, Math.floor(request.count));
+  if (count === 0) return [];
+  const { doc, field } = request;
+  const avoid = request.avoid ?? [];
+  const pitchX = SEAT.width + SEAT_GAP;
+  const pitchY = SEAT.height + SEAT_GAP;
+  const centre = { x: doc.left + doc.width / 2, y: doc.top + doc.height / 2 };
+  const top = EDGE_MARGIN + SEAT.height / 2;
+  const bottom = field.height - EDGE_MARGIN - SEAT.height / 2;
+  // Rows measured from the document's middle, kept inside the field's height.
+  const rows: number[] = [];
+  if (bottom >= top) {
+    const first = Math.ceil((top - centre.y) / pitchY);
+    const last = Math.floor((bottom - centre.y) / pitchY);
+    for (let k = first; k <= last; k += 1) rows.push(centre.y + k * pitchY);
   }
-  const chosen = best ?? { pane: { ...FOCUS_MIN }, places: [] };
-  return {
-    pane: { left: centre.x - chosen.pane.width / 2, top: centre.y - chosen.pane.height / 2, width: chosen.pane.width, height: chosen.pane.height },
-    centre,
-    places: chosen.places,
+  // A field too short for one whole seat still seats its neighbours, in one row.
+  if (rows.length === 0) rows.push(field.height / 2);
+  const keepOut: Rect = { left: doc.left - SEAT_GAP, top: doc.top - SEAT_GAP, width: doc.width + 2 * SEAT_GAP, height: doc.height + 2 * SEAT_GAP };
+  const usable = (p: Point): boolean => {
+    const r = seatRect(p);
+    return !intersects(r, keepOut) && avoid.every((a) => !intersects(r, a));
   };
+  const make = (p: Point, ring: number): Seat => {
+    const r = seatRect(p);
+    return { x: p.x, y: p.y, ring, onScreen: r.left >= 0 && r.left + r.width <= field.width && r.top >= 0 && r.top + r.height <= field.height };
+  };
+  const found: Seat[] = [];
+  // Above and below the document, across its own width.
+  const across: number[] = [];
+  const half = Math.floor((doc.width / 2 - SEAT.width / 2) / pitchX);
+  for (let j = -half; j <= half; j += 1) across.push(centre.x + j * pitchX);
+  for (const y of rows) {
+    for (const x of across) {
+      const p = { x, y };
+      if (!usable(p)) continue;
+      const ring = Math.max(0, Math.round((Math.abs(y - centre.y) - doc.height / 2 - SEAT_GAP - SEAT.height / 2) / pitchY));
+      found.push(make(p, ring));
+    }
+  }
+  // To the left and the right, outward. Every column that could be in sight
+  // is offered, so a seat in sight is never passed over, and past the field's
+  // edges the columns go on until there are enough seats. `MOST_COLUMNS`
+  // only stops a request whose `avoid` covers everything from running away.
+  for (let ring = 0; ring < MOST_COLUMNS; ring += 1) {
+    const left = doc.left - SEAT_GAP - SEAT.width / 2 - ring * pitchX;
+    const right = doc.left + doc.width + SEAT_GAP + SEAT.width / 2 + ring * pitchX;
+    const inSight = left + SEAT.width / 2 > 0 || right - SEAT.width / 2 < field.width;
+    if (!inSight && found.length >= count) break;
+    for (const x of [left, right]) {
+      for (const y of rows) {
+        const p = { x, y };
+        if (usable(p)) found.push(make(p, ring));
+      }
+    }
+  }
+  // In sight first, then nearest the document's edge, then nearest its
+  // middle, so the two sides fill together instead of one column first. Last,
+  // clockwise from the top, so the same request always gives the same seats.
+  const order = (s: Seat): number => {
+    const a = angleAbout(centre, s) + Math.PI / 2;
+    return ((a % TAU) + TAU) % TAU;
+  };
+  const near = (a: number, b: number): number => (Math.abs(a - b) < 1e-6 ? 0 : a - b);
+  found.sort((a, b) =>
+    Number(b.onScreen) - Number(a.onScreen)
+    || near(gapBetween(seatRect(a), doc), gapBetween(seatRect(b), doc))
+    || near(Math.hypot(a.x - centre.x, a.y - centre.y), Math.hypot(b.x - centre.x, b.y - centre.y))
+    || order(a) - order(b));
+  return found.slice(0, count);
 }
 
-/** What the ring needs to know about one neighbour of the focus. */
-export interface RingNeighbour {
+/** What seating needs to know about one neighbour of the focus. */
+export interface SeatNeighbour {
   id: string;
-  /** The note that was the focus before this one: the mini note clicked came from its ring. */
-  cameFrom?: boolean;
-  held?: boolean;
-  /** Joined to another held note as well. */
-  shared?: boolean;
-  owed?: boolean;
-  /** 'out': the focus links to it; 'in': it links to the focus; 'both'. */
-  direction: 'out' | 'in' | 'both';
-  /** Its angle around the middle of the field where it was drawn before the lift, or null. */
+  /** Its angle around the document's middle where its card was drawn before, or null. */
   angle: number | null;
-  /** Its bearing on the cylinder from where the person faces, negative to the left, or null when it has no slot. */
-  bearing: number | null;
-}
-
-function rank(n: RingNeighbour): number {
-  if (n.cameFrom === true) return 0;
-  if (n.held === true) return 1;
-  if (n.shared === true) return 2;
-  if (n.owed === true) return 3;
-  return n.direction === 'in' ? 5 : 4;
-}
-
-/**
- * Who gets a place. Everyone, when they fit; otherwise all but the last place
- * go by priority (decision 4) and the last is "+N more", N being everyone
- * left out, so the places plus N always equal the neighbours.
- */
-export function chooseForRing(neighbours: readonly RingNeighbour[], places: number): { chosen: RingNeighbour[]; more: number } {
-  if (neighbours.length <= places) return { chosen: [...neighbours], more: 0 };
-  const room = Math.max(0, places - 1);
-  const chosen = [...neighbours].sort((a, b) => rank(a) - rank(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(0, room);
-  return { chosen, more: neighbours.length - room };
+  /** Which side of the person it stood on when it was out of sight: negative left, positive right, 0 unknown. */
+  side: number;
 }
 
 const TAU = 2 * Math.PI;
@@ -245,74 +209,88 @@ function gap(a: number, b: number): number {
 }
 
 /** The angle a neighbour is sorted by: where it was, or its side, or the bottom. */
-function sortAngle(n: RingNeighbour): number {
+function sortAngle(n: SeatNeighbour): number {
   if (n.angle !== null) return wrap(n.angle);
-  // Left of the person is the left of the ring (π), right is the right (0).
-  if (n.bearing !== null) return n.bearing < 0 ? Math.PI : 0;
+  if (n.side !== 0) return n.side < 0 ? Math.PI : 0;
   return Math.PI / 2;
 }
 
-export interface RingSeat {
+export interface Seating {
   id: string;
-  place: Point;
+  seat: Seat;
 }
 
 /**
- * Seat the chosen neighbours on the places, keeping their circular order
- * (decision 5, after Yee et al.). The ring is turned to whichever seating
- * moves them least; when `cameFromAngle` is given, it is turned instead so the
- * note the person came from sits at that angle, opposite the direction the
- * new focus came from. With "+N more" the last place is its, and the
- * neighbours take the others in order.
+ * Give each neighbour a seat, keeping the circular order the cards had round
+ * the document (after Yee et al., as before): the seats are taken in order of
+ * angle, and the whole arrangement is turned to whichever seating moves the
+ * cards least. Deterministic: the same neighbours and seats always seat the
+ * same way. A neighbour past the last seat is not seated, and the caller
+ * counts it; `seatsAround` returns one seat per neighbour, so that happens
+ * only when the caller asked for fewer.
  */
-export function seatRing(chosen: readonly RingNeighbour[], layout: FocusLayout, more: number, cameFromAngle: number | null = null): { seats: RingSeat[]; morePlace: Point | null } {
-  const places = layout.places;
-  const usable = more > 0 ? places.slice(0, Math.max(0, places.length - 1)) : places;
-  const morePlace = more > 0 && places.length > 0 ? (places[places.length - 1] as Point) : null;
-  const ordered = [...chosen].sort((a, b) => sortAngle(a) - sortAngle(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  const m = usable.length;
-  if (ordered.length === 0 || m === 0) return { seats: [], morePlace };
-  const angleOf = (p: Point): number => Math.atan2(p.y - layout.centre.y, p.x - layout.centre.x);
-  const placeAngles = usable.map(angleOf);
-  // Spread the neighbours over the places evenly when there are fewer of them.
-  const slot = (j: number, r: number): number => (Math.round((j * m) / ordered.length) + r) % m;
+export function seatNeighbours(neighbours: readonly SeatNeighbour[], seats: readonly Seat[], centre: Point): Seating[] {
+  const n = Math.min(neighbours.length, seats.length);
+  if (n === 0) return [];
+  const ordered = [...neighbours]
+    .sort((a, b) => sortAngle(a) - sortAngle(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .slice(0, n);
+  const places = seats.slice(0, n)
+    .map((seat) => ({ seat, angle: wrap(angleAbout(centre, seat)) }))
+    .sort((a, b) => a.angle - b.angle || a.seat.ring - b.seat.ring || a.seat.x - b.seat.x || a.seat.y - b.seat.y);
   let bestTurn = 0;
   let bestCost = Infinity;
-  const from = ordered.findIndex((n) => n.cameFrom === true);
-  for (let r = 0; r < m; r += 1) {
+  for (let r = 0; r < n; r += 1) {
     let cost = 0;
-    if (from >= 0 && cameFromAngle !== null) {
-      cost = gap(placeAngles[slot(from, r)] as number, cameFromAngle);
-    } else {
-      for (let j = 0; j < ordered.length; j += 1) cost += gap(placeAngles[slot(j, r)] as number, sortAngle(ordered[j] as RingNeighbour));
+    for (let j = 0; j < n && cost < bestCost; j += 1) {
+      cost += gap((places[(j + r) % n] as { angle: number }).angle, sortAngle(ordered[j] as SeatNeighbour));
     }
     if (cost < bestCost - 1e-9) {
       bestCost = cost;
       bestTurn = r;
     }
   }
-  return { seats: ordered.map((n, j) => ({ id: n.id, place: usable[slot(j, bestTurn)] as Point })), morePlace };
+  return ordered.map((neighbour, j) => ({ id: neighbour.id, seat: (places[(j + bestTurn) % n] as { seat: Seat }).seat }));
 }
 
 /**
- * A point on the way from `start` to `end` at time `t`, moving by angle round
- * `centre` (the short way) and by distance from it, never in a straight line:
- * a straight line would carry the neighbours through the middle, under the
- * pane (decision 6).
+ * How far the desk must move to bring a rectangle wholly into the field: the
+ * least movement that does it, or none when it is already there. A rectangle
+ * larger than the field is brought to the field's top left.
  */
-export function arcPoint(start: Point, end: Point, centre: Point, t: number): Point {
-  if (t <= 0) return { x: start.x, y: start.y };
-  if (t >= 1) return { x: end.x, y: end.y };
-  const a0 = Math.atan2(start.y - centre.y, start.x - centre.x);
-  const a1 = Math.atan2(end.y - centre.y, end.x - centre.x);
-  let da = a1 - a0;
-  if (da > Math.PI) da -= TAU;
-  if (da < -Math.PI) da += TAU;
-  const r0 = Math.hypot(start.x - centre.x, start.y - centre.y);
-  const r1 = Math.hypot(end.x - centre.x, end.y - centre.y);
-  const a = a0 + da * t;
-  const r = r0 + (r1 - r0) * t;
-  return { x: centre.x + r * Math.cos(a), y: centre.y + r * Math.sin(a) };
+export function revealShift(rect: Rect, field: Size, margin = EDGE_MARGIN): Point {
+  const along = (start: number, size: number, room: number): number => {
+    if (size + 2 * margin >= room) return margin - start;
+    if (start < margin) return margin - start;
+    if (start + size > room - margin) return room - margin - (start + size);
+    return 0;
+  };
+  return { x: along(rect.left, rect.width, field.width), y: along(rect.top, rect.height, field.height) };
+}
+
+/** How many rectangles lie wholly beyond each edge of the field. */
+export function beyondEdges(rects: readonly Rect[], field: Size): { left: number; right: number; up: number; down: number } {
+  const out = { left: 0, right: 0, up: 0, down: 0 };
+  for (const r of rects) {
+    if (r.left + r.width <= 0) out.left += 1;
+    else if (r.left >= field.width) out.right += 1;
+    else if (r.top + r.height <= 0) out.up += 1;
+    else if (r.top >= field.height) out.down += 1;
+  }
+  return out;
+}
+
+/** Where the line from a rectangle's centre toward `to` leaves its edge. */
+export function edgeAnchor(pane: Rect, to: Point): Point {
+  const cx = pane.left + pane.width / 2;
+  const cy = pane.top + pane.height / 2;
+  const dx = to.x - cx;
+  const dy = to.y - cy;
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+  const sx = dx === 0 ? Infinity : pane.width / 2 / Math.abs(dx);
+  const sy = dy === 0 ? Infinity : pane.height / 2 / Math.abs(dy);
+  const s = Math.min(sx, sy);
+  return { x: cx + dx * s, y: cy + dy * s };
 }
 
 /** Slow at both ends: 0 at 0, 1 at 1, symmetric about the middle. */

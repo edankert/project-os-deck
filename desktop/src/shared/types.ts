@@ -113,6 +113,12 @@ export interface DeskCard {
   z?: number;
 }
 
+/** A document's width and height in pixels, as a person chose them. */
+export interface ReadingSize {
+  w: number;
+  h: number;
+}
+
 export interface Desk {
   name: string;
   workspaceId: string;
@@ -162,6 +168,15 @@ export interface DeckState {
    * note it held reads as on every view, which is exactly what it showed.
    */
   viewDesks: Record<string, Record<string, DeskCard[]>>;
+  /**
+   * The size a person last gave an opened note, per view, keyed by workspace
+   * id and then view id (TASK-0104, ISS-0071). A note opened afterwards on
+   * that view opens at this size. A note's own `w` and `h` win over it, and a
+   * view with no entry opens notes at the first-use size (`shared/panes.ts`).
+   * Kept in the store, so a second window on the same view reads it. A state
+   * file written before this has none, and reads as an empty table.
+   */
+  readingSizes: Record<string, Record<string, ReadingSize>>;
   /**
    * The view whose desk this state draws, when that is not `viewId`. Set only
    * on a served page: the tablet browses its own view and draws the desk of

@@ -11,7 +11,7 @@
  * rather than something to read back off the DOM when a person saves
  * (TASK-0024, TASK-0025).
  */
-import type { Desk, DeskCard, DeckState, Filters, SessionState } from './types.js';
+import type { Desk, DeskCard, DeckState, Filters, ReadingSize, SessionState } from './types.js';
 import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
 
 export type DeckAction =
@@ -21,7 +21,13 @@ export type DeckAction =
   | { type: 'open-desk'; name: string | null; viewId?: string }
   | { type: 'save-desk'; name: string; viewId?: string }
   | { type: 'delete-desk'; workspaceId: string; name: string }
-  | { type: 'put-on-desk'; noteId: string; x: number; y: number; viewId?: string }
+  /**
+   * `w` and `h` are the size the note opens at, when the window knows one.
+   * Without them the note takes the view's reading size, if it has one
+   * (TASK-0104): either way the size is written on the card, so resizing
+   * another note later does not change this one.
+   */
+  | { type: 'put-on-desk'; noteId: string; x: number; y: number; w?: number; h?: number; viewId?: string }
   | { type: 'take-off-desk'; noteId: string; viewId?: string }
   | { type: 'move-card'; noteId: string; x: number; y: number; viewId?: string }
   /**
@@ -51,7 +57,11 @@ export type DeckAction =
   | { type: 'push'; noteId: string }
   /** Every pulled and pushed note in this workspace goes back where the record puts it. */
   | { type: 'let-go' }
-  /** A pane's size, clamped to the minimum a body can be read at (TASK-0054). */
+  /**
+   * A pane's size, clamped to the minimum a body can be read at (TASK-0054).
+   * It is also the size the next note opened on this view takes (TASK-0104):
+   * resizing is the one act that says how large a person wants to read.
+   */
   | { type: 'resize-card'; noteId: string; w: number; h: number; viewId?: string }
   /** A pane brought to the top of its stack, which is the end of the desk's list. */
   | { type: 'raise-card'; noteId: string; viewId?: string }
@@ -132,6 +142,7 @@ export function initialState(): DeckState {
     desks: {},
     deskCards: {},
     viewDesks: {},
+    readingSizes: {},
     query: '',
     filters: { statuses: [], types: [] },
     folds: {},
@@ -191,6 +202,12 @@ export function everyViewCardsOf(state: DeckState, workspaceId: string | null): 
 export function viewCardsOf(state: DeckState, workspaceId: string | null, viewId: string | null): DeskCard[] {
   if (workspaceId === null || viewId === null) return [];
   return state.viewDesks[workspaceId]?.[viewId] ?? [];
+}
+
+/** The size a person last gave an opened note on this view, or null when they have given none. */
+export function readingSizeOf(state: DeckState, workspaceId: string | null, viewId: string | null): ReadingSize | null {
+  if (workspaceId === null || viewId === null) return null;
+  return state.readingSizes[workspaceId]?.[viewId] ?? null;
 }
 
 /** Whether a held note is on every view of its workspace. */
@@ -327,6 +344,14 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const drawn = deskCardsOf(state, ws, view);
       if (drawn.some((c) => c.noteId === action.noteId)) return state;
       const card: DeskCard = { noteId: action.noteId, x: round(action.x), y: round(action.y), z: topZ(drawn) + 1 };
+      // The size it opens at is written on the card: what the window asked
+      // for, else the size last chosen on this view. With neither it has no
+      // size of its own, as every card had before TASK-0104.
+      const asked = finite(action.w) && finite(action.h) ? { w: action.w as number, h: action.h as number } : readingSizeOf(state, ws, view);
+      if (asked !== null) {
+        card.w = clampSide(asked.w, PANE_MIN_WIDTH);
+        card.h = clampSide(asked.h, PANE_MIN_HEIGHT);
+      }
       return withDesk(state, ws, view, null, [...viewCardsOf(state, ws, view), card]);
     }
     case 'take-off-desk': {
@@ -454,7 +479,16 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
     case 'resize-card': {
       const w = clampSide(action.w, PANE_MIN_WIDTH);
       const h = clampSide(action.h, PANE_MIN_HEIGHT);
-      return updateCard(state, viewOf(state, action), action.noteId, (c) => (c.w === w && c.h === h ? c : { ...c, w, h }));
+      const view = viewOf(state, action);
+      if (state.workspaceId === null || !deskCardsOf(state, state.workspaceId, view).some((c) => c.noteId === action.noteId)) return state;
+      const resized = updateCard(state, view, action.noteId, (c) => (c.w === w && c.h === h ? c : { ...c, w, h }));
+      // The view remembers it, so the next note opened here opens at this
+      // size. A note that is not on the desk sets nothing: the guard above.
+      const ws = state.workspaceId;
+      const known = readingSizeOf(resized, ws, view);
+      if (view === null || (known !== null && known.w === w && known.h === h)) return resized;
+      const next: DeckState = { ...resized, readingSizes: { ...resized.readingSizes, [ws]: { ...(resized.readingSizes[ws] ?? {}), [view]: { w, h } } } };
+      return resized === state ? bump(next) : next;
     }
     case 'raise-card': {
       if (state.workspaceId === null) return state;
@@ -586,6 +620,10 @@ function clampSide(value: number, minimum: number): number {
   return Math.min(PANE_MAX_SIDE, Math.max(minimum, n));
 }
 
+function finite(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 function round(value: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : 0;
 }
@@ -642,6 +680,24 @@ export function normaliseState(value: unknown): DeckState {
       viewDesks[ws] = out;
     }
   }
+  // The reading size per view (TASK-0104). Read as tolerantly as the desks:
+  // a file written before it existed has none, and a table of junk is no
+  // table, so every note then opens at the first-use size.
+  const readingSizes: Record<string, Record<string, ReadingSize>> = {};
+  const rawSizes = raw['readingSizes'];
+  if (typeof rawSizes === 'object' && rawSizes !== null && !Array.isArray(rawSizes)) {
+    for (const [ws, views] of Object.entries(rawSizes as Record<string, unknown>)) {
+      if (typeof views !== 'object' || views === null || Array.isArray(views)) continue;
+      const out: Record<string, ReadingSize> = {};
+      for (const [view, size] of Object.entries(views as Record<string, unknown>)) {
+        if (typeof size !== 'object' || size === null) continue;
+        const { w, h } = size as Record<string, unknown>;
+        if (!finite(w) || !finite(h)) continue;
+        out[view] = { w: clampSide(w as number, PANE_MIN_WIDTH), h: clampSide(h as number, PANE_MIN_HEIGHT) };
+      }
+      readingSizes[ws] = out;
+    }
+  }
   const folds: Record<string, boolean> = {};
   const rawFolds = raw['folds'];
   if (typeof rawFolds === 'object' && rawFolds !== null) {
@@ -657,6 +713,7 @@ export function normaliseState(value: unknown): DeckState {
     desks,
     deskCards,
     viewDesks,
+    readingSizes,
     query: typeof raw['query'] === 'string' ? raw['query'] : '',
     filters: normaliseFilters(raw['filters']),
     folds,

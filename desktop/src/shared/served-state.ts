@@ -55,6 +55,7 @@ export function servedState(state: DeckState, openWorkspaceIds: ReadonlySet<stri
     desks,
     deskCards: keep(state.deskCards),
     viewDesks: keep(state.viewDesks),
+    readingSizes: keep(state.readingSizes),
     indexRevisions: keep(state.indexRevisions),
     session: { pulled: keep(state.session.pulled), pushed: keep(state.session.pushed) },
     actor: '',
