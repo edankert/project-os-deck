@@ -2055,7 +2055,12 @@ export class GlassField {
     field.addEventListener('keydown', (event) => {
       this.scheduleIdle();
       const target = event.target as HTMLElement;
-      if (target.closest('.pane') !== null || target.tagName === 'INPUT') return;
+      // A key pressed inside a desk object is that object's. The collection
+      // stands in the field since FEAT-0020, so its keys bubble to here: an
+      // arrow on its header moved it and turned the field as well, and End
+      // on a row went to the last row and flew the field round to face
+      // behind, leaving the list out of sight.
+      if (target.closest('.pane, .collection, .narrow-bar') !== null || target.tagName === 'INPUT') return;
       if (target === this.el.quietCursor) return;
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         event.preventDefault();
