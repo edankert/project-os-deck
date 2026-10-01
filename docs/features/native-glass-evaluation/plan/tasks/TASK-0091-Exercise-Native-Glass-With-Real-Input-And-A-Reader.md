@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0091"
 title: "Make the field interactive and open a representative native note reader"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -14,7 +14,7 @@ related: ["[[RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind]]"
 tests: []
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # Exercise the field with real input and a native reader
@@ -70,3 +70,7 @@ The reader command route now also has an OS-versus-replay artifact. The prior OS
 Under macOS Reduce motion enabled through Settings, `reduced-motion-real-window-r2.json` logged OS opening and closing N-00000, locating quiet N-00004, pulling it and resetting pulls. `reduced-motion-observation-r2.json` records the preference false before, true during and false after, with hashed captures and the restored original setting. The run kept 200/200 placement, focus and the intended display without application errors. The first attempt failed to close the reader and pulled the wrong note; its raw record remains visible. The prototype has no animated scene transitions in either setting, so this verifies that the actions remain available under the OS preference rather than a visible animation difference.
 
 The reader now parses local Markdown links in its body and resolves relative paths against the open note. Keyboard link navigation lists those body links before the fixture's separate outgoing relationships, so it can follow a link a person actually sees. In the compatibility window, `native-compat-reader-link-os-r20.json` records OS pointer input opening `PHASES.md` and OS Enter following its `[docs/README.md](README.md)` link to canonical `your-trainer|README.md`; the new pane shows that note. The run kept focus and recorded no application errors. Rust tests cover relative-link resolution and navigation through the application reader. This narrows the link acceptance gap but does not complete the full TST-0058 walk or establish equal Markdown layout.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].

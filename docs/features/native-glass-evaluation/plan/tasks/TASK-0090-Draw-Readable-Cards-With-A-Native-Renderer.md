@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0090"
 title: "Draw realistic card content with cached text and bounded graphics work"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -62,3 +62,7 @@ A generated 10,000-note reader diagnostic exposed a resource leak in a locked se
 An offline 2026-10-01 review found that every uncapped camera zoom cleared all shaped card text, even though its buffers use each card's base size and the draw call supplies the camera scale. Zoom now retains that cache; pull and reset invalidate only the cards whose dimensions changed. All 71 Rust tests pass. The desktop was locked, so no foreground frame measured the expected reduction in text-cache misses or checked painted text after this change. The task remains open for that check and its other visible-content and resource evidence.
 
 Each submitted frame now records the number of geometry `draw` calls and the count of cards drawn at each detail level. The run summary reports the largest value in each group and rejects a frame whose detail counts differ from its painted-card count. Glyphon's internal text draw calls and atlas bytes are unavailable and remain null. Eight focused summary tests pass. Foreground resource and visual-detail checks remain owed.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].

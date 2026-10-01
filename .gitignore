@@ -40,7 +40,3 @@ node_modules/
 # not a file every clone should carry. Anchored, so a `docs/.../measurements/`
 # could never vanish from a fresh clone unnoticed.
 /measurements/
-
-# Native Glass experiment: private workspace exports, raw runs and Rust build output.
-/prototypes/native-glass/local/
-/prototypes/native-glass/target/

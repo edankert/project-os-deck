@@ -22,7 +22,7 @@ tasks: ["[[TASK-0086-Define-The-Native-Glass-Experiment-And-Baseline]]", "[[TASK
 evidence: []
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # The native Glass evaluation is reproducible
@@ -63,3 +63,9 @@ Not run. The native executable, fixture exporter, matrix printer, `tools/run.mjs
 ## Adequacy
 
 The audit must fail a bundle with missing fixture hashes, silently dropped records, unequal visible content, lost foreground samples or a conclusion unsupported by its results. TASK-0092 records rejection evidence for deliberate invalid runs. Manual reproduction guards against a summary that merely repeats its own recorded claims.
+
+## Withdrawn, 2026-10-01
+
+This audit was never run and never will be. Edwin dropped the native Rust evaluation on 2026-10-01 and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed the prototype and the measurement bundle it would have audited.
+
+The note rests at `ready`, not `retired`, for one reason: the validator rejects a retired manual test that has no `last_verified:` date, and this test has no run to date. `ready` is the status for a test that has never been executed, which is the truth here.

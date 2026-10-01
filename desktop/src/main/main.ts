@@ -8,7 +8,6 @@ import type { ChildProcess } from 'node:child_process';
 import { recordGlass } from './smoke-glass.js';
 import { GraphService } from './graph-service.js';
 import { runMeasure, saveMeasurement } from './measure.js';
-import { runFixtureDiagnostic } from './measure-fixture.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -48,7 +47,7 @@ const FOCUS = focusPolicy(process.argv, process.env);
 // affect each other.
 app.setPath(
   'userData',
-  process.argv.includes('--smoke') || process.argv.includes('--measure') || process.argv.includes('--measure-fixture')
+  process.argv.includes('--smoke') || process.argv.includes('--measure')
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'deck-smoke-'))
     : path.join(app.getPath('appData'), 'project-os-deck'),
 );
@@ -546,40 +545,6 @@ app.whenReady().then(async () => {
     await startHost();
     if (process.argv.includes('--smoke')) {
       await runSmoke();
-      return;
-    }
-    if (process.argv.includes('--measure-fixture')) {
-      const adapter = argValue('--measure-fixture');
-      if (!adapter) throw new Error('--measure-fixture needs an adapter JSON path');
-      const out = argValue('--measure-fixture-out');
-      if (!out) throw new Error('--measure-fixture-out needs an output JSON path');
-      if (fs.existsSync(out)) throw new Error(`fixture diagnostic output already exists: ${out}`);
-      const host = argValue('--measure-fixture-workspace') ?? defaultWorkspacePath(__dirname);
-      const sourceRoot = argValue('--measure-fixture-source-root') ?? host;
-      const durationMs = Number(argValue('--measure-fixture-ms') ?? '5000');
-      const result = await runFixtureDiagnostic({
-        store,
-        addWorkspace: (root) => {
-          const added = workspaces.add(root);
-          return added.ok ? { ok: true, id: added.workspace.id, name: added.workspace.name } : { ok: false, reason: added.reason };
-        },
-        openWorkspace: async (id) => (await ipcInvoke('deck:workspaces:open', id)) as { ok: boolean; error?: string },
-        snapshot: (id) => indexes.get(id)?.snapshot() ?? null,
-        graphs,
-        origin: hostOrigin,
-        createWindow: (role, address, panel) => createWindow(role, address, panel),
-        focusApp,
-        untilBooted,
-      }, adapter, host, durationMs, sourceRoot, process.argv.includes('--measure-fixture-reader-probe'),
-      argValue('--measure-fixture-trace'), argValue('--measure-fixture-matched-fixture'), out,
-      process.argv.includes('--measure-fixture-visual-checkpoints'),
-      process.argv.includes('--measure-fixture-os-observe'),
-      Number(argValue('--measure-fixture-visual-input-stride') ?? '1'));
-      fs.writeFileSync(out, `${JSON.stringify(result, null, 2)}\n`);
-      console.log(`deck: fixture diagnostic written to ${out}`);
-      shutdown();
-      await waitForExit(stopping);
-      app.exit(result && (result as { valid: boolean }).valid ? 0 : 1);
       return;
     }
     if (process.argv.includes('--measure')) {

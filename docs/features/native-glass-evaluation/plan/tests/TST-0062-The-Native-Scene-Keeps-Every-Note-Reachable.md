@@ -2,7 +2,7 @@
 type: "[[test]]"
 id: "TST-0062"
 title: "The native scene keeps every note reachable"
-status: "passing"
+status: "retired"
 owner: "user:edwin"
 created: "2026-10-01"
 updated: "2026-10-01"
@@ -51,3 +51,7 @@ On 2026-10-01, `cargo test --locked` passed 71 native checks, including the comm
 ## Adequacy
 
 The former real-export test used an obsolete path and silently returned when that path was absent. The replacement defaults to a committed fixture and fails if an explicitly named full fixture is missing. The omitted-record check removes one of 200 placements and receives `placed 199 of 200 notes`; the transform check shifts the located camera by 1,000 world units and no longer hits the requested key. The forced-overlap check reconciles the scene's visible paint order with reverse hit order. Foreground draw, clipping and delivered input remain the separate [[TST-0058-Every-Note-Can-Be-Reached-In-The-Native-Prototype]] walk.
+
+## Retired, 2026-10-01
+
+The subject is gone. Edwin dropped the native Rust evaluation on 2026-10-01 and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed the prototype this test exercised, so it can no longer be run. Any result recorded above describes the prototype as it stood and says nothing about Deck.

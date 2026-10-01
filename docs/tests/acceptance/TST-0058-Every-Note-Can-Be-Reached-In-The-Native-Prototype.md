@@ -16,14 +16,14 @@ review_round: ""
 related: []
 id: "TST-0058"
 title: "Every note can be reached in the native prototype"
-status: "active"
+status: "retired"
 level: "acceptance"
 tasks: ["[[TASK-0089-Give-Every-Note-A-Stable-Reachable-Place]]", "[[TASK-0090-Draw-Readable-Cards-With-A-Native-Renderer]]", "[[TASK-0091-Exercise-Native-Glass-With-Real-Input-And-A-Reader]]", "[[TASK-0092-Measure-Native-Glass-Against-The-Current-Deck]]"]
 area: "Native Glass evaluation"
 after: []
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # Every note can be reached in the native prototype
@@ -97,3 +97,7 @@ The final read-only fixture audit rechecked the frozen Your Trainer source after
 ## Adequacy
 
 Executable scene/input checks must detect a dropped record, an incorrect transform and an incorrectly routed reader wheel event. The walk adds evidence from real event delivery and visible content; state-only tests cannot replace it.
+
+## Retired, 2026-10-01
+
+The subject is gone. Edwin dropped the native Rust evaluation on 2026-10-01 and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed the prototype this test exercised, so it can no longer be run. Any result recorded above describes the prototype as it stood and says nothing about Deck.

@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0093"
 title: "Report what the evidence supports and define the next architecture decision"
-status: "backlog"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -14,7 +14,7 @@ related: ["[[RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind]]"
 tests: ["[[TST-0059-The-Native-Glass-Evaluation-Is-Reproducible]]"]
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-28"
+updated: "2026-10-01"
 ---
 
 # Decide which design constraints the evidence lets Deck remove
@@ -53,3 +53,7 @@ Do not recommend an unconditional migration from an empty-window or rectangle be
 ## Notes
 
 Depends on [[TASK-0092-Measure-Native-Glass-Against-The-Current-Deck]]. Risks [[RISK-0005-A-Native-Prototype-Wins-By-Doing-Less-Work]] and [[RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind]] remain open until their evidence and remaining exposure are assessed.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].

@@ -2,7 +2,7 @@
 type: "[[risk]]"
 id: "RISK-0005"
 title: "A native prototype wins by doing less work"
-status: "open"
+status: "closed"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 likelihood: "high"
@@ -11,7 +11,7 @@ mitigation: ["[[TASK-0086-Define-The-Native-Glass-Experiment-And-Baseline]]", "[
 related: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]", "[[TST-0059-The-Native-Glass-Evaluation-Is-Reproducible]]"]
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # A native prototype wins by doing less work
@@ -44,3 +44,7 @@ A fast native field can give a misleading answer if it omits content, interactio
 ## Response and closure evidence
 
 Stop scored comparison on any trigger and record the mismatch. Repair workload equivalence or label the runs as different experiments. Resolve this risk only after [[TST-0059-The-Native-Glass-Evaluation-Is-Reproducible]] verifies the complete bundle and the decision report discloses remaining limits. A negative result can resolve the evidence risk when it is complete and honestly reported.
+
+## Closed, 2026-10-01
+
+No comparison between a native prototype and Deck will be scored, so no result can be won by doing less work. Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The risk was not mitigated; its cause was removed. A later proposal to change renderer starts a new risk scan.

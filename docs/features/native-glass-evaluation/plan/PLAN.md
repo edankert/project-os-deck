@@ -1,13 +1,13 @@
 ---
 type: "[[plan]]"
 title: "Evaluate native Glass before choosing a migration"
-status: "active"
+status: "superseded"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 implements: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 related: ["[[PHASE-0002-Glass]]"]
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-28"
+updated: "2026-10-01"
 ---
 
 # Evaluate native Glass before choosing a migration
@@ -75,3 +75,7 @@ Pure checks prove complete placement, deterministic identity, stable positions, 
 ## Planning review
 
 Two independent reviewers read the feature, delivery plan and benchmark from clean contexts on 2026-09-28. Both found that idle and scheduled minimize/restore segments conflicted with the active-frame timing rules. BENCHMARK.md now defines metric applicability per segment, preserves raw exclusions and gives recovery separate deadlines. A narrow follow-up review confirmed that correction. The remaining scoped claims about complete placement, realistic workloads, comparison validity and migration boundaries held by document inspection. This is advisory plan review, not runtime verification or a feature-completion verdict.
+
+## Dropped, 2026-10-01
+
+This delivery sequence was not completed. Edwin dropped the evaluation on 2026-10-01; the feature note's "Cancelled" section records it. Glass is delivered in the Electron application under the plans of FEAT-0020 and FEAT-0022.

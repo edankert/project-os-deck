@@ -2,10 +2,10 @@
 type: "[[test]]"
 id: "TST-0060"
 title: "The native Glass fixtures reconcile and regenerate"
-status: "passing"
+status: "retired"
 owner: "user:edwin"
 created: "2026-09-29"
-updated: "2026-09-29"
+updated: "2026-10-01"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 scope: "feature"
 level: "system"
@@ -57,3 +57,7 @@ Two fresh cockpit exports each selected 1,727 all-notes, 159 Features and 315 Is
 ## Adequacy
 
 The auditor's mutation checks fail for a removed selected record, a duplicate canonical key, and a changed body even when its note-array digest has been recomputed. Repeating the generator and live exporter independently guards against a self-consistent but non-reproducible manifest. The reader's visual handling of embeds, HTML and all other Markdown belongs to [[TST-0058-Every-Note-Can-Be-Reached-In-The-Native-Prototype]]; timing and matched-work integrity belong to [[TST-0059-The-Native-Glass-Evaluation-Is-Reproducible]].
+
+## Retired, 2026-10-01
+
+The subject is gone. Edwin dropped the native Rust evaluation on 2026-10-01 and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed the prototype this test exercised, so it can no longer be run. Any result recorded above describes the prototype as it stood and says nothing about Deck.

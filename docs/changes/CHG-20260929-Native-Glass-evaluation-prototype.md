@@ -124,3 +124,7 @@ The unlocked Mac Studio supplied full-minute foreground pull/reset diagnostics o
 
 - [ ] Finish the current-Deck baseline, real-input walk, scored native and matched-work measurements and decision report before closing FEAT-0019.
 - [ ] Revisit this note after the final feature review; this branch's prototype has not been released or made Deck's default.
+
+## Removed, 2026-10-01
+
+The prototype and the fixture diagnostic this note describes were taken out of the tree on 2026-10-01: [[CHG-20261001-Native-Glass-Evaluation-Removed]]. The re-recorded test fixtures and the owed-surge test cases stayed.

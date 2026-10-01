@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0086"
 title: "Define the experiment, freeze the benchmark protocol and capture the current Deck baseline"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -14,7 +14,7 @@ related: ["[[RISK-0005-A-Native-Prototype-Wins-By-Doing-Less-Work]]", "[[TST-005
 tests: []
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # Define the experiment before comparing implementations
@@ -55,3 +55,7 @@ Stop scored comparisons if the workload or metric definition is still changing. 
 ## Notes
 
 The provisional production-renderer baseline is recorded in [BASELINE.md](../BASELINE.md), with the raw local measurement path and its limits. Deck's focused five-second Issues turns were about 17.5 ms p95 on each workspace; this is a 60 Hz scheduling observation of a capped view, not a native-versus-web verdict. A shared-fixture, repeated scored baseline with p99, input, load and memory is still required before this task can close. [[RISK-0005-A-Native-Prototype-Wins-By-Doing-Less-Work]] owns the comparison hazard.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].

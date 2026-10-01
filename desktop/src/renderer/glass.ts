@@ -246,7 +246,6 @@ export class GlassField {
   /** The note being reached for, and the wires its neighbours get. */
   private reach: { noteId: string; neighbours: Set<string> } | null = null;
   private reachTimer: ReturnType<typeof setTimeout> | null = null;
-  private fixtureReachContexts: Record<string, NoteContext> | null = null;
   private highlight: string | null = null;
   /** Several cards marked at once, for a moment: a lift's neighbours under reduced motion. */
   private highlights = new Set<string>();
@@ -1020,26 +1019,6 @@ export class GlassField {
     setText(element, '.fc-face', faceText(card, this.input.faces));
     setText(element, '.fc-owed', entry.inputs.owed ? (card.owedVerb ?? 'needs you') : '');
     this.paintMore(element, card);
-  }
-
-  /** Opt-in benchmark inventory of the face Deck would paint for every placed note. */
-  cardFieldInventory(): Array<{ key: string; id: string; title: string; mark: string; face: string; owed: string; more: string }> {
-    const fields = (element: HTMLElement, selector: string): string =>
-      element.querySelector(selector)?.textContent?.trim() ?? '';
-    const result = [];
-    const held = new Set(this.held.map((card) => card.noteId));
-    for (const [key, slot] of this.model.current.slots) {
-      const entry = this.entries.get(key);
-      if (entry === undefined) throw new Error(`placed note ${key} has no card entry`);
-      const element = document.createElement('article');
-      element.innerHTML = '<span class="fc-id"></span><span class="fc-title"></span><span class="fc-mark"></span>' +
-        '<span class="fc-face"></span><span class="fc-owed"></span><span class="fc-more"></span>';
-      this.paintCard(element, entry, slot, held.has(key));
-      result.push({ key, id: fields(element, '.fc-id'), title: fields(element, '.fc-title'),
-        mark: fields(element, '.fc-mark'), face: fields(element, '.fc-face'),
-        owed: fields(element, '.fc-owed'), more: fields(element, '.fc-more') });
-    }
-    return result;
   }
 
   /**
@@ -2168,11 +2147,6 @@ export class GlassField {
 
   // ---- reach ----
 
-  /** Supply the fixture's resolved links to the opt-in measurement field. */
-  setFixtureReachContexts(contexts: Record<string, NoteContext>): void {
-    this.fixtureReachContexts = contexts;
-  }
-
   /** A trace for the smoke run's diagnostics; silent unless the page asks for it. */
   private trace(...parts: unknown[]): void {
     const g = globalThis as unknown as { __deckTrace?: boolean; __deckTraceLog?: string[] };
@@ -2185,8 +2159,8 @@ export class GlassField {
     if (this.reachTimer !== null) clearTimeout(this.reachTimer);
     this.reachTimer = setTimeout(() => {
       this.reachTimer = null;
-      void (this.fixtureReachContexts?.[noteId] === undefined
-        ? this.hooks.context(noteId) : Promise.resolve(this.fixtureReachContexts[noteId]))
+      void this.hooks
+        .context(noteId)
         .then((context) => {
           // Still reaching for it? A pointer that moved on has let go.
           if (this.pendingReach !== noteId) return;

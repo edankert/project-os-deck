@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0089"
 title: "Give every note a stable place and a route into view without population caps"
-status: "done"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -57,3 +57,7 @@ The behavioral contract is [PLAN.md](../PLAN.md), “Scene and interaction contr
 The earlier release binary, SHA-256 `9081c6aa85649a8fb1c8e80a25aee99f44cd558c4cc4139a9c2a8a671338f29e`, headlessly allocated 3,174 of 3,174 frozen real all-notes records, 10,000 of 10,000 generated records and 50,000 of 50,000 exploratory records. The follow-up [[TST-0062-The-Native-Scene-Keeps-Every-Note-Reachable]] audit checked every key's locate, visibility, center hit, camera inverse and unchanged priority band on all three fixtures. The overlap, clipping, view-return, camera/reader stability, counter and reload routes pass focused native checks; the existing [[TST-0058-Every-Note-Can-Be-Reached-In-The-Native-Prototype]] records a prior OS-delivered 200→201→200 reload walk with unchanged survivor pixels. These correctness checks are not drawing performance results. The current release build additionally prints selected, rejected, placed, visible and interactable counts in its headless output.
 
 The 2026-10-01 close-out ran all 71 Rust tests, all 483 Deck tests and the prototype-tool suite (97 passed, six skipped), with no failures. The existing RISK-0005 covers the chance of overclaiming an uncapped result as a fair speed comparison; this task added no new external dependency or write route. Full visual parity and scored timing remain under TASK-0094 and TASK-0092.
+
+## Cancelled, 2026-10-01
+
+This task was finished and was `done` until 2026-10-01, verified by [[TST-0062-The-Native-Scene-Keeps-Every-Note-Reachable]]. Edwin dropped the native Rust evaluation that day ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled") and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed what this task built. The test that verified it is retired because it can no longer be run, so the task cannot stand as `done`. The ticked boxes above record what was true while the prototype existed.

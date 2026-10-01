@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0094"
 title: "Match Deck's visible Glass work in a native compatibility mode"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["Edwin 2026-09-29: Build visual-parity mode first", "Edwin 2026-10-01: Desktop is unlocked now"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -178,3 +178,7 @@ The prior zoom and hover delivery statements above are superseded. Deck real r25
 The full-minute hover route now delivers 473 actions to each foreground application on both fixtures. Its r2 point was too close to an overlapping card edge, which made Deck and native reach different notes. The r3 route keeps a three-pixel clearance. Deck real r269/native r270 and Deck generated r271/native r272 each pass their separate OS receipt audits and match 472 frame-bearing camera checkpoints and all six sustained reached-note states. Their final reader bodies and links match exactly: 14,475 characters and seven links on real, 5,887 characters and one link on generated. The paired audits still reject the first reader-opening checkpoint because Deck animates the pane from the card while native presents its final geometry immediately. The final settled reader crop differs above the diagnostic 20-value RGB threshold in 24.3079% of real pixels and 18.1699% of generated pixels. The prior r2 hover failures and other invalid runs remain retained.
 
 TASK-0094 stays doing with four unticked criteria. The immediate remaining work is equivalent reader-opening presentation, a justified image-level parity check that actually passes on both fixtures, a full-minute turn route with sampled visual work, and an OS-deliverable revision of BENCHMARK.md that reconciles all named actions. No current structural diagnostic or fixed-region pixel report opens the direct speed gate for TASK-0092. The latest focused checks pass 78 Rust tests, 110 prototype Node tests and two Python image-comparator tests; the last native release binary hash and run/report hashes are recorded in EVIDENCE.md.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].

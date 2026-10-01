@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0088"
 title: "Boot an isolated Rust window with reproducible builds and measurement output"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -14,7 +14,7 @@ related: ["[[RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind]]"
 tests: []
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # Boot a separate native window with measurement support
@@ -52,3 +52,7 @@ Stop if the selected stack requires an embedded WebView to draw the field or rep
 ## Notes
 
 The Cargo project, pinned toolchain, lockfile, Metal window, text pipeline and initial metrics now exist. One release-window run on the M2 Max presented a frame containing five visible cards, with 200 of 200 records allocated and no reported render error. The run lost focus, and it is not a scored benchmark. Surface recovery, input response, memory and font evidence need a fuller run. [[RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind]] remains open.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].

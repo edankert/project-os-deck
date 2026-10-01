@@ -2,7 +2,7 @@
 type: "[[risk]]"
 id: "RISK-0006"
 title: "Native rendering leaves Decks reader and tablet behind"
-status: "open"
+status: "closed"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 likelihood: "high"
@@ -11,7 +11,7 @@ mitigation: ["[[TASK-0088-Boot-An-Isolated-Native-Glass-Executable]]", "[[TASK-0
 related: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]", "[[TST-0058-Every-Note-Can-Be-Reached-In-The-Native-Prototype]]"]
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-30"
+updated: "2026-10-01"
 ---
 
 # Native rendering leaves Deck's reader and tablet behind
@@ -48,3 +48,7 @@ Navigator-label parity now adds a direct pinned `unicode-segmentation` dependenc
 Record the dependency or parity gap and its consequence in the evaluation report. Replace a dependency when needed for the agreed prototype workload; do not quietly lower that workload. Work beyond the prototype belongs to an explicit later migration decision and phase scope.
 
 A completed prototype can leave migration hazards open. Resolve this risk only when the report makes those hazards actionable and the owner accepts the residual exposure or chooses not to migrate. Do not claim that a smooth field proves complete native Deck feasibility.
+
+## Closed, 2026-10-01
+
+No native renderer is being adopted, so the reader and the tablet cannot be left behind by one. Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The risk was not mitigated; its cause was removed. A later proposal to change renderer starts a new risk scan.

@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0087"
 title: "Export complete workspace fixtures and deterministic larger datasets"
-status: "done"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -14,7 +14,7 @@ related: ["[[RISK-0005-A-Native-Prototype-Wins-By-Doing-Less-Work]]"]
 tests: ["[[TST-0060-The-Native-Glass-Fixtures-Reconcile-And-Regenerate]]"]
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # Export complete, representative inputs for the experiment
@@ -59,3 +59,7 @@ The exporter and generator are under `prototypes/native-glass/tools/`. The lates
 The native headless loader placed 10,000/10,000, 50,000/50,000 and 2,116/2,116 notes from the new files. A five-second production diagnostic on the new generated workspace kept 10,000 selected and 2,116 placed, then opened a real 5,887-character article. Four of its 299 actions were more than 100 ms late, so it is ineligible for matched timing and remains diagnostic. Matrix r6 gives the generated native subset no source root and names the materialized workspace only for the production reader; r5 incorrectly applied that source root to both and remains a draft.
 
 Two fresh cockpit exports selected the same 1,727 all-notes, 159 Features and 315 Issues records with identical content, navigation, source-tree and revision hashes. The exporter checked source Git status, dirty diff and every indexed Markdown file before and after each export. It now refuses output inside the source note tree and refuses overwriting an existing fixture. The source audit reports unresolved links and embed/HTML markers without pretending they were rendered; its syntax counts are not a complete Markdown audit.
+
+## Cancelled, 2026-10-01
+
+This task was finished and was `done` until 2026-10-01, verified by [[TST-0060-The-Native-Glass-Fixtures-Reconcile-And-Regenerate]]. Edwin dropped the native Rust evaluation that day ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled") and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed what this task built. The test that verified it is retired because it can no longer be run, so the task cannot stand as `done`. The ticked boxes above record what was true while the prototype existed.

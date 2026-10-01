@@ -2,7 +2,7 @@
 type: "[[test]]"
 id: "TST-0061"
 title: "The visual parity gate rejects mismatched work"
-status: "active"
+status: "retired"
 owner: "user:edwin"
 created: "2026-09-29"
 updated: "2026-10-01"
@@ -148,3 +148,7 @@ The unlocked 2026-10-01 foreground runs supersede the locked-session handoff for
 The initial real 599-event zoom route is a retained negative foreground check. Deck r256/native r257 each pass OS receipt audits and reconcile camera motion within 0.000005, but the paired visual report SHA-256 `9a43dd618a2588d90e4bd499b66aa5019f2023359938eb85de7bfc2231c3dc52` rejects the compass rectangle at the diagnostic 2px limit, with a 5.41px maximum difference. Native now measures the live hidden-count compass text. The rerun with Deck r256/native r258 passes the structural audit at SHA-256 `1ceed1bf274074c3350d6fc1aacdfd1ebf40ccb3700e4f7f8e228b097b1421f4`. Generated Deck r259/native r260 also passes at SHA-256 `5ae37f695c92d8626ad396feb06af6da71e43feea1eeb6b8d506fbe9393f711c`. Each delivers all 599 actions and matches 599 camera and 60 sampled visual checkpoints. Both still refuse direct comparison.
 
 The current r3 hover routes deliver all 473 actions per application on both fixtures. Deck real r269/native r270 and Deck generated r271/native r272 match 472 frame-bearing camera checkpoints, six sustained hover rests, the final complete reader body and links. The paired reports SHA-256 `61b9b04743dcb60d65de2ebd2a3ea7224f7f11b16cb0955726ad0a2f8049238a` and `2f54a7d251be4ad5c97a9cf8363c4e1bc77cf0713fa11f6c294e86ce39122929` still reject the first reader-opening geometry: Deck grows and gathers the pane, while native places it immediately. The settled reader PNGs differ in 24.3079% real and 18.1699% generated pixels within the fixed reader crop at the diagnostic 20-value RGB threshold. The changed transition, material paint, eligible protocol and direct timing comparison remain open; TST-0061 stays active.
+
+## Retired, 2026-10-01
+
+The subject is gone. Edwin dropped the native Rust evaluation on 2026-10-01 and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed the prototype this test exercised, so it can no longer be run. Any result recorded above describes the prototype as it stood and says nothing about Deck.

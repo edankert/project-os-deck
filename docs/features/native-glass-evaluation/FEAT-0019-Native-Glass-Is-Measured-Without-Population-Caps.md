@@ -2,12 +2,12 @@
 type: "[[feature]]"
 id: "FEAT-0019"
 title: "Native Glass is measured without population caps"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["Edwin 2026-09-28: Plan these 5 steps fully.", "Edwin: evaluate removing design compromises made in anticipation of slowdown, rather than only speeding up the existing capped design."]
 goal: "Determine whether a native Rust Glass can give every note a stable, reachable place with realistic readable content and smooth interaction on the current Mac Studio, and record whether the evidence warrants a native Deck migration."
 requirements: []
-tasks: ["[[TASK-0086-Define-The-Native-Glass-Experiment-And-Baseline]]", "[[TASK-0087-Export-Representative-Workspaces-For-Both-Renderers]]", "[[TASK-0088-Boot-An-Isolated-Native-Glass-Executable]]", "[[TASK-0089-Give-Every-Note-A-Stable-Reachable-Place]]", "[[TASK-0090-Draw-Readable-Cards-With-A-Native-Renderer]]", "[[TASK-0091-Exercise-Native-Glass-With-Real-Input-And-A-Reader]]", "[[TASK-0092-Measure-Native-Glass-Against-The-Current-Deck]]", "[[TASK-0093-Decide-What-The-Native-Glass-Evidence-Supports]]", "[[TASK-0094-Match-Decks-Visible-Glass-Work-In-A-Native-Compatibility-Mode]]"]
+tasks: ["[[TASK-0086-Define-The-Native-Glass-Experiment-And-Baseline]]", "[[TASK-0087-Export-Representative-Workspaces-For-Both-Renderers]]", "[[TASK-0088-Boot-An-Isolated-Native-Glass-Executable]]", "[[TASK-0089-Give-Every-Note-A-Stable-Reachable-Place]]", "[[TASK-0090-Draw-Readable-Cards-With-A-Native-Renderer]]", "[[TASK-0091-Exercise-Native-Glass-With-Real-Input-And-A-Reader]]", "[[TASK-0092-Measure-Native-Glass-Against-The-Current-Deck]]", "[[TASK-0093-Decide-What-The-Native-Glass-Evidence-Supports]]", "[[TASK-0094-Match-Decks-Visible-Glass-Work-In-A-Native-Compatibility-Mode]]", "[[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]]"]
 release: ""
 acceptance_exception: ""
 design: ""
@@ -17,7 +17,7 @@ review_verdict: ""
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]", "[[RISK-0006-Native-Rendering-Leaves-Decks-Reader-And-Tablet-Behind]]"]
 owner: "user:edwin"
 created: "2026-09-28"
-updated: "2026-09-29"
+updated: "2026-10-01"
 ---
 
 # Native Glass is measured without population caps
@@ -72,3 +72,9 @@ On 2026-10-01, `npm test --prefix desktop` passed all 483 tests, `cargo test --l
 - Measurement contract: [BENCHMARK.md](plan/BENCHMARK.md).
 - Phase: [[PHASE-0002-Glass]].
 - Existing runtime architecture: [ARCHITECTURE.md](../../ARCHITECTURE.md).
+
+## Cancelled, 2026-10-01
+
+**The evaluation was dropped before it produced a verdict.** Edwin, 2026-10-01: “This is in the electron application, discard the rust solution also started in this project.” Glass is delivered in the existing Electron application ([[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]], [[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]).
+
+No comparison was scored and no architecture recommendation was written, so nothing in this note is evidence for or against a native renderer. All nine of its tasks are `cancelled`. TASK-0087 and TASK-0089 had been finished; what they built was removed with the prototype and the tests that verified them are retired, so they no longer stand as `done`. [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] took the prototype and the Electron-side fixture diagnostic out of the tree. The sections above are kept as the record of what was planned and measured; the paths they name under `prototypes/native-glass/` no longer exist.

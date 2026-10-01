@@ -37,4 +37,4 @@ tests: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]"]
 
 ## Notes
 
-The native comparison is separate TASK-0092. This task measures the Electron experience being delivered here.
+This task measures the Electron experience being delivered here. The native comparison that TASK-0092 planned was dropped on 2026-10-01.

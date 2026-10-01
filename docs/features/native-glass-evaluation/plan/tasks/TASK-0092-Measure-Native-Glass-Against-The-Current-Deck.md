@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: "TASK-0092"
 title: "Measure both implementations and record correctness, latency and resource limits"
-status: "doing"
+status: "cancelled"
 phase: "[[PHASE-0002-Glass]]"
 source: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]", "Edwin 2026-10-01: We don't have full parity but I think this should be meaningful enough, can you run the benchmarks and give me a verdict?", "Edwin 2026-10-01: I took the focus, sorry", "Edwin 2026-10-01: Why are you using this for the benchmarks why not use the current / latest rust application?", "Edwin 2026-10-01: But the application looked an awful lot closer to the electron version already?", "Edwin 2026-10-01: stop", "Edwin 2026-10-01: You created a replication of the electron glass solution in rust, this isn't it, you have been creating this replica for nearly a day, so make use of that to understand if the rust version can achieve better performance then the electron version!", "Edwin 2026-10-01: Do one run of the benchmarks for both and show me the differences", "Edwin 2026-10-01: So, would you think a rust remake makes sense or should we keep working on the electron version instead?", "Edwin 2026-10-01: Also, which framework would make most sense if we want to make this into an application that can run on VR glasses (to more closely mimic the minority report functionality!)"]
 parent: "[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"
@@ -119,3 +119,7 @@ TASK-0094 now also has unscored 60-second reader delivery on the real and genera
 The first full-minute real turn attempt exposes an additional gate. At a 50ms wheel cadence, native receives all 1,192 normalized actions while Deck receives 991 after coalescing; at 100ms Deck receives all 597 but 28 miss the 100ms receipt-interval bound. The output yaw can agree despite unequal intermediate deliveries, so it cannot stand in for the required action-by-action match. These failed runs are retained in EVIDENCE.md and are not direct speed measurements. No long-turn cadence has been accepted or frozen for a new protocol revision.
 
 A light-observer control shows Deck still receives only 999 of 1,192 individual 50ms events without dense visual export. At a separately labelled 100ms cadence, real and generated Deck/native pairs pass all 597 OS actions and camera checkpoints when Deck uses the light observer. Their reports count zero matched visual checkpoints and explicitly remain ineligible for direct comparison. The dense 100ms run's 28 timing misses and an invalid generated native run with unrelated pointer motion remain retained; no protocol revision or scored matrix is frozen from these diagnostics.
+
+## Cancelled, 2026-10-01
+
+Not finished and not going to be: Edwin dropped the native Rust evaluation on 2026-10-01 ([[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]], "Cancelled"). The unticked boxes above stay unticked. The text is kept as the record of what was done; the `prototypes/native-glass/` paths it names were removed by [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]].
