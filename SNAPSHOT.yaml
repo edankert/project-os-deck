@@ -62,10 +62,10 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0019"
-  task: "TASK-0105"
+  feature: "FEAT-0017"
+  task: "TASK-0104"
   issue: ""
-  note: "2026-10-01: Edwin dropped the native Rust evaluation (FEAT-0019); TASK-0105 removes it from the tree. Glass is delivered in the Electron application. Next: TASK-0104 repairs continuity under FEAT-0017, then FEAT-0020 (collection and full document on Glass), FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021."
+  note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. In order: TASK-0104 repairs continuity under FEAT-0017 (one object per note, chosen reading size, the neighbourhood moves with the document), then FEAT-0020 (collection and full document on Glass), FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -309,7 +309,7 @@ items:
     TASK-0104:
       file: "docs/features/glass-focus/plan/tasks/TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving.md"
       title: "Preserve note identity, chosen size and neighbourhood while moving"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0017
       phase: PHASE-0002

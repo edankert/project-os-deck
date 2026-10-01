@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0104
 title: "Preserve note identity, chosen size and neighbourhood while moving"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
