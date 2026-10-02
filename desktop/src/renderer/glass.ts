@@ -81,6 +81,7 @@ import {
 import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
 import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
+import { NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, testsNamedOnLine } from '../shared/evidence.js';
 import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
 import {
   type Edge,
@@ -138,8 +139,34 @@ const FOCUS_DIM = 0.28;
 const SEATED_Z = 2950;
 /** How long documents and the collection take to travel when an arrangement is applied or put back. */
 const ARRANGE_MS = 300;
+/** A document at least this wide shows its evidence beside its text; a narrower one shows it above. */
+const EVIDENCE_BESIDE_PX = 760;
 /** How long a reading position waits for its document's text before it is given up. */
 const READING_WAIT_MS = 5000;
+
+/**
+ * A test note's own Evidence section, as text: what stands under its heading
+ * that begins with "Evidence", up to the next heading of the same or a higher
+ * level. Cut to a readable length, and said to be cut. A note with no such
+ * heading says so; nothing is quoted from anywhere else in it.
+ */
+export function evidenceExcerpt(html: string, testId: string): string {
+  // Parsed into a document of its own, which loads nothing and runs nothing.
+  const holder = new DOMParser().parseFromString(html, 'text/html').body;
+  const heading = Array.from(holder.querySelectorAll('h1, h2, h3, h4')).find((h) => /^evidence\b/i.test((h.textContent ?? '').trim()));
+  if (heading === undefined) return NO_SECTION;
+  const level = Number(heading.tagName.slice(1));
+  const parts: string[] = [];
+  for (let node = heading.nextElementSibling; node !== null; node = node.nextElementSibling) {
+    if (/^H[1-6]$/.test(node.tagName) && Number(node.tagName.slice(1)) <= level) break;
+    const text = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (text !== '') parts.push(text);
+  }
+  const all = parts.join(' ');
+  if (all === '') return `${testId}'s Evidence section is empty`;
+  const LIMIT = 700;
+  return `From ${testId}, under its "${(heading.textContent ?? '').trim()}" heading: ${all.length > LIMIT ? `${all.slice(0, LIMIT)}… (cut here; open the test note for the rest)` : all}`;
+}
 
 /** "A", "A and B", "A, B and C". */
 function listOf(names: readonly string[]): string {
@@ -208,6 +235,47 @@ export interface DeskFurniture {
   layout?(): CollectionLayout | null;
 }
 
+/** One thing recorded about a test: what kind of fact, the sentence, where it comes from and how it should look. */
+export interface EvidenceFact {
+  /** "verdict" for the ledger's word, "status of the test note" for the note's own. Never both in one fact. */
+  label: string;
+  text: string;
+  from: string;
+  tone: 'clear' | 'blocking' | 'absent' | 'stale' | 'plain';
+}
+
+/** One test, as the evidence panel shows it. Every string is something a source says, or says it does not. */
+export interface EvidenceRow {
+  id: string;
+  title: string;
+  /** The test note's path, for opening the original. '' when the index has no note for it. */
+  rel: string;
+  /** How the source joins it to the note, in the source's own key: "its covers: names this note", or "named on this line". */
+  keys: string[];
+  /** How it is carried out. */
+  runner: string;
+  /** The test note's own status. Shown on its own line, and never as a verdict. */
+  noteStatus: string;
+  /** What is recorded: a verdict per platform for a check a person walks, the note's own status and date for one done by hand, the command's sentence. */
+  facts: EvidenceFact[];
+  /** The command that runs it, for a person to run. '' when there is none. */
+  command: string;
+  /** The paths the test note lists. Text: nothing serves them. */
+  artifacts: string[];
+  /** Every event the ledger holds for it, newest first. */
+  history: string[];
+}
+
+export interface EvidenceView {
+  /** The note's own status. Shown apart from every verdict, because it is not one. */
+  status: string;
+  rows: EvidenceRow[];
+  /** Why the acceptance record could not be read, when a row needed it and it could not. Said once. */
+  unread: string | null;
+  /** A row needed the acceptance record and this workspace keeps none. */
+  noLedger: boolean;
+}
+
 export interface FurnitureSeats {
   at: ReadonlyMap<string, Point>;
   /** The height the cards are drawn at: just above the furniture's own surface. */
@@ -259,6 +327,16 @@ export interface GlassHooks {
   dress(noteId: string, note: HTMLElement, actions: HTMLElement): Promise<void>;
   /** The card for a note named by its path: where a link inside a document leads. */
   cardByRel(rel: string): Promise<CardModel | null>;
+  /**
+   * What is recorded about the tests that verify a note (FEAT-0024): from
+   * Deck's own index and the release ledger, each fact with its source.
+   * `only` asks about those tests alone, for a claim whose line names them.
+   */
+  evidence(noteId: string, only?: readonly string[], again?: boolean): Promise<EvidenceView>;
+  /** How many tests name a note, and whether it is itself a test: from Deck's index already read, null until it has been. Makes no request to the sidecar. */
+  evidenceCount(noteId: string): { naming: number; isTest: boolean } | null;
+  /** The test notes among the notes at these paths, by path: for finding the tests a claim's line links to. */
+  testsAt(rels: readonly string[]): Promise<Map<string, string>>;
   /** A document was closed: the keyboard goes back to the row it was opened from. */
   closed(noteId: string): void;
   /** Put the keyboard on a note's row in the list, or say why it has none. The document stays open. */
@@ -418,6 +496,18 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** The document whose evidence panel is open, and the claim it was opened from, when it was. */
+  private evidenceOpen: string | null = null;
+  private evidenceClaim: { noteId: string; tests: string[]; text: string } | null = null;
+  /** The test notes opened from an evidence row, and the document whose row it was: closing one goes back to that row. */
+  private readonly evidenceOrigin = new Map<string, string>();
+  /** What was read for each panel: the view, the wait, or why it could not be read. Dropped when the notes change. */
+  private readonly evidenceRead = new Map<string, EvidenceView | 'reading' | { error: string }>();
+  /** The excerpt shown under a row, by document and test. */
+  private readonly excerpts = new Map<string, string>();
+  private readonly historyOpen = new Set<string>();
+  /** The next read of evidence drops what was read before: a person asked for it again. */
+  private evidenceAgain = false;
   /** Where each note was last being read in this window, kept when its document is taken down. Session state. */
   private readonly lastReading = new Map<string, ReadingAnchor>();
   /** Reading positions waiting for their documents' text (restoreReading). */
@@ -3375,6 +3465,13 @@ export class GlassField {
       else if (reading !== null) this.lastReading.delete(noteId);
       pane.remove();
       this.paneEls.delete(noteId);
+      // A document that has left the desk, however it left, opens next time with its panels closed.
+      if (this.relatedOpen === noteId) this.relatedOpen = null;
+      if (this.detailsOpen === noteId) this.detailsOpen = null;
+      if (this.evidenceOpen === noteId) {
+        this.evidenceOpen = null;
+        this.evidenceClaim = null;
+      }
       this.rereads.delete(noteId);
       this.openedWith.delete(noteId);
       if (this.emphasis?.noteId === noteId) this.emphasis = null;
@@ -3525,6 +3622,7 @@ export class GlassField {
       '<span class="pane-title"></span><span class="pane-id"></span><span class="pane-status"></span>' +
       '<span class="pane-tools">' +
       '<button type="button" class="pane-related" title="The notes this one is joined to (R)" aria-expanded="false"></button>' +
+      '<button type="button" class="pane-proof" title="The tests that name this note, and what is recorded for each (E)" aria-expanded="false">evidence</button>' +
       '<button type="button" class="pane-info" title="Where this note is stored, and its other details (D)" aria-expanded="false">details</button>' +
       '<button type="button" class="pane-every" title="Keep this note on every view (V)" aria-label="Keep this note on every view" aria-pressed="false">⧉</button>' +
       '<button type="button" class="pane-orbit" title="Show this in the link graph (O)" aria-label="Show this in the link graph">◎</button>' +
@@ -3535,10 +3633,13 @@ export class GlassField {
       '<div class="pane-subject" hidden></div>' +
       '<div class="pane-details" hidden></div>' +
       '<div class="pane-links" hidden><div class="link-kinds" hidden></div><ul class="link-list"></ul></div>' +
+      '<div class="pane-main">' +
+      '<div class="pane-evidence" hidden></div>' +
       '<div class="pane-body">' +
       '<div class="pane-state" role="status" hidden></div>' +
       '<div class="pane-actions" hidden></div>' +
       '<article class="pane-note"></article>' +
+      '</div>' +
       '</div>' +
       '<span class="pane-resize" aria-hidden="true"></span>';
     const head = pane.querySelector('.pane-head') as HTMLElement;
@@ -3560,6 +3661,7 @@ export class GlassField {
     on('.pane-send', () => void this.sendFromPane(noteId));
     on('.pane-related', () => this.toggleRelated(noteId));
     on('.pane-info', () => this.toggleDetails(noteId));
+    on('.pane-proof', () => this.toggleEvidence(noteId));
     const links = pane.querySelector('.pane-links') as HTMLElement;
     links.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
@@ -3590,10 +3692,21 @@ export class GlassField {
       if (event.key !== 'Escape') return;
       const listOpen = this.relatedOpen === noteId;
       const detailsOpen = this.detailsOpen === noteId;
-      if (!listOpen && !detailsOpen) return;
+      const evidenceOpen = this.evidenceOpen === noteId;
+      if (!listOpen && !detailsOpen && !evidenceOpen) return;
       event.preventDefault();
       event.stopPropagation();
-      if (detailsOpen && (!listOpen || details.contains(event.target as Node))) {
+      const evidence = pane.querySelector('.pane-evidence') as HTMLElement;
+      const inList = links.contains(event.target as Node);
+      const inDetails = details.contains(event.target as Node);
+      // The panel the keyboard is in closes first; else evidence, then details, then the list.
+      if (evidenceOpen && !inList && !inDetails) {
+        // Back to the control that opened it: the claim's own, when it was opened from a claim.
+        const opener = pane.querySelector<HTMLElement>('.claim-picked > .claim-evidence') ?? (pane.querySelector('.pane-proof') as HTMLElement);
+        this.toggleEvidence(noteId, false);
+        opener.focus({ preventScroll: true });
+        void evidence;
+      } else if (detailsOpen && (!listOpen || details.contains(event.target as Node))) {
         this.toggleDetails(noteId, false);
         (pane.querySelector('.pane-info') as HTMLElement).focus();
       } else {
@@ -3668,10 +3781,11 @@ export class GlassField {
     const head = pane.querySelector('.pane-head') as HTMLElement;
     head.setAttribute(
       'aria-label',
-      `${title}, ${noteId}${card === null ? '' : `, ${card.status || 'no status'}`}${doc === undefined ? '' : `, stored at ${doc.relPath}`}: arrow keys move it, Alt and arrows resize it, Enter gathers what it is joined to, R lists them, D shows its details, L goes to its row in the list, W fills the field, S sends it, Delete closes it and returns to its row`,
+      `${title}, ${noteId}${card === null ? '' : `, ${card.status || 'no status'}`}${doc === undefined ? '' : `, stored at ${doc.relPath}`}: arrow keys move it, Alt and arrows resize it, Enter gathers what it is joined to, R lists them, E shows what verifies it, D shows its details, L goes to its row in the list, W fills the field, S sends it, Delete closes it and returns to its row`,
     );
     this.paintSubject(pane, card, doc);
     this.paintDetails(pane, noteId, card, doc);
+    this.paintEvidence(pane, noteId);
     this.paintRelated(pane, noteId);
     this.fillDocument(pane, noteId, card);
   }
@@ -3755,6 +3869,337 @@ export class GlassField {
     panel.tabIndex = -1;
   }
 
+  // ---- evidence beside the claim (FEAT-0024, ADR-0008) ----
+
+  /** Open or close a document's evidence. Opened from the header it is about the whole note. */
+  private toggleEvidence(noteId: string, open: boolean = this.evidenceOpen !== noteId || this.evidenceClaim !== null): void {
+    this.evidenceOpen = open ? noteId : this.evidenceOpen === noteId ? null : this.evidenceOpen;
+    this.evidenceClaim = null;
+    if (open) this.roomForEvidence(noteId);
+    for (const li of Array.from(this.paneEls.get(noteId)?.querySelectorAll('.claim-picked') ?? [])) li.classList.remove('claim-picked');
+    this.drawPanes();
+  }
+
+  /** Whether a document is wide enough to show its evidence beside its text. */
+  private evidenceFitsBeside(noteId: string): boolean {
+    const pane = this.paneEls.get(noteId);
+    return pane !== undefined && (parseFloat(pane.style.width) || pane.offsetWidth) >= EVIDENCE_BESIDE_PX;
+  }
+
+  /** In a document too narrow for the evidence to stand beside the text, the evidence takes the related list's place above it. */
+  private roomForEvidence(noteId: string): void {
+    if (this.relatedOpen === noteId && !this.evidenceFitsBeside(noteId)) this.relatedOpen = null;
+  }
+
+  /** The key the panel's reading is kept under: the note, and the claim's tests when it is about one claim. */
+  private evidenceKey(noteId: string): string {
+    const claim = this.evidenceClaim !== null && this.evidenceClaim.noteId === noteId ? this.evidenceClaim : null;
+    return claim === null ? noteId : `${noteId}|${claim.tests.join(',')}`;
+  }
+
+  /**
+   * The evidence panel: the tests that verify this note and what is recorded
+   * for each, with where each fact comes from.
+   *
+   * The note's own status is said first and apart, because it is not a
+   * verdict. A test's row says how it is carried out, what is recorded (or
+   * that nothing is), and from where; it opens the test note itself, and can
+   * show the test note's own Evidence section. Nothing here is inferred, and
+   * nothing here writes: recording a verdict is the cockpit's.
+   */
+  private paintEvidence(pane: HTMLElement, noteId: string): void {
+    const button = pane.querySelector('.pane-proof') as HTMLElement;
+    const panel = pane.querySelector('.pane-evidence') as HTMLElement;
+    const open = this.evidenceOpen === noteId;
+    // The header says how many tests name the note, from Deck's own index and with no request. A count
+    // of tests is not a result, and a note no test names says exactly that.
+    const count = this.hooks.evidenceCount(noteId);
+    const naming = count === null ? '' : count.isTest ? `this test${count.naming === 0 ? '' : ` + ${count.naming}`}` : count.naming === 0 ? 'no test' : String(count.naming);
+    const label = naming === '' ? 'evidence' : `evidence · ${naming}`;
+    if (button.textContent !== label) {
+      button.textContent = label;
+      const sentence = count === null ? 'The tests that name this note' : count.isTest ? `What is recorded for this test${count.naming === 0 ? '' : `; ${controlText(count.naming)}`}` : controlText(count.naming);
+      button.title = `${sentence}. What is recorded for each (E)`;
+      button.setAttribute('aria-label', `Evidence: ${sentence}`);
+    }
+    button.setAttribute('aria-expanded', String(open));
+    panel.hidden = !open;
+    // Beside the text when the document is wide enough to hold both, above it when it is not.
+    pane.classList.toggle('evidence-beside', open && this.evidenceFitsBeside(noteId));
+    if (!open) return;
+    const claim = this.evidenceClaim !== null && this.evidenceClaim.noteId === noteId ? this.evidenceClaim : null;
+    const key = this.evidenceKey(noteId);
+    const read = this.evidenceRead.get(key);
+    if (read === undefined) {
+      this.evidenceRead.set(key, 'reading');
+      const again = this.evidenceAgain;
+      this.evidenceAgain = false;
+      void this.hooks
+        .evidence(noteId, claim === null ? undefined : claim.tests, again)
+        .then((view) => this.evidenceRead.set(key, view))
+        .catch((err: unknown) => this.evidenceRead.set(key, { error: err instanceof Error ? err.message : String(err) }))
+        .finally(() => {
+          if (this.active) this.drawPanes();
+        });
+    }
+    const now = this.evidenceRead.get(key);
+    const rowsSignature =
+      typeof now === 'object' && 'rows' in now
+        ? `${now.status}|${now.unread ?? ''}|${now.noLedger}\n${now.rows.map((r) => `${r.id}|${r.noteStatus}|${r.facts.map((f) => f.text).join(';')}|${r.history.length}|${this.historyOpen.has(`${noteId}|${r.id}`)}|${this.excerpts.get(`${noteId}|${r.id}`) ?? ''}`).join('\n')}`
+        : JSON.stringify(now);
+    const signature = `${key}|${rowsSignature}`;
+    if (panel.dataset['signature'] === signature) return;
+    panel.dataset['signature'] = signature;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', claim === null ? `Evidence for ${noteId}: the tests that name it and what is recorded for each` : `Evidence for one claim of ${noteId}: the tests named on its line`);
+    panel.tabIndex = -1;
+    const el = (tag: string, cls: string, textContent = ''): HTMLElement => {
+      const node = document.createElement(tag);
+      node.className = cls;
+      node.textContent = textContent;
+      return node;
+    };
+    /** A labelled line: what kind of fact, the fact, and where it comes from. All of it is text a screen reader reads. */
+    const fact = (labelText: string, text: string, from: string, tone: string): HTMLElement => {
+      const line = el('p', `evidence-said ${tone}`);
+      if (labelText !== '') line.appendChild(el('span', 'evidence-label', `${labelText}: `));
+      line.appendChild(el('span', 'evidence-text', text));
+      if (from !== '') line.appendChild(el('span', 'evidence-from', ` · from ${from}`));
+      return line;
+    };
+    const nodes: HTMLElement[] = [];
+    if (now !== 'reading' && now !== undefined) {
+      // What is recorded is read when the panel opens and when the notes change. A person who has just
+      // marked a check in the cockpit, or whose sidecar was not answering, asks for it again here.
+      // It reads; it runs no test and records nothing. At the top, where it is never under the compass.
+      const again = el('button', 'action evidence-again', 'read again') as HTMLButtonElement;
+      again.type = 'button';
+      again.dataset['act'] = 'again';
+      again.title = 'Read what is recorded again, from the notes and from the ledger. Nothing is run and nothing is recorded.';
+      again.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.evidenceRead.delete(key);
+        this.evidenceAgain = true;
+        this.drawPanes();
+      });
+      nodes.push(again);
+    }
+    if (claim !== null) {
+      nodes.push(el('p', 'evidence-claim', `For the claim "${claim.text.length > 140 ? `${claim.text.slice(0, 137)}…` : claim.text}": the tests ${NAMED_ON_LINE}, and what is recorded for each.`));
+      const all = el('button', 'action evidence-all', 'show every test for this note');
+      (all as HTMLButtonElement).type = 'button';
+      all.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.toggleEvidence(noteId, true);
+      });
+      nodes.push(all);
+    }
+    if (now === 'reading' || now === undefined) {
+      nodes.push(el('p', 'evidence-said', 'Reading what is recorded…'));
+    } else if ('error' in now) {
+      nodes.push(el('p', 'evidence-said absent', `What is recorded could not be read: ${now.error}`));
+    } else {
+      if (claim === null) {
+        nodes.push(el('p', 'evidence-status', `${noteId} is "${now.status === '' ? 'no status' : now.status}". That is its status, not a verdict.`));
+      }
+      // Said once, and each row that needed the record says it in place of a verdict.
+      if (now.unread !== null) nodes.push(el('p', 'evidence-said absent evidence-unread', `${UNREAD}: ${now.unread}`));
+      if (now.noLedger) nodes.push(el('p', 'evidence-said absent evidence-unread', NO_LEDGER));
+      if (now.rows.length === 0) nodes.push(el('p', 'evidence-said absent evidence-none', claim === null ? `${NO_TEST}. Nothing is inferred from its status.` : 'none of the notes named on this line is a test'));
+      const list = el('ul', 'evidence-list');
+      for (const row of now.rows) {
+        const item = el('li', 'evidence-row');
+        item.dataset['noteId'] = row.id;
+        item.dataset['tone'] = row.facts[0]?.tone ?? 'plain';
+        const head = el('div', 'evidence-head');
+        head.append(el('span', 'evidence-title', row.title), el('span', 'evidence-id', row.id));
+        item.append(head, el('p', 'evidence-joined', `${row.keys.join(' · ')}${row.runner === '' ? '' : ` · ${row.runner}`}`));
+        for (const said of row.facts) item.appendChild(fact(said.label, said.text, said.from, said.tone));
+        // The note's own status stands on its own line beside a verdict: an acceptance check rests at
+        // `active`, which says nothing about whether it was walked.
+        if (row.facts.some((f) => f.label === 'verdict')) item.appendChild(fact('status of the test note', row.noteStatus === '' ? 'no status' : row.noteStatus, 'the test note', 'plain note-status'));
+        if (row.command !== '') {
+          const line = el('p', 'evidence-command');
+          line.append(el('span', 'evidence-label', 'command: '), el('code', '', row.command));
+          item.appendChild(line);
+        }
+        // Paths as the test note lists them. Text, not links: nothing serves them.
+        if (row.artifacts.length > 0) item.appendChild(fact('artifacts the test note lists', row.artifacts.join(', '), '', 'plain artifacts'));
+        const tools = el('div', 'evidence-tools');
+        const tool = (text: string, name: string, pressed: boolean | null, run: () => void): void => {
+          const b = el('button', 'action', text) as HTMLButtonElement;
+          b.type = 'button';
+          b.dataset['act'] = name;
+          if (pressed !== null) b.setAttribute('aria-expanded', String(pressed));
+          b.addEventListener('click', (event) => {
+            event.stopPropagation();
+            run();
+          });
+          tools.appendChild(b);
+        };
+        const rowKey = `${noteId}|${row.id}`;
+        if (row.id !== noteId && row.rel !== '') tool('Open the test note', 'open', null, () => void this.openOriginal(noteId, row.id));
+        if (row.rel !== '') tool('Excerpt', 'excerpt', this.excerpts.has(rowKey), () => void this.toggleExcerpt(noteId, row.id));
+        if (row.history.length > 0) {
+          tool(`History (${row.history.length})`, 'history', this.historyOpen.has(rowKey), () => {
+            if (!this.historyOpen.delete(rowKey)) this.historyOpen.add(rowKey);
+            this.drawPanes();
+          });
+        }
+        item.appendChild(tools);
+        if (this.historyOpen.has(rowKey)) {
+          const history = el('ol', 'evidence-history');
+          history.setAttribute('aria-label', `Every verdict recorded for ${row.id}, newest first`);
+          for (const line of row.history) history.appendChild(el('li', '', line));
+          item.appendChild(history);
+        }
+        const excerpt = this.excerpts.get(rowKey);
+        if (excerpt !== undefined) item.appendChild(el('blockquote', 'evidence-excerpt', excerpt));
+        list.appendChild(item);
+      }
+      nodes.push(list);
+    }
+    const kept = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.evidence-row')?.dataset['noteId'] ?? null;
+    const keptAct = (document.activeElement as HTMLElement | null)?.dataset['act'] ?? null;
+    const inPanel = panel.contains(document.activeElement);
+    panel.replaceChildren(...nodes);
+    // A repaint does not take the keyboard off the control it was on.
+    if (inPanel) {
+      const again = kept === null ? null : Array.from(panel.querySelectorAll<HTMLElement>('.evidence-row')).find((r) => r.dataset['noteId'] === kept);
+      ((again?.querySelector<HTMLElement>(`[data-act="${keptAct ?? 'open'}"]`) ?? panel.querySelector<HTMLElement>(`:scope > [data-act="${keptAct ?? ''}"]`)) ?? panel).focus({ preventScroll: true });
+    }
+  }
+
+  /** The count on each open document's evidence control can be said: Deck's index has been read. */
+  evidenceIndexed(): void {
+    if (this.active) this.drawPanes();
+  }
+
+  /** The keyboard goes to the evidence row a test note was opened from, when that row is still on screen. */
+  private backToEvidenceRow(testId: string): boolean {
+    const docId = this.evidenceOrigin.get(testId);
+    this.evidenceOrigin.delete(testId);
+    if (docId === undefined || this.evidenceOpen !== docId) return false;
+    const row = Array.from(this.paneEls.get(docId)?.querySelectorAll<HTMLElement>('.evidence-row') ?? []).find((r) => r.dataset['noteId'] === testId);
+    const control = row?.querySelector<HTMLElement>('[data-act="open"]') ?? null;
+    if (control === null) return false;
+    control.focus({ preventScroll: true });
+    control.scrollIntoView({ block: 'nearest' });
+    return true;
+  }
+
+  /** Open the test note itself, at its Evidence section when it has one: the route to the full original. */
+  private async openOriginal(docId: string, testId: string): Promise<void> {
+    const card = this.cardFor(testId) ?? (await this.testCard(docId, testId));
+    if (card === null) {
+      this.tell(`${testId} has no note Deck can open`, true);
+      return;
+    }
+    // A test note already on the desk is raised, not opened twice: `lift` finds it.
+    this.evidenceOrigin.set(testId, docId);
+    await this.lift(card, null, true);
+    this.restoreReading({ [testId]: { heading: 'Evidence', past: 0, fraction: 0 } });
+  }
+
+  /** A card for a test note this view does not hold: by the path the evidence row carries. */
+  private async testCard(docId: string, testId: string): Promise<CardModel | null> {
+    for (const [key, read] of this.evidenceRead) {
+      if (!key.startsWith(docId) || typeof read !== 'object' || !('rows' in read)) continue;
+      const row = read.rows.find((r) => r.id === testId);
+      if (row !== undefined && row.rel !== '') return this.hooks.cardByRel(row.rel).catch(() => null);
+    }
+    return null;
+  }
+
+  /**
+   * Show or hide, under a test's row, that test note's own Evidence section.
+   * The excerpt is the note's text under its `Evidence` heading and nothing
+   * else: found by that heading, so it follows the section when the note is
+   * edited above it. A note with no such heading says so.
+   */
+  private async toggleExcerpt(docId: string, testId: string): Promise<void> {
+    const key = `${docId}|${testId}`;
+    if (this.excerpts.delete(key)) {
+      this.drawPanes();
+      return;
+    }
+    const card = this.cardFor(testId) ?? (await this.testCard(docId, testId));
+    let said: string;
+    if (card === null) {
+      said = `${testId}'s note could not be opened to read its Evidence section`;
+    } else {
+      try {
+        const read = await this.hooks.document(card);
+        said = evidenceExcerpt(read.html, testId);
+      } catch (err) {
+        said = `${testId} could not be read: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    }
+    this.excerpts.set(key, said);
+    this.drawPanes();
+  }
+
+  /**
+   * Put an "evidence" control beside each criterion whose own line links to a
+   * test note. That link, written by the note's author, is the only thing
+   * that joins a claim to a test: there is no other mapping, and none is
+   * made up. A criterion that names no test gets no control.
+   */
+  private async markClaims(noteId: string, note: HTMLElement): Promise<void> {
+    // A criterion is a list item with a checkbox of its own. The sidecar wraps the box in a label, so it
+    // is found by which item it belongs to, not by where in the item it sits; and a link counts for the
+    // line it is written on, not for a line that holds that one in a nested list.
+    const own = (li: HTMLElement, selector: string): HTMLElement[] => Array.from(li.querySelectorAll<HTMLElement>(selector)).filter((e) => e.closest('li') === li);
+    const lines = Array.from(note.querySelectorAll<HTMLElement>('li')).filter((li) => own(li, 'input[type="checkbox"]').length > 0);
+    const linked = lines.map((li) =>
+      own(li, 'a')
+        .map((a) => a.getAttribute('href') ?? '')
+        .filter((href) => href.startsWith(NOTE_LINK_PREFIX))
+        .map((href) => decodeSafely(href.slice(NOTE_LINK_PREFIX.length).split('#')[0] ?? '') ?? ''),
+    );
+    const rels = [...new Set(linked.flat())].filter((r) => r !== '');
+    if (rels.length === 0) return;
+    let tests: Map<string, string>;
+    try {
+      tests = await this.hooks.testsAt(rels);
+    } catch {
+      return;
+    }
+    // The text was replaced while the index was being asked: these lines are not on screen any more.
+    if (!note.isConnected) return;
+    lines.forEach((li, i) => {
+      const ids = testsNamedOnLine((linked[i] ?? []).map((rel) => tests.get(rel) ?? ''), (id) => id !== '');
+      if (ids.length === 0 || own(li, '.claim-evidence').length > 0) return;
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = 'claim-evidence';
+      control.textContent = `evidence ${NAMED_ON_LINE}`;
+      control.title = `What is recorded for ${ids.join(' and ')}, ${NAMED_ON_LINE}`;
+      control.setAttribute('aria-label', `Evidence ${NAMED_ON_LINE}: ${ids.join(', ')}`);
+      control.addEventListener('click', (event) => {
+        event.stopPropagation();
+        for (const other of Array.from(note.querySelectorAll('.claim-picked'))) other.classList.remove('claim-picked');
+        li.classList.add('claim-picked');
+        const text = Array.from(li.childNodes)
+          .filter((n) => !(n instanceof HTMLElement && (n.classList.contains('claim-evidence') || n.classList.contains('tick') || n.tagName === 'UL' || n.tagName === 'OL')))
+          .map((n) => n.textContent ?? '')
+          .join('')
+          .replace(/\s+/g, ' ')
+          .trim();
+        this.evidenceClaim = { noteId, tests: ids, text };
+        this.evidenceOpen = noteId;
+        this.roomForEvidence(noteId);
+        this.drawPanes();
+        this.paneEls.get(noteId)?.querySelector<HTMLElement>('.pane-evidence')?.focus({ preventScroll: true });
+      });
+      // At the end of the criterion's own words, where its author named the test: before a list nested
+      // under it, and beside the checkbox's line without wrapping or changing the box.
+      const nested = Array.from(li.children).find((c) => c.tagName === 'UL' || c.tagName === 'OL');
+      if (nested === undefined) li.appendChild(control);
+      else nested.before(control);
+    });
+  }
+
   /** Open or close a document's details. */
   private toggleDetails(noteId: string, open: boolean = this.detailsOpen !== noteId): void {
     this.detailsOpen = open ? noteId : this.detailsOpen === noteId ? null : this.detailsOpen;
@@ -3812,6 +4257,7 @@ export class GlassField {
         this.applyReading(noteId, pane);
         const actions = pane.querySelector('.pane-actions') as HTMLElement;
         void this.hooks.dress(noteId, note, actions).catch(() => null);
+        void this.markClaims(noteId, note);
       }
       if (!this.rereads.has(noteId)) {
         say('ready', '');
@@ -4029,6 +4475,12 @@ export class GlassField {
   /** Open or close a document's list of related notes. One list at a time, in this window. */
   private toggleRelated(noteId: string, open: boolean = this.relatedOpen !== noteId): void {
     this.relatedOpen = open ? noteId : this.relatedOpen === noteId ? null : this.relatedOpen;
+    if (open && this.evidenceOpen === noteId && !this.evidenceFitsBeside(noteId)) {
+      // In a document too narrow to hold the evidence beside the text, both would stand above it and leave
+      // the text a few lines: the list takes the evidence's place.
+      this.evidenceOpen = null;
+      this.evidenceClaim = null;
+    }
     if (open) {
       void this.hooks.context(noteId).then(() => this.active && this.drawPanes()).catch(() => null);
       void this.readEdges().then(() => this.active && this.drawPanes());
@@ -4779,6 +5231,9 @@ export class GlassField {
       else this.docs.delete(noteId);
     }
     for (const pane of this.paneEls.values()) delete pane.dataset['asked'];
+    // What is recorded may have changed with the notes: it is read again when a panel is next drawn.
+    this.evidenceRead.clear();
+    this.excerpts.clear();
   }
 
   /**
@@ -4948,6 +5403,12 @@ export class GlassField {
       if (this.relatedOpen === noteId) (pane?.querySelector<HTMLElement>('.link-go') ?? pane?.querySelector<HTMLElement>('.pane-related'))?.focus();
       return;
     }
+    if (event.key === 'e' || event.key === 'E') {
+      event.preventDefault();
+      this.toggleEvidence(noteId);
+      if (this.evidenceOpen === noteId) this.paneEls.get(noteId)?.querySelector<HTMLElement>('.pane-evidence')?.focus();
+      return;
+    }
     if (event.key === 'd' || event.key === 'D') {
       event.preventDefault();
       this.toggleDetails(noteId);
@@ -5030,7 +5491,7 @@ export class GlassField {
       this.localHeld.splice(at, 1);
       if (this.held.filter((c) => c.noteId !== noteId).length === 0) this.narrowFront = 'collection';
       if (this.active) this.redeal(false);
-      this.hooks.closed(noteId);
+      if (!this.backToEvidenceRow(noteId)) this.hooks.closed(noteId);
       return;
     }
     // Closing the focused document leaves the focus: its cards go back to
@@ -5041,9 +5502,10 @@ export class GlassField {
     await this.hooks.dispatch({ type: 'take-off-desk', noteId });
     // With no other document to show, a narrow field goes back to the list.
     if (this.held.filter((c) => c.noteId !== noteId).length === 0) this.narrowFront = 'collection';
-    // The keyboard goes back to the row the note was opened from, or the
-    // collection says that row is gone (TASK-0098).
-    this.hooks.closed(noteId);
+    // The keyboard goes back to where the note was opened from: the evidence
+    // row, when it was opened from one (FEAT-0024); else its row in the
+    // collection, or the collection says that row is gone (TASK-0098).
+    if (!this.backToEvidenceRow(noteId)) this.hooks.closed(noteId);
   }
 
   /**

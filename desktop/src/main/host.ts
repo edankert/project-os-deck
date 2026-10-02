@@ -45,6 +45,13 @@ const FORWARDABLE = [
   // forwardable, and this host still answers 405 to every method that is not
   // GET or HEAD.
   '/api/notes/actions',
+  // The release ledger's verdicts for the checks a person walks: each one's
+  // mark, date, reason and history (FEAT-0024, ADR-0008). A READ, of the
+  // workspace's own acceptance record, which the sidecar gives to any caller:
+  // it has no loopback guard to bypass. Forwarding it lets a tablet read what
+  // was recorded. It lets nobody record anything: marking a check is a POST,
+  // and this host answers 405 to every method that is not GET or HEAD.
+  '/api/cockpit/acceptance',
 ];
 
 export function isForwardable(sidecarPath: string): boolean {
@@ -318,7 +325,7 @@ export class DeckHost {
       }
     }
     if (pathname.startsWith(RECORDS_PREFIX)) {
-      this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), res);
+      this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), url.searchParams.get('type'), res);
       return;
     }
     if (rawPathname.startsWith(SIDECAR_PREFIX)) {
@@ -392,7 +399,7 @@ export class DeckHost {
    * layer down: a read during a long start-up was read as a death and the
    * thing being read was torn down.
    */
-  private records(workspaceId: string, rel: string | null, res: http.ServerResponse): void {
+  private records(workspaceId: string, rel: string | null, type: string | null, res: http.ServerResponse): void {
     if (workspaceId === '' || workspaceId.includes('/')) {
       plain(res, 404, 'that request names no workspace');
       return;
@@ -434,7 +441,10 @@ export class DeckHost {
       pathPrefix: index.pathPrefix,
       // Nothing while the walk is still running, rather than half a workspace
       // that a view would quietly draw as though it were all of it.
-      records: rel === null ? records : one(rel),
+      // `?type=` asks for the notes of one type: evidence reads every test
+      // note's frontmatter (FEAT-0024), and a workspace's tests are a fiftieth
+      // of its notes.
+      records: (rel === null ? records : one(rel)).filter((record) => type === null || record.types.includes(type)),
       problems: index.problems,
     });
   }

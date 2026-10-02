@@ -212,6 +212,20 @@ export class SidecarClient {
     return contextFromPayload(await this.getJson(path), `${this.base}${path}`);
   }
 
+  /**
+   * The release ledger's record of the checks a person walks, for every
+   * platform that has a ledger (FEAT-0024). Returned as it came: what it
+   * means is `shared/evidence.ts`'s to say, and it says so when the shape is
+   * not the one it was written against.
+   */
+  async acceptance(platform: string): Promise<unknown> {
+    // The platform is always named. With none the sidecar answers for
+    // whatever the open release ships, and `all` is the union in which every
+    // platform must clear a check: neither is one platform's verdict, and
+    // `all` is asked only to learn which platforms have a ledger (ADR-0008).
+    return this.getJson(`/api/cockpit/acceptance?platform=${encodeURIComponent(platform)}`);
+  }
+
   async actions(noteId: string): Promise<unknown> {
     return this.getJson(`/api/notes/actions?id=${encodeURIComponent(noteId)}`);
   }

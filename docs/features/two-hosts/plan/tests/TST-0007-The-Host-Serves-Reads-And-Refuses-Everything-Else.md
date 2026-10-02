@@ -6,14 +6,14 @@ title: "The host serves the renderer, proxies reads, and refuses every method an
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-10-02
 source: ["[[FEAT-0008-One-Renderer-Two-Hosts]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
 level: unit
 entrypoint: "desktop/tests/host.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh host"
-covers: ["[[FEAT-0008-One-Renderer-Two-Hosts]]"]
+covers: ["[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]]", "[[REQ-0006-Evidence-Beside-A-Claim-Names-Its-Source-And-Says-What-Is-Missing]]"]
 issues: []
 tasks: []
 artifacts: []
@@ -50,6 +50,7 @@ Deck's own host is the only network surface Deck exposes. This suite drives it o
 - Every write method is refused before the sidecar is reached.
 - No path outside the served directory is served, and no **query** names one either. `/api/render` takes the file it renders as a query argument, so a check that read only the path left containment to the sidecar upstream; that was [[ISS-0014-The-Forwarding-Allow-List-Reads-The-Path-And-Never-The-Query]] and it is fixed. Deck refuses the query itself now, and [[RISK-0002-Decks-Read-Only-Guarantee-Rests-On-The-Sidecars-Own-Checks]] is closed on that.
 - The served capability set contains nothing only the shell can do.
+- The acceptance record (`/api/cockpit/acceptance`, FEAT-0024) is forwarded for GET and HEAD with its query intact, bound to loopback and bound beyond it. POST, PUT, PATCH and DELETE on it are answered 405. A `platform` that names a way out is answered 403. Its neighbours (`acceptance-debt`, `/api/notes/acceptance`, `scope-tests`, `release-item`, `release-test`, `/docs/`) and the routes that record a verdict are answered 403, or 405 as writes. The fake sidecar records none of them.
 
 ## Evidence
 

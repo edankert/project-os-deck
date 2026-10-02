@@ -102,6 +102,13 @@ test('only the reads Deck actually makes are forwarded', async () => {
       '/_inbox/screenshot.png',
       '/api/cockpit/dispatch',
       '/api/cockpit/state',
+      // Neighbours of the one acceptance read Deck forwards (FEAT-0024): none of them is it.
+      '/api/cockpit/acceptance-debt',
+      '/api/cockpit/release-test',
+      '/api/cockpit/scope-tests',
+      '/api/notes/acceptance',
+      '/api/notes/mark-check',
+      '/api/notes/seal-ledger',
       '/api/cockpit/sessions',
       '/_events',
       '/',
@@ -120,6 +127,44 @@ test('only the reads Deck actually makes are forwarded', async () => {
   } finally {
     await host.close();
     await sidecar.close();
+  }
+});
+
+test('the acceptance record is a read Deck forwards, by GET and HEAD, and recording a verdict is still refused (FEAT-0024)', async () => {
+  // Bound to loopback and bound beyond it, which is how a tablet reaches the host: the rule is the same.
+  for (const bind of ['127.0.0.1', '0.0.0.0']) {
+    const sidecar = await fakeSidecar({ '/healthz': HEALTH });
+    const host = new DeckHost({ webRoot: WEB_ROOT, capabilities: SERVED_CAPABILITIES, listWorkspaces: () => [WORKSPACE], sidecarBaseFor: (id) => (id === WORKSPACE.id ? sidecar.base : null) });
+    const { port } = await host.listen(0, bind);
+    const origin = `http://127.0.0.1:${port}`;
+    try {
+      const at = `${origin}/deck/sidecar/${WORKSPACE.id}/api/cockpit/acceptance`;
+      // The stand-in sidecar has no such page; what matters is that Deck let the read through, query intact.
+      assert.notEqual((await fetch(`${at}?platform=app`)).status, 403, `${bind}: the read was not forwarded`);
+      assert.notEqual((await fetch(`${at}?platform=app`, { method: 'HEAD' })).status, 403, `${bind}: a HEAD was not forwarded`);
+      assert.deepEqual(sidecar.received.map((r) => `${r.method} ${r.url}`), ['GET /api/cockpit/acceptance?platform=app', 'HEAD /api/cockpit/acceptance?platform=app']);
+      sidecar.received.length = 0;
+      for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+        assert.equal((await fetch(at, { method })).status, 405, `${bind}: ${method} was not refused`);
+      }
+      // The host's query check still applies to the new path: a platform that names a way out is refused.
+      for (const way of ['../x', '/etc/passwd', '..%2Fx']) {
+        assert.equal((await fetch(`${at}?platform=${way}`)).status, 403, `${bind}: platform=${way} was forwarded`);
+      }
+      // Its neighbours are not let through by it: the rule matches whole segments.
+      for (const near of ['/api/cockpit/acceptance-debt', '/api/notes/acceptance?id=FEAT-0001', '/api/cockpit/scope-tests?id=FEAT-0001', '/api/cockpit/release-item', '/api/cockpit/release-test', '/docs/attachments/x.png']) {
+        assert.equal((await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}${near}`)).status, 403, `${bind}: ${near} was forwarded`);
+      }
+      // The routes that DO record a verdict: not forwarded as reads, and refused as writes.
+      for (const write of ['/api/notes/mark-check', '/api/notes/seal-ledger', '/api/notes/acceptance-run', '/api/notes/retire-check']) {
+        assert.equal((await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}${write}`)).status, 403);
+        assert.equal((await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}${write}`, { method: 'POST' })).status, 405);
+      }
+      assert.deepEqual(sidecar.received, [], `${bind}: a write, a way out or an unforwarded path reached the sidecar`);
+    } finally {
+      await host.close();
+      await sidecar.close();
+    }
   }
 });
 

@@ -1322,6 +1322,73 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 .pane.arrived { box-shadow: 0 0 0 2px var(--accent), 0 10px 28px rgba(0, 0, 0, 0.45); }
 .target-strip .target[data-mode="move"] { border-color: var(--owed); }
 
+/* Evidence beside the claim (FEAT-0024): what is recorded for the tests that
+   verify a note, each fact with its source. A verdict that settles a check
+   and one that holds it open look different; "nothing is recorded" looks like
+   neither, and so does a test whose result Deck cannot read. */
+.pane-main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.pane-evidence {
+  flex: 0 0 auto;
+  max-height: 55%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #202432;
+  border: 1px solid var(--line);
+  border-top: 0;
+  padding: 8px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  user-select: text;
+}
+/* Beside the text in a document wide enough for both; the text keeps the larger share. */
+.pane.evidence-beside .pane-main { flex-direction: row-reverse; }
+.pane.evidence-beside .pane-evidence { flex: 0 0 min(42%, 440px); max-height: none; border-top: 1px solid var(--line); }
+.pane.evidence-beside .pane-body { flex: 1 1 0; min-width: 0; }
+.pane-evidence:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pane-evidence p { margin: 0 0 6px; }
+.evidence-status, .evidence-claim { color: var(--ink-dim); }
+.evidence-list { list-style: none; margin: 0; padding: 0; }
+.evidence-row { padding: 6px 0 6px 10px; border-top: 1px solid var(--line); border-left: 3px solid var(--line); margin-left: -10px; }
+/* Only a verdict or a manual test's own status colours a row. A test run by a
+   command has no result Deck can read, and looks like neither a pass nor a fail. */
+.evidence-row[data-tone="clear"] { border-left-color: var(--done); }
+.evidence-row[data-tone="blocking"] { border-left-color: var(--alarm); }
+.evidence-row[data-tone="stale"] { border-left-color: var(--owed); }
+.evidence-row[data-tone="absent"] { border-left-style: dashed; }
+.evidence-head { display: flex; gap: 8px; align-items: baseline; }
+.evidence-id { flex: 0 0 auto; color: var(--ink-dim); font-size: 11px; letter-spacing: 0.03em; }
+.evidence-title { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evidence-joined { color: var(--ink-dim); font-size: 11px; }
+.evidence-said { color: var(--ink); }
+.evidence-label { color: var(--ink-dim); }
+.evidence-said.clear .evidence-text { color: var(--done); }
+.evidence-said.blocking .evidence-text { color: var(--alarm); }
+.evidence-said.stale .evidence-text { color: var(--owed); }
+.evidence-said.absent .evidence-text { color: var(--ink-dim); font-style: italic; }
+.evidence-from { color: var(--ink-dim); font-size: 11px; }
+.evidence-command code { background: var(--ground); padding: 1px 4px; border-radius: 4px; font-size: 11.5px; overflow-wrap: anywhere; }
+.evidence-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.evidence-tools .action, .evidence-all, .evidence-again { padding: 0 8px; font-size: 11px; }
+.evidence-tools .action:focus-visible, .evidence-all:focus-visible, .evidence-again:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.evidence-again { float: right; margin: 0 0 4px 8px; }
+/* The last row can be scrolled clear of the compass, which stands over the field's lower corner. */
+.pane-evidence > :last-child { margin-bottom: 56px; }
+.evidence-history { margin: 6px 0 0; padding-left: 20px; color: var(--ink-dim); }
+.evidence-excerpt { margin: 6px 0 0; padding: 6px 10px; border-left: 2px solid var(--line); color: var(--ink-dim); }
+.pane-note .claim-evidence {
+  font: inherit;
+  font-size: 11px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.pane-note .claim-evidence:hover, .pane-note .claim-evidence:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.pane-note li.claim-picked { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: -4px 0 0 var(--accent); }
+
 /* Scenes (FEAT-0023): the controls on the bar, and what a reopened scene has to say. */
 .scenes { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
 .scenes select { max-width: 16em; font: inherit; font-size: 12px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
