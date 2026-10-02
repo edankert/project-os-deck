@@ -81,3 +81,18 @@ export function relationKinds(edges: readonly GraphEdge[], documentId: string, n
   }
   return new Map([...out].sort((a, b) => a[0].localeCompare(b[0])));
 }
+
+/** The neighbours of ONE document that a key picks out, or null when that key joins it to none of them. */
+export function pickedOut(edges: readonly GraphEdge[], documentId: string, neighbourIds: readonly string[], kind: string): Set<string> | null {
+  return relationKinds(edges, documentId, neighbourIds).get(kind) ?? null;
+}
+
+/**
+ * What is said when a key is picked out: the count is of the notes joined to
+ * the document the key was pressed on, which is named. `count` is null while
+ * the workspace's links have not been read, and then no number is said.
+ */
+export function pickedOutSentence(kind: string, documentId: string, count: number | null): string {
+  if (count === null) return `"${kind}" is picked out round ${documentId}; the rest are dimmed and still listed`;
+  return `"${kind}": ${count} of the notes joined to ${documentId} ${count === 1 ? 'is' : 'are'} picked out; the rest are dimmed and still listed`;
+}

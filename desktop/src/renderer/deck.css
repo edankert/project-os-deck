@@ -1246,7 +1246,9 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   text-align: left;
   cursor: pointer;
 }
-.grid-ref:hover, .grid-ref:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.grid-ref:hover, .grid-ref:focus-visible { border-color: var(--accent); color: var(--ink); }
+/* The keyboard is shown by an outline, as on every other control. The hover border alone is one dashed pixel that changes colour. */
+.grid-ref:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .grid-ref-id { color: var(--ink); letter-spacing: 0.03em; }
 .collection-places { flex: 0 0 auto; margin: 0; padding: 4px 10px; border-top: 1px solid var(--line); color: var(--ink-dim); font-size: 11px; }
 .collection.collapsed .collection-body,
@@ -1498,7 +1500,9 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 .link-kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: 11.5px; }
 .kinds-label { color: var(--ink-dim); }
 .kind-chip { font: inherit; padding: 0 8px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--ink-dim); cursor: pointer; }
-.kind-chip:hover, .kind-chip:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.kind-chip:hover, .kind-chip:focus-visible { border-color: var(--accent); color: var(--ink); }
+/* A pressed chip has the accent border already, so the border cannot be what shows where the keyboard is. */
+.kind-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .kind-chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink); }
 .kinds-said { flex: 1 1 100%; color: var(--ink-dim); }
 .kinds-said:empty { display: none; }

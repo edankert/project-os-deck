@@ -68,7 +68,7 @@ test('the persister drops the session part, and a restart starts with nothing pu
 });
 
 test('the hands and the panes cross the window channel; restore still does not', () => {
-  for (const type of ['pull', 'push', 'let-go', 'resize-card', 'raise-card', 'widen-card', 'select-surface']) {
+  for (const type of ['pull', 'push', 'let-go', 'resize-card', 'raise-card', 'widen-card', 'select-surface', 'arrange']) {
     assert.equal(isRendererAction({ type }), true, `${type} cannot be dispatched from a window`);
   }
   assert.equal(isRendererAction({ type: 'restore' }), false);

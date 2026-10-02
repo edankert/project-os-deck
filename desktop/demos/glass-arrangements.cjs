@@ -26,6 +26,19 @@ module.exports = async function (d) {
   const paneRect = (id) => js(`(() => { const p = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(id)}); if (!p) return null; const r = p.getBoundingClientRect(); const f = document.getElementById('field').getBoundingClientRect(); return { left: Math.round(r.left - f.left), top: Math.round(r.top - f.top), width: Math.round(r.width), height: Math.round(r.height), scrollTop: p.querySelector('.pane-body').scrollTop, fontSize: getComputedStyle(p.querySelector('.pane-note')).fontSize }; })()`);
   const openRow = async (skip = []) => { const r = await js(t.rowInReach(skip)); await d.pointer(win, d.click(r)); await d.delay(1400); await t.park(); return r.id; };
   const press = async (id) => { await t.clickOn(`#${id}`, 500); };
+  // Where the keyboard is, read when the Tab key arrives on a control: from `from`, Tab is pressed until the
+  // keyboard is on something that matches. Null when it never arrives. The accent colour is read from the page.
+  const tabOnto = async (selector, from, most = 40) => {
+    if (!(await js(`(() => { const e = document.querySelector(${JSON.stringify(from)}); if (!e) return false; e.scrollIntoView({ block: 'nearest' }); e.focus({ preventScroll: true }); return document.activeElement === e; })()`))) return null;
+    for (let i = 0; i < most; i += 1) {
+      d.press(win, 'Tab');
+      await d.delay(90);
+      const at = await js(`(() => { const e = document.activeElement; if (!e || !e.matches(${JSON.stringify(selector)})) return null; const s = getComputedStyle(e); const probe = document.createElement('span'); probe.style.color = 'var(--accent)'; document.body.appendChild(probe); const accent = getComputedStyle(probe).color; probe.remove(); return { on: e.dataset.kind || e.dataset.noteId || e.id || e.className, tabs: ${i + 1}, style: s.outlineStyle, width: parseFloat(s.outlineWidth), colour: s.outlineColor, accent, focusVisible: e.matches(':focus-visible') }; })()`);
+      if (at !== null) return at;
+    }
+    return null;
+  };
+  const outlined = (at) => at !== null && at.focusVisible && at.style === 'solid' && at.width === 2 && at.colour === at.accent;
 
   // ---- 1. The same members three ways ----
   const search = await t.rect('#search');
@@ -123,6 +136,26 @@ module.exports = async function (d) {
   check(retried.state === 'ready' && retried.rows > 0, '"retry" reads it again, and the list is there', retried);
   await t.view('features');
 
+  // ---- 1c. The selected note survives a change between table and cards ----
+  {
+    // A note is selected by opening it; its document is then closed, so in the cards it is a card and not a reference.
+    await js(`document.getElementById('nav-list').scrollTop = 0`);
+    const chosen = await openRow();
+    await t.clickOn(`.pane[data-note-id="${chosen}"] .pane-close`, 800);
+    await t.park();
+    const asTable = () => js(`({ selected: window.__deckLastState.noteId, marked: [...document.querySelectorAll('#nav-list .nav-row[aria-current="true"]')].filter((r) => !r.hidden).map((r) => r.dataset.noteId), open: window.__deckDesk() })`);
+    const tableBefore = await asTable();
+    await press('collection-as-cards');
+    await d.delay(800);
+    await t.park();
+    const asCards = await js(`({ selected: window.__deckLastState.noteId, marked: [...document.querySelectorAll('.field-card.in-collection[aria-current="true"]')].map((e) => e.dataset.noteId), drawn: [...document.querySelectorAll('.field-card.in-collection')].some((e) => e.dataset.noteId === ${JSON.stringify(chosen)}), rows: [...document.querySelectorAll('#nav-list .nav-row')].filter((r) => r.getBoundingClientRect().height > 0).length })`);
+    await press('collection-as-table');
+    await d.delay(700);
+    const tableAfter = await asTable();
+    const onlyChosen = (ids) => ids.length > 0 && ids.every((id) => id === chosen);
+    check(tableBefore.selected === chosen && onlyChosen(tableBefore.marked) && tableBefore.open.length === 0 && asCards.selected === chosen && asCards.drawn && asCards.marked.length === 1 && asCards.marked[0] === chosen && tableAfter.selected === chosen && onlyChosen(tableAfter.marked), `the selected note survives a change of form: ${chosen}, selected in the table, is the one card marked as selected when the collection is cards, and its row is the one marked again when it is a table`, { chosen, tableBefore, asCards, tableAfter });
+  }
+
   // ---- 2. One object per note, in cards as in the table ----
   await js(`document.getElementById('nav-list').scrollTop = 0`);
   const a = await openRow();
@@ -138,6 +171,9 @@ module.exports = async function (d) {
   check(one.twice.length === 0 && one.cardForOpen === 0 && refFor !== undefined && /open as a document/.test(refFor[1]), `with ${a} open and the collection as cards, no note is drawn twice: the open note is a reference in the cards, not a second card`, { refs: one.refs.slice(0, 5), gathered, seated: one.seated, inCollection: one.inCollection });
   check(/not drawn twice/.test(one.said) || one.refs.length === 0, 'the collection says how many of its members are open or gathered elsewhere', one.said);
   await d.shot(win, '03-cards-with-an-open-note');
+  // The keyboard on a reference is shown by an outline, as on every other control.
+  const refFocus = await tabOnto('.grid-ref', '#collection-grid');
+  check(outlined(refFocus), 'the Tab key goes from the cards to a reference among them, and the reference shows where the keyboard is: a 2 px outline in the accent colour, not the hover border alone', refFocus);
   // The reference brings the real one into view.
   await t.clickOn(`.grid-ref[data-note-id="${a}"]`, 700);
   check((await js(`document.activeElement.closest('.pane') ? document.activeElement.closest('.pane').dataset.noteId : null`)) === a, 'pressing the reference finds the open document', await js('document.activeElement.className'));
@@ -248,6 +284,9 @@ module.exports = async function (d) {
   check(offered.length === byKind.size && offered.every((c) => byKind.has(c.kind) && c.text === `${c.kind} ${byKind.get(c.kind).size}`) && !offered.some((c) => c.kind === 'link'), 'the relationships offered are exactly the frontmatter keys the files join it by, each with its count; a plain link in the text is not offered as a meaning', { offered: offered.map((c) => c.text), fromFiles: [...byKind].map(([k, s]) => `${k} ${s.size}`) });
   if (offered.length > 0) {
     const pick = offered[0];
+    // The keyboard on a chip is shown by an outline: a pressed chip already has the accent border.
+    const chipFocus = await tabOnto('.pane.focus .kind-chip', '.pane.focus .pane-related');
+    check(outlined(chipFocus), 'the Tab key goes from the document\'s header into its list and on to a "pick out" chip, and the chip shows where the keyboard is: a 2 px outline in the accent colour, not the hover border alone', chipFocus);
     await t.clickOn(`.pane.focus .kind-chip[data-kind="${pick.kind}"]`, 700);
     await t.park();
     const picked = await js(`(() => { const p = document.querySelector('.pane.focus'); return { said: p.querySelector('.kinds-said').textContent, rows: p.querySelectorAll('.link-row').length, quietRows: p.querySelectorAll('.link-row.quiet').length, loud: [...p.querySelectorAll('.link-row:not(.quiet)')].map((r) => r.dataset.noteId), quietCards: document.querySelectorAll('.field-card.seated.quiet').length, seated: document.querySelectorAll('.field-card.seated').length, quietLines: document.querySelectorAll('.link-line.quiet').length, pressed: p.querySelector('.kind-chip[aria-pressed="true"]')?.dataset.kind, active: document.activeElement.className }; })()`);
@@ -270,8 +309,25 @@ module.exports = async function (d) {
     await press('arrange-read');
     d.press(win, 'Return');
     await d.delay(1300);
-    // While it is arranged for reading, the pick is cleared with the list's own control.
     const paneA = `[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)})`;
+    // Arranged for reading, the document is not the focus: nothing is gathered round it. A chip pressed in its
+    // list still says how many of the notes joined to THIS document it picks out.
+    {
+      if (await js(`${paneA}.querySelector('.pane-links').hidden`)) { await js(`${paneA}.querySelector('.pane-head').focus()`); d.press(win, 'r'); await d.delay(800); }
+      const chip = JSON.stringify(`.kind-chip[data-kind="${pick.kind}"]`);
+      const pressChip = async () => {
+        const at = await js(`(() => { const c = ${paneA}.querySelector(${chip}); if (!c) return null; c.scrollIntoView({ block: 'nearest' }); const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+        if (at) { await d.pointer(win, d.click(at)); await d.delay(600); }
+        return at !== null;
+      };
+      // Pressed while it is picked out it stops; pressed again it picks out, and that is what is announced.
+      if ((await js(`${glass}.arrangeState().emphasis`)) !== null) await pressChip();
+      const pressed = await pressChip();
+      const heard = { focus: await js(`${glass}.focusId()`), said: await t.text('#field-say'), emphasis: await js(`${glass}.arrangeState().emphasis`) };
+      const wanted = `"${pick.kind}": ${want.length} of the notes joined to ${a} ${want.length === 1 ? 'is' : 'are'} picked out; the rest are dimmed and still listed`;
+      check(pressed && heard.focus !== a && heard.emphasis !== null && heard.emphasis.noteId === a && heard.said === wanted, `"${pick.kind}" pressed in the list of ${a} while ${a} is not the focus says how many of the notes joined to ${a} it picks out: ${want.length}, the number its list picks out`, { ...heard, wanted });
+    }
+    // While it is arranged for reading, the pick is cleared with the list's own control.
     if ((await js(`${glass}.arrangeState().emphasis`)) !== null) {
       if (await js(`${paneA}.querySelector('.pane-links').hidden`)) { await js(`${paneA}.querySelector('.pane-head').focus()`); d.press(win, 'r'); await d.delay(800); }
       const clearAt = await js(`(() => { const c = ${paneA}.querySelector('.kind-clear'); if (!c) return null; c.scrollIntoView({ block: 'nearest' }); const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
@@ -300,12 +356,26 @@ module.exports = async function (d) {
   let refreshed = await arrange();
   for (let i = 0; i < 40 && !(refreshed.preview && refreshed.preview.refreshed); i += 1) { await d.delay(500); refreshed = await arrange(); }
   const said = await t.text('#arrange-text');
-  check(stale.preview !== null && refreshed.preview !== null && refreshed.preview.refreshed === true && /worked out again/.test(said), 'a note changed on disk while Compare was shown: the preview was worked out again from what is there now, and says so', { changed: path.basename(victim), said });
+  const heard = await js(`({ status: document.getElementById('field-say').textContent, live: document.getElementById('arrange-text').getAttribute('aria-live') })`);
+  check(stale.preview !== null && refreshed.preview !== null && refreshed.preview.refreshed === true && /^While this was shown, notes changed on disk, so it was worked out again/.test(said) && !/desk changed/.test(said) && heard.status !== '' && said.startsWith(heard.status) && heard.live === 'polite', 'a note changed on disk while Compare was shown: the preview was worked out again from what is there now and says that notes changed on disk, not that the desk did; the status line says the same sentence, and the preview\'s text is a polite live region', { changed: path.basename(victim), said, heard });
   await d.shot(win, '10-preview-worked-out-again');
+  // A third note is opened on top of the two while the preview is still shown, as another window of the
+  // application would open it: through the store. The first plan was made with the two already on top, so it
+  // raises nothing; the plan worked out again has to bring them above the note opened since.
+  const firstNotes = await js(`[...document.querySelectorAll('#arrange-notes li')].map((l) => l.textContent)`);
+  const onDesk = await js('window.__deckDesk()');
+  const late = (await js(`${coll}.members()`)).find((id) => !onDesk.includes(id));
+  d.store.dispatch({ type: 'put-on-desk', noteId: late, x: 420, y: 260, w: 560, h: 520, viewId: 'features' });
+  await d.delay(1200);
+  const again = await js(`({ held: window.__deckDesk(), text: document.getElementById('arrange-text').textContent, notes: [...document.querySelectorAll('#arrange-notes li')].map((l) => l.textContent), status: document.getElementById('field-say').textContent, preview: ${glass}.arrangeState().preview })`);
+  check(JSON.stringify(onDesk.slice(-2)) === JSON.stringify([a, c]) && again.held[again.held.length - 1] === late && again.preview !== null && again.preview.label === `Compare ${a} and ${c}` && again.text.includes(`${late} was opened`) && again.text.startsWith(again.status) && again.notes.some((n) => /other open note stays/.test(n)) && !firstNotes.some((n) => /other open note stays/.test(n)), `${late} was opened on top of the two while Compare was shown: the preview is still about ${a} and ${c}, names ${late} as what was opened in the preview and in the status line, and now says the other open note stays where it is`, { late, onDesk, firstNotes, again });
   d.press(win, 'Return');
   await d.delay(1000);
-  const applied = { a: await paneRect(a), c: await paneRect(c), undo: (await arrange()).undo };
-  check(applied.undo === `Compare ${a} and ${c}` && applied.a.top === applied.c.top, 'Apply then applies the plan on screen, not the one it replaced', applied);
+  const applied = { a: await paneRect(a), c: await paneRect(c), undo: (await arrange()).undo, stack: await js('window.__deckDesk()') };
+  check(applied.undo === `Compare ${a} and ${c}` && applied.a.top === applied.c.top && JSON.stringify(applied.stack) === JSON.stringify([...onDesk.slice(0, -2), late, a, c]), `Apply then applies the plan on screen, not the one it replaced: ${a} and ${c} are brought above ${late}, which the first plan, made when the two were already on top, would have left over them`, applied);
+  // The third note has done what it was opened for, and is closed the way it was opened.
+  d.store.dispatch({ type: 'take-off-desk', noteId: late, viewId: 'features' });
+  await d.delay(900);
   // A person moves one of the two by hand; the undo says so before doing anything.
   const headC = await t.rect(`.pane[data-note-id="${c}"] .pane-title`);
   await d.pointer(win, d.drag(headC, { x: headC.x - 70, y: headC.y + 120 }, 8));
@@ -325,6 +395,20 @@ module.exports = async function (d) {
   await t.clickOn(`.pane[data-note-id="${c}"] .pane-close`, 800);
   await press('arrange-undo');
   const closedAsk = await js(`[...document.querySelectorAll('#arrange-notes li')].map((l) => l.textContent)`);
+  // While the question is on screen the other note is moved, as another window of the application would move
+  // it: through the store. "Undo the rest" is then no answer to what the question listed.
+  const placedA = JSON.parse(await desk()).find((x) => x.noteId === a);
+  d.store.dispatch({ type: 'move-card', noteId: a, x: placedA.x + 90, y: placedA.y + 60, viewId: 'features' });
+  await d.delay(600);
+  const beforeRest = await desk();
+  await press('arrange-apply');
+  const reasked = await js(`({ asking: ${glass}.arrangeState().asking, lines: [...document.querySelectorAll('#arrange-notes li')].map((l) => l.textContent), said: document.getElementById('field-say').textContent, undo: ${glass}.arrangeState().undo })`);
+  check(reasked.asking !== null && reasked.lines.includes(`${c} has been closed since`) && reasked.lines.includes(`${a} has been moved since`) && !closedAsk.includes(`${a} has been moved since`) && (await desk()) === beforeRest && /nothing was put back/.test(reasked.said) && reasked.undo !== null, `${a} was moved while the undo's question was on screen: "Undo the rest", pressed, puts nothing back, shows the question again with ${a} in its list, and says so in the status line`, { closedAsk, reasked });
+  // The note is put back where the arrangement had it, and the question asked afresh is the first one again.
+  await press('arrange-cancel');
+  d.store.dispatch({ type: 'move-card', noteId: a, x: placedA.x, y: placedA.y, viewId: 'features' });
+  await d.delay(600);
+  await press('arrange-undo');
   d.press(win, 'Return');
   await d.delay(900);
   check(closedAsk.includes(`${c} has been closed since`) && !(await js('window.__deckDesk()')).includes(c), `an undo after ${c} was closed says so, and does not open it again`, { closedAsk, held: await js('window.__deckDesk()') });
@@ -466,6 +550,44 @@ module.exports = async function (d) {
     if ((await arrange()).asking !== null) { await press('arrange-apply'); await d.delay(900); }
     win.setBounds(wide);
     await d.delay(900);
+  }
+
+  // ---- 9c. A window shorter than the collection: what is stored for it is not the size it is drawn at ----
+  {
+    const full = win.getBounds();
+    const kept = JSON.parse(await layout());
+    if ((await js('window.__deckDesk()')).length === 0) await openRow();
+    if (kept === null) {
+      d.log('NOT RUN: nothing is stored for the collection of this view, so there is no stored size to compare with');
+    } else {
+      // Somewhere a person might have left it, open, so Read has it to put down the left.
+      d.store.dispatch({ type: 'set-collection', layout: { ...kept, x: 40, y: 60, collapsed: false, presentation: 'table' }, viewId: 'features' });
+      win.setBounds({ x: 0, y: 0, width: full.width, height: Math.max(420, Math.round(kept.h * 0.6)) });
+      await d.delay(1000);
+      await t.park();
+      const short = await js(`({ field: Math.round(document.getElementById('field').getBoundingClientRect().height), drawn: Math.round(document.getElementById('collection').getBoundingClientRect().height) })`);
+      if (!(short.field < kept.h)) {
+        d.log('NOT RUN: the window could not be made shorter than the collection is stored', { short, stored: kept.h });
+      } else {
+        const storedBefore = await layout();
+        const deskBefore = await desk();
+        await press('arrange-read');
+        const outline = await js(`(() => { const o = document.querySelector('.arrange-outline[data-object="collection"]'); return o ? Math.round(o.getBoundingClientRect().height) : null; })()`);
+        d.press(win, 'Return');
+        await d.delay(1100);
+        const storedApplied = JSON.parse(await layout());
+        await press('arrange-undo');
+        await d.delay(1100);
+        const asking = (await arrange()).asking;
+        if (asking !== null) await press('arrange-cancel');
+        const storedUndone = await layout();
+        check(short.drawn <= short.field && outline !== null && outline <= short.field && storedApplied.x === 12 && storedApplied.w === kept.w && storedApplied.h === kept.h && asking === null && storedUndone === storedBefore && (await desk()) === deskBefore, 'in a window shorter than the collection is stored, the collection is drawn shorter to fit and the preview outlines it that way; Apply stores its new place and the height it had, not the fitted one; Undo arrangement asks nothing and leaves what is stored for the collection, and the desk, the same bytes as before', { short, outline, stored: kept.h, storedBefore, storedApplied, storedUndone, asking });
+      }
+      win.setBounds(full);
+      await d.delay(900);
+      d.store.dispatch({ type: 'set-collection', layout: kept, viewId: 'features' });
+      await d.delay(500);
+    }
   }
 
   // ---- 10. A narrow window, a reload, and the served page ----
