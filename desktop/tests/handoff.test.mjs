@@ -159,6 +159,11 @@ test('the way back is the same handoff in reverse, carrying where it was read la
   assert.equal(returnOf(settleUnconfirmed(record('show', tablet, true)).record, null, null), null);
   assert.equal(returnOf(settle(record('move', desk, true, { source: { windowId: 1, view: null, label: 'Deck', kind: 'main' } }), { type: 'ack', ok: true }).record, null, null), null);
   assert.equal(returnOf(settle(record('move', desk, true), { type: 'timeout' }).record, null, null), null);
+  // A note shown here from a reader window has no way back either: a reader is no desk to return it to.
+  // (This is the record that once replaced a real way back and left "send back" leading nowhere.)
+  const fromReader = settle(record('show', main, false, { source: { windowId: 9, view: 'features', label: 'reader on Display 2', kind: 'reader' } }), { type: 'ack', ok: true }).record;
+  assert.equal(fromReader.state, 'done');
+  assert.equal(returnOf(fromReader, null, null), null);
 });
 
 test('a destination on the same desk, and a note kept on every view, are offered "also show" only', () => {

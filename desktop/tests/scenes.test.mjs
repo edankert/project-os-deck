@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
-const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom } = load('shared/scenes.js');
+const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene } = load('shared/scenes.js');
 
 const WS = 'aaaa1111bbbb2222';
 const list = { x: 12, y: 12, w: 340, h: 700, collapsed: false, presentation: 'cards' };
@@ -171,4 +171,27 @@ test('a reopened scene says what is not as it was saved, and nothing about the c
   assert.ok(!report.join(' ').match(/\d+ notes|count|members/), 'the collection\'s membership is live and is never reported as a change');
   // A larger field is not a change worth a sentence.
   assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 2000, h: 1200 }, movedPassages: [] }), []);
+});
+
+test('a saved scene has a name, a field has a size, and the list is one workspace\'s', () => {
+  const cards = (v) => (Array.isArray(v) ? v : []);
+  const none = () => null;
+  // Nothing saved is unnamed. Only the desk kept for "back", which is never saved, may be.
+  assert.equal(normaliseScene({ name: '', workspaceId: WS, version: SCENE_VERSION, cards: [] }, cards, none), null);
+  assert.equal(normaliseScene({ name: '', workspaceId: WS, cards: [] }, cards, none), null);
+  assert.notEqual(normaliseScene({ name: '', workspaceId: WS, version: SCENE_VERSION, cards: [] }, cards, none, true), null);
+  assert.equal(normaliseScene({ name: 'x', workspaceId: '', version: SCENE_VERSION, cards: [] }, cards, none), null);
+  // A field of no size, or of a size that is not a number, is dropped: the report would otherwise compare a window with nothing.
+  for (const field of [{ w: 0, h: 600 }, { w: 800, h: 0 }, { w: -1, h: 600 }, { w: Number.NaN, h: 600 }, { w: '800', h: 600 }, null]) {
+    assert.equal(normaliseScene({ name: 'x', workspaceId: WS, version: SCENE_VERSION, cards: [], field }, cards, none).field, undefined, JSON.stringify(field));
+  }
+  assert.deepEqual(normaliseScene({ name: 'x', workspaceId: WS, version: SCENE_VERSION, cards: [], field: { w: 800.4, h: 600.6 } }, cards, none).field, { w: 800, h: 601 });
+  // The list names this workspace's scenes and no other's.
+  const desks = {
+    a: { name: 'Mine', workspaceId: WS, version: SCENE_VERSION, view: 'issues', cards: [] },
+    b: { name: 'Theirs', workspaceId: 'cccc3333dddd4444', version: SCENE_VERSION, view: 'issues', cards: [] },
+    c: { name: 'An old desk', workspaceId: WS, cards: [{ noteId: 'ISS-0001', x: 0, y: 0 }] },
+  };
+  assert.deepEqual(listScenes(desks, WS).map((s) => s.name), ['An old desk', 'Mine']);
+  assert.deepEqual(listScenes(desks, 'cccc3333dddd4444').map((s) => s.name), ['Theirs']);
 });
