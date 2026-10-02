@@ -320,7 +320,7 @@ items:
     TASK-0107:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass.md"
       title: "Save, reopen and undo scenes in Glass"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
@@ -2385,7 +2385,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 114
-    tasks_done: 94
+    tasks_done: 95
     tests_total: 57
     tests_passing: 8
     tests_failing: 0

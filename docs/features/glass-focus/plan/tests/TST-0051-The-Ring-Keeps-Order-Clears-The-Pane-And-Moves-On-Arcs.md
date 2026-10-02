@@ -17,7 +17,7 @@ covers: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", 
 issues: []
 tasks: ["[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
 artifacts: []
-adequacy: "Measured on 2026-10-02. Two independent reviewers took seven seating rules out of the built module: the suite failed for three and passed for four. Commit 0fc2c46 added a test for each of the four, and its author then broke each again and saw a test fail. The Adequacy section lists the seven."
+adequacy: "Measured on 2026-10-02. In round one two independent reviewers took seven seating rules out of the built module: the suite failed for three and passed for four. Commit 0fc2c46 added a test for each of the four. In round two an independent reviewer took those four out again and the suite failed each time. The Adequacy section lists them."
 mutation_score: ""
 reviewed_by: ""
 review_date: ""
@@ -61,11 +61,9 @@ TASK-0104 rewrote this suite on 2026-10-01. Until then it checked the contract E
 
 ## Evidence
 
-2026-10-02: the suite ran inside `npm test` in `desktop/`, 589 of 589, at `e86b2e4`. It holds 15 tests. This note has a `command:`, so it records no verdict of its own; CI runs it.
+2026-10-02: the suite ran inside `npm test` in `desktop/`, 645 of 645, at `18f5405`. It holds 20 tests: 15 before the independent review of FEAT-0017, and five added by the review's fixes, which also extended one (`0fc2c46`, `b3646d0`). This note has a `command:`, so it records no verdict of its own; CI runs it.
 
 The suite checks where seats are. That the cards on screen stand at those seats, once each, is checked in a window by the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]).
-
-That count is from before the independent review of FEAT-0017. The review's fixes added five tests and extended one (`0fc2c46`, `b3646d0`), and no pass that ran the suite with them is recorded here yet.
 
 **What the review found in this suite, 2026-10-02.** The suite passed with four seating rules taken out of the module. It now holds a test for each (`0fc2c46`). That commit changed no line of the module: the tests were what was missing.
 
@@ -78,7 +76,7 @@ That count is from before the independent review of FEAT-0017. The review's fixe
 
 ## Adequacy (who verifies this test?)
 
-Measured on 2026-10-02 by the two independent reviewers of FEAT-0017, and again after the tests were added. The reviewers took eight rules out of the built code, seven of them in `focus-ring.ts`, and ran this suite each time.
+Measured on 2026-10-02 by the two independent reviewers of FEAT-0017 in round one, and again by the reviewer of round two after the tests were added. The reviewers took eight rules out of the built code, seven of them in `focus-ring.ts`, and ran this suite each time.
 
 | Rule taken out | By | The suite |
 | --- | --- | --- |
@@ -90,6 +88,17 @@ Measured on 2026-10-02 by the two independent reviewers of FEAT-0017, and again 
 | No seat lies over the document | reviewer A | 3 tests failed |
 | Seats in sight come first in the order | reviewer A | 1 test failed |
 
-Four of the seven were not caught. Commit `0fc2c46` added a test for each of the four and says each rule was then broken again in the built module, and every break failed at least one test. That second run was made by the session that wrote the tests, not by a reviewer. FEAT-0017's "Review" has the commands and what they printed.
+Four of the seven were not caught. Commit `0fc2c46` added a test for each of the four and says each rule was then broken again in the built module, and every break failed at least one test. That run was made by the session that wrote the tests.
+
+Round two's reviewer then took the same four rules out again, in a clean context and a clone of its own at `cbae0d3`, and the suite failed each time.
+
+| Rule taken out in round two | The suite |
+| --- | --- |
+| The seating is turned to the one that moves the cards least | 1 test failed (`pass 19, fail 1`) |
+| No card is sent out of sight while a seat in sight is free | 3 tests failed (`pass 17, fail 3`) |
+| A tie between two neighbours is broken by id | 1 test failed (`pass 19, fail 1`) |
+| A seat keeps 14 pixels from the document | 1 test failed (`pass 19, fail 1`) |
+
+Not broken on purpose by anyone: the rule that a neighbour no card can be drawn for gets no seat, and the rules about the edge counters, the lines, the least movement and the easing. FEAT-0017's "Review" has the commands and what they printed.
 
 The four breaks recorded here on 2026-09-11 were made against the suite TASK-0104 replaced, and each of the checks they failed is gone.

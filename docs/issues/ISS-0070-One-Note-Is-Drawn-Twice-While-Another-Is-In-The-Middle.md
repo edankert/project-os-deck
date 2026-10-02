@@ -32,11 +32,11 @@ tests: ["[[TST-0052]]", "[[TST-0045]]", "[[TST-0051]]"]
 
 **A note opened in Glass is now drawn once: its neighbours are the field's own cards, moved to seats round its document at the size they are browsed at, and the opened note leaves no frame behind.** A seat is the place one card takes beside the document. Edwin's option 1 was built in `81d4632` (TASK-0104): the renderer that painted ring copies, `ring-view.ts`, is deleted, and the ghost is no longer drawn. The opened note's slot is kept for it and nothing is drawn there.
 
-**The check that shows the defect gone** is in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which opens a note with a real click in a real window. In the pass of 2026-10-02 at `e86b2e4` it read: "one note is one object: no card is drawn for the open note (0), no note is drawn twice (none), and there is no ghost (0), no copy on a ring (0) and no "+N more" (0)". It counts the field cards drawn for each note id, and the elements the old build drew. If the defect came back, a neighbour drawn as a second card would be named in the "drawn twice" list, a copy on a ring would make its count 1 or more, and a frame left behind would make the ghost count 1. Any of those fails the check.
+**The check that shows the defect gone** is in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which opens a note with a real click in a real window. In the pass of 2026-10-02 at `18f5405` it read: "one note is one object: no card is drawn for the open note (0), no note is drawn twice (none), and there is no ghost (0), no copy on a ring (0) and no "+N more" (0)". It counts the field cards drawn for each note id, and the elements the old build drew. If the defect came back, a neighbour drawn as a second card would be named in the "drawn twice" list, a copy on a ring would make its count 1 or more, and a frame left behind would make the ghost count 1. Any of those fails the check.
 
 Four more checks in the same run bear on it, and all passed:
 
-- "every neighbour is seated round the document, each once, none over the document or another card (14 seated of 14 neighbours…)". For the note with the most neighbours it found 220 places for 220: 218 seated cards and 2 notes that were already documents.
+- "every neighbour is seated round the document, each once, none over the document or another card (15 seated of 15 neighbours…)". For the note with the most neighbours it found 220 places for 220: 219 seated cards and 1 note that was already a document.
 - "a seated card is the size a card is browsed at: 138.2 to 138.2 px wide against 138.2 by 68.4 for the front-band card straight ahead, not the 168 by 44 of a copy". This is the half of the report that asked why the neighbours were shown so small.
 - In the `lift` part: "the lifted note is drawn once, as its document: the field draws no card for it (0) and no ghost (0), and still holds its slot".
 - In the orbit: the opened note has no card and no dot, and none of its 28 neighbours is also a dot or drawn twice.
@@ -48,7 +48,7 @@ The smoke run opens ISS-0069 where it used to open this issue. Until this pass i
 What is not shown:
 
 - Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it. Edwin has not yet seen the repair in a walk.
-- No check that runs in a window was broken on purpose to see it fail. The checks were written after the fix, so none has been seen failing on this defect. The two reviewers of FEAT-0017 ran node suites only on 2026-10-02 and marked "drawn once, without a duplicate card or ghost" *not checked*, because only a window could settle it. They did break the geometry suite on purpose; TST-0051 says what that showed under "Adequacy".
+- No check that runs in a window was broken on purpose to see it fail. The checks were written after the fix, so none has been seen failing on this defect. The two reviewers of FEAT-0017 ran node suites only on 2026-10-02 and marked "drawn once, without a duplicate card or ghost" *not checked*, because only a window could settle it. Round two's reviewer ran node suites only as well. Both rounds broke the geometry suite on purpose; TST-0051 says what that showed under "Adequacy".
 - One thing the review found bears on this issue, and it is fixed. A neighbour for which no card could be made still took a seat, and the seat stood empty. Since `b3646d0` such a neighbour is given no seat and stays in the document's list. No route through the application produces such a neighbour today, so no walk shows it; the geometry suite holds the rule.
 - The frame time the risk scan below asks for was taken in the Linux container only, which draws in software: with 217 cards seated, 16.7 ms between frames at the median and 33.3 ms at the 95th percentile while turning. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
 
@@ -107,7 +107,7 @@ No trigger applies: no new dependency, env var, path, artifact or exposure. Opti
 
 - [x] **Edwin chose option 1 and dropped the ghost, 2026-09-12.** Recorded below.
 - [x] Amend [[DES-0002-The-Glass-Cockpit]]: the ghost is gone, and the slot a lifted note left is reserved rather than drawn. Done 2026-10-02, as a dated amendment under "So opening is lifting".
-- [x] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]], with a smoke check that counts the drawn elements per note id while a note is in the middle and fails at two. Done as TASK-0104; the check is "one note is one object" in the `focus` part of the smoke run, which passed at `e86b2e4` on 2026-10-02.
+- [x] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]], with a smoke check that counts the drawn elements per note id while a note is in the middle and fails at two. Done as TASK-0104; the check is "one note is one object" in the `focus` part of the smoke run, which passed at `18f5405` on 2026-10-02.
 
 ## Decision record
 

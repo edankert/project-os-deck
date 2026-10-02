@@ -129,9 +129,9 @@ This section was first written at commit `4243fc2` and is brought up to commit `
 
 ## What the independent review changed in these rules, 2026-10-02
 
-Two reviewers read FEAT-0023 at commit `5e66f48` on 2026-10-02 and asked for changes. The fixes changed or sharpened several rules of this decision. Each is stated below as the rule the build now keeps, with the commit and the numbered item it belongs to. The findings and their evidence are in [[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]] under Review. This section changes no status: the decision stays proposed, and each rule here is Edwin's to accept or to send back with the rest.
+Two reviewers read FEAT-0023 at commit `5e66f48` on 2026-10-02 and asked for changes. The fixes changed or sharpened several rules of this decision. Each is stated below as the rule the build now keeps, with the commit and the numbered item it belongs to. The findings and their evidence are in [[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]] under Review. A second round, by one reviewer at `cbae0d3`, found all ten refuted claims fixed and approved the fixes. This section changes no status: the decision stays proposed, and each rule here is Edwin's to accept or to send back with the rest.
 
-Two lines of the section above are no longer true and are replaced here: A4's line on a retry later than five seconds, and B2's line on the chooser cutting its sentence off.
+Three things in the section above are no longer true and are replaced here: A4's line on a retry later than five seconds, B2's line on the chooser cutting its sentence off, and the measurements, which were taken again and are at the foot of this section.
 
 **Rules of part A as now built.**
 
@@ -161,6 +161,10 @@ Two lines of the section above are no longer true and are replaced here: A4's li
 - **A second arrival replaces the first one's line.** B5 does not say how many arrival lines a window shows. It shows one, for the latest arrival. Each document that arrived keeps its own mark, and `S` on it still offers "Send back".
 
 **Left open, for a decision.** The cards surface's list of saved desks opens a scene straight through the store: no "back to the desk before", no reading position, no message. A6 and A5 are met in Glass only. Whether the cards surface should open a scene the way Glass does is not decided here.
+
+**Shown in a window, 2026-10-02, at commit `18f5405`.** Every suite, the smoke run and both scripted walks were run again on the code as fixed, in the Linux container that draws in software, and every run held. The walks have a check for six of the rules above, and each held on this repository and on a copy of `your-trainer`: the list and the other view's desk put back by the undo, an entry from a different Deck offered "delete" only and refused by "save desk", a scene with no note open saying it reopened, the served page opening no scene from an address, a late retry read where the scene kept it, and a "send back" that went unanswered and could be pressed again. The other rules are held by node tests alone, and one by nothing: a destination that answers too late. [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]] has what each check saw.
+
+**Measured again in that pass, on this repository.** From release to the answer: 155 ms to a desk window, against a wait of 4000 ms. To a reader window, 1178 ms against 12000 ms; that reading now starts before three arrow-key presses the walk makes, so about 360 ms of it is the walk's own waiting. A desk window that was kept busy was given up on after 4.2 s, timed from opening the chooser. From pressing "open" to both of a scene's documents being read where they were: 132 ms. Each is one reading. Nothing was measured on the Mac.
 
 ## Acceptance
 

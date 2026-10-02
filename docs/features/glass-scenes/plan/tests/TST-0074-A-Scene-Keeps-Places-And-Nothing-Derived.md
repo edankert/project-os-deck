@@ -80,9 +80,10 @@ These are what the twenty-two tests assert, reconciled with the suite file on 20
 
 ## Evidence
 
-- **2026-10-02, after the independent review.** The commits `bb99700`, `093c198`, `ff25f28`, `52dcd6c`, `22678b9`, `509c770`, `61625e7`, `fd8b6a9`, `426e3ec`, `4f5d266` and `972ce73` brought the suite from ten tests to twenty-two. No full run on the fixed code is cited here yet. This close-out read the twenty-two tests against the list above and did not run the suite.
+- **2026-10-02, commit `18f5405`.** `npm test` in `desktop/` ran every suite, this one among them: 645 of 645 passed. The session that ran the pass reported the count. This close-out ran the suite by itself on the same day, with `node --test tests/scenes.test.mjs`: 22 of 22 passed. It read the twenty-two tests against the list above. The commits `bb99700`, `093c198`, `ff25f28`, `52dcd6c`, `22678b9`, `509c770`, `61625e7`, `fd8b6a9`, `426e3ec`, `4f5d266` and `972ce73` had brought the suite from ten tests to twenty-two.
+- **2026-10-02, commit `cbae0d3`, by the round-two reviewer.** One reviewer, in a clean context and a clone of its own, ran this suite and the handoff suite: `pass 44, fail 0`. It took each fixed rule of this suite out again and a test failed each time: the list's layout on reopen (2 tests fail), the second of two equal headings (1), the view to go back to ignored (1), an unreadable entry changed (two breaks, 1 each), a name the address refuses (1), and either check removed from `apply-scene` (`fail 1`). Its verdict on the test: fixed.
 - **2026-10-02, commit `5e66f48`, by the two reviewers.** Each ran this suite and the handoff suite in a clone of its own. Reviewer A reports "both suites pass 28 of 28 after the last restore", and reviewer B "`scenes` plus `handoff` pass 28 of 28 after the restore". Both took a guard out of `apply-scene` and report that nothing failed; see "Defects the independent review found" below.
-- **2026-10-02, commit `e86b2e4`.** `npm test` in `desktop/` ran every suite, this one among them: 589 of 589 passed. The session that built the feature ran it and reported the count. The second close-out did not run the suite. It read the ten tests the suite then had.
+- **2026-10-02, commit `e86b2e4`,** before the review: 589 of 589 in the full run, ten of them these tests, by the report of the session that built the feature.
 - **2026-10-02, commit `69301dd`,** the commit that added the tenth test.
 - **2026-10-02, commit `b1bfa1d`,** the commit that added the suite: 550 of 550, nine of them these tests, by that commit's message.
 

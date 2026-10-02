@@ -20,17 +20,17 @@ related: ["[[PHASE-0002-Glass]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orb
 2. The chosen document size feeds the layout, the existing related cards move in a workspace larger than the window, and a drag of the document carries the group. Built in `81d4632` and `b2a99d6`.
 3. Keyboard and named routes to cards out of sight, with held and shared neighbours reused. Built in the same two commits.
 4. The old geometry and smoke assertions are reconciled (`81d4632`, `6be167a`), and the walk written for the repair makes checks (`f7bdd46`). The walk of TST-0052 and the performance record on the Mac, which this step also asked for, are not done.
-5. Two independent reviewers read the repair on 2026-10-02 and asked for changes. A note with no size of its own changed size when another note was resized, a press on the resize corner could store a size nobody chose, the seating suite passed with four of its rules taken out, and the reading-size suite had no test of a note with no size. The fixes are the five commits merged in `0dc5708`. FEAT-0017's "Review" lists each finding and what was done.
+5. Two independent reviewers read the repair on 2026-10-02 and asked for changes. A note with no size of its own changed size when another note was resized, a press on the resize corner could store a size nobody chose, the seating suite passed with four of its rules taken out, and the reading-size suite had no test of a note with no size. The fixes are the five commits merged in `0dc5708`. Round two found all six refuted claims fixed and one narrower case left, which is kept as FEAT-0017's decision 19. The verdict recorded is `changes-requested`. FEAT-0017's "Review" lists each finding and what was done.
 
 ## What is still owed
 
-- **Round two of the review.** One reviewer reads the fixes. It has not been run.
-- **A run of the three new checks about the resize corner.** `fb829b0` added them to the walk `focus-neighbourhood`, and no pass the notes cite has run them.
 - **The rendering cost on the Mac.** It is the one open box in TASK-0104, which stays `doing`. Everything timed so far was timed in the Linux container, which draws in software.
 - **A person's walk of TST-0052.** Nobody has walked it, and the acceptance ledger holds no verdict.
-- **A second window taking the view's size.** ISS-0071 keeps a box open for it. The walk `glass-collection` compares the two sizes since `e3f1460`, and the box stays open until a pass the notes cite has run that check.
 - **Edwin's choice about the field's edge.** A dragged document is drawn stopped at the edge, and his answer of 2026-09-12 was that nothing is clamped. ISS-0072 sets the two side by side.
+- **Edwin's judgement of a note kept on every view.** With no size of its own it changes size once on a view not in front of the person. Round two of the review reported it, and FEAT-0017's decision 19 says why it is kept.
 - **Edwin's judgement of one seating.** Six cards that all stood to one side of a document are seated on both sides of it. A reviewer raised it, and FEAT-0017's "Review" records it as kept.
+
+No longer owed since the pass at `18f5405`: the three walk checks about the resize corner ran and held, and a note opened on the served page took the size chosen on its view, which ticks ISS-0071's last box.
 
 ## Dependencies
 

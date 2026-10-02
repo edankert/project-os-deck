@@ -86,7 +86,7 @@ Both scripts run on this repository's own notes and write nothing: `git status` 
 - Whether a person finds the route obvious or the motion helpful. That is TST-0063.
 - A screen reader. The names and roles are in the page and the second script reads them; nobody has listened to them.
 - A refusal the sidecar itself made, as said above.
-- A list that changed only its order, and the words the chip in the bar above the field then shows. Neither script changes a note.
+- A list that changed without any note changing, and the words the chip in the bar above the field then shows ("the list changed — show it"). Neither script changes a note.
 - Enter and a double-click on the collection's header on the served page. The script presses the fold control there, by script and not with a pointer event. The `collection` suite tries all three on a stand-in page ([[TST-0067-A-Collection-Counts-Exactly-And-Keeps-Its-Place]]).
 - Closing a document while the collection shows cards, has the row folded away under its heading, or stands behind another document in a narrow field. The script closes one with the list on screen and one with the collection collapsed.
 - Escape with the collection's header pressed and not yet dragged 5 px. That key still goes to Glass.
@@ -97,14 +97,14 @@ Both scripts run on this repository's own notes and write nothing: `git status` 
 
 ## Evidence
 
-**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, screen 1440 by 900, window 1440 by 873), on this repository at commit `e86b2e4`, from a separate clone. Both scripts ran in one verification pass that also made the smoke run and the other walks. The Features view held 144 notes, and the collection counted 144.
+**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, screen 1440 by 900, window 1440 by 873), on this repository at commit `18f5405`, from a separate clone. Both scripts ran in one verification pass that also made the smoke run and the other walks, after the independent review's fixes. The Features view held 144 notes, and the collection counted 144.
 
 | Script | Checks recorded | Checks that held | Pictures | Time | Workspace |
 | --- | --- | --- | --- | --- | --- |
-| `glass-desktop` | 54 | 54 | 23 | 62 seconds | unchanged |
-| `glass-collection` | 11 | 11 | 3 | 46 seconds | unchanged |
+| `glass-desktop` | 55 | 55 | 23 | 62 seconds | unchanged |
+| `glass-collection` | 17 | 17 | 3 | 60 seconds | unchanged |
 
-No part of either script was left out: neither wrote a `NOT RUN` line.
+No part of either script was left out: neither wrote a `NOT RUN` line. That matters for the resize step of the second script, which writes one when the corner is covered; in this run the step ran.
 
 What the second script saw, check by check:
 
@@ -113,23 +113,21 @@ What the second script saw, check by check:
 - Cleared, the header reads "144 notes" and names no filter.
 - The heading for PHASE-0001 has 10 rows under it. Pressed, it has none and says it is folded. After Enter it has 10 again.
 - At the first row the list stays at 0. At the last it stays at 275 of 275 px. The zoom is 1 and the bearing the same before and after.
-- The collection is dragged from 192, 121 to 332, 132. After Escape it is at 192, 121 and FEAT-0001 is still open.
-- Tab lands on the status filter, the type filter, a row, and then the open document's header and two of its controls. Each has an outline. The filters are named "Filter by status" and "Filter by type", the list has the role `list` and a row the role `listitem`.
+- The collection is dragged from 192, 121 to 332, 132. After Escape it is at 192, 121. The pointer then moves three more times with the button down, and the collection is still at 192, 121; it is there after the button is let go. What the store holds for the collection is the same before and after, and FEAT-0001 is still open.
+- The corner takes the collection from 340 by 693 to 420 by 717. After Escape it is 340 by 693, and it stays so while the pointer moves on and after the button is let go. The store's layout is unchanged, FEAT-0001 is still open and is still the focus.
+- The collection's "cards" and "table" controls, its header, its fold control and the search box each have an outline when the Tab key arrives on them.
+- Tab from the search box lands on the status filter, the type filter, a row, and then the open document's header and two of its controls. Each has an outline. The filters are named "Filter by status" and "Filter by type", the list has the role `list` and a row the role `listitem`.
 - "Accept" on ADR-0005 is drawn disabled inside the document, with the reason beside it and as its tooltip. The press sent no request that writes and asked for no reason. "Supersede" is drawn as the sidecar gave it.
 - With the related list and the details open, the document comes back with both closed after "close all" and again after Delete.
-- A note resized to 624 by 552 is followed by a note that opens at 624 by 552. **The served half of this check asserted nothing about size in this run.** The served page's field was 772 by 446, which has no room for 624 by 552, and the script holds the note to the chosen size only when the field has room. The note opened there at 622 by 427.
+- FEAT-0002 closed with the list on screen leaves the keyboard on FEAT-0002's row. Closed with the collection collapsed, it leaves the keyboard on the collection's header.
+- A note resized to 624 by 552 is followed by a note that opens at 624 by 552. On the served page, whose field is 1260 by 739 in this run, TASK-0010 opens at 624 by 552 too.
+- With the collection collapsed by the Mac, the served page draws it 34 px tall with no row. Its fold control opens it there, 693 px tall with 76 rows on screen, folds it and opens it again. In the Mac's window it is collapsed throughout, and the store's layout for it is the same after each press.
+- On the served page the header's label reads "Features, 144 notes: Enter opens it" while collapsed and "Features, 144 notes: Enter collapses it" while open.
+- With the served page's window 760 px wide its field is 632 px wide, the bar holds four buttons, and each of the four controls the Tab key is moved to has an outline.
 
-**Both scripts have grown since this run, and no run of the grown scripts is recorded here yet.** The table and the list above are the run at `e86b2e4`. The second script now makes 17 checks where it made 11, and the first 55 where it made 54. The added checks are about these things:
+The check the first script gained: in the narrow window the Tab key is moved to four controls after the bar's first button, and each has an outline.
 
-- Where the keyboard is drawn on the collection's header, its "table", "cards" and fold controls and the search box, which the list above does not read (commit `e3f1460`).
-- Where the keyboard is drawn in the narrow window (the first script) and on the served page in a window 760 px wide (`e3f1460`).
-- Escape while the collection is resized by its corner (`716ae82`).
-- Where the keyboard is after a document is closed, with the list on screen and with the collection collapsed (`fb79f05`).
-- On the served page, a collection the Mac collapsed being opened and folded there with the Mac's store unchanged, and the header's label (`bad5a5c`).
-
-Two checks that were already there ask for more. The Escape check moves the pointer on after Escape before it lets go, and reads the store's layout (`716ae82`). The size check opens the served page in a window with room for the chosen size and requires the two sizes to be equal, so the served half can no longer assert nothing (`e3f1460`).
-
-The first script first held all 54 on 2026-10-01 at commit `598ecc9`, when the view held 131 notes. The second script was written on 2026-10-02 (commit `7103e3c`).
+**How the scripts grew.** The first script first held all 54 of its checks on 2026-10-01 at commit `598ecc9`, when the view held 131 notes; it makes 55 since commit `e3f1460`. The second script was written on 2026-10-02 (commit `7103e3c`) with 11 checks and held them at `e86b2e4`. In that run its served half asserted nothing about size, because the served page's field, 772 by 446, had no room for 624 by 552. Commit `e3f1460` gave that page a larger window and added the checks on the collection's own controls and on the served page in a narrow window. Commits `716ae82`, `fb79f05` and `bad5a5c` added the resize, closing and served-fold checks with the review's fixes, which makes 17.
 
 The first complete run of the first script, on 2026-10-01, failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
 
@@ -148,7 +146,7 @@ The second script found a ninth defect in the application on 2026-10-02, fixed i
 
 9. Collapsing the collection and opening it again moved the list by several hundred pixels when a note was open. The script scrolls the list 60 px down, and the commit records that it came back at 665. The rows under "Joined to what you are holding" were sorted afresh at every redraw. Their order depends on where the cards stand round the open note, which is known only a moment after the note opens. So the first redraw after that, whatever caused it, moved every row, and the list followed the row it remembered. The order is now worked out when what it describes changes, and once more when the seats round the focus are first known. The check on the collapsed header reads the scroll position before and after, 60 and 60 in this run, and would read 665 again if the defect came back.
 
-**The independent review of FEAT-0020 on 2026-10-02 found four more, and one check of this walk that could not fail.** Two reviewers read the feature at `5e66f48` and ran node suites only; neither ran this walk. Each defect is fixed in the commit named, and the step that now holds it is named with what it would show if the defect came back. No run of these steps is recorded here yet.
+**The independent review of FEAT-0020 on 2026-10-02 found four more, and one check of this walk that could not fail.** Two reviewers read the feature at `5e66f48` and ran node suites only; neither ran this walk. Each defect is fixed in the commit named, and the step that now holds it is named with what it would show if the defect came back. Every one of these steps held in the run at `18f5405`, with the fix in place. Nobody has run the walk with a defect put back, so that each step fails on its defect is read from the script and not seen. Round two of the review read the Escape check and said the same: fixed by reading, not run.
 
 10. Escape during a drag of the collection left the drag live. The collection went back, but the next move of a hand still on the button began the drag again from the original press, and the release stored the moved place. Both reviewers showed it with a probe in node. **This walk's Escape check passed with the defect present,** because it pressed Escape and let go at the very point of the last move, so the pointer never moved after Escape. Fixed in commit `716ae82`. The check now moves the pointer on by one pixel and then further before letting go. With the defect back, the collection would follow the pointer again after Escape and the store's layout would change.
 11. Escape while the collection was resized by its corner was not used by the collection. Reviewer B's probe showed the key was not consumed; by reading, it then reached Glass's own Escape, which leaves the focus or closes every note. Fixed in the same commit. The new step drags the corner, presses Escape and moves on. With the defect back, the size would stay as dragged, and the focus or the open notes would be gone.

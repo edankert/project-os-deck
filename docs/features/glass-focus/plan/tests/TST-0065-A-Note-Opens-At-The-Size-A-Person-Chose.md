@@ -17,7 +17,7 @@ covers: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", 
 issues: []
 tasks: ["[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
 artifacts: []
-adequacy: "Measured in part on 2026-10-02. An independent reviewer removed the line that writes the view's size on a newly opened note and two tests failed. Commit 0d39033 says its three new tests fail with the fix taken out. The other rules have not been broken on purpose."
+adequacy: "Measured in part on 2026-10-02. In round one an independent reviewer removed the line that writes the view's size on a newly opened note and two tests failed. In round two an independent reviewer took out the step that keeps a note with no size at its drawn size and three tests failed. The other rules have not been broken on purpose."
 mutation_score: ""
 reviewed_by: ""
 review_date: ""
@@ -53,13 +53,13 @@ This suite checks which size a note opens at, what a resize changes, and what a 
 
 ## Evidence
 
-2026-10-02: the suite ran inside `npm test` in `desktop/`, 589 of 589, at `e86b2e4`. It holds 14 tests. This note has a `command:`, so it records no verdict of its own; CI runs it.
+2026-10-02: the suite ran inside `npm test` in `desktop/`, 645 of 645, at `18f5405`. It holds 18 tests: 14 before the independent review of FEAT-0017, and four added by the review's fixes (`0d39033`, `fb829b0`). This note has a `command:`, so it records no verdict of its own; CI runs it.
 
-The suite checks the rule in the store. Three runs in a window at `e86b2e4`, in the Linux container, check what a person sees. The `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) finds the document 560 by 520 "to the pixel when opened, while dragged, after the drag, out of focus and in focus again", and finds the next note opening at the size the corner last chose. The `glass-desktop` walk finds a document back at its size after the window was narrow. The `glass-collection` walk resizes a note to 624 by 552 and finds the next note opened in that window 624 by 552.
+The suite checks the rule in the store. Four runs in a window at `18f5405`, in the Linux container, check what a person sees. The `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) finds the document 560 by 520 "to the pixel when opened, while dragged, after the drag, out of focus and in focus again". After the corner is dragged it finds that "the view remembers that size (600 by 550)", and that a document already open keeps 560 by 520 while the view's size is 616 by 550. The `glass-desktop` walk finds a document back at its size after the window was narrow, and a note opened in a field 652 pixels wide stored at 656 by 560, a reading size and not the window's. The `glass-collection` walk resizes a note to 624 by 552 and finds the next note opened in that window 624 by 552. The `focus-neighbourhood` walk presses the resize corner without moving and finds the note still 560 by 520 and the view still with no chosen size; it drags the corner until the document is drawn 500 by 484, presses Escape, and finds it 560 by 520 again with nothing stored.
 
-Not checked in that pass: that a note opened in a second window on the same view takes the view's size. The `glass-collection` walk opens a note on the served page, which is a second window with no bridge to the application. In that run it compared the two sizes only when the served page's field could hold the chosen size, and it could not: the field there was 772 by 446 and the size chosen was 624 by 552. So no size was compared. The note it opened there was drawn 622 by 427. Since `e3f1460` the walk makes the served window 1440 by 900 and requires the two sizes to be equal. No pass cited here has run that check, and no run has opened a second Deck window on the same view.
+**A note opened in a second window on the same view takes the view's size, as far as the served page shows it.** The `glass-collection` walk opens a note on the served page, which is a second window with no bridge to the application. At `18f5405` its check read "a note resized to 624 by 552 sets the size the next note opens at on this view: in this window, and in a second window on the same view (the served page, in a field of 1260 by 739), where a note opened there is 624 by 552". In the pass at `e86b2e4` the same check compared nothing, because the served page's field was 772 by 446 and could not hold the size; `e3f1460` made the served window 1440 by 900 and made the comparison a requirement. No run has opened a second Deck window on the same view.
 
-The count above is from before the independent review of FEAT-0017. The review's fixes added four tests (`0d39033`, `fb829b0`), and no pass that ran the suite with them is recorded here yet.
+Not checked in a window: a press on the corner in a field too small for the document. The walk pressed it where the document was drawn at its full size. The last test of this suite holds the small-field rule.
 
 **Two defects the review found, 2026-10-02, which this suite now holds.**
 
@@ -68,4 +68,4 @@ The count above is from before the independent review of FEAT-0017. The review's
 
 ## Adequacy (who verifies this test?)
 
-Measured in part, on 2026-10-02. One rule was taken out by a reviewer: reviewer A of FEAT-0017 removed the line of the store that writes the view's size on a newly opened note, and two tests failed (`pass 12 fail 2`). Reviewer B broke no rule in this suite. Both named the same gap, a note with no size beside one that is resized, and row 2a of FEAT-0017's "Review" has their evidence. Commit `0d39033` says its three tests fail with the reducer's new step taken out; that run was made by the session that wrote them, not by a reviewer. No break has been run against the rules about a small field, a state file or a tablet.
+Measured in part, on 2026-10-02. In round one, reviewer A of FEAT-0017 removed the line of the store that writes the view's size on a newly opened note, and two tests failed (`pass 12 fail 2`). Reviewer B broke no rule in this suite. Both named the same gap, a note with no size beside one that is resized, and row 2a of FEAT-0017's "Review" has their evidence. Commit `0d39033` says its three tests fail with the reducer's new step taken out. Round two's reviewer confirmed it in a clean context at `cbae0d3`: with `keepDrawnSizes` taken out the suite printed `pass 15, fail 3`, the three new tests. No break has been run against the rules about the corner, a small field, a state file or a tablet.

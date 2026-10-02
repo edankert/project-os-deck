@@ -49,9 +49,9 @@ DES-0003 allows a link to say "parent" or "implements" only when the source repo
 
 This test has a `command:`, so it records no verdict here; CI is the verdict.
 
-**2026-10-02**, commit `e86b2e4`: `npm test` in `desktop/` ran every suite and passed 589 of 589. Six of those tests are this suite's, and ten are the `graph` suite's, which holds the two tests named in step 2.
+**2026-10-02**, commit `18f5405`: `npm test` in `desktop/` ran every suite and passed 645 of 645. Seven of those tests are this suite's, and eleven are the `graph` suite's, which holds the three tests named in step 2. One of the seven came with FEAT-0022's fix in `fdb7e3e` and is about picking out a key, which is that feature's.
 
-The same rule is checked on real notes by the `glass-desktop` walk ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]]). At `e86b2e4` its check "every relationship word is a frontmatter key the source wrote for that pair, or 'link'; none is invented" held for the 16 rows of one note's related list: 11 rows named a key and none was invented.
+The same rule is checked on real notes by the `glass-desktop` walk ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]]). At `18f5405` its check "every relationship word is a frontmatter key the source wrote for that pair, or 'link'; none is invented" held for the 16 rows of one note's related list: 11 rows named a key and none was invented.
 
 Step 2 of the Procedure named two tests by a title that no test has. It was corrected on 2026-10-02 to the titles in the file.
 
@@ -59,6 +59,6 @@ Step 2 of the Procedure named two tests by a title that no test has. It was corr
 
 One thing found while fixing it is kept as it is: a bare id on a comment line at the margin of the frontmatter is still read under the key above that line. Nobody has decided it.
 
-Both reviewers broke this suite's guards and a test failed each time: listing a relation once, never inventing a word such as "child" for an incoming `parent`, and a link or a bare id in the frontmatter carrying its key. No count from a run after the fix is written here yet.
+Both reviewers broke this suite's guards and a test failed each time: listing a relation once, never inventing a word such as "child" for an incoming `parent`, and a link or a bare id in the frontmatter carrying its key. In round two the reviewer took each of the two new rules out of the built module and the `graph` suite gave `pass 10, fail 1` both times, the failing test being the third in step 2.
 
 **The reviewers also noted that this note is `active` and not `passing`.** That is kept. This test has a `command:`, and by `tools/instructions/STATUSES.md` such a test records no verdict on its note; CI is the verdict.

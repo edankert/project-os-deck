@@ -24,7 +24,7 @@ after: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]", "[[TST-0064-Glass
 
 # A scene reopens and a note crosses screens
 
-**Not walked.** No person has walked this check, and the ledger (`docs/releases/ledgers/WORKING-app.json`) holds no verdict for it on 2026-10-02. What it describes is built. Two scripted walks drive most of the same route in a Linux container, last at commit `e86b2e4` ([[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]). A scripted walk is not a person's walk, and it had one display and no tablet.
+**Not walked.** No person has walked this check, and the ledger (`docs/releases/ledgers/WORKING-app.json`) holds no verdict for it on 2026-10-02. What it describes is built. Two scripted walks drive most of the same route in a Linux container, last on 2026-10-02 at commit `18f5405`, where all their checks held ([[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]). A scripted walk is not a person's walk, and it had one display and no tablet.
 
 ## Setup
 
@@ -95,7 +95,7 @@ The steps were written before anything was built. These were changed so that a p
 
 ## After the independent review, 2026-10-02
 
-Two reviewers read FEAT-0023 on 2026-10-02 and ran node suites only. Both marked this check *not checked*: it is a person's walk and has not been walked. Nothing they found changes a step above, and no step names a control that the fixes removed or renamed. Nothing was walked to write this section; it comes from the commits and the code.
+Two reviewers read FEAT-0023 on 2026-10-02 and ran node suites only, and a third read the fixes in a second round and approved them. All marked this check *not checked*: it is a person's walk and has not been walked. Nothing they found changes a step above, and no step names a control that the fixes removed or renamed. Nothing was walked to write this section; it comes from the commits and the code.
 
 A person walking the steps will see four things that differ from the application as it was when the steps were last corrected.
 

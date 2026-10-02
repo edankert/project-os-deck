@@ -68,30 +68,30 @@ The second close-out of the notes (commit `28fc154`, from the pass at `e86b2e4`)
 - **Fourteen commits, merged in `71522c6`,** fixed what the review found. A reopened scene puts the list back as the scene had it, a list nobody had moved included (`bb99700`, `426e3ec`). "Undo: back to the desk before" puts back the other view's desk and list (`093c198`, `4f5d266`). A scene this Deck cannot read is never changed and is said to be from a different Deck (`ff25f28`). A document read under the second of two equal headings reopens there (`52dcd6c`). A reopened scene always gets its message (`22678b9`). A note on its way to another window cannot be sent again until that is answered (`5d5b38f`). A "send back" that fails can be pressed again (`39915fe`). A scene cannot be given a name its address would refuse (`509c770`). The served page opens no scene from its address (`2646cf5`). A test fails when the store stops refusing another workspace's scene (`61625e7`). A document with no size of its own is counted at the size it is drawn at (`fd8b6a9`). The fourteenth, `bbe187c`, moved one import so the branch merged cleanly.
 - **Commit `972ce73`** closed three things the fixing session had found and left: a window that answers too late no longer announces an arrival, a scene with no search of its own clears the search, and an unreadable entry chosen in the cards surface's list says why nothing opened.
 
-The review's findings, with the reviewers' evidence, are in [[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]] under Review. Its verdict is `changes-requested`, round one. Round two has not been run.
+The review's findings, with the reviewers' evidence, are in [[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]] under Review. Round one's verdict was `changes-requested`. Round two, by one reviewer at `cbae0d3`, found all ten refuted claims fixed and approved them: eight by a command and two by reading. That approval covers what a node suite can show. It is not an acceptance, and the feature stays at `doing`.
 
 ## Evidence
 
-In the test notes: [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], [[TST-0075-A-Move-Is-Never-Half-Done]], [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]] and the smoke run, [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]. The smoke run and the walks are from 2026-10-02 at commit `e86b2e4`.
+In the test notes: [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], [[TST-0075-A-Move-Is-Never-Half-Done]], [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]] and the smoke run, [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]. The node suites, the smoke run and the walks are from 2026-10-02 at commit `18f5405`, in a pass where every run held. The pass before the review, at `e86b2e4`, held too, with 589 node tests and 38 and 33 walk checks.
 
-- `npm test` in `desktop/`: 589 of 589 at `e86b2e4`, reported by the session that built the feature. The scenes suite has ten tests and the handoff suite eighteen.
+- `npm test` in `desktop/`: 645 of 645 at `18f5405`, reported by the session that ran the pass. The scenes suite has 22 tests and the handoff suite 22.
 - Each rule of the two models that the building session could name was broken once. At the last run, on 2026-10-02 at commit `972ce73`, fifteen of fifteen and twenty-two of twenty-two fail a test. The lists do not hold the rules the review's fixes added; TST-0074 and TST-0075 say which.
-- The smoke run, in the Linux container, on loopback and on the network: exit 0.
-- The scenes walk, 38 checks, and the handoff walk, 33 checks, in the same container: none failed, on this repository and on a copy of `your-trainer`.
+- The smoke run, in the Linux container, on loopback and on the network: exit 0 after 1145 seconds. Its loopback half holds 389 checks with none failed.
+- The scenes walk, 43 checks, and the handoff walk, 34 checks, in the same container: none failed, on this repository and on a copy of `your-trainer`. The checks added since the review saw the other view's desk put back by the undo, "save desk" on the cards surface refused and asking, an entry from a different Deck offered "delete" only, a scene with no note open saying it reopened, the served page opening no scene from an address, and a "send back" that went unanswered and then worked. TST-0076 has what each saw.
 
 One earlier report was wrong and is corrected in TST-0076. The handoff walk had shown a move to a desk window on another view arriving. It arrived only because of a defect fixed in `a37f8f2`. With that fixed the move stopped arriving, and `9379a0c` made it arrive properly.
 
 Not done: the acceptance check a person walks, [[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]]. Not tried: a second display, a real tablet, and a display really unplugged during a handoff. For the last, the walk sent the main process the event Electron sends when a display is removed, and its check says no display was unplugged. Not measured: anything on the Mac, and the frame cadence while a scene is restored.
 
-Where the tasks stand: TASK-0106 and TASK-0108 are `done`. TASK-0107, TASK-0109 and TASK-0110 are `doing`, with five boxes open between them. Two need a second display. The others are the route by keyboard alone, a visible focus on the scene controls, and the frame cadence with the Mac measurements.
+Where the tasks stand: TASK-0106, TASK-0107 and TASK-0108 are `done`. TASK-0109 and TASK-0110 are `doing`, with four boxes open between them. Two need a second display. The others are the route by keyboard alone, and the frame cadence with the Mac measurements. TASK-0107 closed on the pass at `18f5405`: three checks of the scenes walk show a visible focus on each scene button and "dismiss" and "restore" reached and pressed by keyboard.
 
-Seen in the pictures of the pass at `e86b2e4` and asserted by no check then: in the keyboard chooser the sentence saying what a move does was cut short in a window 1100 pixels wide, and a scene's message lay over the right half of a document's header. Commit `972985f` changed both in the build and gave each a check in a walk.
+Seen in the pictures of the pass at `e86b2e4` and asserted by no check then: in the keyboard chooser the sentence saying what a move does was cut short in a window 1100 pixels wide, and a scene's message lay over the right half of a document's header. Commit `972985f` changed both in the build and gave each a check in a walk, and both checks held at `18f5405`. The pictures of that pass show the sentence whole above the status line and the message at the field's lower left, over rows of the collection and lines of a document's text.
 
 ## Documentation Coverage (All Types Considered)
 
 - features: updated. FEAT-0023; FEAT-0015 carries a dated amendment.
 - requirements: new. REQ-0004 and REQ-0005 list the evidence collected; no criterion is ticked.
-- tasks: new. TASK-0106 to TASK-0110; two are done and three are doing.
+- tasks: new. TASK-0106 to TASK-0110; three are done and two are doing.
 - issues: new. ISS-0091, fixed.
 - tests: new. TST-0073 to TST-0076.
 - workflows: not-applicable.
@@ -111,7 +111,7 @@ Seen in the pictures of the pass at `e86b2e4` and asserted by no check then: in 
 ## Follow-ups
 
 - [ ] Edwin looks at the two things commit `972985f` changed after the pictures showed them: the chooser's sentence, now drawn whole above the status line, and a scene's message, now at the field's lower left.
-- [ ] Round two of the independent review, by one reviewer, on the feature note's Review section and the fixes.
+- [x] Round two of the independent review, by one reviewer, on the feature note's Review section and the fixes. Run on 2026-10-02 at `cbae0d3`: all ten refuted claims fixed, approved for those ten.
 - [ ] Edwin decides whether the cards surface's list of saved desks should open a scene as Glass does, with the undo, the reading positions and the message.
 - [ ] Edwin walks TST-0073, with a second display if one is to hand.
 - [ ] Edwin settles ADR-0007's three open threads.
