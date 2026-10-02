@@ -1717,6 +1717,7 @@ function drawDesk(): void {
       view: currentView,
       faces: currentView?.face ?? PLAIN_FACES,
       pending: pendingCount,
+      pendingAny: pendingMoves,
     });
     // The collection says how many of its members the field has a place for,
     // and it is painted with the list, which is drawn before the field is
@@ -2448,7 +2449,10 @@ async function receiveArrival(raw: unknown): Promise<void> {
     await host.acknowledgeArrival({ id: arrival.id, ok: false, error: 'this window did not draw it' });
     return;
   }
-  await host.acknowledgeArrival({ id: arrival.id, ok: true });
+  const stands = await host.acknowledgeArrival({ id: arrival.id, ok: true });
+  // The source stopped waiting before this window answered, and the note has been taken off this desk again:
+  // nothing arrived, so nothing is marked or announced.
+  if (!stands) return;
   // It is read where it was being read, and marked so it can be found.
   if (glass.isActive()) {
     if (arrival.anchor !== null) glass.restoreReading({ [arrival.noteId]: arrival.anchor });
@@ -2613,7 +2617,7 @@ async function prepareChange(): Promise<void> {
   changeArriving = true;
   glass.forgetBodies();
   glass.forgetGraphEdges();
-  glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount });
+  glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount, pendingAny: pendingMoves });
   let next: CardGroup[];
   try {
     const source = sourceOf(view);
@@ -3069,6 +3073,14 @@ function wireControls(): void {
   el.deskList.addEventListener('change', () => {
     void (async () => {
       const value = el.deskList.value;
+      const ws = host.state().workspaceId;
+      const chosen = value === '' || ws === null ? undefined : host.state().desks[deskKey(ws, value)];
+      if (chosen !== undefined && sceneKind(chosen) === 'unreadable') {
+        // The store refuses it without a word; a person who chose it is told why nothing opened.
+        say(`"${value}" was ${savedByOther(chosen)} and is not opened`, true);
+        el.deskList.value = host.state().deskName ?? '';
+        return;
+      }
       await send({ type: 'open-desk', name: value === '' ? null : value });
       drawNavigator();
       drawDesk();

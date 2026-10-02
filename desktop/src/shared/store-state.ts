@@ -1006,8 +1006,12 @@ function applyScene(state: DeckState, ws: string, scene: Desk, name: string | nu
     viewId: view,
     viewDesks: { ...state.viewDesks, [ws]: { ...(state.viewDesks[ws] ?? {}), [view]: own } },
   };
-  if (scene.query !== undefined) next.query = scene.query;
-  if (scene.filters !== undefined) next.filters = { statuses: [...scene.filters.statuses], types: [...scene.filters.types] };
+  // A scene restores its search and filters whatever they were: one saved with none clears them. A desk
+  // from before scenes has neither, and leaves them as they are.
+  if (sceneKind(scene) === 'scene') {
+    next.query = scene.query ?? '';
+    next.filters = { statuses: [...(scene.filters?.statuses ?? [])], types: [...(scene.filters?.types ?? [])] };
+  }
   // The list goes back to how the scene had it, whatever that was. A list
   // nobody had moved when the scene was saved had no stored layout, and has
   // none again: left as it is now, it would stand wherever it was dragged

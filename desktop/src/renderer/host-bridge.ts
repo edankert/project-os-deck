@@ -256,10 +256,12 @@ export class Host {
     return b.windows.onSourceClosed(fn);
   }
 
-  async acknowledgeArrival(answer: { id: string; ok: boolean; error?: string }): Promise<void> {
+  /** Tell the source this window shows the note, or could not. False when the source is no longer waiting for the answer. */
+  async acknowledgeArrival(answer: { id: string; ok: boolean; error?: string }): Promise<boolean> {
     const b = bridge();
-    if (b === null) return;
-    await b.windows.acknowledge(answer);
+    if (b === null) return false;
+    const reply = (await b.windows.acknowledge(answer)) as { ok?: boolean } | null;
+    return reply?.ok === true;
   }
 
   async sendBack(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; said?: string }> {

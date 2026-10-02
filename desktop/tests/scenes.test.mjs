@@ -142,6 +142,25 @@ test('a scene saved while the list had never been moved puts the list back to ha
   assert.equal(reduce(bare, { type: 'open-desk', name: 'Plain' }).collections, bare.collections);
 });
 
+test('a scene with no search and no filters of its own clears them, and a desk from before scenes leaves them', () => {
+  // A scene's entry may lack the two fields: one written by hand, or by a build that left them out when empty.
+  let s = save(desk(), 'Plain');
+  const key = deskKey(WS, 'Plain');
+  const { query: _q, filters: _f, ...without } = s.desks[key];
+  s = { ...s, desks: { ...s.desks, [key]: without } };
+  s = reduce(s, { type: 'set-query', text: 'typed since' });
+  s = reduce(s, { type: 'set-filters', filters: { statuses: ['done'], types: ['feature'] } });
+  const opened = reduce(s, { type: 'open-desk', name: 'Plain' });
+  assert.equal(opened.query, '', 'the search the person typed since is not left standing over the scene');
+  assert.deepEqual(opened.filters, { statuses: [], types: [] });
+  // A desk saved before scenes has no version, kept neither, and changes neither.
+  const old = { name: 'Old', workspaceId: WS, cards: [{ noteId: 'ISS-0001', x: 10, y: 10 }] };
+  const withOld = { ...s, desks: { ...s.desks, [deskKey(WS, 'Old')]: old } };
+  const openedOld = reduce(withOld, { type: 'open-desk', name: 'Old' });
+  assert.equal(openedOld.query, 'typed since');
+  assert.deepEqual(openedOld.filters, { statuses: ['done'], types: ['feature'] });
+});
+
 test('"back to the desk before" puts the list back as it was, a list that had no place of its own included', () => {
   const bare = unmoved();
   const table = { ...list, presentation: 'table' };

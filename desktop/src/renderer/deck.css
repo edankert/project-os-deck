@@ -1468,7 +1468,9 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
   color: var(--ink-dim);
   cursor: pointer;
 }
-.pane-note .claim-evidence:hover, .pane-note .claim-evidence:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.pane-note .claim-evidence:hover { border-color: var(--accent); color: var(--ink); }
+/* The keyboard's place is an outline, as on every other control: the hover border alone looked the same as a pointer resting there. */
+.pane-note .claim-evidence:focus-visible { border-color: var(--accent); color: var(--ink); outline: 2px solid var(--accent); outline-offset: 1px; }
 .pane-note li.claim-picked { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: -4px 0 0 var(--accent); }
 
 /* Scenes (FEAT-0023): the controls on the bar, and what a reopened scene has to say. */
