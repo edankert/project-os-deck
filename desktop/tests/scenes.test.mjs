@@ -132,6 +132,9 @@ test('a scene saved while the list had never been moved puts the list back to ha
   assert.deepEqual(collectionOf(opened, WS, 'features'), { ...list, x: 77 }, 'another view\'s list is not touched');
   // And the state it leaves is one the state file takes and gives back.
   assert.equal(collectionOf(normaliseState(JSON.parse(JSON.stringify(persistable(opened)))), WS, 'issues'), null);
+  // Reopened where the list has no place of its own either, nothing about any list is written.
+  const bare = save(unmoved(), 'Plain');
+  assert.equal(reduce(bare, { type: 'open-desk', name: 'Plain' }).collections, bare.collections);
 });
 
 test('"back to the desk before" puts the list back as it was, a list that had no place of its own included', () => {
