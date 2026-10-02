@@ -409,6 +409,9 @@ const glass = new GlassField(glassElements(), {
     return evidenceFor(noteId, only);
   },
   evidenceCount: (noteId) => evidenceCount(noteId),
+  neighboursSeated: () => {
+    if (glass.isActive()) drawNavigator();
+  },
   testsAt: async (rels) => {
     const index = await evidenceIndex();
     const out = new Map<string, string>();
@@ -1120,7 +1123,20 @@ function drawCollection(): void {
  * from outside the view is in none of the view's groups, so without these the
  * front band would hold cards no key could reach.
  */
-const deskOrder: { held: string[]; joined: string[]; shared: string[] } = { held: [], joined: [], shared: [] };
+/**
+ * The order of the rows that come from the desk, and what it was worked out for.
+ *
+ * These rows are sorted from the desk and from the cards round the focused
+ * document. Sorted afresh on every redraw, they moved whenever the list was
+ * next drawn after something unrelated: a note's neighbours take their seats
+ * a moment after it opens, and the next redraw, which could be the collection
+ * being collapsed and opened again minutes later, then moved every row. So
+ * the order is worked out when what it describes changes (which notes are
+ * held, which is the focus) and once more when the seats round the focus are
+ * first known. At every other redraw it is kept, and a note that arrives is
+ * added after the others.
+ */
+const deskOrder: { held: string[]; joined: string[]; shared: string[]; situation: string; ringUsed: boolean } = { held: [], joined: [], shared: [], situation: '', ringUsed: false };
 
 function deskGroups(): CardGroup[] {
   const state = host.state();
@@ -1131,7 +1147,17 @@ function deskGroups(): CardGroup[] {
   // sorted afresh every time a note is opened or raised, and a person
   // pressing rows one after another pressed whatever had just moved in
   // under the pointer.
-  const hold = collection.pointerOnList();
+  const ringNow = glass.neighbourOrder();
+  const situation = `${ws}|${deskViewHere() ?? ''}|${deskHere(state).map((c) => c.noteId).sort().join(' ')}|${glass.focusId() ?? ''}`;
+  const changed = situation !== deskOrder.situation;
+  const ringFirstKnown = !changed && ringNow !== null && !deskOrder.ringUsed;
+  if (changed) {
+    deskOrder.situation = situation;
+    deskOrder.ringUsed = ringNow !== null;
+  } else if (ringFirstKnown) {
+    deskOrder.ringUsed = true;
+  }
+  const hold = collection.pointerOnList() || !(changed || ringFirstKnown);
   const heldIds = steadyOrder(deskOrder.held, deskHere(state).map((c) => c.noteId), hold);
   deskOrder.held = heldIds;
   if (heldIds.length === 0) {
@@ -1154,7 +1180,7 @@ function deskGroups(): CardGroup[] {
   ];
   // While a document is the focus, its neighbours are listed in the order
   // their cards stand round it, clockwise from the top (FEAT-0017).
-  const ring = glass.neighbourOrder();
+  const ring = ringNow;
   const joined = steadyOrder(
     deskOrder.joined,
     [...joinedTo(heldIds, known)].sort((a, b) => {

@@ -421,7 +421,7 @@ export class CollectionView {
     if (presentation === 'cards') this.openAt = this.anchor?.id ?? null;
     this.commit({ ...l, presentation, collapsed: false });
     if (this.model !== null) this.paint(this.model);
-    if (presentation === 'table') requestAnimationFrame(() => this.restoreAnchor());
+    if (presentation === 'table') requestAnimationFrame(() => this.restoreWhenLaidOut());
     this.hooks.seatsChanged();
   }
 
@@ -537,6 +537,31 @@ export class CollectionView {
     return true;
   }
 
+  /**
+   * Scroll back to the remembered row once the list is on screen again and
+   * that row is there under its own heading.
+   *
+   * Opening the collection again laid the list out a frame or more after the
+   * press, and the rows under "Joined to what you are holding" arrive after
+   * that. Restored at once, the remembered row was measured before it had a
+   * place, or was not there yet, and the list went to the same note's row
+   * under another heading: a few hundred pixels from where it was. So it
+   * waits for the row itself, and takes the same note elsewhere only when the
+   * row has not come back after half a second.
+   */
+  private restoreWhenLaidOut(frames = 30): void {
+    const anchor = this.anchor;
+    if (anchor === null) return;
+    const list = this.el.list;
+    const laidOut = list.offsetParent !== null && list.clientHeight > 0;
+    const there = laidOut && this.rows().some((r) => r.id === anchor.id && (anchor.group === undefined || r.group === anchor.group));
+    if (there || (laidOut && frames <= 0)) {
+      this.restoreAnchor();
+      return;
+    }
+    if (frames > 0) requestAnimationFrame(() => this.restoreWhenLaidOut(frames - 1));
+  }
+
   /** The remembered row's note, for a check and for saying it is gone. */
   anchorId(): string | null {
     return this.anchor?.id ?? null;
@@ -579,7 +604,7 @@ export class CollectionView {
     this.commit({ ...l, collapsed: !l.collapsed });
     if (l.collapsed && l.presentation === 'table') {
       // The list was not laid out while it was collapsed; scroll once it is.
-      requestAnimationFrame(() => this.restoreAnchor());
+      requestAnimationFrame(() => this.restoreWhenLaidOut());
     }
     if (this.model !== null) this.paint(this.model);
     this.hooks.seatsChanged();

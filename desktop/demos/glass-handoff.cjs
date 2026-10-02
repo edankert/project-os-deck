@@ -301,7 +301,7 @@ module.exports = async function (d) {
   d.focusApp(page);
   await d.delay(400);
   // A row of the page's own list is opened there: a document of the page's own, which the Mac's desk does not hold.
-  const servedRow = await d.js(page, `(() => { const open = new Set([...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId)); const r = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].find((x) => !x.hidden && !open.has(x.dataset.noteId)); if (!r) return null; r.scrollIntoView({ block: 'center' }); r.click(); return { id: r.dataset.noteId }; })()`);
+  const servedRow = await d.js(page, `(() => { const open = new Set([...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId)); const r = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].find((x) => !x.hidden && !open.has(x.dataset.noteId)); if (!r) return null; const id = r.dataset.noteId; r.scrollIntoView({ block: 'center' }); r.click(); return { id }; })()`);
   if (servedRow === null) throw new Error('the served page lists no row to open');
   await d.delay(2000);
   await d.js(page, `[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(servedRow.id)}).querySelector('.pane-head').focus()`);

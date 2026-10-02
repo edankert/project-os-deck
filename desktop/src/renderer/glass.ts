@@ -333,6 +333,8 @@ export interface GlassHooks {
    * `only` asks about those tests alone, for a claim whose line names them.
    */
   evidence(noteId: string, only?: readonly string[], again?: boolean): Promise<EvidenceView>;
+  /** The cards round a newly focused document have their seats: the order they stand in is known. */
+  neighboursSeated(): void;
   /** How many tests name a note, and whether it is itself a test: from Deck's index already read, null until it has been. Makes no request to the sidecar. */
   evidenceCount(noteId: string): { naming: number; isTest: boolean } | null;
   /** The test notes among the notes at these paths, by path: for finding the tests a claim's line links to. */
@@ -4843,6 +4845,10 @@ export class GlassField {
       const a = Math.atan2(p.y - centre.y, p.x - centre.x) + Math.PI / 2;
       return ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     };
+    // The first seating for this document: the list is told, so the rows for what it is joined to take
+    // the order of the cards round it now, and not at whatever redraw happens to come next.
+    const firstForThisDocument = this.seating === null || this.seating.docId !== id;
+    if (firstForThisDocument) requestAnimationFrame(() => this.hooks.neighboursSeated());
     this.seating = {
       key,
       docId: id,
