@@ -5,7 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { modesFor, canAcknowledge, describeHandoff, handoffLabel, planLanding, settle, settleUnconfirmed, returnOf, HANDOFF_ACK_MS } = load('shared/handoff.js');
+const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, planLanding, settle, settleUnconfirmed, returnOf, HANDOFF_ACK_MS } = load('shared/handoff.js');
+const { reduce, initialState, deskCardsOf, persistable } = load('shared/store-state.js');
 
 const desk = { kind: 'desk', label: 'desk on Display 2', windowId: 7, view: 'issues' };
 const main = { kind: 'main', label: 'Deck on Built-in Display', windowId: 1, view: 'features' };
@@ -134,4 +135,83 @@ test('the way back is the same handoff in reverse, carrying where it was read la
   assert.equal(returnOf(settleUnconfirmed(record('show', tablet, true)).record, null, null), null);
   assert.equal(returnOf(settle(record('move', desk, true, { source: { windowId: 1, view: null, label: 'Deck', kind: 'main' } }), { type: 'ack', ok: true }).record, null, null), null);
   assert.equal(returnOf(settle(record('move', desk, true), { type: 'timeout' }).record, null, null), null);
+});
+
+test('a destination on the same desk, and a note kept on every view, are offered "also show" only', () => {
+  assert.deepEqual(offeredModes(desk, { sourceView: 'features', everyView: false }), ['move', 'show']);
+  assert.deepEqual(offeredModes({ ...desk, view: 'features' }, { sourceView: 'features', everyView: false }), ['show'], 'the same view is the same desk');
+  assert.deepEqual(offeredModes(desk, { sourceView: 'features', everyView: true }), ['show'], 'on every view: taking it off one desk takes it off all');
+  assert.deepEqual(offeredModes(reader, { sourceView: 'features', everyView: false }), ['show']);
+  assert.deepEqual(offeredModes(desk, { sourceView: null, everyView: false }), ['move', 'show'], 'a card from the field is on no desk');
+});
+
+test('an undone handoff gives a reader back what it showed, closes a reader it opened, and leaves a closed window alone', () => {
+  const toReader = { ...record('show', reader, false), previousAddress: 'deck://w/features?note=OLD&panel=note' };
+  assert.deepEqual(settle(toReader, { type: 'timeout' }).effects, [{ type: 'readdress', windowId: 9, address: 'deck://w/features?note=OLD&panel=note' }]);
+  assert.deepEqual(settle(toReader, { type: 'closed' }).effects, []);
+  const opened = { ...record('show', fresh, false), openedWindowId: 12 };
+  assert.deepEqual(settle(opened, { type: 'display-removed' }).effects, [{ type: 'close-window', windowId: 12 }]);
+  assert.match(settle(opened, { type: 'display-removed' }).reply.said, /the display the a new reader on Display 3 is on was disconnected/);
+  assert.deepEqual(settle(opened, { type: 'ack', ok: true }).effects, []);
+});
+
+// The store, driven by the rule the way the main process drives it.
+const WS = 'w';
+function desks() {
+  let s = reduce(initialState(), { type: 'open-workspace', workspaceId: WS });
+  s = reduce(s, { type: 'select-view', viewId: 'features' });
+  s = reduce(s, { type: 'put-on-desk', noteId: 'FEAT-0002', x: 10, y: 10, w: 640, h: 560 });
+  s = reduce(s, { type: 'put-on-desk', noteId: 'FEAT-0003', x: 40, y: 40 });
+  return s;
+}
+const ids = (s, view) => deskCardsOf(s, WS, view).map((c) => c.noteId);
+function hand(s, noteId, mode, destination, answer, sourceView = 'features') {
+  const req = request(mode, destination, { noteId, source: { windowId: 1, view: sourceView, label: 'Deck', kind: 'main' } });
+  const landing = planLanding(req, { alreadyThere: destination.view !== null && ids(s, destination.view).includes(noteId) });
+  if ('refused' in landing) return { s, refused: landing.refused };
+  if (landing.put) s = reduce(s, { type: 'put-on-desk', noteId, x: 16, y: 16, w: 640, h: 560, viewId: destination.view });
+  const rec = { ...req, id: 'h', state: 'awaiting', put: landing.put };
+  const out = landing.awaits ? settle(rec, answer) : settleUnconfirmed(rec);
+  for (const effect of out.effects) if (effect.type === 'take-off') s = reduce(s, { type: 'take-off-desk', noteId: effect.noteId, viewId: effect.view });
+  return { s, reply: out.reply };
+}
+
+test('on every path that does not end acknowledged, the source desk still holds the note and the destination does not gain it', () => {
+  for (const answer of [{ type: 'timeout' }, { type: 'closed' }, { type: 'display-removed' }, { type: 'ack', ok: false, error: 'x' }]) {
+    const { s, reply } = hand(desks(), 'FEAT-0002', 'move', desk, answer);
+    assert.equal(reply.ok, false);
+    assert.deepEqual(ids(s, 'features'), ['FEAT-0002', 'FEAT-0003'], JSON.stringify(answer));
+    assert.deepEqual(ids(s, 'issues'), [], JSON.stringify(answer));
+  }
+  const moved = hand(desks(), 'FEAT-0002', 'move', desk, { type: 'ack', ok: true });
+  assert.deepEqual(ids(moved.s, 'features'), ['FEAT-0003']);
+  assert.deepEqual(ids(moved.s, 'issues'), ['FEAT-0002']);
+  const size = deskCardsOf(moved.s, WS, 'issues')[0];
+  assert.deepEqual([size.w, size.h], [640, 560], 'it arrives at the size it had');
+  const shown = hand(desks(), 'FEAT-0002', 'show', desk, { type: 'ack', ok: true });
+  assert.deepEqual(ids(shown.s, 'features'), ['FEAT-0002', 'FEAT-0003']);
+  assert.deepEqual(ids(shown.s, 'issues'), ['FEAT-0002']);
+});
+
+test('after any sequence of handoffs and failures no desk holds a note twice, and no note is lost', () => {
+  const answers = [{ type: 'ack', ok: true }, { type: 'timeout' }, { type: 'closed' }, { type: 'ack', ok: false }];
+  const places = [desk, { ...desk, view: 'features', label: 'desk on this view' }, main, { ...main, view: 'issues' }, reader, tablet];
+  let seed = 7;
+  const next = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  for (let run = 0; run < 40; run += 1) {
+    let s = desks();
+    for (let step = 0; step < 12; step += 1) {
+      const noteId = ['FEAT-0002', 'FEAT-0003'][next(2)];
+      const from = ['features', 'issues'].find((v) => ids(s, v).includes(noteId));
+      if (from === undefined) assert.fail(`${noteId} is on no desk after step ${step} of run ${run}`);
+      const out = hand(s, noteId, ['move', 'show'][next(2)], places[next(places.length)], answers[next(answers.length)], from);
+      s = out.s;
+      for (const view of ['features', 'issues']) {
+        const held = ids(s, view);
+        assert.equal(new Set(held).size, held.length, `run ${run} step ${step}: ${view} holds ${held.join(', ')}`);
+      }
+      for (const id of ['FEAT-0002', 'FEAT-0003']) assert.ok(['features', 'issues'].some((v) => ids(s, v).includes(id)), `run ${run} step ${step}: ${id} is on no desk`);
+    }
+    assert.equal(JSON.stringify(persistable(s)).includes('handoff'), false, 'nothing about a handoff is in what is saved');
+  }
 });

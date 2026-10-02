@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0106
 title: "Keep a scene in the store"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02

@@ -2,7 +2,7 @@
 type: "[[feature]]"
 id: FEAT-0023
 title: "A Glass scene reopens and crosses screens without losing its work"
-status: planned
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01

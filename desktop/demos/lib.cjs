@@ -4,7 +4,8 @@
 // `check` it records says what was seen, so a reader can tell a pass from a
 // failure without trusting the script's opinion.
 module.exports = function lib(d, win) {
-  const js = (code) => d.js(win, code);
+  // A script that throws in the page says only that it threw; say which script.
+  const js = (code) => d.js(win, code).catch((err) => { throw new Error(`${err.message} In: ${String(code).slice(0, 200)}`); });
   const results = [];
   const check = (ok, what, seen) => {
     results.push({ ok: !!ok, what, seen });

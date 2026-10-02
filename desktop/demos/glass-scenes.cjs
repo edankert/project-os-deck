@@ -134,8 +134,17 @@ module.exports = async function (d) {
   const full = win.getBounds();
   win.setBounds({ x: 0, y: 0, width: 1180, height: 760 });
   await d.delay(900);
+  // The field is turned and zoomed first: neither is part of a scene, so reopening one changes neither.
+  const cameraBefore = await js(`({ yaw: ${glass}.model.yaw, zoom: ${glass}.zoom().scale })`);
+  await js(`document.getElementById('field').focus()`);
+  await t.keys(['Right', 'Right', '+'], 400);
+  const camera = await js(`({ yaw: ${glass}.model.yaw, zoom: ${glass}.zoom().scale })`);
   await choose('Review Glass');
   await d.delay(2500);
+  const cameraAfter = await js(`({ yaw: ${glass}.model.yaw, zoom: ${glass}.zoom().scale })`);
+  check(camera.yaw !== cameraBefore.yaw && camera.zoom !== cameraBefore.zoom && Math.abs(cameraAfter.yaw - camera.yaw) < 1e-6 && cameraAfter.zoom === camera.zoom, 'the field was turned and zoomed before the scene was reopened on its own view, and is turned and zoomed the same after: a scene keeps neither and changes neither', { cameraBefore, camera, cameraAfter });
+  d.press(win, '0');
+  await d.delay(400);
   const report = await js(`({ hidden: document.getElementById('scene-report').hidden, title: document.getElementById('scene-report-title').textContent, lines: [...document.querySelectorAll('#scene-report-lines li')].map((l) => l.textContent) })`);
   check(!report.hidden && /Since it was saved/.test(report.title) && report.lines.some((l) => l.startsWith(`${a} is no longer in this workspace`)) && report.lines.some((l) => /This window's field is \d+ by \d+; the scene was arranged in/.test(l)) && report.lines.some((l) => l.includes(`The passage being read in ${b} is not under the heading it was`)), `reopened after ${a} was deleted, a heading in ${b} was renamed and the window was made smaller: the scene says all three, and stays until dismissed`, report);
   const gone = await pane(a);
@@ -150,6 +159,27 @@ module.exports = async function (d) {
   check(await js(`document.getElementById('scene-report').hidden`), 'dismiss closes the report', null);
   win.setBounds(full);
   await d.delay(700);
+
+  // ---- 6b. Saving over a name asks first; the address names the scene ----
+  await js(`window.deck.state.dispatch({ type: 'open-desk', name: null })`);
+  await d.delay(300);
+  const savedBefore = JSON.stringify((await state()).desks[`${ws}:Review Glass`]);
+  await t.clickOn('#scene-save', 400);
+  await js(`(() => { const i = document.querySelector('#status input'); if (i) i.select(); })()`);
+  await type('Review Glass');
+  d.press(win, 'Return');
+  await d.delay(700);
+  const asked = await js(`[...document.querySelectorAll('#status button')].map((b) => b.textContent)`);
+  await js(`[...document.querySelectorAll('#status button')].find((b) => b.textContent === 'keep it').focus()`);
+  d.press(win, 'Return');
+  await d.delay(600);
+  check(asked.includes('replace it') && asked.includes('keep it') && JSON.stringify((await state()).desks[`${ws}:Review Glass`]) === savedBefore, 'saving under a name that is taken asks first, and "keep it" leaves the saved scene exactly as it was', asked);
+  await choose('Review Glass');
+  const { clipboard } = require('electron');
+  clipboard.writeText('');
+  await t.clickOn('#copy-address', 600);
+  const address = clipboard.readText();
+  check(/desk=Review(%20|\+| )Glass/.test(address) && address.includes('/features'), 'the copied address names the scene and its view, so the scene is a state Deck can be sent to', address);
 
   // ---- 7. Rename, delete, restore ----
   await t.clickOn('#scene-rename', 400);

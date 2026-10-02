@@ -50,7 +50,7 @@ counters:
     last_date: 0
   DES: 3
   FEAT: 23
-  ISS: 90
+  ISS: 91
   PHASE: 4
   REQ: 5
   RISK: 7
@@ -62,8 +62,8 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0022"
-  task: "TASK-0101"
+  feature: "FEAT-0023"
+  task: "TASK-0108"
   issue: ""
   note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. TASK-0104 (one object per note, chosen reading size, the neighbourhood moves with the document) is built and its node suites pass; its smoke run is being reconciled, so it is still in progress and ISS-0070/0071/0072 stay open until that evidence exists. FEAT-0020 is being built now, TASK-0095 first: the collection and the full document on the Glass desk. Then FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
 # Canonical state for tracked items (empty for a fresh template).
@@ -81,7 +81,7 @@ items:
     FEAT-0023:
       file: "docs/features/glass-scenes/FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens.md"
       title: "A Glass scene reopens and crosses screens without losing its work"
-      status: planned
+      status: doing
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0004", "REQ-0005"]
@@ -276,28 +276,28 @@ items:
     TASK-0106:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0106-Keep-A-Scene-In-The-Store.md"
       title: "Keep a scene in the store"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
     TASK-0107:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass.md"
       title: "Save, reopen and undo scenes in Glass"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
     TASK-0108:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process.md"
       title: "Acknowledge a handoff in the main process"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
     TASK-0109:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0109-Show-The-Destination-The-Arrival-And-The-Way-Back.md"
       title: "Show the destination, the arrival and the way back"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
@@ -1670,7 +1670,7 @@ items:
       features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017", "FEAT-0018", "FEAT-0019", "FEAT-0020", "FEAT-0022", "FEAT-0023"]
       requirements: [REQ-0001, REQ-0002, REQ-0003, REQ-0004, REQ-0005]
       tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0085", "TASK-0086", "TASK-0087", "TASK-0088", "TASK-0089", "TASK-0090", "TASK-0091", "TASK-0092", "TASK-0093", "TASK-0094", "TASK-0095", "TASK-0096", "TASK-0097", "TASK-0098", "TASK-0099", "TASK-0100", "TASK-0101", "TASK-0102", "TASK-0103", "TASK-0104", "TASK-0105", "TASK-0106", "TASK-0107", "TASK-0108", "TASK-0109", "TASK-0110"]
-      issues: ["ISS-0008", "ISS-0058", "ISS-0059", "ISS-0060", "ISS-0061", "ISS-0062", "ISS-0063", "ISS-0064", "ISS-0065", "ISS-0066", "ISS-0068", "ISS-0070", "ISS-0071", "ISS-0072", "ISS-0073", "ISS-0074", "ISS-0075", "ISS-0076", "ISS-0077", "ISS-0078", "ISS-0079", "ISS-0080", "ISS-0081", "ISS-0082", "ISS-0083", "ISS-0084", "ISS-0085", "ISS-0086", "ISS-0087", "ISS-0088", "ISS-0090"]
+      issues: ["ISS-0008", "ISS-0058", "ISS-0059", "ISS-0060", "ISS-0061", "ISS-0062", "ISS-0063", "ISS-0064", "ISS-0065", "ISS-0066", "ISS-0068", "ISS-0070", "ISS-0071", "ISS-0072", "ISS-0073", "ISS-0074", "ISS-0075", "ISS-0076", "ISS-0077", "ISS-0078", "ISS-0079", "ISS-0080", "ISS-0081", "ISS-0082", "ISS-0083", "ISS-0084", "ISS-0085", "ISS-0086", "ISS-0087", "ISS-0088", "ISS-0090", "ISS-0091"]
       note: "2026-09-11, later: FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) ADDED at Edwin's request from REFERENCE-FOCUS-ZOOM-AND-VERBS, eight tasks TASK-0064 to TASK-0071, suites TST-0050 and TST-0051, walk TST-0052; no new exit criterion, and criterion 3 is amended by TASK-0069 (a lift fills a ring first, the front band after leaving). FEAT-0017 revisits DES-0002 by Edwin's request. 2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"

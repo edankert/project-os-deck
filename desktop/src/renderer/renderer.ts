@@ -21,7 +21,7 @@ import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
-import { listScenes, sceneFrom, sceneKind, sceneReport } from '../shared/scenes.js';
+import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor } from '../shared/scenes.js';
 import type { Desk } from '../shared/types.js';
 import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
@@ -35,6 +35,8 @@ import { CollectionView } from './collection-view.js';
 import type { GraphEdge } from '../shared/graph.js';
 import { ContextCache } from '../shared/neighbourhood.js';
 import { type Edge, type ThrowTarget, type WindowInfo, type DisplayInfo, targetsToward } from '../shared/throw.js';
+import { type Destination, type HandoffMode, describeHandoff, handoffLabel, offeredModes } from '../shared/handoff.js';
+import type { ReadingAnchor } from '../shared/types.js';
 import { DEFAULT_SURFACE } from '../shared/store-state.js';
 import { surfaceKinds } from '../shared/vocabularies.js';
 import { cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
@@ -409,7 +411,7 @@ const glass = new GlassField(glassElements(), {
   revealed: (noteId) => {
     navigator.reveal(noteId);
   },
-  targets: (edge) => throwTargets(edge),
+  targets: (edge, noteId) => throwTargets(edge, noteId),
   throwTo: (target, card, edge) => throwTo(target, card, edge),
   applyPending: () => applyPending(),
   reducedMotion,
@@ -586,6 +588,11 @@ async function boot(): Promise<void> {
   drawActor();
   drawFollow();
   if (panel === 'needs-you') startNeedsYouPoll();
+  // A note handed to this window (FEAT-0023): told as it arrives, and asked
+  // for once at the start, because a reader is re-addressed and loads afresh
+  // after the note was sent to it.
+  host.onArrival((arrival) => void receiveArrival(arrival));
+  for (const arrival of await host.pendingArrivals()) void receiveArrival(arrival);
 }
 
 function renderRail(): void {
@@ -810,7 +817,11 @@ async function selectView(viewId: string): Promise<void> {
     say(`this workspace has no view called "${viewId}"`, true);
     return;
   }
-  await host.dispatch({ type: 'select-view', viewId });
+  // A popped-out window draws the view in its own address and changes no
+  // one else's (ISS-0018, ISS-0091). It used to tell the shared store, so a
+  // desk window for Issues, opened or restored at launch, switched the main
+  // window to Issues and took every open note off its screen.
+  if (!pinned) await host.dispatch({ type: 'select-view', viewId });
   paintSwitcher();
   await loadView(workspace, view);
   // A view switch is the other act that applies a held change: the new view
@@ -2048,7 +2059,7 @@ function drawStale(): void {
  * that way, a display with no Deck window, and the tablet when one is
  * following. Asked of the main process, which knows every window's bounds.
  */
-async function throwTargets(edge: Edge): Promise<ThrowTarget[]> {
+async function throwTargets(edge: Edge, noteId?: string): Promise<ThrowTarget[]> {
   const listed = (await host.windowList()) as {
     self: { bounds: { x: number; y: number; width: number; height: number } } | null;
     windows: WindowInfo[];
@@ -2056,15 +2067,164 @@ async function throwTargets(edge: Edge): Promise<ThrowTarget[]> {
     followers: number;
   } | null;
   if (listed === null || listed.self === null) return [];
-  return targetsToward(edge, listed.self.bounds, listed.windows, listed.displays, listed.followers > 0);
+  const places = targetsToward(edge, listed.self.bounds, listed.windows, listed.displays, listed.followers > 0);
+  // A card from the field is on no desk: each place once, as it always was.
+  if (noteId === undefined || !deskHere().some((c) => c.noteId === noteId)) return places;
+  // A document: each place once per act it is offered, named by the act (FEAT-0023).
+  const state = host.state();
+  const facts = { sourceView: deskViewHere(), everyView: isOnEveryView(state, state.workspaceId, noteId) };
+  return places.flatMap((place) => {
+    const destination = destinationOf(place);
+    return offeredModes(destination, facts).map((mode) => ({ ...place, mode, label: handoffLabel(mode, destination), says: describeHandoff(noteId, mode, destination) }));
+  });
+}
+
+/** A throw target as the handoff rule sees it: what kind of place it is, and whose desk. */
+function destinationOf(target: ThrowTarget): Destination {
+  if (target.kind === 'tablet') return { kind: 'tablet', label: 'tablet', windowId: null, view: host.state().viewId };
+  if (target.kind === 'display') return { kind: 'new-reader', label: target.label, windowId: null, view: null };
+  const kind = target.carries === 'desk' ? 'desk' : target.carries === 'focus' ? 'main' : 'reader';
+  return { kind, label: target.label, windowId: target.windowId, view: target.view ?? null };
 }
 
 async function throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promise<void> {
   const state = host.state();
-  if (state.workspaceId === null || state.viewId === null) return;
-  const result = await host.throwNote({ target, noteId: card.noteId, workspaceId: state.workspaceId, viewId: state.viewId, edge });
+  const view = deskViewHere() ?? state.viewId;
+  if (state.workspaceId === null || view === null) return;
+  // A card from the field has no act of its own: it is shown there, and the field keeps its card.
+  const mode: HandoffMode = target.mode ?? 'show';
+  const held = deskHere().some((c) => c.noteId === card.noteId);
+  const result = await host.throwNote({
+    target,
+    noteId: card.noteId,
+    workspaceId: state.workspaceId,
+    viewId: view,
+    edge,
+    mode,
+    // What makes it the same document on the other side: the size it is read at and where.
+    size: held ? glass.readingSize(card.noteId) : null,
+    anchor: held ? glass.readingAnchor(card.noteId) : null,
+  });
   if (!result.ok) say(result.error ?? 'that throw did not land', true);
-  else say(`${card.noteId} is in the ${target.label}`);
+  else say(result.said ?? `${card.noteId} is in the ${target.label}`);
+  // Moved on from here, it is no longer here to send back.
+  if (result.ok && mode === 'move') arrivedHere.delete(card.noteId);
+  drawNavigator();
+  drawDesk();
+}
+
+// ---- arrivals (FEAT-0023): a note handed to THIS window ----
+
+interface Arrival {
+  id: string;
+  noteId: string;
+  workspaceId: string;
+  from: string;
+  mode: HandoffMode;
+  size: { w: number; h: number } | null;
+  anchor: ReadingAnchor | null;
+  canReturn: boolean;
+}
+
+const answered = new Set<string>();
+/** The notes that arrived here and can be sent back, by note. This window's, this session's. */
+const arrivedHere = new Map<string, Arrival>();
+
+/** Whether this window is showing a note now: 'shown', or null while it is not yet. */
+function showsNote(noteId: string): boolean {
+  if (glass.isActive()) {
+    // Text in, or a labelled failure: either way the document is drawn and says what it is.
+    const state = glass.documentState(noteId);
+    return state !== null && state !== 'loading';
+  }
+  // A reader window shows the note in its address, whatever note the main
+  // window is on; and it is showing it once the note's text is in, not while
+  // the line that says it is being read is.
+  if (panel === 'note') return pinnedNoteId === noteId && el.reader.querySelector('article') !== null;
+  return Array.from(el.desk.querySelectorAll<HTMLElement>('[data-note-id]')).some((c) => c.dataset['noteId'] === noteId);
+}
+
+/**
+ * A note arrived from another window. This window answers once: when it is
+ * showing the note, or after a few seconds that it could not. Until it
+ * answers, the window it came from keeps it.
+ */
+async function receiveArrival(raw: unknown): Promise<void> {
+  const arrival = raw as Arrival;
+  if (typeof arrival?.id !== 'string' || typeof arrival.noteId !== 'string' || answered.has(arrival.id)) return;
+  answered.add(arrival.id);
+  let shown = false;
+  for (let attempt = 0; attempt < 35 && !shown; attempt += 1) {
+    shown = showsNote(arrival.noteId);
+    if (!shown) await new Promise((r) => setTimeout(r, 100));
+  }
+  if (!shown) {
+    await host.acknowledgeArrival({ id: arrival.id, ok: false, error: 'this window did not draw it' });
+    return;
+  }
+  await host.acknowledgeArrival({ id: arrival.id, ok: true });
+  // It is read where it was being read, and marked so it can be found.
+  if (glass.isActive()) {
+    if (arrival.anchor !== null) glass.restoreReading({ [arrival.noteId]: arrival.anchor });
+    glass.markArrived(arrival.noteId);
+  } else if (panel === 'note' && arrival.anchor !== null) {
+    scrollReaderTo(arrival.anchor);
+  }
+  if (arrival.canReturn) arrivedHere.set(arrival.noteId, arrival);
+  sayArrival(arrival);
+}
+
+/**
+ * The reader window's text, scrolled to where the note was being read. The
+ * text scrolls in whichever of the reader and the page is the one that
+ * overflows, which depends on how the window is laid out; and it is laid out
+ * a frame after its text is put in, so the scroll waits for that frame.
+ */
+function scrollReaderTo(anchor: ReadingAnchor): void {
+  requestAnimationFrame(() => {
+    const page = document.scrollingElement as HTMLElement | null;
+    const box = el.reader.scrollHeight > el.reader.clientHeight + 1 || page === null ? el.reader : page;
+    const origin = box === el.reader ? box.getBoundingClientRect().top - box.scrollTop : -box.scrollTop;
+    const headings = Array.from(el.reader.querySelectorAll<HTMLElement>('h1, h2, h3, h4')).map((h) => ({ text: (h.textContent ?? '').trim(), top: h.getBoundingClientRect().top - origin }));
+    box.scrollTop = scrollTopForAnchor(anchor, headings, box.scrollHeight - box.clientHeight).top;
+  });
+}
+
+/** Say that a note arrived and from where, with the way back when there is one. */
+function sayArrival(arrival: Arrival): void {
+  el.status.classList.remove('error');
+  el.status.replaceChildren();
+  const text_ = document.createElement('span');
+  text_.textContent = `${arrival.noteId} arrived from the ${arrival.from}${arrival.mode === 'show' ? ', which keeps it too' : ''}. `;
+  el.status.appendChild(text_);
+  if (!arrival.canReturn) return;
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'action';
+  back.id = 'send-back';
+  back.textContent = 'send back';
+  back.title = `Send ${arrival.noteId} back to the ${arrival.from}`;
+  back.addEventListener('click', () => void sendBack(arrival.noteId));
+  el.status.appendChild(back);
+}
+
+/** Send an arrived note back where it came from: the same handoff in reverse. */
+async function sendBack(noteId: string): Promise<boolean> {
+  const arrival = arrivedHere.get(noteId);
+  if (arrival === undefined) {
+    say(`${noteId} did not arrive here from another window`, true);
+    return false;
+  }
+  const result = await host.sendBack({ noteId, size: glass.isActive() ? glass.readingSize(noteId) : arrival.size, anchor: glass.isActive() ? glass.readingAnchor(noteId) : arrival.anchor });
+  if (!result.ok) {
+    say(result.error ?? `${noteId} could not be sent back`, true);
+    return false;
+  }
+  arrivedHere.delete(noteId);
+  say(result.said ?? `${noteId} was sent back`);
+  drawNavigator();
+  drawDesk();
+  return true;
 }
 
 /**
@@ -2078,19 +2238,27 @@ async function sendTo(card: CardModel): Promise<void> {
   }
   const seen = new Map<string, { target: ThrowTarget; edge: Edge }>();
   for (const edge of ['right', 'left', 'bottom', 'top'] as Edge[]) {
-    for (const target of await throwTargets(edge)) {
+    for (const target of await throwTargets(edge, card.noteId)) {
       if (!seen.has(target.label)) seen.set(target.label, { target, edge });
     }
   }
-  if (seen.size === 0) {
+  // A note that arrived here can go back where it came from: the first thing
+  // offered, and only while the window it came from is still open.
+  const listed = (await host.windowList()) as { returnable?: string[] } | null;
+  if (!(listed?.returnable ?? []).includes(card.noteId)) arrivedHere.delete(card.noteId);
+  const arrival = arrivedHere.get(card.noteId);
+  const BACK = 'send back';
+  if (seen.size === 0 && arrival === undefined) {
     say('there is no other window to send it to; pop one out first', true);
     return;
   }
-  const chosen = await askChoice(
-    `send ${card.noteId} to:`,
-    [...seen.keys()].map((label) => ({ value: label, label })),
-  );
+  const options = [...(arrival === undefined ? [] : [{ value: BACK, label: `Send back to the ${arrival.from}` }]), ...[...seen.keys()].map((label) => ({ value: label, label }))];
+  const chosen = await askChoice(`${card.noteId}:`, options);
   if (chosen === null) return;
+  if (chosen === BACK) {
+    await sendBack(card.noteId);
+    return;
+  }
   const picked = seen.get(chosen);
   if (picked !== undefined) await throwTo(picked.target, card, picked.edge);
 }
@@ -2329,7 +2497,8 @@ async function applyAddress(raw: string): Promise<void> {
   // After the workspace, which opens in Glass (ISS-0060), and before the
   // view, so the view is drawn once, on the surface the address names. No
   // surface in the address means Glass.
-  await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
+  // The surface is the main window's to choose: a popped-out window always draws its panel (ISS-0091).
+  if (!pinned) await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
   await selectView(address.viewId);
   if (address.desk !== null) await openScene(address.desk, false);
   if (address.note !== null) {

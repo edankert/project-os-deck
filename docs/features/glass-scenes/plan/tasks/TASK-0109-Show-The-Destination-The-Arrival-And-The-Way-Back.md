@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0109
 title: "Show the destination, the arrival and the way back"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02

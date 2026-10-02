@@ -266,7 +266,12 @@ export interface GlassHooks {
   /** A note was opened: its row is shown in the collection. */
   revealed(noteId: string): void;
   /** The places a throw toward this edge could land. Empty where there are no windows. */
-  targets(edge: Edge): Promise<ThrowTarget[]>;
+  /**
+   * Where a note could go toward an edge. For a document (`noteId` given)
+   * each place comes once per act it is offered: "Move to" and "Also show
+   * in" (FEAT-0023). For a card from the field, each place once.
+   */
+  targets(edge: Edge, noteId?: string): Promise<ThrowTarget[]>;
   throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promise<void>;
   /** A change arrived while the field was on screen; applying it is the person's call (TASK-0032). */
   applyPending(): void;
@@ -413,6 +418,8 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** Where each note was last being read in this window, kept when its document is taken down. Session state. */
+  private readonly lastReading = new Map<string, ReadingAnchor>();
   /** Reading positions waiting for their documents' text (restoreReading). */
   private readingWanted = new Map<string, ReadingAnchor>();
   private readingMoved: string[] = [];
@@ -2768,6 +2775,29 @@ export class GlassField {
     done?.([...this.readingMoved]);
   }
 
+  /** Mark a document that has just arrived from another window, and put the keyboard on it. */
+  markArrived(noteId: string): void {
+    const pane = this.paneEls.get(noteId);
+    if (pane === undefined) return;
+    pane.classList.add('highlight', 'arrived');
+    setTimeout(() => pane.classList.remove('highlight', 'arrived'), 2400);
+    (pane.querySelector('.pane-head') as HTMLElement | null)?.focus({ preventScroll: true });
+  }
+
+  /** What this window shows for a note: its document's state, or null when it has no document for it. */
+  documentState(noteId: string): string | null {
+    return this.paneEls.get(noteId)?.dataset['state'] ?? null;
+  }
+
+  /** The size a held document is read at, for a handoff to carry. */
+  readingSize(noteId: string): { w: number; h: number } | null {
+    const card = this.held.find((c) => c.noteId === noteId);
+    if (card === undefined) return null;
+    const state = this.hooks.state();
+    const size = readingSizeFor(card, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+    return { w: size.w, h: size.h };
+  }
+
   /** The field's size, which a scene keeps so it can say when it is reopened in a smaller one. */
   fieldSize(): { w: number; h: number } {
     return { w: this.viewport.width, h: this.viewport.height };
@@ -3232,6 +3262,9 @@ export class GlassField {
         item.className = 'target';
         item.dataset['index'] = String(i);
         item.textContent = target.label;
+        if (target.mode !== undefined) item.dataset['mode'] = target.mode;
+        // What releasing here does, before it is done: where the note goes and whether it leaves this desk.
+        if (target.says !== undefined) item.title = target.says;
         return item;
       }),
     );
@@ -3316,6 +3349,13 @@ export class GlassField {
     });
     for (const [noteId, pane] of this.paneEls) {
       if (live.has(noteId)) continue;
+      // Where it was being read is kept for the session, so a note that comes
+      // back to this desk (a view left and returned to, a note sent away and
+      // back) is read where it was. Until this a returning note opened at its
+      // top, because its document is built again.
+      const reading = this.readingAnchor(noteId);
+      if (reading !== null && (reading.heading !== null || reading.past > 0)) this.lastReading.set(noteId, reading);
+      else if (reading !== null) this.lastReading.delete(noteId);
       pane.remove();
       this.paneEls.delete(noteId);
       this.rereads.delete(noteId);
@@ -3460,6 +3500,8 @@ export class GlassField {
     const pane = document.createElement('section');
     pane.className = 'pane';
     pane.dataset['noteId'] = noteId;
+    // Not filled yet: its first text goes to where the note was last being read (fillDocument).
+    pane.dataset['fresh'] = 'true';
     pane.innerHTML =
       '<header class="pane-head" tabindex="0" role="toolbar">' +
       '<span class="pane-title"></span><span class="pane-id"></span><span class="pane-status"></span>' +
@@ -3743,8 +3785,12 @@ export class GlassField {
         note.innerHTML = doc.html;
         note.dataset['filled'] = 'true';
         body.scrollTop = at;
-        // A scene or a handoff said where this note was being read: go there
-        // now that there is text to be somewhere in.
+        // A document built again goes back to where this note was last being
+        // read in this window. A scene or a handoff that says where it was
+        // being read is applied after, and so wins.
+        const last = this.lastReading.get(noteId);
+        if (pane.dataset['fresh'] === 'true' && last !== undefined) body.scrollTop = scrollTopForAnchor(last, this.headingsOf(pane), body.scrollHeight - body.clientHeight).top;
+        delete pane.dataset['fresh'];
         this.applyReading(noteId, pane);
         const actions = pane.querySelector('.pane-actions') as HTMLElement;
         void this.hooks.dress(noteId, note, actions).catch(() => null);
@@ -4779,7 +4825,7 @@ export class GlassField {
         this.showStrip(null, []);
         if (near !== null) {
           const asked = near;
-          void this.hooks.targets(near).then((found) => {
+          void this.hooks.targets(near, noteId).then((found) => {
             if (edge !== asked) return;
             targets = found;
             this.showStrip(asked, found);
@@ -4801,7 +4847,8 @@ export class GlassField {
         const target = hovered;
         this.dragOf = null;
         this.render(false);
-        this.tell(`${noteId} sent to the ${target.label}`);
+        // Said now as an act that is under way; what happened is said when the other window has answered.
+        this.tell(target.mode === undefined ? `${noteId} sent to the ${target.label}` : `${target.label}: waiting for that window to show ${noteId}`);
         void this.hooks.throwTo(target, card, edge ?? 'right');
         return;
       }

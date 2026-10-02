@@ -60,6 +60,28 @@ export function modesFor(kind: DestinationKind): HandoffMode[] {
   return kind === 'desk' || kind === 'main' ? ['move', 'show'] : ['show'];
 }
 
+export interface OfferFacts {
+  /** The view whose desk holds the note at the source, or null when it is on no desk. */
+  sourceView: string | null;
+  /** The note is kept on every view: it is on every desk already, and taking it off one takes it off all. */
+  everyView: boolean;
+}
+
+/**
+ * Which acts a destination is OFFERED for one note. Narrower than what its
+ * kind takes: a destination drawing the same view's desk as the source is
+ * not offered a move, because source and destination are one desk and the
+ * move would take the note off it; and a note kept on every view is offered
+ * "also show" only, for the same reason on every desk at once.
+ */
+export function offeredModes(destination: Destination, facts: OfferFacts): HandoffMode[] {
+  return modesFor(destination.kind).filter((mode) => {
+    if (mode !== 'move') return true;
+    if (facts.everyView) return false;
+    return !(destination.view !== null && destination.view === facts.sourceView);
+  });
+}
+
 /** Whether the destination can say it drew the note. A served page has no route back. */
 export function canAcknowledge(kind: DestinationKind): boolean {
   return kind !== 'tablet';
@@ -119,17 +141,26 @@ export interface HandoffRecord extends HandoffRequest {
   state: HandoffState;
   /** Whether this handoff put the note on the destination's desk, and so must take it off again if it fails. */
   put: boolean;
+  /** For a reader that was re-addressed: what it showed before, so a failed handoff can give it back. */
+  previousAddress?: string | null;
+  /** For a new reader: the window this handoff opened, so a failed handoff can close it. */
+  openedWindowId?: number | null;
 }
 
 export type HandoffAnswer =
   /** The destination says it is showing the note, or says why it could not. */
   | { type: 'ack'; ok: boolean; error?: string }
   | { type: 'timeout' }
-  /** The destination window closed, or its display went away, before it answered. */
-  | { type: 'closed' };
+  /** The destination window closed before it answered. */
+  | { type: 'closed' }
+  /** The display the destination is on was disconnected before it answered. */
+  | { type: 'display-removed' };
 
-/** What the main process then does to the store. */
-export type HandoffEffect = { type: 'take-off'; view: string; noteId: string };
+/** What the main process then does: to the store, and to a window the landing changed or opened. */
+export type HandoffEffect =
+  | { type: 'take-off'; view: string; noteId: string }
+  | { type: 'readdress'; windowId: number; address: string }
+  | { type: 'close-window'; windowId: number };
 
 export interface HandoffReply {
   ok: boolean;
@@ -181,8 +212,19 @@ export function settle(record: HandoffRecord, answer: HandoffAnswer): { record: 
       ? `the ${destination.label} did not answer`
       : answer.type === 'closed'
         ? `the ${destination.label} closed`
-        : `the ${destination.label} could not show it${answer.error === undefined || answer.error === '' ? '' : `: ${answer.error}`}`;
-  const effects: HandoffEffect[] = record.put && destination.view !== null ? [{ type: 'take-off', view: destination.view, noteId }] : [];
+        : answer.type === 'display-removed'
+          ? `the display the ${destination.label} is on was disconnected`
+          : `the ${destination.label} could not show it${answer.error === undefined || answer.error === '' ? '' : `: ${answer.error}`}`;
+  // Exactly what the landing added is removed, and nothing else: a note the
+  // destination's desk already held stays there, a reader goes back to what
+  // it showed, and a reader this handoff opened is closed. A window that has
+  // itself closed needs neither.
+  const effects: HandoffEffect[] = [];
+  if (record.put && destination.view !== null) effects.push({ type: 'take-off', view: destination.view, noteId });
+  if (answer.type !== 'closed') {
+    if (destination.kind === 'reader' && destination.windowId !== null && typeof record.previousAddress === 'string') effects.push({ type: 'readdress', windowId: destination.windowId, address: record.previousAddress });
+    if (destination.kind === 'new-reader' && typeof record.openedWindowId === 'number') effects.push({ type: 'close-window', windowId: record.openedWindowId });
+  }
   return {
     record: { ...record, state: 'failed' },
     effects,

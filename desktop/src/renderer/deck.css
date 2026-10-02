@@ -383,7 +383,12 @@ body[data-panel="needs-you"] .card .remove { display: none; }
 
 body[data-panel="note"] .navigator,
 body[data-panel="note"] .desk-area { display: none; }
-body[data-panel="note"] .reader { width: 100%; max-width: none; border-left: 0; }
+body[data-panel="note"] .reader { width: 100%; max-width: none; border-left: 0; flex: 1 1 auto; min-height: 0; }
+/* A reader window holds one note, and the note scrolls INSIDE the reader. In
+   a window under 860 px wide the row used to wrap, the reader grew as tall as
+   its note and the whole page scrolled: the status bar, which says what
+   arrived and offers the way back, went off the screen with it (FEAT-0023). */
+body[data-panel="note"] .body { flex-wrap: nowrap; }
 
 body[data-panel="desk"] .navigator,
 body[data-panel="desk"] .reader { display: none; }
@@ -1312,6 +1317,10 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .field.arranging .pane, .field.arranging .collection { transition: none; }
 }
+
+/* A document that has just arrived from another window (FEAT-0023): marked for a moment, with no travel. */
+.pane.arrived { box-shadow: 0 0 0 2px var(--accent), 0 10px 28px rgba(0, 0, 0, 0.45); }
+.target-strip .target[data-mode="move"] { border-color: var(--owed); }
 
 /* Scenes (FEAT-0023): the controls on the bar, and what a reopened scene has to say. */
 .scenes { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }

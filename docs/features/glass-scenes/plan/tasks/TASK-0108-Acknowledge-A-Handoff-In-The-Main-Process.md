@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0108
 title: "Acknowledge a handoff in the main process"
-status: backlog
+status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02
