@@ -3963,6 +3963,34 @@ async function recordDocument(kit: Kit): Promise<void> {
       );
     }
 
+    // ---- 5c. A press held while the list is drawn again under it still opens its row ----
+    // The list holds a row still under the pointer when rows arrive above it,
+    // and it does so by handing the row to another of its elements. A press
+    // that began on one element and ended on the other is sent by the browser
+    // to the list, not to a row. So the redraw is made here while the button
+    // is down: another note is put on the desk, which adds rows above.
+    await sweep();
+    const heldPair = await pairOf(used);
+    if (heldPair === null) {
+      record(false, 'document: two rows were in reach, to hold one while the other is opened');
+    } else {
+      used.push(heldPair.a.id, heldPair.b.id);
+      const elementAt = (): Promise<{ id: string | null; index: string | null }> =>
+        js(`(() => { const e = document.elementFromPoint(${heldPair.b.x}, ${heldPair.b.y}); const r = e ? e.closest('.nav-row') : null; return { id: r ? r.dataset.noteId : null, index: r ? r.dataset.index : null }; })()`);
+      await pointer(win, [{ type: 'move', x: heldPair.b.x, y: heldPair.b.y, wait: 60 }, { type: 'down', x: heldPair.b.x, y: heldPair.b.y, wait: 30 }]);
+      const atDown = await elementAt();
+      store.dispatch({ type: 'put-on-desk', noteId: heldPair.a.id, x: 420, y: 40, viewId: VIEW });
+      await delay(700);
+      const atUp = await elementAt();
+      await pointer(win, [{ type: 'up', x: heldPair.b.x, y: heldPair.b.y, wait: 60 }]);
+      await delay(1500);
+      await pointer(win, [{ type: 'move', ...PARK }]);
+      record(
+        atDown.id === heldPair.b.id && atUp.id === heldPair.b.id && atDown.index !== atUp.index && deskIds().includes(heldPair.b.id) && deskIds().length === 2,
+        `a press on ${heldPair.b.id}'s row, held while ${heldPair.a.id} was opened and the list drawn again, still opens ${heldPair.b.id}: the row stayed under the pointer (${atUp.id}) and was handed from element ${atDown.index} to element ${atUp.index} in between, and the desk holds ${deskIds().join(', ') || 'nothing'}`,
+      );
+    }
+
     // ---- 6. A link inside a note's text opens the note it names, as another document ----
     await sweep();
     // A link to a note the view does not hold is taken first: that is the
