@@ -11,9 +11,9 @@
  * rather than something to read back off the DOM when a person saves
  * (TASK-0024, TASK-0025).
  */
+import { isDeskName } from './address.js';
 import type { Desk, DeskCard, DeckState, Filters, ReadingAnchor, ReadingSize, SessionState } from './types.js';
 import { normaliseScene, sceneFrom, sceneKind } from './scenes.js';
-import { isDeskName } from './address.js';
 import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
 import { type CollectionLayout, normaliseCollection } from './collection.js';
 
