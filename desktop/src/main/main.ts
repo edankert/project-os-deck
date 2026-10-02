@@ -1825,6 +1825,17 @@ async function recordEveryVerbAsksWhy(
             typeof request['mtime'] === 'number' && heldAt !== null && Math.abs(request['mtime'] - heldAt) < 1e-6 && ticked.length === 0,
             `and the modification time Deck's index holds for the note, through the transition channel and no other (sent ${String(request['mtime'])}; the index holds ${heldAt === null ? 'no time' : String(heldAt)} for ${plain.rel}; ${ticked.length} on the tick channel)`,
           );
+          // After a write the window reads its list again, and it is its own
+          // list: a popped-out window draws the view in its address, whatever
+          // view the main window is on.
+          await delay(1500);
+          const listed = (await win.webContents.executeJavaScript(
+            `({ row: document.querySelector('#nav-list .nav-row[data-note-id="${plain.id}"]:not([hidden])') !== null, rows: document.querySelectorAll('#nav-list .nav-row:not([hidden])').length, mainView: window.__deckLastState ? window.__deckLastState.viewId : null })`,
+          )) as { row: boolean; rows: number; mainView: string | null };
+          record(
+            listed.row && listed.mainView !== viewOf(plain.id),
+            `after the write, this popped-out window still lists its own view: ${plain.id} still has a row in it (the window is on ${viewOf(plain.id)}, the main window on ${listed.mainView}; ${listed.rows} rows drawn)`,
+          );
         }
       } finally {
         win.destroy();

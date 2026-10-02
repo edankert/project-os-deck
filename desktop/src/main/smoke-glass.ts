@@ -2894,7 +2894,8 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
         return id;
       })()`);
       await delay(700);
-      record(thrown !== null && own('issues').includes(thrown) && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore, `a note thrown onto that desk panel from Features lands on the Issues desk, and the Features desk is unchanged (${thrown})`);
+      const throwSaid = await js<string>(`__t.text('#status')`);
+      record(thrown !== null && own('issues').includes(thrown) && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore, `a note thrown onto that desk panel from Features lands on the Issues desk, and the Features desk is unchanged (${thrown}; the window said "${throwSaid.trim().slice(0, 160)}")`);
     } finally {
       if (!deskPanel.isDestroyed()) deskPanel.destroy();
     }
@@ -4512,7 +4513,7 @@ async function recordThrow(kit: Kit): Promise<void> {
       asked = await js<typeof asked>(`({ asked: __t.text('#status'), focus: document.activeElement ? document.activeElement.textContent : '', hasFocus: document.hasFocus() })`);
     }
     if (asked.focus.trim() === '') console.log('DIAG sendto', JSON.stringify(asked));
-    record(/^send /.test(asked.asked.trim()) && asked.focus.length > 0, `send to asks where, and the keyboard is on the first answer ("${asked.focus}")`);
+    record(/^send /.test(asked.asked.trim()) && asked.focus.length > 0, `send to asks where, and the keyboard is on the first answer ("${asked.focus}"; the question reads "${asked.asked.trim().slice(0, 90)}")`);
     const focusIsReader = asked.focus.startsWith('reader on');
     press(win, 'Return');
     await delay(1600);
