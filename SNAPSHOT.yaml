@@ -367,7 +367,7 @@ items:
     TASK-0102:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements.md"
       title: "Preview, apply and undo Glass arrangements"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
@@ -2385,7 +2385,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 114
-    tasks_done: 89
+    tasks_done: 90
     tests_total: 57
     tests_passing: 8
     tests_failing: 0

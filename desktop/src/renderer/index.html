@@ -70,7 +70,11 @@
       <!-- Glass: the field where depth carries priority (FEAT-0009). The containers
            are pointer-transparent and the cards are not (TASK-0031). -->
       <main class="field-area" id="field-area" hidden>
+        <!-- Three groups: what the field says, the scenes, and what is on the desk. In a wide window they
+             are one row; narrower, each group that does not fit beside the others has a row of its own,
+             so which row a control is on depends on the window's width and never on what the bar holds. -->
         <div class="field-bar">
+          <div class="bar-status">
           <!-- First, so it keeps its place whatever the label beside it says (TASK-0036). -->
           <span class="owed-count" id="owed-count" title="Every owed note in this view, drawn or not. It keeps this place whatever the front band means."></span>
           <span class="front-label" id="front-label">in front: what needs you</span>
@@ -81,6 +85,7 @@
           <!-- The orbit's three treatments, all drawn, switchable; which one stays is Edwin's call (TASK-0005). -->
           <div class="treatments" id="treatments" hidden role="group" aria-label="Treatment"></div>
           <span class="field-overflow" id="field-overflow"></span>
+          </div>
           <!-- Scenes (FEAT-0023): this view's desk, saved under a name and reopened with what it holds read afresh. -->
           <div class="scenes" id="scenes" role="group" aria-label="Scenes" hidden>
             <select id="scene-list" aria-label="Saved scenes"></select>
@@ -91,6 +96,7 @@
             <button type="button" class="action" id="scene-delete" hidden>delete</button>
             <button type="button" class="action" id="scene-back" hidden></button>
           </div>
+          <div class="bar-desk">
           <!-- Arrangements of the desk (FEAT-0022). Each is shown before it is applied, and can be put back. -->
           <div class="arrange" id="arrange" role="group" aria-label="Arrange the desk" hidden>
             <button type="button" class="action" id="arrange-read">Read</button>
@@ -103,6 +109,7 @@
           <button type="button" class="action" id="sweep-desk" hidden title="Close every note on this view's desk; a note kept on every view stays (Escape, with no focus)">close all</button>
           <span class="glass-desk-count count" id="glass-desk-count"></span>
           <span class="also-held" id="glass-also-held"></span>
+          </div>
         </div>
         <div class="field" id="field" tabindex="0" aria-label="The field: arrow keys turn, Home faces the front, End faces the quiet band, Escape sweeps the desk">
           <canvas class="field-canvas" id="field-canvas" aria-hidden="true"></canvas>

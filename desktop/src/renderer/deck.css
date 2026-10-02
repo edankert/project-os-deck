@@ -553,26 +553,36 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   font-size: 12px;
 }
 .field-bar::-webkit-scrollbar { display: none; }
+/* The bar holds three groups: what the field says, the scenes, and what is on the desk. In a wide window
+   they are one row, as the bar always was, and the groups are not boxes of their own. */
+.bar-status, .bar-desk { display: contents; }
 /* Scenes and arrangements together are wider than a laptop's window. Scrolled sideways, the last controls
-   (the two undos) were out of sight with nothing to say so. Under 1500 px the bar is two rows and under
-   1200 px three, at a height that is fixed for the window's width, so a button appearing still does not
-   resize the field. */
+   (the two undos) were out of sight with nothing to say so. Under 1500 px the desk's group has a row of
+   its own, and under 1200 px each group has. Which row a control is on depends on the window's width and
+   never on what the bar holds. Wrapping wherever the row was full did depend on it: a third or fourth row
+   appeared with a longer label, and a row past the bar's fixed height was cut off, so a press meant for
+   "close all" landed on whatever stood in the field beneath. The bar's height stays fixed for the
+   window's width, so a button appearing still does not resize the field. */
 @media (max-width: 1500px) {
   /* Rows start at the top and the first row never moves: the owed count is first in the bar so that it
      keeps its place, and centring the rows moved it up whenever a second row appeared. */
-  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: flex-start; padding-top: 8px; row-gap: 4px; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
-  /* What the rows cannot hold is reached by scrolling the bar, and here the bar shows that it scrolls. */
-  .field-bar::-webkit-scrollbar { display: block; width: 6px; }
-  .field-bar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
-  #scene-back { max-width: 26em; overflow: hidden; text-overflow: ellipsis; }
+  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: flex-start; padding-top: 7px; row-gap: 4px; overflow: hidden; }
+  .bar-status, .bar-desk { display: flex; align-items: center; gap: 10px; height: 22px; min-width: 0; }
+  /* What the field says takes the room the scenes leave, and its text is cut with an ellipsis before a control is. */
+  .bar-status { flex: 1 1 0; }
+  .field-bar .scenes { flex: 0 1 auto; min-width: 0; height: 22px; }
+  .bar-desk { flex: 0 0 100%; }
+  #scene-back { flex: 0 1 auto; min-width: 8em; max-width: 26em; overflow: hidden; text-overflow: ellipsis; }
 }
 @media (max-width: 1200px) {
-  /* Two rows held the scene controls and the arrangements in a window of 1440. At 900 the third row
-     ("Read", "Compare", "close all") was cut off by the bar's lower edge, and a press on it landed on
-     whatever stood in the field beneath. */
-  .field-bar { flex-basis: 86px; height: 86px; }
-  /* A group wider than the bar wraps inside itself rather than being cut at the bar's right edge. */
-  .field-bar .scenes, .field-bar .arrange { flex: 0 1 auto; min-width: 0; flex-wrap: wrap; row-gap: 4px; }
+  .field-bar { flex-basis: 88px; height: 88px; }
+  .bar-status, .field-bar .scenes { flex: 0 0 100%; }
+}
+/* Under about 760 px a row is narrower than its own buttons. It scrolls sideways there, as the whole bar
+   used to, and that is the one width at which a control of the bar can be out of sight. */
+@media (max-width: 760px) {
+  .field-bar .scenes, .bar-desk { overflow-x: auto; scrollbar-width: none; }
+  .field-bar .scenes::-webkit-scrollbar, .bar-desk::-webkit-scrollbar { display: none; }
 }
 .field-bar .spacer { flex: 1 1 auto; }
 .field-bar .action { padding: 1px 8px; line-height: 1.4; flex: 0 0 auto; }
@@ -580,9 +590,12 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
 .treatments { flex: 0 0 auto; }
 .field.holding ~ .field-bar .front-label,
 .field-area .front-label { transition: color 0.3s; }
-.owed-count { color: var(--owed); font-variant-numeric: tabular-nums; min-width: 5.5em; }
-.hand-count { color: var(--accent); }
-.field-overflow { color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; }
+.owed-count { color: var(--owed); font-variant-numeric: tabular-nums; min-width: 5.5em; flex: 0 0 auto; }
+/* The bar's text gives way before its controls do: each is cut with an ellipsis, and the note about what
+   the field could not place gives way first. */
+.hand-count { color: var(--accent); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.field-overflow { color: var(--ink-dim); flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.field-bar .glass-desk-count, .field-bar .also-held { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pending-chip { border-color: var(--accent); }
 
 /* The fog: one gradient painted once. Far things lose contrast; nothing goes out of focus. */
