@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { planRead, planCompare, planRelated, planBasis, checkUndo, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
+const { planRead, planCompare, planRelated, planBasis, checkUndo, undoFor, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
 const { COLLECTION_HEAD_HEIGHT, cardGrid, rowOfMember, gridText } = load('shared/collection.js');
 const { SEAT, SEAT_GAP } = load('shared/focus-ring.js');
 const { reduce, initialState, deskCardsOf, collectionOf } = load('shared/store-state.js');
@@ -149,16 +149,17 @@ test('an undo puts back exactly what the arrangement moved when nothing has chan
   assert.deepEqual(check.order, ['C', 'B', 'A']);
 });
 
-test('a field that is not a whole number of pixels high plans whole pixels, so the undo still knows the collection', () => {
+test('a plan leaves the collection\'s size alone, so in a field that is not a whole number of pixels high the undo still knows the collection', () => {
+  // Until a plan stopped writing a height, a field 744.5 px high gave a planned height the store rounded,
+  // and the undo took the collection for one a person had resized.
   const odd = { width: 1260, height: 744.5 };
   const tall = { ...list, h: 721 };
   const plan = planRead(input([doc('A', 300, 120)], tall, odd), 'A');
-  assert.equal(plan.collection.h, 720);
-  assert.equal(Number.isInteger(plan.collection.h), true);
-  // The store rounds what it is given; an undo record made from the plan matches what the store then holds.
+  assert.deepEqual(plan.collection, { ...tall, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN });
   const record = { ...undo, cards: [], collection: { before: tall, after: plan.collection } };
-  const check = checkUndo(record, input([], { ...plan.collection, h: Math.round(plan.collection.h) }, odd));
+  const check = checkUndo(record, input([], plan.collection, odd));
   assert.deepEqual(check.changed, []);
+  assert.deepEqual(check.collection, tall);
 });
 
 test('an undo names what a person changed since and leaves those objects alone', () => {
@@ -220,6 +221,52 @@ function deskWith(cards) {
   for (const c of cards) s = reduce(s, { type: 'put-on-desk', noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? 560, h: c.h ?? 520 });
   return s;
 }
+
+// What the window does with a plan, through the real store: the desk is read
+// as the store holds it, the record is made from that, and both Apply and Undo
+// are one `arrange`.
+const WS = 'w';
+const VIEW = 'issues';
+function deskInput(state, f) {
+  return { field: f, collection: collectionOf(state, WS, VIEW), docs: deskCardsOf(state, WS, VIEW).map((c) => ({ noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? 560, h: c.h ?? 520 })) };
+}
+const act = (from) => ({ type: 'arrange', cards: from.cards, order: from.order, ...(from.collection === null ? {} : { collection: from.collection }) });
+const noSession = { focusBefore: null, listBefore: null, emphasisBefore: null };
+
+test('in a field smaller than the stored collection, Apply stores no fitted size and Undo leaves the stored layout byte for byte what it was', () => {
+  const stored = { x: 40, y: 60, w: 340, h: 820, collapsed: false, presentation: 'table' };
+  const small = { width: 1260, height: 600 };
+  let s = deskWith([{ noteId: 'A', x: 500, y: 200 }]);
+  s = reduce(s, { type: 'set-collection', layout: stored });
+  const before = JSON.stringify(collectionOf(s, WS, VIEW));
+  const from = deskInput(s, small);
+  const plan = planRead(from, 'A');
+  // The list is 820 high and the field 600: it is DRAWN 600 high at the top, and the preview outlines that.
+  const outline = plan.objects.find((o) => o.id === 'collection');
+  assert.deepEqual(outline.from, { left: 40, top: 0, width: 340, height: 600 });
+  assert.deepEqual(outline.to, { left: ARRANGE_MARGIN, top: 0, width: 340, height: 600 });
+  // What is stored changes place only.
+  assert.deepEqual(plan.collection, { ...stored, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN });
+  const applied = reduce(s, act(plan));
+  assert.deepEqual(collectionOf(applied, WS, VIEW), { ...stored, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN }, 'Apply wrote a width or a height');
+  const check = checkUndo(undoFor(plan, from, noSession), deskInput(applied, small));
+  assert.deepEqual(check.changed, []);
+  const undone = reduce(applied, act(check));
+  assert.equal(JSON.stringify(collectionOf(undone, WS, VIEW)), before);
+  assert.deepEqual(deskCardsOf(undone, WS, VIEW).map((c) => [c.noteId, c.x, c.y]), [['A', 500, 200]]);
+  // Folded to its header by a plan, it is stored at the size it had too.
+  const narrow = { width: 800, height: 600 };
+  const folded = planRead(deskInput(s, narrow), 'A');
+  assert.deepEqual(folded.collection, { ...stored, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN, collapsed: true });
+});
+
+test('a collection that would be drawn where it already is, is not named and not stored', () => {
+  // Stored 820 high and 60 down, in a field 600 high: it is drawn at the top either way.
+  const tall = { x: ARRANGE_MARGIN, y: 60, w: 340, h: 820, collapsed: false, presentation: 'table' };
+  const plan = planRead(input([doc('A', 300, 120)], tall, { width: 1260, height: 600 }), 'A');
+  assert.equal(plan.collection, null);
+  assert.deepEqual(plan.objects.map((o) => o.id), ['A']);
+});
 
 test('the store applies an arrangement as one change, and it changes no size', () => {
   let s = deskWith([{ noteId: 'A', x: 500, y: 200, w: 640, h: 560 }, { noteId: 'B', x: 50, y: 50 }, { noteId: 'C', x: 900, y: 300 }]);

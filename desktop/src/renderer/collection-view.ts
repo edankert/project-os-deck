@@ -179,6 +179,16 @@ export class CollectionView {
   }
 
   /**
+   * The layout the store holds, or the default it would be told: what an
+   * arrangement plans from and puts back. Never the one fitted to the field:
+   * that is for painting, and a plan made from it stored a height the person
+   * never chose.
+   */
+  kept(): CollectionLayout {
+    return this.hooks.stored() ?? defaultCollectionLayout(this.field);
+  }
+
+  /**
    * Where the collection stands ON THE DESK, for whatever else is laid out
    * round it: a document is opened beside it and no card is seated under it.
    * Null when it is not on screen.

@@ -518,7 +518,7 @@ glass.addFurniture({
   lower: () => collection.lower(),
   onTop: () => collection.isOnTop(),
   seats: (taken, held) => collection.seats(taken, held),
-  layout: () => (collection.isActive() ? collection.layout() : null),
+  layout: () => (collection.isActive() ? collection.kept() : null),
   wheel: (deltaY) => collection.wheel(deltaY),
   focus: () => {
     collection.raise();

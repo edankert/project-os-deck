@@ -79,7 +79,7 @@ import {
   snapBelowHeaders,
 } from '../shared/panes.js';
 import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
-import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated } from '../shared/arrange.js';
+import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated, undoFor } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
 import { EVIDENCE_HEADING, SECTION_HEADINGS, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
 import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
@@ -231,7 +231,11 @@ export interface DeskFurniture {
   seats?(taken: ReadonlySet<string>, held: ReadonlySet<string>): FurnitureSeats | null;
   /** The wheel turned over one of the cards it placed. */
   wheel?(deltaY: number): void;
-  /** Where it stands and how it is presented, as the store will be told: what an arrangement plans from. */
+  /**
+   * Where it stands and how it is presented, as the store holds it: what an
+   * arrangement plans from and what its undo puts back. Not as it is drawn:
+   * in a field smaller than it, it is drawn smaller and stored as it was.
+   */
   layout?(): CollectionLayout | null;
 }
 
@@ -2967,7 +2971,7 @@ export class GlassField {
 
   // ---- arrangements: Read, Compare, Show related (FEAT-0022, TASK-0102) ----
 
-  /** What an arrangement is planned from: the field, the collection and every document on this desk. */
+  /** What an arrangement is planned from: the field, the collection as the store holds it, and every document on this desk. */
   private arrangeInput(): ArrangeInput {
     const state = this.hooks.state();
     const preference = readingSizeOf(state, state.workspaceId, deskViewOf(state));
@@ -3119,22 +3123,7 @@ export class GlassField {
     const now = this.arranging;
     if (now === null) return;
     const { plan } = now;
-    const input = this.arrangeInput();
-    const state = this.hooks.state();
-    const preference = readingSizeOf(state, state.workspaceId, deskViewOf(state));
-    const record: ArrangeUndo = {
-      label: plan.label,
-      cards: plan.cards.map((to) => {
-        const card = this.held.find((c) => c.noteId === to.noteId) as DeskCard;
-        const size = readingSizeFor(card, preference);
-        return { noteId: to.noteId, before: { x: card.x, y: card.y }, after: { x: to.x, y: to.y }, size: { w: size.w, h: size.h } };
-      }),
-      orderBefore: this.held.map((c) => c.noteId),
-      collection: plan.collection !== null && input.collection !== null ? { before: input.collection, after: plan.collection } : null,
-      focusBefore: this.focusId(),
-      listBefore: this.relatedOpen,
-      emphasisBefore: this.emphasis,
-    };
+    const record: ArrangeUndo = undoFor(plan, this.arrangeInput(), { focusBefore: this.focusId(), listBefore: this.relatedOpen, emphasisBefore: this.emphasis });
     this.arranging = null;
     this.drawArrange();
     this.moveTogether();

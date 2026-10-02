@@ -12,7 +12,7 @@
  * Everything here is pure, so the three layouts, what an undo may restore and
  * when a preview has gone stale are checked without a window.
  */
-import { COLLECTION_HEAD_HEIGHT, type CollectionLayout } from './collection.js';
+import { COLLECTION_HEAD_HEIGHT, type CollectionLayout, fitCollection } from './collection.js';
 import { type Rect, SEAT, SEAT_GAP } from './focus-ring.js';
 
 export type ArrangeKind = 'read' | 'compare' | 'related';
@@ -28,7 +28,14 @@ export interface ArrangeDoc {
 
 export interface ArrangeInput {
   field: { width: number; height: number };
-  /** The collection as it is drawn now, or null when the view has none on the field. */
+  /**
+   * The collection as the STORE holds it (the default, for a view with none
+   * stored), or null when the view has none on the field. Where it is drawn
+   * is worked out from this and the field (`fitCollection`). A plan is made
+   * from the stored layout because a plan is what the store is told: made
+   * from the drawn one, a window smaller than the collection wrote its
+   * fitted height into the store, and the undo put that back as "before".
+   */
   collection: CollectionLayout | null;
   /** Every document on this view's desk, lowest first: the last is the one on top. */
   docs: readonly ArrangeDoc[];
@@ -51,7 +58,7 @@ export interface ArrangePlan {
   cards: Array<{ noteId: string; x: number; y: number }>;
   /** The documents that end on top, lowest first; empty when the stacking does not change. */
   order: string[];
-  /** The collection's new layout, or null when it stays as it is. */
+  /** The collection's new layout as the store will hold it, or null when it stays as it is. Its size is never changed. */
   collection: CollectionLayout | null;
   /** The document whose neighbourhood is gathered afterwards; null for none. */
   focus: string | null;
@@ -114,9 +121,17 @@ function finish(
     objects.push({ id: doc.noteId, kind: 'document', from: rectOf(doc), to: { left: Math.round(x), top: Math.round(y), width: doc.w, height: doc.h } });
   }
   let nextCollection: CollectionLayout | null = null;
-  if (collection !== null && input.collection !== null && !sameLayout(collection, input.collection)) {
-    nextCollection = collection;
-    objects.push({ id: 'collection', kind: 'collection', from: collectionRect(input.collection), to: collectionRect(collection) });
+  if (collection !== null && input.collection !== null) {
+    // Named, and stored, only when it will be DRAWN somewhere else or in
+    // another form. A collection taller than the field is drawn at the top
+    // whatever height it is stored at, and a plan that says it moves when
+    // nothing on screen would is not a preview of anything.
+    const from = fitCollection(input.collection, input.field);
+    const to = fitCollection(collection, input.field);
+    if (!sameLayout(to, from)) {
+      nextCollection = collection;
+      objects.push({ id: 'collection', kind: 'collection', from: collectionRect(from), to: collectionRect(to) });
+    }
   }
   return {
     kind,
@@ -132,15 +147,20 @@ function finish(
   };
 }
 
-/** The collection as the list down the left of the field: where Read and Show related want it. */
+/**
+ * The collection as the list down the left of the field: where Read and Show
+ * related want it. Only where it stands and whether it is folded change. Its
+ * size is the one a person gave it and stays what the store holds: in a field
+ * too small for it, it is drawn smaller and stored as it was.
+ */
 function collectionBeside(input: ArrangeInput): CollectionLayout | null {
   const c = input.collection;
-  if (c === null) return null;
-  // Whole pixels, as the store keeps them: a field 744.5 px high gave a
-  // planned height of 720.5, the store kept 721, and the undo then took the
-  // collection for one a person had resized.
-  const h = Math.max(COLLECTION_HEAD_HEIGHT, Math.min(Math.round(c.h), Math.floor(input.field.height - 2 * ARRANGE_MARGIN)));
-  return { ...c, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN, h, collapsed: false };
+  return c === null ? null : { ...c, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN, collapsed: false };
+}
+
+/** A planned layout as it will be drawn in this field: what a document is stood beside. */
+function drawn(layout: CollectionLayout | null, input: ArrangeInput): CollectionLayout | null {
+  return layout === null ? null : fitCollection(layout, input.field);
 }
 
 /** The collection as its header alone, top left: still there to open, and under nothing. */
@@ -162,12 +182,13 @@ export function planRead(input: ArrangeInput, subject: string): ArrangePlan | Ar
   if (doc === undefined) return { refused: 'Read needs an open note: open one from the list or the field first' };
   const notes: string[] = [];
   const beside = collectionBeside(input);
+  const list = drawn(beside, input);
   const { width } = input.field;
   let collection = beside;
   let x = ARRANGE_MARGIN;
   let y = ARRANGE_MARGIN;
-  if (beside !== null) {
-    x = beside.x + beside.w + ARRANGE_GAP;
+  if (list !== null) {
+    x = list.x + list.w + ARRANGE_GAP;
     if (x + doc.w > width - ARRANGE_MARGIN) {
       collection = collectionAsHeader(input);
       x = ARRANGE_MARGIN;
@@ -197,11 +218,12 @@ export function planCompare(input: ArrangeInput, first: string, second: string):
   const { width } = input.field;
   const both = a.w + ARRANGE_GAP + b.w;
   const beside = collectionBeside(input);
+  const list = drawn(beside, input);
   let collection = beside;
   let ax: number;
   let bx: number;
   let y = ARRANGE_MARGIN;
-  const afterList = beside === null ? ARRANGE_MARGIN : beside.x + beside.w + ARRANGE_GAP;
+  const afterList = list === null ? ARRANGE_MARGIN : list.x + list.w + ARRANGE_GAP;
   if (afterList + both <= width - ARRANGE_MARGIN) {
     ax = afterList;
     bx = ax + a.w + ARRANGE_GAP;
@@ -252,8 +274,9 @@ export function planRelated(input: ArrangeInput, subject: string, neighbours: nu
   if (doc === undefined) return { refused: 'Show related needs an open note: open one from the list or the field first' };
   const notes: string[] = [];
   const beside = collectionBeside(input);
+  const list = drawn(beside, input);
   const { width } = input.field;
-  const left = beside === null ? ARRANGE_MARGIN : beside.x + beside.w + ARRANGE_GAP;
+  const left = list === null ? ARRANGE_MARGIN : list.x + list.w + ARRANGE_GAP;
   const room = width - ARRANGE_MARGIN - left;
   let collection = beside;
   let x: number;
@@ -291,11 +314,32 @@ export interface ArrangeUndo {
   cards: Array<{ noteId: string; before: { x: number; y: number }; after: { x: number; y: number }; size: { w: number; h: number } }>;
   /** The stacking before, lowest first, for the documents on the desk then. */
   orderBefore: string[];
-  /** The collection before and after, when the arrangement changed it. */
+  /** The collection before and after, as the store held it, when the arrangement changed it. */
   collection: { before: CollectionLayout; after: CollectionLayout } | null;
   focusBefore: string | null;
   listBefore: string | null;
   emphasisBefore: { noteId: string; kind: string } | null;
+}
+
+/**
+ * The record an applied plan leaves behind, taken from the desk the plan was
+ * made from: where each document it moves stands now, the stacking, and the
+ * collection as the store holds it. `was` is what the window alone knows.
+ */
+export function undoFor(plan: ArrangePlan, input: ArrangeInput, was: Pick<ArrangeUndo, 'focusBefore' | 'listBefore' | 'emphasisBefore'>): ArrangeUndo {
+  const cards: ArrangeUndo['cards'] = [];
+  for (const to of plan.cards) {
+    const doc = input.docs.find((d) => d.noteId === to.noteId);
+    if (doc === undefined) continue;
+    cards.push({ noteId: to.noteId, before: { x: doc.x, y: doc.y }, after: { x: to.x, y: to.y }, size: { w: doc.w, h: doc.h } });
+  }
+  return {
+    label: plan.label,
+    cards,
+    orderBefore: input.docs.map((d) => d.noteId),
+    collection: plan.collection !== null && input.collection !== null ? { before: input.collection, after: plan.collection } : null,
+    ...was,
+  };
 }
 
 /** What the undo will and will not put back, given the desk as it is now. */
