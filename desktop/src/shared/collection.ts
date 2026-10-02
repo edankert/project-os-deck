@@ -113,6 +113,40 @@ export function fitCollection(layout: CollectionLayout, field: { width: number; 
   };
 }
 
+/**
+ * A fold made on a page that arranges nothing: the served page, which draws
+ * the collection where the Mac put it. `stored` is the Mac's fold when the
+ * person on that page folded or opened the list, and `collapsed` is what they
+ * chose. It is that page's own and the store is told nothing.
+ */
+export interface OwnFold {
+  stored: boolean;
+  collapsed: boolean;
+}
+
+/**
+ * Whether the collection is drawn collapsed. The page's own fold stands while
+ * the Mac's is what it was when the page chose; once the Mac folds or opens
+ * the list, the page follows the Mac again. Without this a list the Mac had
+ * collapsed could not be opened on a tablet at all, and the list is the only
+ * way there to a note with no card in the field.
+ */
+export function foldShown(stored: boolean, own: OwnFold | null): boolean {
+  return own !== null && own.stored === stored ? own.collapsed : stored;
+}
+
+/**
+ * What the keys do on the collection's header, for its label: only what works
+ * on this page and in this field. A page that cannot arrange moves and
+ * resizes nothing, and in a narrow field the collection fills the field and
+ * is neither moved nor folded. '' when no key does anything.
+ */
+export function headKeysText(at: { canArrange: boolean; narrow: boolean; collapsed: boolean }): string {
+  if (at.narrow) return '';
+  const fold = `Enter ${at.collapsed ? 'opens' : 'collapses'} it`;
+  return at.canArrange ? `arrow keys move it, Alt and arrows resize it, ${fold}` : fold;
+}
+
 /** What a collection's Cards presentation needs to know to lay its members out. */
 export interface CardGridInput {
   /** The space the cards have: the collection's body, under its header and its controls. */

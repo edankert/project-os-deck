@@ -321,6 +321,30 @@ module.exports = async function (d) {
   const servedSize = servedOpened === null ? null : await d.js(page, `(() => { const e = [...document.querySelectorAll('.pane')].find((x) => x.dataset.noteId === ${JSON.stringify(servedOpened)}); if (!e) return null; const f = document.getElementById('field').getBoundingClientRect(); const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), field: [Math.round(f.width), Math.round(f.height)], narrow: !document.getElementById('narrow-bar').hidden }; })()`);
   const fits = servedSize !== null && !servedSize.narrow && servedSize.field[0] >= chosen.w && servedSize.field[1] >= chosen.h;
   check(chosen.w !== 560 && next.w === chosen.w && next.h === chosen.h && servedSize !== null && fits && servedSize.w === chosen.w && servedSize.h === chosen.h, `a note resized to ${chosen.w} by ${chosen.h} sets the size the next note opens at on this view: in this window, and in a second window on the same view (the served page, in a field of ${servedSize === null ? '?' : servedSize.field.join(' by ')}), where a note opened there is ${servedSize === null ? '?' : `${servedSize.w} by ${servedSize.h}`}`, { chosen, next, served: servedSize, servedOpened });
+  // The Mac collapses the collection. The served page draws it collapsed, and opens it for itself: the list is
+  // that page's only way to a note with no card. Its fold is its own, and the Mac's store hears nothing of it.
+  await t.clickOn('#collection-fold', 500);
+  await t.park();
+  const servedFold = () => d.js(page, `(() => { const c = document.getElementById('collection'); const f = document.getElementById('collection-fold'); return { collapsed: c.classList.contains('collapsed'), h: Math.round(c.getBoundingClientRect().height), expanded: f.getAttribute('aria-expanded'), rows: [...document.querySelectorAll('#nav-list .nav-row')].filter((r) => !r.hidden && r.getBoundingClientRect().height > 0).length, label: document.getElementById('collection-head').getAttribute('aria-label') }; })()`);
+  const macFold = async () => ({ stored: (((await t.state()).collections || {})[ws] || {}).features || null, collapsed: await js(`document.getElementById('collection').classList.contains('collapsed')`) });
+  let servedFolded = await servedFold();
+  for (let i = 0; i < 20 && !servedFolded.collapsed; i += 1) { await d.delay(250); servedFolded = await servedFold(); }
+  const macFolded = await macFold();
+  await d.js(page, `document.getElementById('collection-fold').click()`);
+  await d.delay(600);
+  const servedOpenedList = await servedFold();
+  const macAfterOpen = await macFold();
+  await d.js(page, `document.getElementById('collection-fold').click()`);
+  await d.delay(600);
+  const servedFoldedAgain = await servedFold();
+  await d.js(page, `document.getElementById('collection-fold').click()`);
+  await d.delay(600);
+  const macAfterAll = await macFold();
+  check(macFolded.collapsed && macFolded.stored !== null && macFolded.stored.collapsed === true && servedFolded.collapsed && servedFolded.rows === 0 && !servedOpenedList.collapsed && servedOpenedList.rows > 0 && servedOpenedList.expanded === 'true' && servedFoldedAgain.collapsed && JSON.stringify(macAfterOpen) === JSON.stringify(macFolded) && JSON.stringify(macAfterAll) === JSON.stringify(macFolded), `on the served page a collection the Mac collapsed is drawn collapsed, and its fold control opens it there (${servedOpenedList.rows} rows on screen), folds it and opens it again; in the Mac's window it is collapsed throughout and what the store holds for it has not changed`, { servedFolded, servedOpenedList, servedFoldedAgain, macFolded, macAfterOpen, macAfterAll });
+  check(typeof servedFolded.label === 'string' && /Enter opens it$/.test(servedFolded.label) && /Enter collapses it$/.test(servedOpenedList.label) && !/arrow keys|resize/.test(`${servedFolded.label} ${servedOpenedList.label}`), 'on the served page the collection header\'s label names the one key that works there, Enter, and says nothing of moving or resizing it', { collapsed: servedFolded.label, open: servedOpenedList.label });
+  // The Mac opens it again, for what follows.
+  await t.clickOn('#collection-fold', 600);
+  await t.park();
   // The served page in a narrow window, as a tablet held upright has it: the bar between the collection and
   // the open note, and the document's header, show where the keyboard is.
   page.setBounds({ x: 0, y: 0, width: 760, height: 900 });

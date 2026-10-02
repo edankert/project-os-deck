@@ -410,6 +410,31 @@ test('a place too far out is held to a bound, so a state file cannot keep 1e300'
   assert.equal(normaliseCollection({ ...LAYOUT, x: NaN }), null);
 });
 
+test('a page that cannot arrange keeps its own fold, until the Mac folds or opens the list', () => {
+  // Nothing chosen on the page: the Mac's fold is drawn.
+  assert.equal(foldShown(true, null), true);
+  assert.equal(foldShown(false, null), false);
+  // The Mac collapsed it and the page opened it: open on the page.
+  assert.equal(foldShown(true, { stored: true, collapsed: false }), false);
+  // The Mac had it open and the page folded it: folded on the page.
+  assert.equal(foldShown(false, { stored: false, collapsed: true }), true);
+  // The Mac changed its fold since: the page follows the Mac again, whichever way.
+  assert.equal(foldShown(false, { stored: true, collapsed: false }), false);
+  assert.equal(foldShown(true, { stored: false, collapsed: false }), true);
+  assert.equal(foldShown(true, { stored: false, collapsed: true }), true);
+});
+
+test('the header\'s label names only the keys that work on this page and in this field', () => {
+  assert.equal(headKeysText({ canArrange: true, narrow: false, collapsed: false }), 'arrow keys move it, Alt and arrows resize it, Enter collapses it');
+  assert.equal(headKeysText({ canArrange: true, narrow: false, collapsed: true }), 'arrow keys move it, Alt and arrows resize it, Enter opens it');
+  // A served page moves and resizes nothing, and folds for itself.
+  assert.equal(headKeysText({ canArrange: false, narrow: false, collapsed: false }), 'Enter collapses it');
+  assert.equal(headKeysText({ canArrange: false, narrow: false, collapsed: true }), 'Enter opens it');
+  // In a narrow field the collection fills the field: no key on its header does anything.
+  assert.equal(headKeysText({ canArrange: true, narrow: true, collapsed: false }), '');
+  assert.equal(headKeysText({ canArrange: false, narrow: true, collapsed: true }), '');
+});
+
 test('a state file written before collections existed loads, and a junk entry is no layout', () => {
   const before = { workspaceId: WS, viewId: 'issues', deskCards: { [WS]: [{ noteId: 'OLD', x: 1, y: 2 }] } };
   const state = normaliseState(before);
@@ -559,6 +584,48 @@ test('Escape while the collection is resized puts its size back, and the key goe
   assert.deepEqual(page.told, [{ ...LAYOUT, w: 520, h: 700 }]);
   page.document.fire('keydown', { key: 'Escape' });
   assert.equal(page.glassEscapes, 2);
+});
+
+test('on a page that cannot arrange, a collection the Mac collapsed opens and folds for that page, and the store is told nothing', async () => {
+  const page = await collectionOnAPage({ canArrange: false, stored: { ...LAYOUT, collapsed: true } });
+  const { head, fold, root } = page.el;
+  page.view.paint(page.model());
+  assert.equal(page.view.layout().collapsed, true);
+  assert.equal(page.view.rect().height, COLLECTION_HEAD_HEIGHT);
+  assert.equal(head.getAttribute('aria-label'), 'Issues, 3 notes: Enter opens it', 'the label names a key that does nothing on this page');
+  // The fold control, Enter on the header and a double-click each fold or open it.
+  fold.fire('click');
+  assert.equal(page.view.layout().collapsed, false, 'the fold control did not open it');
+  assert.equal(page.view.rect().height, LAYOUT.h);
+  assert.ok(!root.classList.contains('collapsed'));
+  assert.equal(fold.getAttribute('aria-expanded'), 'true');
+  assert.equal(head.getAttribute('aria-label'), 'Issues, 3 notes: Enter collapses it');
+  head.fire('keydown', { key: 'Enter' });
+  assert.equal(page.view.layout().collapsed, true, 'Enter on the header did not fold it');
+  assert.ok(root.classList.contains('collapsed'));
+  head.fire('dblclick');
+  assert.equal(page.view.layout().collapsed, false, 'a double-click on the header did not open it');
+  // The arrow keys still move and resize nothing here, and nothing was stored by any of it.
+  head.fire('keydown', { key: 'ArrowRight' });
+  head.fire('keydown', { key: 'ArrowDown', altKey: true });
+  head.fire('pointerdown', { clientX: 100, clientY: 100 });
+  head.fire('pointermove', { clientX: 240, clientY: 190 });
+  head.fire('pointerup', { clientX: 240, clientY: 190 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  assert.deepEqual(page.told, [], 'the store was told');
+  assert.deepEqual(page.stored, { ...LAYOUT, collapsed: true }, 'the Mac\'s layout was changed');
+  // The Mac opens the list: the page follows the Mac again, and goes on following it.
+  page.stored = { ...LAYOUT, collapsed: false };
+  assert.equal(page.view.layout().collapsed, false);
+  page.stored = { ...LAYOUT, collapsed: true };
+  assert.equal(page.view.layout().collapsed, true, 'the page\'s old choice came back over the Mac\'s newer one');
+  // The page that arranges is unchanged: its fold is the store's.
+  const mac = await collectionOnAPage();
+  mac.view.paint(mac.model());
+  assert.equal(mac.el.head.getAttribute('aria-label'), 'Issues, 3 notes: arrow keys move it, Alt and arrows resize it, Enter collapses it');
+  mac.el.fold.fire('click');
+  assert.deepEqual(mac.told, [{ ...LAYOUT, collapsed: true }]);
+  assert.equal(mac.view.layout().collapsed, true);
 });
 
 test('a refreshed result that differs only in its order is offered, and applying it is one press', async () => {

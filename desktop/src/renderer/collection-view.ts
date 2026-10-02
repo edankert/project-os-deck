@@ -23,6 +23,7 @@ import {
   type AnchorRow,
   type CollectionLayout,
   type CollectionSummary,
+  type OwnFold,
   type ScrollAnchor,
   type CardGrid,
   type Presentation,
@@ -32,7 +33,9 @@ import {
   countText,
   defaultCollectionLayout,
   fitCollection,
+  foldShown,
   gridText,
+  headKeysText,
   rowOfMember,
   scrollTopFor,
   scrollTopForFirst,
@@ -130,6 +133,8 @@ export class CollectionView {
   private shift = { x: 0, y: 0, opacity: 1, visible: true };
   /** A drag or a resize in progress, drawn before the store hears of it. */
   private live: CollectionLayout | null = null;
+  /** The fold a person chose on a page that cannot arrange: that page's own, and the store is not told. */
+  private ownFold: OwnFold | null = null;
   private onTop = false;
   /** The pointer's height on screen while it is over the list, else null. */
   private pointerY: number | null = null;
@@ -172,10 +177,23 @@ export class CollectionView {
     return this.active;
   }
 
-  /** The layout the collection is drawn with: a drag in progress, else the store's, else the default; fitted to the field. */
+  /**
+   * The layout the collection is drawn with: a drag in progress, else the
+   * store's, else the default; fitted to the field. Folded or open as this
+   * page chose, on a page that keeps its own fold.
+   */
   layout(): CollectionLayout {
     const base = this.live ?? this.hooks.stored() ?? defaultCollectionLayout(this.field);
-    return fitCollection(base, this.field);
+    return fitCollection(this.ownFold === null ? base : { ...base, collapsed: this.folded(base.collapsed) }, this.field);
+  }
+
+  /** Whether the collection is drawn collapsed, given the store's fold: as this page chose, while its choice stands. */
+  private folded(stored: boolean): boolean {
+    // The Mac folded or opened the list since this page chose. Its fold is
+    // followed again, and the page's choice is over: it does not come back
+    // when the Mac's fold returns to what it was.
+    if (this.ownFold !== null && this.ownFold.stored !== stored) this.ownFold = null;
+    return foldShown(stored, this.ownFold);
   }
 
   /**
@@ -244,9 +262,12 @@ export class CollectionView {
     el.filter.textContent = model.filter === '' ? '' : `narrowed: ${model.filter}`;
     el.filter.hidden = model.filter === '';
     el.root.setAttribute('aria-label', `${model.name}: ${countText(model.summary)}${model.filter === '' ? '' : `, narrowed to ${model.filter}`}`);
+    // The label names the keys that work here and no others: a served page
+    // said "arrow keys move it" of a collection it cannot move.
+    const keys = headKeysText({ canArrange: this.hooks.canArrange(), narrow: this.narrow !== null, collapsed: l.collapsed });
     el.head.setAttribute(
       'aria-label',
-      `${model.name}, ${countText(model.summary)}${model.filter === '' ? '' : `, narrowed to ${model.filter}`}: arrow keys move it, Alt and arrows resize it, Enter ${l.collapsed ? 'opens' : 'collapses'} it`,
+      `${model.name}, ${countText(model.summary)}${model.filter === '' ? '' : `, narrowed to ${model.filter}`}${keys === '' ? '' : `: ${keys}`}`,
     );
     const collapsed = l.collapsed && this.narrow === null;
     el.fold.setAttribute('aria-expanded', String(!collapsed));
@@ -596,12 +617,20 @@ export class CollectionView {
 
   /** Collapse to the header, or open again at the size and the row it had. */
   toggleCollapsed(): void {
-    if (!this.hooks.canArrange() || this.narrow !== null) return;
-    const l = this.hooks.stored() ?? defaultCollectionLayout(this.field);
+    if (this.narrow !== null) return;
+    const stored = this.hooks.stored() ?? defaultCollectionLayout(this.field);
+    const l = { ...stored, collapsed: this.folded(stored.collapsed) };
     // The list's row is kept only when it is the list that is on screen: as
     // cards the list is not laid out, and has no row to measure.
     if (!l.collapsed && l.presentation === 'table') this.keepAnchor();
-    this.commit({ ...l, collapsed: !l.collapsed });
+    if (this.hooks.canArrange()) this.commit({ ...l, collapsed: !l.collapsed });
+    else {
+      // A served page arranges nothing on the Mac's desk, and the list is
+      // still its only way to a note with no card: the fold is this page's
+      // own. It changes what this page shows and the store is told nothing.
+      this.ownFold = { stored: stored.collapsed, collapsed: !l.collapsed };
+      this.place(this.field, this.shift, this.narrow);
+    }
     if (l.collapsed && l.presentation === 'table') {
       // The list was not laid out while it was collapsed; scroll once it is.
       requestAnimationFrame(() => this.restoreWhenLaidOut());
