@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan — one renderer, two hosts"
-status: active
+status: done
 owner: user:edwin
 created: 2026-09-06
 updated: 2026-09-06

@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan — deck opens a workspace"
-status: active
+status: done
 owner: user:edwin
 created: 2026-09-06
 updated: 2026-09-06

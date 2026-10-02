@@ -87,6 +87,10 @@ The five questions this note listed before implementation are answered in [[ADR-
 | Which host owns the handoff acknowledgement, and how do cancellation, closure and disconnection recover? | ADR-0007 B3. The main process owns it and undoes a landing that is not acknowledged. |
 | How are scene undo and arrangement undo presented? | ADR-0007 A6. Two controls with two names, neither touching a note. |
 
+One more was settled while building, 2026-10-02, and it changes a view outside this feature.
+
+- **A desk window draws a note handed to it even when its view does not list that note.** A desk window is always drawn as Spread cards, and Spread dropped a card its view does not list unless the note was kept on every view ([[FEAT-0015-Each-View-Keeps-Its-Own-Desk]], decision 7). So "Move to the desk on …" from another view could never arrive. Spread now draws any note on its desk that the workspace has, marked "not in this view", as a Glass document already is. The first fix tried was a refusal with the reason (commit `5f706a5`); it was replaced because it left an offer that could never be taken up (commit `9379a0c`). The scripted walk had reported this move as working. It worked only because of a defect fixed in `a37f8f2`: after a write a popped-out window listed the main window's view. That is recorded in [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]].
+
 Three threads are open under ADR-0007's Acceptance section, and each is Edwin's: whether a scene names a note whose file moved, whether a scene should remember its view (FEAT-0015 left that question to him), and whether a heading's words may be kept as a locator.
 
 ## Impact analysis

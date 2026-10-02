@@ -7,7 +7,7 @@ status: review
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-02
 source: ["Edwin 2026-09-11: 'I need a button to hide everything (all the open items) on the desk. Also, we probably need to have different open items on different views, maybe some can be marked to be open on all views?'", "[[DES-0002-The-Glass-Cockpit]]"]
 goal: "A person can hide every note they are holding with one button and bring them all back with the same button, without putting any of them back. Each view (Issues, Features and the rest) keeps its own set of held notes, so switching view shows the notes held for that view; a note marked 'on every view' stays on the desk whichever view is chosen."
 requirements: []
@@ -146,6 +146,8 @@ No sibling issue: this is a feature request, and a search of `docs/issues/` for 
 - Code: `desktop/src/shared/types.ts`, `desktop/src/shared/store-state.ts`, `desktop/src/shared/served-state.ts`, `desktop/src/renderer/glass.ts`, `desktop/src/renderer/renderer.ts`, `desktop/src/renderer/cards.ts`, `desktop/src/main/main.ts`, `desktop/src/main/smoke-glass.ts`
 
 ## Where this stands
+
+**Amended 2026-10-02 ([[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]], commit `9379a0c`): Spread draws every note on its desk that the workspace has.** Decision 7 made Spread draw a note kept on every view on a view that does not list it, marked "not in this view", and left every other such note dropped and counted. Two later features put notes on a desk that its view does not list, on purpose: a link in a Glass document opens the note it names (FEAT-0020), and a note can be moved to a desk window on another view (FEAT-0023). The second could not work while Spread dropped the card: the desk window never showed the note, and the handoff, which waits for that, undid itself. Spread now draws any note on its desk from Deck's own index, with the same mark. Only a note the workspace no longer has is dropped, and the desk's name counts those as "N cards whose note could not be found". The smoke run's check for a throw onto a desk panel now asserts the card is drawn there and marked.
 
 **2026-09-11: built and tested; the walk is Edwin's.** All six tasks are done. The store suite ([[TST-0049-A-Desk-For-Each-View-And-A-Note-On-Every-View-In-The-Store]]) passes 13 of 13 and fails for each of the four breaks its note names. The Glass section of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) drives every acceptance line above with a real pointer, 21 new checks, each shown to fail with its fix removed. The feature is at `review`: the walk [[TST-0048-Each-View-Keeps-Its-Own-Desk-And-Held-Notes-Can-Be-Hidden]] is a person's, and the open question above is still Edwin's.
 

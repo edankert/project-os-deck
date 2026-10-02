@@ -5208,7 +5208,7 @@ export class GlassField {
   /**
    * Hide notes, or show them again (FEAT-0015, decisions 1 and 2). The notes
    * stay held and keep shaping the field: their neighbours stay in front and
-   * their slots stay ghosted. Only the panes go, and the space they covered
+   * their slots stay kept for them. Only the panes go, and the space they covered
    * is dealt into.
    */
   setHidden(hidden: boolean): void {

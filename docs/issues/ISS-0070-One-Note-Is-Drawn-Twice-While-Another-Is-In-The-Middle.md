@@ -7,7 +7,7 @@ status: open
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["Edwin 2026-09-12, running Deck: 'it shows associated notes around the note in the middle but this using a very small view of the notes, why not the same size view as when browsing?'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'; 'When opening a note the corresponding smaller version seems to turn into just a frame, this should not be the case, there should only be one note on the deck.'"]
 reported_by: user:edwin
 severity: high
@@ -82,7 +82,7 @@ No trigger applies: no new dependency, env var, path, artifact or exposure. Opti
 ## Next Actions
 
 - [x] **Edwin chose option 1 and dropped the ghost, 2026-09-12.** Recorded below.
-- [ ] Amend [[DES-0002-The-Glass-Cockpit]]: the ghost is gone, and the slot a lifted note left is reserved rather than drawn.
+- [x] Amend [[DES-0002-The-Glass-Cockpit]]: the ghost is gone, and the slot a lifted note left is reserved rather than drawn. Done 2026-10-02, as a dated amendment under "So opening is lifting".
 - [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]], with a smoke check that counts the drawn elements per note id while a note is in the middle and fails at two.
 
 ## Decision record

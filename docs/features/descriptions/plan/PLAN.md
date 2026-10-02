@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan — a view is a description"
-status: active
+status: done
 owner: user:edwin
 created: 2026-09-08
 updated: 2026-09-09
