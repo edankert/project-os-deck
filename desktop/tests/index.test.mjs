@@ -824,6 +824,12 @@ test('a page reads Deck\'s records over Deck\'s own host, with the revision', as
 
     const head = await fetch(`${origin}/deck/records/aaaa1111`, { method: 'HEAD' });
     assert.equal(head.status, 200);
+
+    // `?type=` asks for the notes of one type, which is how evidence reads every test note (FEAT-0024).
+    const issues = await (await fetch(`${origin}/deck/records/aaaa1111?type=issue`)).json();
+    assert.deepEqual(issues.records.map((r) => r.relPath), ['a.md']);
+    assert.deepEqual((await (await fetch(`${origin}/deck/records/aaaa1111?type=test`)).json()).records, []);
+    assert.deepEqual((await (await fetch(`${origin}/deck/records/aaaa1111?type=issue&rel=b.md`)).json()).records, [], 'both filters apply together');
   } finally {
     await host.close();
     index.close();

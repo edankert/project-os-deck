@@ -27,7 +27,9 @@ Deck is built beside project-os-cockpit and shares its sidecar. The cockpit stay
 
 The cockpit's rule, mirrored here: a change note there that adds, changes or retires capability updates its register in the same commit. Deck's rule: when a new row appears there, it appears here as `not yet` with the date, and grooming decides.
 
-**Read against:** cockpit register at baseline `c0ed9e3`, 2026-09-07.
+**Read against:** cockpit register at `d1df13c`, 2026-10-02.
+
+**Positions last moved 2026-10-02**, when [[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]] was built: `api.read.check-history` moved from `not yet` to `adopted`. The register was re-read the same day and six keys had arrived that this table did not carry. They are added as `not yet`, and grooming decides.
 
 **Positions last moved 2026-09-07**, when the six tasks from [[REFERENCE-PHASE-0001-REVIEW]] landed: `shell.nav.needs-you`, `shell.nav.hide-completed` and `shell.stage.find` moved from `not yet` to `adopted`. The register was re-read the same day at `c0ed9e3` and two keys had arrived that this table did not carry: `shell.checks.mark-dialog` and `api.read.check-history`, both from the cockpit's acceptance-checks work of 2026-09-06. Both are `not yet`, and grooming decides.
 
@@ -44,6 +46,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `surface.shell` | adopted | 2026-09-06: an Electron shell, and Deck's own HTTP host serving the same renderer for a tablet ([[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]) |
 | `surface.sidecar-html` | not applicable | the sidecar's own HTML stays the cockpit's; Deck served from the sidecar is a different page |
 | `surface.cli` | not yet | `cockpit focus` and `cockpit state` need a Deck meaning (an address for a view, a desk and a focused note) |
+| `cli.release-test` | not yet | new in the cockpit on 2026-09-27, read here 2026-10-02: the release test as a Markdown sheet or as JSON, from the template's own script |
 
 ### Shell
 
@@ -74,12 +77,15 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.pages.release` | not yet | |
 | `shell.pages.release.settle` | not yet | new in the cockpit on 2026-09-08, read here 2026-09-09: the checks a release owes, on one screen, each settled with `na`, `excused` or `blocked` and one ledger event carrying a reason and an author. A release page SETTLES a check and never passes one — `pass`, `partial`, `fail` and `question` are refused by name at the server (the cockpit's ADR-0041). Deck has no release page, so this arrives with `shell.pages.release`. Worth noting when it does: Deck's own write path already follows the same shape, posting to the endpoint the sidecar named and restating no verb |
 | `shell.pages.release.coverage` | not yet | new in the cockpit on 2026-09-08, read here 2026-09-09: what a release ships that nothing verifies — features no acceptance check names in `covers:`, and requirements with unticked criteria — computed mechanically, with a verb that dispatches an agent to draft the missing `TST-*` notes for review as a diff. Arrives with `shell.pages.release`. The agent-dispatch half is a bigger question than the page: Deck offers no agent verbs at all and [[ADR-0003-Deck-Writes-Through-The-Shell]] scopes its writes to two |
+| `shell.pages.release-test` | not yet | new in the cockpit on 2026-09-27, read here 2026-10-02: one platform's release test in the Tests view, replacing the cockpit's walk page |
 | `shell.pages.accept` | not yet | stepwise, not a list |
 | `shell.pages.test-run` | not yet | |
 | `shell.pages.session` | not yet | |
 | `shell.pages.agents` | not yet | |
 | `shell.pages.inbox` | not yet | |
 | `shell.agents.strip` | not yet | |
+| `shell.agents.usage` | not yet | registered in the cockpit on 2026-09-16, read here 2026-10-02: account usage bars at the sidebar's foot |
+| `shell.agents.codex` | not yet | registered in the cockpit on 2026-09-25, read here 2026-10-02: Codex in the embedded terminal reports to the rail dot, the agent strip and Needs you |
 | `shell.agents.attention` | not yet | |
 | `shell.agents.approvals` | not yet | |
 | `shell.agents.follow` | not yet | 2026-09-10: half of it. A served page has a Follow the Mac toggle that shows the note the shell has focused (TASK-0057), which is the cockpit's toggle pointed at a different leader. Following an AGENT's navigation, and `cockpit focus` landing in Deck, are not built |
@@ -98,8 +104,10 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.nav` | adopted | 2026-09-06: read as is, through Deck's own host, which proxies GET and HEAD and refuses everything else. The list of views is Deck's own and the sidecar is not asked for it (Edwin, 2026-09-06) |
 | `api.read.note` | adopted | 2026-09-06: `/api/render`, read through the same proxy; its HTML goes straight into the reader |
 | `api.read.record` | adopted | 2026-09-06: the stats payload only, which is what the overview view draws |
-| `api.read.check-history` | not yet | new in the cockpit on 2026-09-06, read here 2026-09-07: every verdict ever recorded against a check, with the method that distinguishes a walker's sentence from the migration backfill. Deck reads no acceptance payload yet |
-| `api.read.obligations` | not yet | |
+| `api.read.check-history` | adopted | 2026-10-02: `GET /api/cockpit/acceptance?platform=<p>`, read through Deck's own host, which forwards it for GET and HEAD and refuses every other method. The evidence panel of a Glass document shows each acceptance check's standing verdict and opens its history ([[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], [[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]). Deck records no verdict |
+| `api.read.obligations` | not yet | 2026-10-02: one of its seven routes, `/api/cockpit/acceptance`, is read for a check's standing verdict (the row above). The other six are not read, and Deck draws no obligation from any of them |
+| `api.read.release-test` | not yet | new in the cockpit on 2026-09-27, read here 2026-10-02: the release test as data, for one platform |
+| `api.read.vocabulary` | not yet | new in the cockpit on 2026-09-20, read here 2026-10-02: the status bands, severities and callout types as data. The cockpit's register says Deck can drop `desktop/src/shared/statuses.ts` and its recorded fixture and read these instead |
 | `api.read.agents` | not yet | |
 | `api.read.validation` | not yet | |
 | `api.read.state` | not yet | needs a Deck address grammar first |
@@ -111,6 +119,8 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.guards` | adopted | by construction: Deck calls the same endpoints and adds no write path of its own |
 
 ## Maintenance
+
+- 2026-10-02 — **one row moved to `adopted` and six keys arrived.** `api.read.check-history` is adopted by [[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], and `api.read.obligations` gains a sentence because the same route sits under both keys in the cockpit's register (ADR-0008, fourth open thread). The register was re-read at `d1df13c` and compared key by key: 62 keys there, 56 here. The six this table did not carry are added as `not yet`: `shell.pages.release-test`, `api.read.release-test` and `cli.release-test` (2026-09-27, the cockpit's release test, which replaced its walk page), `api.read.vocabulary` (2026-09-20), `shell.agents.usage` (2026-09-16) and `shell.agents.codex` (2026-09-25). No key this table carries has left the register. The table had not been re-read since 2026-09-09, which is the drift the maintenance rule below is meant to prevent.
 
 - 2026-09-09 — **two keys arrived and were added as `not yet`, which is the first time this table has grown because the cockpit grew rather than because a decision changed.** The cockpit is at `11ded07` and has landed one change note since the last read, `CHG-20260908-Preparing-A-Release-Is-One-Workflow`, which added `shell.pages.release.settle` and `shell.pages.release.coverage` (FEAT-0145, ADR-0041). Both are release-page work and Deck has no release page, so both arrive with `shell.pages.release` when that row moves. Compared mechanically rather than by eye: the register lists 57, this table now carries 57, and neither side holds a key the other lacks. No row moved position. `shell.reader.actuators` stays `not yet` although [[FEAT-0013-The-First-Write]] built it — the row's own condition is that the transition is WALKED in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]], and nobody has walked it. `api.write.notes` stays `not yet` for the same reason.
 - 2026-09-08 — **two rows changed position because a decision changed, not because the register did.** The cockpit is still at `c0ed9e3` and no key arrived. `api.write.notes` moved from `not applicable` to `not yet`: Edwin decided on 2026-09-08 that Deck must be able to write, and [[ADR-0003-Deck-Writes-Through-The-Shell]] put that write in the shell's main process over loopback, so the reason the row gave for "not applicable" no longer holds. `shell.reader.actuators` stays `not yet` and now names [[FEAT-0013-The-First-Write]] as the feature that adopts it. Nothing else moved, and the served host still refuses every write, which keeps `api.guards` and `api.infra` as they were.

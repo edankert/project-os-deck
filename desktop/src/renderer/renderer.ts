@@ -22,6 +22,8 @@ import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
 import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor } from '../shared/scenes.js';
+import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
+import type { EvidenceRow, EvidenceView } from './glass.js';
 import type { Desk } from '../shared/types.js';
 import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
@@ -400,6 +402,23 @@ const glass = new GlassField(glassElements(), {
     if (state.workspaceId !== null) await drawActuators(actions, state.workspaceId, noteId);
   },
   cardByRel: (rel) => cardByRel(rel),
+  evidence: (noteId, only, again) => {
+    // Asked for again: what was read from the index and the ledger is dropped first.
+    if (again === true) evidenceCache.key = '';
+    return evidenceFor(noteId, only);
+  },
+  evidenceCount: (noteId) => evidenceCount(noteId),
+  testsAt: async (rels) => {
+    const index = await evidenceIndex();
+    const out = new Map<string, string>();
+    if (index === null) return out;
+    const tests = new Set(index.tests.map((t) => t.id));
+    for (const rel of rels) {
+      const node = index.byRel.get(rel);
+      if (node !== undefined && tests.has(node.id)) out.set(rel, node.id);
+    }
+    return out;
+  },
   closed: (noteId) => documentClosed(noteId),
   toRow: (noteId) => {
     drawNavigator();
@@ -1220,6 +1239,155 @@ function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[
     select.appendChild(option);
   }
   select.value = values.includes(current) ? current : '';
+}
+
+// ---- evidence (FEAT-0024, ADR-0008) ----
+
+interface EvidenceIndex {
+  nodes: Map<string, { id: string; rel: string; type: string; title: string; status: string }>;
+  byRel: Map<string, { id: string; rel: string; type: string; title: string; status: string }>;
+  edges: GraphEdge[];
+  /** Every test note's record, with its whole frontmatter: what a test says about itself, and what it names. */
+  tests: NoteRecord[];
+}
+
+/** What evidence is read from, kept until the notes change: Deck's index, and the acceptance record once a panel needs it. */
+const evidenceCache: { key: string; index: Promise<EvidenceIndex | null> | null; ready: EvidenceIndex | null; ledger: Promise<LedgerRead> | null } = {
+  key: '',
+  index: null,
+  ready: null,
+  ledger: null,
+};
+
+function evidenceFresh(): void {
+  const key = `${host.state().workspaceId}|${indexRevision()}`;
+  if (evidenceCache.key === key) return;
+  evidenceCache.key = key;
+  evidenceCache.index = null;
+  evidenceCache.ready = null;
+  evidenceCache.ledger = null;
+}
+
+/** Deck's own index, as evidence reads it: the links with the key each was written under, and every test note's record. */
+function evidenceIndex(): Promise<EvidenceIndex | null> {
+  evidenceFresh();
+  const ws = host.state().workspaceId;
+  if (ws === null) return Promise.resolve(null);
+  evidenceCache.index ??= (async () => {
+    const until = async <T extends { building?: boolean }>(url: string): Promise<T | null> => {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const body = (await fetch(url).then((r) => r.json())) as T;
+        if (body.building !== true) return body;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      return null;
+    };
+    const [graph, tests] = await Promise.all([
+      until<{ building?: boolean; nodes?: Array<{ id: string; rel: string; type: string; title: string; status: string }>; edges?: GraphEdge[] }>(`/deck/graph/${encodeURIComponent(ws)}`),
+      until<{ building?: boolean; records?: NoteRecord[] }>(`/deck/records/${encodeURIComponent(ws)}?type=test`),
+    ]);
+    if (graph === null || tests === null) return null;
+    const nodes = graph.nodes ?? [];
+    const index: EvidenceIndex = { nodes: new Map(nodes.map((n) => [n.id, n])), byRel: new Map(nodes.map((n) => [n.rel, n])), edges: graph.edges ?? [], tests: tests.records ?? [] };
+    evidenceCache.ready = index;
+    // The count on each open document's header can be said now.
+    if (glass.isActive()) glass.evidenceIndexed();
+    return index;
+  })().catch(() => null);
+  return evidenceCache.index;
+}
+
+/**
+ * The acceptance record: one ledger per platform, read once until the notes
+ * change or a person asks again. Asked first with `platform=all`, from which
+ * only the list of platforms is read; then once per platform, because a
+ * verdict is one platform's (ADR-0008).
+ */
+function evidenceLedger(ws: string): Promise<LedgerRead> {
+  evidenceCache.ledger ??= (async (): Promise<LedgerRead> => {
+    const client = clientFor(ws);
+    const platforms = platformsFrom(await client.acceptance('all'));
+    if (!Array.isArray(platforms)) return platforms;
+    if (platforms.length === 0) return { none: true };
+    const ledgers = [];
+    for (const platform of platforms) {
+      const ledger = platformLedger(await client.acceptance(platform), platform);
+      if ('unread' in ledger) return { unread: `${platform}: ${ledger.unread}` };
+      ledgers.push(ledger);
+    }
+    return { ledgers };
+  })().catch((err: unknown) => ({ unread: err instanceof Error ? err.message : String(err) }));
+  return evidenceCache.ledger;
+}
+
+/**
+ * The rows of a note's panel: the tests that name it, with the key each was
+ * found under. A wikilink under any of the four keys is an edge, and so is a
+ * bare id under `tests:` or `verifies:`; a bare id under a test's `covers:`
+ * or `tasks:` is read from the test's own frontmatter.
+ */
+function evidenceVerifying(index: EvidenceIndex, noteId: string): Array<{ testId: string; keys: string[] }> {
+  const isTest = index.tests.some((t) => t.id === noteId);
+  return [
+    // A test note is its own first row: what is recorded for it.
+    ...(isTest ? [{ testId: noteId, keys: ['this note'] }] : []),
+    ...testsVerifying(noteId, index.edges, index.tests).map((v) => ({ testId: v.testId, keys: v.keys.map(keyPhrase) })),
+  ];
+}
+
+/**
+ * What is recorded about the tests that verify a note. Nothing is inferred
+ * from the note's own status, which is handed back apart so the panel can
+ * show it is not a verdict. The acceptance record is asked for only when a
+ * listed test is one a person walks.
+ */
+async function evidenceFor(noteId: string, only?: readonly string[]): Promise<EvidenceView> {
+  const ws = host.state().workspaceId;
+  const index = await evidenceIndex();
+  if (ws === null || index === null) throw new Error("Deck's index of the notes did not answer, so the tests that name this note are not known");
+  const tests = new Map(index.tests.map((t) => [t.id, t]));
+  const node = index.nodes.get(noteId);
+  const verifying = only !== undefined ? testsNamedOnLine(only, (id) => tests.has(id)).map((testId) => ({ testId, keys: [NAMED_ON_LINE] })) : evidenceVerifying(index, noteId);
+  const facts = verifying.map((v) => {
+    const record = tests.get(v.testId);
+    return record === undefined ? null : testFacts(record);
+  });
+  const walked = facts.some((f) => f !== null && f.level === 'acceptance' && f.status !== 'retired');
+  const ledger: LedgerRead = walked ? await evidenceLedger(ws) : { none: true };
+  const today = new Date().toISOString().slice(0, 10);
+  const rows: EvidenceRow[] = verifying.map((v, i) => {
+    const test = facts[i];
+    if (test === null || test === undefined) {
+      return { id: v.testId, title: index.nodes.get(v.testId)?.title ?? v.testId, rel: index.nodes.get(v.testId)?.rel ?? '', keys: v.keys, runner: '', noteStatus: '', facts: [{ label: '', text: "its note could not be read from Deck's index", from: "Deck's index", tone: 'absent' as const }], command: '', artifacts: [], history: [] };
+    }
+    const events = 'ledgers' in ledger && test.level === 'acceptance' ? ledger.ledgers.flatMap((l) => l.history.get(test.id) ?? []) : [];
+    events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    return {
+      id: test.id,
+      title: test.title,
+      rel: test.rel,
+      keys: v.keys,
+      runner: runnerText(test),
+      // The test note's own status, shown on its own line: an acceptance check rests at `active`, which says nothing about whether it was walked.
+      noteStatus: test.status,
+      facts: recordedFor(test, ledger, today).map(recordedSentence),
+      command: test.command,
+      artifacts: test.artifacts,
+      history: events.map(historyLine),
+    };
+  });
+  return { status: node?.status ?? '', rows, unread: walked && 'unread' in ledger ? ledger.unread : null, noLedger: walked && 'none' in ledger };
+}
+
+/** How many tests name a note, and whether it is one: from the index already read, null while it has not been. Asks for nothing but the index. */
+function evidenceCount(noteId: string): { naming: number; isTest: boolean } | null {
+  evidenceFresh();
+  const index = evidenceCache.ready;
+  if (index === null) {
+    void evidenceIndex();
+    return null;
+  }
+  return { naming: testsVerifying(noteId, index.edges, index.tests).length, isTest: index.tests.some((t) => t.id === noteId) };
 }
 
 // ---- scenes (FEAT-0023, ADR-0007) ----
