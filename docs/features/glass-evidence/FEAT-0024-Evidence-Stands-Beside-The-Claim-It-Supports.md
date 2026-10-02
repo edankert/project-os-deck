@@ -12,6 +12,10 @@ goal: "A person reading a note on the Glass desk can ask what supports it and se
 requirements: ["[[REQ-0006-Evidence-Beside-A-Claim-Names-Its-Source-And-Says-What-Is-Missing]]"]
 tasks: ["[[TASK-0111-Work-Out-A-Notes-Evidence-Without-A-Window]]", "[[TASK-0112-Forward-The-Acceptance-Record-As-A-Read]]", "[[TASK-0113-Show-Evidence-Beside-The-Claim-In-The-Glass-Document]]", "[[TASK-0114-Walk-The-Evidence-Panel-On-Two-Real-Workspaces]]"]
 release: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-02
+review_round: 1
+review_verdict: changes-requested
 acceptance_exception: ""
 related: ["[[FEAT-0021-Project-To-Evidence-Levels-Guide-Deck]]", "[[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]", "[[DES-0003-Collections-And-Documents-On-Glass]]", "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes]]", "[[TST-0077-A-Claims-Evidence-Stands-Beside-It]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[project-os-cockpit#DES-0016]]", "[[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]"]
 ---
@@ -75,6 +79,9 @@ Six more were settled while building, 2026-10-02, each from what the walks showe
 
 Five threads are open under ADR-0008's Acceptance section, and each is Edwin's. The first is the phase: whether adopting a cockpit capability belongs in Glass.
 
+11. **A criterion is a list line with a checkbox, or a list line under a heading that says "criteria".** Added 2026-10-02 after the review. The control "evidence named on this line" stands on such a line when the line links a test note. Read by the checkbox alone, a note whose criteria are plain bullets, as this one's are, got no control. A bullet anywhere else that links a test gets none: a Verification list naming five tests would otherwise carry five controls that add nothing to the panel.
+12. **A test note's own panel lists the note itself first, as "this note".** Stated 2026-10-02 after the review, which found it built and not written down. A person who opens a test note and asks what is recorded for it is asking about that test, so its own row comes first, followed by any tests that name it. The first acceptance criterion's "and no other" is about which other tests are listed; this row is the note the panel belongs to.
+
 ## Acceptance
 
 - The panel of a note lists exactly the tests that name it or that it names, each with the key the link was written under. A note with none reads "no test names this note", whatever its status.
@@ -99,6 +106,38 @@ Built on 2026-10-02 and checked at `e86b2e4`, in a pass that ran every suite, th
 - **Not done: a person's walk.** [[TST-0077-A-Claims-Evidence-Stands-Beside-It]] has not been walked and the ledger holds no verdict for it. Its steps were checked against the built application and two were rewritten to routes that exist.
 
 The feature rests at `review`. It is built and its automated checks pass. `done` needs REQ-0006's criteria ticked with evidence, and two of them name the walk a person takes.
+
+## Review
+
+**Round one, 2026-10-02: changes requested.** Two reviewers read the packet at `024e603`, each in a clean context and in a clone of its own, and each ran node suites only. Both are `model:claude-opus-5-5`, which is very likely the model that wrote the work; what was independent is the context. Each broke three guards, and a test failed for all six. Two claims were refuted, one of them by both reviewers.
+
+**Refuted.**
+
+| # | Claim | Verdict | Evidence | What was done |
+| --- | --- | --- | --- | --- |
+| 6b | With the acceptance payload in a shape Deck does not read, the panel reads "the acceptance record could not be read" and no row reads "not walked" | refuted in part (reviewer A) | A payload at `schema_version: 4` with `areas` renamed to `groups`, `items` to `checks` or `mark` to `verdict` printed "not walked: no verdict is recorded" for a check that held a pass. A wrong schema, or no `view`, `tiers` or `history`, was refused as stated. | The answer is read strictly all the way down. A tier with no `areas`, an area with no `items`, a check with no `id` or `mark`, and an event with no date each make the whole answer unread, with which part. `972985f`. |
+| 7b | Each row opens the test note as a document at its Evidence section | refuted (both) | `scrollTopForAnchor({ heading: 'Evidence' }, …)` against a note headed "Evidence (fill after running)" printed `{"top":0,"moved":true}`. That is the template's heading, and twenty test notes here have it, two of them this feature's. | The heading is found by how it begins, the rule the excerpt already used. `972985f`. |
+| T | TST-0079 fails when the behaviour it guards is broken | refuted for the landing check (reviewer B) | The walk reported 36 checks holding while 7b was broken: its check accepted the document scrolled to its end, and tried one note. | The check requires the heading in sight, and a second check opens a test note with the longer heading (TST-0008 here). `972985f`. |
+
+**Held.** Every other criterion a node suite can settle: the tests that name a note and their keys (1a), "no test names this note" (1b), the walked check's verdict with date, author, method and platform (2a), "not walked" (2b), the invalidated verdict (2c), a manual test's status, date and staleness (3), a test with a command (4), a verdict never shown as a status (5), the unread record for a wrong schema or a missing part (6a), the source and date on each row (7a), the control on a criterion's line (8, for the rule), the host forwarding GET and HEAD and answering 405 to the rest (10b), no control that records (10c), and the scope's one new read. TST-0007 and TST-0078 each failed when a guard was removed.
+
+**Not checked, because only a window could settle it:** opening and closing by pointer and keyboard and reduced motion (9), the served page (10a), `git status` unchanged after a run (10d), the excerpt on screen (7c), and TST-0077, which is a person's walk.
+
+**Other findings, each about code this feature changed, and what was done.**
+
+| Finding | What was done |
+| --- | --- |
+| A check with no standing verdict and an earlier verdict in its history (an `excused` that expired, a verdict from a sealed release) read "not walked", though its History listed the event. | It reads "no verdict stands. An earlier one, pass on 2026-08-30, is in the history." Deck gives no reason, because neither source does. `972985f`. |
+| Pressing E inside the panel did nothing; only Escape closed it from there. | E in the panel closes it and puts the keyboard back on the control that opened it. `972985f`. |
+| Only a list item with a checkbox was treated as a criterion. This feature's own criteria are plain bullets. | A line of a list under a heading that says "criteria" is a criterion too. Decision 11 below. `972985f`. |
+| `last_verified: last spring` was shown as "last sprin", in the colour of a pass, and never went stale. `level: Acceptance` was taken for a manual test. | A value that is not a date is no date. A level is read whatever its capitals. `972985f`. |
+| Staleness counted from the UTC day. | It counts from the local day. `972985f`; the test sets a time zone, `4cdab26`. |
+| `names()` matched by prefix, so a test covering `Plan-B` also covered a note called `Plan`. | The file-name rule applies to project-os ids only; any other name is named exactly. `972985f`. |
+| A test note's own panel lists the note itself first, keyed "this note". The first criterion says "exactly the tests that name it or that it names". | Kept, and stated: decision 12 below. |
+| History is sorted by day and keeps the payload's order within a day, so a pass and its invalidation on one day rest on the sidecar sending newest first. | Kept, and stated: an event carries a day and no time, so Deck cannot check it. ADR-0008 says so. |
+| `evidenceFor`, `evidenceLedger` and `evidenceVerifying` in `renderer.ts` have no node test. | Not changed. They join the three sources and are held by the walk alone (TST-0079); a node suite does not load the renderer. |
+
+**After the fixes:** `npm test` passes 592 of 592. Each rule of the evidence model was broken once, the new ones included, and a test failed for 38 of 38. The evidence walk holds 39 checks on this repository and 29 on `your-trainer`.
 
 ## Impact analysis
 

@@ -144,6 +144,18 @@ What the tablet newly sees is the ledger's content: each verdict's mark, date, r
 - **The cost of the read.** Opening a panel that lists an acceptance check makes one request for the list of platforms and one per platform. On this repository that is two answers of about 448 KB each (21 checks, one platform), and the panel was filled 158 ms after the key press. On `your-trainer` it is three answers, 3.3 MB and 4.0 MB for the two platforms (442 checks each), and the panel was filled in 463 to 608 ms across three runs. Both were taken in the Linux box, which says nothing about the Mac's drawing but does include the sidecar's work. The answer is kept until the notes change or a person presses "read again".
 - **Every answer carries `ledger_platforms`,** whatever platform was asked. The first request could therefore be dropped if Deck knew one platform's name beforehand. It does not, and A2's rule stands: the first request names `all` and only the list is read from it.
 
+### I. What the review changed, 2026-10-02
+
+Two independent reviewers read the build ([[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], Review). These rules follow from what they found. Each amends a section above and is built.
+
+1. **The acceptance answer is read strictly all the way down (amends A2).** A tier with no `areas`, an area with no `items`, a check with no `id` or no `mark`, and an event with no date each make the whole answer "could not be read", naming the part. Skipped one by one, a renamed field left every check without a row, and a check without a row read "not walked".
+2. **A check with no standing verdict and an earlier one in its history is not "not walked" (amends C).** It reads "no verdict stands. An earlier one, pass on 2026-08-30, is in the history." The row says nothing stands; the history says a verdict was recorded. Deck gives no reason, because neither source gives one. This is what an `excused` that expired with its release looks like, and a verdict recorded for a sealed release.
+3. **The order of two events on one day is the sidecar's (amends A2).** An event carries a day and no time. Deck sorts the history newest day first and keeps the order the sidecar sent within a day, which the sidecar documents as newest first. A pass and its invalidation on the same day rest on that. Deck cannot check it.
+4. **The Evidence section is found by how its heading begins (amends D).** The template writes "Evidence (fill after running)". The excerpt found it and "Open the test note" did not, because that asked for the word alone.
+5. **A criterion is a list line with a checkbox, or a list line under a heading that says "criteria" (amends E).** Plain bullets are how this repository's features write their criteria.
+6. **A value names a note exactly, or, for a project-os id, by the file name that begins with it (amends A1).** A note called `Plan` is not named by `Plan-B`.
+7. **A date that is not a date is no date, a level is read whatever its capitals, and staleness counts local days (amends B).**
+
 ## What no source provides
 
 FEAT-0024 does not show any of these. Each is an external dependency, named with who decides it.
