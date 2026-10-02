@@ -220,6 +220,33 @@ test('a note listed under two headings is kept by the heading its row was under'
   assert.equal(scrollTopFor(anchor, grown.slice(0, 2)), 20);
 });
 
+test('a redrawn list is held by the row under its own heading, in a list that is scrolled down', () => {
+  // The list is scrolled well down, so no answer here is hidden by the stop
+  // at the top: a row matched by its note alone gives another number.
+  const rows = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'B', top: 30, group: 'deck:held' },
+    { id: 'C', top: 60, group: 'deck:held' },
+    { id: null, top: 400, group: 'g:high' },
+    { id: 'A', top: 430, group: 'g:high' },
+    { id: 'B', top: 460, group: 'g:high' },
+    { id: 'C', top: 490, group: 'g:high' },
+  ];
+  // The pointer rests on B under its own heading; the list is scrolled to 440.
+  const at = anchorsFrom(rows, 440, 470);
+  assert.deepEqual(at, [{ id: 'B', offset: -20, group: 'g:high' }, { id: 'C', offset: -50, group: 'g:high' }]);
+  // Four rows arrive above that heading. B's row under it is the one kept where it was.
+  const grown = [...rows.slice(0, 3), { id: null, top: 90, group: 'deck:joined' }, { id: 'D', top: 120, group: 'deck:joined' }, ...rows.slice(3).map((r) => ({ ...r, top: r.top + 120 }))];
+  assert.equal(scrollTopForFirst(at, grown), 560, 'not 10, which is where the same note stands on the desk');
+  // B leaves its own heading and is still on the desk: the row below it, under that heading, is held instead.
+  const left = grown.filter((r) => !(r.id === 'B' && r.group === 'g:high')).map((r) => (r.id === 'C' && r.group === 'g:high' ? { ...r, top: 580 } : r));
+  assert.equal(scrollTopForFirst(at, left), 530, 'not 10: B on the desk is another place in the list');
+  // Neither is under that heading any more: the first one's row elsewhere is better than losing the place.
+  assert.equal(scrollTopForFirst(at, grown.slice(0, 3)), 10);
+  assert.equal(scrollTopForFirst(at, []), null);
+  assert.equal(scrollTopForFirst([], grown), null);
+});
+
 test('a view with nothing stored draws the default collection, down the left of the field', () => {
   const field = { width: 996, height: 780 };
   const layout = defaultCollectionLayout(field);
