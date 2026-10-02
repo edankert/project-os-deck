@@ -696,12 +696,15 @@ export class CollectionView {
       this.live = { ...start, x: Math.max(0, drawn.x + dx), y: Math.max(0, drawn.y + dy) };
       this.place(this.field, this.shift, this.narrow);
     };
-    const end = (e: PointerEvent): void => {
+    const finish = (): void => {
       head.removeEventListener('pointermove', move);
       head.removeEventListener('pointerup', end);
       head.removeEventListener('pointercancel', end);
       document.removeEventListener('keydown', cancel, true);
       this.el.root.classList.remove('dragging');
+    };
+    const end = (e: PointerEvent): void => {
+      finish();
       const live = this.live;
       if (!moved || live === null || e.type === 'pointercancel') {
         this.live = null;
@@ -710,15 +713,18 @@ export class CollectionView {
       }
       this.commit(live);
     };
-    // Escape during the drag puts it back, and the key goes no further: it
-    // must not also leave the focus or sweep the desk.
+    // Escape during the drag ends the drag, as it does for a document's
+    // header (glass.ts, `grabPane`): the collection is back where it was, and
+    // whatever the pointer does until it is let go moves nothing and stores
+    // nothing. Left listening, the next move of a hand still on the button
+    // began the drag again and the release stored it. The key goes no
+    // further: it must not also leave the focus or sweep the desk.
     const cancel = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape' || !moved) return;
       e.preventDefault();
       e.stopPropagation();
-      moved = false;
+      finish();
       this.live = null;
-      this.el.root.classList.remove('dragging');
       this.place(this.field, this.shift, this.narrow);
     };
     head.addEventListener('pointermove', move);
@@ -746,10 +752,14 @@ export class CollectionView {
       };
       this.place(this.field, this.shift, this.narrow);
     };
-    const end = (e: PointerEvent): void => {
+    const finish = (): void => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', end);
       handle.removeEventListener('pointercancel', end);
+      document.removeEventListener('keydown', cancel, true);
+    };
+    const end = (e: PointerEvent): void => {
+      finish();
       const live = this.live;
       if (live === null || e.type === 'pointercancel') {
         this.live = null;
@@ -758,9 +768,22 @@ export class CollectionView {
       }
       this.commit(live);
     };
+    // Escape while the corner is held cancels the resize: the size goes back
+    // and the corner is let go of, as a drag of the header is. The key goes
+    // no further. Unhandled, it reached Glass's own Escape, which left the
+    // focus or closed every note while the collection stayed half resized.
+    const cancel = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      finish();
+      this.live = null;
+      this.place(this.field, this.shift, this.narrow);
+    };
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', end);
     handle.addEventListener('pointercancel', end);
+    document.addEventListener('keydown', cancel, true);
   }
 
   /** The keyboard's way to do what the pointer does on the header: move, resize and collapse. */

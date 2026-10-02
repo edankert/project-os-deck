@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
+import { El, loadWeb, standInPage } from './stand-in-page.mjs';
 
 const {
   COLLECTION_MIN_WIDTH, COLLECTION_MIN_HEIGHT, COLLECTION_MAX_SIDE, COLLECTION_MAX_PLACE, COLLECTION_HEAD_HEIGHT,
@@ -371,4 +372,109 @@ test('a field smaller than the collection draws it inside the field and changes 
   assert.equal(header.y, 480 - COLLECTION_HEAD_HEIGHT);
   // Room enough: drawn as stored.
   assert.deepEqual(fitCollection(LAYOUT, { width: 1920, height: 1080 }), LAYOUT);
+});
+
+// ---- The collection object and its list, on a stand-in page ----
+//
+// What follows drives the built `collection-view.js` and `navigator.js`: the
+// listeners a drag attaches and removes, and where the keyboard is afterwards.
+// The stand-in page (stand-in-page.mjs) lays nothing out, so nothing here is
+// about what is drawn.
+
+/** A collection on a page 1400 by 900, with the store's part played by `page.stored` and `page.told`. */
+async function collectionOnAPage({ canArrange = true, stored = LAYOUT } = {}) {
+  const document = standInPage();
+  const { CollectionView } = await loadWeb('renderer/collection-view.js');
+  const names = ['root', 'head', 'name', 'count', 'filter', 'fold', 'asTable', 'asCards', 'grid', 'note', 'places', 'body', 'resize', 'navigator', 'list', 'state'];
+  const el = Object.fromEntries(names.map((n) => [n, new El(n)]));
+  el.home = { parent: new El('home'), before: null };
+  const page = { el, document, stored, told: [], canArrange, glassEscapes: 0, applied: 0 };
+  // Glass's own Escape, which leaves the focus or closes every note (glass.ts):
+  // a key the collection used must not reach it.
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !event.defaultPrevented) page.glassEscapes += 1;
+  });
+  page.view = new CollectionView(el, {
+    canArrange: () => page.canArrange,
+    stored: () => page.stored,
+    store: (layout) => {
+      page.told.push(layout);
+      page.stored = layout;
+    },
+    raised() {},
+    applyChange: () => {
+      page.applied += 1;
+    },
+    clearFilters() {},
+    retry() {},
+    seatsChanged() {},
+    locate() {},
+  });
+  page.view.setActive(true);
+  page.view.place({ width: 1400, height: 900 }, { x: 0, y: 0, opacity: 1, visible: true }, null);
+  page.at = () => {
+    const l = page.view.layout();
+    return [l.x, l.y, l.w, l.h];
+  };
+  page.model = (extra = {}) => ({ name: 'Issues', summary: { total: 3, shown: 3, narrowed: false, inField: 3, listOnly: 0 }, filter: '', change: '', removed: null, state: 'ready', error: '', members: [], cardOf: () => null, ...extra });
+  return page;
+}
+
+test('Escape during a drag of the collection ends the drag: what the pointer does afterwards moves nothing and stores nothing', async () => {
+  const page = await collectionOnAPage();
+  const { head, root } = page.el;
+  head.fire('pointerdown', { clientX: 100, clientY: 100 });
+  head.fire('pointermove', { clientX: 240, clientY: 190 });
+  assert.deepEqual(page.at(), [180, 120, 420, 600], 'the drag did not move it');
+  assert.ok(root.classList.contains('dragging'));
+  const key = page.document.fire('keydown', { key: 'Escape' });
+  assert.deepEqual(page.at(), [40, 30, 420, 600], 'Escape did not put it back');
+  assert.ok(key.defaultPrevented && key.stopped && page.glassEscapes === 0, 'the key went on to Glass');
+  assert.ok(!root.classList.contains('dragging'));
+  // The hand is still on the button. It moves by a pixel, then a long way, then lets go.
+  head.fire('pointermove', { clientX: 241, clientY: 190 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600], 'the next move of the pointer began the drag again');
+  head.fire('pointermove', { clientX: 500, clientY: 400 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  head.fire('pointerup', { clientX: 500, clientY: 400 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  assert.deepEqual(page.told, [], 'the release stored a drag that Escape had ended');
+  // The drag is over, so the next Escape is Glass's again.
+  page.document.fire('keydown', { key: 'Escape' });
+  assert.equal(page.glassEscapes, 1);
+  // And the next drag is a drag: moved, let go, stored once.
+  head.fire('pointerdown', { clientX: 100, clientY: 100 });
+  head.fire('pointermove', { clientX: 240, clientY: 190 });
+  head.fire('pointerup', { clientX: 240, clientY: 190 });
+  assert.deepEqual(page.told, [{ ...LAYOUT, x: 180, y: 120 }]);
+});
+
+test('Escape while the collection is resized puts its size back, and the key goes no further', async () => {
+  const page = await collectionOnAPage();
+  const { resize } = page.el;
+  resize.fire('pointerdown', { clientX: 460, clientY: 630 });
+  resize.fire('pointermove', { clientX: 560, clientY: 730 });
+  assert.deepEqual(page.at(), [40, 30, 520, 700], 'the corner did not resize it');
+  const key = page.document.fire('keydown', { key: 'Escape' });
+  assert.deepEqual(page.at(), [40, 30, 420, 600], 'Escape did not put the size back');
+  assert.ok(key.defaultPrevented && key.stopped && page.glassEscapes === 0, 'the key reached Glass, which leaves the focus or closes every note');
+  // The corner is let go of: a hand still on the button resizes nothing, and its release stores nothing.
+  resize.fire('pointermove', { clientX: 600, clientY: 760 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  resize.fire('pointerup', { clientX: 600, clientY: 760 });
+  assert.deepEqual(page.told, []);
+  page.document.fire('keydown', { key: 'Escape' });
+  assert.equal(page.glassEscapes, 1, 'with no resize in progress the key is Glass\'s');
+  // Escape with the corner held and not yet moved is the same: nothing to put back, and the key is used.
+  resize.fire('pointerdown', { clientX: 460, clientY: 630 });
+  assert.ok(page.document.fire('keydown', { key: 'Escape' }).defaultPrevented);
+  resize.fire('pointerup', { clientX: 470, clientY: 640 });
+  assert.deepEqual(page.told, []);
+  // A resize that is let go is stored once, and takes its Escape listener with it.
+  resize.fire('pointerdown', { clientX: 460, clientY: 630 });
+  resize.fire('pointermove', { clientX: 560, clientY: 730 });
+  resize.fire('pointerup', { clientX: 560, clientY: 730 });
+  assert.deepEqual(page.told, [{ ...LAYOUT, w: 520, h: 700 }]);
+  page.document.fire('keydown', { key: 'Escape' });
+  assert.equal(page.glassEscapes, 2);
 });

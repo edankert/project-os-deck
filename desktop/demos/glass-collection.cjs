@@ -152,26 +152,65 @@ module.exports = async function (d) {
   await d.delay(900);
   await t.park();
 
-  // ---- 5. Escape during a drag puts the collection back, once, and closes nothing ----
+  // ---- 5. Escape during a drag ends the drag: the collection is back, what the hand does next moves and stores nothing, and nothing closes ----
   let note = await openRow();
   for (let i = 0; i < 3 && !(await js('window.__deckDesk()')).includes(note); i += 1) { await d.delay(500); note = await openRow(); }
   if (!(await js('window.__deckDesk()')).includes(note)) throw new Error(`${note} did not open from its row`);
   const head = await t.rect('#collection-name');
-  const placeBefore = await js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; })()`);
+  const boxNow = () => js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; })()`);
+  const placeNow = async () => (await boxNow()).slice(0, 2);
+  // What the store holds for the collection on this view, as this window last heard it: null when nothing was ever stored.
+  const storedNow = () => js(`JSON.stringify(((window.__deckLastState.collections || {})[${JSON.stringify(ws)}] || {}).features || null)`);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const placeBefore = await placeNow();
+  const storedBefore = await storedNow();
   await d.pointer(win, [{ type: 'move', x: head.x, y: head.y }, { type: 'down', x: head.x, y: head.y }]);
   await d.delay(120);
   for (const step of [[20, 15], [60, 40], [100, 65], [140, 90]]) { await d.pointer(win, [{ type: 'move', x: head.x + step[0], y: head.y + step[1] }]); await d.delay(60); }
   await d.delay(200);
-  const during = await js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; })()`);
+  const during = await placeNow();
   const heldDuring = await js('window.__deckDesk()');
   d.press(win, 'Escape');
   await d.delay(300);
   const heldAfterKey = await js('window.__deckDesk()');
-  await d.pointer(win, [{ type: 'up', x: head.x + 140, y: head.y + 90 }]);
-  await d.delay(400);
+  const placeAfterKey = await placeNow();
+  // The hand is still on the button. It moves on, by a pixel and then further, before it lets go: a drag that
+  // Escape only paused began again at the first of these moves, and the release stored it.
+  for (const step of [[141, 90], [170, 110], [200, 130]]) { await d.pointer(win, [{ type: 'move', x: head.x + step[0], y: head.y + step[1] }]); await d.delay(60); }
+  await d.delay(200);
+  const placeAfterMoves = await placeNow();
+  await d.pointer(win, [{ type: 'up', x: head.x + 200, y: head.y + 130 }]);
+  await d.delay(500);
   await t.park();
-  const afterEscape = { place: await js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; })()`), held: await js('window.__deckDesk()') };
-  check((during[0] !== placeBefore[0] || during[1] !== placeBefore[1]) && JSON.stringify(afterEscape.place) === JSON.stringify(placeBefore) && afterEscape.held.includes(note), 'Escape while the collection is being dragged puts it back where it was, and the key goes no further: the open note is still open', { placeBefore, during, heldDuring, heldAfterKey, afterEscape, note });
+  const afterEscape = { place: await placeNow(), held: await js('window.__deckDesk()'), stored: await storedNow() };
+  check((during[0] !== placeBefore[0] || during[1] !== placeBefore[1]) && same(placeAfterKey, placeBefore) && same(placeAfterMoves, placeBefore) && same(afterEscape.place, placeBefore) && afterEscape.stored === storedBefore && afterEscape.held.includes(note), 'Escape while the collection is being dragged ends the drag: it is back where it was, it stays there while the pointer moves on with the button still down and when the button is let go, the store is told nothing, and the key goes no further: the open note is still open', { placeBefore, during, placeAfterKey, placeAfterMoves, heldDuring, heldAfterKey, afterEscape, storedBefore, note });
+
+  // ---- 5b. Escape while the corner is held cancels the resize, and the key goes no further ----
+  const corner = await t.rect('#collection-resize');
+  const cornerFree = corner !== null && (await js(`(() => { const e = document.getElementById('collection-resize'); const hit = document.elementFromPoint(${corner === null ? 0 : corner.x}, ${corner === null ? 0 : corner.y}); return !!hit && (hit === e || e.contains(hit)); })()`));
+  if (cornerFree) {
+    const boxBefore = await boxNow();
+    const storedBeforeResize = await storedNow();
+    const focusBefore = await js(`${glass}.focusId()`);
+    await d.pointer(win, [{ type: 'move', x: corner.x, y: corner.y }, { type: 'down', x: corner.x, y: corner.y }]);
+    await d.delay(120);
+    for (const step of [[20, 15], [50, 35], [80, 60]]) { await d.pointer(win, [{ type: 'move', x: corner.x + step[0], y: corner.y + step[1] }]); await d.delay(60); }
+    await d.delay(200);
+    const boxDuring = await boxNow();
+    d.press(win, 'Escape');
+    await d.delay(300);
+    const boxAfterKey = await boxNow();
+    for (const step of [[81, 60], [110, 80]]) { await d.pointer(win, [{ type: 'move', x: corner.x + step[0], y: corner.y + step[1] }]); await d.delay(60); }
+    await d.delay(200);
+    const boxAfterMoves = await boxNow();
+    await d.pointer(win, [{ type: 'up', x: corner.x + 110, y: corner.y + 80 }]);
+    await d.delay(500);
+    await t.park();
+    const afterResize = { box: await boxNow(), held: await js('window.__deckDesk()'), focus: await js(`${glass}.focusId()`), stored: await storedNow() };
+    check((boxDuring[2] !== boxBefore[2] || boxDuring[3] !== boxBefore[3]) && same(boxAfterKey, boxBefore) && same(boxAfterMoves, boxBefore) && same(afterResize.box, boxBefore) && afterResize.stored === storedBeforeResize && same(afterResize.held, heldAfterKey) && afterResize.focus === focusBefore, 'Escape while the collection is being resized by its corner puts its size back, a hand still on the button resizes nothing more, the store is told nothing, and the key goes no further: every open note is still open and the focus is where it was', { boxBefore, boxDuring, boxAfterKey, boxAfterMoves, afterResize, focusBefore });
+  } else {
+    d.log('NOT RUN: the collection\'s resize corner is not drawn, or something is drawn over its middle', { corner });
+  }
 
   // ---- 6. Keyboard focus that can be seen, and the names a screen reader is given ----
   await js(`document.getElementById('search').focus()`);
