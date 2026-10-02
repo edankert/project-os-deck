@@ -28,6 +28,8 @@ function opened(view = 'issues') {
   return state;
 }
 const LAYOUT = { x: 40, y: 30, w: 420, h: 600, collapsed: false, presentation: 'table' };
+/** A refreshed result that is the result on screen. */
+const NO_CHANGE = { added: [], removed: [], moved: [], changed: [], list: [] };
 
 test('the members of a collection are every note its groups hold, each once, children included, in list order', () => {
   const groups = [
@@ -71,16 +73,96 @@ test('a refreshed result is compared by note: added, removed, and changed in pla
   const before = [group('a', [card('A'), card('B'), card('C', { children: [card('C1')] })])];
   const after = [group('a', [card('A'), card('C', { status: 'fixed', children: [card('C1')] }), card('D')])];
   const change = membershipChange(before, after);
-  assert.deepEqual(change, { added: ['D'], removed: ['B'], changed: ['C'] });
+  assert.deepEqual(change, { added: ['D'], removed: ['B'], moved: [], changed: ['C'], list: [] });
   assert.equal(changeCount(change), 3);
-  assert.equal(changeText(change), '3 notes changed: 1 added, 1 removed, 1 changed');
+  assert.equal(changeText(change), '3 notes changed: 1 added, 1 removed, 1 changed what it shows');
   // The same result again is no change, so nothing is announced.
-  assert.deepEqual(membershipChange(before, before), { added: [], removed: [], changed: [] });
+  assert.deepEqual(membershipChange(before, before), NO_CHANGE);
   assert.equal(changeText(membershipChange(before, before)), '');
+  assert.equal(anyChange(membershipChange(before, before)), false);
+  // The same result read again is not the same objects: it is compared by what it holds.
+  assert.deepEqual(membershipChange(before, JSON.parse(JSON.stringify(before))), NO_CHANGE);
   // A note moved to another heading, or newly owed, is a change even with the same status.
-  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('b', [card('A')])]).changed, ['A']);
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('b', [card('A')])]).moved, ['A']);
   assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A', { owed: true })])]).changed, ['A']);
-  assert.equal(changeText({ added: [], removed: ['B'], changed: [] }), '1 note changed: 1 removed');
+  assert.equal(changeText({ ...NO_CHANGE, removed: ['B'] }), '1 note changed: 1 removed');
+});
+
+test('a refreshed result in another order is a change, and says which order', () => {
+  // The rows under one heading, reversed: no note is counted, and there is still something to apply.
+  const rows = membershipChange([group('a', [card('A'), card('B'), card('C')])], [group('a', [card('C'), card('B'), card('A')])]);
+  assert.deepEqual(rows, { ...NO_CHANGE, list: ['rows-reordered'] });
+  assert.equal(changeCount(rows), 0);
+  assert.equal(anyChange(rows), true);
+  assert.equal(changeText(rows), 'the order of the rows changed');
+  // The notes one note holds, in another order, are rows too.
+  const held = membershipChange([group('a', [card('P', { children: [card('T1'), card('T2')] })])], [group('a', [card('P', { children: [card('T2'), card('T1')] })])]);
+  assert.deepEqual(held, { ...NO_CHANGE, list: ['rows-reordered'] });
+  // The headings, swapped, with every row where it was under its own.
+  const headings = membershipChange([group('a', [card('A')]), group('b', [card('B')])], [group('b', [card('B')]), group('a', [card('A')])]);
+  assert.deepEqual(headings, { ...NO_CHANGE, list: ['headings-reordered'] });
+  assert.equal(anyChange(headings), true);
+  assert.equal(changeText(headings), 'the order of the headings changed');
+  // A note listed under two headings is not said to have moved when the headings swap.
+  const twice = membershipChange([group('needs', [card('A')]), group('b', [card('A'), card('B')])], [group('b', [card('A'), card('B')]), group('needs', [card('A')])]);
+  assert.deepEqual(twice, { ...NO_CHANGE, list: ['headings-reordered'] });
+  // Both, with a note that changed: the count is of notes, and each order is said after it.
+  const both = membershipChange(
+    [group('a', [card('A'), card('B')]), group('b', [card('C')])],
+    [group('b', [card('C', { status: 'fixed' })]), group('a', [card('B'), card('A')])],
+  );
+  assert.equal(changeText(both), '1 note changed: 1 changed what it shows; the order of the headings changed; the order of the rows changed');
+  // A note that arrives or leaves between two rows does not make the rows that stayed "reordered".
+  assert.deepEqual(membershipChange([group('a', [card('A'), card('C')])], [group('a', [card('A'), card('B'), card('C')])]), { ...NO_CHANGE, added: ['B'] });
+  assert.deepEqual(membershipChange([group('a', [card('A'), card('B'), card('C')])], [group('a', [card('A'), card('C')])]), { ...NO_CHANGE, removed: ['B'] });
+});
+
+test('a note whose row or card shows something else is a change: progress, severity, a title alone', () => {
+  const one = (was, now) => membershipChange([group('a', [card('A', was), card('B')])], [group('a', [card('A', now), card('B')])]);
+  for (const [was, now, what] of [
+    [{ progress: { done: 1, total: 5 } }, { progress: { done: 4, total: 5 } }, 'progress'],
+    [{ severity: 'low' }, { severity: 'high' }, 'severity'],
+    [{ title: 'Before' }, { title: 'After' }, 'the title alone'],
+    [{ subtitle: null }, { subtitle: 'said in a line' }, 'the line under the title'],
+    [{ owed: true, owedVerb: 'accept' }, { owed: true, owedVerb: 'verify' }, 'what is owed'],
+    [{ stale: false }, { stale: true }, 'a walk gone stale'],
+    [{ frontmatter: { role: 'hero' } }, { frontmatter: { role: 'villain' } }, 'a property a face shows'],
+  ]) {
+    const change = one(was, now);
+    assert.deepEqual(change, { ...NO_CHANGE, changed: ['A'] }, what);
+    assert.equal(changeCount(change), 1, what);
+    assert.equal(changeText(change), '1 note changed: 1 changed what it shows', what);
+  }
+  const three = membershipChange(
+    [group('a', [card('A', { severity: 'low' }), card('B', { title: 'b' }), card('C', { progress: null })])],
+    [group('a', [card('A', { severity: 'high' }), card('B', { title: 'B' }), card('C', { progress: { done: 0, total: 2 } })])],
+  );
+  assert.equal(changeText(three), '3 notes changed: 3 changed what they show');
+});
+
+test('a note held under another note than before has moved, and is counted once', () => {
+  // T was held under P and is now held under Q, under the same heading.
+  const change = membershipChange(
+    [group('a', [card('P', { children: [card('T')] }), card('Q')])],
+    [group('a', [card('P'), card('Q', { children: [card('T')] })])],
+  );
+  assert.deepEqual(change, { ...NO_CHANGE, moved: ['T'] });
+  assert.equal(changeText(change), '1 note changed: 1 moved in the list');
+  // Moved and showing something else: one note, said as moved.
+  const also = membershipChange([group('a', [card('A')]), group('b', [card('B')])], [group('a', []), group('b', [card('B'), card('A', { status: 'fixed' })])]);
+  assert.deepEqual(also, { ...NO_CHANGE, moved: ['A'] });
+  assert.equal(changeCount(also), 1);
+});
+
+test('a heading that reads differently, or an empty one that arrived or left, is a change', () => {
+  const renamed = membershipChange([group('a', [card('A')])], [group('a', [card('A')], { label: 'Another name' })]);
+  assert.deepEqual(renamed, { ...NO_CHANGE, list: ['heading-changed'] });
+  assert.equal(changeText(renamed), 'a heading changed');
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A')], { needsHuman: true })]).list, ['heading-changed']);
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A')]), group('b', [])]).list, ['heading-changed']);
+  assert.deepEqual(membershipChange([group('a', [card('A')]), group('b', [])], [group('a', [card('A')])]).list, ['heading-changed']);
+  // A heading that arrives with a note under it is said by that note, once.
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A')]), group('b', [card('B')])]), { ...NO_CHANGE, added: ['B'] });
 });
 
 test('a selected note that left the result is named, and its open document is said to stay', () => {
@@ -477,4 +559,20 @@ test('Escape while the collection is resized puts its size back, and the key goe
   assert.deepEqual(page.told, [{ ...LAYOUT, w: 520, h: 700 }]);
   page.document.fire('keydown', { key: 'Escape' });
   assert.equal(page.glassEscapes, 2);
+});
+
+test('a refreshed result that differs only in its order is offered, and applying it is one press', async () => {
+  const page = await collectionOnAPage();
+  const reordered = membershipChange([group('a', [card('A'), card('B')])], [group('a', [card('B'), card('A')])]);
+  page.view.paint(page.model({ change: changeText(reordered) }));
+  const { note } = page.el;
+  assert.equal(note.hidden, false, 'nothing is offered');
+  const [said, apply] = note.children[0].children;
+  assert.equal(said.textContent, 'the order of the rows changed');
+  assert.equal(apply.textContent, 'apply');
+  apply.fire('click');
+  assert.equal(page.applied, 1);
+  // The same result again offers nothing.
+  page.view.paint(page.model({ change: changeText(membershipChange([group('a', [card('A')])], [group('a', [card('A')])])) }));
+  assert.equal(note.hidden, true);
 });
