@@ -15,7 +15,9 @@
  *
  * Everything here is pure: what a scene holds, how a reading position is
  * kept and found again, and what a reopened scene has to say about what
- * changed since it was saved.
+ * changed since it was saved. `ReadingWait` keeps state, the documents still
+ * waiting for their text, and like the rest it touches no window and no
+ * clock, so a node suite can hold its rules.
  */
 import type { CollectionLayout } from './collection.js';
 import { readingSizeFor } from './panes.js';

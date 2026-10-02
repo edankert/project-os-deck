@@ -105,6 +105,11 @@ test('a desk that is not in the list is put on the desk only when it is this wor
   for (const junk of [null, 'x', [], { name: 'x' }]) assert.equal(reduce(s, { type: 'apply-scene', scene: junk }), s, JSON.stringify(junk));
   const closed = initialState();
   assert.equal(reduce(closed, { type: 'apply-scene', scene: other }), closed);
+  // Refused, it changes nothing at all: the view it would have gone back to is not shown either.
+  assert.equal(reduce(s, { type: 'apply-scene', scene: { ...other, version: 3 }, backTo: 'features' }), s);
+  const { view: __, ...viewless } = other;
+  const noView = { ...s, viewId: null };
+  assert.equal(reduce(noView, { type: 'apply-scene', scene: viewless, backTo: 'features' }), noView, 'with no view to put it on, nothing is put back and no view is chosen');
   // The same desk, this workspace's and of this version, is applied: the refusals above are not the reducer refusing everything.
   const applied = reduce(s, { type: 'apply-scene', scene: other });
   assert.equal(applied.viewId, 'features');

@@ -1534,7 +1534,7 @@ async function openScene(name: string, undoable = true): Promise<void> {
   // it, so an address that names a scene opens none there: no document is scrolled, and nothing is said to
   // have been reopened.
   if (!host.canArrange()) {
-    say(`that address names the scene "${name}"; this page shows the desk the Mac has and opens no scene`);
+    say(`that address names the saved desk "${name}"; this page shows the desk the Mac has and opens none`);
     return;
   }
   const scene = state.desks[deskKey(ws, name)];

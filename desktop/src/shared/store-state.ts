@@ -415,7 +415,7 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const named = scene.name !== '' && deskKey(scene.workspaceId, scene.name) in state.desks ? scene.name : null;
       const applied = applyScene(state, state.workspaceId, scene, named);
       // The desk put back may be another view's than the one the person was on: they are back on theirs.
-      return typeof action.backTo === 'string' && action.backTo !== '' ? { ...applied, viewId: action.backTo } : applied;
+      return applied !== state && typeof action.backTo === 'string' && action.backTo !== '' ? { ...applied, viewId: action.backTo } : applied;
     }
     case 'rename-desk': {
       const from = deskKey(action.workspaceId, action.from);
