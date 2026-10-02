@@ -9,6 +9,8 @@ import { load } from './helpers.mjs';
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
 const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy, actsFor, savedByOther, ReadingWait } = load('shared/scenes.js');
 
+const { isDeskName, addressFor, formatAddress, parseAddress } = load('shared/address.js');
+
 const WS = 'aaaa1111bbbb2222';
 const list = { x: 12, y: 12, w: 340, h: 700, collapsed: false, presentation: 'cards' };
 
@@ -220,6 +222,25 @@ test('rename keeps the scene, delete removes it, and restore puts it back only i
   // A scene saved under that name since is not replaced by the restore.
   gone = save(gone, 'Second');
   assert.equal(reduce(gone, { type: 'restore-desk', desk: { ...kept, cards: [] } }), gone);
+});
+
+test('a scene\'s name is a name its address accepts: one the address refuses is not saved, and not renamed to', () => {
+  const s = desk();
+  const refused = ['x'.repeat(65), 'a tab\tin it', 'two\nlines'];
+  for (const name of refused) {
+    assert.equal(isDeskName(name), false, JSON.stringify(name));
+    assert.equal(reduce(s, { type: 'save-scene', name, ...extras }), s, `saved as ${JSON.stringify(name)}`);
+  }
+  const saved = save(s);
+  for (const to of refused) assert.equal(reduce(saved, { type: 'rename-desk', workspaceId: WS, from: 'Review Glass', to }), saved, `renamed to ${JSON.stringify(to)}`);
+  // What an address takes, a scene takes: 64 characters, spaces, an apostrophe, an accent, a slash. Each is a state Deck can be sent to.
+  for (const name of ['x'.repeat(64), 'Edwin\'s review / été']) {
+    const named = reduce(s, { type: 'save-scene', name, ...extras });
+    assert.ok(deskKey(WS, name) in named.desks, name);
+    assert.equal(parseAddress(formatAddress(addressFor(WS, 'issues', { desk: name }))).desk, name);
+    const renamed = reduce(saved, { type: 'rename-desk', workspaceId: WS, from: 'Review Glass', to: name });
+    assert.ok(deskKey(WS, name) in renamed.desks, name);
+  }
 });
 
 test('a scene with fields that are not what they should be opens with those fields dropped', () => {

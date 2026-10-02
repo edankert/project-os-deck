@@ -1421,6 +1421,9 @@ function evidenceCount(noteId: string): { naming: number; isTest: boolean } | nu
 
 // ---- scenes (FEAT-0023, ADR-0007) ----
 
+/** What the name of a desk or a scene may be, said where one is refused: the rule its address checks (`isDeskName`). */
+const NAME_RULE = 'up to 64 characters, and no control characters';
+
 /**
  * The desk a scene replaced, so opening one can be taken back. This window's,
  * this session's. A scene opened from another view replaced THAT view's desk,
@@ -1580,6 +1583,11 @@ async function saveScene(): Promise<void> {
     say('nothing was saved: a scene needs a name');
     return;
   }
+  if (!isDeskName(name)) {
+    // A scene is a state Deck can be sent to, so its name has to be one its address takes.
+    say(`nothing was saved: a scene's name goes in its address, which takes ${NAME_RULE}`, true);
+    return;
+  }
   const existing = state.desks[deskKey(ws, name)];
   if (existing !== undefined && sceneKind(existing) === 'unreadable') {
     say(`"${name}" was ${savedByOther(existing)} and is not replaced; choose another name`, true);
@@ -1636,6 +1644,10 @@ async function renameScene(): Promise<void> {
   const asked = await askText(`rename "${from}" to:`, from);
   const to = asked === null ? '' : asked.trim();
   if (to === '' || to === from) return;
+  if (!isDeskName(to)) {
+    say(`"${from}" keeps its name: a scene's name goes in its address, which takes ${NAME_RULE}`, true);
+    return;
+  }
   if (deskKey(ws, to) in state.desks) {
     say(`a scene called "${to}" exists; "${from}" keeps its name`, true);
     return;
@@ -2997,7 +3009,7 @@ function wireControls(): void {
       if (!isDeskName(name)) {
         // Refused here, where the person can retype it, rather than later when
         // they copy the address and Deck rejects its own string.
-        say('that name cannot go in an address: up to 64 characters, and no control characters', true);
+        say(`that name cannot go in an address: ${NAME_RULE}`, true);
         return;
       }
       // A desk saved over a scene keeps the cards and drops the rest: the scene's view, search, list and

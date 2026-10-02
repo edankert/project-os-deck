@@ -13,6 +13,7 @@
  */
 import type { Desk, DeskCard, DeckState, Filters, ReadingAnchor, ReadingSize, SessionState } from './types.js';
 import { normaliseScene, sceneFrom, sceneKind } from './scenes.js';
+import { isDeskName } from './address.js';
 import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
 import { type CollectionLayout, normaliseCollection } from './collection.js';
 
@@ -388,6 +389,9 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const view = viewOf(state, action);
       const name = typeof action.name === 'string' ? action.name.trim() : '';
       if (view === null || name === '') return state;
+      // A scene is a state Deck can be sent to, so its name is one its address takes. A name the address
+      // refuses would be saved, and then refused when the address is copied or opened.
+      if (!isDeskName(name)) return state;
       const key = deskKey(ws, name);
       // A scene another Deck saved is not overwritten by one that could not read it.
       const existing = state.desks[key];
@@ -422,6 +426,8 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (desk === undefined || name === '' || from === to || to in state.desks) return state;
       // Nor an entry this Deck cannot read: its name is one of the fields that are not ours to change.
       if (sceneKind(desk) === 'unreadable') return state;
+      // Nor to a name its address would refuse.
+      if (!isDeskName(name)) return state;
       const desks = { ...state.desks };
       delete desks[from];
       desks[to] = { ...desk, name };
