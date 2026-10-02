@@ -410,6 +410,19 @@ export class DeckHost {
     // changed since the page was drawn — and fetching 2715 records to find one
     // of them would be a strange way to ask.
     const records = index.building ? [] : index.records;
+    // The path is accepted in both spellings Deck uses. A record's path starts
+    // at the docs root (`issues/X.md`). A card from a view's list carries the
+    // path the sidecar's url gave it, which starts at the workspace root
+    // (`docs/issues/X.md`). Asked with a card's path this answered with no
+    // record, so the page had no modification time to send, and every tick and
+    // every verb pressed on a note opened from a view reached the sidecar
+    // without the one guard against a note that changed underneath.
+    const prefix = index.pathPrefix === '' ? '' : `${index.pathPrefix}/`;
+    const one = (wanted: string): typeof records => {
+      const exact = records.filter((record) => record.relPath === wanted);
+      if (exact.length > 0 || prefix === '' || !wanted.startsWith(prefix)) return exact;
+      return records.filter((record) => record.relPath === wanted.slice(prefix.length));
+    };
     json(res, 200, {
       workspaceId: index.workspaceId,
       revision: index.revision,
@@ -421,7 +434,7 @@ export class DeckHost {
       pathPrefix: index.pathPrefix,
       // Nothing while the walk is still running, rather than half a workspace
       // that a view would quietly draw as though it were all of it.
-      records: rel === null ? records : records.filter((record) => record.relPath === rel),
+      records: rel === null ? records : one(rel),
       problems: index.problems,
     });
   }

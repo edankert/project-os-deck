@@ -992,6 +992,46 @@ test('the index carries the prefix, and so does what the host answers', async ()
   }
 });
 
+test('one record is found by the path a card carries, as well as by its own', async () => {
+  // A page asks for one record to learn a note's modification time, which a
+  // write then carries as the sidecar's guard against a note that changed
+  // underneath. A card from a view's list carries the path the sidecar's url
+  // gave it, from the workspace root (`docs/issues/a.md`); a record's path is
+  // from the docs root (`issues/a.md`). Asked with the card's path the host
+  // answered with no record, so no write made from a view carried the time.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-rel-'));
+  fs.mkdirSync(path.join(root, 'docs', 'issues'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'docs', 'docs'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'docs', 'issues', 'a.md'), '---\ntype: issue\nid: ISS-0001\n---\n');
+  // A note whose own path begins with the prefix: its exact path must win.
+  fs.writeFileSync(path.join(root, 'docs', 'docs', 'b.md'), '---\ntype: issue\nid: ISS-0002\n---\n');
+  fs.writeFileSync(path.join(root, 'docs', 'b.md'), '---\ntype: issue\nid: ISS-0003\n---\n');
+  const index = new NoteIndex({
+    workspaceId: 'aaaa1111',
+    docsRoot: path.join(root, 'docs'),
+    pathPrefix: pathPrefixFor(root, path.join(root, 'docs')),
+    quietMs: 0,
+  });
+  index.build();
+  const { host, origin } = await hostWithIndex(() => index.snapshot());
+  const ask = async (rel) => (await (await fetch(`${origin}/deck/records/aaaa1111?rel=${encodeURIComponent(rel)}`)).json()).records;
+  try {
+    const own = await ask('issues/a.md');
+    assert.deepEqual(own.map((r) => r.id), ['ISS-0001'], 'a record is found by its own path');
+    const carried = await ask('docs/issues/a.md');
+    assert.deepEqual(carried.map((r) => r.id), ['ISS-0001'], "a record is found by the path a view's card carries");
+    assert.equal(typeof carried[0].mtimeMs, 'number', 'and the answer carries the time a write sends');
+    assert.equal(carried[0].mtimeMs, fs.statSync(path.join(root, 'docs', 'issues', 'a.md')).mtimeMs);
+    assert.deepEqual((await ask('docs/b.md')).map((r) => r.id), ['ISS-0002'], 'a path that is exactly a record is that record');
+    assert.deepEqual((await ask('docs/docs/b.md')).map((r) => r.id), ['ISS-0002']);
+    assert.deepEqual(await ask('issues/none.md'), [], 'a path that names no record finds none');
+    assert.deepEqual(await ask('docs/issues/none.md'), []);
+  } finally {
+    await host.close();
+    index.close();
+  }
+});
+
 test('every block-scalar shape reads what PyYAML reads', () => {
   // ISS-0035. The ISS-0025 fix introduced two new SILENT mis-reads of its own:
   // the scalar swallowed lines shallower than itself, and the chomping
