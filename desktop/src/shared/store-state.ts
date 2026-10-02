@@ -11,7 +11,8 @@
  * rather than something to read back off the DOM when a person saves
  * (TASK-0024, TASK-0025).
  */
-import type { Desk, DeskCard, DeckState, Filters, ReadingSize, SessionState } from './types.js';
+import type { Desk, DeskCard, DeckState, Filters, ReadingAnchor, ReadingSize, SessionState } from './types.js';
+import { normaliseScene, sceneFrom, sceneKind } from './scenes.js';
 import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
 import { type CollectionLayout, normaliseCollection } from './collection.js';
 
@@ -22,6 +23,18 @@ export type DeckAction =
   | { type: 'open-desk'; name: string | null; viewId?: string }
   | { type: 'save-desk'; name: string; viewId?: string }
   | { type: 'delete-desk'; workspaceId: string; name: string }
+  /**
+   * Scenes (FEAT-0023, ADR-0007). `save-scene` keeps the view's Glass desk
+   * under a name, with what the window knows and the store does not: where
+   * each document is being read and how large the field is. `apply-scene`
+   * puts a scene that is NOT in the list on the desk: the desk that was there
+   * before a scene was opened, so opening one can be taken back. `rename-desk`
+   * and `restore-desk` change the list and nothing on the desk.
+   */
+  | { type: 'save-scene'; name: string; anchors: Record<string, ReadingAnchor>; field: { w: number; h: number }; savedAt: string; viewId?: string }
+  | { type: 'apply-scene'; scene: Desk }
+  | { type: 'rename-desk'; workspaceId: string; from: string; to: string }
+  | { type: 'restore-desk'; desk: Desk }
   /**
    * `w` and `h` are the size the note opens at, when the window knows one.
    * Without them the note takes the view's reading size, if it has one
@@ -105,6 +118,10 @@ const RENDERER_ACTIONS = new Set([
   'open-desk',
   'save-desk',
   'delete-desk',
+  'save-scene',
+  'apply-scene',
+  'rename-desk',
+  'restore-desk',
   'put-on-desk',
   'take-off-desk',
   'move-card',
@@ -134,6 +151,7 @@ const RENDERER_ACTIONS = new Set([
 export const DESK_ACTIONS: ReadonlySet<string> = new Set([
   'open-desk',
   'save-desk',
+  'save-scene',
   'put-on-desk',
   'take-off-desk',
   'move-card',
@@ -329,6 +347,11 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (view === null) return state;
       const saved = state.desks[deskKey(ws, action.name)];
       if (saved === undefined) return state;
+      // A scene brings its view, its search and its collection with it. One
+      // saved by a newer Deck is not opened: its fields are not ours to read.
+      const kind = sceneKind(saved);
+      if (kind === 'unreadable') return state;
+      if (kind === 'scene') return applyScene(state, ws, saved, action.name);
       // Opening a desk brings back what was saved under that name, as the
       // view's own notes, in the saved stacking order. A note on every view
       // stays where it is, and so do the notes on every view the saved desk
@@ -351,6 +374,55 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       };
       const desks = { ...state.desks, [deskKey(state.workspaceId, action.name)]: desk };
       return bump({ ...state, desks, deskName: action.name });
+    }
+    case 'save-scene': {
+      if (state.workspaceId === null) return state;
+      const ws = state.workspaceId;
+      const view = viewOf(state, action);
+      const name = typeof action.name === 'string' ? action.name.trim() : '';
+      if (view === null || name === '') return state;
+      const key = deskKey(ws, name);
+      // A scene a newer Deck saved is not overwritten by one it could not read.
+      const existing = state.desks[key];
+      if (existing !== undefined && sceneKind(existing) === 'unreadable') return state;
+      const scene = sceneFrom(
+        { workspaceId: ws, view, query: state.query, filters: state.filters, collection: collectionOf(state, ws, view), cards: deskCardsOf(state, ws, view) },
+        name,
+        {
+          anchors: typeof action.anchors === 'object' && action.anchors !== null ? action.anchors : {},
+          field: { w: finite(action.field?.w) ? action.field.w : 0, h: finite(action.field?.h) ? action.field.h : 0 },
+          savedAt: typeof action.savedAt === 'string' ? action.savedAt : '',
+        },
+      );
+      return bump({ ...state, desks: { ...state.desks, [key]: scene }, deskName: name });
+    }
+    case 'apply-scene': {
+      if (state.workspaceId === null) return state;
+      const scene = normaliseScene(action.scene, normaliseCards, normaliseCollection, true);
+      if (scene === null || scene.workspaceId !== state.workspaceId || sceneKind(scene) !== 'scene') return state;
+      // The name it carries is the desk that was open then, when it still exists; else none.
+      const named = scene.name !== '' && deskKey(scene.workspaceId, scene.name) in state.desks ? scene.name : null;
+      return applyScene(state, state.workspaceId, scene, named);
+    }
+    case 'rename-desk': {
+      const from = deskKey(action.workspaceId, action.from);
+      const name = typeof action.to === 'string' ? action.to.trim() : '';
+      const to = deskKey(action.workspaceId, name);
+      const desk = state.desks[from];
+      // Never onto a name that is taken: that would be deleting the other one.
+      if (desk === undefined || name === '' || from === to || to in state.desks) return state;
+      const desks = { ...state.desks };
+      delete desks[from];
+      desks[to] = { ...desk, name };
+      return bump({ ...state, desks, deskName: state.deskName === action.from && state.workspaceId === action.workspaceId ? name : state.deskName });
+    }
+    case 'restore-desk': {
+      const desk = normaliseScene(action.desk, normaliseCards, normaliseCollection);
+      if (desk === null) return state;
+      const key = deskKey(desk.workspaceId, desk.name);
+      // Put back only into the gap it left: a desk saved under that name since is not replaced.
+      if (key in state.desks) return state;
+      return bump({ ...state, desks: { ...state.desks, [key]: desk } });
     }
     case 'delete-desk': {
       const key = deskKey(action.workspaceId, action.name);
@@ -858,12 +930,31 @@ function normaliseCards(value: unknown): DeskCard[] {
 }
 
 function normaliseDesk(value: unknown): Desk | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const raw = value as Record<string, unknown>;
-  const name = str(raw['name']);
-  const workspaceId = str(raw['workspaceId']);
-  if (name === null || workspaceId === null) return null;
-  return { name, workspaceId, cards: normaliseCards(raw['cards']) };
+  return normaliseScene(value, normaliseCards, normaliseCollection);
+}
+
+/**
+ * Put a scene on the desk: its view, its search and filters, its collection
+ * and its documents. What is on every view stays, as it does when a saved
+ * desk is opened. Nothing derived is restored, because nothing derived was
+ * kept: the collection lists what its view returns now.
+ */
+function applyScene(state: DeckState, ws: string, scene: Desk, name: string | null): DeckState {
+  const view = scene.view ?? state.viewId;
+  if (view === null) return state;
+  const every = everyViewCardsOf(state, ws);
+  const base = topZ(every) + 1;
+  const own = scene.cards.filter((c) => !every.some((e) => e.noteId === c.noteId)).map((c, i) => ({ ...plainCard(c), z: base + i }));
+  const next: DeckState = {
+    ...state,
+    deskName: name,
+    viewId: view,
+    viewDesks: { ...state.viewDesks, [ws]: { ...(state.viewDesks[ws] ?? {}), [view]: own } },
+  };
+  if (scene.query !== undefined) next.query = scene.query;
+  if (scene.filters !== undefined) next.filters = { statuses: [...scene.filters.statuses], types: [...scene.filters.types] };
+  if (scene.collection !== undefined) next.collections = { ...state.collections, [ws]: { ...(state.collections[ws] ?? {}), [view]: scene.collection } };
+  return bump(next);
 }
 
 function str(value: unknown): string | null {

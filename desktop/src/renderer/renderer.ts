@@ -20,7 +20,9 @@ import { SidecarClient, flattenGroups, groupsFromNav, isFinishedWork } from '../
 import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
-import { DESK_ACTIONS, collectionOf, deskCardsOf, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
+import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
+import { listScenes, sceneFrom, sceneKind, sceneReport } from '../shared/scenes.js';
+import type { Desk } from '../shared/types.js';
 import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, isNarrowed, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
@@ -67,6 +69,18 @@ const el = {
   openAddress: must('open-address') as HTMLButtonElement,
   popOut: must('pop-out') as HTMLButtonElement,
   saveDesk: must('save-desk') as HTMLButtonElement,
+  scenes: must('scenes'),
+  sceneList: must('scene-list') as HTMLSelectElement,
+  sceneOpen: must('scene-open') as HTMLButtonElement,
+  sceneSave: must('scene-save') as HTMLButtonElement,
+  sceneRename: must('scene-rename') as HTMLButtonElement,
+  sceneDelete: must('scene-delete') as HTMLButtonElement,
+  sceneBack: must('scene-back') as HTMLButtonElement,
+  sceneReport: must('scene-report'),
+  sceneReportTitle: must('scene-report-title'),
+  sceneReportLines: must('scene-report-lines'),
+  sceneReportAct: must('scene-report-act') as HTMLButtonElement,
+  sceneReportClose: must('scene-report-close') as HTMLButtonElement,
   clearDesk: must('clear-desk') as HTMLButtonElement,
   hideNotes: must('hide-notes') as HTMLButtonElement,
   alsoHeld: must('also-held'),
@@ -1197,10 +1211,243 @@ function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[
   select.value = values.includes(current) ? current : '';
 }
 
+// ---- scenes (FEAT-0023, ADR-0007) ----
+
+/** The desk that was on screen before a scene was opened, so opening one can be taken back. This window's, this session's. */
+let beforeScene: { desk: Desk; opened: string } | null = null;
+/** The last scene deleted, so it can be restored until the window closes or another is deleted. */
+let deletedScene: Desk | null = null;
+
+/** This view's desk as a scene, from the store and from what this window knows: where each note is being read. */
+function sceneNow(name: string): Desk | null {
+  const state = host.state();
+  const ws = state.workspaceId;
+  const view = deskViewHere();
+  if (ws === null || view === null) return null;
+  return sceneFrom(
+    { workspaceId: ws, view, query: state.query, filters: state.filters, collection: collectionOf(state, ws, view), cards: deskCardsOf(state, ws, view) },
+    name,
+    { anchors: glass.readingAnchors(), field: glass.fieldSize(), savedAt: new Date().toISOString() },
+  );
+}
+
+/** The scene controls on the field's bar: the list, and what can be done with the one that is open. */
+function drawScenes(): void {
+  const state = host.state();
+  const ws = state.workspaceId;
+  el.scenes.hidden = !glass.isActive() || !host.canArrange() || ws === null;
+  if (el.scenes.hidden || ws === null) return;
+  const scenes = listScenes(state.desks, ws);
+  const open = state.deskName !== null && scenes.some((s) => s.name === state.deskName) ? state.deskName : '';
+  const signature = `${open}|${scenes.map((s) => `${s.name}:${s.kind}:${s.view}:${s.notes}`).join(',')}`;
+  if (el.sceneList.dataset['signature'] !== signature) {
+    el.sceneList.dataset['signature'] = signature;
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = scenes.length === 0 ? 'no scenes saved' : open === '' ? `scenes (${scenes.length})` : 'scenes';
+    const options = scenes.map((scene) => {
+      const option = document.createElement('option');
+      option.value = scene.name;
+      const where = scene.view === null ? '' : ` · ${scene.view}`;
+      option.textContent = scene.kind === 'unreadable' ? `${scene.name} (cannot be opened)` : `${scene.name}${where} · ${scene.notes} ${scene.notes === 1 ? 'note' : 'notes'}`;
+      // Listed and not openable: it is there, and this Deck cannot read it.
+      option.disabled = scene.kind === 'unreadable';
+      if (scene.why !== null) option.title = scene.why;
+      return option;
+    });
+    // The name chosen in the list stays chosen across a redraw; with none chosen, the open scene is.
+    const chosen = el.sceneList.value;
+    el.sceneList.replaceChildren(first, ...options);
+    el.sceneList.value = scenes.some((s) => s.name === chosen) ? chosen : open;
+  }
+  // The three acts are about the name chosen in the list, which need not be the scene that is open.
+  const chosen = el.sceneList.value;
+  const entry = scenes.find((s) => s.name === chosen);
+  el.sceneOpen.hidden = entry === undefined || entry.kind === 'unreadable';
+  el.sceneOpen.title = entry === undefined ? '' : `Replace this view's desk with "${entry.name}". What it holds is read afresh; one press brings back the desk that is here now.`;
+  el.sceneRename.hidden = entry === undefined;
+  el.sceneDelete.hidden = entry === undefined;
+  el.sceneBack.hidden = beforeScene === null;
+  if (beforeScene !== null) {
+    el.sceneBack.textContent = `Undo: back to the desk before "${beforeScene.opened}"`;
+    el.sceneBack.title = 'Puts back the desk, the collection, the search and the filters that were here. It changes no note and undoes no project action.';
+  }
+}
+
+/** The message a reopened or deleted scene leaves. It stays until it is dismissed. */
+function showSceneReport(title: string, lines: readonly string[], act: { label: string; run: () => void } | null = null): void {
+  el.sceneReportTitle.textContent = title;
+  el.sceneReportLines.replaceChildren(
+    ...lines.map((line) => {
+      const li = document.createElement('li');
+      li.textContent = line;
+      return li;
+    }),
+  );
+  el.sceneReportAct.hidden = act === null;
+  el.sceneReportAct.textContent = act?.label ?? '';
+  el.sceneReportAct.onclick = act === null ? null : () => act.run();
+  el.sceneReport.hidden = false;
+}
+
+/** Every note id Deck's own index holds for a workspace now, or null while it cannot say. */
+async function noteIdsNow(ws: string): Promise<Set<string> | null> {
+  try {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const graph = (await fetch(`/deck/graph/${encodeURIComponent(ws)}`).then((r) => r.json())) as { building?: boolean; nodes?: Array<{ id: string }> };
+      if (graph.building !== true) return new Set((graph.nodes ?? []).map((n) => n.id));
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  } catch {
+    // Said by the caller: the report then makes no claim about what exists.
+  }
+  return null;
+}
+
+/**
+ * Open a saved scene: this view's desk is replaced by it, and everything it
+ * holds is read afresh. `undoable` keeps the desk that was here, so one press
+ * comes back; an address opened at launch has no desk before it to keep.
+ */
+async function openScene(name: string, undoable = true): Promise<void> {
+  const state = host.state();
+  const ws = state.workspaceId;
+  if (ws === null) return;
+  const scene = state.desks[deskKey(ws, name)];
+  if (scene === undefined) {
+    say(`there is no scene called "${name}" in this workspace`, true);
+    return;
+  }
+  const kind = sceneKind(scene);
+  if (kind === 'unreadable') {
+    say(`"${name}" was saved by a newer Deck (version ${String(scene.version)}) and is not opened; it is kept as it is`, true);
+    drawScenes();
+    return;
+  }
+  const before = undoable ? sceneNow(state.deskName ?? '') : null;
+  await send({ type: 'open-desk', name });
+  // The scene brings its view with it; the view's notes are then read now.
+  const view = host.state().viewId;
+  if (view !== null && currentView?.id !== view) await selectView(view);
+  if (before !== null) beforeScene = { desk: before, opened: name };
+  glass.forgetArrangement();
+  drawNavigator();
+  drawDesk();
+  if (kind !== 'scene') {
+    // A desk from before scenes: its notes, on the view that is on screen, and nothing else to say.
+    say(`"${name}" opened: ${scene.cards.length} ${scene.cards.length === 1 ? 'note' : 'notes'}`);
+    return;
+  }
+  const present = await noteIdsNow(ws);
+  glass.restoreReading(scene.anchors ?? {}, (moved) => {
+    const lines = sceneReport({ scene, present: present ?? new Set(scene.cards.map((c) => c.noteId)), field: glass.fieldSize(), movedPassages: moved });
+    if (present === null) lines.push('Deck could not check which of its notes still exist: its index did not answer.');
+    if (lines.length === 0) {
+      say(`scene "${name}" reopened: everything it holds is where it was, read as it is now`);
+      return;
+    }
+    showSceneReport(`Scene "${name}" reopened. Since it was saved:`, lines);
+  });
+}
+
+async function saveScene(): Promise<void> {
+  const state = host.state();
+  const ws = state.workspaceId;
+  if (ws === null || !host.canArrange()) return;
+  const asked = await askText('scene name:', state.deskName ?? '');
+  const name = asked === null ? '' : asked.trim();
+  if (name === '') {
+    say('nothing was saved: a scene needs a name');
+    return;
+  }
+  const existing = state.desks[deskKey(ws, name)];
+  if (existing !== undefined && sceneKind(existing) === 'unreadable') {
+    say(`"${name}" was saved by a newer Deck and is not replaced; choose another name`, true);
+    return;
+  }
+  if (existing !== undefined && name !== state.deskName) {
+    const answer = await askChoice(`a scene called "${name}" exists:`, [
+      { value: 'replace', label: 'replace it' },
+      { value: 'keep', label: 'keep it' },
+    ]);
+    if (answer !== 'replace') {
+      say(`"${name}" was kept as it was`);
+      return;
+    }
+  }
+  await send({ type: 'save-scene', name, anchors: glass.readingAnchors(), field: glass.fieldSize(), savedAt: new Date().toISOString() });
+  drawDesk();
+  const n = deskHere().length;
+  say(`scene "${name}" saved: where ${n === 1 ? 'its note stands and is' : `its ${n} notes stand and are`} being read, the collection and the search. Not the notes themselves, and not the list's rows.`);
+}
+
+async function backFromScene(): Promise<void> {
+  const kept = beforeScene;
+  if (kept === null) return;
+  beforeScene = null;
+  await send({ type: 'apply-scene', scene: kept.desk });
+  const view = host.state().viewId;
+  if (view !== null && currentView?.id !== view) await selectView(view);
+  glass.forgetArrangement();
+  glass.restoreReading(kept.desk.anchors ?? {});
+  el.sceneReport.hidden = true;
+  drawNavigator();
+  drawDesk();
+  say(`back to the desk that was here before "${kept.opened}"`);
+}
+
+async function renameScene(): Promise<void> {
+  const state = host.state();
+  const ws = state.workspaceId;
+  const from = el.sceneList.value;
+  if (ws === null || from === '' || !(deskKey(ws, from) in state.desks)) return;
+  const asked = await askText(`rename "${from}" to:`, from);
+  const to = asked === null ? '' : asked.trim();
+  if (to === '' || to === from) return;
+  if (deskKey(ws, to) in state.desks) {
+    say(`a scene called "${to}" exists; "${from}" keeps its name`, true);
+    return;
+  }
+  await send({ type: 'rename-desk', workspaceId: ws, from, to });
+  if (beforeScene !== null && beforeScene.opened === from) beforeScene.opened = to;
+  el.sceneList.dataset['signature'] = '';
+  drawDesk();
+  el.sceneList.value = to;
+  drawScenes();
+  say(`"${from}" is now "${to}"`);
+}
+
+async function deleteScene(): Promise<void> {
+  const state = host.state();
+  const ws = state.workspaceId;
+  const name = el.sceneList.value;
+  if (ws === null || name === '') return;
+  const scene = state.desks[deskKey(ws, name)];
+  if (scene === undefined) return;
+  deletedScene = scene;
+  await send({ type: 'delete-desk', workspaceId: ws, name });
+  drawDesk();
+  // The desk on screen is not touched: only the name it was saved under is gone.
+  showSceneReport(`Scene "${name}" deleted.`, ['What is on the desk now is as it was.'], {
+    label: 'restore',
+    run: () => {
+      const back = deletedScene;
+      if (back === null) return;
+      deletedScene = null;
+      void send({ type: 'restore-desk', desk: back }).then(() => {
+        el.sceneReport.hidden = true;
+        drawDesk();
+        say(`scene "${back.name}" restored`);
+      });
+    },
+  });
+}
+
 function drawDesk(): void {
   const state = host.state();
   const workspace = workspaceById(state.workspaceId);
   fetchStrangers();
+  drawScenes();
   drawHideButton();
   const also = alsoHeldText();
   el.alsoHeld.textContent = also;
@@ -2084,7 +2331,7 @@ async function applyAddress(raw: string): Promise<void> {
   // surface in the address means Glass.
   await host.dispatch({ type: 'select-surface', surface: address.surface ?? DEFAULT_SURFACE });
   await selectView(address.viewId);
-  if (address.desk !== null) await send({ type: 'open-desk', name: address.desk });
+  if (address.desk !== null) await openScene(address.desk, false);
   if (address.note !== null) {
     const card = currentCards.find((c) => c.noteId === address.note);
     if (card === undefined) say(`that address names a note this view does not show: ${address.note}`, true);
@@ -2224,6 +2471,21 @@ function wireControls(): void {
     })();
   });
 
+  // Choosing a name only chooses it. On some systems the arrow keys change a
+  // list's value at every step, and opening on that would replace the desk
+  // with each scene passed on the way to the one that was wanted.
+  el.sceneList.addEventListener('change', () => drawScenes());
+  el.sceneOpen.addEventListener('click', () => {
+    const name = el.sceneList.value;
+    if (name !== '') void openScene(name);
+  });
+  el.sceneSave.addEventListener('click', () => void saveScene());
+  el.sceneRename.addEventListener('click', () => void renameScene());
+  el.sceneDelete.addEventListener('click', () => void deleteScene());
+  el.sceneBack.addEventListener('click', () => void backFromScene());
+  el.sceneReportClose.addEventListener('click', () => {
+    el.sceneReport.hidden = true;
+  });
   el.saveDesk.addEventListener('click', () => {
     void (async () => {
       const state = host.state();
