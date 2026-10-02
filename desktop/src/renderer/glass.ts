@@ -81,7 +81,7 @@ import {
 import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
 import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
-import { EVIDENCE_HEADING, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
+import { EVIDENCE_HEADING, SECTION_HEADINGS, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
 import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
 import {
   type Edge,
@@ -153,7 +153,7 @@ const READING_WAIT_MS = 5000;
 export function evidenceExcerpt(html: string, testId: string): string {
   // Parsed into a document of its own, which loads nothing and runs nothing.
   const holder = new DOMParser().parseFromString(html, 'text/html').body;
-  const heading = Array.from(holder.querySelectorAll('h1, h2, h3, h4')).find((h) => EVIDENCE_HEADING.test((h.textContent ?? '').trim()));
+  const heading = Array.from(holder.querySelectorAll(SECTION_HEADINGS)).find((h) => EVIDENCE_HEADING.test((h.textContent ?? '').trim()));
   if (heading === undefined) return NO_SECTION;
   const level = Number(heading.tagName.slice(1));
   const parts: string[] = [];
@@ -4158,7 +4158,16 @@ export class GlassField {
     const control = row?.querySelector<HTMLElement>('[data-act="open"]') ?? null;
     if (control === null) return false;
     control.focus({ preventScroll: true });
-    control.scrollIntoView({ block: 'nearest' });
+    // Brought into sight inside the evidence panel only. `scrollIntoView` scrolls every ancestor that can be
+    // scrolled, and closing a test note left every document 27 px up, under the bar. The field is clipped
+    // now and cannot be scrolled (deck.css); this stays within the one box that is meant to scroll.
+    const panel = control.closest<HTMLElement>('.pane-evidence');
+    if (panel !== null) {
+      const c = control.getBoundingClientRect();
+      const b = panel.getBoundingClientRect();
+      if (c.top < b.top) panel.scrollTop -= b.top - c.top + 8;
+      else if (c.bottom > b.bottom) panel.scrollTop += c.bottom - b.bottom + 8;
+    }
     return true;
   }
 
@@ -4185,7 +4194,9 @@ export class GlassField {
     if ((pane.querySelector('.pane-note') as HTMLElement).dataset['filled'] !== 'true' || this.rereads.has(noteId)) return;
     this.sectionWanted.delete(noteId);
     const body = pane.querySelector('.pane-body') as HTMLElement;
-    const top = evidenceSectionTop(this.headingsOf(pane), body.scrollHeight - body.clientHeight);
+    const origin = body.getBoundingClientRect().top - body.scrollTop;
+    const headings = Array.from(pane.querySelectorAll<HTMLElement>('.pane-note h1, .pane-note h2, .pane-note h3, .pane-note h4')).map((h) => ({ text: (h.textContent ?? '').trim(), top: h.getBoundingClientRect().top - origin, level: Number(h.tagName.slice(1)) }));
+    const top = evidenceSectionTop(headings, body.scrollHeight - body.clientHeight);
     if (top !== null) body.scrollTop = top;
   }
 

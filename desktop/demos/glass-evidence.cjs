@@ -335,7 +335,7 @@ module.exports = async function (d) {
   await pressRow(SUBJECT, original, 'open', 2400);
   await t.park();
   // Where its Evidence heading stands: at the top of the document's text, or as near as the end of the text allows.
-  const landedAt = (id) => js(`(() => { const p = ${find(id)}; const b = p.querySelector('.pane-body'); const h = [...p.querySelectorAll('.pane-note h1, .pane-note h2, .pane-note h3, .pane-note h4')].find((x) => /^evidence\\b/i.test(x.textContent.trim())); const below = h ? Math.round(h.getBoundingClientRect().top - b.getBoundingClientRect().top) : null; return { held: window.__deckDesk(), state: ${glass}.documentState(${JSON.stringify(id)}), heading: h ? h.textContent.trim() : null, headingBelowTop: below, inSight: below !== null && below >= -2 && below < b.clientHeight, atEnd: b.scrollHeight - b.clientHeight - b.scrollTop < 2, scrolled: Math.round(b.scrollTop) }; })()`);
+  const landedAt = (id) => js(`(() => { const p = ${find(id)}; const b = p.querySelector('.pane-body'); const h = [...p.querySelectorAll('.pane-note h2, .pane-note h3, .pane-note h4')].find((x) => /^evidence\\b/i.test(x.textContent.trim())); const below = h ? Math.round(h.getBoundingClientRect().top - b.getBoundingClientRect().top) : null; return { held: window.__deckDesk(), state: ${glass}.documentState(${JSON.stringify(id)}), heading: h ? h.textContent.trim() : null, headingBelowTop: below, inSight: below !== null && below >= -2 && below < b.clientHeight, atEnd: b.scrollHeight - b.clientHeight - b.scrollTop < 2, scrolled: Math.round(b.scrollTop) }; })()`);
   // At the top of the text, or, where the text ends before the heading can reach the top, in sight with the text at its end.
   const landed = (o) => o.headingBelowTop !== null && ((o.headingBelowTop >= -2 && o.headingBelowTop <= 24) || (o.atEnd && o.inSight));
   const openedTest = await landedAt(original);
@@ -406,6 +406,32 @@ module.exports = async function (d) {
       await d.shot(win, '06-an-invalidated-verdict');
     }
     await close(subject);
+  }
+
+  // A test note whose title itself begins with "Evidence": its section is further down, and the title is not it.
+  {
+    const titled = [...recordOf.values()].find((r) => r.types.includes('test') && /^evidence\b/i.test(r.title || '') && r.status !== 'retired');
+    const about = titled === undefined ? undefined : subjectOf(titled.id);
+    let opened = false;
+    if (titled !== undefined && about) { try { await openNote(about); opened = true; } catch { opened = false; } }
+    if (!opened) {
+      d.log('NOT RUN: this workspace has no test note titled "Evidence …" that a note in this view\'s list names');
+    } else {
+      await t.clickOn(`.pane[data-note-id="${about}"] .pane-widen`, 400);
+      await evidenceOf(about);
+      await pressRow(about, titled.id, 'excerpt', 1500);
+      const quoted = ((await panel(about)).rows.find((r) => r.id === titled.id) || {}).excerpt || '';
+      await pressRow(about, titled.id, 'open', 2400);
+      await t.park();
+      const at = await landedAt(titled.id);
+      check(at.heading !== null && at.state === 'ready' && landed(at) && at.scrolled > 0 && quoted.startsWith(`From ${titled.id}, under its "${at.heading}" heading`), `${titled.id} is titled "${titled.title}": its excerpt is quoted from under its "${at.heading}" heading and "Open the test note" lands there, not at the title`, { at, quoted: quoted.slice(0, 120) });
+      await close(titled.id);
+      // Closing the test note puts the keyboard back on its row. That must not scroll the field: it once did,
+      // and every document then stood under the bar.
+      const fieldScroll = await js(`(() => { const f = document.getElementById('field'); const p = ${find(about)}; return { scrolled: [f.scrollLeft, f.scrollTop], paneTop: Math.round(p.getBoundingClientRect().top - f.getBoundingClientRect().top), onRow: !!document.activeElement.closest('.evidence-row') }; })()`);
+      check(fieldScroll.scrolled[0] === 0 && fieldScroll.scrolled[1] === 0 && fieldScroll.paneTop >= 0 && fieldScroll.onRow, `closing ${titled.id} puts the keyboard back on its row and leaves the field where it was: the document it was opened from still stands inside the field`, fieldScroll);
+      await close(about);
+    }
   }
 
   // ---- 5. A claim, and the tests its own line names; by keyboard ----

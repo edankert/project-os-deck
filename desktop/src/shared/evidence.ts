@@ -25,9 +25,16 @@ export const NOT_WALKED = 'not walked: no verdict is recorded';
  */
 export const EVIDENCE_HEADING = /^evidence\b/i;
 
-/** Where that section begins in a document's text, held to how far the text scrolls; null when the note has none. */
-export function evidenceSectionTop(headings: ReadonlyArray<{ text: string; top: number }>, max: number): number | null {
-  const heading = headings.find((h) => EVIDENCE_HEADING.test(h.text.trim()));
+/** The headings a section can be: not the note's title. A test note titled "Evidence says what is recorded" has its section further down. */
+export const SECTION_HEADINGS = 'h2, h3, h4';
+
+/**
+ * Where that section begins in a document's text, held to how far the text
+ * scrolls; null when the note has none. A heading of level 1 is the note's
+ * title and is never the section.
+ */
+export function evidenceSectionTop(headings: ReadonlyArray<{ text: string; top: number; level?: number }>, max: number): number | null {
+  const heading = headings.find((h) => h.level !== 1 && EVIDENCE_HEADING.test(h.text.trim()));
   return heading === undefined ? null : Math.max(0, Math.min(heading.top, max));
 }
 
@@ -293,7 +300,8 @@ export function platformLedger(payload: unknown, platform: string): PlatformLedg
       for (const item of items) {
         if (typeof item !== 'object' || item === null) return { unread: 'a check of the answer is not a record' };
         const row = item as Record<string, unknown>;
-        if (!('id' in row)) return { unread: 'a check of the answer has no id' };
+        // An id is text, and '' for a check with no note of its own. A number would be read as no id and its row skipped.
+        if (typeof row['id'] !== 'string') return { unread: 'a check of the answer has no id' };
         if (typeof row['mark'] !== 'string') return { unread: 'a check of the answer has no mark' };
         const id = text(row['id']);
         if (id === '') continue;
@@ -310,7 +318,8 @@ export function platformLedger(payload: unknown, platform: string): PlatformLedg
       const e = event as Record<string, unknown>;
       const date = text(e['date']);
       if (date === '') return { unread: 'an event of the history has no date' };
-      if (e['mark'] !== undefined && e['mark'] !== null && typeof e['mark'] !== 'string') return { unread: 'an event of the history has a mark that is not text' };
+      // An invalidation is an event whose mark is ''. With the field missing or renamed, a verdict would be taken for one.
+      if (typeof e['mark'] !== 'string') return { unread: 'an event of the history has no mark' };
       const of = text(e['platform']);
       // An event the payload says belongs to another platform is not this platform's.
       if (of !== '' && of !== platform) continue;

@@ -603,7 +603,10 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  /* Clipped, not hidden: a box that hides its overflow can still be scrolled by script, and a focus or a
+     `scrollIntoView` on something inside it scrolled the field itself, leaving every document that far up
+     under the bar. A clipped box cannot be scrolled at all. */
+  overflow: clip;
   outline: none;
   touch-action: none;
   user-select: none;
@@ -1183,7 +1186,7 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
+  overflow: clip;
 }
 .collection.out-of-sight { visibility: hidden; }
 .collection.dragging { box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55); }

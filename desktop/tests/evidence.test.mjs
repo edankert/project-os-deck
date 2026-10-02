@@ -112,7 +112,6 @@ test('the acceptance payload is read into a ledger: the standing verdict, the in
         { id: 'TST-0001', rel: 'tests/TST-0001.md', mark: 'pass', verdict_date: '2026-09-20', verdict_reason: 'walked on the Mac', verdict_method: 'manual', invalidated_by: {} },
         { id: 'TST-0002', mark: 'todo', verdict_date: '', verdict_reason: '', verdict_method: '', invalidated_by: { change: 'TASK-0001', reason: 'written on the note long ago', date: '' } },
         { id: '', mark: 'pass' }, // a check with no note of its own: no row
-        { id: null, mark: 'todo' },
       ],
       {
         'TST-0001': [
@@ -154,7 +153,13 @@ test('a payload Deck was not written against is not read at all, and says why', 
   assert.match(withHistory('not a list').unread, /history of a check is not a list/);
   assert.match(withHistory([null]).unread, /an event .* is not a record/);
   assert.match(withHistory([{ platform: 'app', when: '2026-09-20', mark: 'pass' }]).unread, /an event .* has no date/);
-  assert.match(withHistory([{ platform: 'app', date: '2026-09-21', mark: 7 }]).unread, /a mark that is not text/);
+  assert.match(withHistory([{ platform: 'app', date: '2026-09-21', mark: 7 }]).unread, /an event .* has no mark/);
+  // Round two of the review: an id that is a number was read as no id and its row skipped, and an event with
+  // `mark` renamed was read as an invalidation, because an invalidation is an event whose mark is ''.
+  assert.match(shaped({ tiers: [{ areas: [{ items: [{ id: 1, mark: 'pass' }] }] }], history: {} }).unread, /a check .* has no id/);
+  assert.match(shaped({ tiers: [{ areas: [{ items: [{ id: null, mark: 'todo' }] }] }], history: {} }).unread, /a check .* has no id/);
+  assert.match(withHistory([{ platform: 'app', date: '2026-09-20', verdict: 'pass' }]).unread, /an event .* has no mark/);
+  assert.match(withHistory([{ platform: 'app', date: '2026-09-20', mark: null }]).unread, /an event .* has no mark/);
   // And a check whose verdict cannot be read reads as that, never as "not walked".
   const renamed = { ledgers: [shaped({ tiers: [{ areas: [{ items: [{ id: 'TST-0001', verdict: 'pass' }] }] }], history: {} })] };
   assert.equal('unread' in renamed.ledgers[0], true);
@@ -265,6 +270,10 @@ test('a test note opens at its Evidence section however the heading goes on, and
   assert.equal(evidenceSectionTop(headings, 600), 600, 'no further than the text scrolls');
   assert.equal(evidenceSectionTop([{ text: 'Evidently', top: 10 }, { text: 'The evidence', top: 20 }], 2000), null, 'a heading that only contains the word is not the section');
   assert.equal(evidenceSectionTop([], 2000), null);
+  // The note's title is not its section: TST-0078 is titled "Evidence says what is recorded and names what is not".
+  const titled = [{ text: 'Evidence says what is recorded', top: 0, level: 1 }, { text: 'Purpose', top: 60, level: 2 }, { text: 'Evidence (fill after running)', top: 900, level: 2 }];
+  assert.equal(evidenceSectionTop(titled, 2000), 900);
+  assert.equal(evidenceSectionTop([{ text: 'Evidence of absence', top: 0, level: 1 }], 2000), null);
   // The local calendar day, not the UTC one: the same instant is two different days in two places. The
   // zone is set here, because on a machine whose zone is at or near UTC the two days are the same.
   const zone = process.env.TZ;

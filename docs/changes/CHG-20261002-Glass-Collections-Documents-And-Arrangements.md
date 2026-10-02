@@ -41,6 +41,7 @@ This repository has no survey notes, so each line names the screen in words.
 - Glass draws a card only when its content or state changed, and moves the lines between notes with one transform. A turn with 217 notes gathered round a document costs less script work per frame than it did; the figures before and after are in commit `002fc33` and in TST-0072.
 - The scripted walks are new: `tools/scripts/walk-in-a-box.sh <walk>` drives a route through the real application in the Linux container with real pointer and key events, records each claim with what was seen, and keeps pictures. A walk is not the smoke run and is not a person's walk.
 - The smoke run's Glass section was rewritten for one object per note, the collection and the document.
+- A second walk of the collection, `glass-collection`, drives its filters, its collapsed header, a folded group, the wheel at the list's ends, Escape during a drag, the keyboard's place on each control, a refused action and the chosen size in a second window. It found that collapsing the collection and opening it again moved the list by several hundred pixels while a note was open, because the rows for what the open note is joined to were sorted afresh at every redraw. Their order is now worked out when what it describes changes (`7103e3c`).
 
 ## What was decided and can be overturned
 
