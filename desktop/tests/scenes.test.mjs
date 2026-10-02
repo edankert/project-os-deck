@@ -90,6 +90,27 @@ test('a desk from before scenes, and one this Deck cannot read, replace nothing 
   assert.equal(viewReplacedBy({ name: 'f', workspaceId: WS, cards: [], version: 3, view: 'issues' }, 'features'), 'features');
 });
 
+test('a desk that is not in the list is put on the desk only when it is this workspace\'s and of the version this Deck reads', () => {
+  const s = desk();
+  const other = sceneFrom({ workspaceId: WS, view: 'features', query: 'other', filters: { statuses: [], types: [] }, collection: null, cards: [{ noteId: 'FEAT-0009', x: 1, y: 2 }] }, '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
+  // Another workspace's: its notes are not this workspace's notes, and its view may not exist here.
+  assert.equal(reduce(s, { type: 'apply-scene', scene: { ...other, workspaceId: 'cccc3333dddd4444' } }), s, 'a scene of another workspace is refused');
+  // A version this Deck does not know: its fields are not ours to read.
+  for (const version of [3, 1, '2']) assert.equal(reduce(s, { type: 'apply-scene', scene: { ...other, version } }), s, `version ${JSON.stringify(version)} is refused`);
+  // A desk with no version is not a scene: it has no view, search or list to put back.
+  const { version: _, ...unversioned } = other;
+  assert.equal(reduce(s, { type: 'apply-scene', scene: unversioned }), s);
+  // Nor anything that is not a desk at all, nor with no workspace open.
+  for (const junk of [null, 'x', [], { name: 'x' }]) assert.equal(reduce(s, { type: 'apply-scene', scene: junk }), s, JSON.stringify(junk));
+  const closed = initialState();
+  assert.equal(reduce(closed, { type: 'apply-scene', scene: other }), closed);
+  // The same desk, this workspace's and of this version, is applied: the refusals above are not the reducer refusing everything.
+  const applied = reduce(s, { type: 'apply-scene', scene: other });
+  assert.equal(applied.viewId, 'features');
+  assert.equal(applied.query, 'other');
+  assert.deepEqual(deskCardsOf(applied, WS, 'features').map((c) => c.noteId), ['FEAT-0009']);
+});
+
 // One note open on the Issues view, and the list where a view puts it when nobody has moved it: nothing stored.
 function unmoved() {
   let s = reduce(initialState(), { type: 'open-workspace', workspaceId: WS });
