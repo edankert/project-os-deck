@@ -391,6 +391,11 @@ module.exports = async function (d) {
   d.log('narrow, after the row', await js(`({ row: ${JSON.stringify(nrow)}, held: window.__deckDesk(), bar: [...document.querySelectorAll('#narrow-bar button')].map((b) => b.textContent + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')), panes: [...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId + (p.classList.contains('out-of-sight') ? ' hidden' : '')), hit: (() => { const e = document.elementFromPoint(${nrow.x}, ${nrow.y}); return e ? e.className + ' / ' + (e.closest('.nav-row') ? e.closest('.nav-row').dataset.noteId : 'no row') : null; })(), status: document.getElementById('status').textContent })`));
   await d.shot(win, '19b-narrow-after-row');
   check(narrowDoc.shown.length === 1 && narrowDoc.shown[0] === nrow.id && narrowDoc.state === 'ready' && narrowDoc.stored && narrowDoc.stored.w >= 280, 'a row opened there comes to the front as the one document, and the size stored for it is a reading size, not the narrow window', narrowDoc);
+  // In the narrow window the keyboard's place is drawn too: on the bar's buttons and on the document's header.
+  await js(`document.querySelector('#narrow-bar button').focus()`);
+  const narrowSeen = [];
+  for (let i = 0; i < 4; i += 1) { d.press(win, 'Tab'); await d.delay(140); narrowSeen.push(await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0] || e.tagName.toLowerCase(), outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none' }; })()`)); }
+  check(narrowSeen.every((x) => x.outline || x.ring) && new Set(narrowSeen.map((x) => x.id)).size >= 2, 'in the narrow window each of the four controls the Tab key moves to after the bar\'s first button shows where the keyboard is', narrowSeen);
   win.setBounds(full);
   await d.delay(900);
   const widened = await js(`[...document.querySelectorAll('.pane')].map((p) => { const r = p.getBoundingClientRect(); return [p.dataset.noteId, Math.round(r.width), Math.round(r.height), p.classList.contains('out-of-sight')]; })`);

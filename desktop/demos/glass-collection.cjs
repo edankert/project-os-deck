@@ -181,6 +181,13 @@ module.exports = async function (d) {
     await d.delay(120);
     seen.push(await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || e.className.split(' ')[0], outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none', border: s.borderTopColor }; })()`));
   }
+  // The collection's header and its three controls, backwards from the fold control, then forwards to the search box.
+  await js(`document.getElementById('collection-fold').focus()`);
+  const headSeen = [];
+  for (let i = 0; i < 3; i += 1) { d.press(win, 'Tab', ['shift']); await d.delay(120); headSeen.push(await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0] || e.tagName.toLowerCase(), outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none' }; })()`)); }
+  for (let i = 0; i < 4; i += 1) { d.press(win, 'Tab'); await d.delay(120); headSeen.push(await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0] || e.tagName.toLowerCase(), outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none' }; })()`)); }
+  const reached = new Set(headSeen.map((h) => h.id));
+  check(['collection-head', 'collection-as-table', 'collection-as-cards', 'collection-fold', 'search'].every((id) => reached.has(id)) && headSeen.every((h) => h.outline || h.ring), 'the collection\'s header, its "table", "cards" and fold controls and the search box each show where the keyboard is when the Tab key arrives on them', headSeen);
   const named = await js(`({ collection: document.getElementById('collection').getAttribute('aria-label') || document.getElementById('collection').getAttribute('aria-labelledby'), head: document.getElementById('collection-head').getAttribute('role'), list: document.getElementById('nav-list').getAttribute('role'), status: document.getElementById('status-filter').getAttribute('aria-label'), type: document.getElementById('type-filter').getAttribute('aria-label'), fold: document.getElementById('collection-fold').getAttribute('aria-expanded'), row: (() => { const r = document.querySelector('#nav-list .nav-row'); return r ? { role: r.getAttribute('role'), text: r.textContent.trim().length > 0 } : null; })() })`);
   check(seen.every((s) => s.outline || s.ring) && named.status === 'Filter by status' && named.type === 'Filter by type' && named.list === 'list' && named.fold !== null && named.row !== null && named.row.text, 'each control the Tab key reaches in the collection shows where the keyboard is, with an outline or a ring; the filters, the list, the fold control and the rows carry the names and roles a screen reader is given (nobody has listened to them)', { seen, named });
 
@@ -262,16 +269,30 @@ module.exports = async function (d) {
   const q = await openRow([p]);
   const next = await js(`${glass}.readingSize(${JSON.stringify(q)})`);
   const page = d.openServedPage();
+  // Large enough for the chosen size: in the size the served window opens at, its field was too low to hold
+  // it, and nothing could be compared.
+  page.setBounds({ x: 0, y: 0, width: 1440, height: 900 });
   page.showInactive();
   await new Promise((resolve) => page.webContents.once('did-finish-load', resolve));
   await d.delay(4000);
   await d.js(page, `[...document.querySelectorAll('#switcher button')].find((x) => x.dataset.viewId === 'features').click()`);
   await d.delay(2500);
   const servedOpened = await d.js(page, `(() => { const open = new Set([...document.querySelectorAll('.pane')].map((e) => e.dataset.noteId)); const r = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].find((x) => !x.hidden && !open.has(x.dataset.noteId)); if (!r) return null; const id = r.dataset.noteId; r.scrollIntoView({ block: 'center' }); r.click(); return id; })()`);
-  for (let i = 0; i < 30 && servedOpened !== null; i += 1) { await d.delay(250); if (await d.js(page, `(() => { const e = [...document.querySelectorAll('.pane')].find((x) => x.dataset.noteId === ${JSON.stringify(servedOpened)}); return !!e && e.dataset.state === 'ready'; })()`)) break; }
+  for (let i = 0; i < 30 && servedOpened !== null; i += 1) { await d.delay(250); if (await d.js(page, `(() => { const e = [...document.querySelectorAll('.pane')].find((x) => x.dataset.noteId === ${JSON.stringify(servedOpened)}); return !!e && e.dataset.state === 'ready' && e.getAnimations().length === 0; })()`)) break; }
   const servedSize = servedOpened === null ? null : await d.js(page, `(() => { const e = [...document.querySelectorAll('.pane')].find((x) => x.dataset.noteId === ${JSON.stringify(servedOpened)}); if (!e) return null; const f = document.getElementById('field').getBoundingClientRect(); const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), field: [Math.round(f.width), Math.round(f.height)], narrow: !document.getElementById('narrow-bar').hidden }; })()`);
   const fits = servedSize !== null && !servedSize.narrow && servedSize.field[0] >= chosen.w && servedSize.field[1] >= chosen.h;
-  check(chosen.w !== 560 && next.w === chosen.w && next.h === chosen.h && servedSize !== null && (!fits || (servedSize.w === chosen.w && servedSize.h === chosen.h)), `a note resized to ${chosen.w} by ${chosen.h} sets the size the next note opens at on this view: in this window, and in a second window on the same view (the served page), where a note opened there is that size${fits ? '' : ' as far as its smaller field allows'}`, { chosen, next, served: servedSize, servedOpened });
+  check(chosen.w !== 560 && next.w === chosen.w && next.h === chosen.h && servedSize !== null && fits && servedSize.w === chosen.w && servedSize.h === chosen.h, `a note resized to ${chosen.w} by ${chosen.h} sets the size the next note opens at on this view: in this window, and in a second window on the same view (the served page, in a field of ${servedSize === null ? '?' : servedSize.field.join(' by ')}), where a note opened there is ${servedSize === null ? '?' : `${servedSize.w} by ${servedSize.h}`}`, { chosen, next, served: servedSize, servedOpened });
+  // The served page in a narrow window, as a tablet held upright has it: the bar between the collection and
+  // the open note, and the document's header, show where the keyboard is.
+  page.setBounds({ x: 0, y: 0, width: 760, height: 900 });
+  await d.delay(1200);
+  d.focusApp(page);
+  const servedNarrow = await d.js(page, `(() => { const bar = document.getElementById('narrow-bar'); const b = bar.hidden ? null : bar.querySelector('button'); if (b) b.focus(); return { narrow: !bar.hidden, buttons: bar.querySelectorAll('button').length, field: Math.round(document.getElementById('field').getBoundingClientRect().width), focused: document.hasFocus() }; })()`);
+  const servedSeen = [];
+  for (let i = 0; i < 3; i += 1) { d.press(page, 'Tab'); await d.delay(150); servedSeen.push(await d.js(page, `(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0] || e.tagName.toLowerCase(), outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none' }; })()`)); }
+  d.press(page, 'Tab', ['shift']); await d.delay(150);
+  servedSeen.push(await d.js(page, `(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0] || e.tagName.toLowerCase(), outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none' }; })()`));
+  check(servedNarrow.narrow && servedNarrow.buttons >= 2 && servedSeen.length === 4 && servedSeen.every((x) => x.outline || x.ring), `on the served page in a window 760 px wide, the bar between the collection and the open note is shown, and each of the four controls the Tab key was moved to shows where the keyboard is`, { servedNarrow, servedSeen });
   page.destroy();
 
   d.log('what this walk does not establish', [

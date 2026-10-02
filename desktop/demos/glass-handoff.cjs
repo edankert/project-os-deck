@@ -28,6 +28,16 @@ module.exports = async function (d) {
     if (!at) throw new Error(`the chooser has no "${label}"`);
     await d.pointer(win, d.click(at));
   };
+  /** Answer the chooser with the arrow keys and Enter. How many presses it took, or null when the answer was not reached. */
+  const chooseByKeys = async (label) => {
+    const n = (await choices()).length;
+    for (let i = 0; i <= n; i += 1) {
+      if ((await js(`document.activeElement.textContent`)) === label) { d.press(win, 'Return'); return i; }
+      d.press(win, 'Right');
+      await d.delay(120);
+    }
+    return null;
+  };
   /** S on a document's header: the keyboard's way to hand it on. */
   const askWhere = async (noteId) => {
     await js(`[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(noteId)}).querySelector('.pane-head').focus()`);
@@ -134,12 +144,13 @@ module.exports = async function (d) {
   // ---- 5. Also show in a reader: this desk keeps it ----
   const readerOffer = (await askWhere(a)).find((o) => o.startsWith('Also show in the reader'));
   const shownAt = Date.now();
-  await choose(readerOffer);
+  // By keys alone from the document's header: S asked, the arrow keys go to the answer and Enter gives it.
+  const keyPresses = await chooseByKeys(readerOffer);
   for (let i = 0; i < 750; i += 1) { await d.delay(20); said = await status(); if (/also shown in|stays here/.test(said)) break; }
   const showMs = Date.now() - shownAt;
   await d.delay(600);
   const inReader = await d.js(reader, `(() => { const r = document.getElementById('reader'); const page = document.scrollingElement; const h = [...r.querySelectorAll('h2')].find((x) => x.textContent.trim() === ${JSON.stringify(reading.anchor.heading)}); return { address: new URLSearchParams(location.search).get('address'), text: r.textContent.length, scrollTop: Math.max(r.scrollTop, page.scrollTop), headingTop: h ? Math.round(h.getBoundingClientRect().top - r.getBoundingClientRect().top) : null, sizes: [r.scrollHeight, r.clientHeight, page.scrollHeight, page.clientHeight], status: (document.getElementById('arrival').hidden ? '' : document.getElementById('arrival').textContent), lineInView: (() => { const b = document.getElementById('arrival').getBoundingClientRect(); return b.height > 0 && b.bottom <= window.innerHeight + 1; })() }; })()`);
-  check(/also shown in the reader on .*; this desk keeps it/.test(said) && deskOf('features').some((c) => c.noteId === a) && inReader.address.includes(`note=${encodeURIComponent(a)}`) && inReader.text > 200, `Also show: the reader window now shows ${a}, and this desk still holds it`, { said, reader: inReader });
+  check(keyPresses !== null && /also shown in the reader on .*; this desk keeps it/.test(said) && deskOf('features').some((c) => c.noteId === a) && inReader.address.includes(`note=${encodeURIComponent(a)}`) && inReader.text > 200, `Also show, asked and answered with keys alone (S on the header, the arrow keys, Enter): the reader window now shows ${a}, and this desk still holds it`, { said, keyPresses, reader: inReader });
   check(inReader.scrollTop > 0 && inReader.headingTop !== null && Math.abs(inReader.headingTop + reading.anchor.past) <= 40 && inReader.status.includes('which keeps it too') && inReader.lineInView && inReader.sizes[2] <= inReader.sizes[3] + 1, 'the reader opens it where it was being read, says the other window keeps it too, and scrolls inside itself so that message stays on screen', inReader);
   await d.shot(reader, '05-also-shown-in-the-reader');
   d.log('from release to the answer, in the box', { toADeskWindowMs: moveMs, toAReaderWindowMs: showMs, waitAllowedMs: 4000, readerAllowedMs: 12000 });

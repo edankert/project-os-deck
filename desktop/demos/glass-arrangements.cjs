@@ -408,6 +408,23 @@ module.exports = async function (d) {
   d.press(win, 'Return');
   await d.delay(700);
   check((await desk()) === kbBefore, 'Enter on Undo arrangement puts it back', null);
+  // Compare and Show related, begun with the keyboard: Tab goes from Read to each, each shows where the keyboard
+  // is, Enter shows what it would do, and Escape withdraws that with nothing moved and the keyboard back on it.
+  await js(`document.getElementById('arrange-read').focus()`);
+  const begun = [];
+  for (const id of ['arrange-compare', 'arrange-related']) {
+    d.press(win, 'Tab');
+    await d.delay(150);
+    const at = await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0] || e.tagName.toLowerCase(), outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0, ring: s.boxShadow !== 'none' }; })()`);
+    d.press(win, 'Return');
+    await d.delay(700);
+    const shownNow = await js(`({ preview: ${glass}.arrangeState().preview !== null, title: document.getElementById('arrange-title').textContent, said: document.getElementById('status').textContent, active: document.activeElement.id })`);
+    d.press(win, 'Escape');
+    await d.delay(400);
+    const after = await js(`({ preview: ${glass}.arrangeState().preview !== null, active: document.activeElement.id })`);
+    begun.push({ wanted: id, at, shownNow, after, deskSame: (await desk()) === kbBefore });
+  }
+  check(begun.every((b) => b.at.id === b.wanted && (b.at.outline || b.at.ring) && b.deskSame && !b.after.preview && (b.shownNow.preview ? b.shownNow.active === 'arrange-apply' && b.after.active === b.wanted : b.shownNow.said.length > 0)), 'Tab goes from Read to Compare and to Show related, and each shows where the keyboard is; Enter on each shows what it would do, or says why it cannot, and Escape withdraws it with nothing moved and the keyboard back on the control', begun);
   await dbg.sendCommand('Emulation.setEmulatedMedia', { features: [] });
   dbg.detach();
 
