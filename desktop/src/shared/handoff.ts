@@ -117,6 +117,10 @@ export function handoffLabel(mode: HandoffMode, destination: Destination): strin
 export interface LandingFacts {
   /** The note is already on the destination's desk. */
   alreadyThere: boolean;
+  /** The note is kept on every view: it is on every desk already, and taking it off one takes it off all. */
+  everyView: boolean;
+  /** Where the note is already going, when a handoff of it is still waiting for its answer (`waitingFor`); else null. */
+  waiting: Destination | null;
 }
 
 export type Landing =
@@ -128,14 +132,25 @@ export type Landing =
 /**
  * What landing a request means, or why it is refused.
  *
- * Two refusals keep a handoff from damaging a desk. A mode the destination
- * does not take is refused, never downgraded silently. And a move onto the
- * desk the note is already on is refused: source and destination would be
- * the same desk, the "move" would take the note off it, and nothing would
- * be left.
+ * Four refusals keep a handoff from damaging a desk. A note with a handoff
+ * still waiting is not sent again until that one is answered: two waiting
+ * at once undo each other. The first to fail takes the note off the desk the
+ * second also counted on, the second is then acknowledged and takes it off
+ * the source, and the note is on no desk. A note kept on every view is not
+ * moved: taking it off the source desk takes it off every desk. A mode the
+ * destination does not take is refused, never downgraded silently. And a
+ * move onto the desk the note is already on is refused: source and
+ * destination would be the same desk, the "move" would take the note off it,
+ * and nothing would be left.
  */
 export function planLanding(request: HandoffRequest, facts: LandingFacts): Landing {
   const { destination, mode, source, noteId } = request;
+  if (facts.waiting !== null) {
+    return { refused: `${noteId} is already on its way to ${named(facts.waiting.label)}, which has not answered yet. It can be sent again once that is answered.` };
+  }
+  if (mode === 'move' && facts.everyView) {
+    return { refused: `${noteId} is kept on every view, so it is on every desk already and cannot be moved to one. It can be shown there as well.` };
+  }
   if (!modesFor(destination.kind).includes(mode)) {
     return { refused: `${noteId} cannot be moved to ${named(destination.label)}: it is not a desk. It can be shown there as well.` };
   }
@@ -160,6 +175,18 @@ export interface HandoffRecord extends HandoffRequest {
   previousAddress?: string | null;
   /** For a new reader: the window this handoff opened, so a failed handoff can close it. */
   openedWindowId?: number | null;
+}
+
+/**
+ * The handoff of a note that is still waiting for its destination to answer,
+ * among the ones the main process holds, or null. One note in one workspace
+ * has at most one: `planLanding` refuses a second.
+ */
+export function waitingFor(records: Iterable<HandoffRecord>, noteId: string, workspaceId: string): HandoffRecord | null {
+  for (const record of records) {
+    if (record.state === 'awaiting' && record.noteId === noteId && record.workspaceId === workspaceId) return record;
+  }
+  return null;
 }
 
 export type HandoffAnswer =
