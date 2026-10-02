@@ -71,34 +71,34 @@ It is run by hand with one command. `python3 tools/scripts/run-tests.py` and CI 
 
 ## Measurements
 
-Taken on 2026-10-02 at `4243fc2` in the Linux box (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900). The box draws in software, so the times include the sidecar's work and Deck's reading and say nothing about how fast the Mac draws.
+Taken on 2026-10-02 at `e86b2e4` in the Linux box (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900). The box draws in software, so the times include the sidecar's work and Deck's reading and say nothing about how fast the Mac draws.
 
 | Workspace | Notes | Test notes | Ledger platforms | Acceptance answers read | Size of each platform's answer | From pressing E to the rows being filled |
 | --- | --- | --- | --- | --- | --- | --- |
-| this repository, a copy | 427 | 80 | `app` | 2 | 448 KB | 152 ms |
-| `your-trainer`, a copy | 3269 | 685 | `android` and `ios` | 3 | 3.3 MB and 4.0 MB | 466 ms |
+| this repository, a copy | 430 | 80 | `app` | 2 | 499 KB | 156 ms |
+| `your-trainer`, a copy | 3269 | 685 | `android` and `ios` | 3 | 3.3 MB and 4.0 MB | 473 ms |
 
 The answers are kept until the notes change or a person presses "read again", so a second panel costs no request.
 
 ## Evidence (fill after running)
 
-**2026-10-02, at `4243fc2`, in the Linux box.** Every press was sent with `webContents.sendInputEvent`. Pictures and `drive.json` are in `desktop/dist/walks/glass-evidence/` and `desktop/dist/walks/glass-evidence-your-trainer/`, which are build output and are not committed.
+**2026-10-02, at `e86b2e4`, in the Linux box.** Every press was sent with `webContents.sendInputEvent`. Pictures and `drive.json` are in `desktop/dist/walks/glass-evidence/` and `desktop/dist/walks/glass-evidence-your-trainer/`, which are build output and are not committed.
 
-**On a copy of this repository: 36 checks, all holding, none not run.** The subject was FEAT-0017, chosen by the walk as the feature whose tests are of the most kinds. What was seen, in the order of the expected results:
+**On a copy of this repository: 36 checks, all holding, none not run.** The subject was FEAT-0020, chosen by the walk as the feature whose tests are of the most kinds. What was seen, in the order of the expected results:
 
-- The document opened with its panel closed and the header reading "evidence · 6". No request for the acceptance record had been made. A task whose tests are all below acceptance level (TASK-0071) showed its rows and still no request was made.
+- The document opened with its panel closed and the header reading "evidence · 7". No request for the acceptance record had been made. A task whose tests are all below acceptance level (TASK-0063) showed its rows and still no request was made.
 - Opening the subject's panel asked for the record twice, once for the platforms and once for `app`. The rows were the tests the frontmatter names and no other, each with its title before its id and the key it was found under.
-- At its own size (560 px) the panel stood above the text and the related list closed to make room. Filling the field (1244 px) it stood to the right of the text.
-- A check a person walks showed a "verdict" from the acceptance ledger and, on its own line, the "status of the test note". TST-0052 has no entry in the ledger file and read "not walked: no verdict is recorded". A test run by a command showed the sentence and its command, in the plain text colour, with no mark and no date. A test done by hand showed its note's status and date.
+- At its own size (560 px) the panel stood above the text and the related list closed to make room. Filling the field it stood to the right of the text.
+- A check a person walks showed a "verdict" from the acceptance ledger and, on its own line, the "status of the test note". TST-0063 has no entry in the ledger file and read "not walked: no verdict is recorded". A test run by a command showed the sentence and its command, in the plain text colour, with no mark and no date. A test done by hand showed its note's status and date.
 - "Excerpt" quoted the text under a test note's Evidence heading, compared with the note as the sidecar renders it. A note with no such heading read "this test note has no Evidence section". "Open the test note" opened the note with its Evidence heading at the top of the text; asked again, it raised the same document; closing it put the keyboard back on the row.
 - TST-0008 on FEAT-0005 read "pass on 2026-09-07 by user:edwin, manual", as its newest entry in the ledger file does, and "History" listed its two entries newest first. TST-0015 read as a question with the walker's reason, in the colour of a check held open. TST-0010 on FEAT-0008 read as invalidated on 2026-09-08 by the change the ledger names, with "The verdict before it, pass on 2026-09-07, no longer stands."
-- On REQ-0001, each of five criteria that link a test note had a control reading "evidence named on this line", and Enter on it listed only that line's test. Escape put the keyboard back on that control. By keyboard alone the walk then opened an excerpt, opened the original, closed it with Delete and found the keyboard on the row it came from.
+- On REQ-0001, each criterion that links a test note had a control reading "evidence named on this line", and Enter on it listed only that line's test. Escape put the keyboard back on that control. By keyboard alone the walk then opened an excerpt, opened the original, closed it with Delete and found the keyboard on the row it came from.
 - A note no test names read "no test names this note. Nothing is inferred from its status."
 - With one manual test's `last_verified:` set to 2026-06-01 in the copy, its row read "stale: a manual verification goes stale after 90 days; this was 123 days ago".
 - With the request for the record refused, the panel said once "the acceptance record could not be read: the sidecar did not answer: Failed to fetch". The walked check said that in place of a verdict, and no row read "not walked". "read again" brought its own words back.
 - With reduced motion asked for through the debugger, the panel was in its place at once and had not moved half a second later.
 - The served page, with no bridge, showed the same control and the same rows with the same words. The host answered 405 to a POST on the acceptance path and on `mark-check`. No control in a panel records or re-runs anything.
-- Of the copy's 435 files under `docs`, the only one that differed at the end was the test note the walk edited. The ledger file was entry for entry what it was.
+- Of the copy's 438 files under `docs`, the only one that differed at the end was the test note the walk edited. The ledger file was entry for entry what it was.
 
 **On a copy of `your-trainer`: 28 checks, all holding, 3 parts not run.** 3269 notes, 685 test notes, three ledger files for two platforms. The subject was FEAT-0104, with 20 tests of which 14 are retired.
 
@@ -106,6 +106,7 @@ The answers are kept until the notes change or a person presses "read again", so
 - For `ios`, whose ledger is one file, the sidecar's answer agreed with that file's newest entry for every one of 442 checks. For `android`, whose record is a sealed release's ledger and the open one, the walk held the panel to the sidecar's own answer and says so in its log.
 - TST-0019 read as invalidated on 2026-09-29 by the newest of three invalidations in its ledger, on both platforms, with the verdict before it named only on android, where there was one.
 - A retired test read "retired: it is no longer performed".
+- TST-0015 has no Evidence section, and its excerpt read "this test note has no Evidence section".
 
 **Parts not run on `your-trainer`, and why.** None of the subject's tests has an Evidence section, so no excerpt was quoted. No requirement there has a criterion that links a test note on its own line. The subject has no test done by hand, so the staleness rule was not seen there. All three were seen on this repository.
 
@@ -120,6 +121,7 @@ The answers are kept until the notes change or a person presses "read again", so
 | A note reopened after the desk was swept came back with its related list open. | Only the × closed a document's panels. | A document that leaves the desk has its panels closed, however it left. |
 | A walked check on a feature with retired tests was expected to have a verdict for each retired test. | The walk's own expectation, not the application: a retired test has no verdict to show. | The walk expects "retired: it is no longer performed". |
 | The walk read a ledger entry spelled `result:` as an invalidation, and missed a test linked by its file's name. | Two mistakes in the walk's own reading of the files. | The walk reads `result` as the mark and resolves a link by file name. |
+| The walk's record showed later requests beside the check that there had been none. | The log held the list of requests itself, which goes on growing. | Each check records a copy (`2692fe0`). |
 
 **Not covered here.** Safari on a tablet. A screen reader, and touch. Whether a person reads "not walked" and "run by a command" as intended. A capture or a ledger evidence reference, which no route gives. The history pressed on the served page: the rows there were compared word for word, and the subject's walked check on this repository has no history to open. These are [[TST-0077-A-Claims-Evidence-Stands-Beside-It]]'s, which no one has walked.
 

@@ -7,7 +7,7 @@ owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-02
 source: ["Edwin 2026-10-01: 'Fully implement the documented Glass / Minority Report interaction direction in project-os-deck, delivering a working, polished experience backed by real verification.'", "[[DES-0003-Collections-And-Documents-On-Glass]]"]
-commit: "81d4632..cee5119"
+commit: "81d4632..e86b2e4"
 pr: ""
 impacts: ["desktop/src/renderer/glass.ts", "desktop/src/renderer/renderer.ts", "desktop/src/renderer/collection-view.ts", "desktop/src/renderer/navigator.ts", "desktop/src/renderer/link-lines.ts", "desktop/src/renderer/deck.css", "desktop/src/renderer/index.html", "desktop/src/shared/collection.ts", "desktop/src/shared/arrange.ts", "desktop/src/shared/store-state.ts", "desktop/src/main/host.ts", "desktop/src/main/smoke-glass.ts", "desktop/demos/", "tools/scripts/walk-in-a-box.sh"]
 issues: ["[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]"]
@@ -31,7 +31,7 @@ This repository has no survey notes, so each line names the screen in words.
 - **Glass, the collection:** the view's rows, groups, count, search and filters stand on the desk in a box that can be dragged, resized and folded. It can be shown as a stack, a table or cards. It says how many notes it lists and how many of those have a place in the field. When notes change on disk it holds still and says a change is waiting; the rows do not move under the pointer.
 - **Glass, a document:** pressing a row, a card or a link opens the note as a document with its full text. No reading column opens beside the field. The header has the related notes (R), details (D), keep on every view (V), show in the link graph (O), send (S), fill the field (W) and close. A document opens at the size the person last chose and keeps it when dragged.
 - **Glass, a note in the middle of its neighbours:** a note is drawn once. An opened note has no second card and leaves no outline in the field. The notes it is joined to gather round it and move with it when it is dragged. The related list names how each is joined, in the frontmatter key its author wrote.
-- **Glass, the bar above the field:** "Read", "Compare" and "Show related" arrange the open documents. Each shows outlines of where things will go and waits for "apply". "undo" puts everything back and says if something changed meanwhile.
+- **Glass, the bar above the field:** "Read", "Compare" and "Show related" arrange the open documents. Each shows outlines of where things will go and waits for "apply". "undo" puts everything back and says if something changed meanwhile. From 1500 px the bar is one row. Under 1500 px these buttons, "close all" and the counts have a row of their own, and under 1200 px the scene controls have one too, so no control is cut off in a narrow window. The bar's height depends only on the window's width.
 - **A narrow window, and the page a tablet loads:** under 720 px the collection and one document take turns, with a bar to switch. The served page opens documents of its own and never changes the Mac's desk.
 - **Spread and List:** unchanged.
 

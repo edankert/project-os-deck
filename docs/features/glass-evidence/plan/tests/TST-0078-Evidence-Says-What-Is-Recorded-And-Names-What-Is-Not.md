@@ -60,7 +60,7 @@ The status is `active` and not `ready`. A test with a `command:` records no verd
 
 ## Evidence (fill after running)
 
-- 2026-10-02, at `0169d7f`: `bash tools/scripts/run-desktop-tests.sh evidence` passes, 18 tests. `npm test` in `desktop/` passes, 586 tests. That commit differs from `4243fc2`, where the walks and the smoke run were made, by notes and one word in a comment.
+- 2026-10-02, at `e86b2e4`: `bash tools/scripts/run-desktop-tests.sh evidence` passes, 18 tests. `npm test` in `desktop/` passes, 589 tests.
 - The last test reads `desktop/fixtures/acceptance/app.json`, the sidecar's own answer recorded from this repository on 2026-10-02 (cockpit at `d1df13c`). It holds the reading to what that answer held: 21 checks, 4 `pass`, 1 `question` and 16 with no standing verdict, 14 events, and of the 21 checks 5 with a verdict, 14 never walked and 2 invalidated. A verdict's author is found for every one of the five.
 - This note has a `command:`, so it records no verdict of its own and rests at `active`. CI is where a run's result is.
 

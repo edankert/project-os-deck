@@ -90,13 +90,13 @@ Five threads are open under ADR-0008's Acceptance section, and each is Edwin's. 
 
 ## Verification
 
-Built on 2026-10-02 and checked at `4243fc2`.
+Built on 2026-10-02 and checked at `e86b2e4`, in a pass that ran every suite, the smoke run and every walk at that one commit.
 
-- **`npm test` in `desktop/`: 586 tests, all passing** (run at `0169d7f`, which differs from `4243fc2` by notes and one word in a comment). The evidence model is [[TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not]] (`bash tools/scripts/run-desktop-tests.sh evidence`, 18 tests). Each of its rules was broken once in the module and a test failed; the list is in that note. The host's refusals on the new path are in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] (`bash tools/scripts/run-desktop-tests.sh host`).
-- **The scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], in the Linux box.** On a copy of this repository: 36 checks, all holding, none not run. On a copy of `your-trainer`, which keeps ledgers for two platforms: 28 checks, all holding, 3 parts not run. That note lists what was seen, the measurements and seven defects the walks found, each fixed here.
-- **The earlier walks were run again in the same pass,** after the document's structure changed to hold the panel beside the text, and all held: the Glass desktop, arrangements, scenes, handoff, the collection's refresh and the neighbourhood.
+- **`npm test` in `desktop/`: 589 tests, all passing.** The evidence model is [[TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not]] (`bash tools/scripts/run-desktop-tests.sh evidence`, 18 tests). Each of its rules was broken once in the module and a test failed; the list is in that note. The host's refusals on the new path are in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] (`bash tools/scripts/run-desktop-tests.sh host`).
+- **The scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], in the Linux box.** On a copy of this repository: 36 checks, all holding, none not run. On a copy of `your-trainer`, which keeps ledgers for two platforms: 28 checks, all holding, 3 parts not run. That note lists what was seen, the measurements and the defects the walks found, each fixed here.
+- **The full smoke run, on loopback and on the network:** `bash tools/scripts/smoke-in-a-box.sh both` exited 0 after 1148 seconds. Run once more on loopback with each check printed, 389 checks passed and none failed. Two did not apply there: the throw to an empty display, on a machine with one display, and the tablet-shaped checks, which the network half makes.
+- **The other walks ran in the same pass** and all held: the Glass desktop, the collection, the neighbourhood, arrangements, scenes, handoff, the collection's refresh and the two at the size of a real workspace.
 - **Not done: a person's walk.** [[TST-0077-A-Claims-Evidence-Stands-Beside-It]] has not been walked and the ledger holds no verdict for it. Its steps were checked against the built application and two were rewritten to routes that exist.
-- **The full smoke run, on loopback and on the network, with this feature in the build:** `bash tools/scripts/smoke-in-a-box.sh both` exits 0 at `4243fc2`. The loopback half, run once more with each check printed, shows 389 checks passing, none failing and none skipped, 291 of them in the Glass section. The run's comparison of a document's text with the note's own leaves out the evidence control, as it does the tick control.
 
 The feature rests at `review`. It is built and its automated checks pass. `done` needs REQ-0006's criteria ticked with evidence, and two of them name the walk a person takes.
 

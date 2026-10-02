@@ -65,7 +65,7 @@ focus:
   feature: "FEAT-0023"
   task: "TASK-0109"
   issue: ""
-  note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. TASK-0104 (one object per note, chosen reading size, the neighbourhood moves with the document) is built and its node suites pass; its smoke run is being reconciled, so it is still in progress and ISS-0070/0071/0072 stay open until that evidence exists. FEAT-0020 is being built now, TASK-0095 first: the collection and the full document on the Glass desk. Then FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
+  note: "2026-10-02: the DES-0003 interaction direction is built in the Electron application: TASK-0104 (one object per note, the chosen size, the neighbourhood moves with the document), FEAT-0020 (the collection and the full document on the Glass desk), FEAT-0022 (stack, table and cards; Read, Compare and Show related with preview and undo), FEAT-0023 (named scenes; a handoff that waits for the destination) and FEAT-0024 (the evidence panel). Checked in one pass at e86b2e4: the node suites, the smoke run on loopback and on the network, and thirteen runs of the scripted walks on this repository and on your-trainer. ISS-0070, ISS-0071 and ISS-0072 are fixed. No feature is done: the acceptance walks TST-0052, TST-0063, TST-0064, TST-0073 and TST-0077 are a person's and are not walked, nothing was timed on the Mac, and DES-0003, ADR-0007 and ADR-0008 are proposed. PHASE-0002's Where this stands lists what is Edwin's."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -313,7 +313,7 @@ items:
     TASK-0106:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0106-Keep-A-Scene-In-The-Store.md"
       title: "Keep a scene in the store"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
@@ -327,7 +327,7 @@ items:
     TASK-0108:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process.md"
       title: "Acknowledge a handoff in the main process"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
@@ -360,14 +360,14 @@ items:
     TASK-0101:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0101-Change-A-Collection-Between-Stack-Table-And-Cards.md"
       title: "Change a collection between stack, table and cards"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
     TASK-0102:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements.md"
       title: "Preview, apply and undo Glass arrangements"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
@@ -395,7 +395,7 @@ items:
     TASK-0096:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0096-Draw-And-Operate-The-Collection-In-Glass.md"
       title: "Draw and operate the collection in Glass"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -403,7 +403,7 @@ items:
     TASK-0097:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0097-Open-The-Full-Note-As-A-Glass-Document.md"
       title: "Open the full note as a Glass document"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -2385,7 +2385,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 114
-    tasks_done: 88
+    tasks_done: 94
     tests_total: 57
     tests_passing: 8
     tests_failing: 0
