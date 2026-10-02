@@ -360,14 +360,14 @@ items:
     TASK-0101:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0101-Change-A-Collection-Between-Stack-Table-And-Cards.md"
       title: "Change a collection between stack, table and cards"
-      status: done
+      status: doing
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
     TASK-0102:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements.md"
       title: "Preview, apply and undo Glass arrangements"
-      status: done
+      status: doing
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
@@ -2385,7 +2385,7 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 114
-    tasks_done: 90
+    tasks_done: 88
     tests_total: 57
     tests_passing: 8
     tests_failing: 0

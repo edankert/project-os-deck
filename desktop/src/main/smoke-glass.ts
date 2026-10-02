@@ -4031,16 +4031,48 @@ async function recordDocument(kit: Kit): Promise<void> {
     // Sooner, and toward the row's right end: where the growing document lies
     // over the row. Whether it did is read at the press, from the document's
     // own box, so a press that came too late to meet it is made again.
+    //
+    // The second press is sent when the growing document has been seen over that
+    // point, not a fixed time after the first. A fixed time did not work: the
+    // document is first drawn growing one frame after it opens, and in the box
+    // that frame came anywhere from 40 to 75 ms after the first press, so a press
+    // sent 18 to 42 ms after it met a document still the size of its row in four
+    // attempts out of four on one run. From its first frame the document lies
+    // over the point for about 60 ms, until its left edge has passed it.
+    const pressUnder = async (pair: Pair, x: number): Promise<{ presses: Press[]; seen: boolean }> => {
+      await js(`window.__deckPresses = []; true`);
+      await pointer(win, [
+        { type: 'move', x: pair.a.x, y: pair.a.y },
+        { type: 'down', x: pair.a.x, y: pair.a.y, wait: 10 },
+        { type: 'up', x: pair.a.x, y: pair.a.y },
+      ]);
+      const over = `(() => { const p = document.querySelector('.pane.opening'); if (!p) return false; const r = p.getBoundingClientRect(); return ${x} >= r.left && ${x} <= r.right && ${pair.b.y} >= r.top && ${pair.b.y} <= r.bottom; })()`;
+      let seen = false;
+      for (let i = 0; i < 100 && !seen; i += 1) {
+        seen = await js<boolean>(over);
+        if (!seen) await delay(3);
+      }
+      await pointer(win, [
+        { type: 'move', x, y: pair.b.y },
+        { type: 'down', x, y: pair.b.y, wait: 10 },
+        { type: 'up', x, y: pair.b.y, wait: 60 },
+      ]);
+      await delay(1600);
+      await pointer(win, [{ type: 'move', ...PARK }]);
+      return { presses: await js<Press[]>(`window.__deckPresses`), seen };
+    };
     let through: { pair: Pair; presses: Press[] } | null = null;
     const gaps: string[] = [];
-    for (let attempt = 0; attempt < 4 && through === null; attempt += 1) {
+    for (let attempt = 0; attempt < 6 && through === null; attempt += 1) {
       await sweep();
       const next = await pairOf(used);
       if (next === null) break;
       used.push(next.a.id, next.b.id);
-      const presses = await twoPresses(next, next.b.px, 18 + attempt * 8);
+      const { presses, seen } = await pressUnder(next, next.b.px);
       const second = presses[1];
-      gaps.push(second === undefined ? 'no second press' : `${Math.round(second.at - (presses[0]?.at ?? second.at))} ms, ${second.covered ? 'under the document' : second.opening ? 'beside the document' : 'no document growing'}`);
+      const took = second === undefined ? null : Math.round(second.at - (presses[0]?.at ?? second.at));
+      // A pair low in the list is never covered: the document grows upward from there, away from the row below.
+      gaps.push(second === undefined ? 'no second press' : `${took} ms, ${second.covered ? 'under the document' : !seen ? 'the document never lay over the row' : second.opening ? 'beside the document by the time the press arrived' : 'no document growing'}`);
       if (second !== undefined && second.covered) through = { pair: next, presses };
     }
     if (through === null) {
