@@ -9,9 +9,9 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const {
-  COLLECTION_MIN_WIDTH, COLLECTION_MIN_HEIGHT, COLLECTION_MAX_SIDE, COLLECTION_HEAD_HEIGHT,
-  defaultCollectionLayout, normaliseCollection, fitCollection, memberIds, summarise, countText, filterText,
-  membershipChange, changeCount, changeText, removedSelectionText, anchorAt, anchorUnder, anchorsFrom, scrollTopForFirst, steadyOrder, scrollTopFor, nearestSurvivor,
+  COLLECTION_MIN_WIDTH, COLLECTION_MIN_HEIGHT, COLLECTION_MAX_SIDE, COLLECTION_MAX_PLACE, COLLECTION_HEAD_HEIGHT,
+  defaultCollectionLayout, normaliseCollection, fitCollection, foldShown, headKeysText, memberIds, summarise, countText, filterText,
+  membershipChange, changeCount, anyChange, changeText, removedSelectionText, anchorAt, anchorUnder, anchorsFrom, scrollTopForFirst, steadyOrder, scrollTopFor, nearestSurvivor,
 } = load('shared/collection.js');
 const { reduce, initialState, normaliseState, persistable, collectionOf, DESK_ACTIONS, isRendererAction } = load('shared/store-state.js');
 const { servedState, TABLET_LOCAL_ACTIONS } = load('shared/served-state.js');
@@ -271,6 +271,33 @@ test('a layout is clamped to what can be read, and one that is not whole is igno
   assert.equal(normaliseCollection({ ...LAYOUT, collapsed: 'yes' }).collapsed, false);
   // With no workspace or no view there is no desk to put it on.
   assert.equal(reduce(initialState(), { type: 'set-collection', layout: LAYOUT }).collections[WS], undefined);
+});
+
+test('a place too far out is held to a bound, so a state file cannot keep 1e300', () => {
+  assert.equal(COLLECTION_MAX_PLACE, 100000);
+  const far = normaliseCollection({ ...LAYOUT, x: 1e12, y: 1e300 });
+  assert.deepEqual(far, { ...LAYOUT, x: COLLECTION_MAX_PLACE, y: COLLECTION_MAX_PLACE });
+  // The bound itself and one short of it are kept as they are; one past it is not.
+  assert.equal(normaliseCollection({ ...LAYOUT, x: COLLECTION_MAX_PLACE }).x, COLLECTION_MAX_PLACE);
+  assert.equal(normaliseCollection({ ...LAYOUT, x: COLLECTION_MAX_PLACE - 1 }).x, COLLECTION_MAX_PLACE - 1);
+  assert.equal(normaliseCollection({ ...LAYOUT, y: COLLECTION_MAX_PLACE + 1 }).y, COLLECTION_MAX_PLACE);
+  // `1e999` in a state file reads as Infinity: held to the bound, not thrown away with the size beside it.
+  const read = JSON.parse('{"x":1e999,"y":-1e999,"w":420,"h":600,"collapsed":true,"presentation":"cards"}');
+  assert.equal(read.x, Infinity);
+  assert.deepEqual(normaliseCollection(read), { x: COLLECTION_MAX_PLACE, y: 0, w: 420, h: 600, collapsed: true, presentation: 'cards' });
+  // The other way a place stops at the field's own edge, as it did.
+  assert.equal(normaliseCollection({ ...LAYOUT, x: -1e300 }).x, 0);
+  // Through the store and out to the state file: what is written is the bound.
+  let state = reduce(opened(), { type: 'set-collection', layout: { ...LAYOUT, x: 1e300, y: Infinity } });
+  assert.deepEqual(collectionOf(state, WS, 'issues'), { ...LAYOUT, x: COLLECTION_MAX_PLACE, y: COLLECTION_MAX_PLACE });
+  const written = JSON.stringify(persistable(state).collections);
+  assert.ok(!/e\+|null/.test(written), written);
+  state = normaliseState({ workspaceId: WS, viewId: 'issues', collections: { [WS]: { issues: { ...LAYOUT, x: 1e300 } } } });
+  assert.equal(collectionOf(state, WS, 'issues').x, COLLECTION_MAX_PLACE);
+  // It is still drawn inside the field.
+  assert.equal(fitCollection(far, { width: 1400, height: 900 }).x, 1400 - LAYOUT.w);
+  // A place that is not a number at all is still no layout.
+  assert.equal(normaliseCollection({ ...LAYOUT, x: NaN }), null);
 });
 
 test('a state file written before collections existed loads, and a junk entry is no layout', () => {

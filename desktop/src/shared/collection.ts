@@ -64,15 +64,22 @@ function side(value: unknown, least: number): number | null {
   return Math.min(COLLECTION_MAX_SIDE, Math.max(least, Math.round(value)));
 }
 
+/** No place further out than this is kept: no desk is this large, and a state file cannot then hold 1e300. */
+export const COLLECTION_MAX_PLACE = 100000;
+
 function place(value: unknown): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-  return Math.max(0, Math.round(value));
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  // Infinity is a number here, and is held to the bound like any other that
+  // is too large: it is what `1e999` in a state file reads as.
+  return Math.max(0, Math.min(COLLECTION_MAX_PLACE, Math.round(value)));
 }
 
 /**
  * A layout read from the store or from a state file: whole and in range, or
  * null. A layout missing a number is no layout, and the caller falls back to
- * the default rather than guessing half of one.
+ * the default rather than guessing half of one. A place too far out is not
+ * missing: it is held to `COLLECTION_MAX_PLACE`, and drawn inside the field
+ * like any other (`fitCollection`).
  */
 export function normaliseCollection(value: unknown): CollectionLayout | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
