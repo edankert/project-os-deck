@@ -1954,10 +1954,16 @@ async function recordFocus(kit: Kit): Promise<void> {
       const mostAll = new Set([...mostKnown.linked, ...mostKnown.backlinks]);
       const mostStored = stored(most.id);
       const mostPane = await pane(most.id);
+      // A note that was already open when the corner was dragged is not a note opened next: it keeps the size
+      // it was drawn at then (FEAT-0017's review, `0d39033`), and pressing its row brings it to the front as
+      // it is. Until that fix it had no size of its own and took the view's new one, which this check then
+      // read as "opened at the chosen size".
+      const wasOpen = other === most.id;
+      const expected = wasOpen && otherSize?.w !== undefined && otherSize.h !== undefined ? { w: otherSize.w, h: otherSize.h } : wantSize;
       record(
-        f.noteId === most.id && mostStored?.w === wantSize.w && mostStored?.h === wantSize.h && mostPane !== null && mostPane.width === wantSize.w && mostPane.height === wantSize.h &&
+        f.noteId === most.id && mostStored?.w === expected.w && mostStored?.h === expected.h && mostPane !== null && mostPane.width === expected.w && mostPane.height === expected.h &&
           JSON.stringify([stored(card.id)?.w, stored(card.id)?.h]) === JSON.stringify([firstSize?.w, firstSize?.h]) && (other === undefined || (stored(other)?.w === otherSize?.w && stored(other)?.h === otherSize?.h)),
-        `${most.id}, opened from ${via}, takes the size the corner last chose on this view (${mostStored?.w} by ${mostStored?.h}, drawn ${px(mostPane?.width ?? 0)} by ${px(mostPane?.height ?? 0)}, the view's ${wantSize.w} by ${wantSize.h}), while ${card.id} keeps ${stored(card.id)?.w} by ${stored(card.id)?.h}${other === undefined ? '' : ` and ${other} keeps ${stored(other)?.w} by ${stored(other)?.h}`}`,
+        `${most.id}, ${wasOpen ? `already open when the corner was dragged and brought forward from ${via}, keeps the size it had then` : `opened from ${via}, takes the size the corner last chose on this view`} (${mostStored?.w} by ${mostStored?.h}, drawn ${px(mostPane?.width ?? 0)} by ${px(mostPane?.height ?? 0)}, the view's ${wantSize.w} by ${wantSize.h}), while ${card.id} keeps ${stored(card.id)?.w} by ${stored(card.id)?.h}${other === undefined ? '' : ` and ${other} keeps ${stored(other)?.w} by ${stored(other)?.h}`}`,
       );
       const manySeats = await seatedNow();
       const heldNow = deskIds();
