@@ -148,6 +148,12 @@ export interface Desk {
 export interface ReadingAnchor {
   /** The nearest heading at or above the top of the view, or null when the view was above the first one. */
   heading: string | null;
+  /**
+   * Which heading with those words it is, counted from 1 down the text: a
+   * note may have "Steps" under two sections. A position kept before this
+   * was recorded has none, and means the first.
+   */
+  occurrence?: number;
   /** How many pixels past that heading's top the view was scrolled. */
   past: number;
   /** The scroll position as a share of the scroll range, 0 to 1. */

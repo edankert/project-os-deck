@@ -231,7 +231,7 @@ test('a scene with fields that are not what they should be opens with those fiel
 test('a reading position is kept by the heading above it, and found again when text is added above', () => {
   const headings = [{ text: 'Goal', top: 40 }, { text: 'Scope', top: 300 }, { text: 'Out of scope', top: 900 }];
   const anchor = readingAnchorAt(headings, 420, 2000);
-  assert.deepEqual(anchor, { heading: 'Scope', past: 120, fraction: 0.21 });
+  assert.deepEqual(anchor, { heading: 'Scope', occurrence: 1, past: 120, fraction: 0.21 });
   // Three paragraphs were added to Goal: Scope is 260 pixels lower, and so is the reader.
   const grown = [{ text: 'Goal', top: 40 }, { text: 'Scope', top: 560 }, { text: 'Out of scope', top: 1160 }];
   assert.deepEqual(scrollTopForAnchor(anchor, grown, 2260), { top: 680, moved: false });
@@ -245,6 +245,30 @@ test('a reading position is kept by the heading above it, and found again when t
   assert.deepEqual(scrollTopForAnchor(anchor, headings, 350), { top: 350, moved: false });
   // A document that does not scroll has a fraction of 0, not NaN.
   assert.equal(readingAnchorAt(headings, 0, 0).fraction, 0);
+});
+
+test('a reading position under a heading whose words occur twice goes back to that one, not the first', () => {
+  // "Steps" heads two sections. The reader is 60 pixels into the second.
+  const headings = [{ text: 'Goal', top: 40 }, { text: 'Steps', top: 300 }, { text: 'Result', top: 600 }, { text: 'Steps', top: 1500 }];
+  const anchor = readingAnchorAt(headings, 1560, 3000);
+  assert.deepEqual(anchor, { heading: 'Steps', occurrence: 2, past: 60, fraction: 0.52 });
+  assert.deepEqual(scrollTopForAnchor(anchor, headings, 3000), { top: 1560, moved: false });
+  // Text added above both: still the second "Steps".
+  const grown = headings.map((h) => ({ ...h, top: h.top + 200 }));
+  assert.deepEqual(scrollTopForAnchor(anchor, grown, 3200), { top: 1760, moved: false });
+  // Under the first "Steps" the position says so, and goes there.
+  assert.deepEqual(readingAnchorAt(headings, 320, 3000), { heading: 'Steps', occurrence: 1, past: 20, fraction: 0.10666666666666667 });
+  assert.deepEqual(scrollTopForAnchor({ heading: 'Steps', occurrence: 1, past: 20, fraction: 0.1 }, headings, 3000), { top: 320, moved: false });
+  // A position saved before this was recorded has no count, and means the first: saved scenes open as they did.
+  assert.deepEqual(scrollTopForAnchor({ heading: 'Steps', past: 20, fraction: 0.1 }, headings, 3000), { top: 320, moved: false });
+  // The second "Steps" was taken out of the text. The first is not it: the share of the text is used, and it says so.
+  assert.deepEqual(scrollTopForAnchor(anchor, headings.slice(0, 3), 3000), { top: 1560, moved: true });
+  // Above the first heading there is nothing to count.
+  assert.equal('occurrence' in readingAnchorAt(headings, 10, 3000), false);
+  // A scene keeps the count, through a save, the state file and a read; a count that is not one is dropped.
+  const s = reduce(desk(), { type: 'save-scene', name: 'Twice', ...extras, anchors: { 'ISS-0001': anchor, 'ISS-0002': { heading: 'Steps', occurrence: 'second', past: 5, fraction: 0.1 } } });
+  const kept = normaliseState(JSON.parse(JSON.stringify(persistable(s)))).desks[deskKey(WS, 'Twice')].anchors;
+  assert.deepEqual(kept, { 'ISS-0001': anchor, 'ISS-0002': { heading: 'Steps', past: 5, fraction: 0.1 } });
 });
 
 test('a reopened scene says what is not as it was saved, and nothing about the count', () => {
