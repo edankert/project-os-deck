@@ -84,6 +84,78 @@ test('resizing one note leaves every other open note the size it was', () => {
   assert.deepEqual(size(state, 'B'), { w: 820, h: 700 });
 });
 
+// What a window draws a held note at: the rule `paneRect` in Glass applies.
+const drawn = (state, id, view = 'issues') => {
+  const { w, h } = readingSizeFor(card(state, id, view), readingSizeOf(state, WS, view));
+  return { w, h };
+};
+
+test('a note with no size of its own is drawn the same before and after another note is resized', () => {
+  // The review of 2026-10-02: the test above opens both notes with a size, so
+  // it never met a note drawn at the VIEW's size. Such a note jumped to
+  // whatever size another note was dragged to. Spread puts a note on the desk
+  // with no size, and so does a handoff that names none.
+  let state = opened();
+  state = reduce(state, { type: 'put-on-desk', noteId: 'A', x: 10, y: 10 });
+  state = reduce(state, { type: 'put-on-desk', noteId: 'B', x: 40, y: 40, w: 560, h: 520 });
+  assert.equal(card(state, 'A').w, undefined, 'A was given a size when it was opened');
+  const before = drawn(state, 'A');
+  const revision = state.revision;
+  state = reduce(state, { type: 'resize-card', noteId: 'B', w: 820, h: 700 });
+  assert.deepEqual(drawn(state, 'A'), before, 'resizing B changed the size A is drawn at');
+  assert.deepEqual(size(state, 'B'), { w: 820, h: 700 });
+  assert.deepEqual(readingSizeOf(state, WS, 'issues'), { w: 820, h: 700 });
+  // One act by the person is one change, however many notes kept their size.
+  assert.equal(state.revision, revision + 1);
+  // A's place and its height in the stack are untouched.
+  assert.deepEqual({ x: card(state, 'A').x, y: card(state, 'A').y, z: card(state, 'A').z }, { x: 10, y: 10, z: 1 });
+  // And again: A holds through every later resize, by pointer or by key.
+  state = reduce(state, { type: 'resize-card', noteId: 'B', w: 400, h: 300 });
+  assert.deepEqual(drawn(state, 'A'), before);
+  // The note that IS resized takes the size asked for, having had none.
+  state = reduce(state, { type: 'put-on-desk', noteId: 'C', x: 0, y: 0, w: 500, h: 400 });
+  state = reduce(state, { type: 'resize-card', noteId: 'A', w: 610, h: 430 });
+  assert.deepEqual(size(state, 'A'), { w: 610, h: 430 });
+  assert.deepEqual(size(state, 'B'), { w: 400, h: 300 });
+  assert.deepEqual(size(state, 'C'), { w: 500, h: 400 });
+});
+
+test('a state file older than reading sizes: its notes hold their size when one of them is resized', () => {
+  // Nothing is rewritten when the file is loaded. The notes are given the
+  // size they are drawn at only when the view's size is about to change.
+  const state = normaliseState({
+    workspaceId: WS,
+    viewId: 'issues',
+    deskCards: { [WS]: [{ noteId: 'EVERY', x: 20, y: 30 }] },
+    viewDesks: { [WS]: { issues: [{ noteId: 'OLD-1', x: 5, y: 6 }, { noteId: 'WIDTH-ONLY', x: 7, y: 8, w: 444 }, { noteId: 'OLD-2', x: 60, y: 90, w: 500, h: 400 }], features: [{ noteId: 'ELSEWHERE', x: 1, y: 2 }] } },
+  });
+  assert.deepEqual(card(state, 'OLD-1', 'issues'), { noteId: 'OLD-1', x: 5, y: 6 }, 'loading the file wrote a size on a card');
+  const before = Object.fromEntries(['EVERY', 'OLD-1', 'WIDTH-ONLY'].map((id) => [id, drawn(state, id)]));
+  const resized = reduce(state, { type: 'resize-card', noteId: 'OLD-2', w: 900, h: 640 });
+  for (const id of ['EVERY', 'OLD-1', 'WIDTH-ONLY']) assert.deepEqual(drawn(resized, id), before[id], `${id} changed size when OLD-2 was resized`);
+  assert.deepEqual(before['WIDTH-ONLY'], { w: 444, h: READING_FIRST_USE.h });
+  // Another view's desk is not this view's: its note is left as it was.
+  assert.deepEqual(card(resized, 'ELSEWHERE', 'features'), { noteId: 'ELSEWHERE', x: 1, y: 2 });
+  // A note on every view was given the size it had on the view it was seen on.
+  assert.deepEqual(size(resized, 'EVERY', 'issues'), { w: READING_FIRST_USE.w, h: READING_FIRST_USE.h });
+});
+
+test('a note on every view holds the size it is drawn at where the view already has a size', () => {
+  // Pinned to every view with no size, then seen on a view whose size is
+  // 700 by 610: that is the size it is drawn at, and the size it keeps.
+  let state = opened('issues');
+  state = reduce(state, { type: 'put-on-desk', noteId: 'A', x: 0, y: 0 });
+  state = reduce(state, { type: 'resize-card', noteId: 'A', w: 700, h: 610 });
+  state = reduce(state, { type: 'select-view', viewId: 'features' });
+  state = reduce(state, { type: 'put-on-desk', noteId: 'P', x: 0, y: 0 });
+  state = reduce(state, { type: 'set-every-view', noteId: 'P', on: true });
+  state = reduce(state, { type: 'select-view', viewId: 'issues' });
+  assert.equal(card(state, 'P', 'issues').w, undefined);
+  assert.deepEqual(drawn(state, 'P'), { w: 700, h: 610 });
+  state = reduce(state, { type: 'resize-card', noteId: 'A', w: 900, h: 800 });
+  assert.deepEqual(drawn(state, 'P'), { w: 700, h: 610 }, 'the note on every view changed size when A was resized');
+});
+
 test('the size a window asks for wins over the view\'s when a note is opened', () => {
   let state = opened();
   state = reduce(state, { type: 'put-on-desk', noteId: 'A', x: 0, y: 0 });

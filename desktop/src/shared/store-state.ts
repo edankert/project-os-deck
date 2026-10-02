@@ -13,7 +13,7 @@
  */
 import type { Desk, DeskCard, DeckState, Filters, ReadingAnchor, ReadingSize, SessionState } from './types.js';
 import { normaliseScene, sceneFrom, sceneKind } from './scenes.js';
-import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH } from './panes.js';
+import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH, readingSizeFor } from './panes.js';
 import { type CollectionLayout, normaliseCollection } from './collection.js';
 
 export type DeckAction =
@@ -585,8 +585,14 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const ws = state.workspaceId;
       const known = readingSizeOf(resized, ws, view);
       if (view === null || (known !== null && known.w === w && known.h === h)) return resized;
-      const next: DeckState = { ...resized, readingSizes: { ...resized.readingSizes, [ws]: { ...(resized.readingSizes[ws] ?? {}), [view]: { w, h } } } };
-      return resized === state ? bump(next) : next;
+      // The view's size is about to change, and an open note with no size of
+      // its own is drawn at the view's size: it would change size on screen
+      // though nobody touched it. Each such note is first given the size it
+      // is drawn at now, so resizing one note resizes one note.
+      const kept = keepDrawnSizes(resized, ws, view, action.noteId, known);
+      const next: DeckState = { ...kept, readingSizes: { ...kept.readingSizes, [ws]: { ...(kept.readingSizes[ws] ?? {}), [view]: { w, h } } } };
+      // One change, however many notes were given the size they had: one revision.
+      return { ...next, revision: state.revision + 1 };
     }
     case 'set-collection': {
       if (state.workspaceId === null) return state;
@@ -767,6 +773,38 @@ function updateCard(state: DeckState, view: string | null, noteId: string, chang
   }
   const next = apply(viewCardsOf(state, ws, view));
   return next === null ? state : withDesk(state, ws, view, null, next);
+}
+
+/**
+ * Every note on the drawn desk with no size of its own, but `except`, is
+ * given the size it is drawn at under `preference`, the view's size so far.
+ *
+ * A note has no size when Spread put it on the desk, when another window
+ * handed it over without one, or when the state file is older than TASK-0104.
+ * All three are met here, when the view's size changes, and not when the
+ * state is loaded: until somebody resizes a note, such a card is the card it
+ * always was. A note with one side stored keeps that side. A note on every
+ * view is given the size it has on this view, the one in front of the person.
+ * The revision is the caller's to raise.
+ */
+function keepDrawnSizes(state: DeckState, ws: string, view: string, except: string, preference: ReadingSize | null): DeckState {
+  const keep = (cards: DeskCard[]): DeskCard[] | null => {
+    let changed = false;
+    const next = cards.map((c) => {
+      if (c.noteId === except || (c.w !== undefined && c.h !== undefined)) return c;
+      const drawn = readingSizeFor(c, preference);
+      changed = true;
+      return { ...c, w: drawn.w, h: drawn.h };
+    });
+    return changed ? next : null;
+  };
+  const every = keep(everyViewCardsOf(state, ws));
+  const own = keep(viewCardsOf(state, ws, view));
+  if (every === null && own === null) return state;
+  const next: DeckState = { ...state };
+  if (every !== null) next.deskCards = { ...state.deskCards, [ws]: every };
+  if (own !== null) next.viewDesks = { ...state.viewDesks, [ws]: { ...(state.viewDesks[ws] ?? {}), [view]: own } };
+  return next;
 }
 
 function clampSide(value: number, minimum: number): number {
