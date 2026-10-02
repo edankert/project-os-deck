@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
+const { READING_FIRST_USE } = load('shared/panes.js');
 const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy, actsFor, savedByOther, ReadingWait } = load('shared/scenes.js');
 
 const { isDeskName, addressFor, formatAddress, parseAddress } = load('shared/address.js');
@@ -380,15 +381,31 @@ test('a second request while the first is waiting answers the first, and its unr
 
 test('a reopened scene says what is not as it was saved, and nothing about the count', () => {
   const scene = save(desk()).desks[deskKey(WS, 'Review Glass')];
-  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 1260, h: 745 }, movedPassages: [] }), []);
-  const report = sceneReport({ scene, present: new Set(['ISS-0001']), field: { w: 900, h: 700 }, movedPassages: ['ISS-0001'] });
+  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 1260, h: 745 }, readingSize: null, movedPassages: [] }), []);
+  const report = sceneReport({ scene, present: new Set(['ISS-0001']), field: { w: 900, h: 700 }, readingSize: null, movedPassages: ['ISS-0001'] });
   assert.equal(report.length, 3);
   assert.match(report[0], /^ISS-0002 is no longer in this workspace\. Its document is kept, labelled, and can be closed\.$/);
   assert.match(report[1], /^This window's field is 900 by 700; the scene was arranged in 1260 by 745\. ISS-0001 and ISS-0002 are drawn inside this field; the saved places are not changed\.$/);
   assert.match(report[2], /^The passage being read in ISS-0001 is not under the heading it was/);
   assert.ok(!report.join(' ').match(/\d+ notes|count|members/), 'the collection\'s membership is live and is never reported as a change');
   // A larger field is not a change worth a sentence.
-  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 2000, h: 1200 }, movedPassages: [] }), []);
+  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 2000, h: 1200 }, readingSize: null, movedPassages: [] }), []);
+});
+
+test('a document with no stored size counts at the size it is drawn at when a scene says what fits a smaller field', () => {
+  // One document at x 850 with no size of its own, in a scene arranged in a field 1260 wide, reopened in one 900 wide.
+  const scene = { name: 'n', workspaceId: WS, version: SCENE_VERSION, cards: [{ noteId: 'A', x: 850, y: 10 }], field: { w: 1260, h: 745 } };
+  const report = (readingSize, cards = scene.cards) => sceneReport({ scene: { ...scene, cards }, present: new Set(['A']), field: { w: 900, h: 700 }, readingSize, movedPassages: [] });
+  // Nobody has resized a note on this view: it is drawn at the first-use size, 560 wide, and 850 + 560 is past 900.
+  assert.equal(READING_FIRST_USE.w, 560);
+  assert.deepEqual(report(null), ['This window\'s field is 900 by 700; the scene was arranged in 1260 by 745. A is drawn inside this field; the saved place is not changed.']);
+  // At x 500 the view's reading size decides: 300 wide fits in 900, 560 wide does not.
+  const at500 = [{ noteId: 'A', x: 500, y: 10 }];
+  assert.match(report({ w: 300, h: 200 }, at500)[0], /Everything still fits\.$/);
+  assert.match(report(null, at500)[0], /A is drawn inside this field/);
+  assert.match(report({ w: 300, h: 695 }, at500)[0], /A is drawn inside this field/, 'too tall counts as well as too wide');
+  // A size of its own still wins over the view's.
+  assert.match(report({ w: 600, h: 200 }, [{ noteId: 'A', x: 500, y: 10, w: 300, h: 200 }])[0], /Everything still fits\.$/);
 });
 
 test('a saved scene has a name, a field has a size, and the list is one workspace\'s', () => {

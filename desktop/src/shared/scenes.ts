@@ -18,6 +18,7 @@
  * changed since it was saved.
  */
 import type { CollectionLayout } from './collection.js';
+import { readingSizeFor } from './panes.js';
 import type { DeskCard, Desk, Filters, ReadingAnchor } from './types.js';
 
 export type { ReadingAnchor };
@@ -303,6 +304,13 @@ export interface SceneReportInput {
   present: ReadonlySet<string>;
   /** The field the scene is being reopened in. */
   field: { w: number; h: number };
+  /**
+   * The size the scene's view gives a document that has none of its own: the
+   * last size a person gave a note there, or null when nobody has, and the
+   * first-use size applies. A document with no stored size is drawn at it,
+   * so it is the size it counts at when the report says what fits.
+   */
+  readingSize: { w: number; h: number } | null;
   /** Documents whose reading passage could not be found again by its heading. */
   movedPassages: readonly string[];
 }
@@ -325,7 +333,13 @@ export function sceneReport(input: SceneReportInput): string[] {
   }
   const saved = scene.field;
   if (saved !== undefined && (field.w < saved.w - 1 || field.h < saved.h - 1)) {
-    const outside = cards.filter((c) => c.x + (c.w ?? 0) > field.w || c.y + (c.h ?? 0) > field.h).map((c) => c.noteId);
+    // A document with no size of its own is not zero wide: it is drawn at the view's reading size.
+    const outside = cards
+      .filter((c) => {
+        const size = readingSizeFor(c, input.readingSize);
+        return c.x + size.w > field.w || c.y + size.h > field.h;
+      })
+      .map((c) => c.noteId);
     out.push(
       `This window's field is ${Math.round(field.w)} by ${Math.round(field.h)}; the scene was arranged in ${saved.w} by ${saved.h}.` +
         (outside.length > 0 ? ` ${listOf(outside)} ${outside.length === 1 ? 'is' : 'are'} drawn inside this field; the saved ${outside.length === 1 ? 'place is' : 'places are'} not changed.` : ' Everything still fits.'),

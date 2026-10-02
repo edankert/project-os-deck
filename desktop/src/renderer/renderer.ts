@@ -20,7 +20,7 @@ import { SidecarClient, flattenGroups, groupsFromNav, isFinishedWork } from '../
 import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
-import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
+import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, readingSizeOf, viewCardsOf } from '../shared/store-state.js';
 import { actsFor, listScenes, savedByOther, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor, viewReplacedBy } from '../shared/scenes.js';
 import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, localDay, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
 import type { EvidenceRow, EvidenceView } from './glass.js';
@@ -1570,7 +1570,8 @@ async function openScene(name: string, undoable = true): Promise<void> {
   }
   const present = await noteIdsNow(ws);
   glass.restoreReading(scene.anchors ?? {}, (moved) => {
-    const lines = sceneReport({ scene, present: present ?? new Set(scene.cards.map((c) => c.noteId)), field: glass.fieldSize(), movedPassages: moved });
+    const now = host.state();
+    const lines = sceneReport({ scene, present: present ?? new Set(scene.cards.map((c) => c.noteId)), field: glass.fieldSize(), readingSize: readingSizeOf(now, ws, now.viewId), movedPassages: moved });
     if (present === null) lines.push('Deck could not check which of its notes still exist: its index did not answer.');
     if (lines.length === 0) {
       say(`scene "${name}" reopened: everything it holds is where it was, read as it is now`);
