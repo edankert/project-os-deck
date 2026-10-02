@@ -89,8 +89,9 @@ module.exports = async function (d) {
   check(/moved to the desk on .*, which is showing it/.test(said) && !deskOf('features').some((c) => c.noteId === a) && landed !== undefined, `Move: ${a} is on the Issues desk and off this one, and the main window says the other window is showing it`, { said, order });
   check(JSON.stringify(order) === JSON.stringify(['F-', 'FI', '-I']), 'it was on both desks before it left this one, and never on neither: the source let go after the destination had it', order);
   check(landed !== undefined && landed.w === reading.size.w && landed.h === reading.size.h, 'it arrived at the size it was read at', landed);
-  const arrived = await d.js(desk, `({ card: [...document.querySelectorAll('#desk [data-note-id]')].some((c) => c.dataset.noteId === ${JSON.stringify(a)}), status: document.getElementById('status').textContent, back: !!document.getElementById('send-back') })`);
-  check(arrived.card && arrived.status.includes(`${a} arrived from the Deck on`) && arrived.back, 'the desk window draws it, says where it came from, and offers "send back"', arrived);
+  // A card on screen, not an element of the pool left from another note; and what the desk window lists, read from the window itself.
+  const arrived = await d.js(desk, `(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); const r = c ? c.getBoundingClientRect() : null; return { card: !!c && r.width > 0 && r.height > 0, markedNotInThisView: !!c && c.dataset.elsewhere === 'true', says: c ? getComputedStyle(c, '::after').content : '', surface: document.body.dataset.surface, windowLists: document.getElementById('status').textContent, status: document.getElementById('status').textContent, back: !!document.getElementById('send-back') }; })()`);
+  check(arrived.card && arrived.markedNotInThisView && /not in this view/.test(arrived.says) && arrived.status.includes(`${a} arrived from the Deck on`) && arrived.back, 'the desk window, which lists Issues and draws its desk as cards, draws the feature as a card marked "not in this view", says where it came from, and offers "send back"', arrived);
   await d.shot(desk, '03-arrived-on-the-desk-window');
 
   // ---- 4. Sent back: the same document, read where it was ----
