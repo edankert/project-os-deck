@@ -2884,20 +2884,71 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
       }
       const nowAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === 'ISS-0008');
       record(moveFrom !== null && wasAt !== undefined && nowAt !== undefined && (nowAt.x !== wasAt.x || nowAt.y !== wasAt.y) && viewCardsOf(store.getState(), ws, 'features').length === 0, `a card dragged in that panel moves on the Issues desk (${wasAt?.x},${wasAt?.y} to ${nowAt?.x},${nowAt?.y})`);
+      // A desk drawn as cards shows only the notes its view lists. A feature handed to the Issues desk would
+      // be in the store and on no screen, so since FEAT-0023 the handoff is refused: the panel answers that it
+      // cannot show it, and nothing is put anywhere.
       const featuresBefore = JSON.stringify(viewCardsOf(store.getState(), ws, 'features'));
+      const issuesBefore = JSON.stringify(own('issues'));
       const thrown = await js<string | null>(`(async () => {
         const g = window.__deckGlass;
         const id = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).find((n) => n.startsWith('FEAT-'));
         const card = id ? g.cardFor(id) : null;
         if (!card) return null;
-        await g.hooks.throwTo({ kind: 'window', windowId: ${deskPanel.id}, carries: 'desk', label: 'desk', displayId: 0 }, card, 'right');
+        await g.hooks.throwTo({ kind: 'window', windowId: ${deskPanel.id}, carries: 'desk', label: 'desk on the main display', displayId: 0, view: 'issues' }, card, 'right');
         return id;
       })()`);
       await delay(700);
       const throwSaid = await js<string>(`__t.text('#status')`);
-      record(thrown !== null && own('issues').includes(thrown) && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore, `a note thrown onto that desk panel from Features lands on the Issues desk, and the Features desk is unchanged (${thrown}; the window said "${throwSaid.trim().slice(0, 160)}")`);
+      record(
+        thrown !== null && JSON.stringify(own('issues')) === issuesBefore && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore && throwSaid.includes(`${thrown} stays here`) && throwSaid.includes(`does not list ${thrown}`),
+        `a feature handed to a desk panel on Issues, which does not list it, is refused with the reason, and neither desk changes (${thrown}; the window said "${throwSaid.trim().slice(0, 240)}")`,
+      );
     } finally {
       if (!deskPanel.isDestroyed()) deskPanel.destroy();
+    }
+
+    // ---- 8b. A note moved to a desk panel whose view lists it lands there, is drawn, and only then leaves this desk ----
+    // Overview lists the features too. The note is held on the Features desk first, so there is a desk for it to leave.
+    await view('features');
+    const mover = await js<string | null>(`[...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).find((n) => n.startsWith('FEAT-')) || null`);
+    store.dispatch({ type: 'put-on-desk', noteId: mover ?? '', x: 40, y: 40, viewId: 'features' });
+    const overviewPanel = ctx.createWindow('satellite', `deck://${ws}/overview?panel=desk`, 'desk');
+    overviewPanel.setBounds({ x: 1330, y: 0, width: 520, height: 420 });
+    try {
+      await once(overviewPanel, 'did-finish-load');
+      await ctx.untilBooted(overviewPanel);
+      await delay(1500);
+      const heldBefore = viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover);
+      // What the panel had drawn when the note left the Features desk: the order is the rule being checked.
+      let drawnWhenLeft: boolean | null = null;
+      // The store here has no subscription, so it is watched: at the first look that finds the note gone
+      // from the Features desk, the panel is asked whether it has drawn it.
+      const watch = setInterval(() => {
+        if (drawnWhenLeft !== null || viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover)) return;
+        drawnWhenLeft = false;
+        void overviewPanel.webContents
+          .executeJavaScript(`[...document.querySelectorAll('#desk .card:not([hidden])')].some((e) => e.dataset.noteId === ${JSON.stringify(mover)})`)
+          .then((v) => { drawnWhenLeft = v === true; });
+      }, 15);
+      const stop = (): void => clearInterval(watch);
+      await js(`(async () => {
+        const g = window.__deckGlass;
+        const card = g.cardFor(${JSON.stringify(mover)});
+        if (!card) return null;
+        await g.hooks.throwTo({ kind: 'window', windowId: ${overviewPanel.id}, carries: 'desk', label: 'desk on the main display', displayId: 0, view: 'overview', mode: 'move' }, card, 'right');
+        return true;
+      })()`);
+      await delay(900);
+      stop();
+      const moveSaid = await js<string>(`__t.text('#status')`);
+      const drawnThere = (await overviewPanel.webContents.executeJavaScript(`[...document.querySelectorAll('#desk .card:not([hidden])')].some((e) => e.dataset.noteId === ${JSON.stringify(mover)})`)) as boolean;
+      record(
+        mover !== null && heldBefore && own('overview').includes(mover) && drawnThere && drawnWhenLeft === true && !viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover) && moveSaid.includes(`${mover} moved to the desk on the main display`),
+        `a note moved to a desk panel on Overview, which lists it, is on that desk and drawn there, and it left the Features desk only after the panel had drawn it (${mover}; drawn there when it left: ${drawnWhenLeft}; the window said "${moveSaid.trim().slice(0, 160)}")`,
+      );
+      store.dispatch({ type: 'take-off-desk', noteId: mover ?? '', viewId: 'overview' });
+    } finally {
+      if (!overviewPanel.isDestroyed()) overviewPanel.destroy();
     }
 
     // ---- 9. The tablet draws the Mac's current view's desk ----
@@ -4541,8 +4592,9 @@ async function recordThrow(kit: Kit): Promise<void> {
       asked = await js<typeof asked>(`({ asked: __t.text('#status'), focus: document.activeElement ? document.activeElement.textContent : '', hasFocus: document.hasFocus() })`);
     }
     if (asked.focus.trim() === '') console.log('DIAG sendto', JSON.stringify(asked));
-    record(/^send /.test(asked.asked.trim()) && asked.focus.length > 0, `send to asks where, and the keyboard is on the first answer ("${asked.focus}"; the question reads "${asked.asked.trim().slice(0, 90)}")`);
-    const focusIsReader = asked.focus.startsWith('reader on');
+    // Since FEAT-0023 the question names the note and each answer names its act: "Move to the …" or "Also show in the …".
+    record(rowNote !== null && asked.asked.trim().startsWith(`${rowNote}:`) && /^(Move to|Also show in) the /.test(asked.focus), `send to names the note and asks where, each answer naming its act, and the keyboard is on the first answer ("${asked.focus}"; the question reads "${asked.asked.trim().slice(0, 90)}")`);
+    const focusIsReader = / the reader on /.test(asked.focus);
     press(win, 'Return');
     await delay(1600);
     if (rowNote !== null) {
