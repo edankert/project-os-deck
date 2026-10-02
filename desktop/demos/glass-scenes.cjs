@@ -72,7 +72,9 @@ module.exports = async function (d) {
   await d.delay(200);
   const search = await t.rect('#search');
   await d.pointer(win, d.click(search));
-  await type('glass');
+  // A word that narrows this view: "glass" here, and on another workspace the commonest long word of its notes' titles.
+  const WORD = await js(`(() => { const titles = [...document.querySelectorAll('#nav-list .nav-row')].map((r) => r.textContent.toLowerCase()); const n = (w) => titles.filter((x) => x.includes(w)).length; if (n('glass') >= 3) return 'glass'; const counts = new Map(); for (const x of titles) for (const w of new Set(x.match(/[a-z]{5,}/g) || [])) counts.set(w, (counts.get(w) || 0) + 1); return ([...counts].filter(([, c]) => c >= 3 && c < titles.length - 2).sort((a, b) => b[1] - a[1])[0] || ['a'])[0]; })()`);
+  await type(WORD);
   await d.delay(800);
   await t.clickOn('#collection-as-cards', 800);
   await t.park();
@@ -84,7 +86,7 @@ module.exports = async function (d) {
   await saveAs('Review Glass');
   const saved = (await state()).desks[`${ws}:Review Glass`];
   const said = await t.text('#status');
-  check(saved !== undefined && saved.version === 2 && saved.view === 'features' && saved.query === 'glass' && saved.collection.presentation === 'cards' && saved.cards.length === 2 && saved.anchors[a].heading === kept.anchorA.heading && /saved/.test(said), 'the scene is saved under its name: its view, search, collection, the two notes and where each is being read', { said, anchors: saved && saved.anchors });
+  check(saved !== undefined && saved.version === 2 && saved.view === 'features' && saved.query === WORD && saved.collection.presentation === 'cards' && saved.cards.length === 2 && saved.anchors[a].heading === kept.anchorA.heading && /saved/.test(said), 'the scene is saved under its name: its view, search, collection, the two notes and where each is being read', { said, anchors: saved && saved.anchors });
   check(saved !== undefined && JSON.stringify(Object.keys(saved).sort()) === JSON.stringify(['anchors', 'cards', 'collection', 'field', 'filters', 'name', 'query', 'savedAt', 'version', 'view', 'workspaceId']) && saved.cards.every((c) => JSON.stringify(Object.keys(c).sort()) === JSON.stringify(['h', 'noteId', 'w', 'x', 'y'])), 'it holds no row, no member id, no count, no text, and nothing of how the field was turned or zoomed', saved && Object.keys(saved));
   const listed = await js(`({ value: document.getElementById('scene-list').value, options: [...document.getElementById('scene-list').options].map((o) => o.textContent), rename: !document.getElementById('scene-rename').hidden, del: !document.getElementById('scene-delete').hidden })`);
   check(listed.value === 'Review Glass' && listed.options.some((o) => o.startsWith('Review Glass · features · 2 notes')) && listed.rename && listed.del, 'the list names it with its view and how many notes it holds, and rename and delete are offered for it', listed);
@@ -110,7 +112,7 @@ module.exports = async function (d) {
   check(chosenOnly.value === 'Review Glass' && chosenOnly.view === 'issues' && chosenOnly.held.length === 1 && chosenOnly.open, 'choosing the scene\'s name in the list changes nothing on the desk; "open" is then offered', chosenOnly);
   await choose('Review Glass');
   const again = { state: await state(), a: await pane(a), b: await pane(b), anchorA: await anchorOf(a), anchorB: await anchorOf(b), count: await t.text('#collection-count'), cards: await js(`document.querySelectorAll('.field-card.in-collection').length`), search: await js(`document.getElementById('search').value`), status: await t.text('#status'), report: await js(`document.getElementById('scene-report').hidden`) };
-  check(again.state.viewId === 'features' && again.search === 'glass' && again.cards > 0 && again.state.collections[ws].features.presentation === 'cards', 'the scene chosen from the list brings back its view, its search and the collection as cards', { view: again.state.viewId, search: again.search, cards: again.cards });
+  check(again.state.viewId === 'features' && again.search === WORD && again.cards > 0 && again.state.collections[ws].features.presentation === 'cards', 'the scene chosen from the list brings back its view, its search and the collection as cards', { view: again.state.viewId, search: again.search, cards: again.cards });
   check(again.a !== null && again.b !== null && again.a.left === kept.a.left && again.a.top === kept.a.top && again.b.left === kept.b.left && again.a.width === kept.a.width && again.b.width === kept.b.width && again.b.height === kept.b.height, 'both notes are open where they stood, at the sizes they had', { a: again.a, b: again.b });
   check(again.a.state === 'ready' && again.b.state === 'ready' && again.anchorA.heading === kept.anchorA.heading && Math.abs(again.anchorA.past - kept.anchorA.past) <= 2 && again.anchorB.heading === kept.anchorB.heading && Math.abs(again.b.scrollTop - kept.b.scrollTop) <= 2, 'each is read where it was being read: under the same heading, the same distance past it', { a: [kept.anchorA, again.anchorA], b: [kept.b.scrollTop, again.b.scrollTop] });
   const nav = await (await fetch(`${d.origin}/deck/sidecar/${ws}/api/cockpit/nav?mode=features`)).json();
