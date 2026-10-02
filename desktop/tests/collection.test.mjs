@@ -643,3 +643,36 @@ test('a refreshed result that differs only in its order is offered, and applying
   page.view.paint(page.model({ change: changeText(membershipChange([group('a', [card('A')])], [group('a', [card('A')])])) }));
   assert.equal(note.hidden, true);
 });
+
+test('the keyboard is on a row or on the header only when that element took it', async () => {
+  const page = await collectionOnAPage();
+  const { NavigatorList } = await loadWeb('renderer/navigator.js');
+  const list = new NavigatorList(page.el.list, { toggle() {}, fold() {} });
+  list.render({
+    groups: [group('a', [card('A'), card('B')])],
+    faces: { default: { title: 'title', subtitle: null, image: null, fields: [], measure: 'none' }, byType: {} },
+    folds: {},
+    onDesk: new Set(),
+    currentNoteId: null,
+  });
+  const rows = page.el.list.children;
+  assert.deepEqual(rows.map((r) => r.dataset.noteId ?? null), [null, 'A', 'B']);
+  // On screen, the row takes the keyboard and says so.
+  assert.equal(list.focusNote('B', true), true);
+  assert.equal(page.document.activeElement, rows[2]);
+  // Not on screen (the collection collapsed, shown as cards, or behind a
+  // document in a narrow field), the row exists and cannot take it: the
+  // answer is no, so the caller goes on to the header.
+  for (const row of rows) row.focusable = false;
+  page.document.activeElement = null;
+  assert.equal(list.focusNote('A', true), false, 'a row that did not take the keyboard was said to have it');
+  assert.equal(page.document.activeElement, null);
+  assert.equal(list.focusNote('ZZZ', true), false);
+  assert.equal(list.reveal('A'), 'row', 'the row is still in the list');
+  // The header answers the same way.
+  assert.equal(page.view.focusHead(), true);
+  assert.equal(page.document.activeElement, page.el.head);
+  page.el.head.focusable = false;
+  page.document.activeElement = null;
+  assert.equal(page.view.focusHead(), false, 'a header that is out of sight was said to have the keyboard');
+});

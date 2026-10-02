@@ -1,9 +1,10 @@
 // What the collection's and the document's tasks ask for and no other walk
 // drives (FEAT-0020, TASK-0096 and TASK-0097): the status and type filters and
 // a group heading in the Glass collection, what its collapsed header says, the
-// wheel at both ends of the list, Escape during a drag, keyboard focus that can
-// be seen, a verb the sidecar refuses with its reason inside a document, and a
-// document's panels after it has left the desk.
+// wheel at both ends of the list, Escape during a drag and during a resize,
+// keyboard focus that can be seen, a verb the sidecar refuses with its reason
+// inside a document, a document's panels after it has left the desk, where the
+// keyboard goes when a document is closed, and the served page's own fold.
 //
 // Real pointer and keyboard throughout. It changes no note:
 //   bash tools/scripts/walk-in-a-box.sh glass-collection
@@ -298,6 +299,21 @@ module.exports = async function (d) {
   await reopen();
   const afterClose = await panels();
   check(wereOpen.list && wereOpen.details && afterSweep !== null && !afterSweep.list && !afterSweep.details && !afterSweep.evidence && afterClose !== null && !afterClose.list && !afterClose.details && !afterClose.evidence, 'a document whose related list and details were open comes back with every panel closed, whether it left when the desk was swept or when it was closed by itself', { wereOpen, afterSweep, afterClose });
+
+  // ---- 8b. Closing a document puts the keyboard on its row when the row is on screen, and on the collection's header when it is not ----
+  const keyboardOn = () => js(`(() => { const e = document.activeElement; return { id: e && e.id ? e.id : null, row: e && e.classList.contains('nav-row') ? e.dataset.noteId : null, tag: e ? e.tagName.toLowerCase() : null }; })()`);
+  const closeByKey = async () => { await js(`${paneEl(p)}.querySelector('.pane-head').focus()`); d.press(win, 'Delete'); await d.delay(700); };
+  await closeByKey();
+  const backOnRow = { keyboard: await keyboardOn(), held: await js('window.__deckDesk()') };
+  await reopen();
+  await t.clickOn('#collection-fold', 500);
+  const foldedForClose = await js(`document.getElementById('collection').classList.contains('collapsed')`);
+  await closeByKey();
+  const backOnHead = { keyboard: await keyboardOn(), held: await js('window.__deckDesk()') };
+  await t.clickOn('#collection-fold', 600);
+  await t.park();
+  check(backOnRow.keyboard.row === p && !backOnRow.held.includes(p) && foldedForClose && backOnHead.keyboard.id === 'collection-head' && !backOnHead.held.includes(p), `closing ${p} with the list on screen puts the keyboard on its row; closing it with the collection collapsed, where that row is not on screen, puts the keyboard on the collection's header and not nowhere`, { backOnRow, foldedForClose, backOnHead });
+  await reopen();
 
   // ---- 9. The size a person gave a note is the size the next note opens at, in this window and on the served page ----
   await js(`${paneEl(p)}.querySelector('.pane-head').focus()`);

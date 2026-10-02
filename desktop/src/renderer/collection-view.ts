@@ -588,10 +588,15 @@ export class CollectionView {
     return this.anchor?.id ?? null;
   }
 
-  /** Put the keyboard on the collection's header: where focus goes when the row it would return to is gone. */
-  focusHead(): void {
+  /**
+   * Put the keyboard on the collection's header: where focus goes when the
+   * row it would return to is gone or is not on screen. False when the header
+   * did not take it, which is when the collection itself is out of sight.
+   */
+  focusHead(): boolean {
     this.raise();
     this.el.head.focus({ preventScroll: true });
+    return document.activeElement === this.el.head;
   }
 
   /** Bring it above the documents, as a press on it does. */

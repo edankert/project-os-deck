@@ -427,8 +427,11 @@ const glass = new GlassField(glassElements(), {
   toRow: (noteId) => {
     drawNavigator();
     if (navigator.focusNote(noteId, true)) return;
-    if (navigator.reveal(noteId) === 'group') say(`${noteId}'s row is folded away under the marked heading`);
-    else say(`${noteId} is not in this list`);
+    // A row that is there and did not take the keyboard is not on screen (the
+    // collection is collapsed, or shows cards): nothing is said of the list.
+    const where = navigator.reveal(noteId);
+    if (where === 'group') say(`${noteId}'s row is folded away under the marked heading`);
+    else if (where === 'absent') say(`${noteId} is not in this list`);
     collection.focusHead();
   },
   revealed: (noteId) => {
@@ -1891,6 +1894,12 @@ async function cardByRel(rel: string): Promise<CardModel | null> {
  * opened from, at the place the list was scrolled to. When that row is no
  * longer in the list, that is said and the keyboard goes to the collection
  * itself, never to some other note's row (FEAT-0020, TASK-0098).
+ *
+ * The same when the row is there and is not on screen: the collection is
+ * collapsed, or shows cards, or its heading is folded away, or it stands
+ * behind another document in a narrow field. The keyboard was left nowhere
+ * then, because the row was asked whether it exists and not whether it took
+ * the keyboard.
  */
 function documentClosed(noteId: string): void {
   documentNotes.delete(noteId);
@@ -1898,12 +1907,15 @@ function documentClosed(noteId: string): void {
   if (!glass.isActive()) return;
   drawNavigator();
   if (navigator.focusNote(noteId, true)) return;
-  if (navigator.reveal(noteId) === 'group') {
-    say(`${noteId} is closed; its row is folded away under the marked heading`);
-    return;
-  }
-  say(`${noteId} is closed; it is not in this list any more`);
-  collection.focusHead();
+  const where = navigator.reveal(noteId);
+  if (where === 'group') say(`${noteId} is closed; its row is folded away under the marked heading`);
+  else if (where === 'absent') say(`${noteId} is closed; it is not in this list any more`);
+  if (collection.focusHead()) return;
+  // The header cannot take the keyboard either when the collection itself is
+  // out of sight. It is brought into reach, as the L key on a document does,
+  // and the row is tried again now that the list is in front.
+  glass.showCollection();
+  if (where !== 'row' || !navigator.focusNote(noteId, true)) collection.focusHead();
 }
 
 async function openCard(card: CardModel): Promise<void> {

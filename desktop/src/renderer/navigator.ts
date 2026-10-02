@@ -120,6 +120,11 @@ export class NavigatorList {
    * for coming BACK to a row, when a document is closed: the keyboard returns
    * to where the note was opened from, and that is not a fresh arrival, so the
    * field is not flown anywhere (FEAT-0020, TASK-0098).
+   *
+   * The answer is whether the keyboard is on that row now, not whether the
+   * note has a row. A row in a list that is not on screen (the collection
+   * collapsed, shown as cards, or behind a document in a narrow field) cannot
+   * take the keyboard, and the caller then puts it somewhere that can.
    */
   focusNote(noteId: string, quiet = false): boolean {
     const index = this.rowFor(noteId);
@@ -131,7 +136,7 @@ export class NavigatorList {
     } finally {
       this.restoring = was;
     }
-    return true;
+    return document.activeElement === this.pool[index];
   }
 
   /**
