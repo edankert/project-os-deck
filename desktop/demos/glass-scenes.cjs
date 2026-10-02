@@ -36,6 +36,19 @@ module.exports = async function (d) {
     await d.delay(1500);
     await t.park();
   };
+  const focusSeen = `(() => { const e = document.activeElement; const s = getComputedStyle(e); return { id: e.id || String(e.className).split(' ')[0], seen: (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none' }; })()`;
+  const tabTo = async (from, id, max = 16) => {
+    await js(`document.querySelector(${JSON.stringify(from)}).focus()`);
+    const passed = [];
+    for (let i = 0; i < max; i += 1) {
+      d.press(win, 'Tab');
+      await d.delay(90);
+      const at = await js(focusSeen);
+      passed.push(at.id);
+      if (at.id === id) return { reached: true, presses: i + 1, seen: at.seen, passed };
+    }
+    return { reached: false, presses: max, seen: false, passed };
+  };
   const saveAs = async (name) => {
     await t.clickOn('#scene-save', 400);
     // The name is asked for in the status bar, with what is there now already typed.
@@ -171,8 +184,10 @@ module.exports = async function (d) {
   const storedPlaces = (await state()).viewDesks[ws].features.map((c) => [c.noteId, c.x, c.y, c.w, c.h]);
   check(JSON.stringify(storedPlaces) === JSON.stringify(saved.cards.map((c) => [c.noteId, c.x, c.y, c.w, c.h])), 'the places and sizes the scene holds were not changed by being drawn in a smaller window', storedPlaces);
   await d.shot(win, '03-reopened-after-changes');
-  await t.clickOn('#scene-report-close', 300);
-  check(await js(`document.getElementById('scene-report').hidden`), 'dismiss closes the report', null);
+  const toDismiss = await tabTo('#scene-list', 'scene-report-close');
+  d.press(win, 'Return');
+  await d.delay(300);
+  check(toDismiss.reached && toDismiss.seen && (await js(`document.getElementById('scene-report').hidden`)), `the Tab key reaches "dismiss" ${toDismiss.presses} presses after the list of scenes, the keyboard's place is drawn on it, and Enter closes the report`, toDismiss);
   win.setBounds(full);
   await d.delay(700);
 
@@ -196,6 +211,19 @@ module.exports = async function (d) {
   await t.clickOn('#copy-address', 600);
   const address = clipboard.readText();
   check(/desk=Review(%20|\+| )Glass/.test(address) && address.includes('/features'), 'the copied address names the scene and its view, so the scene is a state Deck can be sent to', address);
+  // With the scene open, "save scene" offers its own name, and taking it still asks before it replaces what the scene kept.
+  const ownBefore = JSON.stringify((await state()).desks[`${ws}:Review Glass`]);
+  await t.clickOn('#scene-save', 400);
+  const offered = await js(`(document.querySelector('#status input') || {}).value || ''`);
+  d.press(win, 'Return');
+  await d.delay(700);
+  const askedOwn = await js(`[...document.querySelectorAll('#status button')].map((b) => b.textContent)`);
+  if (askedOwn.includes('keep it')) {
+    await js(`[...document.querySelectorAll('#status button')].find((b) => b.textContent === 'keep it').focus()`);
+    d.press(win, 'Return');
+    await d.delay(600);
+  }
+  check((await state()).deskName === 'Review Glass' && offered === 'Review Glass' && askedOwn.includes('replace it') && askedOwn.includes('keep it') && JSON.stringify((await state()).desks[`${ws}:Review Glass`]) === ownBefore, 'with the scene open, "save scene" offers the scene\'s own name; saving under it asks first, and "keep it" leaves what the scene kept as it was', { offered, askedOwn });
 
   // ---- 7. Rename, delete, restore ----
   const filesBeforeRename = fingerprint();
@@ -211,9 +239,11 @@ module.exports = async function (d) {
   const deleted = await js(`({ keys: Object.keys(window.__deckLastState.desks), title: document.getElementById('scene-report-title').textContent, act: document.getElementById('scene-report-act').hidden ? null : document.getElementById('scene-report-act').textContent })`);
   check(deleted.keys.length === 0 && /deleted/.test(deleted.title) && deleted.act === 'restore' && JSON.stringify((await state()).viewDesks[ws].features) === deskBefore, 'delete removes the scene from the list, leaves the desk on screen as it is, and offers restore', deleted);
   await d.shot(win, '04-deleted-with-restore');
-  await t.clickOn('#scene-report-act', 700);
+  const toRestore = await tabTo('#scene-list', 'scene-report-act');
+  d.press(win, 'Return');
+  await d.delay(700);
   const restored = (await state()).desks[`${ws}:Compare designs`];
-  check(restored !== undefined && restored.version === 2 && restored.cards.length === 2 && JSON.stringify(restored.anchors) === JSON.stringify(saved.anchors), 'restore puts it back as it was saved', restored && Object.keys(restored));
+  check(toRestore.reached && toRestore.seen && restored !== undefined && restored.version === 2 && restored.cards.length === 2 && JSON.stringify(restored.anchors) === JSON.stringify(saved.anchors), `the Tab key reaches "restore" ${toRestore.presses} presses after the list of scenes, with the keyboard's place drawn on it, and Enter puts the scene back as it was saved`, { toRestore, restored: restored && Object.keys(restored) });
 
   check(differ(filesBeforeRename, fingerprint()).length === 0, 'renaming, deleting and restoring a scene left every file of the copy as it was', differ(filesBeforeRename, fingerprint()));
 
@@ -296,8 +326,9 @@ module.exports = async function (d) {
   // By keyboard: Tab goes through the scene controls in order, and Escape closes the question and nothing else.
   await js(`document.getElementById('scene-list').focus()`);
   const tabbed = [];
-  for (let i = 0; i < 5; i += 1) { d.press(win, 'Tab'); await d.delay(120); tabbed.push(await js(`document.activeElement.id`)); }
-  const outlined = await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return s.outlineStyle !== 'none' || s.boxShadow !== 'none' || s.borderColor !== getComputedStyle(document.getElementById('scene-save')).borderColor; })()`);
+  const seenOn = [];
+  for (let i = 0; i < 5; i += 1) { d.press(win, 'Tab'); await d.delay(120); const at = await js(focusSeen); tabbed.push(at.id); seenOn.push(at.seen); }
+  const outlined = seenOn.every(Boolean);
   await js(`document.getElementById('scene-save').focus()`);
   const desksBefore = JSON.stringify(Object.keys((await state()).desks).sort());
   const deskAsItWas = JSON.stringify((await state()).viewDesks[ws].features);
@@ -307,7 +338,7 @@ module.exports = async function (d) {
   d.press(win, 'Escape');
   await d.delay(500);
   const escaped = await js(`({ asking: !!document.querySelector('#status input'), held: window.__deckDesk().length, listOpen: !${paneEl(x)}.querySelector('.pane-links').hidden, report: document.getElementById('scene-report').hidden })`);
-  check(JSON.stringify(tabbed) === JSON.stringify(['scene-open', 'scene-save', 'scene-rename', 'scene-delete', 'scene-back']) && asking && !escaped.asking && escaped.held === 2 && escaped.listOpen === sessionBefore.listOpen && JSON.stringify(Object.keys((await state()).desks).sort()) === desksBefore && JSON.stringify((await state()).viewDesks[ws].features) === deskAsItWas, 'Tab goes from the list through open, save scene, rename, delete and the undo, in that order; Enter on "save scene" asks for a name and Escape closes that question and nothing else: no scene is saved, no document is closed and the open list stays open', { tabbed, focusVisible: outlined, asking, escaped });
+  check(outlined && JSON.stringify(tabbed) === JSON.stringify(['scene-open', 'scene-save', 'scene-rename', 'scene-delete', 'scene-back']) && asking && !escaped.asking && escaped.held === 2 && escaped.listOpen === sessionBefore.listOpen && JSON.stringify(Object.keys((await state()).desks).sort()) === desksBefore && JSON.stringify((await state()).viewDesks[ws].features) === deskAsItWas, 'Tab goes from the list through open, save scene, rename, delete and the undo, in that order, and each shows where the keyboard is; Enter on "save scene" asks for a name and Escape closes that question and nothing else: no scene is saved, no document is closed and the open list stays open', { tabbed, focusVisible: outlined, asking, escaped });
 
   // With reduced motion asked for, a reopened scene's documents are at their places at once.
   const dbgScenes = win.webContents.debugger;
@@ -330,6 +361,10 @@ module.exports = async function (d) {
   const relY = graphNow.nodes.find((n) => n.id === y).rel;
   let refuseY = true;
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, done) => done({ cancel: refuseY && /\/api\/render\?/.test(details.url) && decodeURIComponent(details.url).includes(relY) }));
+  // Scrolled to its top before it is closed, so this window does not remember a place for it: where it is
+  // read after the retry can then only come from the scene.
+  await js(`(() => { ${paneEl(y)}.querySelector('.pane-body').scrollTop = 0; return true; })()`);
+  await d.delay(200);
   await sweep();
   await d.delay(400);
   await js(`${glass}.forgetBodies && ${glass}.forgetBodies()`);
@@ -346,7 +381,7 @@ module.exports = async function (d) {
   if (retryAt) { d.press(win, 'Return'); await d.delay(300); }
   let retriedDoc = null;
   for (let i = 0; i < 60; i += 1) { await d.delay(200); retriedDoc = await js(`({ state: ${glass}.documentState(${JSON.stringify(y)}), anchor: ${glass}.readingAnchor(${JSON.stringify(y)}) })`); if (retriedDoc.state === 'ready' && retriedDoc.anchor && retriedDoc.anchor.heading === anchorY.heading) break; }
-  check(failedDoc !== null && failedDoc.state === 'error' && failedDoc.said.length > 0 && failedDoc.retry.length > 0 && retryAt !== null && retriedDoc.state === 'ready' && retriedDoc.anchor !== null && retriedDoc.anchor.heading === anchorY.heading && Math.abs(retriedDoc.anchor.past - anchorY.past) <= 2, `a document of the scene whose text could not be read says so under its title, with a retry; when the retry succeeds, more than six seconds later, it is read at "${anchorY.heading}" where the scene kept it`, { failedDoc, retriedDoc, kept: anchorY });
+  check(failedDoc !== null && failedDoc.state === 'error' && failedDoc.said.length > 0 && failedDoc.retry.length > 0 && retryAt !== null && retriedDoc.state === 'ready' && retriedDoc.anchor !== null && retriedDoc.anchor.heading === anchorY.heading && Math.abs(retriedDoc.anchor.past - anchorY.past) <= 2, `a document of the scene whose text could not be read says so under its title, with a retry; when the retry succeeds, more than six seconds later, it is read at "${anchorY.heading}" where the scene kept it, in a window that had last read it at its top`, { failedDoc, retriedDoc, kept: anchorY });
 
   // In a window smaller than the one the scene was arranged in, every document's header is inside the field.
   const big = win.getBounds();
@@ -357,8 +392,8 @@ module.exports = async function (d) {
   await d.pointer(win, d.click(await t.rect('#scene-open')));
   await d.delay(2500);
   await t.park();
-  const small = await js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); return { field: [Math.round(f.width), Math.round(f.height)], heads: [...document.querySelectorAll('.pane')].filter((p) => !p.classList.contains('out-of-sight')).map((p) => { const h = p.querySelector('.pane-head').getBoundingClientRect(); const at = document.elementFromPoint(h.left + 24, h.top + h.height / 2); return { id: p.dataset.noteId, inside: h.left >= f.left - 1 && h.right <= f.right + 1 && h.top >= f.top - 1 && h.bottom <= f.bottom + 1, reachable: !!at && at.closest('.pane') !== null }; }), narrow: !document.getElementById('narrow-bar').hidden, bar: [...document.querySelectorAll('#narrow-bar button')].map((b) => b.textContent), cut: [...document.querySelectorAll('.field-bar button, .field-bar select')].filter((b) => b.getClientRects().length > 0).filter((b) => { const r = b.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(hit && (hit === b || b.contains(hit))); }).map((b) => b.id || b.textContent), report: [...document.querySelectorAll('#scene-report-lines li')].map((l) => l.textContent) }; })()`);
-  check(small.cut.length === 0 && small.heads.length >= 1 && small.heads.every((h) => h.inside && h.reachable) && (small.heads.length === 2 || (small.narrow && small.bar.length >= 2)) && small.report.some((l) => /This window's field is \d+ by \d+; the scene was arranged in/.test(l)), `reopened in a field of ${small.field.join(' by ')}, smaller than the one it was arranged in: every document on screen has its header wholly inside the field and under the pointer, a document not on screen is one press away in the bar, every control above the field can be pressed where it is drawn, and the report says the field is smaller`, small);
+  const small = await js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); return { field: [Math.round(f.width), Math.round(f.height)], heads: [...document.querySelectorAll('.pane')].filter((p) => !p.classList.contains('out-of-sight')).map((p) => { const h = p.querySelector('.pane-head').getBoundingClientRect(); const at = document.elementFromPoint(h.left + 24, h.top + h.height / 2); const x = p.querySelector('.pane-close').getBoundingClientRect(); const atClose = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return { id: p.dataset.noteId, inside: h.left >= f.left - 1 && h.right <= f.right + 1 && h.top >= f.top - 1 && h.bottom <= f.bottom + 1, reachable: !!at && at.closest('.pane') !== null, closeReachable: !!atClose && atClose.closest('.pane') !== null }; }), narrow: !document.getElementById('narrow-bar').hidden, bar: [...document.querySelectorAll('#narrow-bar button')].map((b) => b.textContent), cut: [...document.querySelectorAll('.field-bar button, .field-bar select')].filter((b) => b.getClientRects().length > 0).filter((b) => { const r = b.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(hit && (hit === b || b.contains(hit))); }).map((b) => b.id || b.textContent), report: [...document.querySelectorAll('#scene-report-lines li')].map((l) => l.textContent) }; })()`);
+  check(small.cut.length === 0 && small.heads.length >= 1 && small.heads.every((h) => h.inside && h.reachable && h.closeReachable) && (small.heads.length === 2 || (small.narrow && small.bar.length >= 2)) && small.report.some((l) => /This window's field is \d+ by \d+; the scene was arranged in/.test(l)), `reopened in a field of ${small.field.join(' by ')}, smaller than the one it was arranged in: every document on screen has its header wholly inside the field, with nothing but another document over either end of it while the scene's message is still shown, a document not on screen is one press away in the bar, every control above the field can be pressed where it is drawn, and the report says the field is smaller`, small);
   await d.shot(win, '09-a-scene-in-a-smaller-window');
   if (!(await js(`document.getElementById('scene-report').hidden`))) await t.clickOn('#scene-report-close', 300);
   win.setBounds(big);

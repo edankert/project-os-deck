@@ -19,6 +19,26 @@ import type { GraphEdge } from './graph.js';
 /** The sentences ADR-0008 fixes, so a reader meets the same words everywhere and a test can check them. */
 export const NO_TEST = 'no test names this note';
 export const NOT_WALKED = 'not walked: no verdict is recorded';
+/**
+ * The heading a test note keeps its evidence under. The template writes it
+ * "Evidence (fill after running)", so it is found by how it begins.
+ */
+export const EVIDENCE_HEADING = /^evidence\b/i;
+
+/** Where that section begins in a document's text, held to how far the text scrolls; null when the note has none. */
+export function evidenceSectionTop(headings: ReadonlyArray<{ text: string; top: number }>, max: number): number | null {
+  const heading = headings.find((h) => EVIDENCE_HEADING.test(h.text.trim()));
+  return heading === undefined ? null : Math.max(0, Math.min(heading.top, max));
+}
+
+/** Today as this machine's own calendar day, which is the day a person means by "ninety days ago". */
+export function localDay(now: Date): string {
+  const two = (n: number): string => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+}
+
+/** The row says nothing stands, and the history holds a verdict from before. */
+export const NO_STANDING = 'no verdict stands';
 export const BY_COMMAND = 'run by a command; its result is not recorded anywhere Deck can read';
 export const NO_DATE = 'no date of verification is recorded on the test note';
 export const UNREAD = 'the acceptance record could not be read';
@@ -73,6 +93,12 @@ function list(value: unknown): string[] {
   return one === '' ? [] : [one];
 }
 
+/** The day a value names, as YYYY-MM-DD, or '' when it is not a date. */
+function isoDay(value: string): string {
+  const day = value.trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(Date.parse(`${day}T00:00:00Z`)) ? day : '';
+}
+
 /** A test's facts from its record, or null when the record is not a test note. */
 export function testFacts(record: RecordLike): TestFacts | null {
   if (!record.types.includes('test')) return null;
@@ -82,9 +108,11 @@ export function testFacts(record: RecordLike): TestFacts | null {
     title: record.title ?? record.id,
     rel: record.relPath,
     status: record.status ?? '',
-    level: text(fm['level']),
+    // `Acceptance` and `acceptance` are the same level: read with a capital it was taken for a manual test.
+    level: text(fm['level']).trim().toLowerCase(),
     command: text(fm['command']),
-    lastVerified: text(fm['last_verified']).slice(0, 10),
+    // Only a date counts. "last spring" was shown cut to "last sprin", as a date, and could never go stale.
+    lastVerified: isoDay(text(fm['last_verified'])),
     artifacts: list(fm['artifacts']),
     reviewVerdict: text(fm['review_verdict']),
   };
@@ -116,10 +144,18 @@ function target(value: string): string {
   return name.split('/').pop() ?? name;
 }
 
-/** Whether a written target names this note: its id exactly, or its file name, which begins with the id. */
+/** A project-os id: capitals, a hyphen, digits. Such a note's file name is its id, a hyphen and its title. */
+const PROJECT_OS_ID = /^[A-Z][A-Z0-9]*-\d+$/;
+
+/**
+ * Whether a written target names this note: its id exactly, or, for a
+ * project-os id, its file name, which begins with the id and a hyphen. A
+ * note with any other kind of name is named only exactly: read by its
+ * beginning, a test covering `Plan-B` also covered a note called `Plan`.
+ */
 function names(written: string, noteId: string): boolean {
   const t = target(written);
-  return t === noteId || t.startsWith(`${noteId}-`);
+  return t === noteId || (PROJECT_OS_ID.test(noteId) && t.startsWith(`${noteId}-`));
 }
 
 /**
@@ -245,15 +281,20 @@ export function platformLedger(payload: unknown, platform: string): PlatformLedg
   const rawHistory = v['history'];
   if (typeof rawHistory !== 'object' || rawHistory === null || Array.isArray(rawHistory)) return { unread: 'the answer has no view.history' };
   const rows = new Map<string, Standing>();
+  // Strict all the way down. A tier with no `areas`, an area with no `items` or a check with no `id` or
+  // `mark` is a shape Deck was not written against. Skipped, each would leave its checks without a row,
+  // and a check without a row reads "not walked": the one sentence this must never say by mistake (RISK-0008).
   for (const tier of v['tiers'] as unknown[]) {
     const areas = (tier as Record<string, unknown> | null)?.['areas'];
-    if (!Array.isArray(areas)) continue;
+    if (!Array.isArray(areas)) return { unread: 'a tier of the answer has no areas' };
     for (const area of areas) {
       const items = (area as Record<string, unknown> | null)?.['items'];
-      if (!Array.isArray(items)) continue;
+      if (!Array.isArray(items)) return { unread: 'an area of the answer has no items' };
       for (const item of items) {
-        if (typeof item !== 'object' || item === null) continue;
+        if (typeof item !== 'object' || item === null) return { unread: 'a check of the answer is not a record' };
         const row = item as Record<string, unknown>;
+        if (!('id' in row)) return { unread: 'a check of the answer has no id' };
+        if (typeof row['mark'] !== 'string') return { unread: 'a check of the answer has no mark' };
         const id = text(row['id']);
         if (id === '') continue;
         rows.set(id, { mark: text(row['mark']), date: text(row['verdict_date']), reason: text(row['verdict_reason']), method: text(row['verdict_method']) });
@@ -262,19 +303,22 @@ export function platformLedger(payload: unknown, platform: string): PlatformLedg
   }
   const history = new Map<string, LedgerEvent[]>();
   for (const [id, events] of Object.entries(rawHistory as Record<string, unknown>)) {
-    if (!Array.isArray(events)) continue;
+    if (!Array.isArray(events)) return { unread: 'the history of a check is not a list' };
     const out: LedgerEvent[] = [];
     for (const event of events) {
-      if (typeof event !== 'object' || event === null) continue;
+      if (typeof event !== 'object' || event === null) return { unread: 'an event of the history is not a record' };
       const e = event as Record<string, unknown>;
       const date = text(e['date']);
-      if (date === '' || (e['mark'] !== undefined && e['mark'] !== null && typeof e['mark'] !== 'string')) continue;
+      if (date === '') return { unread: 'an event of the history has no date' };
+      if (e['mark'] !== undefined && e['mark'] !== null && typeof e['mark'] !== 'string') return { unread: 'an event of the history has a mark that is not text' };
       const of = text(e['platform']);
       // An event the payload says belongs to another platform is not this platform's.
       if (of !== '' && of !== platform) continue;
       out.push({ platform, date, mark: text(e['mark']), reason: text(e['reason']), by: text(e['by']), method: text(e['method']), invalidatedBy: text(e['invalidated_by']) });
     }
-    // Newest first, whatever order they came in; the sort is stable, so same-day events keep the payload's order.
+    // Newest first, whatever order they came in. An event carries a day and no time, so two events of one
+    // day stay in the order the sidecar sent them, which it documents as newest first (`_history` in its
+    // ledger module). Deck cannot check that order; a pass and its invalidation on one day rest on it.
     out.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     history.set(id, out);
   }
@@ -302,6 +346,7 @@ export function daysBetween(from: string, to: string): number | null {
 export type Recorded =
   | { kind: 'verdict'; mark: string; settles: 'clears' | 'blocks' | 'other'; date: string; reason: string; by: string; method: string; platform: string; source: 'ledger' }
   | { kind: 'not-walked'; platform: string; source: 'ledger' }
+  | { kind: 'lapsed'; last: { mark: string; date: string }; platform: string; source: 'ledger' }
   | { kind: 'invalidated'; change: string; date: string; reason: string; before: { mark: string; date: string } | null; platform: string; source: 'ledger' }
   | { kind: 'unread'; why: string; source: 'ledger' }
   | { kind: 'no-ledger'; source: 'ledger' }
@@ -317,7 +362,11 @@ function standingFor(test: TestFacts, ledger: PlatformLedger): Recorded {
   const latest = events[0];
   if (row === undefined || row.mark === '' || row.mark === 'todo') {
     // No verdict stands. Either the newest event in the ledger is an invalidation, or none was ever recorded.
-    if (latest === undefined || !(latest.invalidatedBy !== '' || latest.mark === '')) return { kind: 'not-walked', platform, source: 'ledger' };
+    if (latest === undefined) return { kind: 'not-walked', platform, source: 'ledger' };
+    // The row says no verdict stands and the history's newest event is a verdict: one that expired, or that
+    // was recorded for an earlier release. It was walked, so "not walked" would be false. Deck says what the
+    // two sources say and gives no reason, because neither does.
+    if (!(latest.invalidatedBy !== '' || latest.mark === '')) return { kind: 'lapsed', last: { mark: latest.mark, date: latest.date }, platform, source: 'ledger' };
     const before = events.find((e) => e.mark !== '' && e.invalidatedBy === '');
     return { kind: 'invalidated', change: latest.invalidatedBy, date: latest.date, reason: latest.reason, before: before === undefined ? null : { mark: before.mark, date: before.date }, platform, source: 'ledger' };
   }
@@ -390,6 +439,8 @@ export function recordedSentence(recorded: Recorded): Said {
     }
     case 'not-walked':
       return { label: 'verdict', text: NOT_WALKED, from: ledger(recorded.platform), tone: 'absent' };
+    case 'lapsed':
+      return { label: 'verdict', text: `${NO_STANDING}. An earlier one, ${recorded.last.mark} on ${recorded.last.date}, is in the history.`, from: ledger(recorded.platform), tone: 'absent' };
     case 'invalidated': {
       const by = recorded.change === '' ? '' : ` by ${recorded.change}`;
       const why = recorded.reason === '' ? '' : `: ${stop(recorded.reason)}`;

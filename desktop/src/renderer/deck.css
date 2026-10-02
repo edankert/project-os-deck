@@ -1373,10 +1373,30 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 }
 .arrival[hidden] { display: none; }
 .arrival .action { padding: 0 8px; font-size: 11px; }
-/* What the answer under the keyboard or the pointer does. It takes the room that is left and never moves an answer:
-   a button that shifted when its own explanation appeared would be pressed where it no longer was. */
+/* What the answer under the keyboard or the pointer does. It stands above the status line, in full, and never
+   moves an answer: a button that shifted when its own explanation appeared would be pressed where it no longer
+   was. In the line itself it took the room the answers left, and in a window 1100 px wide that cut it after
+   "Move FEAT-0002 to the desk", before the words that say what happens to this desk. */
+.status { position: relative; }
 .status .action { flex: 0 0 auto; }
-.choice-says { color: var(--ink-dim); margin-left: 6px; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choice-says {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 6px);
+  max-width: min(64em, calc(100% - 24px));
+  box-sizing: border-box;
+  padding: 6px 10px;
+  background: #1f2330;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  z-index: 5000;
+}
+.choice-says:empty { display: none; }
 .target-strip .target[data-mode="move"] { border-color: var(--owed); }
 
 /* Evidence beside the claim (FEAT-0024): what is recorded for the tests that
@@ -1449,10 +1469,13 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 /* Scenes (FEAT-0023): the controls on the bar, and what a reopened scene has to say. */
 .scenes { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
 .scenes select { max-width: 16em; font: inherit; font-size: 12px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
+/* At the field's lower left, above the compass's line. At the upper right it lay over the right half of a
+   document's header, where the buttons to close and move it are, in every reopened scene whose document
+   stood there. Here it lies over the foot of the collection or of a document's text, which scroll. */
 .scene-report {
   position: absolute;
-  right: 12px;
-  top: 12px;
+  left: 12px;
+  bottom: 64px;
   max-width: min(460px, calc(100% - 24px));
   box-sizing: border-box;
   padding: 10px 12px;

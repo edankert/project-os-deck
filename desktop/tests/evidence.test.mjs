@@ -10,7 +10,7 @@ import path from 'node:path';
 import { load, desktopRoot } from './helpers.mjs';
 
 const E = load('shared/evidence.js');
-const { testFacts, testsVerifying, keyPhrase, platformsFrom, platformLedger, recordedFor, recordedSentence, historyLine, runnerText, controlText, testsNamedOnLine, daysBetween } = E;
+const { testFacts, testsVerifying, keyPhrase, platformsFrom, platformLedger, recordedFor, recordedSentence, historyLine, runnerText, controlText, testsNamedOnLine, daysBetween, evidenceSectionTop, localDay } = E;
 
 const record = (id, frontmatter = {}, types = ['test']) => ({ id, title: `${id} title`, relPath: `tests/${id}.md`, types, status: frontmatter.status ?? null, frontmatter });
 const edge = (source, target, field) => ({ source, target, wrote: target, offset: 0, resolved: true, crossRepo: false, field });
@@ -94,6 +94,10 @@ test('a bare id under a key counts the same as a wikilink, and a test found both
     { testId: 'TST-0003', keys: ['covers'] },
   ]);
   assert.deepEqual(testsVerifying('TASK-0096', [], records), [{ testId: 'TST-0002', keys: ['tasks'] }]);
+  // A note whose name is not a project-os id is named only exactly: `Plan-B` is another note, not `Plan`.
+  const vault = [record('Check the plan', { covers: ['Plan-B'] }), record('Check plan A', { covers: ['[[Plan]]'] })];
+  assert.deepEqual(testsVerifying('Plan', [], vault), [{ testId: 'Check plan A', keys: ['covers'] }]);
+  assert.deepEqual(testsVerifying('Plan-B', [], vault), [{ testId: 'Check the plan', keys: ['covers'] }]);
   // On the note's side, when its own record is among those handed in.
   assert.deepEqual(testsVerifying('TASK-0095', [], records), [
     { testId: 'TST-0002', keys: ['tasks'] },
@@ -107,19 +111,15 @@ test('the acceptance payload is read into a ledger: the standing verdict, the in
       [
         { id: 'TST-0001', rel: 'tests/TST-0001.md', mark: 'pass', verdict_date: '2026-09-20', verdict_reason: 'walked on the Mac', verdict_method: 'manual', invalidated_by: {} },
         { id: 'TST-0002', mark: 'todo', verdict_date: '', verdict_reason: '', verdict_method: '', invalidated_by: { change: 'TASK-0001', reason: 'written on the note long ago', date: '' } },
-        { id: '', mark: 'pass' },
-        'not a row',
+        { id: '', mark: 'pass' }, // a check with no note of its own: no row
+        { id: null, mark: 'todo' },
       ],
       {
         'TST-0001': [
           { platform: 'app', release: 'WORKING', date: '2026-09-10', mark: 'fail', reason: 'the list was empty', by: 'user:edwin', method: 'manual' },
           { platform: 'app', release: 'WORKING', date: '2026-09-20', mark: 'pass', reason: 'walked on the Mac', by: 'user:edwin', method: 'manual' },
-          { platform: 'app', date: '', mark: 'pass' }, // no date: dropped
-          { platform: 'app', date: '2026-09-21', mark: 7 }, // a mark that is not a word: dropped
           { platform: 'ios', date: '2026-09-22', mark: 'fail' }, // another platform's event
-          null,
         ],
-        'TST-0009': 'not a list',
       },
     ),
     'app',
@@ -129,8 +129,7 @@ test('the acceptance payload is read into a ledger: the standing verdict, the in
   assert.deepEqual(read.rows.get('TST-0001'), { mark: 'pass', date: '2026-09-20', reason: 'walked on the Mac', method: 'manual' });
   // A row's `invalidated_by` is the test note's own frontmatter, not the ledger's word, and is not read.
   assert.deepEqual(read.rows.get('TST-0002'), { mark: 'todo', date: '', reason: '', method: '' });
-  assert.deepEqual(read.history.get('TST-0001').map((e) => `${e.date} ${e.mark} ${e.by}`), ['2026-09-20 pass user:edwin', '2026-09-10 fail user:edwin'], 'newest first, the malformed ones dropped and the rest kept');
-  assert.equal(read.history.has('TST-0009'), false);
+  assert.deepEqual(read.history.get('TST-0001').map((e) => `${e.date} ${e.mark} ${e.by}`), ['2026-09-20 pass user:edwin', '2026-09-10 fail user:edwin'], 'newest first, and another platform\'s event left out');
 });
 
 test('a payload Deck was not written against is not read at all, and says why', () => {
@@ -141,6 +140,24 @@ test('a payload Deck was not written against is not read at all, and says why', 
   assert.match(platformLedger({ schema_version: 4, view: { history: {} } }, 'app').unread, /view\.tiers/);
   assert.match(platformLedger({ schema_version: 4, view: { tiers: [] } }, 'app').unread, /view\.history/);
   assert.match(platformLedger({ schema_version: 4, view: { tiers: [], history: [] } }, 'app').unread, /view\.history/);
+  // Strict all the way down (the review of FEAT-0024, 2026-10-02). With `areas`, `items` or `mark` renamed the
+  // rows were skipped one by one, every check was left without a row, and each then read "not walked".
+  const pass = { id: 'TST-0001', mark: 'pass', verdict_date: '2026-09-20' };
+  const shaped = (view) => platformLedger({ schema_version: 4, view }, 'app');
+  assert.match(shaped({ tiers: [{ groups: [{ items: [pass] }] }], history: {} }).unread, /a tier .* has no areas/);
+  assert.match(shaped({ tiers: [{ areas: [{ checks: [pass] }] }], history: {} }).unread, /an area .* has no items/);
+  assert.match(shaped({ tiers: [{ areas: [{ items: [{ id: 'TST-0001', verdict: 'pass' }] }] }], history: {} }).unread, /a check .* has no mark/);
+  assert.match(shaped({ tiers: [{ areas: [{ items: [{ check: 'TST-0001', mark: 'pass' }] }] }], history: {} }).unread, /a check .* has no id/);
+  assert.match(shaped({ tiers: [{ areas: [{ items: ['not a row'] }] }], history: {} }).unread, /is not a record/);
+  assert.match(shaped({ tiers: [null], history: {} }).unread, /has no areas/);
+  const withHistory = (events) => shaped({ tiers: [{ areas: [{ items: [pass] }] }], history: { 'TST-0001': events } });
+  assert.match(withHistory('not a list').unread, /history of a check is not a list/);
+  assert.match(withHistory([null]).unread, /an event .* is not a record/);
+  assert.match(withHistory([{ platform: 'app', when: '2026-09-20', mark: 'pass' }]).unread, /an event .* has no date/);
+  assert.match(withHistory([{ platform: 'app', date: '2026-09-21', mark: 7 }]).unread, /a mark that is not text/);
+  // And a check whose verdict cannot be read reads as that, never as "not walked".
+  const renamed = { ledgers: [shaped({ tiers: [{ areas: [{ items: [{ id: 'TST-0001', verdict: 'pass' }] }] }], history: {} })] };
+  assert.equal('unread' in renamed.ledgers[0], true);
   // The platforms come from the body, and nothing else is read from that answer.
   assert.deepEqual(platformsFrom(payload([], {}, { ledger_platforms: ['app', 'ios', '', 3] })), ['app', 'ios']);
   assert.deepEqual(platformsFrom(payload([], {}, { ledger_platforms: [] })), []);
@@ -211,6 +228,47 @@ test('an invalidated check has no standing verdict; the one before it is said to
   assert.equal(recordedSentence(fromHistory).text, 'invalidated on 2026-09-25 by CHG-20260925-x. Not walked since.');
   // An invalidation written only on the note, with nothing in the ledger, is not the ledger's: the check reads as not walked.
   assert.deepEqual(recordedFor(check, ledgers([{ id: 'TST-0002', mark: 'todo', invalidated_by: { change: 'TASK-0385', reason: 'x', date: '' } }], {}), TODAY), [{ kind: 'not-walked', platform: 'app', source: 'ledger' }]);
+});
+
+test('a check with no standing verdict and an earlier one in its history is not called "not walked"', () => {
+  // The row says nothing stands; the history's newest event is a verdict, from an earlier release or one that
+  // expired. It was walked, so "not walked" would be false, and Deck gives no reason because no source does.
+  const t = facts('TST-0001', { level: 'acceptance' });
+  const read = ledgers([{ id: 'TST-0001', mark: 'todo', verdict_date: '' }], { 'TST-0001': [{ platform: 'app', date: '2026-08-30', mark: 'excused', by: 'user:edwin', method: 'manual' }] });
+  const [recorded] = recordedFor(t, read, TODAY);
+  assert.deepEqual(recorded, { kind: 'lapsed', last: { mark: 'excused', date: '2026-08-30' }, platform: 'app', source: 'ledger' });
+  const said = recordedSentence(recorded);
+  assert.equal(said.text, 'no verdict stands. An earlier one, excused on 2026-08-30, is in the history.');
+  assert.equal(said.label, 'verdict');
+  assert.equal(said.tone, 'absent', 'not the colour of a pass');
+  assert.equal(said.from, 'the acceptance ledger (app)');
+  // With no history at all it is still "not walked".
+  assert.equal(recordedFor(t, ledgers([{ id: 'TST-0001', mark: 'todo' }], {}), TODAY)[0].kind, 'not-walked');
+});
+
+test('a level is read whatever its capitals, and a date that is not a date is no date', () => {
+  assert.equal(facts('TST-0001', { level: 'Acceptance' }).level, 'acceptance');
+  assert.equal(recordedFor(facts('TST-0001', { level: ' Acceptance ' }), { none: true }, TODAY)[0].kind, 'no-ledger', 'taken for an acceptance check, not a manual test');
+  // "last spring" was shown as "last sprin", in the colour of a pass, and could never go stale.
+  const vague = facts('TST-0002', { status: 'passing', last_verified: 'last spring' });
+  assert.equal(vague.lastVerified, '');
+  assert.deepEqual(recordedFor(vague, { none: true }, TODAY), [{ kind: 'undated', status: 'passing', source: 'note' }]);
+  assert.equal(recordedSentence(recordedFor(vague, { none: true }, TODAY)[0]).tone, 'absent');
+  assert.equal(facts('TST-0003', { last_verified: '2026-13-45' }).lastVerified, '');
+  assert.equal(facts('TST-0004', { last_verified: '2026-09-20T10:00:00Z' }).lastVerified, '2026-09-20');
+});
+
+test('a test note opens at its Evidence section however the heading goes on, and staleness counts local days', () => {
+  const headings = [{ text: 'Purpose', top: 0 }, { text: 'Evidence (fill after running)', top: 900 }, { text: 'Notes', top: 1500 }];
+  assert.equal(evidenceSectionTop(headings, 2000), 900, 'the template\'s heading, which twenty of this repository\'s test notes have');
+  assert.equal(evidenceSectionTop([{ text: ' evidence ', top: 40 }], 2000), 40);
+  assert.equal(evidenceSectionTop(headings, 600), 600, 'no further than the text scrolls');
+  assert.equal(evidenceSectionTop([{ text: 'Evidently', top: 10 }, { text: 'The evidence', top: 20 }], 2000), null, 'a heading that only contains the word is not the section');
+  assert.equal(evidenceSectionTop([], 2000), null);
+  // The local calendar day, not the UTC one: the same instant is two different days in two places.
+  const lateEvening = new Date(2026, 9, 2, 23, 30);
+  assert.equal(localDay(lateEvening), '2026-10-02');
+  assert.equal(localDay(new Date(2026, 0, 5, 0, 10)), '2026-01-05');
 });
 
 test('a record that could not be read is not an empty one, and a workspace with no ledger says so', () => {

@@ -22,7 +22,7 @@ import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
 import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor } from '../shared/scenes.js';
-import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
+import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, localDay, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
 import type { EvidenceRow, EvidenceView } from './glass.js';
 import type { Desk } from '../shared/types.js';
 import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
@@ -1382,7 +1382,8 @@ async function evidenceFor(noteId: string, only?: readonly string[]): Promise<Ev
   });
   const walked = facts.some((f) => f !== null && f.level === 'acceptance' && f.status !== 'retired');
   const ledger: LedgerRead = walked ? await evidenceLedger(ws) : { none: true };
-  const today = new Date().toISOString().slice(0, 10);
+  // The local day: the UTC day is yesterday's or tomorrow's for some hours of every day, and staleness is counted in days.
+  const today = localDay(new Date());
   const rows: EvidenceRow[] = verifying.map((v, i) => {
     const test = facts[i];
     if (test === null || test === undefined) {

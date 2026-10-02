@@ -105,7 +105,9 @@ module.exports = async function (d) {
       return { kind: 'verdict', mark: row.mark, date: row.verdict_date, reason: row.verdict_reason || '', method: row.verdict_method || event.method || '', by: event.by || '' };
     }
     const l = events[events.length - 1];
-    return l !== undefined && l.mark === '' ? { kind: 'invalidated', ...l, before: events.slice().reverse().find((e) => e.mark !== '') } : { kind: 'not-walked' };
+    if (l === undefined) return { kind: 'not-walked' };
+    // The row says no verdict stands and the newest event is a verdict: one from an earlier release, or one that expired.
+    return l.mark === '' ? { kind: 'invalidated', ...l, before: events.slice().reverse().find((e) => e.mark !== '') } : { kind: 'lapsed', ...l };
   };
   const verdictText = (v) => `${v.mark} on ${v.date}${v.by ? ` by ${v.by}` : ''}${v.method ? `, ${v.method}` : ''}${v.reason ? `: ${v.reason}` : ''}`;
   /** Whether what a row shows for one platform is what stands for it there. */
@@ -113,6 +115,7 @@ module.exports = async function (d) {
     const v = standing(id, platform);
     if (fact === undefined || fact.from !== ` · from the acceptance ledger (${platform})`) return false;
     if (v.kind === 'not-walked') return fact.text === 'not walked: no verdict is recorded';
+    if (v.kind === 'lapsed') return fact.text === `no verdict stands. An earlier one, ${v.mark} on ${v.date}, is in the history.`;
     if (v.kind === 'verdict') return fact.text === verdictText(v);
     return fact.text.startsWith(`invalidated on ${v.date}${v.invalidatedBy ? ` by ${v.invalidatedBy}` : ''}`) && fact.text.endsWith('Not walked since.') && (!v.before || fact.text.includes(`The verdict before it, ${v.before.mark} on ${v.before.date}, no longer stands.`));
   };
@@ -332,8 +335,11 @@ module.exports = async function (d) {
   await pressRow(SUBJECT, original, 'open', 2400);
   await t.park();
   // Where its Evidence heading stands: at the top of the document's text, or as near as the end of the text allows.
-  const openedTest = await js(`(() => { const p = ${find(original)}; const b = p.querySelector('.pane-body'); const h = [...p.querySelectorAll('.pane-note h1, .pane-note h2, .pane-note h3, .pane-note h4')].find((x) => /^evidence\\b/i.test(x.textContent.trim())); return { held: window.__deckDesk(), state: ${glass}.documentState(${JSON.stringify(original)}), headingBelowTop: h ? Math.round(h.getBoundingClientRect().top - b.getBoundingClientRect().top) : null, atEnd: b.scrollHeight - b.clientHeight - b.scrollTop < 2 }; })()`);
-  check(openedTest.held.includes(original) && openedTest.state === 'ready' && (quotes === null || (openedTest.headingBelowTop !== null && ((openedTest.headingBelowTop >= -2 && openedTest.headingBelowTop <= 24) || openedTest.atEnd))), `"Open the test note" opens ${original} itself as a document${quotes === null ? '' : ', at its Evidence section'}: the route to the full original`, openedTest);
+  const landedAt = (id) => js(`(() => { const p = ${find(id)}; const b = p.querySelector('.pane-body'); const h = [...p.querySelectorAll('.pane-note h1, .pane-note h2, .pane-note h3, .pane-note h4')].find((x) => /^evidence\\b/i.test(x.textContent.trim())); const below = h ? Math.round(h.getBoundingClientRect().top - b.getBoundingClientRect().top) : null; return { held: window.__deckDesk(), state: ${glass}.documentState(${JSON.stringify(id)}), heading: h ? h.textContent.trim() : null, headingBelowTop: below, inSight: below !== null && below >= -2 && below < b.clientHeight, atEnd: b.scrollHeight - b.clientHeight - b.scrollTop < 2, scrolled: Math.round(b.scrollTop) }; })()`);
+  // At the top of the text, or, where the text ends before the heading can reach the top, in sight with the text at its end.
+  const landed = (o) => o.headingBelowTop !== null && ((o.headingBelowTop >= -2 && o.headingBelowTop <= 24) || (o.atEnd && o.inSight));
+  const openedTest = await landedAt(original);
+  check(openedTest.held.includes(original) && openedTest.state === 'ready' && (quotes === null || landed(openedTest)), `"Open the test note" opens ${original} itself as a document${quotes === null ? '' : `, at its "${openedTest.heading}" heading`}: the route to the full original`, openedTest);
   await d.shot(win, '04-the-original-at-its-evidence-section');
   // A test note's own document has the control too, and its panel shows that test's own row.
   const pt = await evidenceOf(original);
@@ -385,6 +391,14 @@ module.exports = async function (d) {
       const dates = h.map((line) => (/, (\d{4}-\d{2}-\d{2}): /.exec(line) || [])[1]);
       check(h.length === all.length && lines.every((line) => h.some((x) => x.startsWith(line))) && dates.every((date, i) => i === 0 || dates[i - 1] >= date) && row.tools.includes(`History (${all.length})`), `"History" lists all ${all.length} events recorded for it, newest first, each with its platform, date and mark`, h.map((line) => line.slice(0, 140)));
       await d.shot(win, '05-a-verdict-and-its-history');
+      // This test note's Evidence heading may be the template's longer one, "Evidence (fill after running)".
+      await pressRow(subject, id, 'open', 2400);
+      await t.park();
+      const there = await landedAt(id);
+      if (there.heading === null) d.log(`NOT RUN: ${id} has no Evidence heading to open at`);
+      else check(there.held.includes(id) && there.state === 'ready' && landed(there), `"Open the test note" on ${id} lands at its "${there.heading}" heading, found by how the heading begins`, there);
+      // The test note is closed again, so the next case opens its own subject with the list clear.
+      await close(id);
     } else if (what === 'a check held open') {
       check(saysWhatStands(verdict, id, platform) && (!v.reason || verdict.text.endsWith(`: ${v.reason}`)) && getTone(row, verdict) === 'blocking', `${id} on ${subject}: a verdict that holds the check open on ${platform} is shown as that, with the walker's reason`, row && row.facts);
     } else {
@@ -432,6 +446,15 @@ module.exports = async function (d) {
     await d.delay(400);
     const afterEsc = await js(`({ open: !${find(req2)}.querySelector('.pane-evidence').hidden, held: window.__deckDesk().length, active: document.activeElement.className, onFirst: document.activeElement === ${find(req2)}.querySelector('.claim-evidence') })`);
     check(!afterEsc.open && afterEsc.held === 2 && afterEsc.onFirst, 'Escape closes the panel and nothing else, and the keyboard is back on the criterion\'s control that opened it', afterEsc);
+    // E on the header opens the panel and puts the keyboard in it; E pressed there closes it again.
+    await js(`${find(req2)}.querySelector('.pane-head').focus()`);
+    d.press(win, 'e');
+    await d.delay(700);
+    const eOpened = await js(`({ open: !${find(req2)}.querySelector('.pane-evidence').hidden, inPanel: !!document.activeElement.closest('.pane-evidence') })`);
+    d.press(win, 'e');
+    await d.delay(500);
+    const eClosed = await js(`({ open: !${find(req2)}.querySelector('.pane-evidence').hidden, on: document.activeElement.className, held: window.__deckDesk().length })`);
+    check(eOpened.open && eOpened.inPanel && !eClosed.open && /pane-proof/.test(eClosed.on) && eClosed.held === 2, 'E on the header opens the panel with the keyboard in it, and E pressed in the panel closes it and puts the keyboard on the header\'s evidence control', { eOpened, eClosed });
     // Space on the header's control opens the whole note's panel; Tab goes through its rows; Escape goes back to that control.
     await js(`${find(req2)}.querySelector('.pane-proof').focus()`);
     d.press(win, ' ');
@@ -500,6 +523,20 @@ module.exports = async function (d) {
   // ---- 7. The staleness rule, on a date changed in the copy ----
   if (!(await js('window.__deckDesk()')).includes(SUBJECT)) await openNote(SUBJECT);
   await t.clickOn(`.pane[data-note-id="${SUBJECT}"] .pane-widen`, 400);
+  // Two criteria written as plain bullets are added to the subject in the copy, one that links a test and one that links none.
+  {
+    const file = path.join(root, 'docs', nodes.get(SUBJECT).rel);
+    const linkTo = path.basename(nodes.get(want[0].id).rel, '.md');
+    fs.writeFileSync(file, `${fs.readFileSync(file, 'utf-8').trimEnd()}\n\n## Acceptance criteria the walk added\n\n- Added by the walk: this line links [[${linkTo}]].\n- Added by the walk: this line links no test.\n`);
+    edited.push(path.relative(root, file));
+    let crit = [];
+    for (let i = 0; i < 40; i += 1) {
+      await d.delay(400);
+      crit = await js(`(() => { const p = ${find(SUBJECT)}; const lis = [...p.querySelectorAll('.pane-note li')].filter((li) => /^Added by the walk/.test(li.textContent.trim())); return lis.map((li) => ({ text: li.textContent.trim().slice(0, 48), control: (li.querySelector('.claim-evidence') || {}).textContent || null, box: !!li.querySelector('input[type=checkbox]') })); })()`);
+      if (crit.length === 2 && crit[0].control !== null) break;
+    }
+    check(crit.length === 2 && crit[0].control === 'evidence named on this line' && !crit[0].box && crit[1].control === null && !crit[1].box, 'a criterion written as a plain bullet, under a heading that says "criteria", has the control when its line links a test note and none when it links none (two lines the walk added to the subject in the copy)', crit);
+  }
   const factOf = (p, id, label) => { const row = p.rows.find((r) => r.id === id); return row === undefined ? undefined : row.facts.find((f) => f.label === label); };
   if (hand !== null && /^last_verified:/m.test(fs.readFileSync(path.join(root, 'docs', nodes.get(hand.id).rel), 'utf-8'))) {
     const file = path.join(root, 'docs', nodes.get(hand.id).rel);

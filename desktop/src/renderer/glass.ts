@@ -81,7 +81,7 @@ import {
 import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
 import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
-import { NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, testsNamedOnLine } from '../shared/evidence.js';
+import { EVIDENCE_HEADING, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
 import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
 import {
   type Edge,
@@ -141,7 +141,7 @@ const SEATED_Z = 2950;
 const ARRANGE_MS = 300;
 /** A document at least this wide shows its evidence beside its text; a narrower one shows it above. */
 const EVIDENCE_BESIDE_PX = 760;
-/** How long a reading position waits for its document's text before it is given up. */
+/** How long a reopened scene waits for its documents' text before it reports. A document still unread then keeps its place for a retry. */
 const READING_WAIT_MS = 5000;
 
 /**
@@ -153,7 +153,7 @@ const READING_WAIT_MS = 5000;
 export function evidenceExcerpt(html: string, testId: string): string {
   // Parsed into a document of its own, which loads nothing and runs nothing.
   const holder = new DOMParser().parseFromString(html, 'text/html').body;
-  const heading = Array.from(holder.querySelectorAll('h1, h2, h3, h4')).find((h) => /^evidence\b/i.test((h.textContent ?? '').trim()));
+  const heading = Array.from(holder.querySelectorAll('h1, h2, h3, h4')).find((h) => EVIDENCE_HEADING.test((h.textContent ?? '').trim()));
   if (heading === undefined) return NO_SECTION;
   const level = Number(heading.tagName.slice(1));
   const parts: string[] = [];
@@ -514,6 +514,15 @@ export class GlassField {
   private readonly lastReading = new Map<string, ReadingAnchor>();
   /** Reading positions waiting for their documents' text (restoreReading). */
   private readingWanted = new Map<string, ReadingAnchor>();
+  /**
+   * Reading positions whose wait ran out with the document still on the desk
+   * and unread: a document that could not be read and offers a retry. The
+   * position is kept for as long as the document is, so a retry pressed a
+   * minute later still opens it where the scene had it.
+   */
+  private readonly readingOwed = new Map<string, ReadingAnchor>();
+  /** Test notes opened from an evidence row, which go to their Evidence section when their text is on screen. */
+  private readonly sectionWanted = new Set<string>();
   private readingMoved: string[] = [];
   private readingDone: ((moved: string[]) => void) | null = null;
   private readingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2854,6 +2863,7 @@ export class GlassField {
     if (this.readingTimer !== null) clearTimeout(this.readingTimer);
     this.readingMoved = [];
     this.readingWanted = new Map(Object.entries(anchors));
+    for (const noteId of this.readingWanted.keys()) this.readingOwed.delete(noteId);
     this.readingDone = done;
     for (const [noteId] of [...this.readingWanted]) {
       const pane = this.paneEls.get(noteId);
@@ -2865,7 +2875,15 @@ export class GlassField {
 
   private applyReading(noteId: string, pane: HTMLElement): void {
     const anchor = this.readingWanted.get(noteId);
-    if (anchor === undefined) return;
+    if (anchor === undefined) {
+      // Its wait ran out before it could be read: it goes to its place now, and the report has been made.
+      const owed = this.readingOwed.get(noteId);
+      if (owed === undefined) return;
+      this.readingOwed.delete(noteId);
+      const owedBody = pane.querySelector('.pane-body') as HTMLElement;
+      owedBody.scrollTop = scrollTopForAnchor(owed, this.headingsOf(pane), owedBody.scrollHeight - owedBody.clientHeight).top;
+      return;
+    }
     this.readingWanted.delete(noteId);
     const body = pane.querySelector('.pane-body') as HTMLElement;
     const at = scrollTopForAnchor(anchor, this.headingsOf(pane), body.scrollHeight - body.clientHeight);
@@ -2877,6 +2895,8 @@ export class GlassField {
   private settleReading(): void {
     if (this.readingTimer !== null) clearTimeout(this.readingTimer);
     this.readingTimer = null;
+    // A document still on the desk without its text keeps its place for when it is read; a note that is gone does not.
+    for (const [noteId, anchor] of this.readingWanted) if (this.paneEls.has(noteId)) this.readingOwed.set(noteId, anchor);
     this.readingWanted.clear();
     const done = this.readingDone;
     this.readingDone = null;
@@ -3503,6 +3523,8 @@ export class GlassField {
       else if (reading !== null) this.lastReading.delete(noteId);
       pane.remove();
       this.paneEls.delete(noteId);
+      this.readingOwed.delete(noteId);
+      this.sectionWanted.delete(noteId);
       // A document that has left the desk, however it left, opens next time with its panels closed.
       if (this.relatedOpen === noteId) this.relatedOpen = null;
       if (this.detailsOpen === noteId) this.detailsOpen = null;
@@ -3727,6 +3749,20 @@ export class GlassField {
     // open, the one the keyboard is in closes first, then the list.
     const details = pane.querySelector('.pane-details') as HTMLElement;
     pane.addEventListener('keydown', (event) => {
+      // E opened the panel from the header and put the keyboard in it. Pressed again there it did nothing,
+      // because the header's keys are read on the header only. It closes the panel and goes back to what opened it.
+      if ((event.key === 'e' || event.key === 'E') && !event.metaKey && !event.ctrlKey && !event.altKey && this.evidenceOpen === noteId) {
+        const panel = pane.querySelector('.pane-evidence');
+        const target = event.target as HTMLElement;
+        if (panel !== null && panel.contains(target) && !/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) {
+          event.preventDefault();
+          event.stopPropagation();
+          const opener = pane.querySelector<HTMLElement>('.claim-picked > .claim-evidence') ?? (pane.querySelector('.pane-proof') as HTMLElement);
+          this.toggleEvidence(noteId, false);
+          opener.focus({ preventScroll: true });
+          return;
+        }
+      }
       if (event.key !== 'Escape') return;
       const listOpen = this.relatedOpen === noteId;
       const detailsOpen = this.detailsOpen === noteId;
@@ -4136,7 +4172,21 @@ export class GlassField {
     // A test note already on the desk is raised, not opened twice: `lift` finds it.
     this.evidenceOrigin.set(testId, docId);
     await this.lift(card, null, true);
-    this.restoreReading({ [testId]: { heading: 'Evidence', past: 0, fraction: 0 } });
+    // By the rule the excerpt uses, not by the word alone: the template's heading is "Evidence (fill after
+    // running)", and asked for as "Evidence" exactly, twenty of this repository's test notes opened at their top.
+    this.sectionWanted.add(testId);
+    const pane = this.paneEls.get(testId);
+    if (pane !== undefined) this.applySection(testId, pane);
+  }
+
+  /** Scroll a test note opened from an evidence row to its Evidence section, once its text is on screen. */
+  private applySection(noteId: string, pane: HTMLElement): void {
+    if (!this.sectionWanted.has(noteId)) return;
+    if ((pane.querySelector('.pane-note') as HTMLElement).dataset['filled'] !== 'true' || this.rereads.has(noteId)) return;
+    this.sectionWanted.delete(noteId);
+    const body = pane.querySelector('.pane-body') as HTMLElement;
+    const top = evidenceSectionTop(this.headingsOf(pane), body.scrollHeight - body.clientHeight);
+    if (top !== null) body.scrollTop = top;
   }
 
   /** A card for a test note this view does not hold: by the path the evidence row carries. */
@@ -4184,11 +4234,22 @@ export class GlassField {
    * made up. A criterion that names no test gets no control.
    */
   private async markClaims(noteId: string, note: HTMLElement): Promise<void> {
-    // A criterion is a list item with a checkbox of its own. The sidecar wraps the box in a label, so it
-    // is found by which item it belongs to, not by where in the item it sits; and a link counts for the
-    // line it is written on, not for a line that holds that one in a nested list.
+    // A criterion is a list item with a checkbox of its own, or a line of a list that stands under a heading
+    // with "criteria" in it: this repository's features write their acceptance criteria as plain bullets,
+    // and read by the checkbox alone they got no control. The sidecar wraps the box in a label, so it is
+    // found by which item it belongs to, not by where in the item it sits; and a link counts for the line
+    // it is written on, not for a line that holds that one in a nested list.
     const own = (li: HTMLElement, selector: string): HTMLElement[] => Array.from(li.querySelectorAll<HTMLElement>(selector)).filter((e) => e.closest('li') === li);
-    const lines = Array.from(note.querySelectorAll<HTMLElement>('li')).filter((li) => own(li, 'input[type="checkbox"]').length > 0);
+    const underCriteria = (li: HTMLElement): boolean => {
+      // The outermost list this line is in, then back to the heading that list stands under.
+      let list: HTMLElement = li;
+      while (list.parentElement !== null && list.parentElement !== note && list.parentElement.closest('ul, ol') !== null) list = list.parentElement;
+      for (let node: Element | null = list.closest('ul, ol'); node !== null; node = node.previousElementSibling) {
+        if (/^H[1-6]$/.test(node.tagName)) return /\bcriteria\b/i.test(node.textContent ?? '');
+      }
+      return false;
+    };
+    const lines = Array.from(note.querySelectorAll<HTMLElement>('li')).filter((li) => own(li, 'input[type="checkbox"]').length > 0 || underCriteria(li));
     const linked = lines.map((li) =>
       own(li, 'a')
         .map((a) => a.getAttribute('href') ?? '')
@@ -4293,6 +4354,7 @@ export class GlassField {
         if (pane.dataset['fresh'] === 'true' && last !== undefined) body.scrollTop = scrollTopForAnchor(last, this.headingsOf(pane), body.scrollHeight - body.clientHeight).top;
         delete pane.dataset['fresh'];
         this.applyReading(noteId, pane);
+        this.applySection(noteId, pane);
         const actions = pane.querySelector('.pane-actions') as HTMLElement;
         void this.hooks.dress(noteId, note, actions).catch(() => null);
         void this.markClaims(noteId, note);

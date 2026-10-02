@@ -119,7 +119,7 @@ module.exports = async function (d) {
   check(stayed.marked && stayed.line.includes(`${a} arrived from the desk on`) && !acted.marked && acted.line === '' && stillOffered.some((o) => o.startsWith('Send back to the desk')), 'four seconds after it arrived the document is still marked and the line still says where it came from; a press in the document takes both away, and S still offers "Send back"', { stayed, acted, offered: stillOffered });
   // The chooser by keyboard: arrows move between the answers, each says what it does, and Escape closes it and changes nothing.
   const deskBeforeKeys = JSON.stringify([deskOf('features'), deskOf('issues')]);
-  const focusedAnswer = () => js(`({ text: document.activeElement.textContent, says: (document.querySelector('#status .choice-says') || {}).textContent || '' })`);
+  const focusedAnswer = () => js(`(() => { const e = document.querySelector('#status .choice-says'); const r = e ? e.getBoundingClientRect() : null; const hit = r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null; return { text: document.activeElement.textContent, says: e ? e.textContent : '', whole: !!r && r.width > 0 && e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && hit === e }; })()`);
   const k0 = await focusedAnswer();
   d.press(win, 'Right'); await d.delay(150);
   const k1 = await focusedAnswer();
@@ -129,7 +129,7 @@ module.exports = async function (d) {
   const k3 = await focusedAnswer();
   d.press(win, 'Escape'); await d.delay(400);
   const afterEscape = await js(`({ buttons: document.querySelectorAll('#status button').length, on: (document.activeElement.closest('.pane') || { dataset: {} }).dataset.noteId || document.activeElement.className })`);
-  check(k0.text.startsWith('Send back to the desk') && /leaves this desk once that window shows it/.test(k0.says) && k1.text !== k0.text && k2.text !== k1.text && k3.text === k1.text && k1.says !== '' && afterEscape.buttons === 0 && afterEscape.on === a && JSON.stringify([deskOf('features'), deskOf('issues')]) === deskBeforeKeys, 'in the chooser the arrow keys move between the answers, each says what it does before it is chosen, and Escape closes it with nothing sent and the keyboard back on the document', { k0, k1, k2, k3, afterEscape });
+  check(k0.text.startsWith('Send back to the desk') && /leaves this desk once that window shows it/.test(k0.says) && [k0, k1, k2, k3].every((k) => k.whole) && k1.text !== k0.text && k2.text !== k1.text && k3.text === k1.text && k1.says !== '' && afterEscape.buttons === 0 && afterEscape.on === a && JSON.stringify([deskOf('features'), deskOf('issues')]) === deskBeforeKeys, 'in the chooser the arrow keys move between the answers, each says what it does before it is chosen in a sentence drawn whole, and Escape closes it with nothing sent and the keyboard back on the document', { k0, k1, k2, k3, afterEscape });
 
   // ---- 5. Also show in a reader: this desk keeps it ----
   const readerOffer = (await askWhere(a)).find((o) => o.startsWith('Also show in the reader'));
