@@ -79,6 +79,24 @@ module.exports = async function (d) {
   await d.delay(400);
   const wheeled = await js(`({ grid: ${coll}.grid(), zoom: ${glass}.zoom().scale, yaw: ${glass}.model.yaw })`);
   check(wheeled.grid.firstRow > 0 && wheeled.zoom === 1 && wheeled.yaw === 0, 'the wheel over a card of the collection moves through the cards, and the field neither zooms nor turns', wheeled);
+  // The wheel on to the last row: the last member is drawn, and the field still neither zooms nor turns.
+  let wheelEnd = wheeled.grid;
+  for (let i = 0; i < 300 && wheelEnd.first + wheelEnd.drawn < wheelEnd.count; i += 1) { d.wheel(win, overCard.x, overCard.y, 100); await d.delay(25); if (i % 5 === 4) wheelEnd = await js(`${coll}.grid()`); }
+  await d.delay(300);
+  for (let i = 0; i < 6; i += 1) { d.wheel(win, overCard.x, overCard.y, 100); await d.delay(25); }
+  await d.delay(300);
+  const atLast = await js(`({ grid: ${coll}.grid(), drawn: [...document.querySelectorAll('.field-card.in-collection')].map((e) => e.dataset.noteId).concat([...document.querySelectorAll('.grid-ref')].map((e) => e.dataset.noteId)), zoom: ${glass}.zoom().scale, yaw: ${glass}.model.yaw })`);
+  check(atLast.grid.first + atLast.grid.drawn === atLast.grid.count && atLast.drawn.includes(members[members.length - 1]) && atLast.zoom === 1 && atLast.yaw === 0, 'the wheel goes on to the last row of cards and stops there: the last member is drawn, and turning it further neither zooms nor turns the field', { grid: atLast.grid, last: members[members.length - 1], zoom: atLast.zoom, yaw: atLast.yaw });
+  // Folded while it is cards, and opened again: it is cards again, on the row of cards it was on.
+  const beforeFold = await js(`({ grid: ${coll}.grid(), pressed: document.getElementById('collection-as-cards').getAttribute('aria-pressed'), cards: document.querySelectorAll('.field-card.in-collection').length })`);
+  await press('collection-fold');
+  await d.delay(500);
+  const foldedCards = await js(`({ h: Math.round(document.getElementById('collection').getBoundingClientRect().height), cards: document.querySelectorAll('.field-card.in-collection').length, count: document.getElementById('collection-count').textContent, expanded: document.getElementById('collection-fold').getAttribute('aria-expanded') })`);
+  await press('collection-fold');
+  await d.delay(600);
+  await t.park();
+  const reopened = await js(`({ grid: ${coll}.grid(), pressed: document.getElementById('collection-as-cards').getAttribute('aria-pressed'), cards: document.querySelectorAll('.field-card.in-collection').length, count: document.getElementById('collection-count').textContent, expanded: document.getElementById('collection-fold').getAttribute('aria-expanded') })`);
+  check(foldedCards.h <= 36 && foldedCards.cards === 0 && foldedCards.count === header && foldedCards.expanded === 'false' && reopened.expanded === 'true' && reopened.pressed === 'true' && reopened.grid !== null && reopened.grid.count === members.length && reopened.grid.firstRow === beforeFold.grid.firstRow && reopened.cards === beforeFold.cards && reopened.count === header, 'folded while it is cards it is the header alone with the same count and no card drawn; opened again it is cards again, on the row of cards it was on', { beforeFold, foldedCards, reopened });
   // Back to the table: the same row is where it was.
   await press('collection-as-table');
   await d.delay(600);
@@ -88,6 +106,22 @@ module.exports = async function (d) {
   await js(`(() => { const s = document.getElementById('search'); s.focus(); s.select(); })()`);
   d.press(win, 'Backspace');
   await d.delay(900);
+
+  // ---- 1b. A view that could not be read says so in the collection ----
+  let refuseNav = true;
+  win.webContents.session.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, done) => done({ cancel: refuseNav && /\/api\/cockpit\/nav\?mode=issues/.test(details.url) }));
+  await js(`[...document.querySelectorAll('#switcher button')].find((x) => x.dataset.viewId === 'issues').click()`);
+  let unread = null;
+  for (let i = 0; i < 40; i += 1) { await d.delay(250); unread = await js(`(() => { const st = document.getElementById('nav-state'); return { state: st.dataset.state, text: st.textContent, shown: !st.hidden, button: (st.querySelector('button') || {}).textContent || null, rows: [...document.querySelectorAll('#nav-list .nav-row')].filter((r) => !r.hidden).length, name: document.getElementById('collection-name').textContent }; })()`); if (unread.state === 'error') break; }
+  check(unread.state === 'error' && unread.shown && /^Issues could not be read: .+/.test(unread.text) && unread.button === 'retry' && unread.rows === 0, 'a view whose list could not be read says so in the collection, by the view\'s name and with the reason, and offers to try again; it is not shown as an empty view', unread);
+  await d.shot(win, '03b-a-view-that-could-not-be-read');
+  refuseNav = false;
+  win.webContents.session.webRequest.onBeforeRequest(null);
+  await t.clickOn('#nav-state button', 300);
+  let retried = null;
+  for (let i = 0; i < 40; i += 1) { await d.delay(250); retried = await js(`({ state: document.getElementById('nav-state').dataset.state, rows: [...document.querySelectorAll('#nav-list .nav-row')].filter((r) => !r.hidden).length, count: document.getElementById('collection-count').textContent })`); if (retried.state === 'ready' && retried.rows > 0) break; }
+  check(retried.state === 'ready' && retried.rows > 0, '"retry" reads it again, and the list is there', retried);
+  await t.view('features');
 
   // ---- 2. One object per note, in cards as in the table ----
   await js(`document.getElementById('nav-list').scrollTop = 0`);
@@ -159,8 +193,9 @@ module.exports = async function (d) {
   check(compared.a.scrollTop === 220 && compared.b.scrollTop === 140 && compared.a.fontSize === preCompare.a.fontSize, 'and their own reading positions and text size', { a: compared.a.scrollTop, b: compared.b.scrollTop });
   check(compared.a.top === compared.b.top && (!overlap || cmp.notes.some((n) => /overlap by/.test(n))), 'they stand side by side at one height; where the window is too narrow for both, the preview said by how much they overlap', { a: compared.a, b: compared.b, notes: cmp.notes });
   await d.shot(win, '07-compare-applied');
-  // A link in one of them still opens the note it names.
-  const link = await js(`(() => { const body = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(b)}).querySelector('.pane-body'); const held = new Set(window.__deckDesk()); const bb = body.getBoundingClientRect(); for (const l of body.querySelectorAll('.pane-note a[href^="/docs/"]')) { if (held.has((l.textContent || '').trim())) continue; body.scrollTop += l.getBoundingClientRect().top - bb.top - 80; const r = l.getClientRects()[0]; if (r && r.top > bb.top && r.bottom < bb.bottom && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === l) return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; } return null; })()`);
+  // A link in one of them still opens the note it names. Looked for in both documents: a link to a note not on the desk, in view after scrolling to it.
+  const linkIn = (id) => js(`(() => { const body = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(id)}).querySelector('.pane-body'); const held = new Set(window.__deckDesk()); const bb = body.getBoundingClientRect(); for (const l of body.querySelectorAll('.pane-note a[href^="/docs/"]')) { const name = decodeURIComponent((l.getAttribute('href') || '').split('/').pop() || ''); if ([...held].some((h) => name.startsWith(h + '-') || name === h + '.md')) continue; body.scrollTop += l.getBoundingClientRect().top - bb.top - 80; const r = l.getClientRects()[0]; if (r && r.width > 0 && r.top > bb.top && r.bottom < bb.bottom && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === l) return { x: r.left + r.width / 2, y: r.top + r.height / 2, href: l.getAttribute('href') }; } return null; })()`);
+  const link = (await linkIn(b)) || (await linkIn(a));
   let third = null;
   if (link) {
     await d.pointer(win, d.click(link));
@@ -168,7 +203,9 @@ module.exports = async function (d) {
     await t.park();
     const held = await js('window.__deckDesk()');
     third = held.length === 3 ? held[2] : null;
-    check(third !== null, 'a link inside a compared document opens the note it names as a third document', held);
+    check(third !== null, 'a link inside a compared document opens the note it names as a third document', { held, link: link.href });
+  } else {
+    d.log('NOT RUN: neither compared document has a link to a note that is not already on the desk');
   }
   // Undo: the two go back where they were, at the sizes they have, and the third is not touched.
   const thirdBefore = third ? await paneRect(third) : null;
@@ -225,6 +262,29 @@ module.exports = async function (d) {
     const cleared = await js(`({ quietRows: document.querySelectorAll('.pane.focus .link-row.quiet').length, quietCards: document.querySelectorAll('.field-card.seated.quiet').length, emphasis: ${glass}.arrangeState().emphasis, edges: ${JSON.stringify(graph.edges.length)} })`);
     const graphAfter = await (await fetch(`${d.origin}/deck/graph/${ws}`)).json();
     check(cleared.quietRows === 0 && cleared.quietCards === 0 && cleared.emphasis === null && graphAfter.edges.length === graph.edges.length, 'clear shows every related note the same again, and no link was added or removed', cleared);
+
+    // An undo puts back the relationship that was picked out when the arrangement was applied.
+    await t.clickOn(`.pane.focus .kind-chip[data-kind="${pick.kind}"]`, 700);
+    await t.park();
+    const pickedBefore = await js(`${glass}.arrangeState().emphasis`);
+    await press('arrange-read');
+    d.press(win, 'Return');
+    await d.delay(1300);
+    // While it is arranged for reading, the pick is cleared with the list's own control.
+    const paneA = `[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)})`;
+    if ((await js(`${glass}.arrangeState().emphasis`)) !== null) {
+      if (await js(`${paneA}.querySelector('.pane-links').hidden`)) { await js(`${paneA}.querySelector('.pane-head').focus()`); d.press(win, 'r'); await d.delay(800); }
+      const clearAt = await js(`(() => { const c = ${paneA}.querySelector('.kind-clear'); if (!c) return null; c.scrollIntoView({ block: 'nearest' }); const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+      if (clearAt) { await d.pointer(win, d.click(clearAt)); await d.delay(600); }
+    }
+    const pickedDuring = await js(`${glass}.arrangeState().emphasis`);
+    await press('arrange-undo');
+    await d.delay(1300);
+    await t.park();
+    const pickedAfter = await js(`(() => { const p = ${paneA}; return { emphasis: ${glass}.arrangeState().emphasis, asking: ${glass}.arrangeState().asking, listOpen: !p.querySelector('.pane-links').hidden, loud: [...p.querySelectorAll('.link-row:not(.quiet)')].map((r) => r.dataset.noteId).sort(), said: (p.querySelector('.kinds-said') || {}).textContent || '' }; })()`);
+    check(pickedBefore !== null && pickedBefore.kind === pick.kind && pickedDuring === null && pickedAfter.emphasis !== null && pickedAfter.emphasis.noteId === a && pickedAfter.emphasis.kind === pick.kind && (!pickedAfter.listOpen || JSON.stringify(pickedAfter.loud) === JSON.stringify(want)), `Undo arrangement puts back the relationship that was picked out when the arrangement was applied: "${pick.kind}" is picked out again after it had been cleared`, { pickedBefore, pickedDuring, pickedAfter });
+    if (pickedAfter.listOpen) await t.clickOn('.pane.focus .kind-clear', 600).catch(() => null);
+    else await js(`${glass}.setEmphasis(${JSON.stringify(a)}, null)`);
   }
 
   // ---- 7. The desk and the notes change under a preview and under an undo ----
@@ -350,6 +410,46 @@ module.exports = async function (d) {
   check((await desk()) === kbBefore, 'Enter on Undo arrangement puts it back', null);
   await dbg.sendCommand('Emulation.setEmulatedMedia', { features: [] });
   dbg.detach();
+
+  // ---- 9b. Two documents wider together than the window: the preview says by how much they overlap, and they do ----
+  {
+    const here = await js('window.__deckDesk()');
+    if (here.length < 2) await openRow(here);
+    const wide = win.getBounds();
+    win.setBounds({ x: 0, y: 0, width: 1060, height: wide.height });
+    await d.delay(900);
+    const narrowMode = await js(`!!document.querySelector('#narrow-bar') && !document.getElementById('narrow-bar').hidden`);
+    await press('arrange-compare');
+    const shown = await js(`({ title: document.getElementById('arrange-title').textContent, notes: [...document.querySelectorAll('#arrange-notes li')].map((l) => l.textContent) })`);
+    const names = /^Compare (\S+) and (\S+)$/.exec(shown.title) || [];
+    const saidOver = shown.notes.map((n) => /overlap by (\d+) px/.exec(n)).find((m) => m);
+    d.press(win, 'Return');
+    await d.delay(1100);
+    const ra = names[1] ? await paneRect(names[1]) : null;
+    const rb = names[2] ? await paneRect(names[2]) : null;
+    const actual = ra && rb ? Math.round(Math.min(ra.left + ra.width, rb.left + rb.width) - Math.max(ra.left, rb.left)) : null;
+    // Pressing the one behind brings it to the front.
+    let front = null;
+    if (ra && rb && actual > 0) {
+      const topNow = (await js('window.__deckDesk()')).slice(-1)[0];
+      const behind = topNow === names[1] ? names[2] : names[1];
+      // A point of its header's title that the other document does not cover, found on screen.
+      const at = await js(`(() => { const p = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(behind)}); const h = p.querySelector('.pane-head').getBoundingClientRect(); for (let x = h.left + 12; x < h.right - 12; x += 8) { const hit = document.elementFromPoint(x, h.top + h.height / 2); if (hit && hit.closest('.pane') === p && !hit.closest('button')) return { x, y: h.top + h.height / 2 }; } return null; })()`);
+      if (at === null) throw new Error(`no uncovered point on ${behind}'s header`);
+      await d.pointer(win, d.click(at));
+      await d.delay(600);
+      await t.park();
+      front = { behind, topAfter: (await js('window.__deckDesk()')).slice(-1)[0] };
+    }
+    check(!narrowMode && saidOver !== undefined && actual !== null && Math.abs(actual - Number(saidOver[1])) <= 2 && ra.top === rb.top && front !== null && front.topAfter === front.behind, 'in a window too narrow for two documents side by side, the preview says by how many pixels they will overlap, they overlap by that much at their own sizes, and pressing the one behind brings it to the front', { window: 1060, said: saidOver && saidOver[0], actual, a: ra && [ra.left, ra.width], b: rb && [rb.left, rb.width], front, notes: shown.notes });
+    await d.shot(win, '10b-two-documents-that-overlap');
+    await press('arrange-undo');
+    await d.delay(900);
+    // A document was raised since, which is not a move: the undo may ask, and is told to put back the rest.
+    if ((await arrange()).asking !== null) { await press('arrange-apply'); await d.delay(900); }
+    win.setBounds(wide);
+    await d.delay(900);
+  }
 
   // ---- 10. A narrow window, a reload, and the served page ----
   await js(`document.getElementById('nav-list').scrollTop = 0`);

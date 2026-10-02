@@ -73,7 +73,7 @@ items:
     FEAT-0024:
       file: "docs/features/glass-evidence/FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports.md"
       title: "Evidence stands beside the claim it supports"
-      status: doing
+      status: review
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0006"]
@@ -285,28 +285,28 @@ items:
     TASK-0111:
       file: "docs/features/glass-evidence/plan/tasks/TASK-0111-Work-Out-A-Notes-Evidence-Without-A-Window.md"
       title: "Work out a note's evidence without a window"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0024
       phase: PHASE-0002
     TASK-0112:
       file: "docs/features/glass-evidence/plan/tasks/TASK-0112-Forward-The-Acceptance-Record-As-A-Read.md"
       title: "Forward the acceptance record as a read"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0024
       phase: PHASE-0002
     TASK-0113:
       file: "docs/features/glass-evidence/plan/tasks/TASK-0113-Show-Evidence-Beside-The-Claim-In-The-Glass-Document.md"
       title: "Show evidence beside the claim in the Glass document"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0024
       phase: PHASE-0002
     TASK-0114:
       file: "docs/features/glass-evidence/plan/tasks/TASK-0114-Walk-The-Evidence-Panel-On-Two-Real-Workspaces.md"
       title: "Walk the evidence panel on two real workspaces"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0024
       phase: PHASE-0002
@@ -341,7 +341,7 @@ items:
     TASK-0110:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale.md"
       title: "Walk scenes and handoff at real scale"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0023
       phase: PHASE-0002
@@ -374,7 +374,7 @@ items:
     TASK-0103:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0103-Walk-Collection-Forms-And-Arrangements-At-Scale.md"
       title: "Walk collection forms and arrangements at scale"
-      status: backlog
+      status: doing
       owner: user:edwin
       parent: FEAT-0022
       phase: PHASE-0002
@@ -388,7 +388,7 @@ items:
     TASK-0095:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0095-Model-An-Exact-Collection-On-The-Desk.md"
       title: "Model an exact derived collection on the desk"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -410,7 +410,7 @@ items:
     TASK-0098:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0098-Keep-Collection-Document-And-Field-In-Sync.md"
       title: "Keep collection, document and field in sync"
-      status: doing
+      status: done
       owner: user:edwin
       parent: FEAT-0020
       phase: PHASE-0002
@@ -1813,7 +1813,7 @@ items:
       covers: ["FEAT-0024", "REQ-0006"]
     TST-0079:
       file: "docs/tests/TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer.md"
-      status: ready
+      status: passing
       owner: user:edwin
       phase: PHASE-0002
       scope: system
@@ -1849,7 +1849,7 @@ items:
       covers: ["FEAT-0023", "REQ-0005"]
     TST-0076:
       file: "docs/tests/TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer.md"
-      status: ready
+      status: passing
       owner: user:edwin
       phase: PHASE-0002
       scope: system
@@ -2213,7 +2213,7 @@ items:
       note: "Automated, so it carries no verdict: CI is the verdict. Its command names desktop/tests/zoom.test.mjs, which TASK-0064 writes; the suite and this note must land in ONE commit, or run-tests.py fails with exit 2 (ISS-0028). Written at planning, 2026-09-11, not committed."
     TST-0051:
       file: "docs/features/glass-focus/plan/tests/TST-0051-The-Ring-Keeps-Order-Clears-The-Pane-And-Moves-On-Arcs.md"
-      title: "The ring around an opened note keeps its neighbours' order, never overlaps the pane, counts what it cannot hold, and moves them by angle and distance rather than through the middle"
+      title: "The seats round an opened note hold every neighbour at browsing size, never overlap the document or each other, keep the cards' circular order, and run on past the field's left and right edges"
       status: active
       owner: user:edwin
       phase: PHASE-0002
@@ -2385,9 +2385,9 @@ metrics:
     phases_total: 4
     phases_done: 0
     tasks_total: 114
-    tasks_done: 82
+    tasks_done: 88
     tests_total: 57
-    tests_passing: 6
+    tests_passing: 8
     tests_failing: 0
     issues_open: 6
     issues_triage: 0

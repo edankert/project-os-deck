@@ -188,6 +188,29 @@ module.exports = async function (d) {
     await d.delay(700);
   }
 
+  // ---- A turn after each arrangement, with the documents where the arrangement put them ----
+  const arranged = {};
+  for (const [id, label] of [['arrange-read', 'Read'], ['arrange-compare', 'Compare'], ['arrange-related', 'Show related']]) {
+    const button = await t.rect(`#${id}`);
+    const offered = await js(`!document.getElementById(${JSON.stringify(id)}).disabled`);
+    if (!button || !offered) { d.log(`NOT RUN: ${label} is not offered with what is open`); continue; }
+    await d.pointer(win, d.click(button));
+    await d.delay(700);
+    if (await js(`document.getElementById('arrange-preview') && !document.getElementById('arrange-preview').hidden`)) {
+      d.press(win, 'Return');
+      await d.delay(1600);
+      await t.park();
+      arranged[label] = await turn(`after ${label} was applied`);
+      const undo = await t.rect('#arrange-undo');
+      if (undo) { await d.pointer(win, d.click(undo)); await d.delay(1200); }
+      if ((await js(`${glass}.arrangeState().asking`)) !== null) { await d.pointer(win, d.click(await t.rect('#arrange-apply'))); await d.delay(900); }
+      await t.park();
+    } else {
+      d.log(`NOT RUN: ${label} showed no preview: ${await t.text('#status')}`);
+    }
+  }
+  d.log('script work per frame while turning after an arrangement, against a 16.7 ms frame', Object.fromEntries(Object.entries(arranged).map(([k, v]) => [k, { workMedianMs: v.workMedianMs, workP95Ms: v.workP95Ms, documents: v.documents, mostElements: v.mostElements }])));
+
   // ---- Close, and the way back ----
   const top = await js(`window.__deckDesk().slice(-1)[0]`);
   await js(`document.querySelector('.pane[data-note-id="${top}"] .pane-head').focus()`);
