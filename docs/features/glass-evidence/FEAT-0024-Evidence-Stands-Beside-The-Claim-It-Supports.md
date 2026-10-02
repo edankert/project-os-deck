@@ -98,12 +98,13 @@ Five threads are open under ADR-0008's Acceptance section, and each is Edwin's. 
 
 ## Verification
 
-Built on 2026-10-02 and checked at `e86b2e4`, in a pass that ran every suite, the smoke run and every walk at that one commit.
+Built on 2026-10-02 and checked at `18f5405`, in a pass that ran every suite, the smoke run and every walk at that one commit.
 
-- **`npm test` in `desktop/`: 589 tests, all passing.** The evidence model is [[TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not]] (`bash tools/scripts/run-desktop-tests.sh evidence`, 18 tests). Each of its rules was broken once in the module and a test failed; the list is in that note. The host's refusals on the new path are in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] (`bash tools/scripts/run-desktop-tests.sh host`).
-- **The scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], in the Linux box.** On a copy of this repository: 36 checks, all holding, none not run. On a copy of `your-trainer`, which keeps ledgers for two platforms: 28 checks, all holding, 3 parts not run. That note lists what was seen, the measurements and the defects the walks found, each fixed here.
-- **The full smoke run, on loopback and on the network:** `bash tools/scripts/smoke-in-a-box.sh both` exited 0 after 1148 seconds. Run once more on loopback with each check printed, 389 checks passed and none failed. Two did not apply there: the throw to an empty display, on a machine with one display, and the tablet-shaped checks, which the network half makes.
+- **`npm test` in `desktop/`: 645 tests, all passing.** The evidence model is [[TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not]] (`bash tools/scripts/run-desktop-tests.sh evidence`, 21 tests). Each of its rules was broken once in the module and a test failed; the list is in that note. The host's refusals on the new path are in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] (`bash tools/scripts/run-desktop-tests.sh host`).
+- **The scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], in the Linux box.** On a copy of this repository: 41 checks, all holding, none not run. On a copy of `your-trainer`, which keeps ledgers for two platforms: 29 checks, all holding, 5 parts not run. That note lists what was seen, the measurements and the defects the walks found, each fixed here.
+- **The full smoke run, on loopback and on the network:** `bash tools/scripts/smoke-in-a-box.sh both` exited 0 after 1145 seconds. Run once more on loopback with each check printed, 389 checks passed and none failed. Two did not apply there: the throw to an empty display, on a machine with one display, and the tablet-shaped checks, which the network half makes.
 - **The other walks ran in the same pass** and all held: the Glass desktop, the collection, the neighbourhood, arrangements, scenes, handoff, the collection's refresh and the two at the size of a real workspace.
+- **Each rule of the evidence model was broken once on the final code, the rules the review added included: a test failed for 38 of 38.**
 - **Not done: a person's walk.** [[TST-0077-A-Claims-Evidence-Stands-Beside-It]] has not been walked and the ledger holds no verdict for it. Its steps were checked against the built application and two were rewritten to routes that exist.
 
 The feature rests at `review`. It is built and its automated checks pass. `done` needs REQ-0006's criteria ticked with evidence, and two of them name the walk a person takes.
@@ -138,7 +139,7 @@ The feature rests at `review`. It is built and its automated checks pass. `done`
 | History is sorted by day and keeps the payload's order within a day, so a pass and its invalidation on one day rest on the sidecar sending newest first. | Kept, and stated: an event carries a day and no time, so Deck cannot check it. ADR-0008 says so. |
 | `evidenceFor`, `evidenceLedger` and `evidenceVerifying` in `renderer.ts` have no node test. | Not changed. They join the three sources and are held by the walk alone (TST-0079); a node suite does not load the renderer. |
 
-**After the fixes:** `npm test` passes 592 of 592. Each rule of the evidence model was broken once, the new ones included, and a test failed for 38 of 38. The evidence walk holds 39 checks on this repository and 29 on `your-trainer`.
+**After the fixes of both rounds, in the pass at `18f5405` on 2026-10-02:** `npm test` passes 645 of 645, 21 of them the evidence suite. Each rule of the evidence model was broken once, the rules the review added included, and a test failed for 38 of 38. The evidence walk holds 41 checks on this repository and 29 on `your-trainer`, and the smoke run passes on loopback and on the network.
 
 **Round two, 2026-10-02: the changes requested were not all cleared.** One reviewer, in a clean context, read the fixes at `5e66f48` and answered for each refuted claim. It broke three of the new guards and a test failed for all three.
 

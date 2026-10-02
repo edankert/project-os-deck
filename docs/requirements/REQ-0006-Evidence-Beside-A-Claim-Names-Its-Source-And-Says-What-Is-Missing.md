@@ -42,7 +42,7 @@ No criterion is ticked here. Ticking a criterion with evidence is a person's act
 
 | Criterion | What exists | What is still owed |
 | --- | --- | --- |
-| The tests that name a note, by key; "no test names this note" | TST-0078 (18 tests, passing at `e86b2e4`); TST-0079 on two workspaces | A person's walk, TST-0077 steps 2 and 9 |
+| The tests that name a note, by key; "no test names this note" | TST-0078 (21 tests, passing at `18f5405`); TST-0079 on two workspaces | A person's walk, TST-0077 steps 2 and 9 |
 | An acceptance check's verdict, "not walked", an invalidation, the history | TST-0078; TST-0079 compared with the ledger files on both workspaces, two platforms on one | TST-0077 steps 3 and 6 to 8 |
 | A manual test's status and date, stale after 90 days; a test with a command | TST-0078, including the day it turns stale; TST-0079 | TST-0077 steps 4 and 5 |
 | A verdict is never a status; an unread record is not "not walked" | TST-0078; TST-0079 with the request refused | Nothing further is planned |

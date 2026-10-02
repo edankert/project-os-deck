@@ -56,7 +56,7 @@ A note opened as a document on the Glass desk gains an evidence control and a pa
 
 ## Notes
 
-Built on 2026-10-02 in `1a71001`. Each box above is shown by the scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], whose Evidence section goes through them in order: 36 checks on this repository and 28 on `your-trainer`, all holding at `e86b2e4`. The last box is shown by the pass at the same commit: `npm test` passes 589 of 589, and `bash tools/scripts/smoke-in-a-box.sh both` exits 0, with 14 checks in the `document` part of its Glass section.
+Built on 2026-10-02 in `1a71001`. Each box above is shown by the scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], whose Evidence section goes through them in order: 41 checks on this repository and 29 on `your-trainer`, all holding at `18f5405`. The last box is shown by the pass at the same commit: `npm test` passes 645 of 645, and `bash tools/scripts/smoke-in-a-box.sh both` exits 0, with 14 checks in the `document` part of its Glass section.
 
 **Several platforms' verdicts for one check** are laid out as one "verdict" line per platform, in the order the record lists the platforms, each ending "from the acceptance ledger (android)". The test note's status follows on its own line. Seen on `your-trainer`.
 

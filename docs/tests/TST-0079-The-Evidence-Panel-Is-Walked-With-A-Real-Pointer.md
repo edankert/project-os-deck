@@ -53,11 +53,11 @@ It is run by hand with one command. `python3 tools/scripts/run-tests.py` and CI 
 - **Steps 6 and 7, a walked check.** The row's mark, date, author, method and platform equal the newest entry for that check in the ledger file. The source is named as the acceptance ledger, and the test note's status is on a separate labelled line. "History" lists the ledger's entries for the check, newest first.
 - **Step 8, an invalidated check.** The row says the verdict was invalidated, with the change and the date from the ledger file, and shows the earlier mark as no longer standing.
 - **Step 9, a note no test names.** A note no test names reads "no test names this note", with a terminal status where the subject is joined to such a note.
-- **Step 10, the excerpt and the original.** "Excerpt" shows the text under the test note's Evidence heading, equal to that section of the file. A test note with no such heading reads "this test note has no Evidence section". "Open the test note" opens it as a document scrolled to the heading, and a second use raises the same document.
-- **Step 11, a criterion line.** A checkbox line that links a test note has a control reading "named on this line", listing only the tests on that line. A checkbox line that links none has no control, and the checkbox's own `data-raw` is unchanged.
+- **Step 10, the excerpt and the original.** "Excerpt" shows the text under the test note's Evidence heading, equal to that section of the file. A test note with no such heading reads "this test note has no Evidence section". "Open the test note" opens it as a document scrolled to the heading, and a second use raises the same document. Added after the review, 2026-10-02: a test note headed "Evidence (fill after running)" opens at that heading, with the heading in sight; a test note whose title itself begins "Evidence" is quoted from, and opens at, its section and not its title; and closing a test note leaves the field where it was, with the document it was opened from still inside it.
+- **Step 11, a criterion line.** A checkbox line that links a test note has a control reading "named on this line", listing only the tests on that line. A checkbox line that links none has no control, and the checkbox's own `data-raw` is unchanged. Added after the review: a criterion written as a plain bullet under a heading that says "criteria" has the control when its line links a test note, and none when it links none. The walk adds two such lines to the subject in the copy.
 - **Step 12, the served page.** A page loaded with no preload bridge shows the same rows with the same words. The host answers 405 to POST, PUT, PATCH and DELETE on the acceptance path. No control in the panel records a verdict.
-- **Step 13, keyboard and reduced motion.** Open, history, excerpt, open the original and close all work by keyboard, and focus returns to the control that opened the panel. With `prefers-reduced-motion: reduce` emulated the panel appears without travel.
-- **Step 14, the record.** Every file under the copy's `docs` is compared by content at the end. The only difference is the one `last_verified:` edit the walk made itself. The ledger files are unchanged.
+- **Step 13, keyboard and reduced motion.** Open, history, excerpt, open the original and close all work by keyboard, and focus returns to the control that opened the panel. With `prefers-reduced-motion: reduce` emulated the panel appears without travel. Added after the review: E on the header opens the panel with the keyboard in it, and E pressed in the panel closes it and puts the keyboard on the header's evidence control.
+- **Step 14, the record.** Every file under the copy's `docs` is compared by content at the end. The only difference is the one `last_verified:` edit the walk made itself. The ledger files are unchanged. Since the review the walk makes a second edit of its own, the two criteria it adds to the subject, and the differences at the end are those two files.
 - **Beyond TST-0077: the record cannot be read.** With the acceptance answer withheld or the copy's sidecar stopped, the panel reads "the acceptance record could not be read" and no row reads "not walked". The rows that need no ledger are still shown.
 - **Beyond TST-0077: a second workspace.** On another real repository the same claims hold against that repository's files. Where it keeps two ledgers, a check's row shows each platform's verdict with the platform's name.
 
@@ -71,44 +71,47 @@ It is run by hand with one command. `python3 tools/scripts/run-tests.py` and CI 
 
 ## Measurements
 
-Taken on 2026-10-02 at `e86b2e4` in the Linux box (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900). The box draws in software, so the times include the sidecar's work and Deck's reading and say nothing about how fast the Mac draws.
+Taken on 2026-10-02 at `18f5405` in the Linux box (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900). The box draws in software, so the times include the sidecar's work and Deck's reading and say nothing about how fast the Mac draws.
 
 | Workspace | Notes | Test notes | Ledger platforms | Acceptance answers read | Size of each platform's answer | From pressing E to the rows being filled |
 | --- | --- | --- | --- | --- | --- | --- |
-| this repository, a copy | 430 | 80 | `app` | 2 | 499 KB | 156 ms |
-| `your-trainer`, a copy | 3269 | 685 | `android` and `ios` | 3 | 3.3 MB and 4.0 MB | 473 ms |
+| this repository, a copy | 430 | 80 | `app` | 2 | 530 KB | 159 ms |
+| `your-trainer`, a copy | 3269 | 685 | `android` and `ios` | 3 | 3.3 MB and 4.0 MB | 476 ms |
 
 The answers are kept until the notes change or a person presses "read again", so a second panel costs no request.
 
 ## Evidence (fill after running)
 
-**2026-10-02, at `e86b2e4`, in the Linux box.** Every press was sent with `webContents.sendInputEvent`. Pictures and `drive.json` are in `desktop/dist/walks/glass-evidence/` and `desktop/dist/walks/glass-evidence-your-trainer/`, which are build output and are not committed.
+**2026-10-02, at `18f5405`, in the Linux box.** Every press was sent with `webContents.sendInputEvent`. Pictures and `drive.json` are in `desktop/dist/walks/glass-evidence/` and `desktop/dist/walks/glass-evidence-your-trainer/`, which are build output and are not committed.
 
-**On a copy of this repository: 36 checks, all holding, none not run.** The subject was FEAT-0020, chosen by the walk as the feature whose tests are of the most kinds. What was seen, in the order of the expected results:
+**On a copy of this repository: 41 checks, all holding, none not run.** The subject was FEAT-0020, chosen by the walk as the feature whose tests are of the most kinds. What was seen, in the order of the expected results:
 
 - The document opened with its panel closed and the header reading "evidence · 7". No request for the acceptance record had been made. A task whose tests are all below acceptance level (TASK-0063) showed its rows and still no request was made.
 - Opening the subject's panel asked for the record twice, once for the platforms and once for `app`. The rows were the tests the frontmatter names and no other, each with its title before its id and the key it was found under.
 - At its own size (560 px) the panel stood above the text and the related list closed to make room. Filling the field it stood to the right of the text.
 - A check a person walks showed a "verdict" from the acceptance ledger and, on its own line, the "status of the test note". TST-0063 has no entry in the ledger file and read "not walked: no verdict is recorded". A test run by a command showed the sentence and its command, in the plain text colour, with no mark and no date. A test done by hand showed its note's status and date.
 - "Excerpt" quoted the text under a test note's Evidence heading, compared with the note as the sidecar renders it. A note with no such heading read "this test note has no Evidence section". "Open the test note" opened the note with its Evidence heading at the top of the text; asked again, it raised the same document; closing it put the keyboard back on the row.
+- TST-0008, whose heading is the template's "Evidence (fill after running)", opened at that heading: its section is near the end of the note, so the text stood at its end with the heading in sight. TST-0078, whose title itself begins "Evidence says …", was quoted from under its "Evidence (fill after running)" heading and opened there, not at its title. Closing it put the keyboard back on its row and left the field where it was.
 - TST-0008 on FEAT-0005 read "pass on 2026-09-07 by user:edwin, manual", as its newest entry in the ledger file does, and "History" listed its two entries newest first. TST-0015 read as a question with the walker's reason, in the colour of a check held open. TST-0010 on FEAT-0008 read as invalidated on 2026-09-08 by the change the ledger names, with "The verdict before it, pass on 2026-09-07, no longer stands."
-- On REQ-0001, each criterion that links a test note had a control reading "evidence named on this line", and Enter on it listed only that line's test. Escape put the keyboard back on that control. By keyboard alone the walk then opened an excerpt, opened the original, closed it with Delete and found the keyboard on the row it came from.
+- On REQ-0001, each criterion that links a test note had a control reading "evidence named on this line", and Enter on it listed only that line's test. Escape put the keyboard back on that control. E on the header opened the panel with the keyboard in it, and E pressed in the panel closed it and put the keyboard on the header's evidence control. By keyboard alone the walk then opened an excerpt, opened the original, closed it with Delete and found the keyboard on the row it came from.
+- Two criteria the walk added to the subject in the copy as plain bullets, under a heading that says "criteria": the one that links a test note had the control, and the one that links none had none.
 - A note no test names read "no test names this note. Nothing is inferred from its status."
 - With one manual test's `last_verified:` set to 2026-06-01 in the copy, its row read "stale: a manual verification goes stale after 90 days; this was 123 days ago".
 - With the request for the record refused, the panel said once "the acceptance record could not be read: the sidecar did not answer: Failed to fetch". The walked check said that in place of a verdict, and no row read "not walked". "read again" brought its own words back.
 - With reduced motion asked for through the debugger, the panel was in its place at once and had not moved half a second later.
 - The served page, with no bridge, showed the same control and the same rows with the same words. The host answered 405 to a POST on the acceptance path and on `mark-check`. No control in a panel records or re-runs anything.
-- Of the copy's 438 files under `docs`, the only one that differed at the end was the test note the walk edited. The ledger file was entry for entry what it was.
+- Of the copy's 438 files under `docs`, the only ones that differed at the end were the two the walk edited itself: the test note whose date it changed and the subject it added two criteria to. The ledger file was entry for entry what it was.
 
-**On a copy of `your-trainer`: 28 checks, all holding, 3 parts not run.** 3269 notes, 685 test notes, three ledger files for two platforms. The subject was FEAT-0104, with 20 tests of which 14 are retired.
+**On a copy of `your-trainer`: 29 checks, all holding, 5 parts not run.** 3269 notes, 685 test notes, three ledger files for two platforms. The subject was FEAT-0104, with 20 tests of which 14 are retired.
 
 - Each walked check showed two verdict lines, one for `android` and one for `ios`, each naming its platform. TST-0015 read "pass on 2026-08-30 by migration, migration: …" for android and "not walked: no verdict is recorded" for ios.
 - For `ios`, whose ledger is one file, the sidecar's answer agreed with that file's newest entry for every one of 442 checks. For `android`, whose record is a sealed release's ledger and the open one, the walk held the panel to the sidecar's own answer and says so in its log.
 - TST-0019 read as invalidated on 2026-09-29 by the newest of three invalidations in its ledger, on both platforms, with the verdict before it named only on android, where there was one.
 - A retired test read "retired: it is no longer performed".
 - TST-0015 has no Evidence section, and its excerpt read "this test note has no Evidence section".
+- The two criteria added as plain bullets were seen there too.
 
-**Parts not run on `your-trainer`, and why.** None of the subject's tests has an Evidence section, so no excerpt was quoted. No requirement there has a criterion that links a test note on its own line. The subject has no test done by hand, so the staleness rule was not seen there. All three were seen on this repository.
+**Parts not run on `your-trainer`, and why.** None of the subject's tests has an Evidence section, so no excerpt was quoted and no test note could be opened at one. No test note there has a title that begins "Evidence". No requirement there has a criterion that links a test note on its own line. The subject has no test done by hand, so the staleness rule was not seen there. All were seen on this repository.
 
 **Defects the walks found, each fixed in this feature. No check was weakened.**
 
@@ -122,6 +125,9 @@ The answers are kept until the notes change or a person presses "read again", so
 | A walked check on a feature with retired tests was expected to have a verdict for each retired test. | The walk's own expectation, not the application: a retired test has no verdict to show. | The walk expects "retired: it is no longer performed". |
 | The walk read a ledger entry spelled `result:` as an invalidation, and missed a test linked by its file's name. | Two mistakes in the walk's own reading of the files. | The walk reads `result` as the mark and resolves a link by file name. |
 | The walk's record showed later requests beside the check that there had been none. | The log held the list of requests itself, which goes on growing. | Each check records a copy (`2692fe0`). |
+| "Open the test note" opened TST-0008 and nineteen other test notes at their top. Two reviewers found it; the walk had not, because its check accepted a text scrolled to its end and tried one note. | The note's heading is the template's "Evidence (fill after running)", and the code asked for the word alone. | The heading is found by how it begins (`972985f`). The walk requires the heading in sight and opens TST-0008. |
+| TST-0078 opened at its title and was quoted from there. Round two of the review found it. | Its title begins "Evidence says …", and the title matched the rule for the section's heading. | A note's title is never its section (`2b2a928`). The walk opens TST-0078. |
+| After a test note was closed, every document stood 27 px up, with its header's buttons under the bar. | The keyboard went back to the evidence row with `scrollIntoView`, which scrolled the field itself: a box that hides its overflow can still be scrolled by script. Presses in the walk had been landing where they were aimed only because the field stayed scrolled. | The field and the collection are clipped, which cannot be scrolled (`2b2a928`). A walk's click now stops when something else is drawn at the point (`3ff281c`). |
 
-**Not covered here.** Safari on a tablet. A screen reader, and touch. Whether a person reads "not walked" and "run by a command" as intended. A capture or a ledger evidence reference, which no route gives. The history pressed on the served page: the rows there were compared word for word, and the subject's walked check on this repository has no history to open. These are [[TST-0077-A-Claims-Evidence-Stands-Beside-It]]'s, which no one has walked.
+**Not covered here.** A check with no standing verdict and an earlier one in its history ("no verdict stands. An earlier one … is in the history"): the walk expects that sentence where the files show the case, and neither workspace's subject has one, so it is held by the evidence suite alone. Safari on a tablet. A screen reader, and touch. Whether a person reads "not walked" and "run by a command" as intended. A capture or a ledger evidence reference, which no route gives. The history pressed on the served page: the rows there were compared word for word, and the subject's walked check on this repository has no history to open. These are [[TST-0077-A-Claims-Evidence-Stands-Beside-It]]'s, which no one has walked.
 

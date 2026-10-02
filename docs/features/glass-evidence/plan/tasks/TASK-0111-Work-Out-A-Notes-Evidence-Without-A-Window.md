@@ -51,7 +51,7 @@ One pure module decides what the evidence panel may say, with no window and no r
 
 ## Notes
 
-Built on 2026-10-02 and committed in `1a71001`. `desktop/src/shared/evidence.ts` imports one type and nothing else, and the suite reads the source to hold it to that. `bash tools/scripts/run-desktop-tests.sh evidence` passes (18 tests), and `npm test` in `desktop/` passes (589 tests).
+Built on 2026-10-02 and committed in `1a71001`. `desktop/src/shared/evidence.ts` imports one type and nothing else, and the suite reads the source to hold it to that. `bash tools/scripts/run-desktop-tests.sh evidence` passes (21 tests), and `npm test` in `desktop/` passes (645 tests).
 
 Two things differ from this note as first written, and both are recorded in ADR-0008 with the reason.
 

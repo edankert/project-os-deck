@@ -52,7 +52,7 @@ The evidence for FEAT-0024. A scripted walk drives the panel in the real applica
 
 ## Notes
 
-Run on 2026-10-02 at `e86b2e4`, in the Linux box. On this repository's copy: 36 checks, all holding, none not run. On a copy of `your-trainer` (3269 notes, 685 test notes, ledgers for `android` and `ios`): 28 checks, all holding, 3 parts not run. What each run showed, the pictures' names and the parts not run are in [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]].
+Run on 2026-10-02 at `18f5405`, in the Linux box. On this repository's copy: 41 checks, all holding, none not run. On a copy of `your-trainer` (3269 notes, 685 test notes, ledgers for `android` and `ios`): 29 checks, all holding, 5 parts not run. What each run showed, the pictures' names and the parts not run are in [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]].
 
 Window-opening runs on the Mac take the keyboard from whoever is typing (ISS-0075), so the box is the default. The walk records no verdict in any ledger. It compares what the panel shows with the ledger file on disk, and it checks at its end that the ledger files are entry for entry what they were.
 
