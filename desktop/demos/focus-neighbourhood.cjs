@@ -50,6 +50,41 @@ module.exports = async function (d) {
   check(listed.rows === state.neighbours && listed.button.includes(String(state.neighbours)), 'its list names every one of them, the ones seated beyond the edge of sight included, and the control says how many', listed);
   await t.clickOn('.pane.focus .pane-related', 300);
 
+  // ---- 2b. The corner: a press that does not move stores nothing, and Escape during a drag of it puts the size back ----
+  const ws = d.prepared.id;
+  // What the store holds: the note's own size, and the size this view opens notes at.
+  const stored = async () => {
+    const s = await t.state();
+    const held = ((s.viewDesks[ws] || {}).features || []).find((c) => c.noteId === pick.id);
+    return { note: held ? [held.w, held.h] : null, view: (s.readingSizes[ws] && s.readingSizes[ws].features) || null };
+  };
+  const corner = await t.rect('.pane.focus .pane-resize');
+  if (corner === null || !(await js(`(() => { const e = document.elementFromPoint(${corner.x}, ${corner.y}); return !!e && e.classList.contains('pane-resize'); })()`))) throw new Error('the open document\'s resize corner cannot be pressed at its middle');
+  const storedBefore = await stored();
+  const drawnBefore = await t.pane(pick.id);
+  await d.pointer(win, d.click({ x: corner.x, y: corner.y }));
+  await d.delay(600);
+  const storedPressed = await stored();
+  const drawnPressed = await t.pane(pick.id);
+  check(JSON.stringify(storedPressed) === JSON.stringify(storedBefore) && drawnPressed.width === drawnBefore.width && drawnPressed.height === drawnBefore.height, 'a press and release on the resize corner that does not move stores nothing: the note\'s size and the size the view opens notes at are what they were', { before: storedBefore, after: storedPressed });
+  // The corner is dragged and, with the button still down, Escape is pressed.
+  d.focusApp(win);
+  // Inward, so the drag needs no room in the field to be seen.
+  await d.pointer(win, [{ type: 'move', x: corner.x, y: corner.y }, { type: 'down', x: corner.x, y: corner.y }, { type: 'move', x: corner.x - 20, y: corner.y - 12 }, { type: 'move', x: corner.x - 40, y: corner.y - 24 }, { type: 'move', x: corner.x - 60, y: corner.y - 36, wait: 120 }]);
+  const drawnDragging = await t.pane(pick.id);
+  d.press(win, 'Escape');
+  await d.delay(300);
+  const drawnCancelled = await t.pane(pick.id);
+  const focusCancelled = await js(`({ focus: ${glass}.focusId(), held: window.__deckDesk() })`);
+  await d.pointer(win, [{ type: 'up', x: corner.x - 60, y: corner.y - 36, wait: 60 }]);
+  await d.delay(600);
+  await t.park();
+  const storedCancelled = await stored();
+  const drawnReleased = await t.pane(pick.id);
+  await d.shot(win, '04b-corner-drag-cancelled');
+  check(drawnDragging.width < drawnBefore.width && drawnDragging.height < drawnBefore.height && drawnCancelled.width === drawnBefore.width && drawnCancelled.height === drawnBefore.height && drawnReleased.width === drawnBefore.width && drawnReleased.height === drawnBefore.height && JSON.stringify(storedCancelled) === JSON.stringify(storedBefore), 'Escape during a drag of the corner puts the document back at the size it had, and letting the corner go afterwards stores nothing', { before: [drawnBefore.width, drawnBefore.height], dragging: [drawnDragging.width, drawnDragging.height], cancelled: [drawnCancelled.width, drawnCancelled.height], released: [drawnReleased.width, drawnReleased.height], stored: storedCancelled });
+  check(focusCancelled.focus === pick.id && focusCancelled.held.includes(pick.id), 'that Escape goes no further: the note is still the focus and still open', focusCancelled);
+
   // ---- 3. Dragged by its header: the same size, and the neighbourhood with it ----
   const head = await t.rect('.pane.focus .pane-id');
   await d.pointer(win, d.drag(head, { x: head.x + 220, y: head.y + 60 }, 14));
