@@ -30,6 +30,8 @@ import {
   returnOf,
   settle,
   settleUnconfirmed,
+  waitingFor,
+  wayBackSpent,
 } from '../shared/handoff.js';
 import type { ReadingAnchor } from '../shared/types.js';
 import { PANE_HEADER_HEIGHT } from '../shared/panes.js';
@@ -365,11 +367,11 @@ function windowLabel(id: number): string {
 function runHandoff(request: HandoffRequest, how: { edge: Edge; displayId: number | null; viewId: string }): Promise<Record<string, unknown>> | Record<string, unknown> {
   const { noteId, workspaceId, destination, mode } = request;
   const state = store.getState();
-  if (mode === 'move' && isOnEveryView(state, workspaceId, noteId)) {
-    return { ok: false, error: `${noteId} is kept on every view, so it is on every desk already and cannot be moved to one. It can be shown there as well.` };
-  }
   const alreadyThere = destination.view !== null && deskCardsOf(state, workspaceId, destination.view).some((c) => c.noteId === noteId);
-  const landing = planLanding(request, { alreadyThere });
+  // A note that is already on its way somewhere is not sent again until that is answered, and one kept on
+  // every view is not moved: both are the rule's to refuse, from what this process knows.
+  const waiting = waitingFor([...handoffs.values()].map((pending) => pending.record), noteId, workspaceId);
+  const landing = planLanding(request, { alreadyThere, everyView: isOnEveryView(state, workspaceId, noteId), waiting: waiting === null ? null : waiting.destination });
   if ('refused' in landing) return { ok: false, error: landing.refused };
   let address: string;
   try {
@@ -712,8 +714,14 @@ function registerIpc(): void {
     // Where the source window is now: its desk may be another view's by this time.
     const info = windowInfo.get(home.id);
     if (info?.role === 'focus') back.destination.view = store.getState().viewId;
-    cameFrom.delete(`${win.id}:${noteId}`);
-    return runHandoff(back, { edge: 'left', displayId: null, viewId: back.source.view ?? '' });
+    // Where it came from is forgotten only once it is back there. Forgotten before the return ran, a send
+    // back that was refused or not answered left the note here, and the next press was told it "did not
+    // arrive here from another window".
+    const key = `${win.id}:${noteId}`;
+    return Promise.resolve(runHandoff(back, { edge: 'left', displayId: null, viewId: back.source.view ?? '' })).then((reply) => {
+      if (wayBackSpent(reply) && cameFrom.get(key) === arrived) cameFrom.delete(key);
+      return reply;
+    });
   });
 
   /**

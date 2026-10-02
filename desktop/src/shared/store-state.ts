@@ -11,6 +11,7 @@
  * rather than something to read back off the DOM when a person saves
  * (TASK-0024, TASK-0025).
  */
+import { isDeskName } from './address.js';
 import type { Desk, DeskCard, DeckState, Filters, ReadingAnchor, ReadingSize, SessionState } from './types.js';
 import { normaliseScene, sceneFrom, sceneKind } from './scenes.js';
 import { PANE_MAX_SIDE, PANE_MIN_HEIGHT, PANE_MIN_WIDTH, readingSizeFor } from './panes.js';
@@ -28,11 +29,14 @@ export type DeckAction =
    * under a name, with what the window knows and the store does not: where
    * each document is being read and how large the field is. `apply-scene`
    * puts a scene that is NOT in the list on the desk: the desk that was there
-   * before a scene was opened, so opening one can be taken back. `rename-desk`
-   * and `restore-desk` change the list and nothing on the desk.
+   * before a scene was opened, so opening one can be taken back. A scene
+   * opened from another view replaced THAT view's desk, so the desk put back
+   * is that view's, and `backTo` names the view the person was on, which is
+   * shown again. `rename-desk` and `restore-desk` change the list and nothing
+   * on the desk.
    */
   | { type: 'save-scene'; name: string; anchors: Record<string, ReadingAnchor>; field: { w: number; h: number }; savedAt: string; viewId?: string }
-  | { type: 'apply-scene'; scene: Desk }
+  | { type: 'apply-scene'; scene: Desk; backTo?: string }
   | { type: 'rename-desk'; workspaceId: string; from: string; to: string }
   | { type: 'restore-desk'; desk: Desk }
   /**
@@ -348,7 +352,7 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const saved = state.desks[deskKey(ws, action.name)];
       if (saved === undefined) return state;
       // A scene brings its view, its search and its collection with it. One
-      // saved by a newer Deck is not opened: its fields are not ours to read.
+      // of a version this Deck does not know is not opened: its fields are not ours to read.
       const kind = sceneKind(saved);
       if (kind === 'unreadable') return state;
       if (kind === 'scene') return applyScene(state, ws, saved, action.name);
@@ -365,6 +369,10 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
     }
     case 'save-desk': {
       if (state.workspaceId === null) return state;
+      // An entry this Deck cannot read is never changed, and a plain desk
+      // saved over it would drop its version and every field with it.
+      const held = state.desks[deskKey(state.workspaceId, action.name)];
+      if (held !== undefined && sceneKind(held) === 'unreadable') return state;
       // What the view draws, both lists, flat and in stacking order: the
       // `Desk` shape is unchanged, so every saved desk still reads.
       const desk: Desk = {
@@ -381,8 +389,11 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const view = viewOf(state, action);
       const name = typeof action.name === 'string' ? action.name.trim() : '';
       if (view === null || name === '') return state;
+      // A scene is a state Deck can be sent to, so its name is one its address takes. A name the address
+      // refuses would be saved, and then refused when the address is copied or opened.
+      if (!isDeskName(name)) return state;
       const key = deskKey(ws, name);
-      // A scene a newer Deck saved is not overwritten by one it could not read.
+      // A scene another Deck saved is not overwritten by one that could not read it.
       const existing = state.desks[key];
       if (existing !== undefined && sceneKind(existing) === 'unreadable') return state;
       const scene = sceneFrom(
@@ -402,7 +413,9 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (scene === null || scene.workspaceId !== state.workspaceId || sceneKind(scene) !== 'scene') return state;
       // The name it carries is the desk that was open then, when it still exists; else none.
       const named = scene.name !== '' && deskKey(scene.workspaceId, scene.name) in state.desks ? scene.name : null;
-      return applyScene(state, state.workspaceId, scene, named);
+      const applied = applyScene(state, state.workspaceId, scene, named);
+      // The desk put back may be another view's than the one the person was on: they are back on theirs.
+      return applied !== state && typeof action.backTo === 'string' && action.backTo !== '' ? { ...applied, viewId: action.backTo } : applied;
     }
     case 'rename-desk': {
       const from = deskKey(action.workspaceId, action.from);
@@ -411,6 +424,10 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const desk = state.desks[from];
       // Never onto a name that is taken: that would be deleting the other one.
       if (desk === undefined || name === '' || from === to || to in state.desks) return state;
+      // Nor an entry this Deck cannot read: its name is one of the fields that are not ours to change.
+      if (sceneKind(desk) === 'unreadable') return state;
+      // Nor to a name its address would refuse.
+      if (!isDeskName(name)) return state;
       const desks = { ...state.desks };
       delete desks[from];
       desks[to] = { ...desk, name };
@@ -991,7 +1008,17 @@ function applyScene(state: DeckState, ws: string, scene: Desk, name: string | nu
   };
   if (scene.query !== undefined) next.query = scene.query;
   if (scene.filters !== undefined) next.filters = { statuses: [...scene.filters.statuses], types: [...scene.filters.types] };
-  if (scene.collection !== undefined) next.collections = { ...state.collections, [ws]: { ...(state.collections[ws] ?? {}), [view]: scene.collection } };
+  // The list goes back to how the scene had it, whatever that was. A list
+  // nobody had moved when the scene was saved had no stored layout, and has
+  // none again: left as it is now, it would stand wherever it was dragged
+  // since, under the name of a scene that never had it there.
+  if (scene.collection !== undefined) {
+    next.collections = { ...state.collections, [ws]: { ...(state.collections[ws] ?? {}), [view]: scene.collection } };
+  } else if (collectionOf(state, ws, view) !== null) {
+    const layouts = { ...state.collections[ws] };
+    delete layouts[view];
+    next.collections = { ...state.collections, [ws]: layouts };
+  }
   return bump(next);
 }
 

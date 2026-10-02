@@ -116,6 +116,10 @@ module.exports = async function (d) {
   const elsewhere = { view: (await state()).viewId, held: await js('window.__deckDesk()'), query: (await state()).query, other: await pane(other) };
   check(elsewhere.view === 'issues' && elsewhere.held.length === 1 && elsewhere.query === '', 'elsewhere now: the Issues view, one other note open, no search', elsewhere);
 
+  // What the Features view holds now, which the scene is about to replace from the Issues view.
+  const featuresNow = async () => { const s = await state(); return JSON.stringify({ desk: (s.viewDesks[ws] || {}).features || [], list: (s.collections[ws] || {}).features || null }); };
+  const featuresBefore = await featuresNow();
+
   // ---- 4. Reopened ----
   // Choosing a name in the list is not opening it: nothing changes until "open" is pressed.
   await js(`document.getElementById('scene-list').focus()`);
@@ -141,6 +145,8 @@ module.exports = async function (d) {
   await t.park();
   const back = { view: (await state()).viewId, held: await js('window.__deckDesk()'), query: (await state()).query, other: await pane(other), offered: !(await js(`document.getElementById('scene-back').hidden`)), scenes: Object.keys((await state()).desks).length };
   check(backLabel === 'Undo: back to the desk before "Review Glass"' && back.view === 'issues' && JSON.stringify(back.held) === JSON.stringify(elsewhere.held) && back.query === '' && back.other.left === elsewhere.other.left && back.other.top === elsewhere.other.top && !back.offered && back.scenes === 1, 'one press, named for what it does, puts back the Issues view with the note that was open there, where it stood; the scene is still saved', { backLabel, back });
+  const featuresAfter = await featuresNow();
+  check(featuresAfter === featuresBefore && JSON.parse(featuresBefore).desk.length === 0 && (JSON.parse(featuresBefore).list || {}).presentation === 'table', 'the scene was opened from the Issues view and replaced the desk and the list of the Features view; the same press put those back too: no note open there, and its list a table again', { before: featuresBefore, after: featuresAfter });
 
   // Saving, opening and going back wrote no file of the workspace.
   check(differ(filesAtStart, fingerprint()).length === 0, `saving a scene, opening it and going back left every one of the copy's ${filesAtStart.size} files as it was`, differ(filesAtStart, fingerprint()));
@@ -415,13 +421,13 @@ module.exports = async function (d) {
   const byAddress = await js(`({ view: window.__deckLastState.viewId, desk: window.__deckLastState.deskName, held: window.__deckDesk() })`);
   check(/desk=Kept/.test(sceneAddress) && offeredAddress === sceneAddress && byAddress.view === 'features' && byAddress.desk === 'Kept as it is' && byAddress.held.includes(x) && byAddress.held.includes(y), 'the address copied while the scene is open, opened from the Issues view, opens the scene on its own view with its documents', { sceneAddress, byAddress });
 
-  // A scene this Deck cannot read is listed with its version, cannot be opened, and is kept as it is.
+  // A scene this Deck cannot read is listed with its version, cannot be opened or renamed, and is kept as it is.
   const future = { name: 'From a newer Deck', workspaceId: ws, version: 99, view: 'features', cards: [{ noteId: x, x: 10, y: 10 }], somethingNew: { kept: true } };
   d.store.dispatch({ type: 'restore-desk', desk: future });
   await d.delay(700);
   const listedFuture = await js(`(() => { const o = [...document.getElementById('scene-list').options].find((q) => q.value === 'From a newer Deck'); if (!o) return null; const l = document.getElementById('scene-list'); l.value = 'From a newer Deck'; l.dispatchEvent(new Event('change', { bubbles: true })); return { text: o.textContent, disabled: o.disabled }; })()`);
   await d.delay(400);
-  const futureOpen = await js(`document.getElementById('scene-open').hidden`);
+  const futureActs = await js(`({ chosen: document.getElementById('scene-list').value, open: !document.getElementById('scene-open').hidden, rename: !document.getElementById('scene-rename').hidden, del: !document.getElementById('scene-delete').hidden })`);
   const heldBeforeFuture = JSON.stringify(await js('window.__deckDesk()'));
   clip.writeText(`deck://${ws}/features?desk=${encodeURIComponent('From a newer Deck')}`);
   await t.clickOn('#open-address', 500);
@@ -429,7 +435,31 @@ module.exports = async function (d) {
   await d.delay(1800);
   const refusedSaid = await t.text('#status');
   const keptFuture = (await state()).desks[`${ws}:From a newer Deck`];
-  check(listedFuture !== null && /cannot be opened/.test(listedFuture.text) && /version 99/.test(listedFuture.text) && listedFuture.disabled && futureOpen && /saved by a newer Deck \(version 99\) and is not opened/.test(refusedSaid) && JSON.stringify(await js('window.__deckDesk()')) === heldBeforeFuture && keptFuture !== undefined && keptFuture.version === 99 && JSON.stringify(keptFuture.somethingNew) === JSON.stringify({ kept: true }), 'a scene saved by a newer Deck is listed with its version in its own text, cannot be chosen or opened, is refused by address with the reason, and is kept exactly as it was, with the field this Deck does not know', { listedFuture, refusedSaid, kept: keptFuture && Object.keys(keptFuture) });
+  check(listedFuture !== null && /cannot be opened/.test(listedFuture.text) && /saved by a different Deck \(version 99\)/.test(listedFuture.text) && !listedFuture.disabled && futureActs.chosen === 'From a newer Deck' && !futureActs.open && !futureActs.rename && futureActs.del && /saved by a different Deck \(version 99\) and is not opened/.test(refusedSaid) && JSON.stringify(await js('window.__deckDesk()')) === heldBeforeFuture && keptFuture !== undefined && keptFuture.version === 99 && JSON.stringify(keptFuture.somethingNew) === JSON.stringify({ kept: true }), 'a scene of a version this Deck does not know is listed with that version in its own text and can be chosen; "delete" is offered for it and neither "open" nor "rename"; it is refused by address with the reason, and is kept exactly as it was, with the field this Deck does not know', { listedFuture, futureActs, refusedSaid, kept: keptFuture && Object.keys(keptFuture) });
+  // Spread's "save desk" is the other way to save under a name. Under the unreadable scene's name it is refused
+  // with the reason; under a scene's name it asks first, as "save scene" does.
+  const toSurface = async (id) => { await js(`document.querySelector('#surface-toggle button[data-surface="${id}"]').click()`); await d.delay(1500); };
+  const saveDeskAs = async (name) => {
+    await js(`document.getElementById('save-desk').click()`);
+    await d.delay(400);
+    await js(`(() => { const i = document.querySelector('#status input'); if (i) i.select(); })()`);
+    await type(name);
+    d.press(win, 'Return');
+    await d.delay(700);
+  };
+  await toSurface('spread');
+  await saveDeskAs('From a newer Deck');
+  const spreadRefused = await t.text('#status');
+  const sceneBeforeSaveDesk = JSON.stringify((await state()).desks[`${ws}:Kept as it is`]);
+  await saveDeskAs('Kept as it is');
+  const spreadAsked = await js(`[...document.querySelectorAll('#status button')].map((b) => b.textContent)`);
+  if (spreadAsked.includes('keep it')) {
+    await js(`[...document.querySelectorAll('#status button')].find((b) => b.textContent === 'keep it').focus()`);
+    d.press(win, 'Return');
+    await d.delay(600);
+  }
+  check(/saved by a different Deck \(version 99\) and is not replaced/.test(spreadRefused) && JSON.stringify((await state()).desks[`${ws}:From a newer Deck`]) === JSON.stringify(keptFuture) && spreadAsked.includes('replace it') && spreadAsked.includes('keep it') && JSON.stringify((await state()).desks[`${ws}:Kept as it is`]) === sceneBeforeSaveDesk, 'on the cards surface, "save desk" under the unreadable scene\'s name is refused with the reason and leaves it as it was; under a scene\'s name it asks first, and "keep it" leaves the scene exactly as it was saved', { spreadRefused, spreadAsked });
+  await toSurface('glass');
   await d.shot(win, '10-a-scene-this-deck-cannot-read');
 
   // A note added to the view while the scene was put away is in its list when it is reopened: the list is read, not kept.
@@ -451,6 +481,15 @@ module.exports = async function (d) {
   await sweep();
   await t.view('issues');
 
+  // A scene with no note open has no document to put back where it was read, and still says it reopened.
+  await sweep();
+  await saveAs('Nothing open');
+  await t.clickOn('#scene-open', 300);
+  // What it says waits on Deck's index answering which notes exist, so it is looked for rather than timed.
+  for (let i = 0; i < 40; i += 1) { await d.delay(250); if (/reopened/.test(await t.text('#status'))) break; }
+  const emptyScene = { said: await t.text('#status'), held: await js('window.__deckDesk()'), open: (await state()).deskName, report: await js(`document.getElementById('scene-report').hidden`) };
+  check(emptyScene.held.length === 0 && emptyScene.open === 'Nothing open' && /scene "Nothing open" reopened/.test(emptyScene.said) && emptyScene.report, 'a scene saved with no note open reopens and says so in one line: with no document to put back where it was read, the scene is still answered', emptyScene);
+
   // ---- 9. Reload, and the served page ----
   win.webContents.reload();
   await new Promise((resolve) => win.webContents.once('did-finish-load', resolve));
@@ -464,6 +503,11 @@ module.exports = async function (d) {
   await d.delay(3500);
   const served = await d.js(page, `({ scenes: document.getElementById('scenes').hidden, bridge: typeof window.deck })`);
   check(served.bridge === 'undefined' && served.scenes, 'the served page offers no scenes: it shows the desk the application has', served);
+  // Sent an address that names a scene, the served page opens none: the scene is the shell's to open.
+  await page.loadURL(`${d.origin}/?address=${encodeURIComponent(`deck://${ws}/features?desk=${encodeURIComponent('Kept as it is')}`)}`);
+  await d.delay(3500);
+  const servedScene = await d.js(page, `({ bridge: typeof window.deck, said: document.getElementById('status').textContent, report: document.getElementById('scene-report').hidden, scenes: document.getElementById('scenes').hidden })`);
+  check(servedScene.bridge === 'undefined' && !/reopened/.test(servedScene.said) && servedScene.report && servedScene.scenes, 'the served page, sent an address that names a scene, opens no scene: nothing says a scene was reopened and no report is raised', servedScene);
   page.destroy();
 
   d.log('what this walk does not establish', [

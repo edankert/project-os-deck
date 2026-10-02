@@ -84,7 +84,7 @@ import { pickedOut, pickedOutSentence, relationKinds, relationLabel, relationsBe
 import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type ArrangeUnseen, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated, reworkedBecause, sameUndoQuestion, undoFor, undoStanding } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
 import { EVIDENCE_HEADING, SECTION_HEADINGS, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
-import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
+import { type HeadingAt, type ReadingAnchor, ReadingWait, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
 import {
   type Edge,
   type PointerSample,
@@ -518,19 +518,10 @@ export class GlassField {
   private evidenceAgain = false;
   /** Where each note was last being read in this window, kept when its document is taken down. Session state. */
   private readonly lastReading = new Map<string, ReadingAnchor>();
-  /** Reading positions waiting for their documents' text (restoreReading). */
-  private readingWanted = new Map<string, ReadingAnchor>();
-  /**
-   * Reading positions whose wait ran out with the document still on the desk
-   * and unread: a document that could not be read and offers a retry. The
-   * position is kept for as long as the document is, so a retry pressed a
-   * minute later still opens it where the scene had it.
-   */
-  private readonly readingOwed = new Map<string, ReadingAnchor>();
+  /** Reading positions waiting for their documents' text, and who is told when they are placed (restoreReading). */
+  private readonly reading = new ReadingWait((noteId) => this.paneEls.has(noteId));
   /** Test notes opened from an evidence row, which go to their Evidence section when their text is on screen. */
   private readonly sectionWanted = new Set<string>();
-  private readingMoved: string[] = [];
-  private readingDone: ((moved: string[]) => void) | null = null;
   private readingTimer: ReturnType<typeof setTimeout> | null = null;
   /** An arrangement shown and not yet applied: session state, in this window only. */
   private arranging: {
@@ -2877,49 +2868,43 @@ export class GlassField {
    * arrives. `done` is told which documents could not be found by their
    * heading, once every one has been placed or the wait is over: a note that
    * is gone never gets text, and is not waited for for ever.
+   *
+   * `done` is always called. With nothing to wait for it is called before
+   * this returns. An earlier call that is still waiting is answered first,
+   * with what it found so far, and its unread documents keep their place
+   * (`ReadingWait` holds both rules).
    */
   restoreReading(anchors: Readonly<Record<string, ReadingAnchor>>, done: (moved: string[]) => void = () => undefined): void {
     if (this.readingTimer !== null) clearTimeout(this.readingTimer);
-    this.readingMoved = [];
-    this.readingWanted = new Map(Object.entries(anchors));
-    for (const noteId of this.readingWanted.keys()) this.readingOwed.delete(noteId);
-    this.readingDone = done;
-    for (const [noteId] of [...this.readingWanted]) {
+    this.readingTimer = null;
+    this.reading.begin(anchors, done);
+    for (const noteId of Object.keys(anchors)) {
       const pane = this.paneEls.get(noteId);
       if (pane !== undefined && (pane.querySelector('.pane-note') as HTMLElement).dataset['filled'] === 'true' && !this.rereads.has(noteId)) this.applyReading(noteId, pane);
     }
-    if (this.readingWanted.size === 0) return;
-    this.readingTimer = setTimeout(() => this.settleReading(), READING_WAIT_MS);
+    if (this.reading.waiting) this.readingTimer = setTimeout(() => this.settleReading(), READING_WAIT_MS);
   }
 
   private applyReading(noteId: string, pane: HTMLElement): void {
-    const anchor = this.readingWanted.get(noteId);
-    if (anchor === undefined) {
-      // Its wait ran out before it could be read: it goes to its place now, and the report has been made.
-      const owed = this.readingOwed.get(noteId);
-      if (owed === undefined) return;
-      this.readingOwed.delete(noteId);
-      const owedBody = pane.querySelector('.pane-body') as HTMLElement;
-      owedBody.scrollTop = scrollTopForAnchor(owed, this.headingsOf(pane), owedBody.scrollHeight - owedBody.clientHeight).top;
-      return;
-    }
-    this.readingWanted.delete(noteId);
+    const kept = this.reading.take(noteId);
+    if (kept === null) return;
     const body = pane.querySelector('.pane-body') as HTMLElement;
-    const at = scrollTopForAnchor(anchor, this.headingsOf(pane), body.scrollHeight - body.clientHeight);
+    const at = scrollTopForAnchor(kept.anchor, this.headingsOf(pane), body.scrollHeight - body.clientHeight);
     body.scrollTop = at.top;
-    if (at.moved) this.readingMoved.push(noteId);
-    if (this.readingWanted.size === 0) this.settleReading();
+    // Its wait ran out before it could be read: it goes to its place now, and the report has been made.
+    if (!kept.counted) return;
+    this.reading.placed(noteId, at.moved);
+    if (!this.reading.waiting && this.readingTimer !== null) {
+      clearTimeout(this.readingTimer);
+      this.readingTimer = null;
+    }
   }
 
   private settleReading(): void {
     if (this.readingTimer !== null) clearTimeout(this.readingTimer);
     this.readingTimer = null;
     // A document still on the desk without its text keeps its place for when it is read; a note that is gone does not.
-    for (const [noteId, anchor] of this.readingWanted) if (this.paneEls.has(noteId)) this.readingOwed.set(noteId, anchor);
-    this.readingWanted.clear();
-    const done = this.readingDone;
-    this.readingDone = null;
-    done?.([...this.readingMoved]);
+    this.reading.settle();
   }
 
   /** Mark a document that has just arrived from another window, and put the keyboard on it. */
@@ -3595,7 +3580,7 @@ export class GlassField {
       else if (reading !== null) this.lastReading.delete(noteId);
       pane.remove();
       this.paneEls.delete(noteId);
-      this.readingOwed.delete(noteId);
+      this.reading.forget(noteId);
       this.sectionWanted.delete(noteId);
       // A document that has left the desk, however it left, opens next time with its panels closed.
       if (this.relatedOpen === noteId) this.relatedOpen = null;

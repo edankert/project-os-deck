@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, named, consequence, planLanding, settle, settleUnconfirmed, returnOf, HANDOFF_ACK_MS } = load('shared/handoff.js');
+const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, named, consequence, planLanding, settle, settleUnconfirmed, returnOf, waitingFor, wayBackSpent, HANDOFF_ACK_MS } = load('shared/handoff.js');
 const { reduce, initialState, deskCardsOf, persistable } = load('shared/store-state.js');
 
 const desk = { kind: 'desk', label: 'desk on Display 2', windowId: 7, view: 'issues' };
@@ -16,6 +16,8 @@ const tablet = { kind: 'tablet', label: 'tablet', windowId: null, view: 'feature
 const anchor = { heading: 'Scope', past: 40, fraction: 0.3 };
 const request = (mode, destination, over = {}) => ({ noteId: 'FEAT-0002', workspaceId: 'w', mode, source: { windowId: 1, view: 'features', label: 'Deck on Built-in Display', kind: 'main' }, destination, size: { w: 640, h: 560 }, anchor, ...over });
 const record = (mode, destination, put, over = {}) => ({ ...request(mode, destination, over), id: 'h1', state: 'awaiting', put });
+// What the main process knows when a note is to land: nothing unusual, unless a test says otherwise.
+const facts = (over = {}) => ({ alreadyThere: false, everyView: false, waiting: null, ...over });
 
 test('only something that is a desk can have a note moved onto it', () => {
   assert.deepEqual(modesFor('desk'), ['move', 'show']);
@@ -62,24 +64,33 @@ test('what an act does to this desk is said in a few words beside each place', (
 });
 
 test('landing on a desk puts the note there once, and never twice', () => {
-  assert.deepEqual(planLanding(request('move', desk), { alreadyThere: false }), { put: true, reload: false, open: false, awaits: true });
-  assert.deepEqual(planLanding(request('show', desk), { alreadyThere: true }), { put: false, reload: false, open: false, awaits: true });
-  assert.deepEqual(planLanding(request('show', reader), { alreadyThere: false }), { put: false, reload: true, open: false, awaits: true });
-  assert.deepEqual(planLanding(request('show', fresh), { alreadyThere: false }), { put: false, reload: false, open: true, awaits: true });
+  assert.deepEqual(planLanding(request('move', desk), facts()), { put: true, reload: false, open: false, awaits: true });
+  assert.deepEqual(planLanding(request('show', desk), facts({ alreadyThere: true })), { put: false, reload: false, open: false, awaits: true });
+  assert.deepEqual(planLanding(request('show', reader), facts()), { put: false, reload: true, open: false, awaits: true });
+  assert.deepEqual(planLanding(request('show', fresh), facts()), { put: false, reload: false, open: true, awaits: true });
   // The tablet is the main window's desk, and it cannot answer.
-  assert.deepEqual(planLanding(request('show', { ...tablet, view: 'issues' }), { alreadyThere: false }), { put: true, reload: false, open: false, awaits: false });
+  assert.deepEqual(planLanding(request('show', { ...tablet, view: 'issues' }), facts()), { put: true, reload: false, open: false, awaits: false });
 });
 
 test('a move a destination cannot take is refused, never turned into something else', () => {
-  assert.match(planLanding(request('move', reader), { alreadyThere: false }).refused, /cannot be moved to the reader on Display 2: it is not a desk/);
-  assert.match(planLanding(request('move', tablet), { alreadyThere: false }).refused, /not a desk/);
+  assert.match(planLanding(request('move', reader), facts()).refused, /cannot be moved to the reader on Display 2: it is not a desk/);
+  assert.match(planLanding(request('move', tablet), facts()).refused, /not a desk/);
 });
 
 test('a move onto the desk the note is already on is refused: it would take the note off its only desk', () => {
   const same = { ...desk, view: 'features' };
-  assert.match(planLanding(request('move', same), { alreadyThere: true }).refused, /shows this same desk, so FEAT-0002 is already there\. Nothing was moved\./);
+  assert.match(planLanding(request('move', same), facts({ alreadyThere: true })).refused, /shows this same desk, so FEAT-0002 is already there\. Nothing was moved\./);
   // Showing it there is harmless: it is already there, and nothing is put twice.
-  assert.deepEqual(planLanding(request('show', same), { alreadyThere: true }), { put: false, reload: false, open: false, awaits: true });
+  assert.deepEqual(planLanding(request('show', same), facts({ alreadyThere: true })), { put: false, reload: false, open: false, awaits: true });
+});
+
+test('a move of a note kept on every view is refused by the rule itself, and showing it is not', () => {
+  // Taking it off the source desk would take it off every desk, the destination's included.
+  const kept = facts({ alreadyThere: true, everyView: true });
+  assert.equal(planLanding(request('move', desk), kept).refused, 'FEAT-0002 is kept on every view, so it is on every desk already and cannot be moved to one. It can be shown there as well.');
+  assert.match(planLanding(request('move', main), kept).refused, /kept on every view/);
+  assert.deepEqual(planLanding(request('show', desk), kept), { put: false, reload: false, open: false, awaits: true });
+  assert.deepEqual(planLanding(request('show', reader), kept), { put: false, reload: true, open: false, awaits: true });
 });
 
 test('a move takes the note off the source desk only when the destination says it is showing it', () => {
@@ -166,6 +177,21 @@ test('the way back is the same handoff in reverse, carrying where it was read la
   assert.equal(returnOf(fromReader, null, null), null);
 });
 
+test('a "send back" that fails keeps its way back: it is used up only when the note is shown back there', () => {
+  // The note arrived on the desk window; this is it going back to the main window.
+  const done = settle(record('move', desk, true), { type: 'ack', ok: true }).record;
+  const back = { ...returnOf(done, null, null), id: 'h2', state: 'awaiting', put: true };
+  assert.equal(wayBackSpent(settle(back, { type: 'ack', ok: true }).reply), true);
+  for (const answer of [{ type: 'timeout' }, { type: 'closed' }, { type: 'display-removed' }, { type: 'ack', ok: false, error: 'this window did not draw it' }]) {
+    assert.equal(wayBackSpent(settle(back, answer).reply), false, JSON.stringify(answer));
+  }
+  // Refused before it ran, as the main process answers a refusal: nothing was sent, so nothing is used up.
+  const refused = planLanding(returnOf(done, null, null), facts({ waiting: main }));
+  assert.equal(wayBackSpent({ ok: false, error: refused.refused }), false);
+  // Landed without an answer is not shown back either.
+  assert.equal(wayBackSpent(settleUnconfirmed(back).reply), false);
+});
+
 test('a destination on the same desk, and a note kept on every view, are offered "also show" only', () => {
   assert.deepEqual(offeredModes(desk, { sourceView: 'features', everyView: false }), ['move', 'show']);
   assert.deepEqual(offeredModes({ ...desk, view: 'features' }, { sourceView: 'features', everyView: false }), ['show'], 'the same view is the same desk');
@@ -196,7 +222,7 @@ function desks() {
 const ids = (s, view) => deskCardsOf(s, WS, view).map((c) => c.noteId);
 function hand(s, noteId, mode, destination, answer, sourceView = 'features') {
   const req = request(mode, destination, { noteId, source: { windowId: 1, view: sourceView, label: 'Deck', kind: 'main' } });
-  const landing = planLanding(req, { alreadyThere: destination.view !== null && ids(s, destination.view).includes(noteId) });
+  const landing = planLanding(req, facts({ alreadyThere: destination.view !== null && ids(s, destination.view).includes(noteId) }));
   if ('refused' in landing) return { s, refused: landing.refused };
   if (landing.put) s = reduce(s, { type: 'put-on-desk', noteId, x: 16, y: 16, w: 640, h: 560, viewId: destination.view });
   const rec = { ...req, id: 'h', state: 'awaiting', put: landing.put };
@@ -220,6 +246,68 @@ test('on every path that does not end acknowledged, the source desk still holds 
   const shown = hand(desks(), 'FEAT-0002', 'show', desk, { type: 'ack', ok: true });
   assert.deepEqual(ids(shown.s, 'features'), ['FEAT-0002', 'FEAT-0003']);
   assert.deepEqual(ids(shown.s, 'issues'), ['FEAT-0002']);
+});
+
+// The same, with the wait the main process really has: a handoff lands at once and is answered later, so
+// more than one can be asked for before the first is answered.
+function waitingDesks() {
+  let s = desks();
+  const waiting = [];
+  const send = (mode, destination, noteId = 'FEAT-0002') => {
+    const from = ['features', 'issues'].find((v) => ids(s, v).includes(noteId)) ?? null;
+    const req = request(mode, destination, { noteId, workspaceId: WS, source: { windowId: 1, view: from, label: 'Deck', kind: 'main' } });
+    const held = waitingFor(waiting, noteId, WS);
+    const landing = planLanding(req, facts({ alreadyThere: destination.view !== null && ids(s, destination.view).includes(noteId), waiting: held === null ? null : held.destination }));
+    if ('refused' in landing) return { refused: landing.refused, rec: null };
+    if (landing.put) s = reduce(s, { type: 'put-on-desk', noteId, x: 16, y: 16, viewId: destination.view });
+    const rec = { ...req, id: `h${waiting.length + 1}-${noteId}`, state: 'awaiting', put: landing.put };
+    waiting.push(rec);
+    return { refused: null, rec };
+  };
+  const answer = (rec, reply) => {
+    waiting.splice(waiting.indexOf(rec), 1);
+    const out = settle(rec, reply);
+    for (const effect of out.effects) if (effect.type === 'take-off') s = reduce(s, { type: 'take-off-desk', noteId: effect.noteId, viewId: effect.view });
+    return out.reply;
+  };
+  return { send, answer, on: (noteId) => ['features', 'issues'].filter((v) => ids(s, v).includes(noteId)) };
+}
+
+test('a note with a handoff waiting is not sent again until that one is answered, so the same move sent twice leaves it on one desk', () => {
+  const { send, answer, on } = waitingDesks();
+  const first = send('move', desk);
+  const second = send('move', desk);
+  assert.equal(first.refused, null);
+  assert.equal(second.refused, 'FEAT-0002 is already on its way to the desk on Display 2, which has not answered yet. It can be sent again once that is answered.');
+  // The sequence that lost the note: the first times out, the second is acknowledged. Whatever was sent is answered.
+  if (first.rec !== null) answer(first.rec, { type: 'timeout' });
+  if (second.rec !== null) answer(second.rec, { type: 'ack', ok: true });
+  assert.deepEqual(on('FEAT-0002'), ['features'], 'the note is on exactly one desk: the one it never left');
+  // Answered, it can be sent again, and then it moves.
+  const third = send('move', desk);
+  assert.equal(third.refused, null);
+  assert.equal(answer(third.rec, { type: 'ack', ok: true }).ok, true);
+  assert.deepEqual(on('FEAT-0002'), ['issues']);
+});
+
+test('while one is waiting, no other act on that note is taken, to any place; another note is not held up', () => {
+  const { send, answer, on } = waitingDesks();
+  const first = send('show', desk);
+  for (const [mode, place] of [['show', desk], ['move', desk], ['show', reader], ['show', tablet], ['show', fresh]]) {
+    assert.match(send(mode, place).refused, /^FEAT-0002 is already on its way to the desk on Display 2, which has not answered yet\./, `${mode} to ${place.label}`);
+  }
+  const other = send('move', desk, 'FEAT-0003');
+  assert.equal(other.refused, null, 'a different note is sent while the first waits');
+  answer(first.rec, { type: 'timeout' });
+  answer(other.rec, { type: 'ack', ok: true });
+  assert.deepEqual(on('FEAT-0002'), ['features']);
+  assert.deepEqual(on('FEAT-0003'), ['issues']);
+  // What counts as waiting: this note, in this workspace, not yet answered.
+  const awaiting = record('move', desk, true, { workspaceId: WS });
+  assert.equal(waitingFor([awaiting], 'FEAT-0002', WS), awaiting);
+  assert.equal(waitingFor([awaiting], 'FEAT-0003', WS), null);
+  assert.equal(waitingFor([awaiting], 'FEAT-0002', 'another-workspace'), null);
+  assert.equal(waitingFor([settle(awaiting, { type: 'ack', ok: true }).record, settle(awaiting, { type: 'timeout' }).record], 'FEAT-0002', WS), null);
 });
 
 test('after any sequence of handoffs and failures no desk holds a note twice, and no note is lost', () => {

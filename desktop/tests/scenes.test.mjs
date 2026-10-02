@@ -7,7 +7,10 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
-const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene } = load('shared/scenes.js');
+const { READING_FIRST_USE } = load('shared/panes.js');
+const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy, actsFor, savedByOther, ReadingWait } = load('shared/scenes.js');
+
+const { isDeskName, addressFor, formatAddress, parseAddress } = load('shared/address.js');
 
 const WS = 'aaaa1111bbbb2222';
 const list = { x: 12, y: 12, w: 340, h: 700, collapsed: false, presentation: 'cards' };
@@ -47,14 +50,20 @@ test('a scene keeps the view, the search, the collection, each document and wher
 
 test('opening a scene brings back its view, search, collection and documents, and can be taken back', () => {
   const saved = save(desk());
-  // The person moves on: another view, another search, the desk cleared, the collection as a table.
+  // The person moves on. On the scene's own view: the desk cleared, one other note opened, the collection as a
+  // table, no search. Then another view, and a note opened there.
+  const table = { ...list, presentation: 'table', x: 300 };
   let s = reduce(saved, { type: 'clear-desk' });
-  s = reduce(s, { type: 'set-collection', layout: { ...list, presentation: 'table', x: 300 } });
+  s = reduce(s, { type: 'put-on-desk', noteId: 'ISS-0777', x: 5, y: 5 });
+  s = reduce(s, { type: 'set-collection', layout: table });
   s = reduce(s, { type: 'set-query', text: '' });
   s = reduce(s, { type: 'select-view', viewId: 'features' });
   s = reduce(s, { type: 'put-on-desk', noteId: 'FEAT-0009', x: 10, y: 10 });
-  // What is on screen now, kept by the window so opening the scene can be undone.
-  const before = sceneFrom({ workspaceId: WS, view: 'features', query: s.query, filters: s.filters, collection: collectionOf(s, WS, 'features'), cards: deskCardsOf(s, WS, 'features') }, s.deskName ?? '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
+  // What the scene is about to replace, kept by the window so opening it can be undone: the desk and the list of
+  // the scene's OWN view, which is not the view on screen, with the search and the filters as they are now.
+  const replaced = viewReplacedBy(s.desks[deskKey(WS, 'Review Glass')], s.viewId);
+  assert.equal(replaced, 'issues', 'a scene replaces the desk of the view it was saved on');
+  const before = sceneFrom({ workspaceId: WS, view: replaced, query: s.query, filters: s.filters, collection: collectionOf(s, WS, replaced), cards: deskCardsOf(s, WS, replaced) }, s.deskName ?? '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
   const opened = reduce(s, { type: 'open-desk', name: 'Review Glass' });
   assert.equal(opened.viewId, 'issues', 'the scene\'s own view comes with it');
   assert.equal(opened.query, 'glass');
@@ -62,13 +71,87 @@ test('opening a scene brings back its view, search, collection and documents, an
   assert.deepEqual(collectionOf(opened, WS, 'issues'), list);
   assert.deepEqual(deskCardsOf(opened, WS, 'issues').map((c) => [c.noteId, c.x, c.y, c.w, c.h]), [['ISS-0001', 400, 20, 640, 560], ['ISS-0002', 700, 60, 560, 520]]);
   assert.deepEqual(deskCardsOf(opened, WS, 'features').map((c) => c.noteId), ['FEAT-0009'], 'the other view\'s desk is not touched');
-  // Back to the desk before: a scene that is not in the list, applied.
-  const back = reduce(opened, { type: 'apply-scene', scene: before });
-  assert.equal(back.viewId, 'features');
+  // Back to the desk before: a scene that is not in the list, applied, and the view the person was on shown again.
+  const back = reduce(opened, { type: 'apply-scene', scene: before, backTo: 'features' });
+  assert.equal(back.viewId, 'features', 'the person is back on the view they were on');
   assert.equal(back.query, '');
+  assert.deepEqual(back.filters, { statuses: [], types: [] });
   assert.deepEqual(deskCardsOf(back, WS, 'features').map((c) => c.noteId), ['FEAT-0009']);
   assert.equal(Object.keys(back.desks).length, 1, 'taking it back adds nothing to the list of scenes');
-  assert.deepEqual(deskCardsOf(back, WS, 'issues').length, 2, 'and the scene\'s own view keeps what the scene put there');
+  assert.equal(back.deskName, null, 'and no scene is named as open');
+  assert.deepEqual(deskCardsOf(back, WS, 'issues').map((c) => [c.noteId, c.x, c.y]), [['ISS-0777', 5, 5]], 'the desk the scene replaced on its own view is back: the note that was open there, where it stood');
+  assert.deepEqual(collectionOf(back, WS, 'issues'), table, 'and so is that view\'s list, as the table it was');
+});
+
+test('a desk from before scenes, and one this Deck cannot read, replace nothing on another view', () => {
+  // A desk from before scenes opens on the view on screen, so that is the desk kept for the way back.
+  assert.equal(viewReplacedBy({ name: 'old', workspaceId: WS, cards: [] }, 'features'), 'features');
+  assert.equal(viewReplacedBy({ name: 'old', workspaceId: WS, cards: [], view: 'issues' }, 'features'), 'features', 'a view written on a desk with no version is not read');
+  assert.equal(viewReplacedBy({ name: 's', workspaceId: WS, cards: [], version: SCENE_VERSION }, 'features'), 'features', 'a scene that lost its view opens on the one on screen');
+  assert.equal(viewReplacedBy({ name: 'f', workspaceId: WS, cards: [], version: 3, view: 'issues' }, 'features'), 'features');
+});
+
+test('a desk that is not in the list is put on the desk only when it is this workspace\'s and of the version this Deck reads', () => {
+  const s = desk();
+  const other = sceneFrom({ workspaceId: WS, view: 'features', query: 'other', filters: { statuses: [], types: [] }, collection: null, cards: [{ noteId: 'FEAT-0009', x: 1, y: 2 }] }, '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
+  // Another workspace's: its notes are not this workspace's notes, and its view may not exist here.
+  assert.equal(reduce(s, { type: 'apply-scene', scene: { ...other, workspaceId: 'cccc3333dddd4444' } }), s, 'a scene of another workspace is refused');
+  // A version this Deck does not know: its fields are not ours to read.
+  for (const version of [3, 1, '2']) assert.equal(reduce(s, { type: 'apply-scene', scene: { ...other, version } }), s, `version ${JSON.stringify(version)} is refused`);
+  // A desk with no version is not a scene: it has no view, search or list to put back.
+  const { version: _, ...unversioned } = other;
+  assert.equal(reduce(s, { type: 'apply-scene', scene: unversioned }), s);
+  // Nor anything that is not a desk at all, nor with no workspace open.
+  for (const junk of [null, 'x', [], { name: 'x' }]) assert.equal(reduce(s, { type: 'apply-scene', scene: junk }), s, JSON.stringify(junk));
+  const closed = initialState();
+  assert.equal(reduce(closed, { type: 'apply-scene', scene: other }), closed);
+  // Refused, it changes nothing at all: the view it would have gone back to is not shown either.
+  assert.equal(reduce(s, { type: 'apply-scene', scene: { ...other, version: 3 }, backTo: 'features' }), s);
+  const { view: __, ...viewless } = other;
+  const noView = { ...s, viewId: null };
+  assert.equal(reduce(noView, { type: 'apply-scene', scene: viewless, backTo: 'features' }), noView, 'with no view to put it on, nothing is put back and no view is chosen');
+  // The same desk, this workspace's and of this version, is applied: the refusals above are not the reducer refusing everything.
+  const applied = reduce(s, { type: 'apply-scene', scene: other });
+  assert.equal(applied.viewId, 'features');
+  assert.equal(applied.query, 'other');
+  assert.deepEqual(deskCardsOf(applied, WS, 'features').map((c) => c.noteId), ['FEAT-0009']);
+});
+
+// One note open on the Issues view, and the list where a view puts it when nobody has moved it: nothing stored.
+function unmoved() {
+  let s = reduce(initialState(), { type: 'open-workspace', workspaceId: WS });
+  s = reduce(s, { type: 'select-view', viewId: 'issues' });
+  return reduce(s, { type: 'put-on-desk', noteId: 'ISS-0001', x: 400, y: 20, w: 640, h: 560 });
+}
+
+test('a scene saved while the list had never been moved puts the list back to having no place of its own', () => {
+  let s = unmoved();
+  assert.equal(collectionOf(s, WS, 'issues'), null);
+  s = save(s, 'Plain');
+  assert.equal('collection' in s.desks[deskKey(WS, 'Plain')], false, 'a list with no stored layout is saved as having none');
+  // Since then the list was dragged, collapsed and shown as a table, and another view's list was moved too.
+  s = reduce(s, { type: 'set-collection', layout: { ...list, presentation: 'table', x: 300, collapsed: true } });
+  s = reduce(s, { type: 'set-collection', layout: { ...list, x: 77 }, viewId: 'features' });
+  const opened = reduce(s, { type: 'open-desk', name: 'Plain' });
+  assert.equal(collectionOf(opened, WS, 'issues'), null, 'the list is where the scene had it: at the place a view gives it');
+  assert.deepEqual(collectionOf(opened, WS, 'features'), { ...list, x: 77 }, 'another view\'s list is not touched');
+  // And the state it leaves is one the state file takes and gives back.
+  assert.equal(collectionOf(normaliseState(JSON.parse(JSON.stringify(persistable(opened)))), WS, 'issues'), null);
+  // Reopened where the list has no place of its own either, nothing about any list is written.
+  const bare = save(unmoved(), 'Plain');
+  assert.equal(reduce(bare, { type: 'open-desk', name: 'Plain' }).collections, bare.collections);
+});
+
+test('"back to the desk before" puts the list back as it was, a list that had no place of its own included', () => {
+  const bare = unmoved();
+  const table = { ...list, presentation: 'table' };
+  // A scene of this view that keeps the list as a table, in the list of a desk whose own list was never moved.
+  const s = { ...bare, desks: save(reduce(bare, { type: 'set-collection', layout: table }), 'As a table').desks };
+  const before = sceneFrom({ workspaceId: WS, view: 'issues', query: s.query, filters: s.filters, collection: collectionOf(s, WS, 'issues'), cards: deskCardsOf(s, WS, 'issues') }, '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
+  const opened = reduce(s, { type: 'open-desk', name: 'As a table' });
+  assert.deepEqual(collectionOf(opened, WS, 'issues'), table);
+  const back = reduce(opened, { type: 'apply-scene', scene: before });
+  assert.equal(collectionOf(back, WS, 'issues'), null, 'the table the scene brought is gone with the scene');
 });
 
 test('a note kept on every view stays when a scene is opened, and is not doubled', () => {
@@ -99,18 +182,54 @@ test('a desk saved before scenes opens exactly as it did', () => {
   assert.deepEqual(read.desks[deskKey(WS, 'older')], { name: 'older', workspaceId: WS, cards: [{ noteId: 'A', x: 1, y: 2 }] });
 });
 
-test('a scene saved by a newer Deck is kept untouched, listed as unreadable, not opened and not overwritten', () => {
+test('a scene of a version this Deck does not know is kept untouched, listed as unreadable, not opened and never changed', () => {
   const future = { name: 'from the future', workspaceId: WS, version: 3, cards: [{ noteId: 'A', x: 1, y: 2 }], camera: { yaw: 1.2 }, somethingNew: [1, 2, 3] };
   let s = normaliseState({ ...JSON.parse(JSON.stringify(persistable(desk()))), desks: { [deskKey(WS, 'from the future')]: future } });
   assert.deepEqual(s.desks[deskKey(WS, 'from the future')], future, 'every field survives, including ones this Deck has never heard of');
   assert.deepEqual(JSON.parse(JSON.stringify(persistable(s))).desks[deskKey(WS, 'from the future')], future, 'and is written back as it was');
   const entry = listScenes(s.desks, WS).find((e) => e.name === 'from the future');
   assert.equal(entry.kind, 'unreadable');
-  assert.match(entry.why, /newer Deck \(version 3\)/);
+  assert.equal(entry.why, 'saved by a different Deck (version 3); this one reads version 2, so it is kept and not opened');
   s = reduce(s, { type: 'open-workspace', workspaceId: WS });
   s = reduce(s, { type: 'select-view', viewId: 'issues' });
   assert.equal(reduce(s, { type: 'open-desk', name: 'from the future' }), s, 'it is not opened');
-  assert.equal(reduce(s, { type: 'save-scene', name: 'from the future', ...extras }), s, 'and a scene saved under its name does not replace it');
+  assert.equal(reduce(s, { type: 'save-scene', name: 'from the future', ...extras }), s, 'a scene saved under its name does not replace it');
+  assert.equal(reduce(s, { type: 'save-desk', name: 'from the future' }), s, 'nor does a desk saved the old way, which would drop its version and every field with it');
+  assert.equal(reduce(s, { type: 'rename-desk', workspaceId: WS, from: 'from the future', to: 'renamed' }), s, 'and it is not renamed: its name is one of its fields');
+  // What the controls offer follows the same rule: neither open nor rename; delete stays.
+  assert.deepEqual(actsFor('unreadable'), { open: false, rename: false, remove: true });
+  assert.deepEqual(actsFor('scene'), { open: true, rename: true, remove: true });
+  assert.deepEqual(actsFor('desk'), { open: true, rename: true, remove: true });
+  // Deleted, it is gone; restored, it is back whole.
+  const gone = reduce(s, { type: 'delete-desk', workspaceId: WS, name: 'from the future' });
+  assert.equal(deskKey(WS, 'from the future') in gone.desks, false);
+  assert.deepEqual(reduce(gone, { type: 'restore-desk', desk: future }).desks[deskKey(WS, 'from the future')], future);
+});
+
+test('an unreadable scene is written back with every field it had, a missing or malformed list of cards included', () => {
+  const odd = { name: 'odd', workspaceId: WS, version: 3, documents: [1], cards: { byId: {} } };
+  const none = { name: 'none', workspaceId: WS, version: 3, documents: [1] };
+  const s = normaliseState({ desks: { [deskKey(WS, 'odd')]: odd, [deskKey(WS, 'none')]: none } });
+  const written = JSON.parse(JSON.stringify(persistable(s))).desks;
+  assert.deepEqual(written[deskKey(WS, 'odd')], odd, 'cards that are not a list stay what they were');
+  assert.deepEqual(written[deskKey(WS, 'none')], none, 'and an entry with no cards gains none');
+  assert.equal('cards' in written[deskKey(WS, 'none')], false);
+  // The list still names both, and claims no notes for either.
+  assert.deepEqual(listScenes(s.desks, WS).map((e) => [e.name, e.kind, e.notes]), [['none', 'unreadable', 0], ['odd', 'unreadable', 0]]);
+});
+
+test('an entry whose version is not this Deck\'s is said to be from a different Deck, not a newer one', () => {
+  const said = (version) => listScenes({ k: { name: 'o', workspaceId: WS, version, cards: [] } }, WS)[0];
+  assert.equal(said(1).kind, 'unreadable');
+  assert.match(said(1).why, /^saved by a different Deck \(version 1\); this one reads version 2/);
+  // The text "2" is not the number 2, and is shown as text so the two are not taken for each other.
+  assert.equal(said('2').kind, 'unreadable');
+  assert.match(said('2').why, /^saved by a different Deck \(version "2"\); this one reads version 2/);
+  assert.match(said(2.5).why, /\(version 2\.5\)/);
+  assert.match(said(null).why, /\(version null\)/);
+  assert.equal(savedByOther({ name: 'o', workspaceId: WS, version: 99, cards: [] }), 'saved by a different Deck (version 99)');
+  for (const version of [1, '2', 2.5, null, 3]) assert.doesNotMatch(said(version).why, /newer/);
+  assert.equal(said(SCENE_VERSION).why, null);
 });
 
 test('rename keeps the scene, delete removes it, and restore puts it back only into the gap it left', () => {
@@ -135,6 +254,25 @@ test('rename keeps the scene, delete removes it, and restore puts it back only i
   assert.equal(reduce(gone, { type: 'restore-desk', desk: { ...kept, cards: [] } }), gone);
 });
 
+test('a scene\'s name is a name its address accepts: one the address refuses is not saved, and not renamed to', () => {
+  const s = desk();
+  const refused = ['x'.repeat(65), 'a tab\tin it', 'two\nlines'];
+  for (const name of refused) {
+    assert.equal(isDeskName(name), false, JSON.stringify(name));
+    assert.equal(reduce(s, { type: 'save-scene', name, ...extras }), s, `saved as ${JSON.stringify(name)}`);
+  }
+  const saved = save(s);
+  for (const to of refused) assert.equal(reduce(saved, { type: 'rename-desk', workspaceId: WS, from: 'Review Glass', to }), saved, `renamed to ${JSON.stringify(to)}`);
+  // What an address takes, a scene takes: 64 characters, spaces, an apostrophe, an accent, a slash. Each is a state Deck can be sent to.
+  for (const name of ['x'.repeat(64), 'Edwin\'s review / été']) {
+    const named = reduce(s, { type: 'save-scene', name, ...extras });
+    assert.ok(deskKey(WS, name) in named.desks, name);
+    assert.equal(parseAddress(formatAddress(addressFor(WS, 'issues', { desk: name }))).desk, name);
+    const renamed = reduce(saved, { type: 'rename-desk', workspaceId: WS, from: 'Review Glass', to: name });
+    assert.ok(deskKey(WS, name) in renamed.desks, name);
+  }
+});
+
 test('a scene with fields that are not what they should be opens with those fields dropped', () => {
   const junk = { name: 'j', workspaceId: WS, version: 2, cards: [{ noteId: 'A', x: 5, y: 6 }, 'nonsense'], view: 7, query: {}, filters: 'x', collection: { x: 1 }, anchors: { A: { heading: 4, past: 'far', fraction: 9 }, B: {} }, field: { w: -1, h: 'x' }, savedAt: 12 };
   const s = normaliseState({ desks: { [deskKey(WS, 'j')]: junk } });
@@ -144,7 +282,7 @@ test('a scene with fields that are not what they should be opens with those fiel
 test('a reading position is kept by the heading above it, and found again when text is added above', () => {
   const headings = [{ text: 'Goal', top: 40 }, { text: 'Scope', top: 300 }, { text: 'Out of scope', top: 900 }];
   const anchor = readingAnchorAt(headings, 420, 2000);
-  assert.deepEqual(anchor, { heading: 'Scope', past: 120, fraction: 0.21 });
+  assert.deepEqual(anchor, { heading: 'Scope', occurrence: 1, past: 120, fraction: 0.21 });
   // Three paragraphs were added to Goal: Scope is 260 pixels lower, and so is the reader.
   const grown = [{ text: 'Goal', top: 40 }, { text: 'Scope', top: 560 }, { text: 'Out of scope', top: 1160 }];
   assert.deepEqual(scrollTopForAnchor(anchor, grown, 2260), { top: 680, moved: false });
@@ -160,17 +298,122 @@ test('a reading position is kept by the heading above it, and found again when t
   assert.equal(readingAnchorAt(headings, 0, 0).fraction, 0);
 });
 
+test('a reading position under a heading whose words occur twice goes back to that one, not the first', () => {
+  // "Steps" heads two sections. The reader is 60 pixels into the second.
+  const headings = [{ text: 'Goal', top: 40 }, { text: 'Steps', top: 300 }, { text: 'Result', top: 600 }, { text: 'Steps', top: 1500 }];
+  const anchor = readingAnchorAt(headings, 1560, 3000);
+  assert.deepEqual(anchor, { heading: 'Steps', occurrence: 2, past: 60, fraction: 0.52 });
+  assert.deepEqual(scrollTopForAnchor(anchor, headings, 3000), { top: 1560, moved: false });
+  // Text added above both: still the second "Steps".
+  const grown = headings.map((h) => ({ ...h, top: h.top + 200 }));
+  assert.deepEqual(scrollTopForAnchor(anchor, grown, 3200), { top: 1760, moved: false });
+  // Under the first "Steps" the position says so, and goes there.
+  assert.deepEqual(readingAnchorAt(headings, 320, 3000), { heading: 'Steps', occurrence: 1, past: 20, fraction: 0.10666666666666667 });
+  assert.deepEqual(scrollTopForAnchor({ heading: 'Steps', occurrence: 1, past: 20, fraction: 0.1 }, headings, 3000), { top: 320, moved: false });
+  // A position saved before this was recorded has no count, and means the first: saved scenes open as they did.
+  assert.deepEqual(scrollTopForAnchor({ heading: 'Steps', past: 20, fraction: 0.1 }, headings, 3000), { top: 320, moved: false });
+  // The second "Steps" was taken out of the text. The first is not it: the share of the text is used, and it says so.
+  assert.deepEqual(scrollTopForAnchor(anchor, headings.slice(0, 3), 3000), { top: 1560, moved: true });
+  // Above the first heading there is nothing to count.
+  assert.equal('occurrence' in readingAnchorAt(headings, 10, 3000), false);
+  // A scene keeps the count, through a save, the state file and a read; a count that is not one is dropped.
+  const s = reduce(desk(), { type: 'save-scene', name: 'Twice', ...extras, anchors: { 'ISS-0001': anchor, 'ISS-0002': { heading: 'Steps', occurrence: 'second', past: 5, fraction: 0.1 } } });
+  const kept = normaliseState(JSON.parse(JSON.stringify(persistable(s)))).desks[deskKey(WS, 'Twice')].anchors;
+  assert.deepEqual(kept, { 'ISS-0001': anchor, 'ISS-0002': { heading: 'Steps', past: 5, fraction: 0.1 } });
+});
+
+// The wait for documents' text, driven the way the window drives it: a document whose text is in takes its
+// position and says whether its heading was found.
+function waits(onDesk = () => true) {
+  const wait = new ReadingWait(onDesk);
+  const read = (noteId, moved = false) => {
+    const kept = wait.take(noteId);
+    if (kept !== null && kept.counted) wait.placed(noteId, moved);
+    return kept === null ? null : kept.anchor;
+  };
+  return { wait, read };
+}
+const at = (heading) => ({ heading, occurrence: 1, past: 0, fraction: 0 });
+
+test('putting documents back where they were read is always answered, once, a request for nothing included', () => {
+  // A scene with no document that had text: nothing to wait for, and it is answered before `begin` returns.
+  const { wait, read } = waits();
+  const answers = [];
+  wait.begin({}, (moved) => answers.push(moved));
+  assert.deepEqual(answers, [[]], 'a request for nothing is answered at once, so the scene can still say it reopened');
+  assert.equal(wait.waiting, false);
+  // Two documents: answered when the second is placed, with the one whose heading was not found, and only once.
+  wait.begin({ A: at('Goal'), B: at('Scope') }, (moved) => answers.push(moved));
+  assert.equal(wait.waiting, true);
+  assert.deepEqual(read('A', true), at('Goal'));
+  assert.equal(answers.length, 1, 'not answered while a document is still unread');
+  assert.deepEqual(read('B'), at('Scope'));
+  assert.deepEqual(answers, [[], ['A']]);
+  assert.equal(wait.waiting, false);
+  wait.settle();
+  assert.equal(read('A'), null, 'a document is put back once');
+  assert.equal(answers.length, 2, 'and the wait ending afterwards answers nobody a second time');
+});
+
+test('a second request while the first is waiting answers the first, and its unread documents keep their place', () => {
+  const { wait, read } = waits((noteId) => noteId !== 'GONE');
+  const scene = [];
+  const arrival = [];
+  // A scene is reopened: three documents, one read at once, one slow, one whose note is gone.
+  wait.begin({ A: at('Goal'), SLOW: at('Scope'), GONE: at('Steps') }, (moved) => scene.push(moved));
+  read('A', true);
+  assert.deepEqual(scene, []);
+  // A note arrives from another window before the scene's wait is over.
+  wait.begin({ NEW: at('Result') }, (moved) => arrival.push(moved));
+  assert.deepEqual(scene, [['A']], 'the scene is answered now, with what it had found, and is not dropped');
+  assert.deepEqual(arrival, []);
+  assert.deepEqual(read('NEW'), at('Result'));
+  assert.deepEqual(arrival, [[]]);
+  // The scene's slow document is read later: it still goes where the scene had it, and nobody is told twice.
+  assert.deepEqual(read('SLOW'), at('Scope'));
+  assert.equal(read('GONE'), null, 'a note with no document on the desk keeps no place');
+  assert.deepEqual([scene.length, arrival.length], [1, 1]);
+  // The wait running out is the same: the unread document keeps its place until it leaves the desk.
+  wait.begin({ SLOW: at('Goal'), OTHER: at('Scope') }, () => undefined);
+  wait.settle();
+  wait.forget('OTHER');
+  assert.deepEqual(read('SLOW'), at('Goal'));
+  assert.equal(read('OTHER'), null);
+  // A position asked for now replaces one kept from an earlier wait.
+  wait.begin({ X: at('Goal') }, () => undefined);
+  wait.settle();
+  wait.begin({ X: at('Scope') }, () => undefined);
+  assert.deepEqual(read('X'), at('Scope'));
+  assert.equal(read('X'), null);
+});
+
 test('a reopened scene says what is not as it was saved, and nothing about the count', () => {
   const scene = save(desk()).desks[deskKey(WS, 'Review Glass')];
-  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 1260, h: 745 }, movedPassages: [] }), []);
-  const report = sceneReport({ scene, present: new Set(['ISS-0001']), field: { w: 900, h: 700 }, movedPassages: ['ISS-0001'] });
+  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 1260, h: 745 }, readingSize: null, movedPassages: [] }), []);
+  const report = sceneReport({ scene, present: new Set(['ISS-0001']), field: { w: 900, h: 700 }, readingSize: null, movedPassages: ['ISS-0001'] });
   assert.equal(report.length, 3);
   assert.match(report[0], /^ISS-0002 is no longer in this workspace\. Its document is kept, labelled, and can be closed\.$/);
   assert.match(report[1], /^This window's field is 900 by 700; the scene was arranged in 1260 by 745\. ISS-0001 and ISS-0002 are drawn inside this field; the saved places are not changed\.$/);
   assert.match(report[2], /^The passage being read in ISS-0001 is not under the heading it was/);
   assert.ok(!report.join(' ').match(/\d+ notes|count|members/), 'the collection\'s membership is live and is never reported as a change');
   // A larger field is not a change worth a sentence.
-  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 2000, h: 1200 }, movedPassages: [] }), []);
+  assert.deepEqual(sceneReport({ scene, present: new Set(['ISS-0001', 'ISS-0002']), field: { w: 2000, h: 1200 }, readingSize: null, movedPassages: [] }), []);
+});
+
+test('a document with no stored size counts at the size it is drawn at when a scene says what fits a smaller field', () => {
+  // One document at x 850 with no size of its own, in a scene arranged in a field 1260 wide, reopened in one 900 wide.
+  const scene = { name: 'n', workspaceId: WS, version: SCENE_VERSION, cards: [{ noteId: 'A', x: 850, y: 10 }], field: { w: 1260, h: 745 } };
+  const report = (readingSize, cards = scene.cards) => sceneReport({ scene: { ...scene, cards }, present: new Set(['A']), field: { w: 900, h: 700 }, readingSize, movedPassages: [] });
+  // Nobody has resized a note on this view: it is drawn at the first-use size, 560 wide, and 850 + 560 is past 900.
+  assert.equal(READING_FIRST_USE.w, 560);
+  assert.deepEqual(report(null), ['This window\'s field is 900 by 700; the scene was arranged in 1260 by 745. A is drawn inside this field; the saved place is not changed.']);
+  // At x 500 the view's reading size decides: 300 wide fits in 900, 560 wide does not.
+  const at500 = [{ noteId: 'A', x: 500, y: 10 }];
+  assert.match(report({ w: 300, h: 200 }, at500)[0], /Everything still fits\.$/);
+  assert.match(report(null, at500)[0], /A is drawn inside this field/);
+  assert.match(report({ w: 300, h: 695 }, at500)[0], /A is drawn inside this field/, 'too tall counts as well as too wide');
+  // A size of its own still wins over the view's.
+  assert.match(report({ w: 600, h: 200 }, [{ noteId: 'A', x: 500, y: 10, w: 300, h: 200 }])[0], /Everything still fits\.$/);
 });
 
 test('a saved scene has a name, a field has a size, and the list is one workspace\'s', () => {

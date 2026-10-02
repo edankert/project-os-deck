@@ -105,6 +105,20 @@ module.exports = async function (d) {
   check(arrived.card && arrived.markedNotInThisView && /not in this view/.test(arrived.says) && arrived.status.includes(`${a} arrived from the Deck on`) && arrived.back && arrived.dismiss, 'the desk window, which lists Issues and draws its desk as cards, draws the feature as a card marked "not in this view", says where it came from, and offers "send back"', arrived);
   await d.shot(desk, '03-arrived-on-the-desk-window');
 
+  // ---- 3b. A "send back" that is not answered keeps its way back ----
+  // The main window is kept busy for longer than the wait, so the note's return is not answered.
+  void d.js(win, `(() => { const end = Date.now() + 6500; while (Date.now() < end) { /* busy */ } return true; })()`).catch(() => null);
+  await d.delay(300);
+  const unansweredAt = await d.js(desk, `(() => { const r = document.getElementById('send-back').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  d.focusApp(desk);
+  await d.pointer(desk, d.click(unansweredAt));
+  let notBack = '';
+  for (let i = 0; i < 100; i += 1) { await d.delay(100); notBack = await status(desk); if (/stays here|moved to/.test(notBack)) break; }
+  const stillThere = { onIssues: deskOf('issues').some((c) => c.noteId === a), onFeatures: deskOf('features').some((c) => c.noteId === a), back: await d.js(desk, `!!document.getElementById('send-back')`) };
+  check(/stays here: the Deck on .* did not answer\. Nothing was moved\./.test(notBack) && stillThere.onIssues && !stillThere.onFeatures && stillThere.back, 'a "send back" the main window does not answer leaves the note on the desk window, which says so and still offers "send back"; the next press, in the step below, takes it back', { notBack, stillThere });
+  // The main window is given time to come back, and to give up on the arrival it was too busy to show, before the note is sent again.
+  await d.delay(6500);
+
   // ---- 4. Sent back: the same document, read where it was ----
   const backAt = await d.js(desk, `(() => { const r = document.getElementById('send-back').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
   d.focusApp(desk);
