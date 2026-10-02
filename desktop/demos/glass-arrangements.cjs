@@ -562,7 +562,9 @@ module.exports = async function (d) {
     } else {
       // Somewhere a person might have left it, open, so Read has it to put down the left.
       d.store.dispatch({ type: 'set-collection', layout: { ...kept, x: 40, y: 60, collapsed: false, presentation: 'table' }, viewId: 'features' });
-      win.setBounds({ x: 0, y: 0, width: full.width, height: Math.max(420, Math.round(kept.h * 0.6)) });
+      // Short enough that the collection must be drawn shorter than it is stored, and tall enough for the least
+      // height it is ever drawn at: in a window 420 high the field was 237 and the collection's least height is 240.
+      win.setBounds({ x: 0, y: 0, width: full.width, height: Math.max(540, Math.round(kept.h * 0.6) + 190) });
       await d.delay(1000);
       await t.park();
       const short = await js(`({ field: Math.round(document.getElementById('field').getBoundingClientRect().height), drawn: Math.round(document.getElementById('collection').getBoundingClientRect().height) })`);
