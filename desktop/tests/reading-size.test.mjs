@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, readingSizeOf, deskCardsOf } = load('shared/store-state.js');
-const { READING_FIRST_USE, PANE_MIN_WIDTH, PANE_MIN_HEIGHT, PANE_MAX_SIDE, readingSizeFor, fitToField } = load('shared/panes.js');
+const { READING_FIRST_USE, PANE_MIN_WIDTH, PANE_MIN_HEIGHT, PANE_MAX_SIDE, readingSizeFor, fitToField, cornerResize } = load('shared/panes.js');
 const { servedState } = load('shared/served-state.js');
 
 const WS = 'aaaa1111bbbb2222';
@@ -269,4 +269,32 @@ test('a field too small for a document draws it smaller and changes no stored si
   assert.deepEqual(fitToField(chosen, { width: 1920, height: 1080 }), chosen);
   // Never below what can be read, however small the field.
   assert.deepEqual(fitToField(chosen, { width: 100, height: 100 }), { w: PANE_MIN_WIDTH, h: PANE_MIN_HEIGHT });
+});
+
+test('a press and release on the corner asks for nothing, and a drag of it starts from the size the note has', () => {
+  // The slop Glass passes is the one a header drag has: 5 px.
+  const SLOP = 5;
+  const chosen = { w: 900, h: 700 };
+  // No movement, and movement a hand makes while pressing: nothing is asked
+  // for, so nothing is stored. Until 2026-10-02 the size on screen was.
+  assert.equal(cornerResize(chosen, 0, 0, false, SLOP), null);
+  assert.equal(cornerResize(chosen, 3, 4, false, SLOP), null);
+  assert.equal(cornerResize(chosen, -5, 0, false, SLOP), null);
+  // In a field of 640 by 500 this note is drawn at 624 by 484. A drag of its
+  // corner by 10 and 20 asks for 910 by 720, not for 634 by 504.
+  assert.deepEqual(fitToField(chosen, { width: 640, height: 500 }), { w: 624, h: 484 });
+  assert.deepEqual(cornerResize(chosen, 10, 20, false, SLOP), { w: 910, h: 720 });
+  assert.deepEqual(chosen, { w: 900, h: 700 }, 'the drag changed the size it was given');
+  // Once it is a drag, every position counts, the starting one too.
+  assert.deepEqual(cornerResize(chosen, 2, 1, true, SLOP), { w: 902, h: 701 });
+  assert.deepEqual(cornerResize(chosen, 0, 0, true, SLOP), chosen);
+  // What it asks for is what the reducer stores: clamped and whole.
+  for (const [dx, dy] of [[-2000, -2000], [99999, 99999], [10.4, -20.6], [-300, 45]]) {
+    const asked = cornerResize(chosen, dx, dy, false, SLOP);
+    let state = opened();
+    state = reduce(state, { type: 'put-on-desk', noteId: 'A', x: 0, y: 0, w: chosen.w, h: chosen.h });
+    state = reduce(state, { type: 'resize-card', noteId: 'A', w: chosen.w + dx, h: chosen.h + dy });
+    assert.deepEqual(asked, size(state, 'A'), `a drag by ${dx}, ${dy}`);
+  }
+  assert.deepEqual(cornerResize(chosen, -2000, -2000, false, SLOP), { w: PANE_MIN_WIDTH, h: PANE_MIN_HEIGHT });
 });

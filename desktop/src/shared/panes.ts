@@ -81,6 +81,33 @@ export function fitToField(size: { w: number; h: number }, field: { width: numbe
 }
 
 /**
+ * The size a drag of a document's corner asks for, or null while it asks for
+ * none.
+ *
+ * Measured from the size the note HAS, `stored`, and not from the size it is
+ * drawn at: in a field too small for it a document is drawn smaller
+ * (`fitToField`), and a drag that started from there would store the smaller
+ * size as if a person had chosen it. The keyboard's corner starts from the
+ * stored size too. A press that has gone no further than `slop` from where it
+ * began is not a drag yet, so a press and release on the corner stores
+ * nothing; once it is one (`dragging`) every position counts, the start
+ * included. Clamped as the reducer clamps a resize, so what is drawn during
+ * the drag is what will be stored. Pure, so the rule is tested without a
+ * window.
+ */
+export function cornerResize(
+  stored: { w: number; h: number },
+  dx: number,
+  dy: number,
+  dragging: boolean,
+  slop: number,
+): { w: number; h: number } | null {
+  if (!dragging && Math.hypot(dx, dy) <= slop) return null;
+  const side = (value: number, minimum: number): number => Math.min(PANE_MAX_SIDE, Math.max(minimum, Math.round(value)));
+  return { w: side(stored.w + dx, PANE_MIN_WIDTH), h: side(stored.h + dy, PANE_MIN_HEIGHT) };
+}
+
+/**
  * Where a pane lands when it is dropped, by the header rule.
  *
  * A pane whose top edge falls on another pane's header — horizontally

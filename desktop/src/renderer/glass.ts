@@ -74,6 +74,7 @@ import {
   PANE_HEADER_HEIGHT,
   PANE_MIN_HEIGHT,
   PANE_MIN_WIDTH,
+  cornerResize,
   fitToField,
   readingSizeFor,
   snapBelowHeaders,
@@ -5462,44 +5463,67 @@ export class GlassField {
     head.addEventListener('pointercancel', up);
   }
 
-  /** Put back the document being dragged, when one is: Escape's first job. */
+  /** Put back the document being dragged, or the size of the one whose corner is, when one is: Escape's first job. */
   private dragCancel: (() => void) | null = null;
 
   /**
    * The corner: the one way a document's size changes by pointer. The store
    * is told once, when the corner is let go, and what it is told is also the
    * size the next note opened on this view takes (ISS-0071).
+   *
+   * The drag is measured from the size the document has, as the keyboard's
+   * corner is, not from the smaller size a small field is drawing it at. A
+   * press and release that does not move tells the store nothing: until
+   * 2026-10-02 it stored the size on screen, which in a small field replaced
+   * the size a person chose with the fitted one. Escape during the drag puts
+   * the size back, as it puts back a document dragged by its header.
    */
   private resizePane(noteId: string, pane: HTMLElement, event: PointerEvent): void {
     if (event.button !== 0 || !this.hooks.canArrange()) return;
     event.stopPropagation();
+    const card = this.held.find((c) => c.noteId === noteId);
+    if (card === undefined) return;
     const handle = event.currentTarget as HTMLElement;
     handle.setPointerCapture(event.pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
-    const w0 = pane.offsetWidth;
-    const h0 = pane.offsetHeight;
-    pane.classList.add('resizing');
-    const move = (e: PointerEvent): void => {
-      pane.style.width = `${Math.max(PANE_MIN_WIDTH, w0 + e.clientX - startX)}px`;
-      pane.style.height = `${Math.max(PANE_MIN_HEIGHT, h0 + e.clientY - startY)}px`;
-    };
-    const up = (e: PointerEvent): void => {
+    const state = this.hooks.state();
+    const stored = readingSizeFor(card, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+    let asked: { w: number; h: number } | null = null;
+    const finish = (): void => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', up);
       handle.removeEventListener('pointercancel', up);
-      const done = (): void => {
-        pane.classList.remove('resizing');
-        if (this.active) this.placePanes();
+      this.dragCancel = null;
+    };
+    const done = (): void => {
+      pane.classList.remove('resizing');
+      if (this.active) this.placePanes();
+    };
+    const move = (e: PointerEvent): void => {
+      asked = cornerResize(stored, e.clientX - startX, e.clientY - startY, asked !== null, CLICK_SLOP_PX);
+      if (asked === null) return;
+      pane.classList.add('resizing');
+      this.dragCancel = (): void => {
+        finish();
+        done();
       };
-      if (e.type === 'pointercancel') {
+      // Drawn as it will be drawn once stored: fitted to the field.
+      const drawn = fitToField(asked, this.viewport);
+      pane.style.width = `${drawn.w}px`;
+      pane.style.height = `${drawn.h}px`;
+    };
+    const up = (e: PointerEvent): void => {
+      finish();
+      const last = e.type === 'pointercancel' ? null : cornerResize(stored, e.clientX - startX, e.clientY - startY, asked !== null, CLICK_SLOP_PX);
+      if (last === null) {
         done();
         return;
       }
       // The cards round a resized focus move out to make room, over the same
       // time they took to gather.
       this.startGather();
-      void this.hooks.dispatch({ type: 'resize-card', noteId, w: w0 + e.clientX - startX, h: h0 + e.clientY - startY }).finally(done);
+      void this.hooks.dispatch({ type: 'resize-card', noteId, w: last.w, h: last.h }).finally(done);
     };
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', up);
