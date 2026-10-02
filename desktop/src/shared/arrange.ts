@@ -348,7 +348,10 @@ export interface UndoCheck {
   cards: Array<{ noteId: string; x: number; y: number }>;
   /** The collection goes back, or null when it was not changed or has been changed since. */
   collection: CollectionLayout | null;
-  /** The stacking to restore, for the documents that are still open. */
+  /**
+   * The whole stacking after the undo, lowest first, or [] when it is that
+   * already. A document opened since the arrangement is in it where it is now.
+   */
   order: string[];
   /** What a person changed since, one sentence each. Empty means the undo is exact. */
   changed: string[];
@@ -385,8 +388,16 @@ export function checkUndo(undo: ArrangeUndo, input: ArrangeInput): UndoCheck {
     if (input.collection !== null && sameLayout(input.collection, undo.collection.after)) collection = undo.collection.before;
     else changed.push('the collection has been moved, resized or changed form since');
   }
-  const open = new Set(input.docs.map((d) => d.noteId));
-  const order = undo.orderBefore.filter((id) => open.has(id));
-  const current = input.docs.map((d) => d.noteId).filter((id) => order.includes(id));
+  // The stacking: the documents that were on the desk then go back into the
+  // order they were in, in the places in the stack they hold between them
+  // now. A note opened since is not one of them and keeps its place: opened
+  // on top, it stays on top. Until this it ended at the bottom, under every
+  // document the undo raised, and nothing said so.
+  const current = input.docs.map((d) => d.noteId);
+  const open = new Set(current);
+  const then = undo.orderBefore.filter((id) => open.has(id));
+  const known = new Set(then);
+  let next = 0;
+  const order = current.map((id) => (known.has(id) ? (then[next++] as string) : id));
   return { cards, collection, order: order.every((id, i) => id === current[i]) ? [] : order, changed };
 }

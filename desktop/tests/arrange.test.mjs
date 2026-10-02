@@ -8,7 +8,7 @@ import { load } from './helpers.mjs';
 const { planRead, planCompare, planRelated, planBasis, checkUndo, undoFor, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
 const { COLLECTION_HEAD_HEIGHT, cardGrid, rowOfMember, gridText } = load('shared/collection.js');
 const { SEAT, SEAT_GAP } = load('shared/focus-ring.js');
-const { reduce, initialState, deskCardsOf, collectionOf } = load('shared/store-state.js');
+const { reduce, initialState, deskCardsOf, collectionOf, DESK_ACTIONS, isRendererAction } = load('shared/store-state.js');
 
 const field = { width: 1260, height: 745 };
 const list = { x: 40, y: 60, w: 340, h: 600, collapsed: false, presentation: 'table' };
@@ -107,6 +107,25 @@ test('Show related centres the document in the room beside the list, a row of ca
   assert.ok(planRelated(input([doc('A', 20, 20)]), 'A', 0).notes.some((n) => n.includes('joined to no other note')));
 });
 
+test('Show related folds the collection to its header when the note does not fit beside the list, and stands the note under it', () => {
+  const small = { width: 800, height: 600 };
+  const plan = planRelated(input([doc('A', 100, 100)], list, small), 'A', 4);
+  assert.deepEqual(plan.collection, { ...list, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN, collapsed: true });
+  const header = plan.objects.find((o) => o.id === 'collection');
+  assert.equal(header.to.height, COLLECTION_HEAD_HEIGHT, 'the preview outlines the header alone');
+  // Centred in the whole field, since the list no longer takes the left of it, and a row of cards below the header.
+  assert.deepEqual(plan.cards, [{ noteId: 'A', x: Math.round((800 - 560) / 2), y: Math.round(ARRANGE_MARGIN + COLLECTION_HEAD_HEIGHT + ARRANGE_GAP + SEAT.height + SEAT_GAP) }]);
+  assert.ok(plan.notes.some((n) => n.includes('do not fit side by side') && n.includes('collapsed to its header')), plan.notes.join(' / '));
+  // With room beside the list it is left open, and nothing is said about folding.
+  const roomy = planRelated(input([doc('A', 100, 100)]), 'A', 4);
+  assert.equal(roomy.collection.collapsed, false);
+  assert.ok(!roomy.notes.some((n) => n.includes('collapsed')));
+  // A view with no collection on the field has nothing to fold and says nothing about one.
+  const none = planRelated(input([doc('A', 100, 100, 900, 500)], null, small), 'A', 4);
+  assert.equal(none.collection, null);
+  assert.ok(!none.notes.some((n) => n.includes('collapsed')));
+});
+
 test('a plan that would move nothing names no object', () => {
   const at = { x: ARRANGE_MARGIN + 340 + ARRANGE_GAP, y: ARRANGE_MARGIN };
   const plan = planRead(input([doc('A', at.x, at.y)], { ...list, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN }), 'A');
@@ -122,7 +141,11 @@ test('the basis of a plan changes when anything it was worked out from changes',
   assert.notEqual(planBasis(input([doc('A', 10, 10, 600, 520), doc('B', 50, 50)])), base, 'a document resized');
   assert.notEqual(planBasis(input([doc('A', 10, 10)])), base, 'a document closed');
   assert.notEqual(planBasis(input([doc('B', 50, 50), doc('A', 10, 10)])), base, 'the stacking changed');
-  assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], { ...list, collapsed: true })), base, 'the collection changed form');
+  assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], { ...list, collapsed: true })), base, 'the collection was folded to its header');
+  assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], { ...list, presentation: 'cards' })), base, 'the collection changed from a table to cards');
+  assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], { ...list, x: 41 })), base, 'the collection moved');
+  assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], { ...list, w: 400 })), base, 'the collection was resized');
+  assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], null)), base, 'the collection left the field');
   assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], list, { width: 1000, height: 745 })), base, 'the window changed size');
   assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)]), '3 changed'), base, 'a changed result is waiting');
 });
@@ -260,6 +283,29 @@ test('in a field smaller than the stored collection, Apply stores no fitted size
   assert.deepEqual(folded.collection, { ...stored, x: ARRANGE_MARGIN, y: ARRANGE_MARGIN, collapsed: true });
 });
 
+test('Undo leaves a note opened after the arrangement where it is in the stack: opened on top, it stays on top', () => {
+  const wide = { width: 1700, height: 900 };
+  const stack = (state) => deskCardsOf(state, WS, VIEW).map((c) => c.noteId);
+  let s = deskWith([{ noteId: 'C', x: 900, y: 100 }, { noteId: 'B', x: 50, y: 100 }, { noteId: 'A', x: 500, y: 100 }]);
+  const from = deskInput(s, wide);
+  const plan = planCompare(from, 'B', 'C');
+  const record = undoFor(plan, from, noSession);
+  s = reduce(s, act(plan));
+  assert.deepEqual(stack(s), ['A', 'B', 'C'], 'Compare raised its two');
+  s = reduce(s, { type: 'put-on-desk', noteId: 'D', x: 300, y: 300, w: 560, h: 520 });
+  assert.deepEqual(stack(s), ['A', 'B', 'C', 'D']);
+  const check = checkUndo(record, deskInput(s, wide));
+  assert.deepEqual(check.changed, [], 'opening a note is not a change to what the arrangement moved');
+  assert.deepEqual(stack(reduce(s, act(check))), ['C', 'B', 'A', 'D'], 'the three are in the order they were, and the note opened since is still on top');
+  // Opened since and then put under one of them by raising that one: it keeps the place it has.
+  const raised = reduce(s, { type: 'raise-card', noteId: 'A' });
+  assert.deepEqual(stack(raised), ['B', 'C', 'D', 'A']);
+  assert.deepEqual(stack(reduce(raised, act(checkUndo(record, deskInput(raised, wide))))), ['C', 'B', 'D', 'A']);
+  // With the stacking already what it was, the undo names no order.
+  const same = checkUndo({ ...record, cards: [] }, { field: wide, collection: null, docs: [doc('C', 0, 0), doc('B', 0, 0), doc('A', 0, 0), doc('D', 0, 0)] });
+  assert.deepEqual(same.order, []);
+});
+
 test('a collection that would be drawn where it already is, is not named and not stored', () => {
   // Stored 820 high and 60 down, in a field 600 high: it is drawn at the top either way.
   const tall = { x: ARRANGE_MARGIN, y: 60, w: 340, h: 820, collapsed: false, presentation: 'table' };
@@ -286,4 +332,20 @@ test('the store applies an arrangement as one change, and it changes no size', (
   assert.equal(reduce(next, { type: 'arrange', cards: [{ noteId: 'A', x: 62, y: 62 }], order: ['A', 'B'] }), next);
   // Garbage is ignored, never thrown on.
   assert.equal(reduce(next, { type: 'arrange', cards: [{ noteId: 'A', x: NaN, y: 3 }, null], order: [7] }), next);
+});
+
+test('an arrangement is a desk action a window may send: it names the view whose desk it changes', () => {
+  // Without the first a window's Apply is dropped at the channel; without the second the window does not
+  // add the view it draws, and an arrangement made on one view lands on whichever the store has selected.
+  assert.equal(isRendererAction({ type: 'arrange', cards: [] }), true, 'arrange cannot be dispatched from a window');
+  assert.ok(DESK_ACTIONS.has('arrange'), 'a window would not name the view it draws on an arrangement');
+  let s = deskWith([{ noteId: 'A', x: 500, y: 200 }]);
+  s = reduce(s, { type: 'select-view', viewId: 'features' });
+  s = reduce(s, { type: 'put-on-desk', noteId: 'A', x: 300, y: 300 });
+  // The store shows Features; a window still drawing Issues arranges the Issues desk.
+  const next = reduce(s, { type: 'arrange', cards: [{ noteId: 'A', x: 62, y: 62 }], collection: { ...list, x: 12, y: 12 }, viewId: 'issues' });
+  assert.deepEqual(deskCardsOf(next, WS, 'issues').map((c) => [c.x, c.y]), [[62, 62]]);
+  assert.deepEqual(deskCardsOf(next, WS, 'features').map((c) => [c.x, c.y]), [[300, 300]], 'the view on screen in the store took the arrangement');
+  assert.deepEqual(collectionOf(next, WS, 'issues'), { ...list, x: 12, y: 12 });
+  assert.equal(collectionOf(next, WS, 'features'), null);
 });
