@@ -265,10 +265,20 @@ test('a test note opens at its Evidence section however the heading goes on, and
   assert.equal(evidenceSectionTop(headings, 600), 600, 'no further than the text scrolls');
   assert.equal(evidenceSectionTop([{ text: 'Evidently', top: 10 }, { text: 'The evidence', top: 20 }], 2000), null, 'a heading that only contains the word is not the section');
   assert.equal(evidenceSectionTop([], 2000), null);
-  // The local calendar day, not the UTC one: the same instant is two different days in two places.
-  const lateEvening = new Date(2026, 9, 2, 23, 30);
-  assert.equal(localDay(lateEvening), '2026-10-02');
-  assert.equal(localDay(new Date(2026, 0, 5, 0, 10)), '2026-01-05');
+  // The local calendar day, not the UTC one: the same instant is two different days in two places. The
+  // zone is set here, because on a machine whose zone is at or near UTC the two days are the same.
+  const zone = process.env.TZ;
+  const noonUtc = new Date(Date.UTC(2026, 0, 4, 12, 0));
+  try {
+    process.env.TZ = 'Pacific/Kiritimati'; // fourteen hours ahead: already the 5th
+    assert.equal(localDay(noonUtc), '2026-01-05');
+    process.env.TZ = 'Pacific/Pago_Pago'; // eleven hours behind: 01:00 on the 4th
+    assert.equal(localDay(noonUtc), '2026-01-04');
+    assert.equal(localDay(new Date(Date.UTC(2026, 0, 4, 3, 0))), '2026-01-03');
+  } finally {
+    if (zone === undefined) delete process.env.TZ;
+    else process.env.TZ = zone;
+  }
 });
 
 test('a record that could not be read is not an empty one, and a workspace with no ledger says so', () => {
