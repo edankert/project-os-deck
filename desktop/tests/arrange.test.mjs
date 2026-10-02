@@ -233,6 +233,17 @@ test('the sentence a preview says is announced: its text is a polite live region
   assert.match(tag[0], /\baria-live="polite"/);
 });
 
+test('the "pick out" chips and the references among the cards show where the keyboard is with an outline, not the hover border alone', () => {
+  // Read off the built stylesheet with its comments stripped, as TST-0042 does.
+  const css = fs.readFileSync(path.join(desktopRoot, 'dist', 'web', 'deck.css'), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ selectors: m[1].split(',').map((s) => s.trim()), body: m[2] }));
+  for (const control of ['.kind-chip', '.grid-ref']) {
+    const focused = rules.filter((r) => r.selectors.includes(`${control}:focus-visible`));
+    assert.ok(focused.some((r) => /outline\s*:\s*2px solid var\(--accent\)/.test(r.body)), `${control} has no focus outline in the accent colour`);
+    assert.deepEqual(focused.filter((r) => /outline\s*:\s*(none|0)\b/.test(r.body)).map((r) => r.selectors.join(', ')), [], `${control} takes its focus outline away`);
+  }
+});
+
 test('Show related says how many notes gather and how many its list holds, and gives both when they differ', () => {
   const note = (gathers, listed) => planRelated(input([doc('A', 20, 20)]), 'A', gathers, listed).notes.at(-1);
   assert.match(note(16, 16), /^16 notes gather round A, and its list of all 16 opens\./);
