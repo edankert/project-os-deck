@@ -1216,6 +1216,12 @@ function drawDesk(): void {
       faces: currentView?.face ?? PLAIN_FACES,
       pending: pendingCount,
     });
+    // The collection says how many of its members the field has a place for,
+    // and it is painted with the list, which is drawn before the field is
+    // dealt. After a view was chosen it counted its members against the deal
+    // of the view before, and said none of them had a place. Said again now
+    // that the field has dealt this view.
+    drawCollection();
     return;
   }
   document.body.classList.remove('reading');
