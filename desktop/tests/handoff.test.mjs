@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, planLanding, settle, settleUnconfirmed, returnOf, HANDOFF_ACK_MS } = load('shared/handoff.js');
+const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, named, consequence, planLanding, settle, settleUnconfirmed, returnOf, HANDOFF_ACK_MS } = load('shared/handoff.js');
 const { reduce, initialState, deskCardsOf, persistable } = load('shared/store-state.js');
 
 const desk = { kind: 'desk', label: 'desk on Display 2', windowId: 7, view: 'issues' };
@@ -35,6 +35,30 @@ test('what is said before release names the act, the note, the place and what ha
   assert.equal(handoffLabel('move', desk), 'Move to the desk on Display 2');
   assert.equal(handoffLabel('show', desk), 'Also show in the desk on Display 2');
   assert.equal(handoffLabel('show', tablet), 'Also show in the tablet');
+});
+
+test('an empty display is offered "Also show in" only, and its entry reads as a sentence', () => {
+  // A reader that does not exist yet is already named with its article: not "the a new reader".
+  assert.deepEqual(offeredModes(fresh, { sourceView: 'features', everyView: false }), ['show']);
+  assert.equal(handoffLabel('show', fresh), 'Also show in a new reader on Display 3');
+  assert.equal(describeHandoff('FEAT-0002', 'show', fresh), 'Also show FEAT-0002 in a new reader on Display 3: this desk keeps it');
+  assert.equal(named('desk on Display 2'), 'the desk on Display 2');
+  assert.equal(named('a new reader on Display 3'), 'a new reader on Display 3');
+  for (const mode of ['move', 'show']) {
+    for (const d of [desk, main, reader, fresh, tablet]) {
+      for (const said of [handoffLabel(mode, d), describeHandoff('FEAT-0002', mode, d)]) assert.doesNotMatch(said, /the (a|an|the) /, said);
+    }
+  }
+  for (const answer of [{ type: 'timeout' }, { type: 'closed' }, { type: 'display-removed' }, { type: 'ack', ok: false, error: 'x' }, { type: 'ack', ok: true }]) {
+    assert.doesNotMatch(settle(record('show', fresh, false), answer).reply.said, /the (a|an|the) /);
+  }
+});
+
+test('what an act does to this desk is said in a few words beside each place', () => {
+  assert.equal(consequence('move', desk), 'it leaves this desk');
+  assert.equal(consequence('show', desk), 'this desk keeps it');
+  assert.equal(consequence('show', reader), 'this desk keeps it');
+  assert.match(consequence('show', tablet), /this desk keeps it; a tablet cannot confirm/);
 });
 
 test('landing on a desk puts the note there once, and never twice', () => {
@@ -151,7 +175,7 @@ test('an undone handoff gives a reader back what it showed, closes a reader it o
   assert.deepEqual(settle(toReader, { type: 'closed' }).effects, []);
   const opened = { ...record('show', fresh, false), openedWindowId: 12 };
   assert.deepEqual(settle(opened, { type: 'display-removed' }).effects, [{ type: 'close-window', windowId: 12 }]);
-  assert.match(settle(opened, { type: 'display-removed' }).reply.said, /the display the a new reader on Display 3 is on was disconnected/);
+  assert.match(settle(opened, { type: 'display-removed' }).reply.said, /the display a new reader on Display 3 is on was disconnected/);
   assert.deepEqual(settle(opened, { type: 'ack', ok: true }).effects, []);
 });
 

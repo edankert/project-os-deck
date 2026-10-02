@@ -552,6 +552,13 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   background: var(--panel);
   font-size: 12px;
 }
+/* Scenes and arrangements together are wider than a laptop's window. Scrolled sideways, the last controls
+   (the two undos) were out of sight with nothing to say so. Under 1500 px the bar is two rows, at a
+   height that is fixed for the window's width, so a button appearing still does not resize the field. */
+@media (max-width: 1500px) {
+  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: center; row-gap: 3px; overflow-x: hidden; overflow-y: auto; }
+  #scene-back { max-width: 26em; overflow: hidden; text-overflow: ellipsis; }
+}
 .field-bar .spacer { flex: 1 1 auto; }
 .field-bar .action { padding: 1px 8px; line-height: 1.4; flex: 0 0 auto; }
 .field-bar::-webkit-scrollbar { display: none; }
@@ -1320,6 +1327,29 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 
 /* A document that has just arrived from another window (FEAT-0023): marked for a moment, with no travel. */
 .pane.arrived { box-shadow: 0 0 0 2px var(--accent), 0 10px 28px rgba(0, 0, 0, 0.45); }
+/* A document being sent to another window: marked, and still read and scrolled. It is here until that window shows it. */
+.pane.sending { box-shadow: 0 0 0 2px var(--owed), 0 10px 28px rgba(0, 0, 0, 0.45); }
+.pane.sending .pane-head { border-bottom-style: dashed; }
+.target-strip .target { display: flex; flex-direction: column; gap: 1px; }
+.target-strip .target-effect { font-size: 10.5px; color: var(--ink-dim); white-space: nowrap; }
+/* A note that arrived from another window: a line of its own above the status line, until it is dismissed. */
+.arrival {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-top: 1px solid var(--accent);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+}
+.arrival[hidden] { display: none; }
+.arrival .action { padding: 0 8px; font-size: 11px; }
+/* What the answer under the keyboard or the pointer does. It takes the room that is left and never moves an answer:
+   a button that shifted when its own explanation appeared would be pressed where it no longer was. */
+.status .action { flex: 0 0 auto; }
+.choice-says { color: var(--ink-dim); margin-left: 6px; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .target-strip .target[data-mode="move"] { border-color: var(--owed); }
 
 /* Evidence beside the claim (FEAT-0024): what is recorded for the tests that

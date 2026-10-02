@@ -35,6 +35,7 @@ interface BridgeShape {
     throw(request: unknown): Promise<unknown>;
     pendingArrivals(): Promise<unknown>;
     onArrival(fn: (arrival: unknown) => void): () => void;
+    onSourceClosed(fn: (gone: unknown) => void): () => void;
     acknowledge(answer: unknown): Promise<unknown>;
     sendBack(request: unknown): Promise<unknown>;
   };
@@ -246,6 +247,13 @@ export class Host {
     const b = bridge();
     if (b === null || !this.caps.popOutWindows) return () => undefined;
     return b.windows.onArrival(fn);
+  }
+
+  /** Be told when the window a note arrived from has closed. */
+  onSourceClosed(fn: (gone: unknown) => void): () => void {
+    const b = bridge();
+    if (b === null || !this.caps.popOutWindows) return () => undefined;
+    return b.windows.onSourceClosed(fn);
   }
 
   async acknowledgeArrival(answer: { id: string; ok: boolean; error?: string }): Promise<void> {

@@ -462,7 +462,11 @@ function finishHandoff(id: string, answer: HandoffAnswer): void {
       }
     }
   }
-  if (out.record.state === 'done') cameFrom.set(`${pending.windowId}:${out.record.noteId}`, out.record);
+  // Where the note came from is kept only when it can go back there. A later
+  // arrival of the same note that cannot (shown again from a reader, which is
+  // no desk) must not replace it: the window then offered "send back" to a
+  // place the main process no longer had, and refused it with the wrong reason.
+  if (out.record.state === 'done' && returnOf(out.record, null, null) !== null) cameFrom.set(`${pending.windowId}:${out.record.noteId}`, out.record);
   pending.resolve({
     ok: out.reply.ok,
     acknowledged: out.reply.acknowledged,
@@ -477,7 +481,18 @@ function finishHandoff(id: string, answer: HandoffAnswer): void {
 function failHandoffsFor(windowId: number, answer: HandoffAnswer): void {
   for (const [id, pending] of [...handoffs]) if (pending.windowId === windowId) finishHandoff(id, answer);
   arrivals.delete(windowId);
-  for (const key of [...cameFrom.keys()]) if (key.startsWith(`${windowId}:`)) cameFrom.delete(key);
+  for (const [key, record] of [...cameFrom]) {
+    if (key.startsWith(`${windowId}:`)) {
+      cameFrom.delete(key);
+      continue;
+    }
+    // The window a note came from has closed: the window that holds the note
+    // is told, so it stops offering a way back that leads nowhere.
+    if (record.source.windowId !== windowId) continue;
+    cameFrom.delete(key);
+    const holder = BrowserWindow.fromId(Number(key.slice(0, key.indexOf(':'))));
+    if (holder !== null && !holder.isDestroyed()) holder.webContents.send('deck:handoff:source-closed', { noteId: record.noteId, from: record.source.label });
+  }
 }
 
 function registerIpc(): void {

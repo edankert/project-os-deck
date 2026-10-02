@@ -56,6 +56,14 @@ const api = {
         ipcRenderer.removeListener('deck:handoff:arrived', handler);
       };
     },
+    /** Told when the window a note arrived from has closed, so "send back" has nowhere to go. */
+    onSourceClosed: (fn: (gone: unknown) => void): (() => void) => {
+      const handler = (_event: unknown, gone: unknown): void => fn(gone);
+      ipcRenderer.on('deck:handoff:source-closed', handler);
+      return () => {
+        ipcRenderer.removeListener('deck:handoff:source-closed', handler);
+      };
+    },
     /** This window is showing an arrived note, or says why it cannot. */
     acknowledge: (answer: unknown): Promise<unknown> => ipcRenderer.invoke('deck:handoff:ack', answer),
     /** Send an arrived note back to the window it came from. */

@@ -202,6 +202,9 @@
     <!-- A change arrived under this window. Announced, never applied: a page
          that re-arranges itself while somebody is reading it loses their place. -->
     <div class="stale" id="stale" hidden></div>
+    <!-- A note that arrived from another window (FEAT-0023). Its own line, so it stays until the person
+         dismisses it or acts on the note: the status line below is written over by whatever happens next. -->
+    <div class="arrival" id="arrival" role="status" hidden></div>
     <div class="status" id="status" role="status"></div>
     <button type="button" class="actor" id="actor" hidden title="The name Deck writes with"></button>
     <script type="module" src="./renderer/renderer.js"></script>

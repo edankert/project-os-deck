@@ -52,6 +52,21 @@ export interface HandoffRequest {
   anchor: ReadingAnchor | null;
 }
 
+/**
+ * A place's name as it stands in a sentence. A window is "the desk on Display
+ * 2"; a reader that does not exist yet is already named "a new reader on
+ * Display 3", and "the a new reader" is not a sentence.
+ */
+export function named(label: string): string {
+  return /^(a|an|the) /.test(label) ? label : `the ${label}`;
+}
+
+/** What an act does to THIS desk, in a few words: shown beside each place before a note is released on it. */
+export function consequence(mode: HandoffMode, destination: Destination): string {
+  if (destination.kind === 'tablet') return 'this desk keeps it; a tablet cannot confirm';
+  return mode === 'move' ? 'it leaves this desk' : 'this desk keeps it';
+}
+
 /** How long the destination has to say it is showing the note. */
 export const HANDOFF_ACK_MS = 4000;
 
@@ -90,13 +105,13 @@ export function canAcknowledge(kind: DestinationKind): boolean {
 /** What is said before release: the act, the note, where it goes, and what happens here. */
 export function describeHandoff(noteId: string, mode: HandoffMode, destination: Destination): string {
   if (destination.kind === 'tablet') return `Also show ${noteId} on the tablet: it goes on the desk the tablet follows, this desk keeps it, and a tablet cannot confirm it arrived`;
-  if (mode === 'move') return `Move ${noteId} to the ${destination.label}: it leaves this desk once that window shows it`;
-  return `Also show ${noteId} in the ${destination.label}: this desk keeps it`;
+  if (mode === 'move') return `Move ${noteId} to ${named(destination.label)}: it leaves this desk once that window shows it`;
+  return `Also show ${noteId} in ${named(destination.label)}: this desk keeps it`;
 }
 
 /** The short name of the act, for a button or a row of a chooser. */
 export function handoffLabel(mode: HandoffMode, destination: Destination): string {
-  return `${mode === 'move' ? 'Move to' : 'Also show in'} the ${destination.kind === 'tablet' ? 'tablet' : destination.label}`;
+  return `${mode === 'move' ? 'Move to' : 'Also show in'} ${named(destination.kind === 'tablet' ? 'tablet' : destination.label)}`;
 }
 
 export interface LandingFacts {
@@ -122,11 +137,11 @@ export type Landing =
 export function planLanding(request: HandoffRequest, facts: LandingFacts): Landing {
   const { destination, mode, source, noteId } = request;
   if (!modesFor(destination.kind).includes(mode)) {
-    return { refused: `${noteId} cannot be moved to the ${destination.label}: it is not a desk. It can be shown there as well.` };
+    return { refused: `${noteId} cannot be moved to ${named(destination.label)}: it is not a desk. It can be shown there as well.` };
   }
   const sameDesk = destination.view !== null && destination.view === source.view && (destination.kind === 'desk' || destination.kind === 'main' || destination.kind === 'tablet');
   if (sameDesk && mode === 'move') {
-    return { refused: `The ${destination.label} shows this same desk, so ${noteId} is already there. Nothing was moved.` };
+    return { refused: `${named(destination.label).replace(/^./, (c) => c.toUpperCase())} shows this same desk, so ${noteId} is already there. Nothing was moved.` };
   }
   if (destination.kind === 'reader') return { put: false, reload: true, open: false, awaits: true };
   if (destination.kind === 'new-reader') return { put: false, reload: false, open: true, awaits: true };
@@ -203,18 +218,19 @@ export function settle(record: HandoffRecord, answer: HandoffAnswer): { record: 
         ok: true,
         acknowledged: true,
         mode,
-        said: mode === 'move' ? `${noteId} moved to the ${destination.label}, which is showing it` : `${noteId} is also shown in the ${destination.label}; this desk keeps it`,
+        said: mode === 'move' ? `${noteId} moved to ${named(destination.label)}, which is showing it` : `${noteId} is also shown in ${named(destination.label)}; this desk keeps it`,
       },
     };
   }
+  const there = named(destination.label);
   const why =
     answer.type === 'timeout'
-      ? `the ${destination.label} did not answer`
+      ? `${there} did not answer`
       : answer.type === 'closed'
-        ? `the ${destination.label} closed`
+        ? `${there} closed`
         : answer.type === 'display-removed'
-          ? `the display the ${destination.label} is on was disconnected`
-          : `the ${destination.label} could not show it${answer.error === undefined || answer.error === '' ? '' : `: ${answer.error}`}`;
+          ? `the display ${there} is on was disconnected`
+          : `${there} could not show it${answer.error === undefined || answer.error === '' ? '' : `: ${answer.error}`}`;
   // Exactly what the landing added is removed, and nothing else: a note the
   // destination's desk already held stays there, a reader goes back to what
   // it showed, and a reader this handoff opened is closed. A window that has

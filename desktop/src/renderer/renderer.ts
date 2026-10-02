@@ -37,7 +37,7 @@ import { CollectionView } from './collection-view.js';
 import type { GraphEdge } from '../shared/graph.js';
 import { ContextCache } from '../shared/neighbourhood.js';
 import { type Edge, type ThrowTarget, type WindowInfo, type DisplayInfo, targetsToward } from '../shared/throw.js';
-import { type Destination, type HandoffMode, describeHandoff, handoffLabel, offeredModes } from '../shared/handoff.js';
+import { type Destination, type HandoffMode, consequence, describeHandoff, handoffLabel, named, offeredModes } from '../shared/handoff.js';
 import type { ReadingAnchor } from '../shared/types.js';
 import { DEFAULT_SURFACE } from '../shared/store-state.js';
 import { surfaceKinds } from '../shared/vocabularies.js';
@@ -67,6 +67,7 @@ const el = {
   deskList: must('desk-list') as HTMLSelectElement,
   reader: must('reader'),
   status: must('status'),
+  arrival: must('arrival'),
   count: must('count'),
   hostMark: must('host-mark'),
   copyAddress: must('copy-address') as HTMLButtonElement,
@@ -611,6 +612,7 @@ async function boot(): Promise<void> {
   // for once at the start, because a reader is re-addressed and loads afresh
   // after the note was sent to it.
   host.onArrival((arrival) => void receiveArrival(arrival));
+  host.onSourceClosed((gone) => sourceClosed(gone));
   for (const arrival of await host.pendingArrivals()) void receiveArrival(arrival);
 }
 
@@ -1428,7 +1430,8 @@ function drawScenes(): void {
       const option = document.createElement('option');
       option.value = scene.name;
       const where = scene.view === null ? '' : ` · ${scene.view}`;
-      option.textContent = scene.kind === 'unreadable' ? `${scene.name} (cannot be opened)` : `${scene.name}${where} · ${scene.notes} ${scene.notes === 1 ? 'note' : 'notes'}`;
+      // An entry this Deck cannot read says so in its own words, with its version: a tooltip is not seen on a list.
+      option.textContent = scene.kind === 'unreadable' ? `${scene.name} (cannot be opened${scene.why === null ? '' : `: ${scene.why}`})` : `${scene.name}${where} · ${scene.notes} ${scene.notes === 1 ? 'note' : 'notes'}`;
       // Listed and not openable: it is there, and this Deck cannot read it.
       option.disabled = scene.kind === 'unreadable';
       if (scene.why !== null) option.title = scene.why;
@@ -1544,10 +1547,11 @@ async function saveScene(): Promise<void> {
     say(`"${name}" was saved by a newer Deck and is not replaced; choose another name`, true);
     return;
   }
-  if (existing !== undefined && name !== state.deskName) {
+  // Asked whenever the name is taken, the open scene's own name included: saving over a scene replaces what it kept (ADR-0007 A7).
+  if (existing !== undefined) {
     const answer = await askChoice(`a scene called "${name}" exists:`, [
-      { value: 'replace', label: 'replace it' },
-      { value: 'keep', label: 'keep it' },
+      { value: 'replace', label: 'replace it', says: `"${name}" will keep what is on the desk now, and what it kept before is gone.` },
+      { value: 'keep', label: 'keep it', says: `"${name}" stays as it was saved and nothing is saved now.` },
     ]);
     if (answer !== 'replace') {
       say(`"${name}" was kept as it was`);
@@ -2259,7 +2263,7 @@ async function throwTargets(edge: Edge, noteId?: string): Promise<ThrowTarget[]>
   const facts = { sourceView: deskViewHere(), everyView: isOnEveryView(state, state.workspaceId, noteId) };
   return places.flatMap((place) => {
     const destination = destinationOf(place);
-    return offeredModes(destination, facts).map((mode) => ({ ...place, mode, label: handoffLabel(mode, destination), says: describeHandoff(noteId, mode, destination) }));
+    return offeredModes(destination, facts).map((mode) => ({ ...place, mode, label: handoffLabel(mode, destination), says: describeHandoff(noteId, mode, destination), effect: consequence(mode, destination) }));
   });
 }
 
@@ -2278,10 +2282,32 @@ async function throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promis
   // A card from the field has no act of its own: it is shown there, and the field keeps its card.
   const mode: HandoffMode = target.mode ?? 'show';
   const held = deskHere().some((c) => c.noteId === card.noteId);
-  const result = await host.throwNote({
+  // Between release and the answer the document is marked as being sent. It
+  // is still here, and still read and scrolled: a move takes it only when the
+  // other window says it is showing it.
+  if (held) {
+    glass.markSending(card.noteId, true);
+    say(`${mode === 'move' ? 'moving' : 'showing'} ${card.noteId} ${mode === 'move' ? 'to' : 'in'} ${named(target.label.replace(/^(Move to|Also show in) (the )?/, ''))}; this desk keeps it until that window shows it`);
+  }
+  let result: Awaited<ReturnType<typeof host.throwNote>>;
+  try {
+    result = await sendNote(target, card, state.workspaceId, view, edge, mode, held);
+  } finally {
+    if (held) glass.markSending(card.noteId, false);
+  }
+  if (!result.ok) say(result.error ?? 'that throw did not land', true);
+  else say(result.said ?? `${card.noteId} is in ${named(target.label)}`);
+  // Moved on from here, it is no longer here to send back.
+  if (result.ok && mode === 'move') dismissArrival(card.noteId);
+  drawNavigator();
+  drawDesk();
+}
+
+function sendNote(target: ThrowTarget, card: CardModel, workspaceId: string, view: string, edge: Edge, mode: HandoffMode, held: boolean): ReturnType<typeof host.throwNote> {
+  return host.throwNote({
     target,
     noteId: card.noteId,
-    workspaceId: state.workspaceId,
+    workspaceId,
     viewId: view,
     edge,
     mode,
@@ -2289,12 +2315,6 @@ async function throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promis
     size: held ? glass.readingSize(card.noteId) : null,
     anchor: held ? glass.readingAnchor(card.noteId) : null,
   });
-  if (!result.ok) say(result.error ?? 'that throw did not land', true);
-  else say(result.said ?? `${card.noteId} is in the ${target.label}`);
-  // Moved on from here, it is no longer here to send back.
-  if (result.ok && mode === 'move') arrivedHere.delete(card.noteId);
-  drawNavigator();
-  drawDesk();
 }
 
 // ---- arrivals (FEAT-0023): a note handed to THIS window ----
@@ -2351,7 +2371,8 @@ async function receiveArrival(raw: unknown): Promise<void> {
   // It is read where it was being read, and marked so it can be found.
   if (glass.isActive()) {
     if (arrival.anchor !== null) glass.restoreReading({ [arrival.noteId]: arrival.anchor });
-    glass.markArrived(arrival.noteId);
+    // Acting on the document takes the mark and the line away, and keeps the way back (S still offers it).
+    glass.markArrived(arrival.noteId, () => dismissArrival(arrival.noteId, false));
   } else if (panel === 'note' && arrival.anchor !== null) {
     scrollReaderTo(arrival.anchor);
   }
@@ -2375,22 +2396,66 @@ function scrollReaderTo(anchor: ReadingAnchor): void {
   });
 }
 
-/** Say that a note arrived and from where, with the way back when there is one. */
+/**
+ * Say that a note arrived and from where, with the way back when there is one.
+ *
+ * On a line of its own, above the status line, and the document is marked.
+ * Both stay until the person dismisses the line or acts on the note: the
+ * status line is written over by the next thing that happens, and a mark
+ * that fades in two seconds is gone before a person on another screen has
+ * looked across.
+ */
 function sayArrival(arrival: Arrival): void {
-  el.status.classList.remove('error');
-  el.status.replaceChildren();
-  const text_ = document.createElement('span');
-  text_.textContent = `${arrival.noteId} arrived from the ${arrival.from}${arrival.mode === 'show' ? ', which keeps it too' : ''}. `;
-  el.status.appendChild(text_);
-  if (!arrival.canReturn) return;
-  const back = document.createElement('button');
-  back.type = 'button';
-  back.className = 'action';
-  back.id = 'send-back';
-  back.textContent = 'send back';
-  back.title = `Send ${arrival.noteId} back to the ${arrival.from}`;
-  back.addEventListener('click', () => void sendBack(arrival.noteId));
-  el.status.appendChild(back);
+  const said = document.createElement('span');
+  said.className = 'arrival-said';
+  said.textContent = `${arrival.noteId} arrived from ${named(arrival.from)}${arrival.mode === 'show' ? ', which keeps it too' : ''}.`;
+  const nodes: HTMLElement[] = [said];
+  if (arrival.canReturn) {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'action';
+    back.id = 'send-back';
+    back.textContent = 'send back';
+    back.title = `Send ${arrival.noteId} back to ${named(arrival.from)}`;
+    back.addEventListener('click', () => void sendBack(arrival.noteId));
+    nodes.push(back);
+  }
+  const dismiss = document.createElement('button');
+  dismiss.type = 'button';
+  dismiss.className = 'action';
+  dismiss.id = 'arrival-dismiss';
+  dismiss.textContent = 'dismiss';
+  dismiss.title = 'Take this line away. The note stays where it is.';
+  dismiss.addEventListener('click', () => dismissArrival(arrival.noteId));
+  nodes.push(dismiss);
+  el.arrival.dataset['noteId'] = arrival.noteId;
+  el.arrival.replaceChildren(...nodes);
+  el.arrival.hidden = false;
+}
+
+/** The arrival line and the document's mark are taken away: the person dismissed it, acted on the note, or sent it on. */
+function dismissArrival(noteId: string, alsoForget = true): void {
+  if (alsoForget) arrivedHere.delete(noteId);
+  if (glass.isActive()) glass.clearArrived(noteId);
+  if (el.arrival.dataset['noteId'] !== noteId) return;
+  el.arrival.hidden = true;
+  el.arrival.replaceChildren();
+  delete el.arrival.dataset['noteId'];
+}
+
+/**
+ * The window a note arrived from has closed. "send back" has nowhere to go,
+ * so it is no longer offered, and the line says why.
+ */
+function sourceClosed(raw: unknown): void {
+  const gone = raw as { noteId?: unknown; from?: unknown };
+  if (typeof gone?.noteId !== 'string' || typeof gone.from !== 'string') return;
+  if (!arrivedHere.has(gone.noteId)) return;
+  arrivedHere.delete(gone.noteId);
+  if (el.arrival.dataset['noteId'] !== gone.noteId) return;
+  const said = el.arrival.querySelector('.arrival-said');
+  if (said !== null) said.textContent = `${gone.noteId} arrived from ${named(gone.from)}, which has closed since. It stays here.`;
+  el.arrival.querySelector('#send-back')?.remove();
 }
 
 /** Send an arrived note back where it came from: the same handoff in reverse. */
@@ -2405,7 +2470,7 @@ async function sendBack(noteId: string): Promise<boolean> {
     say(result.error ?? `${noteId} could not be sent back`, true);
     return false;
   }
-  arrivedHere.delete(noteId);
+  dismissArrival(noteId);
   say(result.said ?? `${noteId} was sent back`);
   drawNavigator();
   drawDesk();
@@ -2437,7 +2502,10 @@ async function sendTo(card: CardModel): Promise<void> {
     say('there is no other window to send it to; pop one out first', true);
     return;
   }
-  const options = [...(arrival === undefined ? [] : [{ value: BACK, label: `Send back to the ${arrival.from}` }]), ...[...seen.keys()].map((label) => ({ value: label, label }))];
+  const options = [
+    ...(arrival === undefined ? [] : [{ value: BACK, label: `Send back to ${named(arrival.from)}`, says: `${card.noteId} goes back where it came from and leaves this desk once that window shows it.` }]),
+    ...[...seen].map(([label, { target }]) => ({ value: label, label, ...(target.says === undefined ? {} : { says: target.says }) })),
+  ];
   const chosen = await askChoice(`${card.noteId}:`, options);
   if (chosen === null) return;
   if (chosen === BACK) {
@@ -2730,36 +2798,61 @@ function askText(label: string, initial = ''): Promise<string | null> {
 }
 
 /** The same asking place, for a choice between named things. */
-function askChoice<T extends string>(label: string, options: Array<{ value: T; label: string }>): Promise<T | null> {
+function askChoice<T extends string>(label: string, options: Array<{ value: T; label: string; says?: string }>): Promise<T | null> {
   return new Promise((resolve) => {
+    // Where the keyboard was, so closing the question with Escape puts it back.
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     el.status.classList.remove('error');
     el.status.replaceChildren();
     const caption = document.createElement('span');
     caption.textContent = `${label} `;
     el.status.appendChild(caption);
-    for (const option of options) {
+    // What the answer under the keyboard or the pointer does, said before it is chosen.
+    const says = document.createElement('span');
+    says.className = 'choice-says';
+    const finish = (value: T | null): void => {
+      el.status.removeEventListener('keydown', onKey);
+      say('');
+      resolve(value);
+    };
+    const buttons: HTMLButtonElement[] = [];
+    for (const option of [...options, { value: null, label: 'cancel', says: 'Nothing is sent and nothing changes.' }]) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'action';
       button.textContent = option.label;
-      button.addEventListener('click', () => {
-        say('');
-        resolve(option.value);
-      });
+      const tell = (): void => {
+        says.textContent = option.says ?? '';
+      };
+      button.addEventListener('focus', tell);
+      button.addEventListener('pointerenter', tell);
+      button.addEventListener('click', () => finish(option.value as T | null));
       el.status.appendChild(button);
+      buttons.push(button);
     }
-    const cancel = document.createElement('button');
-    cancel.type = 'button';
-    cancel.className = 'action';
-    cancel.textContent = 'cancel';
-    cancel.addEventListener('click', () => {
-      say('');
-      resolve(null);
-    });
-    el.status.appendChild(cancel);
+    el.status.appendChild(says);
+    const onKey = (event: KeyboardEvent): void => {
+      const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (event.key === 'Escape') {
+        // Closes the question and changes nothing; the keyboard goes back where it was.
+        event.preventDefault();
+        event.stopPropagation();
+        finish(null);
+        before?.focus({ preventScroll: true });
+      } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        event.stopPropagation();
+        buttons[(at + 1) % buttons.length]?.focus();
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        event.stopPropagation();
+        buttons[(at - 1 + buttons.length) % buttons.length]?.focus();
+      }
+    };
+    el.status.addEventListener('keydown', onKey);
     // The keyboard lands on the first answer, so a choice asked from a key
     // press can be answered with keys alone (TASK-0055's send to).
-    (el.status.querySelector('button') as HTMLButtonElement | null)?.focus();
+    buttons[0]?.focus();
   });
 }
 

@@ -2882,12 +2882,38 @@ export class GlassField {
   }
 
   /** Mark a document that has just arrived from another window, and put the keyboard on it. */
-  markArrived(noteId: string): void {
+  /**
+   * Mark a document that has just arrived from another window, and give it
+   * the keyboard. The mark stays until the person acts on the document (a
+   * press or a key in it) or dismisses the line that announced it; `acted`
+   * is told the first.
+   */
+  markArrived(noteId: string, acted: () => void = () => undefined): void {
     const pane = this.paneEls.get(noteId);
     if (pane === undefined) return;
     pane.classList.add('highlight', 'arrived');
-    setTimeout(() => pane.classList.remove('highlight', 'arrived'), 2400);
+    // The pulse is a moment; the mark is not.
+    setTimeout(() => pane.classList.remove('highlight'), 2400);
     (pane.querySelector('.pane-head') as HTMLElement | null)?.focus({ preventScroll: true });
+    const once = (): void => {
+      pane.removeEventListener('pointerdown', once, true);
+      pane.removeEventListener('keydown', once, true);
+      if (!pane.classList.contains('arrived')) return;
+      pane.classList.remove('arrived');
+      acted();
+    };
+    pane.addEventListener('pointerdown', once, true);
+    pane.addEventListener('keydown', once, true);
+  }
+
+  /** Take the arrival mark off a document. */
+  clearArrived(noteId: string): void {
+    this.paneEls.get(noteId)?.classList.remove('arrived', 'highlight');
+  }
+
+  /** Mark a document as being sent to another window, or take the mark off. It stays readable and scrollable. */
+  markSending(noteId: string, on: boolean): void {
+    this.paneEls.get(noteId)?.classList.toggle('sending', on);
   }
 
   /** What this window shows for a note: its document's state, or null when it has no document for it. */
@@ -3367,9 +3393,19 @@ export class GlassField {
         const item = document.createElement('span');
         item.className = 'target';
         item.dataset['index'] = String(i);
-        item.textContent = target.label;
+        const name = document.createElement('span');
+        name.className = 'target-name';
+        name.textContent = target.label;
+        item.appendChild(name);
         if (target.mode !== undefined) item.dataset['mode'] = target.mode;
-        // What releasing here does, before it is done: where the note goes and whether it leaves this desk.
+        // What releasing here does, before it is done, in words on the entry itself: whether the note
+        // leaves this desk. The whole sentence is the tooltip.
+        if (target.effect !== undefined) {
+          const effect = document.createElement('small');
+          effect.className = 'target-effect';
+          effect.textContent = target.effect;
+          item.appendChild(effect);
+        }
         if (target.says !== undefined) item.title = target.says;
         return item;
       }),
@@ -5428,6 +5464,11 @@ export class GlassField {
       if ((event.key === 'Delete' || event.key === 'Backspace') && this.localHeld.some((c) => c.noteId === noteId)) {
         event.preventDefault();
         void this.putBack(noteId);
+      } else if (event.key === 's' || event.key === 'S') {
+        // S is answered, not ignored: the page says that a tablet sends nothing (FEAT-0023). Until this the
+        // key did nothing here, and a person could not tell a missing feature from a broken one.
+        event.preventDefault();
+        void this.sendFromPane(noteId);
       }
       return;
     }

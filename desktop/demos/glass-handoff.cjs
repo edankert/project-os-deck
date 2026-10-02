@@ -21,6 +21,7 @@ module.exports = async function (d) {
   const store = () => d.store.getState();
   const deskOf = (view) => (store().viewDesks[ws] && store().viewDesks[ws][view] ? store().viewDesks[ws][view] : []);
   const status = (w = win) => d.js(w, `document.getElementById('status').textContent`);
+  const arrivalLine = (w = win) => d.js(w, `(document.getElementById('arrival').hidden ? '' : document.getElementById('arrival').textContent)`);
   const choices = () => js(`[...document.querySelectorAll('#status button')].map((b) => b.textContent)`);
   const choose = async (label) => {
     const at = await js(`(() => { const b = [...document.querySelectorAll('#status button')].find((x) => x.textContent === ${JSON.stringify(label)}); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
@@ -90,8 +91,8 @@ module.exports = async function (d) {
   check(JSON.stringify(order) === JSON.stringify(['F-', 'FI', '-I']), 'it was on both desks before it left this one, and never on neither: the source let go after the destination had it', order);
   check(landed !== undefined && landed.w === reading.size.w && landed.h === reading.size.h, 'it arrived at the size it was read at', landed);
   // A card on screen, not an element of the pool left from another note; and what the desk window lists, read from the window itself.
-  const arrived = await d.js(desk, `(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); const r = c ? c.getBoundingClientRect() : null; return { card: !!c && r.width > 0 && r.height > 0, markedNotInThisView: !!c && c.dataset.elsewhere === 'true', says: c ? getComputedStyle(c, '::after').content : '', surface: document.body.dataset.surface, windowLists: document.getElementById('status').textContent, status: document.getElementById('status').textContent, back: !!document.getElementById('send-back') }; })()`);
-  check(arrived.card && arrived.markedNotInThisView && /not in this view/.test(arrived.says) && arrived.status.includes(`${a} arrived from the Deck on`) && arrived.back, 'the desk window, which lists Issues and draws its desk as cards, draws the feature as a card marked "not in this view", says where it came from, and offers "send back"', arrived);
+  const arrived = await d.js(desk, `(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); const r = c ? c.getBoundingClientRect() : null; return { card: !!c && r.width > 0 && r.height > 0, markedNotInThisView: !!c && c.dataset.elsewhere === 'true', says: c ? getComputedStyle(c, '::after').content : '', surface: document.body.dataset.surface, windowLists: document.getElementById('status').textContent, status: (document.getElementById('arrival').hidden ? '' : document.getElementById('arrival').textContent), back: !!document.getElementById('send-back'), dismiss: !!document.getElementById('arrival-dismiss') }; })()`);
+  check(arrived.card && arrived.markedNotInThisView && /not in this view/.test(arrived.says) && arrived.status.includes(`${a} arrived from the Deck on`) && arrived.back && arrived.dismiss, 'the desk window, which lists Issues and draws its desk as cards, draws the feature as a card marked "not in this view", says where it came from, and offers "send back"', arrived);
   await d.shot(desk, '03-arrived-on-the-desk-window');
 
   // ---- 4. Sent back: the same document, read where it was ----
@@ -102,10 +103,33 @@ module.exports = async function (d) {
   for (let i = 0; i < 80; i += 1) { await d.delay(100); home = deskOf('features').find((c) => c.noteId === a); if (home && !deskOf('issues').some((c) => c.noteId === a)) break; }
   d.focusApp(win);
   await d.delay(1500);
-  const after = { size: await js(`${glass}.readingSize(${JSON.stringify(a)})`), anchor: await js(`${glass}.readingAnchor(${JSON.stringify(a)})`), mark: await js(`document.getElementById('status').textContent`), deskStatus: await status(desk) };
+  const after = { size: await js(`${glass}.readingSize(${JSON.stringify(a)})`), anchor: await js(`${glass}.readingAnchor(${JSON.stringify(a)})`), mark: await js(`(document.getElementById('arrival').hidden ? '' : document.getElementById('arrival').textContent)`), deskStatus: await status(desk) };
   check(home !== undefined && !deskOf('issues').some((c) => c.noteId === a) && /moved to the Deck on/.test(after.deskStatus), '"send back" on the desk window moves it back: it is on this desk and off that one', { deskStatus: after.deskStatus });
   check(after.size !== null && after.size.w === reading.size.w && after.size.h === reading.size.h && after.anchor !== null && after.anchor.heading === reading.anchor.heading && Math.abs(after.anchor.past - reading.anchor.past) <= 2 && after.mark.includes(`${a} arrived from the desk on`), 'back in the main window it is the size it was and is read where it was being read, and the main window says it arrived', { before: reading, after });
   await d.shot(win, '04-sent-back');
+  // The mark and the line stay: four seconds on, both are still there. A press in the document takes both away, and S still offers the way back.
+  const paneA = `[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)})`;
+  await d.delay(4200);
+  const stayed = { marked: await js(`${paneA}.classList.contains('arrived')`), line: await arrivalLine() };
+  const bodyAt = await js(`(() => { const r = ${paneA}.querySelector('.pane-body').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  await d.pointer(win, d.click(bodyAt));
+  await d.delay(400);
+  const acted = { marked: await js(`${paneA}.classList.contains('arrived')`), line: await arrivalLine() };
+  const stillOffered = await askWhere(a);
+  check(stayed.marked && stayed.line.includes(`${a} arrived from the desk on`) && !acted.marked && acted.line === '' && stillOffered.some((o) => o.startsWith('Send back to the desk')), 'four seconds after it arrived the document is still marked and the line still says where it came from; a press in the document takes both away, and S still offers "Send back"', { stayed, acted, offered: stillOffered });
+  // The chooser by keyboard: arrows move between the answers, each says what it does, and Escape closes it and changes nothing.
+  const deskBeforeKeys = JSON.stringify([deskOf('features'), deskOf('issues')]);
+  const focusedAnswer = () => js(`({ text: document.activeElement.textContent, says: (document.querySelector('#status .choice-says') || {}).textContent || '' })`);
+  const k0 = await focusedAnswer();
+  d.press(win, 'Right'); await d.delay(150);
+  const k1 = await focusedAnswer();
+  d.press(win, 'Right'); await d.delay(150);
+  const k2 = await focusedAnswer();
+  d.press(win, 'Left'); await d.delay(150);
+  const k3 = await focusedAnswer();
+  d.press(win, 'Escape'); await d.delay(400);
+  const afterEscape = await js(`({ buttons: document.querySelectorAll('#status button').length, on: (document.activeElement.closest('.pane') || { dataset: {} }).dataset.noteId || document.activeElement.className })`);
+  check(k0.text.startsWith('Send back to the desk') && /leaves this desk once that window shows it/.test(k0.says) && k1.text !== k0.text && k2.text !== k1.text && k3.text === k1.text && k1.says !== '' && afterEscape.buttons === 0 && afterEscape.on === a && JSON.stringify([deskOf('features'), deskOf('issues')]) === deskBeforeKeys, 'in the chooser the arrow keys move between the answers, each says what it does before it is chosen, and Escape closes it with nothing sent and the keyboard back on the document', { k0, k1, k2, k3, afterEscape });
 
   // ---- 5. Also show in a reader: this desk keeps it ----
   const readerOffer = (await askWhere(a)).find((o) => o.startsWith('Also show in the reader'));
@@ -114,9 +138,9 @@ module.exports = async function (d) {
   for (let i = 0; i < 750; i += 1) { await d.delay(20); said = await status(); if (/also shown in|stays here/.test(said)) break; }
   const showMs = Date.now() - shownAt;
   await d.delay(600);
-  const inReader = await d.js(reader, `(() => { const r = document.getElementById('reader'); const page = document.scrollingElement; const h = [...r.querySelectorAll('h2')].find((x) => x.textContent.trim() === ${JSON.stringify(reading.anchor.heading)}); return { address: new URLSearchParams(location.search).get('address'), text: r.textContent.length, scrollTop: Math.max(r.scrollTop, page.scrollTop), headingTop: h ? Math.round(h.getBoundingClientRect().top - r.getBoundingClientRect().top) : null, sizes: [r.scrollHeight, r.clientHeight, page.scrollHeight, page.clientHeight], status: document.getElementById('status').textContent }; })()`);
+  const inReader = await d.js(reader, `(() => { const r = document.getElementById('reader'); const page = document.scrollingElement; const h = [...r.querySelectorAll('h2')].find((x) => x.textContent.trim() === ${JSON.stringify(reading.anchor.heading)}); return { address: new URLSearchParams(location.search).get('address'), text: r.textContent.length, scrollTop: Math.max(r.scrollTop, page.scrollTop), headingTop: h ? Math.round(h.getBoundingClientRect().top - r.getBoundingClientRect().top) : null, sizes: [r.scrollHeight, r.clientHeight, page.scrollHeight, page.clientHeight], status: (document.getElementById('arrival').hidden ? '' : document.getElementById('arrival').textContent), lineInView: (() => { const b = document.getElementById('arrival').getBoundingClientRect(); return b.height > 0 && b.bottom <= window.innerHeight + 1; })() }; })()`);
   check(/also shown in the reader on .*; this desk keeps it/.test(said) && deskOf('features').some((c) => c.noteId === a) && inReader.address.includes(`note=${encodeURIComponent(a)}`) && inReader.text > 200, `Also show: the reader window now shows ${a}, and this desk still holds it`, { said, reader: inReader });
-  check(inReader.scrollTop > 0 && inReader.headingTop !== null && Math.abs(inReader.headingTop + reading.anchor.past) <= 40 && inReader.status.includes('which keeps it too') && inReader.sizes[2] <= inReader.sizes[3] + 1, 'the reader opens it where it was being read, says the other window keeps it too, and scrolls inside itself so that message stays on screen', inReader);
+  check(inReader.scrollTop > 0 && inReader.headingTop !== null && Math.abs(inReader.headingTop + reading.anchor.past) <= 40 && inReader.status.includes('which keeps it too') && inReader.lineInView && inReader.sizes[2] <= inReader.sizes[3] + 1, 'the reader opens it where it was being read, says the other window keeps it too, and scrolls inside itself so that message stays on screen', inReader);
   await d.shot(reader, '05-also-shown-in-the-reader');
   d.log('from release to the answer, in the box', { toADeskWindowMs: moveMs, toAReaderWindowMs: showMs, waitAllowedMs: 4000, readerAllowedMs: 12000 });
   // "send back" from the reader: the main window still holds the note, so it is brought to the front there.
@@ -143,8 +167,17 @@ module.exports = async function (d) {
   await d.delay(300);
   const startedAt = Date.now();
   await choose((await askWhere(a)).find((o) => o.startsWith('Move to the desk')));
+  // Between release and the answer: marked as being sent, still on this desk, and still scrolled.
+  await d.delay(700);
+  const during = await js(`(() => { const p = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); const b = p.querySelector('.pane-body'); const r = b.getBoundingClientRect(); return { sending: p.classList.contains('sending'), said: document.getElementById('status').textContent, top: b.scrollTop, x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  for (let i = 0; i < 4; i += 1) { d.wheel(win, during.x, during.y, 120); await d.delay(40); }
+  await d.delay(300);
+  const scrolledWhileSending = await js(`(() => { const p = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); return { sending: p.classList.contains('sending'), top: p.querySelector('.pane-body').scrollTop }; })()`);
+  check(during.sending && /^moving .* to the desk on .*; this desk keeps it until that window shows it$/.test(during.said) && deskOf('features').some((c) => c.noteId === a) && scrolledWhileSending.sending && scrolledWhileSending.top !== during.top, 'between release and the answer the document is marked as being sent and the window says it is still here; it is still on this desk and the wheel still scrolls it', { during, scrolledWhileSending });
   for (let i = 0; i < 120; i += 1) { await d.delay(100); said = await status(); if (/stays here|moved to/.test(said)) break; }
   const waited = Date.now() - startedAt;
+  const afterWait = await js(`[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}).classList.contains('sending')`);
+  check(afterWait === false, 'when the answer is known the mark is gone', afterWait);
   check(/stays here: the desk on .* did not answer\. Nothing was moved\./.test(said) && JSON.stringify([deskOf('features'), deskOf('issues')]) === before && waited >= 3500, `a desk window that does not answer: after ${Math.round(waited / 100) / 10} s the main window says the note stays here, and both desks are exactly as they were`, { said, waited });
   await d.shot(win, '06-no-answer');
   await d.delay(6000);
@@ -157,6 +190,10 @@ module.exports = async function (d) {
   desk.destroy();
   for (let i = 0; i < 80; i += 1) { await d.delay(100); said = await status(); if (/stays here|moved to/.test(said)) break; }
   check(/stays here: the desk on .* closed\. Nothing was moved\./.test(said) && JSON.stringify([deskOf('features'), deskOf('issues')]) === before, 'a desk window closed before it answered: the note stays here, and both desks are as they were', { said });
+  // That desk window is where this note came back from earlier. It is gone, so no way back to it is offered.
+  const afterClose = await askWhere(a);
+  await choose('cancel');
+  check(!afterClose.some((o) => o.startsWith('Send back')), 'the window the note once came back from has closed, and S offers no "Send back" to it', afterClose);
 
   // ---- 8. The same desk, and a note kept on every view, are not offered a move ----
   const same = await openPanel(formatAddress(addressFor(ws, 'features', { panel: 'desk' })), 'desk', { x: 1110, y: 0, width: 700, height: 420 });
@@ -179,14 +216,31 @@ module.exports = async function (d) {
   d.press(win, 'v');
   await d.delay(600);
 
+  // ---- 8b. The display the destination is on goes away before it answers ----
+  // No display was unplugged: the box has one screen. This walk sends the main process the same event
+  // Electron sends when a display is removed, naming the display the desk window is on.
+  {
+    const { screen } = require('electron');
+    const beforeGone = JSON.stringify([deskOf('features'), deskOf('issues')]);
+    void d.js(issues2, `(() => { const end = Date.now() + 7000; while (Date.now() < end) { /* busy */ } return true; })()`).catch(() => null);
+    await d.delay(300);
+    await choose((await askWhere(a)).find((o) => o.startsWith('Move to the desk')));
+    await d.delay(700);
+    screen.emit('display-removed', {}, screen.getDisplayMatching(issues2.getBounds()));
+    for (let i = 0; i < 60; i += 1) { await d.delay(100); said = await status(); if (/stays here|moved to/.test(said)) break; }
+    check(/stays here: the display the desk on .* is on was disconnected\. Nothing was moved\./.test(said) && JSON.stringify([deskOf('features'), deskOf('issues')]) === beforeGone, 'when the display the desk window is on is reported removed before it answers, the main window says so, the note stays here and both desks are as they were (the event was sent by this walk; no display was unplugged)', { said });
+    // The desk window comes back to life and finds nothing to show; give it time before it is used again.
+    await d.delay(11000);
+  }
+
   // ---- 9. By pointer: the header dragged to the edge names the acts where it will be released ----
   const head = await t.rect(`.pane[data-note-id="${a}"] .pane-title`);
   const f = await t.field();
   await d.pointer(win, [{ type: 'move', x: head.x, y: head.y }, { type: 'down', x: head.x, y: head.y }, { type: 'move', x: head.x + 80, y: head.y + 10 }, { type: 'move', x: f.right - 20, y: head.y + 30 }, { type: 'move', x: f.right - 6, y: head.y + 40 }]);
   await d.delay(900);
-  const strip = await js(`[...document.querySelectorAll('#target-strip .target')].map((e) => { const r = e.getBoundingClientRect(); return { text: e.textContent, says: e.title, mode: e.dataset.mode || null, x: r.left + r.width / 2, y: r.top + r.height / 2 }; })`);
+  const strip = await js(`[...document.querySelectorAll('#target-strip .target')].map((e) => { const r = e.getBoundingClientRect(); return { text: (e.querySelector('.target-name') || e).textContent, effect: (e.querySelector('.target-effect') || {}).textContent || '', says: e.title, mode: e.dataset.mode || null, x: r.left + r.width / 2, y: r.top + r.height / 2 }; })`);
   const moveTarget = strip.find((s) => s.mode === 'move');
-  check(strip.length >= 2 && moveTarget !== undefined && moveTarget.text.startsWith('Move to the desk') && /leaves this desk once that window shows it/.test(moveTarget.says) && strip.some((s) => s.mode === 'show'), 'dragged to the edge, the strip names each place with its act, and each says what releasing there does', strip.map((s) => [s.text, s.says]));
+  check(strip.length >= 2 && moveTarget !== undefined && moveTarget.text.startsWith('Move to the desk') && moveTarget.effect === 'it leaves this desk' && /leaves this desk once that window shows it/.test(moveTarget.says) && strip.filter((s) => s.mode === 'show').every((s) => /this desk keeps it/.test(s.effect)), 'dragged to the edge, the strip names each place with its act, and each entry says in its own words what releasing there does to this desk: a move "it leaves this desk", a show "this desk keeps it"', strip.map((s) => [s.text, s.effect]));
   await d.shot(win, '07-the-strip-names-the-act');
   await d.pointer(win, [{ type: 'move', x: moveTarget.x, y: moveTarget.y }, { type: 'move', x: moveTarget.x + 1, y: moveTarget.y }, { type: 'up', x: moveTarget.x, y: moveTarget.y }]);
   for (let i = 0; i < 80; i += 1) { await d.delay(100); said = await status(); if (/moved to|stays here/.test(said)) break; }
@@ -203,9 +257,20 @@ module.exports = async function (d) {
   for (let i = 0; i < 60; i += 1) { await d.delay(50); mark = await js(`(() => { const p = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); return p ? { arrived: p.classList.contains('arrived'), animations: p.getAnimations().length } : null; })()`); if (mark && mark.arrived) break; }
   d.focusApp(win);
   await d.delay(600);
-  check(mark !== null && mark.arrived && mark.animations === 0 && (await status()).includes('arrived from the desk on'), 'with reduced motion the returned document does not travel; it is marked as arrived and the message is the same', mark);
+  check(mark !== null && mark.arrived && mark.animations === 0 && (await js(`(document.getElementById('arrival').hidden ? '' : document.getElementById('arrival').textContent)`)).includes('arrived from the desk on'), 'with reduced motion the returned document does not travel; it is marked as arrived and the message is the same', mark);
   await dbg.sendCommand('Emulation.setEmulatedMedia', { features: [] });
   dbg.detach();
+  // The window it came from closes while the line is on screen: the line says so, and the way back is gone from the line and from S.
+  issues2.destroy();
+  await d.delay(800);
+  const closedLine = { line: await arrivalLine(), back: await js(`!!document.getElementById('send-back')`), marked: await js(`[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}).classList.contains('arrived')`) };
+  // The line is dismissed by its own control, and the mark goes with it. (Before S is pressed: a key in the document is acting on it.)
+  await t.clickOn('#arrival-dismiss', 400);
+  const dismissed = { line: await arrivalLine(), marked: await js(`[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}).classList.contains('arrived')`) };
+  const offeredAfter = await askWhere(a);
+  if (offeredAfter.length > 0) await choose('cancel');
+  check(/arrived from the desk on .*, which has closed since\. It stays here\./.test(closedLine.line) && !closedLine.back && !offeredAfter.some((o) => o.startsWith('Send back')), 'when the window a note arrived from closes, the line says it has closed and that the note stays here, and "send back" is offered neither in the line nor by S', { closedLine, offered: offeredAfter });
+  check(closedLine.marked && dismissed.line === '' && !dismissed.marked, '"dismiss" takes the line away and the mark with it; until then both were still there', { before: closedLine.marked, dismissed });
 
   // ---- 11. A card from the field: thrown as before, and the field keeps its card ----
   // (The existing throw is checked by the smoke run; here only that it still lands and names no act.)
@@ -230,6 +295,27 @@ module.exports = async function (d) {
     await choose('cancel');
     d.log('NOT RUN: the served page was not counted as following, so the tablet was not offered', withTablet);
   }
+  // On the served page: S on a document says a tablet sends nothing, and a document dragged to the edge is shown no strip.
+  await d.js(page, `[...document.querySelectorAll('#switcher button')].find((x) => x.dataset.viewId === 'features').click()`);
+  await d.delay(2500);
+  d.focusApp(page);
+  await d.delay(400);
+  // A row of the page's own list is opened there: a document of the page's own, which the Mac's desk does not hold.
+  const servedRow = await d.js(page, `(() => { const open = new Set([...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId)); const r = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].find((x) => !x.hidden && !open.has(x.dataset.noteId)); if (!r) return null; r.scrollIntoView({ block: 'center' }); r.click(); return { id: r.dataset.noteId }; })()`);
+  if (servedRow === null) throw new Error('the served page lists no row to open');
+  await d.delay(2000);
+  await d.js(page, `[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(servedRow.id)}).querySelector('.pane-head').focus()`);
+  d.press(page, 's');
+  await d.delay(500);
+  const servedSaid = await status(page);
+  const servedHead = await d.js(page, `(() => { const r = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(servedRow.id)}).querySelector('.pane-title').getBoundingClientRect(); const f = document.getElementById('field').getBoundingClientRect(); return { x: r.left + 20, y: r.top + r.height / 2, right: f.right }; })()`);
+  await d.pointer(page, [{ type: 'move', x: servedHead.x, y: servedHead.y }, { type: 'down', x: servedHead.x, y: servedHead.y }, { type: 'move', x: servedHead.x + 80, y: servedHead.y + 10 }, { type: 'move', x: servedHead.right - 20, y: servedHead.y + 30 }, { type: 'move', x: servedHead.right - 6, y: servedHead.y + 40 }]);
+  await d.delay(900);
+  const servedStrip = await d.js(page, `({ hidden: document.getElementById('target-strip').hidden, targets: document.querySelectorAll('#target-strip .target').length })`);
+  await d.pointer(page, [{ type: 'up', x: servedHead.right - 6, y: servedHead.y + 40 }]);
+  await d.delay(300);
+  check(servedSaid === 'a tablet follows the Mac and sends nothing back' && servedStrip.hidden && servedStrip.targets === 0, 'on the served page S on a document says "a tablet follows the Mac and sends nothing back", and a document dragged to the edge is shown no strip of places', { servedSaid, servedStrip });
+  d.focusApp(win);
   const served = await d.js(page, `({ bridge: typeof window.deck, back: !!document.getElementById('send-back'), arrange: document.getElementById('arrange').hidden })`);
   const refused = await fetch(`${d.origin}/deck/sidecar/${ws}/api/notes/tick`, { method: 'POST', body: '{}' });
   check(served.bridge === 'undefined' && !served.back && refused.status === 405, 'the served page has no bridge: it is never told of an arrival, offers no "send back", and the host still answers 405 to a write', { ...served, write: refused.status });

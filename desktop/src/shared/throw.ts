@@ -125,7 +125,12 @@ export type ThrowTarget = (
   | { kind: 'window'; windowId: number; carries: WindowInfo['carries']; label: string; displayId: number; view?: string | null }
   | { kind: 'display'; displayId: number; label: string }
   | { kind: 'tablet'; label: string }
-) & { mode?: 'move' | 'show'; says?: string };
+) & {
+  mode?: 'move' | 'show';
+  says?: string;
+  /** What the act does to this desk, in a few words, shown beside the place before a note is released on it. */
+  effect?: string;
+};
 
 function centre(r: Rect): { x: number; y: number } {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
