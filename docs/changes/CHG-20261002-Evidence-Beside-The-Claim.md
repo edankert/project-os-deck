@@ -7,7 +7,7 @@ owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-02
 source: ["Edwin 2026-10-01: 'Deliver the structured-evidence experience described under FEAT-0021, establishing its required source contracts first.'"]
-commit: "1a71001"
+commit: "1a71001..18f5405"
 pr: ""
 impacts: ["desktop/src/shared/evidence.ts", "desktop/src/main/host.ts", "desktop/src/shared/sidecar-client.ts", "desktop/src/renderer/renderer.ts", "desktop/src/renderer/glass.ts", "desktop/src/renderer/deck.css", "desktop/fixtures/acceptance/", "desktop/demos/glass-evidence.cjs", "docs/reference/cockpit-adoption.md"]
 issues: []
@@ -33,6 +33,15 @@ This repository has no survey notes, so each line names the screen in words.
 - **Glass, a criterion line in a note's text:** a line that links a test note has a control, "evidence named on this line", which lists only that line's tests.
 - **The page a tablet loads:** the same control and the same panel.
 - **A document's other panels:** a document that leaves the desk now opens next time with its panels closed, however it left.
+
+## What the independent review changed, 2026-10-02
+
+Two reviewers read FEAT-0024 and requested changes, and a second round found three narrower cases. All are fixed; the feature note's Review section lists each. What a person now sees differently:
+
+- **"Open the test note" lands at the Evidence section** of a note headed "Evidence (fill after running)", which is the template's heading, and of a note whose title itself begins with the word.
+- **An acceptance answer Deck cannot read all the way down is said to be unread**, naming the part, and no check reads "not walked" because a field was renamed.
+- **A check with no standing verdict and an earlier one in its history** reads "no verdict stands. An earlier one, pass on 2026-08-30, is in the history", not "not walked".
+- **E pressed in the panel closes it.** A criterion written as a plain bullet under a heading that says "criteria" has the control. A date that is not a date is no date. Staleness counts local days.
 
 ## What changed underneath
 

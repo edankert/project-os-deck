@@ -7,7 +7,7 @@ owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-02
 source: ["Edwin 2026-10-01: 'Fully implement the documented Glass / Minority Report interaction direction in project-os-deck, delivering a working, polished experience backed by real verification.'", "[[DES-0003-Collections-And-Documents-On-Glass]]"]
-commit: "81d4632..e86b2e4"
+commit: "81d4632..18f5405"
 pr: ""
 impacts: ["desktop/src/renderer/glass.ts", "desktop/src/renderer/renderer.ts", "desktop/src/renderer/collection-view.ts", "desktop/src/renderer/navigator.ts", "desktop/src/renderer/link-lines.ts", "desktop/src/renderer/deck.css", "desktop/src/renderer/index.html", "desktop/src/shared/collection.ts", "desktop/src/shared/arrange.ts", "desktop/src/shared/store-state.ts", "desktop/src/main/host.ts", "desktop/src/main/smoke-glass.ts", "desktop/demos/", "tools/scripts/walk-in-a-box.sh"]
 issues: ["[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]"]
@@ -34,6 +34,20 @@ This repository has no survey notes, so each line names the screen in words.
 - **Glass, the bar above the field:** "Read", "Compare" and "Show related" arrange the open documents. Each shows outlines of where things will go and waits for "apply". "undo" puts everything back and says if something changed meanwhile. From 1500 px the bar is one row. Under 1500 px these buttons, "close all" and the counts have a row of their own, and under 1200 px the scene controls have one too, so no control is cut off in a narrow window. The bar's height depends only on the window's width.
 - **A narrow window, and the page a tablet loads:** under 720 px the collection and one document take turns, with a bar to switch. The served page opens documents of its own and never changes the Mac's desk.
 - **Spread and List:** unchanged.
+
+## What the independent review changed, 2026-10-02
+
+Two reviewers read each of FEAT-0017, FEAT-0020 and FEAT-0022 and requested changes. Each feature note has a Review section with every finding. What a person now sees differently:
+
+- **A note keeps its size when another note is resized.** A note that had no size of its own (put on the desk from Spread, or from an older state file) used to follow the size chosen for the note beside it.
+- **The resize corner.** A press on a document's corner that does not move changes nothing, and Escape during a drag of the corner puts the size back. Escape during a drag or a resize of the collection ends it; what the pointer does afterwards moves nothing.
+- **A list that changed is always offered.** A refreshed list that differs only in its order, or in something a row shows such as progress or a title, used to be held with nothing to press. It is said in the collection ("the order of the rows changed", "3 notes changed what they show") and applied on request.
+- **The served page can open a collection the Mac folded.** The fold there is the page's own and tells the Mac nothing.
+- **Closing a document** puts the keyboard on the row it came from, or on the collection's header when that row is not on screen.
+- **Undo arrangement** puts the collection back at the size the store held, also in a window smaller than it, and leaves a note opened since where it is in the stack.
+- **A preview worked out again says what changed under it**, in its own text and in the status line: which documents were opened, closed or moved, or that notes changed on disk.
+- **A link written in a frontmatter list at the margin, or under a key with a space,** is shown with its key and no longer as a plain link.
+- **The field cannot be scrolled.** A focus or a scroll-into-view could scroll the field itself and leave every document partly under the bar.
 
 ## What changed underneath
 
