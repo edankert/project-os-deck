@@ -198,7 +198,7 @@ module.exports = async function (d) {
   const want = verifying(SUBJECT);
   let p0 = await panel(SUBJECT);
   for (let i = 0; i < 30 && p0.control === 'evidence'; i += 1) { await d.delay(200); p0 = await panel(SUBJECT); }
-  check(!p0.open && p0.control === `evidence · ${want.length}` && p0.controlSays === `Evidence: ${want.length} ${want.length === 1 ? 'test names' : 'tests name'} this note` && want.length >= 1 && asked.length === 0, `${SUBJECT} opens with its evidence closed and its text readable; the header's control says how many tests name it (${want.length}, as the frontmatter of the notes says), and the acceptance record has not been asked for`, { control: p0.control, says: p0.controlSays, open: p0.open, asked });
+  check(!p0.open && p0.control === `evidence · ${want.length}` && p0.controlSays === `Evidence: ${want.length} ${want.length === 1 ? 'test names' : 'tests name'} this note` && want.length >= 1 && asked.length === 0, `${SUBJECT} opens with its evidence closed and its text readable; the header's control says how many tests name it (${want.length}, as the frontmatter of the notes says), and the acceptance record has not been asked for`, { control: p0.control, says: p0.controlSays, open: p0.open, asked: [...asked] });
 
   // A requirement none of whose tests is walked by a person: its panel needs no ledger, and asks for none.
   const joined = await js(`${glass}.hooks.context(${JSON.stringify(SUBJECT)}).then((c) => [...new Set([...c.linked, ...c.backlinks].map((i) => i.id))])`);
@@ -223,7 +223,7 @@ module.exports = async function (d) {
   }
   if (unwalkedId !== null) {
     const pr = await evidenceOf(unwalkedId);
-    check(pr.rows.length > 0 && JSON.stringify(pr.rows.map((r) => r.id)) === JSON.stringify(verifying(unwalkedId).map((v) => v.id)) && pr.unread.length === 0 && asked.length === 0, `${unwalkedId}, none of whose ${pr.rows.length} tests is walked by a person: its panel is drawn from Deck's index and the test notes, and the acceptance record is still not asked for`, { rows: pr.rows.map((r) => [r.id, r.joined]), asked });
+    check(pr.rows.length > 0 && JSON.stringify(pr.rows.map((r) => r.id)) === JSON.stringify(verifying(unwalkedId).map((v) => v.id)) && pr.unread.length === 0 && asked.length === 0, `${unwalkedId}, none of whose ${pr.rows.length} tests is walked by a person: its panel is drawn from Deck's index and the test notes, and the acceptance record is still not asked for`, { rows: pr.rows.map((r) => [r.id, r.joined]), asked: [...asked] });
     d.press(win, 'Escape'); await d.delay(300);
     await close(unwalkedId);
   } else {
@@ -244,7 +244,7 @@ module.exports = async function (d) {
   const fits = (l) => (l.width >= 760 ? l.beside && l.rightOfText : !l.beside && l.aboveText);
   check(fits(layoutNarrow) && fits(layoutWide) && layoutWide.width >= 760, 'the panel is part of the document: beside the text when the document is at least 760 px wide, above it when it is narrower', { atItsOwnSize: layoutNarrow, fillingTheField: layoutWide, bothCasesSeen: layoutNarrow.width < 760 });
   check(p1narrow.width >= 760 || (!roomLeft.listOpen && roomLeft.textHeight >= roomLeft.documentHeight * 0.3), 'in a document too narrow to hold the evidence beside the text, the evidence takes the related list\'s place above the text, and the text keeps at least three tenths of the document', { listWasOpen, ...roomLeft });
-  check(JSON.stringify(asked) === JSON.stringify(['acceptance?platform=all', ...platforms.map((p) => `acceptance?platform=${p}`)]), 'opening a panel that lists a check a person walks asks for the acceptance record: once for the list of platforms, then once for each, naming it', { asked, tookMs });
+  check(JSON.stringify(asked) === JSON.stringify(['acceptance?platform=all', ...platforms.map((p) => `acceptance?platform=${p}`)]), 'opening a panel that lists a check a person walks asks for the acceptance record: once for the list of platforms, then once for each, naming it', { asked: [...asked], tookMs });
   check(JSON.stringify(p1.rows.map((r) => r.id)) === JSON.stringify(want.map((v) => v.id)) && p1.rows.every((r, i) => r.titleFirst && r.title === recordOf.get(r.id).title && r.joined.startsWith(want[i].keys.map((k) => PHRASE[k]).join(' · '))), `a row for each of the ${want.length} tests whose frontmatter names ${SUBJECT}, and no other; each with its title before its id, and the key it was found under in the file's own word`, p1.rows.map((r) => [r.id, r.joined]));
   const ownStatus = recordOf.get(SUBJECT).status;
   check(p1.status === `${SUBJECT} is "${ownStatus}". That is its status, not a verdict.` && /^Evidence for /.test(p1.name), 'the note\'s own status is said first and apart, as a status and not a verdict; the panel has a name a screen reader says', { status: p1.status, name: p1.name });
