@@ -81,6 +81,7 @@ import {
 import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
 import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
+import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
 import {
   type Edge,
   type PointerSample,
@@ -137,6 +138,8 @@ const FOCUS_DIM = 0.28;
 const SEATED_Z = 2950;
 /** How long documents and the collection take to travel when an arrangement is applied or put back. */
 const ARRANGE_MS = 300;
+/** How long a reading position waits for its document's text before it is given up. */
+const READING_WAIT_MS = 5000;
 
 /** "A", "A and B", "A, B and C". */
 function listOf(names: readonly string[]): string {
@@ -263,7 +266,12 @@ export interface GlassHooks {
   /** A note was opened: its row is shown in the collection. */
   revealed(noteId: string): void;
   /** The places a throw toward this edge could land. Empty where there are no windows. */
-  targets(edge: Edge): Promise<ThrowTarget[]>;
+  /**
+   * Where a note could go toward an edge. For a document (`noteId` given)
+   * each place comes once per act it is offered: "Move to" and "Also show
+   * in" (FEAT-0023). For a card from the field, each place once.
+   */
+  targets(edge: Edge, noteId?: string): Promise<ThrowTarget[]>;
   throwTo(target: ThrowTarget, card: CardModel, edge: Edge): Promise<void>;
   /** A change arrived while the field was on screen; applying it is the person's call (TASK-0032). */
   applyPending(): void;
@@ -410,6 +418,13 @@ export class GlassField {
   private readonly docs = new Map<string, NoteDocument>();
   /** Which document's details are open, in this window. */
   private detailsOpen: string | null = null;
+  /** Where each note was last being read in this window, kept when its document is taken down. Session state. */
+  private readonly lastReading = new Map<string, ReadingAnchor>();
+  /** Reading positions waiting for their documents' text (restoreReading). */
+  private readingWanted = new Map<string, ReadingAnchor>();
+  private readingMoved: string[] = [];
+  private readingDone: ((moved: string[]) => void) | null = null;
+  private readingTimer: ReturnType<typeof setTimeout> | null = null;
   /** An arrangement shown and not yet applied: session state, in this window only. */
   private arranging: { kind: ArrangeKind; subjects: string[]; plan: ArrangePlan; basis: string; refreshed: boolean; from: HTMLElement | null } | null = null;
   /** What the last applied arrangement moved, so it can be put back; and the view it was applied on. */
@@ -2706,6 +2721,112 @@ export class GlassField {
     return ids;
   }
 
+  // ---- where each document is being read (FEAT-0023) ----
+
+  /** A document's headings as they are laid out now, in its own scroll coordinates. */
+  private headingsOf(pane: HTMLElement): HeadingAt[] {
+    const body = pane.querySelector('.pane-body') as HTMLElement;
+    const origin = body.getBoundingClientRect().top - body.scrollTop;
+    return Array.from(pane.querySelectorAll<HTMLElement>('.pane-note h1, .pane-note h2, .pane-note h3, .pane-note h4')).map((h) => ({
+      text: (h.textContent ?? '').trim(),
+      top: h.getBoundingClientRect().top - origin,
+    }));
+  }
+
+  /** Where one document is being read, or null when it has no text on screen. */
+  readingAnchor(noteId: string): ReadingAnchor | null {
+    const pane = this.paneEls.get(noteId);
+    if (pane === undefined || (pane.querySelector('.pane-note') as HTMLElement).dataset['filled'] !== 'true') return null;
+    const body = pane.querySelector('.pane-body') as HTMLElement;
+    return readingAnchorAt(this.headingsOf(pane), body.scrollTop, body.scrollHeight - body.clientHeight);
+  }
+
+  /** Where every open document is being read: what a scene keeps, and a handoff carries. */
+  readingAnchors(): Record<string, ReadingAnchor> {
+    const out: Record<string, ReadingAnchor> = {};
+    for (const card of this.held) {
+      const anchor = this.readingAnchor(card.noteId);
+      if (anchor !== null) out[card.noteId] = anchor;
+    }
+    return out;
+  }
+
+  /**
+   * Put documents back where they were being read. A document whose text is
+   * on screen goes there now; one still being read goes there when its text
+   * arrives. `done` is told which documents could not be found by their
+   * heading, once every one has been placed or the wait is over: a note that
+   * is gone never gets text, and is not waited for for ever.
+   */
+  restoreReading(anchors: Readonly<Record<string, ReadingAnchor>>, done: (moved: string[]) => void = () => undefined): void {
+    if (this.readingTimer !== null) clearTimeout(this.readingTimer);
+    this.readingMoved = [];
+    this.readingWanted = new Map(Object.entries(anchors));
+    this.readingDone = done;
+    for (const [noteId] of [...this.readingWanted]) {
+      const pane = this.paneEls.get(noteId);
+      if (pane !== undefined && (pane.querySelector('.pane-note') as HTMLElement).dataset['filled'] === 'true' && !this.rereads.has(noteId)) this.applyReading(noteId, pane);
+    }
+    if (this.readingWanted.size === 0) return;
+    this.readingTimer = setTimeout(() => this.settleReading(), READING_WAIT_MS);
+  }
+
+  private applyReading(noteId: string, pane: HTMLElement): void {
+    const anchor = this.readingWanted.get(noteId);
+    if (anchor === undefined) return;
+    this.readingWanted.delete(noteId);
+    const body = pane.querySelector('.pane-body') as HTMLElement;
+    const at = scrollTopForAnchor(anchor, this.headingsOf(pane), body.scrollHeight - body.clientHeight);
+    body.scrollTop = at.top;
+    if (at.moved) this.readingMoved.push(noteId);
+    if (this.readingWanted.size === 0) this.settleReading();
+  }
+
+  private settleReading(): void {
+    if (this.readingTimer !== null) clearTimeout(this.readingTimer);
+    this.readingTimer = null;
+    this.readingWanted.clear();
+    const done = this.readingDone;
+    this.readingDone = null;
+    done?.([...this.readingMoved]);
+  }
+
+  /** Mark a document that has just arrived from another window, and put the keyboard on it. */
+  markArrived(noteId: string): void {
+    const pane = this.paneEls.get(noteId);
+    if (pane === undefined) return;
+    pane.classList.add('highlight', 'arrived');
+    setTimeout(() => pane.classList.remove('highlight', 'arrived'), 2400);
+    (pane.querySelector('.pane-head') as HTMLElement | null)?.focus({ preventScroll: true });
+  }
+
+  /** What this window shows for a note: its document's state, or null when it has no document for it. */
+  documentState(noteId: string): string | null {
+    return this.paneEls.get(noteId)?.dataset['state'] ?? null;
+  }
+
+  /** The size a held document is read at, for a handoff to carry. */
+  readingSize(noteId: string): { w: number; h: number } | null {
+    const card = this.held.find((c) => c.noteId === noteId);
+    if (card === undefined) return null;
+    const state = this.hooks.state();
+    const size = readingSizeFor(card, readingSizeOf(state, state.workspaceId, deskViewOf(state)));
+    return { w: size.w, h: size.h };
+  }
+
+  /** The field's size, which a scene keeps so it can say when it is reopened in a smaller one. */
+  fieldSize(): { w: number; h: number } {
+    return { w: this.viewport.width, h: this.viewport.height };
+  }
+
+  /** The desk was replaced as a whole (a scene was opened): what the last arrangement moved is not there to put back. */
+  forgetArrangement(): void {
+    this.arranging = null;
+    this.undoAsk = null;
+    this.undoRecord = null;
+    if (this.active) this.drawArrange();
+  }
+
   // ---- arrangements: Read, Compare, Show related (FEAT-0022, TASK-0102) ----
 
   /** What an arrangement is planned from: the field, the collection and every document on this desk. */
@@ -3157,6 +3278,9 @@ export class GlassField {
         item.className = 'target';
         item.dataset['index'] = String(i);
         item.textContent = target.label;
+        if (target.mode !== undefined) item.dataset['mode'] = target.mode;
+        // What releasing here does, before it is done: where the note goes and whether it leaves this desk.
+        if (target.says !== undefined) item.title = target.says;
         return item;
       }),
     );
@@ -3242,6 +3366,13 @@ export class GlassField {
     });
     for (const [noteId, pane] of this.paneEls) {
       if (live.has(noteId)) continue;
+      // Where it was being read is kept for the session, so a note that comes
+      // back to this desk (a view left and returned to, a note sent away and
+      // back) is read where it was. Until this a returning note opened at its
+      // top, because its document is built again.
+      const reading = this.readingAnchor(noteId);
+      if (reading !== null && (reading.heading !== null || reading.past > 0)) this.lastReading.set(noteId, reading);
+      else if (reading !== null) this.lastReading.delete(noteId);
       pane.remove();
       this.paneEls.delete(noteId);
       this.rereads.delete(noteId);
@@ -3387,6 +3518,8 @@ export class GlassField {
     const pane = document.createElement('section');
     pane.className = 'pane';
     pane.dataset['noteId'] = noteId;
+    // Not filled yet: its first text goes to where the note was last being read (fillDocument).
+    pane.dataset['fresh'] = 'true';
     pane.innerHTML =
       '<header class="pane-head" tabindex="0" role="toolbar">' +
       '<span class="pane-title"></span><span class="pane-id"></span><span class="pane-status"></span>' +
@@ -3670,6 +3803,13 @@ export class GlassField {
         note.innerHTML = doc.html;
         note.dataset['filled'] = 'true';
         body.scrollTop = at;
+        // A document built again goes back to where this note was last being
+        // read in this window. A scene or a handoff that says where it was
+        // being read is applied after, and so wins.
+        const last = this.lastReading.get(noteId);
+        if (pane.dataset['fresh'] === 'true' && last !== undefined) body.scrollTop = scrollTopForAnchor(last, this.headingsOf(pane), body.scrollHeight - body.clientHeight).top;
+        delete pane.dataset['fresh'];
+        this.applyReading(noteId, pane);
         const actions = pane.querySelector('.pane-actions') as HTMLElement;
         void this.hooks.dress(noteId, note, actions).catch(() => null);
       }
@@ -4703,7 +4843,7 @@ export class GlassField {
         this.showStrip(null, []);
         if (near !== null) {
           const asked = near;
-          void this.hooks.targets(near).then((found) => {
+          void this.hooks.targets(near, noteId).then((found) => {
             if (edge !== asked) return;
             targets = found;
             this.showStrip(asked, found);
@@ -4725,7 +4865,8 @@ export class GlassField {
         const target = hovered;
         this.dragOf = null;
         this.render(false);
-        this.tell(`${noteId} sent to the ${target.label}`);
+        // Said now as an act that is under way; what happened is said when the other window has answered.
+        this.tell(target.mode === undefined ? `${noteId} sent to the ${target.label}` : `${target.label}: waiting for that window to show ${noteId}`);
         void this.hooks.throwTo(target, card, edge ?? 'right');
         return;
       }

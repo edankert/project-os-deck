@@ -81,6 +81,16 @@
           <!-- The orbit's three treatments, all drawn, switchable; which one stays is Edwin's call (TASK-0005). -->
           <div class="treatments" id="treatments" hidden role="group" aria-label="Treatment"></div>
           <span class="field-overflow" id="field-overflow"></span>
+          <!-- Scenes (FEAT-0023): this view's desk, saved under a name and reopened with what it holds read afresh. -->
+          <div class="scenes" id="scenes" role="group" aria-label="Scenes" hidden>
+            <select id="scene-list" aria-label="Saved scenes"></select>
+            <!-- Opening is its own press: a scene replaces this view's desk, and choosing a name in a list is not asking for that. -->
+            <button type="button" class="action" id="scene-open" hidden>open</button>
+            <button type="button" class="action" id="scene-save" title="Keep this desk under a name: where everything stands and where each note is being read. Not the notes themselves, and not the list's rows.">save scene</button>
+            <button type="button" class="action" id="scene-rename" hidden>rename</button>
+            <button type="button" class="action" id="scene-delete" hidden>delete</button>
+            <button type="button" class="action" id="scene-back" hidden></button>
+          </div>
           <!-- Arrangements of the desk (FEAT-0022). Each is shown before it is applied, and can be put back. -->
           <div class="arrange" id="arrange" role="group" aria-label="Arrange the desk" hidden>
             <button type="button" class="action" id="arrange-read">Read</button>
@@ -128,6 +138,15 @@
             <span class="collection-resize" id="collection-resize" aria-hidden="true"></span>
           </section>
           <div class="field-panes" id="field-panes" aria-label="What you are holding"></div>
+          <!-- What a reopened scene has to say, and a deleted one's way back. Stays until it is dismissed. -->
+          <div class="scene-report" id="scene-report" role="status" hidden>
+            <strong id="scene-report-title"></strong>
+            <ul id="scene-report-lines"></ul>
+            <span class="scene-report-buttons">
+              <button type="button" class="action" id="scene-report-act" hidden></button>
+              <button type="button" class="action" id="scene-report-close">dismiss</button>
+            </span>
+          </div>
           <!-- An arrangement before it is applied: an outline where each object will stand, and what will
                move, in words. Nothing on the desk has moved while this is shown (FEAT-0022). -->
           <div class="arrange-preview" id="arrange-preview" hidden>

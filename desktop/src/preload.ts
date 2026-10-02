@@ -40,8 +40,26 @@ const api = {
     openPanel: (address: string): Promise<unknown> => ipcRenderer.invoke('deck:window:open-panel', address),
     /** Every other window and display, for a throw (TASK-0055). */
     list: (): Promise<unknown> => ipcRenderer.invoke('deck:windows:list'),
-    /** A note thrown to a window, a display or the tablet. */
+    /**
+     * A note handed to a window, a display or the tablet (FEAT-0023). The
+     * request names its act, `move` or `show`, and the answer comes when the
+     * destination has said it is showing the note, or when it will not.
+     */
     throw: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:window:throw', request),
+    /** The notes that arrived in THIS window and are waiting to be shown. */
+    pendingArrivals: (): Promise<unknown> => ipcRenderer.invoke('deck:handoff:pending'),
+    /** Told when a note arrives in this window. Returns its own unsubscribe. */
+    onArrival: (fn: (arrival: unknown) => void): (() => void) => {
+      const handler = (_event: unknown, arrival: unknown): void => fn(arrival);
+      ipcRenderer.on('deck:handoff:arrived', handler);
+      return () => {
+        ipcRenderer.removeListener('deck:handoff:arrived', handler);
+      };
+    },
+    /** This window is showing an arrived note, or says why it cannot. */
+    acknowledge: (answer: unknown): Promise<unknown> => ipcRenderer.invoke('deck:handoff:ack', answer),
+    /** Send an arrived note back to the window it came from. */
+    sendBack: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:handoff:back', request),
   },
 
   clipboard: {

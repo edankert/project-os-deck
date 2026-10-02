@@ -124,6 +124,34 @@ export interface Desk {
   name: string;
   workspaceId: string;
   cards: DeskCard[];
+  /**
+   * Present on a scene (FEAT-0023, ADR-0007): a saved desk that also keeps
+   * the view, the search, the collection's layout and where each document
+   * was being read. Absent on a desk saved before scenes, which opens as it
+   * always did. `shared/scenes.ts` says what each field is and is not.
+   */
+  version?: number;
+  view?: string;
+  query?: string;
+  filters?: Filters;
+  collection?: CollectionLayout;
+  anchors?: Record<string, ReadingAnchor>;
+  field?: { w: number; h: number };
+  savedAt?: string;
+}
+
+/**
+ * Where a document was being read: the heading above the top of what was in
+ * view, by its text, and how far past it; and how far down the whole text
+ * that was, for when the heading is gone.
+ */
+export interface ReadingAnchor {
+  /** The nearest heading at or above the top of the view, or null when the view was above the first one. */
+  heading: string | null;
+  /** How many pixels past that heading's top the view was scrolled. */
+  past: number;
+  /** The scroll position as a share of the scroll range, 0 to 1. */
+  fraction: number;
 }
 
 /**

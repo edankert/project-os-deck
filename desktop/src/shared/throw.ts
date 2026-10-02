@@ -106,6 +106,8 @@ export interface WindowInfo {
   bounds: Rect;
   displayId: number;
   displayLabel: string;
+  /** The view whose desk it draws, for a desk panel and the focus window; null for a reader. */
+  view?: string | null;
 }
 
 export interface DisplayInfo {
@@ -114,10 +116,16 @@ export interface DisplayInfo {
   workArea: Rect;
 }
 
-export type ThrowTarget =
-  | { kind: 'window'; windowId: number; carries: WindowInfo['carries']; label: string; displayId: number }
+/**
+ * Where a note can go. `mode` is the act (FEAT-0023): a document offered to
+ * a desk gets one target for "Move to" and one for "Also show in"; a card
+ * thrown from the field carries none and is shown there.
+ */
+export type ThrowTarget = (
+  | { kind: 'window'; windowId: number; carries: WindowInfo['carries']; label: string; displayId: number; view?: string | null }
   | { kind: 'display'; displayId: number; label: string }
-  | { kind: 'tablet'; label: string };
+  | { kind: 'tablet'; label: string }
+) & { mode?: 'move' | 'show'; says?: string };
 
 function centre(r: Rect): { x: number; y: number } {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -169,6 +177,7 @@ export function targetsToward(
       carries: w.carries,
       displayId: w.displayId,
       label: `${WORDS[w.carries]} on ${w.displayLabel}`,
+      view: w.view ?? null,
     }));
   // Taken only by a window a note can land in: a display holding nothing but
   // a Needs-you strip still gets a new reader (ISS-0062).

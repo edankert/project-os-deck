@@ -33,6 +33,10 @@ interface BridgeShape {
     openPanel(address: string): Promise<unknown>;
     list(): Promise<unknown>;
     throw(request: unknown): Promise<unknown>;
+    pendingArrivals(): Promise<unknown>;
+    onArrival(fn: (arrival: unknown) => void): () => void;
+    acknowledge(answer: unknown): Promise<unknown>;
+    sendBack(request: unknown): Promise<unknown>;
   };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
   write: { transition(request: unknown): Promise<unknown>; tick(request: unknown): Promise<unknown> };
@@ -224,10 +228,36 @@ export class Host {
   }
 
   /** Send a note to another window, a display or the tablet (TASK-0055). */
-  async throwNote(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; landed?: string }> {
+  async throwNote(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; landed?: string; said?: string; acknowledged?: boolean; mode?: string }> {
     const b = bridge();
     if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to throw to' };
-    return (await b.windows.throw(request)) as { ok: boolean; error?: string; landed?: string };
+    return (await b.windows.throw(request)) as { ok: boolean; error?: string; landed?: string; said?: string; acknowledged?: boolean; mode?: string };
+  }
+
+  /** The notes that arrived in this window by a handoff and are waiting to be shown (FEAT-0023). None on a served page. */
+  async pendingArrivals(): Promise<unknown[]> {
+    const b = bridge();
+    if (b === null || !this.caps.popOutWindows) return [];
+    return ((await b.windows.pendingArrivals()) as unknown[]) ?? [];
+  }
+
+  /** Be told when a note arrives in this window. A served page has no bridge and is never told. */
+  onArrival(fn: (arrival: unknown) => void): () => void {
+    const b = bridge();
+    if (b === null || !this.caps.popOutWindows) return () => undefined;
+    return b.windows.onArrival(fn);
+  }
+
+  async acknowledgeArrival(answer: { id: string; ok: boolean; error?: string }): Promise<void> {
+    const b = bridge();
+    if (b === null) return;
+    await b.windows.acknowledge(answer);
+  }
+
+  async sendBack(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; said?: string }> {
+    const b = bridge();
+    if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to send to' };
+    return (await b.windows.sendBack(request)) as { ok: boolean; error?: string; said?: string };
   }
 
   async windowRole(): Promise<{ role: string; panel: string | null }> {

@@ -18,7 +18,20 @@ import { type DeckAction, isRendererAction } from '../shared/store-state.js';
 import type { WindowRole } from '../shared/types.js';
 import { addressFor, formatAddress, tryParseAddress } from '../shared/address.js';
 import { type Edge, displayName, landingBounds } from '../shared/throw.js';
-import { deskCardsOf } from '../shared/store-state.js';
+import { deskCardsOf, isOnEveryView } from '../shared/store-state.js';
+import {
+  type Destination,
+  type HandoffAnswer,
+  type HandoffMode,
+  type HandoffRecord,
+  type HandoffRequest,
+  HANDOFF_ACK_MS,
+  planLanding,
+  returnOf,
+  settle,
+  settleUnconfirmed,
+} from '../shared/handoff.js';
+import type { ReadingAnchor } from '../shared/types.js';
 import { PANE_HEADER_HEIGHT } from '../shared/panes.js';
 import { DeckHost } from './host.js';
 import { DeckStore } from './store.js';
@@ -261,6 +274,8 @@ function createWindow(
     if (!shutDown && role === 'satellite' && address !== null) panelBook.remove(address);
     windowInfo.get(win.id)?.unsubscribe();
     windowInfo.delete(win.id);
+    // A note on its way to this window stays where it came from.
+    failHandoffsFor(win.id, { type: 'closed' });
     if (focusWindowId === win.id) {
       // Promote a satellite rather than leaving Deck with no navigator.
       focusWindowId = null;
@@ -299,6 +314,170 @@ const smokeHandlers = new Map<string, InvokeHandler>();
 function handle(channel: string, handler: InvokeHandler): void {
   smokeHandlers.set(channel, handler);
   ipcMain.handle(channel, handler);
+}
+
+// ---- handoff (FEAT-0023, ADR-0007) ----
+
+/** A note that arrived in a window, as that window is told of it. */
+interface Arrival {
+  id: string;
+  noteId: string;
+  workspaceId: string;
+  /** Where it came from, as a person would name it. */
+  from: string;
+  mode: HandoffMode;
+  size: { w: number; h: number } | null;
+  anchor: ReadingAnchor | null;
+  /** Whether "send back" has somewhere to send it. */
+  canReturn: boolean;
+}
+
+/** Handoffs waiting for their destination to answer. Session state: none of this is saved. */
+const handoffs = new Map<string, { record: HandoffRecord; windowId: number; displayId: number | null; timer: NodeJS.Timeout; resolve: (reply: Record<string, unknown>) => void }>();
+/** What has arrived in each window and has not been answered for yet. */
+const arrivals = new Map<number, Arrival[]>();
+/** Where each arrived note came from, by destination window and note, for "send back". */
+const cameFrom = new Map<string, HandoffRecord>();
+let handoffCount = 0;
+/** A reader has to load a page before it can answer; a desk only has to draw. */
+const READER_BOOT_MS = 8000;
+
+/** A window as a person names it: what it carries and the display it is on. */
+function windowLabel(id: number): string {
+  const info = windowInfo.get(id);
+  const win = BrowserWindow.fromId(id);
+  const what = info === undefined ? 'window' : info.role === 'focus' ? 'Deck' : info.panel === 'desk' ? 'desk' : info.panel === 'note' ? 'reader' : 'window';
+  if (win === null || win.isDestroyed()) return what;
+  const all = screen.getAllDisplays();
+  const displayId = screen.getDisplayMatching(win.getBounds()).id;
+  const index = all.findIndex((d) => d.id === displayId);
+  const display = all[index];
+  return display === undefined ? what : `${what} on ${displayName(display.label, index, displayId === screen.getPrimaryDisplay().id)}`;
+}
+
+/**
+ * Land a note and wait for the destination to say it is showing it.
+ *
+ * The landing is done here, at once, so the destination has something to
+ * draw. What a move does to the SOURCE is done in `finishHandoff`, and only
+ * there, when the destination has answered.
+ */
+function runHandoff(request: HandoffRequest, how: { edge: Edge; displayId: number | null; viewId: string }): Promise<Record<string, unknown>> | Record<string, unknown> {
+  const { noteId, workspaceId, destination, mode } = request;
+  const state = store.getState();
+  if (mode === 'move' && isOnEveryView(state, workspaceId, noteId)) {
+    return { ok: false, error: `${noteId} is kept on every view, so it is on every desk already and cannot be moved to one. It can be shown there as well.` };
+  }
+  const alreadyThere = destination.view !== null && deskCardsOf(state, workspaceId, destination.view).some((c) => c.noteId === noteId);
+  const landing = planLanding(request, { alreadyThere });
+  if ('refused' in landing) return { ok: false, error: landing.refused };
+  let address: string;
+  try {
+    address = formatAddress(addressFor(workspaceId, how.viewId === '' ? (state.viewId ?? '') : how.viewId, { note: noteId, panel: 'note' }));
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+  handoffCount += 1;
+  const record: HandoffRecord = { ...request, id: `h${handoffCount}`, state: 'awaiting', put: landing.put };
+  let windowId = destination.windowId;
+  // On a desk: put there once, at the size it is read at; one that is there already is brought to the top.
+  if (destination.view !== null && (destination.kind === 'desk' || destination.kind === 'main' || destination.kind === 'tablet')) {
+    if (landing.put) {
+      const cards = deskCardsOf(state, workspaceId, destination.view);
+      const place = { x: 16 + (cards.length % 3) * 28, y: 16 + cards.length * PANE_HEADER_HEIGHT };
+      store.dispatch({ type: 'put-on-desk', noteId, ...place, ...(request.size === null ? {} : { w: request.size.w, h: request.size.h }), viewId: destination.view });
+    } else {
+      store.dispatch({ type: 'raise-card', noteId, viewId: destination.view });
+    }
+  }
+  if (landing.reload && windowId !== null) {
+    const info = windowInfo.get(windowId);
+    const win = BrowserWindow.fromId(windowId);
+    if (info === undefined || win === null || win.isDestroyed()) return { ok: false, error: 'that window has closed' };
+    record.previousAddress = info.address;
+    if (info.address !== null) panelBook.remove(info.address);
+    panelBook.add(address);
+    info.address = address;
+    const query = new URLSearchParams({ role: 'satellite', address, panel: 'note' });
+    void win.loadURL(`${hostOrigin}/?${query.toString()}`);
+  }
+  if (landing.open) {
+    const display = screen.getAllDisplays().find((d) => d.id === how.displayId);
+    if (display === undefined) return { ok: false, error: 'that display is gone' };
+    panelBook.add(address);
+    const opened = createWindow('satellite', address, 'note', { ...landingBounds(how.edge, display.workArea), displayId: display.id });
+    record.openedWindowId = opened.id;
+    record.destination = { ...destination, windowId: opened.id };
+    windowId = opened.id;
+  }
+  if (!landing.awaits || windowId === null) {
+    const out = settleUnconfirmed(record);
+    return { ok: true, acknowledged: false, mode, landed: destination.kind, said: out.reply.said };
+  }
+  const destinationWindow = windowId;
+  const arrival: Arrival = {
+    id: record.id,
+    noteId,
+    workspaceId,
+    from: request.source.label,
+    mode,
+    size: request.size,
+    anchor: request.anchor,
+    canReturn: request.source.view !== null && request.source.kind !== 'reader',
+  };
+  arrivals.set(destinationWindow, [...(arrivals.get(destinationWindow) ?? []), arrival]);
+  return new Promise((resolve) => {
+    const wait = HANDOFF_ACK_MS + (landing.reload || landing.open ? READER_BOOT_MS : 0);
+    const timer = setTimeout(() => finishHandoff(record.id, { type: 'timeout' }), wait);
+    timer.unref?.();
+    // A nudge. A window that is still loading asks for what is pending once it has booted.
+    const win = BrowserWindow.fromId(destinationWindow);
+    const displayId = win === null || win.isDestroyed() ? null : screen.getDisplayMatching(win.getBounds()).id;
+    handoffs.set(record.id, { record, windowId: destinationWindow, displayId, timer, resolve });
+    if (win !== null && !win.isDestroyed()) win.webContents.send('deck:handoff:arrived', arrival);
+  });
+}
+
+/** The destination answered, did not, or went away: carry out what the rule says and answer the source. */
+function finishHandoff(id: string, answer: HandoffAnswer): void {
+  const pending = handoffs.get(id);
+  if (pending === undefined) return;
+  handoffs.delete(id);
+  clearTimeout(pending.timer);
+  arrivals.set(pending.windowId, (arrivals.get(pending.windowId) ?? []).filter((a) => a.id !== id));
+  const out = settle(pending.record, answer);
+  for (const effect of out.effects) {
+    if (effect.type === 'take-off') store.dispatch({ type: 'take-off-desk', noteId: effect.noteId, viewId: effect.view });
+    else if (effect.type === 'close-window') {
+      const win = BrowserWindow.fromId(effect.windowId);
+      if (win !== null && !win.isDestroyed()) win.close();
+    } else {
+      const win = BrowserWindow.fromId(effect.windowId);
+      const info = windowInfo.get(effect.windowId);
+      if (win !== null && !win.isDestroyed() && info !== undefined) {
+        if (info.address !== null) panelBook.remove(info.address);
+        panelBook.add(effect.address);
+        info.address = effect.address;
+        void win.loadURL(`${hostOrigin}/?${new URLSearchParams({ role: 'satellite', address: effect.address, panel: 'note' }).toString()}`);
+      }
+    }
+  }
+  if (out.record.state === 'done') cameFrom.set(`${pending.windowId}:${out.record.noteId}`, out.record);
+  pending.resolve({
+    ok: out.reply.ok,
+    acknowledged: out.reply.acknowledged,
+    mode: out.reply.mode,
+    landed: out.record.destination.kind,
+    said: out.reply.said,
+    ...(out.reply.ok ? {} : { error: out.reply.said }),
+  });
+}
+
+/** A window closed or a display went away: every handoff waiting on it ends as undone. */
+function failHandoffsFor(windowId: number, answer: HandoffAnswer): void {
+  for (const [id, pending] of [...handoffs]) if (pending.windowId === windowId) finishHandoff(id, answer);
+  arrivals.delete(windowId);
+  for (const key of [...cameFrom.keys()]) if (key.startsWith(`${windowId}:`)) cameFrom.delete(key);
 }
 
 function registerIpc(): void {
@@ -383,7 +562,10 @@ function registerIpc(): void {
       const b = win.getBounds();
       const displayId = screen.getDisplayMatching(b).id;
       const carries = info.role === 'focus' ? 'focus' : (info.panel ?? 'focus');
-      windows.push({ id, carries, bounds: b, displayId, displayLabel: labelOf(displayId) });
+      // The view whose desk it draws, so the asking window can tell a different desk from its own.
+      const parsed = info.address === null ? null : tryParseAddress(info.address);
+      const view = info.role === 'focus' ? store.getState().viewId : info.panel === 'desk' ? (parsed !== null && parsed.ok ? parsed.address.viewId : store.getState().viewId) : null;
+      windows.push({ id, carries, bounds: b, displayId, displayLabel: labelOf(displayId), view });
     }
     const selfBounds = self === null ? null : self.getBounds();
     return {
@@ -392,74 +574,131 @@ function registerIpc(): void {
       displays: all.map((d) => ({ id: d.id, label: labelOf(d.id), workArea: d.workArea })),
       // A served page following the store is a place a note can be thrown to.
       followers: host.followers(),
+      // The notes that arrived in the asking window and can still go back: the window they came from is open.
+      returnable:
+        self === null
+          ? []
+          : [...cameFrom]
+              .filter(([key, record]) => {
+                if (!key.startsWith(`${self.id}:`)) return false;
+                const home = BrowserWindow.fromId(record.source.windowId);
+                return home !== null && !home.isDestroyed();
+              })
+              .map(([, record]) => record.noteId),
     };
   });
 
   /**
-   * A note thrown to another window (TASK-0055).
+   * A note handed to another window (TASK-0055, FEAT-0023, ADR-0007).
    *
-   * Landing is an action the windows already understand. A reader window is
-   * re-addressed at the note, the way a pop-out is addressed; a desk panel
-   * gets it on the desk of the view in ITS address, which it draws whatever
-   * the focus window shows, and the tablet on the desk of the Mac's current
-   * view (FEAT-0015, decisions 12 and 13); a display with no Deck window gets
-   * a new reader, placed by the function that places every window.
+   * Landing is an action the windows already understand. A desk panel gets
+   * the note on the desk of the view in ITS address, which it draws whatever
+   * the focus window shows; the focus window gets it on the desk it is
+   * drawing; a reader window is re-addressed at the note; a display with no
+   * Deck window gets a new reader; the tablet gets it on the desk it follows.
+   *
+   * What is new is that the request names its act, `move` or `show`, and that
+   * the answer waits: the destination window is told a note arrived, and the
+   * source is answered only when that window says it is showing it, or when
+   * it is clear it will not. `shared/handoff.ts` holds the rule; this carries
+   * it out, and is the only place a handoff's effects reach the store.
    */
-  handle('deck:window:throw', (_e, request: Record<string, unknown>) => {
+  handle('deck:window:throw', (event, request: Record<string, unknown>) => {
     const noteId = typeof request?.['noteId'] === 'string' ? request['noteId'] : '';
     const workspaceId = typeof request?.['workspaceId'] === 'string' ? request['workspaceId'] : '';
     const viewId = typeof request?.['viewId'] === 'string' ? request['viewId'] : '';
     const target = (request?.['target'] ?? {}) as Record<string, unknown>;
     const edge = (['left', 'right', 'top', 'bottom'].includes(String(request?.['edge'])) ? request['edge'] : 'right') as Edge;
     if (noteId === '' || workspaceId === '' || viewId === '') return { ok: false, error: 'a throw names a note, a workspace and a view' };
-    let address: string;
-    try {
-      address = formatAddress(addressFor(workspaceId, viewId, { note: noteId, panel: 'note' }));
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) };
-    }
-    const onTheDesk = (deskView: string | null = null): void => {
-      const cards = deskCardsOf(store.getState(), workspaceId, deskView ?? store.getState().viewId);
-      const place = { x: 16 + (cards.length % 3) * 28, y: 16 + cards.length * PANE_HEADER_HEIGHT };
-      store.dispatch(deskView === null ? { type: 'put-on-desk', noteId, ...place } : { type: 'put-on-desk', noteId, ...place, viewId: deskView });
+    // The act is said, never assumed: a request with none moves nothing.
+    const mode = request?.['mode'];
+    if (mode !== 'move' && mode !== 'show') return { ok: false, error: 'a handoff names its act: "move" takes the note off this desk, "show" keeps it here. Nothing was done.' };
+    const sender = BrowserWindow.fromWebContents(event.sender);
+    const senderInfo = sender === null ? undefined : windowInfo.get(sender.id);
+    if (sender === null || senderInfo === undefined) return { ok: false, error: 'that request did not come from a Deck window' };
+    const state = store.getState();
+    const onDesk = deskCardsOf(state, workspaceId, viewId).some((c) => c.noteId === noteId);
+    const source: HandoffRequest['source'] = {
+      windowId: sender.id,
+      // A card thrown from the field is on no desk, so there is nothing a move takes off.
+      view: onDesk ? viewId : null,
+      label: windowLabel(sender.id),
+      kind: senderInfo.role === 'focus' ? 'main' : senderInfo.panel === 'desk' ? 'desk' : 'reader',
     };
+    let destination: Destination;
+    let displayId: number | null = null;
     if (target['kind'] === 'tablet') {
-      onTheDesk();
-      return { ok: true, landed: 'tablet' };
-    }
-    if (target['kind'] === 'window') {
+      destination = { kind: 'tablet', label: 'tablet', windowId: null, view: state.viewId };
+    } else if (target['kind'] === 'window') {
       const id = Number(target['windowId']);
       const info = windowInfo.get(id);
       const win = BrowserWindow.fromId(id);
       if (info === undefined || win === null || win.isDestroyed()) return { ok: false, error: 'that window has closed' };
-      if (info.panel === 'desk') {
+      if (info.role === 'focus') destination = { kind: 'main', label: windowLabel(id), windowId: id, view: state.viewId };
+      else if (info.panel === 'desk') {
         const parsed = info.address === null ? null : tryParseAddress(info.address);
-        onTheDesk(parsed !== null && parsed.ok ? parsed.address.viewId : null);
-        return { ok: true, landed: 'desk' };
-      }
-      if (info.role === 'focus') {
-        store.dispatch({ type: 'focus-note', noteId });
-        return { ok: true, landed: 'focus' };
-      }
-      if (info.panel === 'note') {
-        if (info.address !== null) panelBook.remove(info.address);
-        panelBook.add(address);
-        info.address = address;
-        const query = new URLSearchParams({ role: 'satellite', address, panel: 'note' });
-        void win.loadURL(`${hostOrigin}/?${query.toString()}`);
-        return { ok: true, landed: 'reader' };
-      }
-      return { ok: false, error: 'a Needs-you strip shows what the record says is owed, and a note is not thrown to it' };
-    }
-    if (target['kind'] === 'display') {
+        destination = { kind: 'desk', label: windowLabel(id), windowId: id, view: parsed !== null && parsed.ok ? parsed.address.viewId : state.viewId };
+      } else if (info.panel === 'note') destination = { kind: 'reader', label: windowLabel(id), windowId: id, view: null };
+      else return { ok: false, error: 'a Needs-you strip shows what the record says is owed, and a note is not thrown to it' };
+    } else if (target['kind'] === 'display') {
       const display = screen.getAllDisplays().find((d) => d.id === Number(target['displayId']));
       if (display === undefined) return { ok: false, error: 'that display is gone' };
-      const bounds = landingBounds(edge, display.workArea);
-      panelBook.add(address);
-      createWindow('satellite', address, 'note', { ...bounds, displayId: display.id });
-      return { ok: true, landed: 'new-reader' };
+      displayId = display.id;
+      destination = { kind: 'new-reader', label: typeof target['label'] === 'string' ? target['label'] : 'a new reader', windowId: null, view: null };
+    } else {
+      return { ok: false, error: 'a throw names where it goes' };
     }
-    return { ok: false, error: 'a throw names where it goes' };
+    const size = request?.['size'] as { w?: unknown; h?: unknown } | undefined;
+    const anchor = request?.['anchor'] as ReadingAnchor | undefined;
+    return runHandoff(
+      {
+        noteId,
+        workspaceId,
+        mode,
+        source,
+        destination,
+        size: typeof size?.w === 'number' && typeof size?.h === 'number' ? { w: size.w, h: size.h } : null,
+        anchor: anchor !== undefined && anchor !== null && typeof anchor === 'object' ? anchor : null,
+      },
+      { edge, displayId, viewId },
+    );
+  });
+
+  /** The notes that have arrived in this window and are waiting to be shown and answered for. */
+  handle('deck:handoff:pending', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return win === null ? [] : (arrivals.get(win.id) ?? []);
+  });
+
+  /** The destination window says it is showing an arrived note, or why it cannot. */
+  handle('deck:handoff:ack', (event, answer: Record<string, unknown>) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const id = typeof answer?.['id'] === 'string' ? answer['id'] : '';
+    const pending = handoffs.get(id);
+    // Only the window the note was sent to may answer for it.
+    if (win === null || pending === undefined || pending.windowId !== win.id) return { ok: false };
+    finishHandoff(id, { type: 'ack', ok: answer['ok'] === true, ...(typeof answer['error'] === 'string' ? { error: answer['error'] } : {}) });
+    return { ok: true };
+  });
+
+  /** "Send back": the same handoff in reverse, for a note that arrived in the asking window. */
+  handle('deck:handoff:back', (event, request: Record<string, unknown>) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const noteId = typeof request?.['noteId'] === 'string' ? request['noteId'] : '';
+    if (win === null) return { ok: false, error: 'that request did not come from a Deck window' };
+    const arrived = cameFrom.get(`${win.id}:${noteId}`);
+    if (arrived === undefined) return { ok: false, error: `${noteId} did not arrive here from another window, so there is nowhere to send it back to` };
+    const size = request?.['size'] as { w?: unknown; h?: unknown } | undefined;
+    const anchor = request?.['anchor'] as ReadingAnchor | undefined;
+    const back = returnOf(arrived, anchor ?? null, typeof size?.w === 'number' && typeof size?.h === 'number' ? { w: size.w, h: size.h } : null);
+    if (back === null) return { ok: false, error: `${noteId} came from the field and was on no desk, so there is nothing to send it back to. It can be closed here.` };
+    const home = back.destination.windowId === null ? null : BrowserWindow.fromId(back.destination.windowId);
+    if (home === null || home.isDestroyed()) return { ok: false, error: `the ${back.destination.label} has closed, so ${noteId} stays here` };
+    // Where the source window is now: its desk may be another view's by this time.
+    const info = windowInfo.get(home.id);
+    if (info?.role === 'focus') back.destination.view = store.getState().viewId;
+    cameFrom.delete(`${win.id}:${noteId}`);
+    return runHandoff(back, { edge: 'left', displayId: null, viewId: back.source.view ?? '' });
   });
 
   /**
@@ -541,6 +780,10 @@ function defaultActor(): string {
 }
 
 app.whenReady().then(async () => {
+  // A display unplugged while a note is on its way to a window on it: the note stays where it came from.
+  screen.on('display-removed', (_event, gone) => {
+    for (const [id, pending] of [...handoffs]) if (pending.displayId === gone.id) finishHandoff(id, { type: 'display-removed' });
+  });
   try {
     registerIpc();
     // Once, and only when nobody has chosen: a name a person typed is theirs.
