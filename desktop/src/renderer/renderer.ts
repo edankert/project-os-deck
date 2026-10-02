@@ -1530,6 +1530,13 @@ async function openScene(name: string, undoable = true): Promise<void> {
   const state = host.state();
   const ws = state.workspaceId;
   if (ws === null) return;
+  // Scenes belong to the shell (ADR-0007, A8). A served page shows the desk the Mac has and cannot replace
+  // it, so an address that names a scene opens none there: no document is scrolled, and nothing is said to
+  // have been reopened.
+  if (!host.canArrange()) {
+    say(`that address names the scene "${name}"; this page shows the desk the Mac has and opens no scene`);
+    return;
+  }
   const scene = state.desks[deskKey(ws, name)];
   if (scene === undefined) {
     say(`there is no scene called "${name}" in this workspace`, true);

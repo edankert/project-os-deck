@@ -503,6 +503,11 @@ module.exports = async function (d) {
   await d.delay(3500);
   const served = await d.js(page, `({ scenes: document.getElementById('scenes').hidden, bridge: typeof window.deck })`);
   check(served.bridge === 'undefined' && served.scenes, 'the served page offers no scenes: it shows the desk the application has', served);
+  // Sent an address that names a scene, the served page opens none: the scene is the shell's to open.
+  await page.loadURL(`${d.origin}/?address=${encodeURIComponent(`deck://${ws}/features?desk=${encodeURIComponent('Kept as it is')}`)}`);
+  await d.delay(3500);
+  const servedScene = await d.js(page, `({ bridge: typeof window.deck, said: document.getElementById('status').textContent, report: document.getElementById('scene-report').hidden, scenes: document.getElementById('scenes').hidden })`);
+  check(servedScene.bridge === 'undefined' && !/reopened/.test(servedScene.said) && servedScene.report && servedScene.scenes, 'the served page, sent an address that names a scene, opens no scene: nothing says a scene was reopened and no report is raised', servedScene);
   page.destroy();
 
   d.log('what this walk does not establish', [
