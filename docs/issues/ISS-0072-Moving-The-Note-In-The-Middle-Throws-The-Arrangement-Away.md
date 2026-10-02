@@ -31,27 +31,41 @@ tests: ["[[TST-0052]]", "[[TST-0045]]"]
 
 **Dragging the opened note now moves it with the cards gathered round it, keeps it open, and moves no other card.** Leaving the arrangement is an explicit act again: Escape, ×, Hide notes, filling the field with W, or switching view or surface. Built in `81d4632` (TASK-0104).
 
-**The checks that show the defect gone** are in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which drags the document's header 90 by 50 pixels with a real pointer in a real window. At `4243fc2` they read:
+**The checks that show the defect gone** are in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which drags the document's header 90 by 50 pixels with a real pointer in a real window. In the pass of 2026-10-02 at `e86b2e4` they read:
 
-- "a drag of its header moves the document 90 by 50 in the store (466,16 to 556,66) and on screen, keeps the focus (ISS-0070: until TASK-0104 a drag left it) and changes no size".
-- "every seated card keeps its place beside the document through the drag (16 cards; none shifted)". It compares each card's offset from the document before and after.
-- "no card outside the neighbourhood moves because the document did: 3 cards are drawn exactly where they were (none moved) and the deal is the same deal".
+- "a drag of its header moves the document 90 by 50 in the store (466,16 to 556,66) and on screen, keeps the focus (ISS-0069: until TASK-0104 a drag left it) and changes no size".
+- "every seated card keeps its place beside the document through the drag (14 cards; none shifted)". It compares each card's offset from the document before and after.
+- "no card outside the neighbourhood moves because the document did: 2 cards are drawn exactly where they were (none moved) and the deal is the same deal".
 
-If the defect came back, the first would report that the dragged note is no longer the focus, the second would find no cards seated, and the third would name the cards that moved and report a new deal. A fourth check starts from a fresh lift and requires that a drag does not leave the focus ("the dragged document is still the focus with its cards round it"). The scripted walk `glass-desktop` checked the same with 29 cards round the document.
+If the defect came back, the first would report that the dragged note is no longer the focus, the second would find no cards seated, and the third would name the cards that moved and report a new deal. A fourth check starts from a fresh lift and requires that a drag does not leave the focus ("the dragged document is still the focus with its cards round it"). Two scripted walks checked the same in that pass: `glass-desktop` with 29 cards round the document, and `focus-neighbourhood` with 44 ("every gathered card moved with it and stands where it stood relative to the document; none was dealt again and none is drawn twice").
+
+The run drags ISS-0069 where it used to drag ISS-0070. Until this pass it had marked ISS-0070, ISS-0071 and this issue as notes that need somebody; all three are `fixed` now, and this pass was made with them fixed.
 
 **What was settled, against the four questions below.**
 
-1. Where the group may go. The cards round the document run past the field's left and right edges and are not clamped. The document itself is drawn within the field's width, with its header in sight, while the desk faces the person: the store keeps the place a drag gave it and the drawing stops at the edge. This is not Edwin's answer of 2026-09-12 that nothing is clamped, and it is Edwin's to accept or change. A turn does carry the document and its cards out of sight together.
-2. The way back. A button on the compass, reading "find" and the note's id, is offered when the desk is turned or moved away, and brings it back. A counter at each edge says how many related cards stand beyond it. Each row of the document's list shows where its card is. The smoke run presses all three.
+1. Where the group may go. The cards round the document run past the field's left and right edges and are not stopped. The document itself is drawn stopped at the field's edge. That differs from Edwin's answer of 2026-09-12, and the next section says how.
+2. The way back. A button on the compass, reading "find" and the note's id, is offered when the desk is turned or moved away, and brings it back. A counter at each edge says how many related cards stand beyond it. Each row of the document's list shows where its card is. The smoke run presses all three, and the `focus-neighbourhood` walk turns the field from a point of its background and presses "find".
 3. Whether the place survives. The document's place is in the store, as every held note's is, so it survives a reload. The focus, the turn and the look aside are the window's and are not stored.
-4. A re-layout and a resize. Dragging the corner keeps the focus and the cards make room: "the resized document is still the focus and its cards make room for it (15 seated, none over it)".
+4. A re-layout and a resize. Dragging the corner keeps the focus and the cards make room: "the resized document is still the focus and its cards make room for it (13 seated, none over it)".
 
 What is not shown:
 
 - Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it.
 - No check was broken on purpose to see it fail. The checks were written after the fix.
-- The frame time the risk scan below asks for was taken in the Linux container only, which draws in software, and while turning, not while dragging: with 217 cards seated, 16.7 ms between frames at the median and 33.4 ms at the 95th percentile. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
+- The frame time the risk scan below asks for was taken in the Linux container only, which draws in software, and while turning, not while dragging: with 217 cards seated, 16.7 ms between frames at the median and 33.3 ms at the 95th percentile. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
 - In the orbit a drag of the document was not driven.
+
+## The document stops at the field's edge, and whether it should is Edwin's choice
+
+**What is built.** A dragged document is drawn no further left than the field's left edge and no further right than its right edge, and never so low that its header leaves the field. The store keeps the place the drag gave it; only the drawing stops (`paneRect` in `desktop/src/renderer/glass.ts`). The cards round the document are not stopped and do run past the left and right edges. A turn of the field still carries the document and its cards out of sight together.
+
+**What shows it.** In the `focus-neighbourhood` walk at `e86b2e4`, the header was dragged 220 pixels to the right and the document moved 174. In the smoke run's `panes` part: "a pane stored past the field's edge is drawn inside it (at 860px)" and "the store still holds the place and the size it was given (3000, 280 by 540)".
+
+**What Edwin said.** On 2026-09-12, in the Decision record below: "Neighbours / notes in general can fall of the edge and move out of vision ... there should be a huge space to play with." He rejected stopping the group at the edge and rejected folding it away.
+
+**What the design asks.** DES-0003, whose direction Edwin endorsed on 2026-10-01 and which is still `proposed`, asks in its table of gestures that a resize "retain a reachable header". It also says the neighbourhood "may extend beyond the viewport".
+
+**The choice.** The build keeps the header where a pointer can always reach it, and so a document cannot be dragged off the field. Edwin's answer of 2026-09-12 allows it to be dragged off, with "find" and the edge counters as the way back. The two cannot both hold, and choosing between them is Edwin's. This issue stays `fixed` either way: the defect it reports, a drag that ended the arrangement, is gone. TST-0052 carries an Expect line saying the document stops, so that a person walking it sees the behaviour named.
 
 ## Cause
 
@@ -105,7 +119,7 @@ No trigger applies: no new dependency, env var, path or exposure. A dragged grou
 
 - [x] **Edwin confirmed the drag carries the ring, 2026-09-12, and rejected both options at the field's edge: nothing is clamped and nothing is folded away.** Recorded below.
 - [x] **Settled 2026-09-12, Edwin: "turning moves the note and the whole ring".** The arrangement is anchored to the cylinder, so the ring's places are bearings; a neighbour off the edge of sight is reached by turning, which is what "a huge space to play with" already means in Glass. Recorded in [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]].
-- [x] The way back: a control that names the note out of sight and returns to it. Built as a button reading "find" and the note's id, with the edge counters and the list beside it. It stands on the compass, as this box proposed. It brings the desk round to where the person faces and does not turn the field. Shown by the smoke run's `focus` checks "and "find" is offered for the note turned away from ("find PHASE-0002")" and ""find" brings the desk back", at `4243fc2`.
+- [x] The way back: a control that names the note out of sight and returns to it. Built as a button reading "find" and the note's id, with the edge counters and the list beside it. It stands on the compass, as this box proposed. It brings the desk round to where the person faces and does not turn the field. Shown by the smoke run's `focus` checks "and "find" is offered for the note turned away from ("find PHASE-0002")" and ""find" brings the desk back", at `e86b2e4`.
 - [x] Then FEAT-0017's decision 13 is rewritten and tasks follow: the layout follows the document's place (pure, with its suite), the drag handler moves the group, there is a way back, and a smoke check drags the note and finds every neighbour at the same offset. Done as TASK-0104. FEAT-0017's rule is now the fourth of its interaction decisions, "Movement preserves the group". The layout takes the document's rectangle wherever it stands, which is what the box called an offset. The smoke check is quoted under "Fixed, 2026-10-02".
 
 ## Decision record

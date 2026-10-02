@@ -51,12 +51,12 @@ This suite checks which size a note opens at, what a resize changes, and what a 
 
 ## Evidence
 
-2026-10-02: the suite ran inside `npm test` in `desktop/`, 586 of 586, at `9379a0c`. It holds 14 tests. The application code has changed since by one word in a comment. This note has a `command:`, so it records no verdict of its own; CI runs it.
+2026-10-02: the suite ran inside `npm test` in `desktop/`, 589 of 589, at `e86b2e4`. It holds 14 tests. This note has a `command:`, so it records no verdict of its own; CI runs it.
 
-The suite checks the rule in the store. Two runs in a window at `4243fc2`, in the Linux container, check what a person sees. The `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) finds the document 560 by 520 "to the pixel when opened, while dragged, after the drag, out of focus and in focus again", and finds the next note opening at the size the corner last chose. The `glass-desktop` walk finds a document back at its size after the window was narrow.
+The suite checks the rule in the store. Three runs in a window at `e86b2e4`, in the Linux container, check what a person sees. The `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) finds the document 560 by 520 "to the pixel when opened, while dragged, after the drag, out of focus and in focus again", and finds the next note opening at the size the corner last chose. The `glass-desktop` walk finds a document back at its size after the window was narrow. The `glass-collection` walk resizes a note to 624 by 552 and finds the next note opened in that window 624 by 552.
 
-Not checked anywhere: a note opened in a second window on the same view. The store is the one every window reads, and no run has watched a second window take the size.
+Not checked anywhere: that a note opened in a second window on the same view takes the view's size. The `glass-collection` walk opens a note on the served page, which is a second window with no bridge to the application. It compares the two sizes only when the served page's field can hold the chosen size, and in this run it could not: the field there was 772 by 446 and the size chosen was 624 by 552. So no size was compared. The note it opened there was drawn 622 by 427. No run has opened a second Deck window on the same view.
 
 ## Adequacy (who verifies this test?)
 
-Not measured. No break has been run against this suite, so nobody has seen it fail with the rule removed.
+Not measured. No break has been run against this suite, so nobody has seen it fail with the rule removed. The breaks made on 2026-10-02 were in the scene and handoff models, not in `panes.ts` or `store-state.ts`.

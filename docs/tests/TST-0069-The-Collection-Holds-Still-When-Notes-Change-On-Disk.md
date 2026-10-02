@@ -62,7 +62,7 @@ The walk refuses to run on anything that is not a copy under `/tmp`, and on any 
 
 ## Evidence
 
-**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb), at commit `4243fc2`, on a copy of this repository's notes made inside the box: 10 checks recorded, 10 held, 4 pictures, 8 seconds. No part of the walk was left out. The walk deleted ISS-0070 while it was open as a document, changed ISS-0071 from `open` to `fixed`, and added ISS-9999. The Issues view held 91 notes before and 91 after, one in and one out, and 70 rows held their order until apply was pressed.
+**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb), at commit `e86b2e4`, on a copy of this repository's notes made inside the box: 10 checks recorded, 10 held, 4 pictures, 8 seconds. No part of the walk was left out. The walk deleted ISS-0008 while it was open as a document, changed ISS-0069 from `open` to `fixed`, and added ISS-9999. The Issues view held 91 notes before and 91 after, one in and one out, and 88 rows held their order until apply was pressed. The walk chooses the notes it changes from the list on screen, so they are not the same notes as in the run on 2026-10-01.
 
 The walk first held all 10 on 2026-10-01. Its first run that day failed five. All five were defects in the application and are fixed:
 

@@ -96,33 +96,36 @@ A note can already be sent to another window. Dragging a card to an edge, or pre
 
 ## What the build changed or measured against this decision, 2026-10-02
 
-FEAT-0023 was built against this proposal on 2026-10-02 (commits `b1bfa1d` to `9379a0c`). Where nothing is listed, the build does what the decision says. The evidence is in [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], [[TST-0075-A-Move-Is-Never-Half-Done]] and [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]. This section changes no decision. Each difference is Edwin's to accept or to send back.
+FEAT-0023 was built against this proposal on 2026-10-02 (commits `b1bfa1d` to `b085ad7`). Where nothing is listed, the build does what the decision says. The evidence is in [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], [[TST-0075-A-Move-Is-Never-Half-Done]] and [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]. This section changes no decision. Each difference is Edwin's to accept or to send back.
+
+This section was first written at commit `4243fc2` and is brought up to commit `e86b2e4`. Four differences it listed then are gone, because commit `9d94fa0` built what the decision says: saving over the open scene asks first (A7), an unreadable scene's version is in the list's own text (A7), what a move does to this desk is written on the strip's entry (B2), and an arrival has a line of its own and a mark that stays (B5).
 
 **Differences from part A.**
 
 - **A4: opening is its own press.** Choosing a scene's name in the list changes nothing; an "open" button beside the list opens it. The reason is in commit `b1bfa1d`: on some systems the arrow keys change a list's value at every step, and opening on that replaced the desk with each scene passed on the way.
+- **A4: a reading position waits five seconds for its text.** A document whose read fails, and is retried later than that, is put where this window last read the note and not where the scene kept it. In a session that has not read the note it opens at its top. The scripted walk shows a retry landing under the right heading, in a session where the two places are the same.
 - **A5: a missing note's document.** It says there is no note at that path any more and offers "retry" and "close". When this window had read the note earlier in the session it still shows that text, labelled as last read. The words "no longer in this workspace" are in the scene's message.
-- **A6: opening a scene clears "Undo arrangement".** The desk that arrangement would put back was replaced as a whole (`forgetArrangement` in `desktop/src/renderer/glass.ts`). The two controls are separate and differently named, as decided.
-- **A7: saving over the open scene does not ask.** "save scene" asks "replace it", "keep it" or "cancel" only when the name belongs to a scene that is not the open one. Typing the open scene's own name saves over it. No commit says why.
-- **A7: an unreadable scene's version is not in the list's text.** The list reads "<name> (cannot be opened)" and the entry cannot be chosen. The version is in the entry's tooltip. No walk produced such an entry in a window; the store's rule is in TST-0074.
+- **A6: opening a scene clears "Undo arrangement".** The desk that arrangement would put back was replaced as a whole (`forgetArrangement` in `desktop/src/renderer/glass.ts`). The two controls are separate and differently named, as decided, and the walk sees both on screen at once after an arrangement is applied on a reopened scene.
+- **A7: the offer of "restore" ends sooner.** It is in the message shown after a delete, and it ends when that message is dismissed or replaced, as well as when the window closes or another scene is deleted.
 - **A7: restore fills only the gap.** A deleted scene is not restored over a scene saved under its name since.
 
 **Differences from part B.**
 
 - **B1: the acts are `move` and `show` in the code.** On screen they read "Move to the …" and "Also show in the …".
-- **B2: the sentence about leaving the desk is a tooltip.** A strip entry's label names the act, what the window carries and its display: "Move to the desk on the main display". "It leaves this desk once that window shows it" is the entry's tooltip. The keyboard chooser's rows carry the label and not that sentence.
+- **B2: the chooser says what an act does for one answer at a time.** The strip writes "it leaves this desk" or "this desk keeps it" under every entry. The keyboard chooser says it for the answer the keyboard or the pointer is on, in the room left beside the answers. In a window 1100 pixels wide that room cuts the sentence off before the words about leaving this desk.
 - **B3: the wait is four seconds for a desk and twelve for a reader.** `HANDOFF_ACK_MS` is 4000. A reader window has to load a page before it can answer, so it gets 8000 more (`READER_BOOT_MS` in `desktop/src/main/main.ts`).
 - **B3: a fourth way to be undone.** A destination that has not drawn the note 3.5 seconds after being told answers that it could not show it, and the landing is undone at once with that reason.
 - **B3: what counts as drawn.** In Glass, a document whose text is in or whose failure is labelled. In a reader window, the note's text. In a desk window, a card on screen.
 - **B4: size and reading position are not seen in a desk window.** A desk window is always drawn as cards. The size is carried into that desk's stored entry and the reading anchor into the arrival message, and both show when the note next stands as a document.
-- **B5: the arrival mark lasts 2.4 seconds and is drawn in Glass only.** A desk window and a reader show the message and no mark. The message is the window's status line, so the next thing said there replaces it.
+- **B5: the arrival mark is drawn on a Glass document only.** A desk window, which draws cards, and a reader show the line that says the note arrived and mark nothing.
 - **B5: "send back" from a reader is a show.** A reader holds no desk, so the note is raised in the window that kept it.
+- **B5: a note shown here from a reader has no way back.** A reader is no desk to return a note to. The main process keeps where a note came from only when the note can go back there, and drops it when that window closes.
 
 **One decision the build added.** A desk window draws every note on its desk that the workspace has, marked "not in this view" when its view does not list it (commit `9379a0c`). Without that, "Move to" a desk window on another view could never be acknowledged. It changes [[FEAT-0015-Each-View-Keeps-Its-Own-Desk]], decision 7, and FEAT-0023 records how it was found.
 
-**Measured, in a Linux container that draws in software, at commit `4243fc2`.** From release to the answer: 159 ms to a desk window and 904 ms to a reader window, against waits of 4000 ms and 12000 ms. A desk window that was kept busy was given up on; the walk timed 4.2 s from opening the chooser to the main window saying so. Each is one reading. Nothing was measured on the Mac.
+**Measured, in a Linux container that draws in software, at commit `e86b2e4`, on this repository.** From release to the answer: 155 ms to a desk window and 809 ms to a reader window, against waits of 4000 ms and 12000 ms. A desk window that was kept busy was given up on; the walk timed 4.2 s from opening the chooser to the main window saying so. From pressing "open" to both of a scene's documents being read where they were: 128 ms. Each is one reading. The same on a copy of `your-trainer` is in TST-0076. Nothing was measured on the Mac.
 
-**Not tried.** A second display, a display unplugged during a handoff, a new reader opened on an empty display, and a real tablet. The rule for a removed display is tested without a window, and the listener is in the main process, and no display has been removed under it.
+**Not tried.** A second display, a new reader opened on an empty display, a display really unplugged during a handoff, and a real tablet. The rule for a removed display is tested without a window. The scripted walk sent the main process the event Electron sends when a display is removed, and the main window said the display was disconnected and kept the note. No display was unplugged.
 
 ## Acceptance
 

@@ -54,8 +54,10 @@ The collection is the view's list as an object on the Glass desk. What it is all
 
 This test has a `command:`, so it records no verdict here; CI is the verdict.
 
-**2026-10-02**, commit `9379a0c`: `npm test` in `desktop/` ran every suite and passed 586 of 586. Seventeen of those tests are this suite's. `9379a0c` is the last commit to change application code before the verification pass at `4243fc2`.
+**2026-10-02**, commit `e86b2e4`: `npm test` in `desktop/` ran every suite and passed 589 of 589. Seventeen of those tests are this suite's.
 
 The suite began with 13 tests when the collection was built (commit `762bdfd`). Four came with defects the walks found: one about a note listed under two headings (`598ecc9`), and three about rows holding still under the pointer (`d91fc7e`). The last three Expected results above were added on 2026-10-02 to name what those tests check.
 
-What the suite cannot show is the list on screen. That is [[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]] and [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]], and the `collection` part of the smoke run, 17 checks of 17 at `4243fc2`.
+What the suite cannot show is the list on screen. That is [[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]] and [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]], and the `collection` part of the smoke run, 17 checks of 17 at `e86b2e4`.
+
+One rule of the list is held by a walk and by no test of this suite. The rows under "Joined to what you are holding" keep their order from one redraw to the next unless the held notes or the focus changed (commit `7103e3c`). The suite's test "rows that come from the desk keep their order while a person is on the list" checks the function that keeps an order. When the order is worked out afresh is decided in `desktop/src/renderer/renderer.ts`, which no node suite loads. The check for it is the collapsed-header check of the `glass-collection` walk in [[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]].

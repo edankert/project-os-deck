@@ -4,7 +4,7 @@ title: "Plan — an opened note stands in the middle of its neighbours"
 status: active
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]"]
 implements: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
 related: ["[[PHASE-0002-Glass]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[DES-0002-The-Glass-Cockpit]]"]
@@ -14,12 +14,19 @@ related: ["[[PHASE-0002-Glass]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orb
 
 ## Delivery sequence
 
-The initial implementation tasks TASK-0067 through TASK-0071 are complete under the earlier contract. They are historical implementation evidence. The remaining repair is [[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]], which resolves the coupled identity, size and movement defects in ISS-0070/71/72.
+**The repair is built and committed, and the plan stays `active` because its feature is at `review`, not `done`.** TASK-0067 through TASK-0071 built the first implementation under the earlier contract. They are complete and are historical evidence only. [[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] repaired the three defects Edwin reported in ISS-0070, ISS-0071 and ISS-0072: a note drawn twice, a size the person did not choose, and a drag that ended the arrangement. All three issues are `fixed`.
 
-1. Establish one spatial object per note and reserve the source slot without drawing a ghost.
-2. Feed chosen document dimensions into the layout. Move the existing related cards in a larger workspace and translate the group on a document drag.
-3. Provide keyboard and named locate routes for off-screen members. Reuse held and shared neighbours.
-4. Reconcile the old geometry and smoke assertions, walk TST-0052, and record performance and source-unchanged evidence before closing the issues.
+1. One spatial object per note, with the source slot reserved and no ghost drawn. Built in `81d4632`.
+2. The chosen document size feeds the layout, the existing related cards move in a workspace larger than the window, and a drag of the document carries the group. Built in `81d4632` and `b2a99d6`.
+3. Keyboard and named routes to cards out of sight, with held and shared neighbours reused. Built in the same two commits.
+4. The old geometry and smoke assertions are reconciled (`81d4632`, `6be167a`), and the walk written for the repair makes checks (`f7bdd46`). The walk of TST-0052 and the performance record on the Mac, which this step also asked for, are not done.
+
+## What is still owed
+
+- **The rendering cost on the Mac.** It is the one open box in TASK-0104, which stays `doing`. Everything timed so far was timed in the Linux container, which draws in software.
+- **A person's walk of TST-0052.** Nobody has walked it, and the acceptance ledger holds no verdict.
+- **A second window taking the view's size.** ISS-0071 keeps a box open for it and says what the one check that looked at it saw.
+- **Edwin's choice about the field's edge.** A dragged document is drawn stopped at the edge, and his answer of 2026-09-12 was that nothing is clamped. ISS-0072 sets the two side by side.
 
 ## Dependencies
 
@@ -27,4 +34,4 @@ TASK-0104 precedes FEAT-0020's final integration and acceptance in TASK-0098/009
 
 ## Resolved choices and remaining calibration
 
-The document's chosen size, removal of the ghost, movement of the existing cards and movement of the neighbourhood were already chosen by Edwin in the linked issues. They do not wait on another approval. A larger workspace replaces the former requirement to fit sixteen mini cards into the viewport. The repair chooses spacing and locate-control details against DES-0003 and records the result in TASK-0104. Full graph expansion is outside this task.
+The document's chosen size, removal of the ghost, movement of the existing cards and movement of the neighbourhood were chosen by Edwin in the linked issues. A larger workspace replaces the former requirement to fit sixteen mini cards into the viewport. The repair chose its spacing and its controls for finding a card out of sight against DES-0003, and FEAT-0017's "Decisions" records each. The first-use size of 560 by 520 and the opening times are trial values; TASK-0097 owns their calibration. Full graph expansion is outside this task.

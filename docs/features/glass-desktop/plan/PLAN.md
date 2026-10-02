@@ -36,4 +36,4 @@ Supported header fields come from each current view's existing data. Missing pro
 
 ## Where the sequence stands, 2026-10-02
 
-Steps 1 to 4 are built. TASK-0095, TASK-0098 and TASK-0100 are `done`. TASK-0096 and TASK-0097 stay `doing` on boxes that no check shows yet, listed in the feature note under Verification. Step 5's demonstration was driven by scripted walks at commit `4243fc2` and is still owed by a person: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]] has not been walked, and nothing was measured on the Mac, so TASK-0099 stays `doing`. Steps 6 and 7 are other features' and are closed out in their own notes. The plan stays `active` while the feature is `doing`.
+Steps 1 to 4 are built, and TASK-0095, TASK-0096, TASK-0097, TASK-0098 and TASK-0100 are `done`. Step 5's demonstration was driven by scripted walks at commit `e86b2e4` and is still owed by a person: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]] has not been walked, and nothing was measured on the Mac, so TASK-0099 stays `doing`. Steps 6 and 7 are other features' and are closed out in their own notes. The plan stays `active` while the feature is `doing`.

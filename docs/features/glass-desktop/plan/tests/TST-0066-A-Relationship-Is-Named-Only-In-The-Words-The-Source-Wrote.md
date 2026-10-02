@@ -48,8 +48,8 @@ DES-0003 allows a link to say "parent" or "implements" only when the source repo
 
 This test has a `command:`, so it records no verdict here; CI is the verdict.
 
-**2026-10-02**, commit `9379a0c`: `npm test` in `desktop/` ran every suite and passed 586 of 586. Six of those tests are this suite's, and ten are the `graph` suite's, which holds the two tests named in step 2. `9379a0c` is the last commit to change application code before the verification pass at `4243fc2`.
+**2026-10-02**, commit `e86b2e4`: `npm test` in `desktop/` ran every suite and passed 589 of 589. Six of those tests are this suite's, and ten are the `graph` suite's, which holds the two tests named in step 2.
 
-The same rule is checked on real notes by the `glass-desktop` walk ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]]). At `4243fc2` its check "every relationship word is a frontmatter key the source wrote for that pair, or 'link'; none is invented" held for the 16 rows of one note's related list: 11 rows named a key and none was invented.
+The same rule is checked on real notes by the `glass-desktop` walk ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]]). At `e86b2e4` its check "every relationship word is a frontmatter key the source wrote for that pair, or 'link'; none is invented" held for the 16 rows of one note's related list: 11 rows named a key and none was invented.
 
 Step 2 of the Procedure named two tests by a title that no test has. It was corrected on 2026-10-02 to the titles in the file.

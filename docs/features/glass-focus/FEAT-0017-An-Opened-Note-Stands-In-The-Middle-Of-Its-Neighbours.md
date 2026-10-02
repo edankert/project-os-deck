@@ -65,7 +65,7 @@ Details settled while building TASK-0104. The reasons are the ones the commits a
 7. **A field too small for a document draws it smaller and stores nothing.** A window made narrow for a moment cannot overwrite a chosen size (DES-0003).
 8. **The opening takes 300 ms and the gathering 400 ms.** The first implementation took 300 and then 700. DES-0003 asks for a trial between 250 and 400, and these are the trial values; TASK-0097 records what a walk decides.
 9. **The whole desk stands at one bearing, and a turn moves it as one flat layer.** The desk here is the documents, the cards seated round them and the collection. Turning away moves it as far as a front-band card at that bearing moves, dims it, and past the edge of sight stops drawing it. This is how Edwin's "turning moves the note and the whole ring" was built. ISS-0071 had sketched each seat as a bearing of its own; the seats are places on the desk in pixels, and the desk has the bearing. A drag changes the document's stored place, not a bearing.
-10. **A document is drawn within the field's width, with its header in sight, while the desk faces the person.** The store keeps the place a drag gave it, and the drawing stops at the field's edge. In the `focus-neighbourhood` record a drag of 420 pixels moved the document 174. The cards round it are not stopped and do run past the edge. This differs from Edwin's answer in ISS-0072 that nothing is clamped, and it is Edwin's to accept or change.
+10. **A document is drawn within the field's width, with its header in sight, while the desk faces the person.** The store keeps the place a drag gave it, and the drawing stops at the field's edge. In the `focus-neighbourhood` walk a drag of 220 pixels to the right moved the document 174. The cards round it are not stopped and do run past the edge. This differs from Edwin's answer in ISS-0072 that nothing is clamped, and it is Edwin's to accept or change. ISS-0072 sets what is built beside what he said, under "The document stops at the field's edge, and whether it should is Edwin's choice".
 11. **Three named controls reach what is out of sight.** A counter at the field's left or right edge says how many related cards stand beyond it, and pressing it brings the nearest into view. Each row of the document's "N related" list shows where its card is. A button on the compass, reading "find" and the note's id, is offered when the desk has been turned or moved away, and brings it back.
 12. **The keyboard reaches every neighbour through the document's list.** R on the document's header opens it. Until this task Tab went to the first of at most sixteen copies.
 13. **Holding a note deals nothing.** The neighbourhood is no longer dealt into the front band, documents no longer push field cards aside, and leaving the focus puts each gathered card back in the slot it came from. A card can therefore stand behind a document; Hide notes uncovers it.
@@ -98,18 +98,26 @@ Repeated at close-out on 2026-10-02. No new external dependency and no new requi
 
 ## Current state
 
-**2026-10-02: the repair is built, the three issues are fixed, and the feature stays at `review`.** The code is in `81d4632` and `b2a99d6`, and the smoke run's checks for it in `6be167a`. ISS-0070, ISS-0071 and ISS-0072 are `fixed`, each on a named check. TASK-0104 is `doing` with one box open: the rendering cost on the Mac. TST-0052, the walk a person makes, has not been walked, and the acceptance ledger holds no verdict for it. DES-0002 and DES-0003 are `proposed`; accepting them is Edwin's. One built detail differs from an answer Edwin recorded: a dragged document stops at the field's edge (Decisions, item 10).
+**2026-10-02: the repair is built, the three issues are fixed, and the feature stays at `review`.** The code is in `81d4632` and `b2a99d6`, the smoke run's checks for it in `6be167a`, and the walk `focus-neighbourhood`, rewritten to make checks, in `f7bdd46`. ISS-0070, ISS-0071 and ISS-0072 are `fixed`, each on a named check. Four things are still owed:
+
+- TASK-0104 is `doing` with one box open: the rendering cost on the Mac. Nothing has been timed there.
+- TST-0052, the walk a person makes, has not been walked, and the acceptance ledger holds no verdict for it.
+- ISS-0071 keeps one box open: no check has compared the size of a note opened in a second window with the size chosen on that view.
+- One built detail differs from an answer Edwin recorded, and the choice is his: a dragged document stops at the field's edge (Decisions, item 10).
+
+DES-0002 and DES-0003 are `proposed`; accepting them is Edwin's.
 
 ## Verification
 
-Run on 2026-10-02 at `4243fc2`, in a Linux container (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), from a separate clone. `main` has moved on since by notes and one word in a code comment.
+Run on 2026-10-02 at `e86b2e4`, in a Linux container (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), from a separate clone.
 
-- **Node suites.** `npm test` in `desktop/` builds and runs every suite: 586 of 586 on 2026-10-02 at `9379a0c`, the last commit before `4243fc2` that changed application code. This feature's suites are `focus-ring` (15 tests, TST-0051) and `reading-size` (14 tests, TST-0065).
-- **The smoke run as CI runs it.** `bash tools/scripts/smoke-in-a-box.sh both` exited 0 after 1131 seconds, on loopback and then on the network.
+- **Node suites.** `npm test` in `desktop/` builds and runs every suite: 589 of 589 on 2026-10-02 at `e86b2e4`. This feature's suites are `focus-ring` (15 tests, TST-0051) and `reading-size` (14 tests, TST-0065).
+- **The smoke run as CI runs it.** `bash tools/scripts/smoke-in-a-box.sh both` exited 0 after 1148 seconds, on loopback and then on the network.
 - **The smoke run with each check printed.** The loopback half was run once more at the same commit: 389 passed, 0 failed, 0 skipped, 2 not applicable (a throw to a display with no window, on a machine with one display; the tablet-shaped checks, which the network half makes). The Glass section passed 291 checks. The parts that bear on this feature: `focus` 47, `lift` 27, `panes` 21, `orbit` 22, `zoom` 15. TST-0045 lists every part.
+- **The walk `focus-neighbourhood`.** 8 checks, none failed. It opens FEAT-0015 from its card and finds one object for each note, a card and a line for each of its 44 neighbours, and a list that names all 44. A drag of the header keeps the document 560 by 520 and every card at its place beside it. A drag from a point of the field's background turns the field, "find FEAT-0015" is offered, and pressing it brings the document back whole without turning the field again. After Escape each of the 24 other cards is where it stood.
 - **The walk `glass-desktop`.** 54 checks, none failed. Among them: the open note is one object and no neighbour is drawn twice; every card is back where it stood after Escape (24 compared); dragging the header moves the document with the 29 cards round it at 560 by 520; the corner resizes it and the view keeps that size for the next note; "find" brings it back after a turn; a narrow window stores no size.
 - **The walks `glass-scale` and `glass-scale-your-trainer`.** 8 checks each, none failed. The most linked-to note opens with every neighbour seated once: 63 on this repository and 217 on Your Trainer. A note joined to more than one open note is one card.
-- **The walk `focus-neighbourhood`.** The pass's summary does not list it. A record of it was written in the clone at 03:42 on 2026-10-02. It makes no pass-or-fail checks. It logged 43 neighbours as 43 cards each drawn once, no ghost, and a drag that kept the size and every offset. Its step that turns the field now starts on a row of the collection and opens a second note instead, so that record shows no turn and no "find". The script needs correcting.
+- **The walk `glass-collection`.** 11 checks, none failed. One bears on this feature: a note was resized to 624 by 552 and the next note opened in the same window was 624 by 552. The same check opens a note on the served page, and ISS-0071 says why that does not show a second window taking the size.
 
 A scripted walk sends real pointer and key events to the real application and checks what is on screen. It is not a person's walk.
 
@@ -118,8 +126,9 @@ Not done:
 - TST-0052 has not been walked by a person. It rests at `active` and the ledger holds no verdict.
 - Nothing was timed on the Mac. Every timing above is the container's, which draws in software.
 - Nothing was tried on a second display, with a display unplugged, on a real tablet, with a screen reader or by touch.
-- In the orbit, a drag and a resize of the document were not driven. No run opened a note in a second window to watch it take the view's size.
-- No check written for the repair was broken on purpose to see it fail. Two were seen to fail on real defects before the renderer was fixed (TST-0045, "2026-10-02").
+- In the orbit, a drag and a resize of the document were not driven.
+- No check compared the size of a note opened in a second window with the size chosen on that view (ISS-0071, "What is not shown").
+- No check written for the repair was broken on purpose to see it fail. Two were seen to fail on real defects before the renderer was fixed (TST-0045, "Adequacy of the rewritten `focus` part").
 - The first implementation's evidence is in TASK-0067 to TASK-0071. It was taken under the contract Edwin rejected and verifies none of the above.
 
 ## Links

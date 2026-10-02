@@ -52,11 +52,11 @@ REQ-0003 says an arrangement changes layout only, can be previewed, cancelled an
 
 ## Evidence
 
-The file holds 15 tests. `npm test` in `desktop/` builds and runs every suite, this one among them. On 2026-10-02 at commit `9379a0c` it passed 586 of 586. That run was the main session's, and this close-out did not run it again. `9379a0c` is the last commit that changed application code before the verification pass at `4243fc2`. The suite's file and `desktop/src/shared/arrange.ts` have not changed since `b017807`, the commit that added them.
+The file holds 15 tests. `npm test` in `desktop/` builds and runs every suite, this one among them. On 2026-10-02 at commit `e86b2e4` it passed 589 of 589. That run was the main session's, and this close-out did not run it again. The suite's file and `desktop/src/shared/arrange.ts` have not changed since `b017807`, the commit that added them.
 
 This note records no verdict. The suite has a `command:`, so CI is its verdict (`STATUSES.md`, `[[test]]`).
 
 ## What it does not cover
 
-- Anything drawn. The outline, the bar that names what moves, the travel and the keyboard are walked in [[TST-0071-Collection-Forms-And-Arrangements-Are-Walked-With-A-Real-Pointer]].
-- The undo putting back the focus, the open list and the relationship picked out. Those are the window's and are not part of `checkUndo`.
+- Anything drawn. The outline, the bar that names what moves, the travel and the keyboard are walked in [[TST-0071-Collection-Forms-And-Arrangements-Are-Walked-With-A-Real-Pointer]]. So are two documents that overlap on screen by the number of pixels the plan says.
+- The undo putting back the focus, the open list and the relationship picked out. Those are the window's and are not part of `checkUndo`. The walk in TST-0071 reads the picked-out relationship after an undo.

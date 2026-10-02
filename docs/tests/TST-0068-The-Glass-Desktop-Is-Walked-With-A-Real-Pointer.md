@@ -15,7 +15,7 @@ kind: manual
 entrypoint: "desktop/demos/glass-desktop.cjs"
 command: ""
 last_verified: 2026-10-02
-automation: "one command, run by hand: bash tools/scripts/walk-in-a-box.sh glass-desktop. Not run by run-tests.py or by CI, which have no Docker."
+automation: "two commands, run by hand: bash tools/scripts/walk-in-a-box.sh glass-desktop, then bash tools/scripts/walk-in-a-box.sh glass-collection. Not run by run-tests.py or by CI, which have no Docker."
 covers: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[REQ-0001-Glass-Collections-Remain-Exact-And-Interactive]]", "[[REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
 issues: []
 tasks: ["[[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]]", "[[TASK-0097-Open-The-Full-Note-As-A-Glass-Document]]", "[[TASK-0098-Keep-Collection-Document-And-Field-In-Sync]]", "[[TASK-0099-Walk-The-Glass-Desktop-At-Real-Scale]]"]
@@ -32,7 +32,7 @@ related: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]", "[[TST-0045-Gla
 
 ## Purpose
 
-`node --test` cannot load the renderer, and the smoke run answers one question, whether every check still holds. This is a different kind of evidence: one route through the real application, the route TST-0063 asks a person to take, driven by `webContents.sendInputEvent` so the browser hit-tests every press as it does a person's. Each claim is recorded with what was seen, and 23 pictures are kept. It is how the eight defects listed under Evidence were found.
+`node --test` cannot load the renderer, and the smoke run answers one question, whether every check still holds. This is a different kind of evidence. Two scripts drive the real application with `webContents.sendInputEvent`, so the browser hit-tests every press as it does a person's. The first, `glass-desktop` (`desktop/demos/glass-desktop.cjs`), takes the route TST-0063 asks a person to take. The second, `glass-collection` (`desktop/demos/glass-collection.cjs`), drives what the feature's tasks ask for and the first script does not reach. Each claim is recorded with what was seen, and pictures are kept. The nine defects listed under Evidence were found this way.
 
 It is not TST-0063. That check is a person's, and no verdict is recorded for it here.
 
@@ -40,11 +40,12 @@ It is not TST-0063. That check is a person's, and no verdict is recorded for it 
 
 1. `colima start` if no Docker daemon is running.
 2. `bash tools/scripts/walk-in-a-box.sh glass-desktop`.
-3. Read the lines beginning `drive: ok` and `drive: FAIL`, and look at the pictures in `desktop/dist/walks/glass-desktop/`. The same lines are in `drive.json` there.
+3. `bash tools/scripts/walk-in-a-box.sh glass-collection`. This is the second script: the two filters, the collapsed header, a group heading, the wheel at both ends of the list, Escape during a drag, keyboard focus that can be seen, a verb that is refused, a document's panels, and the size the next note opens at.
+4. For each, read the lines beginning `drive: ok` and `drive: FAIL`, and look at the pictures in `desktop/dist/walks/glass-desktop/` and `desktop/dist/walks/glass-collection/`. The same lines are in `drive.json` there.
 
-It runs on this repository's own notes, on the Features view, and writes nothing: `git status` in the workspace is compared before and after.
+Both scripts run on this repository's own notes and write nothing: `git status` in the workspace is compared before and after. The first stays on the Features view. The second also opens the Intent view, to find a decision that has verbs.
 
-## What it covers
+## What the first script, `glass-desktop`, covers
 
 - **The collection.** It is inside the field and the column beside the field is gone. Its count is the number of notes the sidecar returns for the view, and every counted note has a row once every heading is opened. It says how many members the field has a place for. Search narrows it and says by what; a search with no match names the query, shows zero and offers Clear filters. It is resized by its corner, moved by its header, collapsed to a header that still carries the name and the exact count, and opened again at the same size on the same row. The store holds six values for it and none of its rows.
 - **Opening.** A click on a card in the field: the document is on screen, named, on the first frame, and grows from the card. Its text is the full note. No card is drawn for the open note and no neighbour is drawn twice. Its row is shown and marked in the collection. The path is under Details and not in the heading.
@@ -61,23 +62,58 @@ It runs on this repository's own notes, on the Features view, and writes nothing
 - **A narrow window.** Under 720 px of field one object is in front and fills it, a bar names the collection and each open note, nothing overflows sideways, and a note opened there is stored at a reading size.
 - **The served page.** With the bridge absent, as a tablet loads it: "collection" brings the list in front of the Mac's documents, a row opens the full note in a document with no tick and no verb, and the desk the application keeps is unchanged.
 
+## Expected results of the second script, `glass-collection`
+
+- **The status filter and the type filter.** Each is chosen with the arrow keys. The list is left with the notes that match, everything each of them holds, and each note that holds a match, so that the match has a place to stand. That is the list's own rule (`narrowGroups` in `desktop/src/shared/search.ts`), and the script works out the expected rows for itself from the sidecar's answer. The header counts those rows against the whole view and names the filter.
+- **The collapsed header.** With a search, a status and a type all set and a note open, the collapsed header alone says the search, the count against the whole view and both filters. Opened again, the collection has its size, the row that was marked is marked, and the list is scrolled to the same row. With the search and both filters cleared, the list is the whole view again and names no filter.
+- **A group heading.** A press on it folds its rows away and its `aria-expanded` says so. Enter on it opens them again. The view's count does not change.
+- **The wheel at both ends of the list.** Turned up at the first row and turned down at the last row, the wheel stays in the list: the field's zoom and bearing are what they were.
+- **Escape during a drag of the collection.** The collection goes back where it was, and the open note stays open.
+- **Keyboard focus that can be seen.** Tab is pressed six times from the search box, and each control the keyboard lands on is drawn with an outline. The two filters carry a name for a screen reader, the list and a row carry a role, and the fold control says whether the list is open.
+- **A verb that is refused.** It is drawn inside the document, disabled, with the reason in words beside it. Pressing it asks nothing and sends nothing. The other verbs are as the sidecar gave them.
+- **A document's panels.** A document whose related list and details were open comes back with every panel closed, after "close all" and after it is closed by itself.
+- **The size the next note opens at.** A note resized with the keyboard sets the size the next note opens at on this view. On the served page a note opened on the same view takes that size when its field has room for it.
+
+**The refusal in the seventh result is the script's own.** No note in this workspace has a verb the sidecar refuses. So the script replaces the sidecar's answer for one note, through the debugger, with one whose first verb is disabled with a reason. What is shown is how Deck draws a refusal inside a document. It is not shown on a refusal the sidecar itself made.
+
 ## What it does not cover
 
 - Whether a person finds the route obvious or the motion helpful. That is TST-0063.
-- A screen reader. The names are in the page; nobody has listened to them.
+- A screen reader. The names and roles are in the page and the second script reads them; nobody has listened to them.
+- A refusal the sidecar itself made, as said above.
+- The focus outline on the search box, on the collection's header and on its fold control. Tab, going forward from the search box, does not pass through them. Nor is the outline read in a narrow window or on the served page.
 - Touch, and a real tablet. The served page was driven in a second Electron window with no preload bridge, with a mouse pointer.
 - A second display.
 - Timing on the Mac. The box renders in software.
-- The two filter boxes, and a group heading pressed with the pointer. The walk opens every heading through the store before it counts rows.
 - A change on disk while the list is open, which is [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]].
 
 ## Evidence
 
-**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, screen 1440 by 900, window 1440 by 873), on this repository at commit `4243fc2`, from a separate clone: 54 checks recorded, 54 held, 23 pictures, workspace unchanged, 62 seconds. No part of the walk was left out. The Features view held 144 notes, and the collection counted 144.
+**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, screen 1440 by 900, window 1440 by 873), on this repository at commit `e86b2e4`, from a separate clone. Both scripts ran in one verification pass that also made the smoke run and the other walks. The Features view held 144 notes, and the collection counted 144.
 
-This was one run in a verification pass that also made the smoke run and the other walks. The walk first held all 54 on 2026-10-01 at commit `598ecc9`, when the view held 131 notes.
+| Script | Checks recorded | Checks that held | Pictures | Time | Workspace |
+| --- | --- | --- | --- | --- | --- |
+| `glass-desktop` | 54 | 54 | 23 | 62 seconds | unchanged |
+| `glass-collection` | 11 | 11 | 3 | 46 seconds | unchanged |
 
-The first complete run, on 2026-10-01, failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
+No part of either script was left out: neither wrote a `NOT RUN` line.
+
+What the second script saw, check by check:
+
+- The status filter at "approved": 6 notes are at that status, 10 rows are left, and the header reads "10 of 144 notes" and "narrowed: status approved". The type filter at "requirement": 6 notes, 10 rows, "narrowed: type requirement".
+- Collapsed, the collection is 34 px tall and its header reads "Features", "10 of 144 notes" and "narrowed: “a” · status approved · type requirement". Before it was collapsed and after it was opened again it is 340 by 693, FEAT-0020's row is the marked one, and the list is 60 px down.
+- Cleared, the header reads "144 notes" and names no filter.
+- The heading for PHASE-0001 has 10 rows under it. Pressed, it has none and says it is folded. After Enter it has 10 again.
+- At the first row the list stays at 0. At the last it stays at 275 of 275 px. The zoom is 1 and the bearing the same before and after.
+- The collection is dragged from 192, 121 to 332, 132. After Escape it is at 192, 121 and FEAT-0001 is still open.
+- Tab lands on the status filter, the type filter, a row, and then the open document's header and two of its controls. Each has an outline. The filters are named "Filter by status" and "Filter by type", the list has the role `list` and a row the role `listitem`.
+- "Accept" on ADR-0005 is drawn disabled inside the document, with the reason beside it and as its tooltip. The press sent no request that writes and asked for no reason. "Supersede" is drawn as the sidecar gave it.
+- With the related list and the details open, the document comes back with both closed after "close all" and again after Delete.
+- A note resized to 624 by 552 is followed by a note that opens at 624 by 552. **The served half of this check asserted nothing about size in this run.** The served page's field was 772 by 446, which has no room for 624 by 552, and the script holds the note to the chosen size only when the field has room. The note opened there at 622 by 427.
+
+The first script first held all 54 on 2026-10-01 at commit `598ecc9`, when the view held 131 notes. The second script was written on 2026-10-02 (commit `7103e3c`).
+
+The first complete run of the first script, on 2026-10-01, failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
 
 1. Escape on a document's header left the focus instead of closing the open related list.
 2. A note opened with Enter left the keyboard on the row.
@@ -89,3 +125,7 @@ The first complete run, on 2026-10-01, failed nine checks. Eight were defects in
 8. In a window under 860 px wide the list stopped at two fifths of the window's height.
 
 The ninth was the walk's own: it pressed a row that was hidden under a heading stuck to the top of the list.
+
+The second script found a ninth defect in the application on 2026-10-02, fixed in commit `7103e3c`:
+
+9. Collapsing the collection and opening it again moved the list by several hundred pixels when a note was open. The script scrolls the list 60 px down, and the commit records that it came back at 665. The rows under "Joined to what you are holding" were sorted afresh at every redraw. Their order depends on where the cards stand round the open note, which is known only a moment after the note opens. So the first redraw after that, whatever caused it, moved every row, and the list followed the row it remembered. The order is now worked out when what it describes changes, and once more when the seats round the focus are first known. The check on the collapsed header reads the scroll position before and after, 60 and 60 in this run, and would read 665 again if the defect came back.

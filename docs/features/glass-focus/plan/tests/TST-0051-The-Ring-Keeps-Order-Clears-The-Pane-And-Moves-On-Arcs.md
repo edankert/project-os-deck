@@ -56,10 +56,10 @@ TASK-0104 rewrote this suite on 2026-10-01. Until then it checked the contract E
 
 ## Evidence
 
-2026-10-02: the suite ran inside `npm test` in `desktop/`, 586 of 586, at `9379a0c`. It holds 15 tests. The application code has changed since by one word in a comment. This note has a `command:`, so it records no verdict of its own; CI runs it.
+2026-10-02: the suite ran inside `npm test` in `desktop/`, 589 of 589, at `e86b2e4`. It holds 15 tests. This note has a `command:`, so it records no verdict of its own; CI runs it.
 
 The suite checks where seats are. That the cards on screen stand at those seats, once each, is checked in a window by the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]).
 
 ## Adequacy (who verifies this test?)
 
-Not measured for the suite as it stands. The four breaks recorded here on 2026-09-11 were made against the suite TASK-0104 replaced, and each of the checks they failed is gone. No break has been run against the rewritten suite.
+Not measured for the suite as it stands. The four breaks recorded here on 2026-09-11 were made against the suite TASK-0104 replaced, and each of the checks they failed is gone. No break has been run against the rewritten suite. The breaks made on 2026-10-02 were in the scene and handoff models, not in `focus-ring.ts`.

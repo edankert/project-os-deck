@@ -49,4 +49,4 @@ One value was left to the build: how many seconds the main process waits for an 
 
 ## Where the plan stands, 2026-10-02
 
-All five steps are built and committed. The plan stays `active` because the feature is at `doing`: each task has an open box or an open step, listed in the task's own note.
+All five steps are built and committed. Steps 1 and 3 are closed: [[TASK-0106-Keep-A-Scene-In-The-Store]] and [[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]] are `done`. Steps 2, 4 and 5 are `doing`: two boxes need a second display, the Mac measurements are owed, the walks do not repeat the route by keyboard alone, and no check looks for a visible focus on the scene controls. The plan stays `active` because the feature is at `doing`. Each open box is listed in its task's own note.

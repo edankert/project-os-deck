@@ -62,7 +62,7 @@ This procedure does not validate named scenes, camera persistence, multiple inde
 
 As of 2026-10-02 nobody has walked this check. The release ledger holds no verdict for it, and this note records none.
 
-A script has driven the same route with real pointer and key events in a Linux container: [[TST-0071-Collection-Forms-And-Arrangements-Are-Walked-With-A-Real-Pointer]]. It is not this check. It says nothing about whether a person finds the commands useful, how long a comparison takes them, or how often they pick the wrong note. Step 11's frame cadence in a foreground window on the Mac has not been measured; [[TST-0072-Glass-Is-Measured-At-The-Size-Of-A-Real-Workspace]] holds the container's figures.
+A script has driven the same route with real pointer and key events in a Linux container: [[TST-0071-Collection-Forms-And-Arrangements-Are-Walked-With-A-Real-Pointer]]. It is not this check. It says nothing about whether a person finds the commands useful, how long a comparison takes them, or how often they pick the wrong note. Step 11's frame cadence in a foreground window on the Mac has not been measured. [[TST-0072-Glass-Is-Measured-At-The-Size-Of-A-Real-Workspace]] holds the container's figures, among them a turn of the field after each of Read, Compare and Show related. The container draws in software, so its time between frames says nothing about the Mac.
 
 Steps 1, 2, 4, 5, 6, 7 and 10 were corrected on 2026-10-02 to name the controls the built application has. What changed:
 
@@ -73,3 +73,5 @@ Steps 1, 2, 4, 5, 6, 7 and 10 were corrected on 2026-10-02 to name the controls 
 - **Relationship emphasis is called "pick out".** It is in the document's list of related notes and offers the frontmatter keys the files join the note by, each with its count.
 
 Two lines under Expect were left as written and are narrower than the build. "Stale previews require recomputation": the application recomputes without being asked. "An incompatible move or removal invalidates undo": the application keeps the undo for the objects that have not changed. REQ-0003 asks only that the changed state is announced before anything is applied, and the build does that. Whether to reword those two lines is Edwin's.
+
+One more wording under Expect is in the same position. The first line says "selected identity", and the build has no selection: what it keeps across a change of form is the note that is open and the row the table was scrolled to. REQ-0003's first criterion says "selected note" in the same way, and its evidence table says what the build does there. Rewording either is Edwin's too.

@@ -67,6 +67,8 @@ These are the routine details settled while building, under Edwin's instruction 
 - The rows under "Joined to what you are holding" keep the last neighbourhood read until its replacement arrives, and until a waiting change is applied. They had vanished and come back on every save, so the row under the pointer became another row (`598ecc9`).
 - The list is held on one row: the row under the pointer, else the row the keyboard is on, else the top row. When that row leaves, the next row down is held. The pointer counts as resting on the list for 0.8 seconds after it leaves, and a document takes no press while it grows, because the growing document lies over the row that was pressed (`d91fc7e`).
 - The place the list is scrolled to is kept as a note and the heading it is under, not as pixels, since one note has a row under several headings (`598ecc9`).
+- The rows under "Joined to what you are holding" are put in order when what the order describes changes: which notes are held, and which is the focus. They are ordered once more when the seats round the focus are first known, and the list is redrawn at once. At every other redraw the order is kept, and a note that arrives is added after the others. Sorted afresh at every redraw, the rows had moved at the first redraw after the seats were known, so collapsing the collection and opening it again moved the list by several hundred pixels (`7103e3c`).
+- After the collection is opened again, the list goes back to its remembered row only once the list is on screen and that row is there under its own heading. Restored one frame after the press, before the list was laid out, it did nothing (`7103e3c`).
 - A press that goes down on a row and comes up on the list itself still acts on that row, if the same row is under the pointer. Rows are drawn by a pool of elements, and a redraw during the press hands the row to another element, so the browser sent the click to the list (`cee5119`).
 
 **The document**
@@ -88,6 +90,7 @@ These are the routine details settled while building, under Edwin's instruction 
 - Glass has no reader column and no column of verbs. The verbs the sidecar allows and the ticks are inside the document. On a served page neither is drawn at all.
 - A field narrower than 720 px shows one object at a time, with a bar that names the collection and each open note. Nothing a narrow window does to a size or a place is stored.
 - A document opened on the served page is that page's own. The desk the application keeps is not changed by it.
+- The bar above the field holds three groups of controls: what the field says, the scenes, and what is on the desk, which is where "put cards back" and "close all" are. From 1500 px of window width the bar is one row. Under 1500 px the desk's group has a row of its own, and under 1200 px each group has. Which row a control is on depends only on the window's width, and so does the bar's height, so a button appearing does not resize the field (`40a74e3`, `aa848b0`, `3ff281c`, `b085ad7`). Before `b085ad7` the bar wrapped wherever a row was full. In a window 900 px wide "close all" was then cut off by the bar's lower edge, and a press on it landed on the collection behind it.
 
 ## Acceptance
 
@@ -104,37 +107,44 @@ These are the routine details settled while building, under Edwin's instruction 
 
 ## Verification
 
-**Where the feature stands, 2026-10-02.** The feature is built and stays `doing`, because three of its six tasks are still `doing`. TASK-0096 and TASK-0097 have boxes that no check shows. TASK-0099 waits on a person's walk and on a measurement on the Mac. TASK-0095, TASK-0098 and TASK-0100 are `done`. No requirement criterion is ticked.
+**Where the feature stands, 2026-10-02.** The feature is built and stays `doing`, because one of its six tasks is still `doing`. TASK-0099 waits on a person's walk, on a measurement on the Mac and on a person's times and mistakes. The other five tasks are `done`. TASK-0096 and TASK-0097 closed on 2026-10-02, when the `glass-collection` walk drove the boxes that no check had shown. No requirement criterion is ticked.
 
-**The node suites.** `npm test` in `desktop/`, 2026-10-02, at commit `9379a0c`: 586 of 586 passed. `9379a0c` is the last commit to change application code before the verification pass. The suites that are this feature's: `collection`, 17 tests ([[TST-0067-A-Collection-Counts-Exactly-And-Keeps-Its-Place]]); `relations`, 6 tests, with two in `graph` ([[TST-0066-A-Relationship-Is-Named-Only-In-The-Words-The-Source-Wrote]]). The reading-size suite, 14 tests, is FEAT-0017's and this feature rests on it.
+**The node suites.** `npm test` in `desktop/`, 2026-10-02, at commit `e86b2e4`: 589 of 589 passed. The suites that are this feature's: `collection`, 17 tests ([[TST-0067-A-Collection-Counts-Exactly-And-Keeps-Its-Place]]); `relations`, 6 tests, with two in `graph` ([[TST-0066-A-Relationship-Is-Named-Only-In-The-Words-The-Source-Wrote]]). The reading-size suite, 14 tests, is FEAT-0017's and this feature rests on it.
 
-**The verification pass.** 2026-10-02, at commit `4243fc2`, in a Linux container (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), from a separate clone. `main` has moved on since by notes and one word in a code comment.
+**The verification pass.** 2026-10-02, at commit `e86b2e4`, in a Linux container (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), from a separate clone.
 
 | Run | Command | Result |
 | --- | --- | --- |
-| The smoke run as CI makes it | `bash tools/scripts/smoke-in-a-box.sh both` | Exit 0 on loopback and on the network, 1131 seconds. The script prints nothing else when every check holds. |
+| The smoke run as CI makes it | `bash tools/scripts/smoke-in-a-box.sh both` | Exit 0 on loopback and on the network, 1148 seconds. The script prints nothing else when every check holds. |
 | The loopback half again, with every check printed | the loopback half of that run, with `DECK_SMOKE_DEBUG=1` | 389 passed, 0 failed, 0 skipped, 2 not applicable (a throw to an empty display, and the tablet-shaped checks the network half makes). The Glass section is 291 of them. |
 | This feature's parts of the Glass section | | `collection` 17, `document` 14, `served` 6. Also bearing on it: `keys` 12, `switch` 11, `focus` 47, and three checks in the verb and tick section about the verbs and ticks inside a Glass document. |
-| The walk `glass-desktop` ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]]) | `bash tools/scripts/walk-in-a-box.sh glass-desktop` | 54 checks of 54, 23 pictures, workspace unchanged. |
+| The walk `glass-desktop` ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]], first script) | `bash tools/scripts/walk-in-a-box.sh glass-desktop` | 54 checks of 54, 23 pictures, workspace unchanged. |
+| The walk `glass-collection` (the same test note, second script) | `bash tools/scripts/walk-in-a-box.sh glass-collection` | 11 checks of 11, 3 pictures, workspace unchanged. One check rests on a refusal the walk itself put in place; see below. |
 | The walk `collection-refresh` ([[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]]) | `bash tools/scripts/walk-in-a-box.sh collection-refresh --copy` | 10 checks of 10, 4 pictures, on a copy of the notes. |
 | The walk `glass-scale` on this repository ([[TST-0072-Glass-Is-Measured-At-The-Size-Of-A-Real-Workspace]]) | `bash tools/scripts/walk-in-a-box.sh glass-scale` | 8 checks of 8. Features view, 144 notes. |
 | The walk `glass-scale` on a copy of Your Trainer | the same with `--workspace ../your-trainer --name glass-scale-your-trainer` | 8 checks of 8. Features view, 1393 notes; 217 neighbours round one note. |
 
 A scripted walk sends real pointer and key events to the real application and checks what is on screen. It is not a person's walk.
 
+One check of the `document` part changed its own setup in commit `e86b2e4`, the last before this pass. It shows that a press goes through a growing document to the row under it. It used to send that press a fixed time after the first, and in the pass before this one it missed the growing document four times and failed. It now sends the press when it sees the document lying over the row. The application did not change.
+
+**What the `glass-collection` walk drives.** It was written on 2026-10-02 (commit `7103e3c`) for what TASK-0096 and TASK-0097 ask for and no check reached. Its 11 checks: a status and a type chosen with the arrow keys, held to the list's own rule for what a filter leaves; the collapsed header naming the search, the count and both filters, and the size, the marked row and the scroll position after it is opened again; the list whole again when everything is cleared; a group heading folded by pointer and opened by Enter; the wheel at the list's first and last row; Escape during a drag of the collection; an outline on each control Tab reaches, and the names and roles a screen reader is given; a refused verb drawn with its reason inside a document; a document's panels closed when it comes back; and the size a person gave a note being the size the next opens at.
+
+**One of those checks rests on something the walk put in place.** No note in this workspace has a verb the sidecar refuses. So the walk replaced the sidecar's answer for ADR-0005, through the debugger, with one whose first verb is disabled with a reason. What is shown is how Deck draws a refusal inside a document. It is not shown on a refusal the sidecar itself made.
+
+**What that walk found.** Collapsing the collection and opening it again moved the list by several hundred pixels when a note was open. It is fixed in commit `7103e3c`, and the rule now built is under Decisions, "The list holding still". The check on the collapsed header would fail again if the defect came back.
+
 **What was not done.**
 
 - [[TST-0063-A-Collection-And-Full-Note-Share-Glass]], the acceptance check, has not been walked. The ledger holds no verdict for it.
 - Nothing was timed on the Mac. Every time in the notes is the container's, which draws in software. The Mac foreground measurement takes the keyboard for about a minute and waits for Edwin.
 - Nothing was tried on a second display, with a display unplugged, on a real tablet, by touch or with a screen reader. The served page was driven in a second Electron window with no preload bridge.
+- No state file saved by an older build was opened in the application. The `collection` suite loads one written by hand.
+- The focus outline was read on six controls in a wide window. It was not read on the search box, on the collection's header or its fold control, in a narrow window or on the served page.
+- On the served page the size of the next note was not held to the size a person chose, because that page's field was smaller than the chosen size in this run (772 by 446 against 624 by 552).
 - The independent review this feature owes before `done` has not been run.
 
-**What no check shows, by task.** None of these is a known defect.
-
-- TASK-0096: a status or a type chosen in the list's two filter boxes while the list is in the collection; a group heading pressed with the pointer; the filter named in a collapsed header; the marked row after the collection is opened again; the wheel at the list's first and last row; Escape during a drag of the collection.
-- TASK-0097: a disabled verb with its reason inside a Glass document. The smoke run checks that in the reader of Spread and List.
-- TASK-0099: the acceptance walk, the Mac measurement, and a person's times and mistakes before and after.
-- A document that leaves the desk now has its panels closed however it left (commit `1a71001`). No check asserts it.
+**What is still open, by task.** Only TASK-0099 has open boxes: the acceptance walk, the Mac measurement, a person's times and mistakes before and after, and the record of a run on the Mac. None is a known defect.
 
 ## Impact analysis and risk scan
 
