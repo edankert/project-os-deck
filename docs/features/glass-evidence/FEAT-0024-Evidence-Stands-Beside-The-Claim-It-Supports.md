@@ -14,8 +14,9 @@ tasks: ["[[TASK-0111-Work-Out-A-Notes-Evidence-Without-A-Window]]", "[[TASK-0112
 release: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-02
-review_round: 1
+review_round: 2
 review_verdict: changes-requested
+review_response: "Round two found two of round one's three refutations fixed and the third fixed in part, with two narrower shapes of the first still open. All three were fixed after it, in 2b2a928, each with a test that fails without the fix. No third round was run: a gate runs at most two. The verdict stays the reviewer's."
 acceptance_exception: ""
 related: ["[[FEAT-0021-Project-To-Evidence-Levels-Guide-Deck]]", "[[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]", "[[DES-0003-Collections-And-Documents-On-Glass]]", "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes]]", "[[TST-0077-A-Claims-Evidence-Stands-Beside-It]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[project-os-cockpit#DES-0016]]", "[[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]"]
 ---
@@ -138,6 +139,18 @@ The feature rests at `review`. It is built and its automated checks pass. `done`
 | `evidenceFor`, `evidenceLedger` and `evidenceVerifying` in `renderer.ts` have no node test. | Not changed. They join the three sources and are held by the walk alone (TST-0079); a node suite does not load the renderer. |
 
 **After the fixes:** `npm test` passes 592 of 592. Each rule of the evidence model was broken once, the new ones included, and a test failed for 38 of 38. The evidence walk holds 39 checks on this repository and 29 on `your-trainer`.
+
+**Round two, 2026-10-02: the changes requested were not all cleared.** One reviewer, in a clean context, read the fixes at `5e66f48` and answered for each refuted claim. It broke three of the new guards and a test failed for all three.
+
+| # | Claim | Round two | What was done after it |
+| --- | --- | --- | --- |
+| 6b | A payload in a shape Deck does not read never reads "not walked" | Fixed for all three of round one's payloads, and for eight more shapes the reviewer tried. Not fixed for two narrower ones: a check whose `id` is a number, holding a pass, read "not walked"; and an event with `mark` renamed, under a row with no verdict, read "invalidated … Not walked since". | An id must be text and an event's mark must be text; anything else makes the answer unread. `2b2a928`. |
+| 7b | Each row opens the test note at its Evidence section | Fixed for the template's heading. Not fixed for TST-0078, whose title is "Evidence says what is recorded …": the title matched the rule first, so the note opened at its title and its excerpt began there. | A note's title is never its section. The walk opens TST-0078 from this feature's panel and checks where it lands and what is quoted. `2b2a928`. |
+| T | TST-0079's landing check fails when the behaviour is broken | Fixed, by reading: it now needs the heading in sight. It would not have caught the TST-0078 case. | The step above. |
+
+**No third round was run.** A gate runs at most two rounds, so the three fixes above were not read by a reviewer. Each is held by a test that fails without it (the evidence suite, 21 tests) or by the walk (41 checks on this repository). The verdict recorded in this note's frontmatter is round two's and stays the reviewer's; `review_response` says what was done.
+
+**Found by the walk while these were being fixed, and fixed in the same commit.** Closing a test note opened from an evidence row scrolled the field itself by 27 pixels, so every document stood that far up with its header's buttons under the bar. A box that hides its overflow can still be scrolled by script. The field and the collection are now clipped, which cannot be scrolled.
 
 ## Impact analysis
 
