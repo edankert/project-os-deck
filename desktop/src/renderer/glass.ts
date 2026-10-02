@@ -62,6 +62,7 @@ import {
   beyondEdges,
   ease,
   revealShift,
+  neighboursToSeat,
   seatNeighbours,
   seatsAround,
   intersects,
@@ -4892,9 +4893,17 @@ export class GlassField {
       return;
     }
     const heldIds = new Set(this.held.map((c) => c.noteId));
+    // The card a neighbour is drawn as: the one the field holds, else one
+    // made from what the document's own context says of the note.
+    const items = new Map([...context.linked, ...context.backlinks].map((item) => [item.id, item]));
+    const cardOf = (noteId: string): CardModel | null => {
+      const item = items.get(noteId);
+      return this.cardFor(noteId) ?? (item === undefined ? null : cardFromContext(item));
+    };
     // A neighbour that is itself on the desk is a document already, and is
-    // not also given a card: the line runs to its document (decision 5).
-    const seatable = this.neighboursOf(id).filter((n) => !heldIds.has(n.id));
+    // not also given a card: the line runs to its document (decision 5). One
+    // no card can be made for is given no seat, so no seat stands empty.
+    const seatable = neighboursToSeat(this.neighboursOf(id), heldIds, (noteId) => cardOf(noteId) !== null);
     const r = this.paneRect(card);
     const key = `${id}|${r.w}x${r.h}|${Math.round(this.viewport.height)}|${seatable.map((n) => n.id).sort().join(' ')}`;
     if (this.seating !== null && this.seating.key === key) return;
@@ -4932,11 +4941,9 @@ export class GlassField {
     // A card for every seated note the deal does not hold: one from outside
     // the view, or one a full band counted and did not place.
     this.seatEntries = new Map();
-    const items = new Map([...context.linked, ...context.backlinks].map((item) => [item.id, item]));
     for (const n of seatable) {
       if (this.entries.has(n.id)) continue;
-      const item = items.get(n.id);
-      const model = this.cardFor(n.id) ?? (item === undefined ? null : cardFromContext(item));
+      const model = cardOf(n.id);
       if (model === null) continue;
       this.seatEntries.set(n.id, {
         card: model,

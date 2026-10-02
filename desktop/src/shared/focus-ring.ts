@@ -188,6 +188,20 @@ export function seatsAround(request: SeatRequest): Seat[] {
   return found.slice(0, count);
 }
 
+/**
+ * The neighbours of the focus that are given a seat.
+ *
+ * A neighbour that is itself on the desk is a document already, and is not
+ * also given a card: the line runs to its document. A neighbour no card can
+ * be drawn for is not seated either: its seat would stand empty in the ring,
+ * with a line running to nothing, and push another card a place further out.
+ * Both stay in the document's list of related notes, which is drawn from all
+ * of the neighbours and not from the seats.
+ */
+export function neighboursToSeat<T extends { id: string }>(neighbours: readonly T[], onDesk: ReadonlySet<string>, hasCard: (id: string) => boolean): T[] {
+  return neighbours.filter((n) => !onDesk.has(n.id) && hasCard(n.id));
+}
+
 /** What seating needs to know about one neighbour of the focus. */
 export interface SeatNeighbour {
   id: string;

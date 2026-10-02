@@ -14,7 +14,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { SEAT, SEAT_GAP, EDGE_MARGIN, BROWSE_SCALE, OPEN_MS, GATHER_MS, seatsAround, seatNeighbours, revealShift, beyondEdges, edgeAnchor, ease } = load('shared/focus-ring.js');
+const { SEAT, SEAT_GAP, EDGE_MARGIN, BROWSE_SCALE, OPEN_MS, GATHER_MS, seatsAround, seatNeighbours, neighboursToSeat, revealShift, beyondEdges, edgeAnchor, ease } = load('shared/focus-ring.js');
 const { CARD_BOX, FRONT, project } = load('shared/slots.js');
 
 const rectOf = (p) => ({ left: p.x - SEAT.width / 2, right: p.x + SEAT.width / 2, top: p.y - SEAT.height / 2, bottom: p.y + SEAT.height / 2 });
@@ -320,6 +320,29 @@ test('two neighbours with an equal claim are seated by id, whichever was named f
   const seated = new Map(seatNeighbours(ids.map((id) => neighbour(id)), six, centre).map((s) => [s.id, s.seat]));
   const angles = [...ids].sort().map((id) => wrap(Math.atan2(seated.get(id).y - centre.y, seated.get(id).x - centre.x)));
   angles.forEach((a, i) => i > 0 && assert.ok(a >= angles[i - 1], `N-${i + 1} is seated before N-${i}, going round`));
+});
+
+test('a neighbour no card can be drawn for is given no seat, and neither is one that is a document on the desk', () => {
+  // Until 2026-10-02 a neighbour with no card kept its seat: the seat stood
+  // empty in the ring and the next card was sent a place further out.
+  const field = { width: 1440, height: 860 };
+  const doc = centred(field, 560, 520);
+  const centre = { x: doc.left + doc.width / 2, y: doc.top + doc.height / 2 };
+  const all = ['CARD-1', 'ON-DESK', 'NO-CARD', 'CARD-2', 'CARD-3'].map((id) => ({ id, title: id }));
+  const drawable = new Set(['CARD-1', 'ON-DESK', 'CARD-2', 'CARD-3']);
+  const seatable = neighboursToSeat(all, new Set(['ON-DESK']), (id) => drawable.has(id));
+  // The neighbours themselves, in the order given, so the caller keeps what it knows of each.
+  assert.deepEqual(seatable, [all[0], all[3], all[4]]);
+  const seats = seatsAround({ doc, field, count: seatable.length });
+  const seated = seatNeighbours(seatable.map((n) => neighbour(n.id)), seats, centre);
+  assert.deepEqual(seated.map((s) => s.id).sort(), ['CARD-1', 'CARD-2', 'CARD-3']);
+  // Three cards on the three nearest seats: no seat is kept for the two others.
+  assert.deepEqual(new Set(seated.map((s) => s.seat)), new Set(seatsAround({ doc, field, count: 5 }).slice(0, 3)));
+  // Nothing to seat is nothing seated, and everything drawable is seated.
+  assert.deepEqual(neighboursToSeat(all, new Set(), () => false), []);
+  assert.deepEqual(neighboursToSeat(all, new Set(), () => true), all);
+  // The list of related notes is drawn from the neighbours given, and they are as they were.
+  assert.deepEqual(all.map((n) => n.id), ['CARD-1', 'ON-DESK', 'NO-CARD', 'CARD-2', 'CARD-3']);
 });
 
 test('a neighbour known only by its side goes to that side, and one with no place goes below, by id', () => {
