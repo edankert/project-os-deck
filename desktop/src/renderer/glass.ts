@@ -79,7 +79,7 @@ import {
   snapBelowHeaders,
 } from '../shared/panes.js';
 import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
-import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated, undoFor } from '../shared/arrange.js';
+import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type ArrangeUnseen, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated, reworkedBecause, undoFor } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
 import { EVIDENCE_HEADING, SECTION_HEADINGS, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
 import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
@@ -531,7 +531,17 @@ export class GlassField {
   private readingDone: ((moved: string[]) => void) | null = null;
   private readingTimer: ReturnType<typeof setTimeout> | null = null;
   /** An arrangement shown and not yet applied: session state, in this window only. */
-  private arranging: { kind: ArrangeKind; subjects: string[]; plan: ArrangePlan; basis: string; refreshed: boolean; from: HTMLElement | null } | null = null;
+  private arranging: {
+    kind: ArrangeKind;
+    subjects: string[];
+    plan: ArrangePlan;
+    basis: string;
+    /** What it was worked out from when it was first shown, to say what has changed since. */
+    was: { input: ArrangeInput; unseen: ArrangeUnseen };
+    /** Why it was worked out again, as a sentence; '' while it is the preview first shown. */
+    reworked: string;
+    from: HTMLElement | null;
+  } | null = null;
   /** What the last applied arrangement moved, so it can be put back; and the view it was applied on. */
   private undoRecord: ArrangeUndo | null = null;
   private undoView: string | null = null;
@@ -2986,11 +2996,26 @@ export class GlassField {
   }
 
   /** The plan for a command on the documents it is about, or the sentence that says why there is none. */
-  private planFor(kind: ArrangeKind, subjects: readonly string[], input: ArrangeInput): ArrangePlan | { refused: string } {
+  private planFor(kind: ArrangeKind, subjects: readonly string[], input: ArrangeInput, unseen: ArrangeUnseen): ArrangePlan | { refused: string } {
     const [first, second] = subjects;
     if (kind === 'compare') return planCompare(input, first ?? '', second ?? '');
     if (kind === 'read') return planRead(input, first ?? '');
-    return planRelated(input, first ?? '', first === undefined ? 0 : this.neighboursOf(first).filter((n) => !n.held).length);
+    return planRelated(input, first ?? '', unseen.related === null ? 0 : unseen.related.gathers, unseen.related?.listed ?? 0);
+  }
+
+  /**
+   * What a preview is worked out from that is not on the desk: how many
+   * changed notes are waiting, and for Show related how many notes its
+   * document is joined to. A neighbour that is open as a document is listed
+   * and does not gather. Until the note's links have been read, how many
+   * gather is not known, and is not said to be none.
+   */
+  private arrangeUnseen(kind: ArrangeKind, subjects: readonly string[]): ArrangeUnseen {
+    const [first] = subjects;
+    if (kind !== 'related' || first === undefined) return { pending: this.input.pending, related: null };
+    const neighbours = this.neighboursOf(first);
+    const known = this.hooks.peekContext(first) !== undefined;
+    return { pending: this.input.pending, related: { noteId: first, gathers: known ? neighbours.filter((n) => !n.held).length : null, listed: neighbours.length } };
   }
 
   /** Which documents a command is about: the one on top, and for Compare the one under it. */
@@ -3009,7 +3034,8 @@ export class GlassField {
     this.undoAsk = null;
     const input = this.arrangeInput();
     const subjects = this.arrangeSubjects(kind);
-    const plan = this.planFor(kind, subjects, input);
+    const unseen = this.arrangeUnseen(kind, subjects);
+    const plan = this.planFor(kind, subjects, input, unseen);
     if ('refused' in plan) {
       this.arranging = null;
       this.drawArrange();
@@ -3024,14 +3050,24 @@ export class GlassField {
       this.tell(`${plan.label}: everything is already where this would put it`);
       return;
     }
-    this.arranging = { kind, subjects, plan, basis: planBasis(input, String(this.input.pending)), refreshed: false, from };
+    this.arranging = { kind, subjects, plan, basis: planBasis(input, JSON.stringify(unseen)), was: { input, unseen }, reworked: '', from };
     this.drawArrange();
     this.el.arrangeApply.focus({ preventScroll: true });
+    // Show related shown before its note's links have been read: they are
+    // asked for, and the preview is worked out again when they arrive.
+    const subject = unseen.related?.gathers === null ? unseen.related.noteId : null;
+    if (subject !== null) {
+      void this.hooks
+        .context(subject)
+        .then(() => this.active && this.refreshArrange())
+        .catch(() => null);
+    }
   }
 
   /**
-   * The desk, the window or the result changed while a preview was shown: the
-   * preview is worked out again from what is there now, and says that it was.
+   * The desk, the window, the result or a note's links changed while a
+   * preview was shown: the preview is worked out again from what is there
+   * now, and says what changed, in the preview and in the status line.
    * A preview about a note that has been closed is withdrawn. A stale preview
    * is never the one that gets applied (DES-0003).
    */
@@ -3039,18 +3075,22 @@ export class GlassField {
     const shown = this.arranging;
     if (shown === null) return;
     const input = this.arrangeInput();
-    const basis = planBasis(input, String(this.input.pending));
+    const unseen = this.arrangeUnseen(shown.kind, shown.subjects);
+    const basis = planBasis(input, JSON.stringify(unseen));
     if (basis === shown.basis) return;
     const gone = shown.subjects.filter((id) => !this.held.some((c) => c.noteId === id));
-    const plan = gone.length > 0 ? null : this.planFor(shown.kind, shown.subjects, input);
+    const plan = gone.length > 0 ? null : this.planFor(shown.kind, shown.subjects, input, unseen);
     if (plan === null || 'refused' in plan) {
       this.arranging = null;
       this.drawArrange();
       this.tell(`${shown.plan.label} was withdrawn: ${gone.length > 0 ? `${gone.join(' and ')} ${gone.length === 1 ? 'is' : 'are'} not open any more` : 'it can no longer be worked out'}. Nothing was moved.`, true);
       return;
     }
-    this.arranging = { ...shown, plan, basis, refreshed: true };
+    // Against what it was FIRST shown from, so the sentence is everything that has changed under it.
+    const reworked = reworkedBecause(shown.was.input, input, shown.was.unseen, unseen);
+    this.arranging = { ...shown, plan, basis, reworked };
     this.drawArrange();
+    if (reworked !== '' && reworked !== shown.reworked) this.tell(reworked);
   }
 
   /** Draw the preview: an outline where each object will stand, and what moves, in words. */
@@ -3106,7 +3146,7 @@ export class GlassField {
     const names = plan.objects.map((o) => (o.kind === 'collection' ? 'the collection' : o.id));
     arrangeTitle.textContent = plan.label;
     arrangeText.textContent =
-      (shown.refreshed ? 'The desk changed while this was shown, so it was worked out again. ' : '') +
+      (shown.reworked === '' ? '' : `${shown.reworked} `) +
       (names.length === 0 ? 'Moves nothing.' : `Moves ${names.length} ${names.length === 1 ? 'object' : 'objects'}: ${listOf(names)}. Sizes and text are not changed.`);
     arrangeNotes.replaceChildren(...plan.notes.map((n) => line(n)));
     arrangeApply.textContent = 'Apply';
@@ -3232,7 +3272,7 @@ export class GlassField {
   /** What the arrangement controls are showing, for a check. */
   arrangeState(): { preview: { kind: ArrangeKind; label: string; objects: string[]; refreshed: boolean } | null; undo: string | null; asking: string[] | null; emphasis: { noteId: string; kind: string } | null } {
     return {
-      preview: this.arranging === null ? null : { kind: this.arranging.kind, label: this.arranging.plan.label, objects: this.arranging.plan.objects.map((o) => o.id), refreshed: this.arranging.refreshed },
+      preview: this.arranging === null ? null : { kind: this.arranging.kind, label: this.arranging.plan.label, objects: this.arranging.plan.objects.map((o) => o.id), refreshed: this.arranging.reworked !== '' },
       undo: this.undoRecord?.label ?? null,
       asking: this.undoAsk?.changed ?? null,
       emphasis: this.emphasis,

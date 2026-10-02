@@ -261,15 +261,37 @@ export function planCompare(input: ArrangeInput, first: string, second: string):
 }
 
 /**
+ * What Show related says about the notes its document is joined to.
+ *
+ * Two numbers when they differ. A neighbour that is itself open as a document
+ * has a row in the list and does not gather: counted from the gathered ones
+ * alone, "its list of all N" said fewer than the list then held. And a note
+ * whose links have not been read yet is not said to have none.
+ */
+function relatedNote(subject: string, gathers: number | null, listed: number): string {
+  if (gathers === null) return `The notes joined to ${subject} are still being read. How many gather round it is said here when they have been.`;
+  if (listed === 0) return `${subject} is joined to no other note, so nothing gathers round it; its list says so.`;
+  const beyond = 'A card that does not fit in the window stands beyond its edge and is in the list.';
+  const gather = `${gathers} ${gathers === 1 ? 'note gathers' : 'notes gather'} round ${subject}`;
+  if (gathers === listed) return `${gather}, and its list of all ${listed} opens. ${beyond}`;
+  const open = listed - gathers;
+  if (gathers === 0) {
+    return `Nothing gathers round ${subject}: ${listed === 1 ? 'the one note it is joined to is open as a document and stays' : `the ${listed} notes it is joined to are open as documents and stay`} where ${listed === 1 ? 'it is' : 'they are'}. Its list of ${listed === 1 ? 'that one' : `all ${listed}`} opens.`;
+  }
+  return `${gather}, and its list holds ${listed}: the other ${open === 1 ? 'one is open as a document and stays where it is' : `${open} are open as documents and stay where they are`}. ${beyond}`;
+}
+
+/**
  * Show related: the document with what it is joined to gathered round it and
  * its complete list open.
  *
  * The document stands in the middle of the space to the right of the list,
  * one row of cards down from the top, so cards have room on every side. How
- * many are gathered is the caller's to say: this module does not know the
- * neighbourhood, only where the document goes.
+ * many gather and how many the list holds are the caller's to say: this
+ * module does not know the neighbourhood, only where the document goes.
+ * `gathers` is null while the note's links have not been read.
  */
-export function planRelated(input: ArrangeInput, subject: string, neighbours: number): ArrangePlan | ArrangeRefusal {
+export function planRelated(input: ArrangeInput, subject: string, gathers: number | null, listed: number = gathers ?? 0): ArrangePlan | ArrangeRefusal {
   const doc = input.docs.find((d) => d.noteId === subject);
   if (doc === undefined) return { refused: 'Show related needs an open note: open one from the list or the field first' };
   const notes: string[] = [];
@@ -288,11 +310,7 @@ export function planRelated(input: ArrangeInput, subject: string, neighbours: nu
     if (beside !== null) notes.push(`The list and ${subject} do not fit side by side in this window, so the collection is collapsed to its header. Its header opens it again.`);
   }
   const y = ARRANGE_MARGIN + (collection !== null && collection.collapsed ? COLLECTION_HEAD_HEIGHT + ARRANGE_GAP : 0) + SEAT.height + SEAT_GAP;
-  notes.push(
-    neighbours === 0
-      ? `${subject} is joined to no other note, so nothing gathers round it; its list says so.`
-      : `${neighbours} ${neighbours === 1 ? 'note gathers' : 'notes gather'} round ${subject}, and its list of all ${neighbours} opens. A card that does not fit in the window stands beyond its edge and is in the list.`,
-  );
+  notes.push(relatedNote(subject, gathers, Math.max(listed, gathers ?? 0)));
   return finish('related', `Show what ${subject} is joined to`, input, [{ doc, x, y }], collection, subject, subject, notes);
 }
 
@@ -305,6 +323,84 @@ export function planBasis(input: ArrangeInput, extra = ''): string {
     input.docs.map((d) => `${d.noteId}@${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.w)}x${Math.round(d.h)}`).join(';'),
     extra,
   ].join('|');
+}
+
+/** What a preview is also worked out from and the desk does not show. Part of its basis, as `extra`. */
+export interface ArrangeUnseen {
+  /** How many notes have changed on disk and are waiting to be shown. */
+  pending: number;
+  /** Show related only: the note, and what is known of its links, as `planRelated` was given them. */
+  related: { noteId: string; gathers: number | null; listed: number } | null;
+}
+
+/** "A", "A and B", "A, B and C". */
+function listOf(names: readonly string[]): string {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * Why a preview was worked out again, in one sentence: what is different now
+ * from when it was first shown.
+ *
+ * It names what it can know: which documents were opened, closed, moved,
+ * resized or brought to the front, what was done to the collection, that the
+ * window changed size, that notes changed on disk, that a note's links were
+ * read. Which note changed on disk it cannot know, so it does not say. Until
+ * this the preview said "the desk changed" whatever had, also when the desk
+ * had not and a note on disk had.
+ *
+ * '' when nothing differs: the preview is the one that was first shown.
+ */
+export function reworkedBecause(was: ArrangeInput, now: ArrangeInput, wasUnseen: ArrangeUnseen, nowUnseen: ArrangeUnseen): string {
+  const causes: string[] = [];
+  const were = (ids: readonly string[], what: string): void => {
+    if (ids.length > 0) causes.push(`${listOf(ids)} ${ids.length === 1 ? 'was' : 'were'} ${what}`);
+  };
+  const before = new Map(was.docs.map((d) => [d.noteId, d]));
+  const after = new Set(now.docs.map((d) => d.noteId));
+  const stayed = now.docs.filter((d) => before.has(d.noteId));
+  were(now.docs.filter((d) => !before.has(d.noteId)).map((d) => d.noteId), 'opened');
+  were(was.docs.filter((d) => !after.has(d.noteId)).map((d) => d.noteId), 'closed');
+  were(stayed.filter((d) => moved(before.get(d.noteId) as ArrangeDoc, d.x, d.y)).map((d) => d.noteId), 'moved');
+  were(
+    stayed
+      .filter((d) => {
+        const then = before.get(d.noteId) as ArrangeDoc;
+        return Math.round(then.w) !== Math.round(d.w) || Math.round(then.h) !== Math.round(d.h);
+      })
+      .map((d) => d.noteId),
+    'resized',
+  );
+  // The stacking, among the documents open then and now: the one on top is the one a person pressed.
+  const then = was.docs.filter((d) => after.has(d.noteId)).map((d) => d.noteId);
+  const here = stayed.map((d) => d.noteId);
+  if (then.some((id, i) => id !== here[i])) {
+    const top = here[here.length - 1] as string;
+    causes.push(top !== then[then.length - 1] ? `${top} was brought to the front` : 'the open notes were stacked in another order');
+  }
+  const a = was.collection;
+  const b = now.collection;
+  if (a === null || b === null) {
+    if (a !== b) causes.push(b === null ? 'the collection left the field' : 'the collection came on to the field');
+  } else {
+    if (a.collapsed !== b.collapsed) causes.push(b.collapsed ? 'the collection was folded to its header' : 'the collection was opened from its header');
+    if (a.presentation !== b.presentation) causes.push(`the collection was changed to ${b.presentation === 'cards' ? 'cards' : 'a table'}`);
+    if (Math.round(a.x) !== Math.round(b.x) || Math.round(a.y) !== Math.round(b.y)) causes.push('the collection was moved');
+    if (Math.round(a.w) !== Math.round(b.w) || Math.round(a.h) !== Math.round(b.h)) causes.push('the collection was resized');
+  }
+  if (Math.round(was.field.width) !== Math.round(now.field.width) || Math.round(was.field.height) !== Math.round(now.field.height)) causes.push('the window changed size');
+  if (nowUnseen.pending > wasUnseen.pending) causes.push('notes changed on disk');
+  else if (nowUnseen.pending < wasUnseen.pending) causes.push('the notes that had changed on disk were shown');
+  const links = nowUnseen.related;
+  const linksThen = wasUnseen.related;
+  if (links !== null && linksThen !== null) {
+    // Fewer gathering with as many listed is a neighbour opened as a document, which is named above.
+    if (linksThen.gathers === null && links.gathers !== null) causes.push(`the notes joined to ${links.noteId} were read`);
+    else if (linksThen.gathers !== null && links.gathers === null) causes.push(`the notes joined to ${links.noteId} are being read again`);
+    else if (links.listed !== linksThen.listed) causes.push(`the notes joined to ${links.noteId} changed`);
+  }
+  return causes.length === 0 ? '' : `While this was shown, ${listOf(causes)}, so it was worked out again from what is there now.`;
 }
 
 /** What an applied arrangement changed, kept for the window so it can be put back. */

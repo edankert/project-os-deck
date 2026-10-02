@@ -3,9 +3,11 @@
 // put back, except where a person has changed something since.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load } from './helpers.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { desktopRoot, load } from './helpers.mjs';
 
-const { planRead, planCompare, planRelated, planBasis, checkUndo, undoFor, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
+const { planRead, planCompare, planRelated, planBasis, checkUndo, undoFor, reworkedBecause, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
 const { COLLECTION_HEAD_HEIGHT, cardGrid, rowOfMember, gridText } = load('shared/collection.js');
 const { SEAT, SEAT_GAP } = load('shared/focus-ring.js');
 const { reduce, initialState, deskCardsOf, collectionOf, DESK_ACTIONS, isRendererAction } = load('shared/store-state.js');
@@ -148,6 +150,66 @@ test('the basis of a plan changes when anything it was worked out from changes',
   assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], null)), base, 'the collection left the field');
   assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)], list, { width: 1000, height: 745 })), base, 'the window changed size');
   assert.notEqual(planBasis(input([doc('A', 10, 10), doc('B', 50, 50)]), '3 changed'), base, 'a changed result is waiting');
+});
+
+test('a preview that was worked out again says what changed under it, and says nothing when nothing did', () => {
+  const quiet = { pending: 0, related: null };
+  const was = input([doc('A', 10, 10), doc('B', 50, 50)]);
+  const said = (now, unseenNow = quiet, unseenThen = quiet) => reworkedBecause(was, now, unseenThen, unseenNow);
+  const because = (text) => `While this was shown, ${text}, so it was worked out again from what is there now.`;
+  assert.equal(said(input([doc('A', 10, 10), doc('B', 50, 50)])), '', 'nothing changed, and it said something had');
+  // The desk: each document by name, and what was done to it.
+  assert.equal(said(input([doc('A', 10, 10), doc('B', 50, 50), doc('C', 300, 300)])), because('C was opened'));
+  assert.equal(said(input([doc('B', 50, 50)])), because('A was closed'));
+  assert.equal(said(input([doc('A', 200, 10), doc('B', 50, 50)])), because('A was moved'));
+  assert.equal(said(input([doc('A', 10, 10, 700, 520), doc('B', 50, 50)])), because('A was resized'));
+  assert.equal(said(input([doc('B', 50, 50), doc('A', 10, 10)])), because('A was brought to the front'));
+  assert.equal(said(input([doc('A', 200, 10), doc('B', 50, 90), doc('C', 0, 0), doc('D', 0, 0)])), because('C and D were opened and A and B were moved'));
+  // The collection and the window.
+  assert.equal(said(input(was.docs, { ...list, collapsed: true })), because('the collection was folded to its header'));
+  assert.equal(said(input(was.docs, { ...list, presentation: 'cards' })), because('the collection was changed to cards'));
+  assert.equal(said(input(was.docs, { ...list, x: 300 })), because('the collection was moved'));
+  assert.equal(said(input(was.docs, { ...list, w: 420 })), because('the collection was resized'));
+  assert.equal(said(input(was.docs, list, { width: 1000, height: 745 })), because('the window changed size'));
+  // A note on disk: the desk did not change, and the sentence does not say it did.
+  const onDisk = said(was, { pending: 2, related: null });
+  assert.equal(onDisk, because('notes changed on disk'));
+  assert.ok(!/desk/.test(onDisk));
+  assert.equal(said(was, quiet, { pending: 2, related: null }), because('the notes that had changed on disk were shown'));
+  // Show related: its note's links arrived, or are not the ones it was shown with.
+  const unread = { pending: 0, related: { noteId: 'A', gathers: null, listed: 0 } };
+  const read = { pending: 0, related: { noteId: 'A', gathers: 4, listed: 4 } };
+  assert.equal(said(was, read, unread), because('the notes joined to A were read'));
+  assert.equal(said(was, { pending: 0, related: { noteId: 'A', gathers: 5, listed: 5 } }, read), because('the notes joined to A changed'));
+  // A neighbour opened as a document gathers no more and is still listed: the opening is the cause, named once.
+  assert.equal(said(input([...was.docs, doc('N', 0, 0)]), { pending: 0, related: { noteId: 'A', gathers: 3, listed: 4 } }, read), because('N was opened'));
+  // Several causes are one sentence.
+  assert.equal(said(input([doc('A', 200, 10), doc('B', 50, 50)]), { pending: 1, related: null }), because('A was moved and notes changed on disk'));
+});
+
+test('the sentence a preview says is announced: its text is a polite live region', () => {
+  const html = fs.readFileSync(path.join(desktopRoot, 'dist', 'web', 'index.html'), 'utf-8');
+  const tag = /<[a-z]+[^>]*\bid="arrange-text"[^>]*>/.exec(html);
+  assert.notEqual(tag, null, 'the preview has no text element');
+  assert.match(tag[0], /\baria-live="polite"/);
+});
+
+test('Show related says how many notes gather and how many its list holds, and gives both when they differ', () => {
+  const note = (gathers, listed) => planRelated(input([doc('A', 20, 20)]), 'A', gathers, listed).notes.at(-1);
+  assert.match(note(16, 16), /^16 notes gather round A, and its list of all 16 opens\./);
+  // One neighbour is open as a document: it is in the list and does not gather.
+  assert.match(note(3, 4), /^3 notes gather round A, and its list holds 4: the other one is open as a document and stays where it is\./);
+  assert.match(note(1, 4), /^1 note gathers round A, and its list holds 4: the other 3 are open as documents and stay where they are\./);
+  assert.match(note(0, 2), /^Nothing gathers round A: the 2 notes it is joined to are open as documents and stay where they are\. Its list of all 2 opens\.$/);
+  assert.match(note(0, 1), /^Nothing gathers round A: the one note it is joined to is open as a document and stays where it is\. Its list of that one opens\.$/);
+  assert.match(note(0, 0), /^A is joined to no other note/);
+  // Before the note's links have been read, nothing is said about how many there are.
+  const unread = note(null, 0);
+  assert.match(unread, /^The notes joined to A are still being read\./);
+  assert.ok(!/no other note|\d/.test(unread), unread);
+  // When they arrive the count is part of what the preview was worked out from.
+  const basis = (related) => planBasis(input([doc('A', 20, 20)]), JSON.stringify({ pending: 0, related }));
+  assert.notEqual(basis({ noteId: 'A', gathers: null, listed: 0 }), basis({ noteId: 'A', gathers: 4, listed: 4 }));
 });
 
 const undo = {
