@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
-const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene } = load('shared/scenes.js');
+const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy } = load('shared/scenes.js');
 
 const WS = 'aaaa1111bbbb2222';
 const list = { x: 12, y: 12, w: 340, h: 700, collapsed: false, presentation: 'cards' };
@@ -47,14 +47,20 @@ test('a scene keeps the view, the search, the collection, each document and wher
 
 test('opening a scene brings back its view, search, collection and documents, and can be taken back', () => {
   const saved = save(desk());
-  // The person moves on: another view, another search, the desk cleared, the collection as a table.
+  // The person moves on. On the scene's own view: the desk cleared, one other note opened, the collection as a
+  // table, no search. Then another view, and a note opened there.
+  const table = { ...list, presentation: 'table', x: 300 };
   let s = reduce(saved, { type: 'clear-desk' });
-  s = reduce(s, { type: 'set-collection', layout: { ...list, presentation: 'table', x: 300 } });
+  s = reduce(s, { type: 'put-on-desk', noteId: 'ISS-0777', x: 5, y: 5 });
+  s = reduce(s, { type: 'set-collection', layout: table });
   s = reduce(s, { type: 'set-query', text: '' });
   s = reduce(s, { type: 'select-view', viewId: 'features' });
   s = reduce(s, { type: 'put-on-desk', noteId: 'FEAT-0009', x: 10, y: 10 });
-  // What is on screen now, kept by the window so opening the scene can be undone.
-  const before = sceneFrom({ workspaceId: WS, view: 'features', query: s.query, filters: s.filters, collection: collectionOf(s, WS, 'features'), cards: deskCardsOf(s, WS, 'features') }, s.deskName ?? '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
+  // What the scene is about to replace, kept by the window so opening it can be undone: the desk and the list of
+  // the scene's OWN view, which is not the view on screen, with the search and the filters as they are now.
+  const replaced = viewReplacedBy(s.desks[deskKey(WS, 'Review Glass')], s.viewId);
+  assert.equal(replaced, 'issues', 'a scene replaces the desk of the view it was saved on');
+  const before = sceneFrom({ workspaceId: WS, view: replaced, query: s.query, filters: s.filters, collection: collectionOf(s, WS, replaced), cards: deskCardsOf(s, WS, replaced) }, s.deskName ?? '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
   const opened = reduce(s, { type: 'open-desk', name: 'Review Glass' });
   assert.equal(opened.viewId, 'issues', 'the scene\'s own view comes with it');
   assert.equal(opened.query, 'glass');
@@ -62,13 +68,24 @@ test('opening a scene brings back its view, search, collection and documents, an
   assert.deepEqual(collectionOf(opened, WS, 'issues'), list);
   assert.deepEqual(deskCardsOf(opened, WS, 'issues').map((c) => [c.noteId, c.x, c.y, c.w, c.h]), [['ISS-0001', 400, 20, 640, 560], ['ISS-0002', 700, 60, 560, 520]]);
   assert.deepEqual(deskCardsOf(opened, WS, 'features').map((c) => c.noteId), ['FEAT-0009'], 'the other view\'s desk is not touched');
-  // Back to the desk before: a scene that is not in the list, applied.
-  const back = reduce(opened, { type: 'apply-scene', scene: before });
-  assert.equal(back.viewId, 'features');
+  // Back to the desk before: a scene that is not in the list, applied, and the view the person was on shown again.
+  const back = reduce(opened, { type: 'apply-scene', scene: before, backTo: 'features' });
+  assert.equal(back.viewId, 'features', 'the person is back on the view they were on');
   assert.equal(back.query, '');
+  assert.deepEqual(back.filters, { statuses: [], types: [] });
   assert.deepEqual(deskCardsOf(back, WS, 'features').map((c) => c.noteId), ['FEAT-0009']);
   assert.equal(Object.keys(back.desks).length, 1, 'taking it back adds nothing to the list of scenes');
-  assert.deepEqual(deskCardsOf(back, WS, 'issues').length, 2, 'and the scene\'s own view keeps what the scene put there');
+  assert.equal(back.deskName, null, 'and no scene is named as open');
+  assert.deepEqual(deskCardsOf(back, WS, 'issues').map((c) => [c.noteId, c.x, c.y]), [['ISS-0777', 5, 5]], 'the desk the scene replaced on its own view is back: the note that was open there, where it stood');
+  assert.deepEqual(collectionOf(back, WS, 'issues'), table, 'and so is that view\'s list, as the table it was');
+});
+
+test('a desk from before scenes, and one this Deck cannot read, replace nothing on another view', () => {
+  // A desk from before scenes opens on the view on screen, so that is the desk kept for the way back.
+  assert.equal(viewReplacedBy({ name: 'old', workspaceId: WS, cards: [] }, 'features'), 'features');
+  assert.equal(viewReplacedBy({ name: 'old', workspaceId: WS, cards: [], view: 'issues' }, 'features'), 'features', 'a view written on a desk with no version is not read');
+  assert.equal(viewReplacedBy({ name: 's', workspaceId: WS, cards: [], version: SCENE_VERSION }, 'features'), 'features', 'a scene that lost its view opens on the one on screen');
+  assert.equal(viewReplacedBy({ name: 'f', workspaceId: WS, cards: [], version: 3, view: 'issues' }, 'features'), 'features');
 });
 
 // One note open on the Issues view, and the list where a view puts it when nobody has moved it: nothing stored.

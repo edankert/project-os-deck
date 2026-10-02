@@ -21,7 +21,7 @@ import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
-import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor } from '../shared/scenes.js';
+import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor, viewReplacedBy } from '../shared/scenes.js';
 import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, localDay, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
 import type { EvidenceRow, EvidenceView } from './glass.js';
 import type { Desk } from '../shared/types.js';
@@ -1421,16 +1421,20 @@ function evidenceCount(noteId: string): { naming: number; isTest: boolean } | nu
 
 // ---- scenes (FEAT-0023, ADR-0007) ----
 
-/** The desk that was on screen before a scene was opened, so opening one can be taken back. This window's, this session's. */
-let beforeScene: { desk: Desk; opened: string } | null = null;
+/**
+ * The desk a scene replaced, so opening one can be taken back. This window's,
+ * this session's. A scene opened from another view replaced THAT view's desk,
+ * so `desk` is that view's; `view` is the view the person was on, and
+ * `reading` is where each document on it was being read.
+ */
+let beforeScene: { desk: Desk; opened: string; view: string | null; reading: Record<string, ReadingAnchor> } | null = null;
 /** The last scene deleted, so it can be restored until the window closes or another is deleted. */
 let deletedScene: Desk | null = null;
 
-/** This view's desk as a scene, from the store and from what this window knows: where each note is being read. */
-function sceneNow(name: string): Desk | null {
+/** A view's desk as a scene, from the store and from what this window knows: where each note is being read. */
+function sceneNow(name: string, view: string | null = deskViewHere()): Desk | null {
   const state = host.state();
   const ws = state.workspaceId;
-  const view = deskViewHere();
   if (ws === null || view === null) return null;
   return sceneFrom(
     { workspaceId: ws, view, query: state.query, filters: state.filters, collection: collectionOf(state, ws, view), cards: deskCardsOf(state, ws, view) },
@@ -1533,12 +1537,18 @@ async function openScene(name: string, undoable = true): Promise<void> {
     drawScenes();
     return;
   }
-  const before = undoable ? sceneNow(state.deskName ?? '') : null;
+  // What is kept for the way back is the desk this replaces. That is the
+  // desk of the scene's own view, which need not be the view on screen: kept
+  // from the view on screen, the other view's desk and list were gone for
+  // good once the scene had replaced them.
+  const here = deskViewHere();
+  const reading = glass.readingAnchors();
+  const before = undoable ? sceneNow(state.deskName ?? '', viewReplacedBy(scene, here)) : null;
   await send({ type: 'open-desk', name });
   // The scene brings its view with it; the view's notes are then read now.
   const view = host.state().viewId;
   if (view !== null && currentView?.id !== view) await selectView(view);
-  if (before !== null) beforeScene = { desk: before, opened: name };
+  if (before !== null) beforeScene = { desk: before, opened: name, view: here, reading };
   glass.forgetArrangement();
   drawNavigator();
   drawDesk();
@@ -1599,11 +1609,13 @@ async function backFromScene(): Promise<void> {
   const kept = beforeScene;
   if (kept === null) return;
   beforeScene = null;
-  await send({ type: 'apply-scene', scene: kept.desk });
+  // The desk and the list the scene replaced go back on the view where it
+  // replaced them, and the person is back on the view they were on.
+  await send({ type: 'apply-scene', scene: kept.desk, ...(kept.view === null ? {} : { backTo: kept.view }) });
   const view = host.state().viewId;
   if (view !== null && currentView?.id !== view) await selectView(view);
   glass.forgetArrangement();
-  glass.restoreReading(kept.desk.anchors ?? {});
+  glass.restoreReading(kept.reading);
   el.sceneReport.hidden = true;
   drawNavigator();
   drawDesk();

@@ -94,6 +94,16 @@ export function sceneKind(desk: Desk): SceneKind {
   return desk.version === SCENE_VERSION ? 'scene' : 'unreadable';
 }
 
+/**
+ * The view whose desk and list opening this replaces. A scene opens on the
+ * view it was saved on, whichever view is on screen. A desk from before
+ * scenes has no view of its own and opens on the one on screen. The window
+ * keeps that view's desk before it opens anything, so one press puts it back.
+ */
+export function viewReplacedBy(desk: Desk, viewNow: string | null): string | null {
+  return sceneKind(desk) === 'scene' && typeof desk.view === 'string' ? desk.view : viewNow;
+}
+
 export interface SceneEntry {
   name: string;
   kind: SceneKind;

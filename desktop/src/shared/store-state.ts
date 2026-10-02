@@ -28,11 +28,14 @@ export type DeckAction =
    * under a name, with what the window knows and the store does not: where
    * each document is being read and how large the field is. `apply-scene`
    * puts a scene that is NOT in the list on the desk: the desk that was there
-   * before a scene was opened, so opening one can be taken back. `rename-desk`
-   * and `restore-desk` change the list and nothing on the desk.
+   * before a scene was opened, so opening one can be taken back. A scene
+   * opened from another view replaced THAT view's desk, so the desk put back
+   * is that view's, and `backTo` names the view the person was on, which is
+   * shown again. `rename-desk` and `restore-desk` change the list and nothing
+   * on the desk.
    */
   | { type: 'save-scene'; name: string; anchors: Record<string, ReadingAnchor>; field: { w: number; h: number }; savedAt: string; viewId?: string }
-  | { type: 'apply-scene'; scene: Desk }
+  | { type: 'apply-scene'; scene: Desk; backTo?: string }
   | { type: 'rename-desk'; workspaceId: string; from: string; to: string }
   | { type: 'restore-desk'; desk: Desk }
   /**
@@ -402,7 +405,9 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       if (scene === null || scene.workspaceId !== state.workspaceId || sceneKind(scene) !== 'scene') return state;
       // The name it carries is the desk that was open then, when it still exists; else none.
       const named = scene.name !== '' && deskKey(scene.workspaceId, scene.name) in state.desks ? scene.name : null;
-      return applyScene(state, state.workspaceId, scene, named);
+      const applied = applyScene(state, state.workspaceId, scene, named);
+      // The desk put back may be another view's than the one the person was on: they are back on theirs.
+      return typeof action.backTo === 'string' && action.backTo !== '' ? { ...applied, viewId: action.backTo } : applied;
     }
     case 'rename-desk': {
       const from = deskKey(action.workspaceId, action.from);

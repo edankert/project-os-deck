@@ -116,6 +116,10 @@ module.exports = async function (d) {
   const elsewhere = { view: (await state()).viewId, held: await js('window.__deckDesk()'), query: (await state()).query, other: await pane(other) };
   check(elsewhere.view === 'issues' && elsewhere.held.length === 1 && elsewhere.query === '', 'elsewhere now: the Issues view, one other note open, no search', elsewhere);
 
+  // What the Features view holds now, which the scene is about to replace from the Issues view.
+  const featuresNow = async () => { const s = await state(); return JSON.stringify({ desk: (s.viewDesks[ws] || {}).features || [], list: (s.collections[ws] || {}).features || null }); };
+  const featuresBefore = await featuresNow();
+
   // ---- 4. Reopened ----
   // Choosing a name in the list is not opening it: nothing changes until "open" is pressed.
   await js(`document.getElementById('scene-list').focus()`);
@@ -141,6 +145,8 @@ module.exports = async function (d) {
   await t.park();
   const back = { view: (await state()).viewId, held: await js('window.__deckDesk()'), query: (await state()).query, other: await pane(other), offered: !(await js(`document.getElementById('scene-back').hidden`)), scenes: Object.keys((await state()).desks).length };
   check(backLabel === 'Undo: back to the desk before "Review Glass"' && back.view === 'issues' && JSON.stringify(back.held) === JSON.stringify(elsewhere.held) && back.query === '' && back.other.left === elsewhere.other.left && back.other.top === elsewhere.other.top && !back.offered && back.scenes === 1, 'one press, named for what it does, puts back the Issues view with the note that was open there, where it stood; the scene is still saved', { backLabel, back });
+  const featuresAfter = await featuresNow();
+  check(featuresAfter === featuresBefore && JSON.parse(featuresBefore).desk.length === 0 && (JSON.parse(featuresBefore).list || {}).presentation === 'table', 'the scene was opened from the Issues view and replaced the desk and the list of the Features view; the same press put those back too: no note open there, and its list a table again', { before: featuresBefore, after: featuresAfter });
 
   // Saving, opening and going back wrote no file of the workspace.
   check(differ(filesAtStart, fingerprint()).length === 0, `saving a scene, opening it and going back left every one of the copy's ${filesAtStart.size} files as it was`, differ(filesAtStart, fingerprint()));
