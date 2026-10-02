@@ -468,8 +468,8 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
   } finally {
     const after = gitStatus(prepared.root);
     // Where git cannot be run, both readings are null and comparing them
-    // would pass whatever the run did. The box's image has no git, so there
-    // the check says it could not be made.
+    // would pass whatever the run did, so the check says it could not be
+    // made. The box's image carries git for this (tools/docker/smoke.Dockerfile).
     if (before === null || after === null) skip('git status in the workspace before and after the Glass checks: git could not be run here, so this run cannot say the workspace is unchanged');
     else record(before === after, 'git status in the workspace is unchanged after every Glass check');
     if (!win.isDestroyed()) win.destroy();
@@ -2884,11 +2884,14 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
       }
       const nowAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === 'ISS-0008');
       record(moveFrom !== null && wasAt !== undefined && nowAt !== undefined && (nowAt.x !== wasAt.x || nowAt.y !== wasAt.y) && viewCardsOf(store.getState(), ws, 'features').length === 0, `a card dragged in that panel moves on the Issues desk (${wasAt?.x},${wasAt?.y} to ${nowAt?.x},${nowAt?.y})`);
-      // A desk drawn as cards shows only the notes its view lists. A feature handed to the Issues desk would
-      // be in the store and on no screen, so since FEAT-0023 the handoff is refused: the panel answers that it
-      // cannot show it, and nothing is put anywhere.
+      // A note handed to a desk window on another view is put on that desk and DRAWN there, marked as not in
+      // that view. Until FEAT-0023 it was only put in the store, where no window drew it, and this check
+      // asserted the store. A feature from the field is shown there as well: the Features desk does not change.
       const featuresBefore = JSON.stringify(viewCardsOf(store.getState(), ws, 'features'));
-      const issuesBefore = JSON.stringify(own('issues'));
+      const drawnIn = async (id: string | null): Promise<{ drawn: boolean; elsewhere: boolean }> =>
+        (await deskPanel.webContents.executeJavaScript(
+          `(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(id)}); return { drawn: !!c, elsewhere: !!c && c.dataset.elsewhere === 'true' }; })()`,
+        )) as { drawn: boolean; elsewhere: boolean };
       const thrown = await js<string | null>(`(async () => {
         const g = window.__deckGlass;
         const id = [...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).find((n) => n.startsWith('FEAT-'));
@@ -2899,56 +2902,42 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
       })()`);
       await delay(700);
       const throwSaid = await js<string>(`__t.text('#status')`);
+      const shownThere = await drawnIn(thrown);
       record(
-        thrown !== null && JSON.stringify(own('issues')) === issuesBefore && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore && throwSaid.includes(`${thrown} stays here`) && throwSaid.includes(`does not list ${thrown}`),
-        `a feature handed to a desk panel on Issues, which does not list it, is refused with the reason, and neither desk changes (${thrown}; the window said "${throwSaid.trim().slice(0, 240)}")`,
+        thrown !== null && own('issues').includes(thrown) && shownThere.drawn && shownThere.elsewhere && JSON.stringify(viewCardsOf(store.getState(), ws, 'features')) === featuresBefore && throwSaid.includes(`${thrown} is also shown in the desk on the main display`),
+        `a feature thrown onto a desk panel on Issues is on the Issues desk and drawn there as a card marked as not in that view, and the Features desk is unchanged (${thrown}; drawn ${shownThere.drawn}, marked ${shownThere.elsewhere}; the window said "${throwSaid.trim().slice(0, 160)}")`,
       );
-    } finally {
-      if (!deskPanel.isDestroyed()) deskPanel.destroy();
-    }
 
-    // ---- 8b. A note moved to a desk panel whose view lists it lands there, is drawn, and only then leaves this desk ----
-    // Overview lists the features too. The note is held on the Features desk first, so there is a desk for it to leave.
-    await view('features');
-    const mover = await js<string | null>(`[...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).find((n) => n.startsWith('FEAT-')) || null`);
-    store.dispatch({ type: 'put-on-desk', noteId: mover ?? '', x: 40, y: 40, viewId: 'features' });
-    const overviewPanel = ctx.createWindow('satellite', `deck://${ws}/overview?panel=desk`, 'desk');
-    overviewPanel.setBounds({ x: 1330, y: 0, width: 520, height: 420 });
-    try {
-      await once(overviewPanel, 'did-finish-load');
-      await ctx.untilBooted(overviewPanel);
-      await delay(1500);
+      // ---- 8b. A note held here and MOVED there leaves this desk only after that window has drawn it ----
+      const mover = await js<string | null>(`[...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).filter((n) => n.startsWith('FEAT-') && n !== ${JSON.stringify(thrown)})[0] || null`);
+      store.dispatch({ type: 'put-on-desk', noteId: mover ?? '', x: 40, y: 40, viewId: 'features' });
+      await delay(1200);
       const heldBefore = viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover);
-      // What the panel had drawn when the note left the Features desk: the order is the rule being checked.
       let drawnWhenLeft: boolean | null = null;
       // The store here has no subscription, so it is watched: at the first look that finds the note gone
       // from the Features desk, the panel is asked whether it has drawn it.
       const watch = setInterval(() => {
         if (drawnWhenLeft !== null || viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover)) return;
         drawnWhenLeft = false;
-        void overviewPanel.webContents
-          .executeJavaScript(`[...document.querySelectorAll('#desk .card:not([hidden])')].some((e) => e.dataset.noteId === ${JSON.stringify(mover)})`)
-          .then((v) => { drawnWhenLeft = v === true; });
+        void drawnIn(mover).then((v) => { drawnWhenLeft = v.drawn; });
       }, 15);
-      const stop = (): void => clearInterval(watch);
       await js(`(async () => {
         const g = window.__deckGlass;
         const card = g.cardFor(${JSON.stringify(mover)});
         if (!card) return null;
-        await g.hooks.throwTo({ kind: 'window', windowId: ${overviewPanel.id}, carries: 'desk', label: 'desk on the main display', displayId: 0, view: 'overview', mode: 'move' }, card, 'right');
+        await g.hooks.throwTo({ kind: 'window', windowId: ${deskPanel.id}, carries: 'desk', label: 'desk on the main display', displayId: 0, view: 'issues', mode: 'move' }, card, 'right');
         return true;
       })()`);
       await delay(900);
-      stop();
+      clearInterval(watch);
       const moveSaid = await js<string>(`__t.text('#status')`);
-      const drawnThere = (await overviewPanel.webContents.executeJavaScript(`[...document.querySelectorAll('#desk .card:not([hidden])')].some((e) => e.dataset.noteId === ${JSON.stringify(mover)})`)) as boolean;
+      const movedThere = await drawnIn(mover);
       record(
-        mover !== null && heldBefore && own('overview').includes(mover) && drawnThere && drawnWhenLeft === true && !viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover) && moveSaid.includes(`${mover} moved to the desk on the main display`),
-        `a note moved to a desk panel on Overview, which lists it, is on that desk and drawn there, and it left the Features desk only after the panel had drawn it (${mover}; drawn there when it left: ${drawnWhenLeft}; the window said "${moveSaid.trim().slice(0, 160)}")`,
+        mover !== null && heldBefore && own('issues').includes(mover) && movedThere.drawn && drawnWhenLeft === true && !viewCardsOf(store.getState(), ws, 'features').some((c) => c.noteId === mover) && moveSaid.includes(`${mover} moved to the desk on the main display`),
+        `a note held on the Features desk and moved to that panel is on the Issues desk and drawn there, and it left the Features desk only after the panel had drawn it (${mover}; drawn there when it left: ${drawnWhenLeft}; the window said "${moveSaid.trim().slice(0, 160)}")`,
       );
-      store.dispatch({ type: 'take-off-desk', noteId: mover ?? '', viewId: 'overview' });
     } finally {
-      if (!overviewPanel.isDestroyed()) overviewPanel.destroy();
+      if (!deskPanel.isDestroyed()) deskPanel.destroy();
     }
 
     // ---- 9. The tablet draws the Mac's current view's desk ----
@@ -3449,7 +3438,9 @@ function readDocument(workspaceId: string, id: string, rel: string | null): stri
         const want = document.createElement('div');
         want.innerHTML = payload.html;
         const got = note.cloneNode(true);
-        got.querySelectorAll('.tick, .no-tick').forEach((e) => e.remove());
+        // What Deck adds to the text is taken out before comparing: its tick controls, and since FEAT-0024 the
+        // evidence control on a criterion whose own line links a test note.
+        got.querySelectorAll('.tick, .no-tick, .claim-evidence').forEach((e) => e.remove());
         same = want.textContent.trim().length > 0 && got.textContent === want.textContent;
       }
     }

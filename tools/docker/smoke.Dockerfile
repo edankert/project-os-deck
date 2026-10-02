@@ -22,8 +22,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
       libpango-1.0-0 libcairo2 libgtk-3-0 \
-      python3 python3-pip python3-venv ca-certificates \
+      python3 python3-pip python3-venv ca-certificates git \
   && rm -rf /var/lib/apt/lists/*
+
+# The Glass checks end by asking git whether the workspace is as it was. With
+# no git in the image the run could only say it was unable to ask, and a check
+# that cannot be made is not a pass. The checkout is mounted from the host and
+# owned by another user, which git refuses to read unless told it is safe.
+RUN git config --system --add safe.directory '*'
 
 WORKDIR /work/project-os-deck
 

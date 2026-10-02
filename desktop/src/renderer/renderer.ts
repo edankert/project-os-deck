@@ -1667,13 +1667,18 @@ function drawDesk(): void {
   }
 
   const onDesk = deskHere(state);
-  // A note on every view that this view does not hold is drawn from Deck's
-  // own index and marked, not dropped (decision 7). Any other note the view
-  // no longer holds is still dropped and counted.
+  // A note on this desk that the view does not list is drawn from Deck's own
+  // index and marked "not in this view", not dropped. It is there because a
+  // person put it there: kept on every view (FEAT-0015, decision 7), opened
+  // from a link in Glass (FEAT-0020), or handed here from another window
+  // (FEAT-0023). Until FEAT-0023 only the first kind was drawn, so a note
+  // moved to a desk window on another view was on that desk in the store and
+  // on no screen. Only a note the workspace no longer has is dropped and
+  // counted.
   const every = new Set(everyViewCardsOf(state, state.workspaceId).map((c) => c.noteId));
   const inView = new Set(currentCards.map((c) => c.noteId));
   const visiting = onDesk
-    .filter((c) => every.has(c.noteId) && !inView.has(c.noteId))
+    .filter((c) => !inView.has(c.noteId))
     .map((c) => strangerCard(c.noteId))
     .filter((c): c is CardModel => c !== null);
   const reconciled = reconcileDesk(onDesk, [...currentCards, ...visiting]);
@@ -1694,7 +1699,8 @@ function drawDesk(): void {
   let label = state.deskName ?? (placed.length === 0 ? 'the desk is empty' : 'unsaved desk');
   if (reconciled.dropped > 0) {
     const cards = reconciled.dropped === 1 ? 'card' : 'cards';
-    label = `${label} — ${reconciled.dropped} ${cards} not in this view`;
+    // Not "not in this view": such a card is drawn now. What is counted is a card whose note Deck's index does not have.
+    label = `${label} — ${reconciled.dropped} ${cards} whose note could not be found`;
   }
   el.deskName.textContent = workspace === null ? 'no workspace' : label;
   el.count.textContent = `${placed.length} on the desk`;
@@ -2319,24 +2325,8 @@ function showsNote(noteId: string): boolean {
   // window is on; and it is showing it once the note's text is in, not while
   // the line that says it is being read is.
   if (panel === 'note') return pinnedNoteId === noteId && el.reader.querySelector('article') !== null;
-  return Array.from(el.desk.querySelectorAll<HTMLElement>('[data-note-id]')).some((c) => c.dataset['noteId'] === noteId);
-}
-
-/**
- * Why a desk drawn as Spread cards cannot show a note, or null when it can.
- * Spread draws the notes its view lists, and a note kept on every view; any
- * other note on its desk is counted and not drawn (decision 7). A note handed
- * to such a desk would be in the store and on no screen, so the handoff is
- * refused, with the reason in words the person at the other window can act on.
- */
-function notListedHere(noteId: string): string | null {
-  if (glass.isActive() || panel === 'note' || panel === 'needs-you') return null;
-  // The view's own list has not arrived yet: nothing can be said about it.
-  if (currentCards.length === 0) return null;
-  if (currentCards.some((c) => c.noteId === noteId)) return null;
-  const state = host.state();
-  if (isOnEveryView(state, state.workspaceId, noteId)) return null;
-  return `its view, ${currentView?.label ?? 'the one it shows'}, does not list ${noteId}, and a desk drawn as cards shows only the notes its view lists`;
+  // A card that is on screen, not an element of the pool left over from another note.
+  return Array.from(el.desk.querySelectorAll<HTMLElement>('[data-note-id]')).some((c) => c.dataset['noteId'] === noteId && !c.hidden);
 }
 
 /**
@@ -2351,12 +2341,10 @@ async function receiveArrival(raw: unknown): Promise<void> {
   let shown = false;
   for (let attempt = 0; attempt < 35 && !shown; attempt += 1) {
     shown = showsNote(arrival.noteId);
-    // A desk that will never draw it says so at once, not after the wait.
-    if (!shown && notListedHere(arrival.noteId) !== null) break;
     if (!shown) await new Promise((r) => setTimeout(r, 100));
   }
   if (!shown) {
-    await host.acknowledgeArrival({ id: arrival.id, ok: false, error: notListedHere(arrival.noteId) ?? 'this window did not draw it' });
+    await host.acknowledgeArrival({ id: arrival.id, ok: false, error: 'this window did not draw it' });
     return;
   }
   await host.acknowledgeArrival({ id: arrival.id, ok: true });
