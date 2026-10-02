@@ -1999,7 +1999,11 @@ async function afterWrite(workspaceId: string, noteId: string): Promise<void> {
   const card = currentCards.find((c) => c.noteId === noteId);
   if (card !== undefined) await openCard(card);
   const workspace = workspaceById(workspaceId);
-  const viewId = host.state().viewId;
+  // The view THIS window draws. A popped-out window draws the view in its
+  // address and no longer tells the store which (ISS-0091), so the store's
+  // view is the main window's: read from there, a tick or a verb made in a
+  // popped-out window replaced that window's list with the main window's.
+  const viewId = pinned ? (currentView?.id ?? host.state().viewId) : host.state().viewId;
   if (workspace !== null && viewId !== null) {
     const view = registry.resolve(workspace, viewId);
     if (view !== null) await loadView(workspace, view);
