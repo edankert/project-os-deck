@@ -71,6 +71,40 @@ test('opening a scene brings back its view, search, collection and documents, an
   assert.deepEqual(deskCardsOf(back, WS, 'issues').length, 2, 'and the scene\'s own view keeps what the scene put there');
 });
 
+// One note open on the Issues view, and the list where a view puts it when nobody has moved it: nothing stored.
+function unmoved() {
+  let s = reduce(initialState(), { type: 'open-workspace', workspaceId: WS });
+  s = reduce(s, { type: 'select-view', viewId: 'issues' });
+  return reduce(s, { type: 'put-on-desk', noteId: 'ISS-0001', x: 400, y: 20, w: 640, h: 560 });
+}
+
+test('a scene saved while the list had never been moved puts the list back to having no place of its own', () => {
+  let s = unmoved();
+  assert.equal(collectionOf(s, WS, 'issues'), null);
+  s = save(s, 'Plain');
+  assert.equal('collection' in s.desks[deskKey(WS, 'Plain')], false, 'a list with no stored layout is saved as having none');
+  // Since then the list was dragged, collapsed and shown as a table, and another view's list was moved too.
+  s = reduce(s, { type: 'set-collection', layout: { ...list, presentation: 'table', x: 300, collapsed: true } });
+  s = reduce(s, { type: 'set-collection', layout: { ...list, x: 77 }, viewId: 'features' });
+  const opened = reduce(s, { type: 'open-desk', name: 'Plain' });
+  assert.equal(collectionOf(opened, WS, 'issues'), null, 'the list is where the scene had it: at the place a view gives it');
+  assert.deepEqual(collectionOf(opened, WS, 'features'), { ...list, x: 77 }, 'another view\'s list is not touched');
+  // And the state it leaves is one the state file takes and gives back.
+  assert.equal(collectionOf(normaliseState(JSON.parse(JSON.stringify(persistable(opened)))), WS, 'issues'), null);
+});
+
+test('"back to the desk before" puts the list back as it was, a list that had no place of its own included', () => {
+  const bare = unmoved();
+  const table = { ...list, presentation: 'table' };
+  // A scene of this view that keeps the list as a table, in the list of a desk whose own list was never moved.
+  const s = { ...bare, desks: save(reduce(bare, { type: 'set-collection', layout: table }), 'As a table').desks };
+  const before = sceneFrom({ workspaceId: WS, view: 'issues', query: s.query, filters: s.filters, collection: collectionOf(s, WS, 'issues'), cards: deskCardsOf(s, WS, 'issues') }, '', { anchors: {}, field: { w: 1260, h: 745 }, savedAt: '' });
+  const opened = reduce(s, { type: 'open-desk', name: 'As a table' });
+  assert.deepEqual(collectionOf(opened, WS, 'issues'), table);
+  const back = reduce(opened, { type: 'apply-scene', scene: before });
+  assert.equal(collectionOf(back, WS, 'issues'), null, 'the table the scene brought is gone with the scene');
+});
+
 test('a note kept on every view stays when a scene is opened, and is not doubled', () => {
   let s = desk();
   s = reduce(s, { type: 'set-every-view', noteId: 'ISS-0002', on: true });

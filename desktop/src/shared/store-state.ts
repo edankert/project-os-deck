@@ -953,7 +953,14 @@ function applyScene(state: DeckState, ws: string, scene: Desk, name: string | nu
   };
   if (scene.query !== undefined) next.query = scene.query;
   if (scene.filters !== undefined) next.filters = { statuses: [...scene.filters.statuses], types: [...scene.filters.types] };
-  if (scene.collection !== undefined) next.collections = { ...state.collections, [ws]: { ...(state.collections[ws] ?? {}), [view]: scene.collection } };
+  // The list goes back to how the scene had it, whatever that was. A list
+  // nobody had moved when the scene was saved had no stored layout, and has
+  // none again: left as it is now, it would stand wherever it was dragged
+  // since, under the name of a scene that never had it there.
+  const layouts = { ...(state.collections[ws] ?? {}) };
+  if (scene.collection !== undefined) layouts[view] = scene.collection;
+  else delete layouts[view];
+  next.collections = { ...state.collections, [ws]: layouts };
   return bump(next);
 }
 
