@@ -78,8 +78,8 @@ import {
   readingSizeFor,
   snapBelowHeaders,
 } from '../shared/panes.js';
-import { relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
-import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type ArrangeUnseen, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated, reworkedBecause, undoFor } from '../shared/arrange.js';
+import { pickedOut, pickedOutSentence, relationKinds, relationLabel, relationsBetween, relationsSentence } from '../shared/relations.js';
+import { type ArrangeInput, type ArrangeKind, type ArrangePlan, type ArrangeUndo, type ArrangeUnseen, type UndoCheck, checkUndo, planBasis, planCompare, planRead, planRelated, reworkedBecause, sameUndoQuestion, undoFor, undoStanding } from '../shared/arrange.js';
 import type { CollectionLayout } from '../shared/collection.js';
 import { EVIDENCE_HEADING, SECTION_HEADINGS, NAMED_ON_LINE, NO_SECTION, NO_TEST, UNREAD, NO_LEDGER, controlText, evidenceSectionTop, testsNamedOnLine } from '../shared/evidence.js';
 import { type HeadingAt, type ReadingAnchor, readingAnchorAt, scrollTopForAnchor } from '../shared/scenes.js';
@@ -542,9 +542,8 @@ export class GlassField {
     reworked: string;
     from: HTMLElement | null;
   } | null = null;
-  /** What the last applied arrangement moved, so it can be put back; and the view it was applied on. */
+  /** What the last applied arrangement moved, so it can be put back. It names the workspace and the view it was applied on. */
   private undoRecord: ArrangeUndo | null = null;
-  private undoView: string | null = null;
   /** The undo's question, while it is being asked: what changed since, and what would still go back. */
   private undoAsk: UndoCheck | null = null;
   private arrangeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2816,8 +2815,12 @@ export class GlassField {
     this.drawPanes();
     this.render(false);
     if (kind !== null) {
-      const ids = this.emphasisIds();
-      this.tell(`"${kind}": ${ids?.size ?? 0} of the notes joined to ${noteId} are picked out; the rest are dimmed and still listed`);
+      // Counted for the document the chip is on, as its list counts them
+      // (paintRelated), whether or not that document is the focus. Counted
+      // through the focus, a chip on any other document said "0 of the notes"
+      // while its list picked out the right rows.
+      const picked = this.edges === null ? null : pickedOut(this.edges, noteId, this.neighboursOf(noteId).map((n) => n.id), kind);
+      this.tell(pickedOutSentence(kind, noteId, picked === null ? null : picked.size));
     } else {
       this.tell(`Every note joined to ${noteId} is shown the same again`);
     }
@@ -2831,7 +2834,7 @@ export class GlassField {
     const context = this.hooks.peekContext(focus);
     const memo = this.emphasisMemo;
     if (memo !== null && memo.kind === e.kind && memo.noteId === e.noteId && memo.edges === this.edges && memo.context === context) return memo.ids;
-    const ids = relationKinds(this.edges, focus, this.neighboursOf(focus).map((n) => n.id)).get(e.kind) ?? null;
+    const ids = pickedOut(this.edges, focus, this.neighboursOf(focus).map((n) => n.id), e.kind);
     this.emphasisMemo = { kind: e.kind, noteId: e.noteId, edges: this.edges, context, ids };
     return ids;
   }
@@ -2987,6 +2990,7 @@ export class GlassField {
     const preference = readingSizeOf(state, state.workspaceId, deskViewOf(state));
     return {
       field: { width: this.viewport.width, height: this.viewport.height },
+      oneAtATime: this.narrowMode() !== null,
       collection: this.furnitureItems[0]?.layout?.() ?? null,
       docs: this.held.map((c) => {
         const size = readingSizeFor(c, preference);
@@ -3115,13 +3119,16 @@ export class GlassField {
       const back = ask.cards.map((c) => c.noteId);
       if (ask.collection !== null) back.push('the collection');
       arrangeTitle.textContent = `Undo: ${this.undoRecord.label}`;
-      arrangeText.textContent =
-        back.length === 0
+      // Asked again with nothing changed any more: what had been moved by hand is back where the arrangement put it.
+      const all = ask.changed.length === 0;
+      arrangeText.textContent = all
+        ? `What had changed since it was applied is as the arrangement left it again, so Undo would put all of it back${back.length === 0 ? '' : `: ${listOf(back)}`}.`
+        : back.length === 0
           ? 'Nothing it moved is still where it put it, so there is nothing to put back.'
           : `Since it was applied, something it moved has changed. Undo would put back ${listOf(back)} and leave the rest as it is.`;
       arrangeNotes.replaceChildren(...ask.changed.map((c) => line(c)));
-      arrangeApply.textContent = 'Undo the rest';
-      arrangeApply.hidden = back.length === 0;
+      arrangeApply.textContent = all ? 'Undo arrangement' : 'Undo the rest';
+      arrangeApply.hidden = back.length === 0 && !all;
       arrangeCancel.textContent = 'Keep as it is';
       return;
     }
@@ -3163,7 +3170,14 @@ export class GlassField {
     const now = this.arranging;
     if (now === null) return;
     const { plan } = now;
-    const record: ArrangeUndo = undoFor(plan, this.arrangeInput(), { focusBefore: this.focusId(), listBefore: this.relatedOpen, emphasisBefore: this.emphasis });
+    const state = this.hooks.state();
+    const record: ArrangeUndo = undoFor(plan, this.arrangeInput(), {
+      workspaceId: state.workspaceId,
+      viewId: deskViewOf(state),
+      focusBefore: this.focusId(),
+      listBefore: this.relatedOpen,
+      emphasisBefore: this.emphasis,
+    });
     this.arranging = null;
     this.drawArrange();
     this.moveTogether();
@@ -3177,7 +3191,6 @@ export class GlassField {
     this.narrowFront = 'document';
     await this.hooks.dispatch({ type: 'arrange', cards: plan.cards, order: plan.order, ...(plan.collection === null ? {} : { collection: plan.collection }) });
     this.undoRecord = record;
-    this.undoView = deskViewOf(this.hooks.state());
     if (this.active) this.redeal(false);
     this.tell(`${plan.label}: applied. Undo arrangement puts it back.`);
     const top = plan.subjects[plan.subjects.length - 1];
@@ -3206,14 +3219,20 @@ export class GlassField {
    * explicit press, which puts back the rest and leaves them alone.
    */
   async undoArrange(confirmed: boolean): Promise<void> {
-    const record = this.undoRecord;
-    if (record === null || !this.hooks.canArrange() || this.undoView !== deskViewOf(this.hooks.state())) return;
+    const record = this.undoHere();
+    if (record === null || !this.hooks.canArrange()) return;
     this.arranging = null;
     const check: UndoCheck = checkUndo(record, this.arrangeInput());
-    if (check.changed.length > 0 && !confirmed) {
+    const asked = this.undoAsk;
+    // "Undo the rest" answers the question that was shown. When something
+    // else has changed since it was asked, the question is shown again with
+    // what is true now, and this press puts nothing back.
+    const again = confirmed && asked !== null && !sameUndoQuestion(asked, check);
+    if ((check.changed.length > 0 && !confirmed) || again) {
       this.undoAsk = check;
       this.drawArrange();
-      (check.cards.length > 0 || check.collection !== null ? this.el.arrangeApply : this.el.arrangeCancel).focus({ preventScroll: true });
+      if (again) this.tell('What has changed since the arrangement is not what was listed, so nothing was put back. The list is worked out again.', true);
+      (check.cards.length > 0 || check.collection !== null || check.changed.length === 0 ? this.el.arrangeApply : this.el.arrangeCancel).focus({ preventScroll: true });
       return;
     }
     this.undoAsk = null;
@@ -3231,6 +3250,28 @@ export class GlassField {
     if (this.active) this.redeal(false);
     this.tell(check.changed.length === 0 ? `Undone: ${record.label}` : `Undone in part: ${record.label}. Left as they are: ${check.changed.join('; ')}.`);
     this.el.arrangeRead.focus({ preventScroll: true });
+  }
+
+  /**
+   * The undo record, when it is for the desk on screen. On another view of
+   * the same workspace it is kept and not offered. With another workspace
+   * open it is forgotten: that workspace has a view of the same id, and
+   * "Undo arrangement" there would move documents the arrangement never did.
+   */
+  private undoHere(): ArrangeUndo | null {
+    const record = this.undoRecord;
+    if (record === null) return null;
+    const state = this.hooks.state();
+    const standing = undoStanding(record, state.workspaceId, deskViewOf(state));
+    if (standing === 'gone') {
+      this.undoRecord = null;
+      // Its question, if it was being asked, goes with it.
+      if (this.undoAsk !== null) {
+        this.undoAsk = null;
+        this.drawArrange();
+      }
+    }
+    return standing === 'here' ? record : null;
   }
 
   /** Let documents and the collection travel to their new places together; a cut under reduced motion. */
@@ -3261,7 +3302,7 @@ export class GlassField {
     set(arrangeRead, top !== undefined, top === undefined ? 'Read needs an open note' : `Read ${top} with the collection beside it. Shown first; nothing moves until Apply.`);
     set(arrangeCompare, under !== undefined, under === undefined ? 'Compare needs two open notes' : `Stand ${under} and ${top} side by side, each at its own size. Shown first; nothing moves until Apply.`);
     set(arrangeRelated, top !== undefined, top === undefined ? 'Show related needs an open note' : `Gather what ${top} is joined to round it and open its complete list. Shown first; nothing moves until Apply.`);
-    const record = this.undoRecord !== null && this.undoView === deskViewOf(this.hooks.state()) ? this.undoRecord : null;
+    const record = this.undoHere();
     arrangeUndo.hidden = record === null;
     if (record !== null) {
       arrangeUndo.title = `Put back what "${record.label}" moved. It changes the layout only: no note's text and no project action.`;
@@ -3273,7 +3314,7 @@ export class GlassField {
   arrangeState(): { preview: { kind: ArrangeKind; label: string; objects: string[]; refreshed: boolean } | null; undo: string | null; asking: string[] | null; emphasis: { noteId: string; kind: string } | null } {
     return {
       preview: this.arranging === null ? null : { kind: this.arranging.kind, label: this.arranging.plan.label, objects: this.arranging.plan.objects.map((o) => o.id), refreshed: this.arranging.reworked !== '' },
-      undo: this.undoRecord?.label ?? null,
+      undo: this.undoHere()?.label ?? null,
       asking: this.undoAsk?.changed ?? null,
       emphasis: this.emphasis,
     };

@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { relationsBetween, relationLabel, relationSentence, relationsSentence, relationKinds } = load('shared/relations.js');
+const { relationsBetween, relationLabel, relationSentence, relationsSentence, relationKinds, pickedOut, pickedOutSentence } = load('shared/relations.js');
 
 const edge = (source, target, field = null) => ({ source, target, wrote: target, offset: 0, resolved: true, crossRepo: false, field });
 const EDGES = [
@@ -97,4 +97,16 @@ test('the kinds a document can be emphasised by are the keys that join it to a n
   assert.deepEqual([...relationKinds(EDGES, 'FEAT-0020', ['REQ-0001']).keys()], ['implements', 'requirements']);
   // A dangling link joins nothing.
   assert.equal(relationKinds(EDGES, 'FEAT-0020', []).size, 0);
+});
+
+test('picking out a key counts the notes joined to the document it was pressed on, and names that document', () => {
+  // Two documents with their lists open: the count is each one's own, whichever of them is the focus.
+  const round = (id, neighbours, kind) => pickedOut(EDGES, id, neighbours, kind);
+  assert.deepEqual([...round('FEAT-0020', ['TASK-0095', 'REQ-0001', 'DES-0003'], 'design')], ['DES-0003']);
+  assert.deepEqual([...round('TASK-0095', ['FEAT-0020'], 'parent')], ['FEAT-0020']);
+  assert.equal(round('TASK-0095', ['FEAT-0020'], 'design'), null, 'a key that joins this document to nothing picked something out');
+  assert.equal(pickedOutSentence('parent', 'TASK-0095', 1), '"parent": 1 of the notes joined to TASK-0095 is picked out; the rest are dimmed and still listed');
+  assert.equal(pickedOutSentence('tasks', 'FEAT-0020', 3), '"tasks": 3 of the notes joined to FEAT-0020 are picked out; the rest are dimmed and still listed');
+  // Before the workspace's links have been read there is no count, and none is made up.
+  assert.ok(!/\d/.test(pickedOutSentence('tasks', 'FEAT', null)));
 });

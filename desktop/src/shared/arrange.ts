@@ -39,6 +39,13 @@ export interface ArrangeInput {
   collection: CollectionLayout | null;
   /** Every document on this view's desk, lowest first: the last is the one on top. */
   docs: readonly ArrangeDoc[];
+  /**
+   * The field shows one object in front at a time and carries a bar that
+   * names the collection and each open note (a narrow field, DES-0003). A
+   * plan stores the same places there; what it says about reaching a
+   * document that lies under another is different.
+   */
+  oneAtATime?: boolean;
 }
 
 /** One object a plan affects, for the preview: named, with where it is and where it goes. */
@@ -240,7 +247,19 @@ export function planCompare(input: ArrangeInput, first: string, second: string):
       ax = ARRANGE_MARGIN;
       bx = Math.max(ARRANGE_MARGIN, width - ARRANGE_MARGIN - b.w);
       const over = Math.max(0, Math.round(ax + a.w - bx));
-      notes.push(`${first} and ${second} are ${Math.round(both)} px wide together and this window has ${Math.round(width - 2 * ARRANGE_MARGIN)}. They keep their sizes and overlap by ${over} px; pressing either brings it to the front.`);
+      // How the one underneath is reached is said as the build offers it. A
+      // narrow field shows one object at a time, and its bar names each open
+      // note. Elsewhere the second stands on top: where it covers the first
+      // completely there is nothing of the first to press, and its header is
+      // still reached with Tab, where Enter brings it to the front.
+      const covered = bx <= ax && bx + b.w >= ax + a.w && b.h >= a.h;
+      const reach =
+        input.oneAtATime === true
+          ? `one is shown at a time in a window this narrow: the bar along its top names ${first} and ${second}, and pressing a name shows that note`
+          : covered
+            ? `${second} covers ${first} completely. Tab reaches ${first}'s header, and Enter there brings it to the front`
+            : 'pressing either brings it to the front';
+      notes.push(`${first} and ${second} are ${Math.round(both)} px wide together and this window has ${Math.round(width - 2 * ARRANGE_MARGIN)}. They keep their sizes and overlap by ${over} px; ${reach}.`);
     }
   }
   const others = input.docs.length - 2;
@@ -318,7 +337,7 @@ export function planRelated(input: ArrangeInput, subject: string, gathers: numbe
 export function planBasis(input: ArrangeInput, extra = ''): string {
   const c = input.collection;
   return [
-    `${Math.round(input.field.width)}x${Math.round(input.field.height)}`,
+    `${Math.round(input.field.width)}x${Math.round(input.field.height)}${input.oneAtATime === true ? ' one at a time' : ''}`,
     c === null ? '-' : `${c.x},${c.y},${c.w},${c.h},${c.collapsed},${c.presentation}`,
     input.docs.map((d) => `${d.noteId}@${Math.round(d.x)},${Math.round(d.y)},${Math.round(d.w)}x${Math.round(d.h)}`).join(';'),
     extra,
@@ -405,6 +424,9 @@ export function reworkedBecause(was: ArrangeInput, now: ArrangeInput, wasUnseen:
 
 /** What an applied arrangement changed, kept for the window so it can be put back. */
 export interface ArrangeUndo {
+  /** The desk it was applied on: a record belongs to one workspace and one view of it. */
+  workspaceId: string | null;
+  viewId: string | null;
   label: string;
   /** Each document the arrangement moved: where it was, and where it was put. */
   cards: Array<{ noteId: string; before: { x: number; y: number }; after: { x: number; y: number }; size: { w: number; h: number } }>;
@@ -422,7 +444,7 @@ export interface ArrangeUndo {
  * made from: where each document it moves stands now, the stacking, and the
  * collection as the store holds it. `was` is what the window alone knows.
  */
-export function undoFor(plan: ArrangePlan, input: ArrangeInput, was: Pick<ArrangeUndo, 'focusBefore' | 'listBefore' | 'emphasisBefore'>): ArrangeUndo {
+export function undoFor(plan: ArrangePlan, input: ArrangeInput, was: Pick<ArrangeUndo, 'workspaceId' | 'viewId' | 'focusBefore' | 'listBefore' | 'emphasisBefore'>): ArrangeUndo {
   const cards: ArrangeUndo['cards'] = [];
   for (const to of plan.cards) {
     const doc = input.docs.find((d) => d.noteId === to.noteId);
@@ -436,6 +458,21 @@ export function undoFor(plan: ArrangePlan, input: ArrangeInput, was: Pick<Arrang
     collection: plan.collection !== null && input.collection !== null ? { before: input.collection, after: plan.collection } : null,
     ...was,
   };
+}
+
+/**
+ * Where an undo record stands for the desk on screen.
+ *
+ * `here`: it was applied on this view of this workspace, and is offered.
+ * `another-view`: the same workspace shows another view. It is kept and not
+ * offered, and is offered again when its view is back. `gone`: another
+ * workspace is open. Two workspaces have views of the same id, so a record
+ * kept by view id alone was offered on a desk it had never arranged; it is
+ * forgotten instead, and is not there when its workspace is opened again.
+ */
+export function undoStanding(undo: Pick<ArrangeUndo, 'workspaceId' | 'viewId'>, workspaceId: string | null, viewId: string | null): 'here' | 'another-view' | 'gone' {
+  if (undo.workspaceId !== workspaceId) return 'gone';
+  return undo.viewId === viewId ? 'here' : 'another-view';
 }
 
 /** What the undo will and will not put back, given the desk as it is now. */
@@ -496,4 +533,17 @@ export function checkUndo(undo: ArrangeUndo, input: ArrangeInput): UndoCheck {
   let next = 0;
   const order = current.map((id) => (known.has(id) ? (then[next++] as string) : id));
   return { cards, collection, order: order.every((id, i) => id === current[i]) ? [] : order, changed };
+}
+
+/**
+ * Whether the undo's question, asked a moment ago, is still the one being
+ * answered: the same things have changed since the arrangement, and the same
+ * objects would go back. "Undo the rest" works the desk out again when it is
+ * pressed. When that differs from what the question listed, pressing it would
+ * put back, or leave, something the person was never told about, so the
+ * question is shown again and that press puts nothing back.
+ */
+export function sameUndoQuestion(asked: UndoCheck, now: UndoCheck): boolean {
+  const back = (check: UndoCheck): string => JSON.stringify([check.cards, check.collection]);
+  return asked.changed.join('\n') === now.changed.join('\n') && back(asked) === back(now);
 }

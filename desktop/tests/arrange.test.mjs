@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { desktopRoot, load } from './helpers.mjs';
 
-const { planRead, planCompare, planRelated, planBasis, checkUndo, undoFor, reworkedBecause, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
+const { planRead, planCompare, planRelated, planBasis, checkUndo, undoFor, undoStanding, sameUndoQuestion, reworkedBecause, ARRANGE_MARGIN, ARRANGE_GAP } = load('shared/arrange.js');
 const { COLLECTION_HEAD_HEIGHT, cardGrid, rowOfMember, gridText } = load('shared/collection.js');
 const { SEAT, SEAT_GAP } = load('shared/focus-ring.js');
 const { reduce, initialState, deskCardsOf, collectionOf, DESK_ACTIONS, isRendererAction } = load('shared/store-state.js');
@@ -16,6 +16,23 @@ const field = { width: 1260, height: 745 };
 const list = { x: 40, y: 60, w: 340, h: 600, collapsed: false, presentation: 'table' };
 const doc = (noteId, x, y, w = 560, h = 520) => ({ noteId, x, y, w, h });
 const input = (docs, collection = list, f = field) => ({ field: f, collection, docs });
+
+// What the window does with a plan, through the real store: the desk is read
+// as the store holds it, the record is made from that, and both Apply and Undo
+// are one `arrange`.
+const WS = 'w';
+const VIEW = 'issues';
+function deskWith(cards) {
+  let s = reduce(initialState(), { type: 'open-workspace', workspaceId: WS });
+  s = reduce(s, { type: 'select-view', viewId: VIEW });
+  for (const c of cards) s = reduce(s, { type: 'put-on-desk', noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? 560, h: c.h ?? 520 });
+  return s;
+}
+function deskInput(state, f) {
+  return { field: f, collection: collectionOf(state, WS, VIEW), docs: deskCardsOf(state, WS, VIEW).map((c) => ({ noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? 560, h: c.h ?? 520 })) };
+}
+const act = (from) => ({ type: 'arrange', cards: from.cards, order: from.order, ...(from.collection === null ? {} : { collection: from.collection }) });
+const noSession = { workspaceId: WS, viewId: VIEW, focusBefore: null, listBefore: null, emphasisBefore: null };
 
 test('Read puts the list down the left and the document beside it, at its own size', () => {
   const plan = planRead(input([doc('B', 600, 200), doc('A', 300, 120, 640, 560)]), 'A');
@@ -91,6 +108,28 @@ test('Compare in a window too narrow for both keeps both sizes and says how far 
   assert.ok(over > 0);
   assert.ok(plan.notes.some((n) => n.includes(`overlap by ${over} px`)), plan.notes.join(' / '));
   for (const o of plan.objects.filter((x) => x.kind === 'document')) assert.equal(o.to.width, 560);
+});
+
+test('Compare says how the note underneath is reached, and does not say "press it" of one that is wholly covered', () => {
+  const said = (plan) => plan.notes.find((n) => n.includes('overlap by'));
+  // Partly covered: something of each is in sight, and a press on it brings it forward.
+  const partly = said(planCompare(input([doc('A', 300, 200), doc('B', 50, 50)], null, { width: 900, height: 700 }), 'A', 'B'));
+  assert.match(partly, /pressing either brings it to the front\.$/);
+  // Two notes as wide as the field: both stand at the left margin, and the second, on top, hides the first.
+  const wide = { width: 900, height: 700 };
+  const plan = planCompare(input([doc('B', 50, 50, 900, 520), doc('A', 300, 200, 900, 520)], null, wide), 'A', 'B');
+  assert.deepEqual(plan.cards.map((c) => [c.noteId, c.x]), [['A', ARRANGE_MARGIN], ['B', ARRANGE_MARGIN]]);
+  assert.deepEqual(plan.order, ['A', 'B'], 'B ends on top');
+  assert.ok(!/pressing either/.test(said(plan)), said(plan));
+  assert.match(said(plan), /B covers A completely\. Tab reaches A's header, and Enter there brings it to the front\.$/);
+  // The one on top is shorter: the first shows below it, and can be pressed.
+  assert.match(said(planCompare(input([doc('A', 300, 200, 900, 600), doc('B', 50, 50, 900, 400)], null, wide), 'A', 'B')), /pressing either brings it to the front\.$/);
+  // A narrow field shows one object at a time, whatever overlaps: the bar names each note.
+  const narrow = planCompare({ ...input([doc('A', 0, 0), doc('B', 30, 30)], null, { width: 560, height: 700 }), oneAtATime: true }, 'A', 'B');
+  assert.ok(!/pressing either/.test(said(narrow)), said(narrow));
+  assert.match(said(narrow), /one is shown at a time in a window this narrow: the bar along its top names A and B, and pressing a name shows that note\.$/);
+  // And whether it does is part of what a preview was worked out from.
+  assert.notEqual(planBasis({ ...input([doc('A', 0, 0)]), oneAtATime: true }), planBasis(input([doc('A', 0, 0)])));
 });
 
 test('Compare needs two different open notes', () => {
@@ -260,6 +299,38 @@ test('an undo names what a person changed since and leaves those objects alone',
   assert.deepEqual(resized.cards, [{ noteId: 'B', x: 50, y: 50 }]);
 });
 
+test('an undo record belongs to one workspace and one view: it is forgotten in another workspace, and kept but not offered on another view', () => {
+  const s = deskWith([{ noteId: 'A', x: 500, y: 200 }]);
+  const from = deskInput(s, field);
+  const record = undoFor(planRead(from, 'A'), from, { ...noSession, workspaceId: 'w', viewId: 'issues' });
+  assert.deepEqual([record.workspaceId, record.viewId], ['w', 'issues'], 'the record does not say which desk it arranged');
+  assert.equal(undoStanding(record, 'w', 'issues'), 'here');
+  assert.equal(undoStanding(record, 'w', 'features'), 'another-view');
+  // Another workspace has an Issues view too: the same view id is not the same desk.
+  assert.equal(undoStanding(record, 'other', 'issues'), 'gone');
+  assert.equal(undoStanding(record, null, 'issues'), 'gone');
+});
+
+test('"Undo the rest" is the answer to the question that was shown: when what has changed is different, it is asked again', () => {
+  const folded = { ...list, x: 12, y: 12, collapsed: true };
+  // A was moved by hand, and the question said so and offered to put B and the collection back.
+  const asked = checkUndo(undo, input([doc('C', 900, 300), doc('A', 300, 62), doc('B', 638, 62)], folded));
+  assert.deepEqual(asked.changed, ['A has been moved since']);
+  assert.equal(sameUndoQuestion(asked, checkUndo(undo, input([doc('C', 900, 300), doc('A', 300, 62), doc('B', 638, 62)], folded))), true, 'nothing changed between the question and the press');
+  // A note opened in between is not something the arrangement moved: the question stands.
+  assert.equal(sameUndoQuestion(asked, checkUndo(undo, input([doc('C', 900, 300), doc('A', 300, 62), doc('B', 638, 62), doc('D', 0, 0)], folded))), true);
+  // B is closed while the question is on screen: it would no longer go back, and the question never said so.
+  const closed = checkUndo(undo, input([doc('C', 900, 300), doc('A', 300, 62)], folded));
+  assert.deepEqual(closed.changed, ['A has been moved since', 'B has been closed since']);
+  assert.equal(sameUndoQuestion(asked, closed), false);
+  // The collection is opened by hand meanwhile.
+  assert.equal(sameUndoQuestion(asked, checkUndo(undo, input([doc('C', 900, 300), doc('A', 300, 62), doc('B', 638, 62)], { ...folded, collapsed: false }))), false);
+  // A is dragged back to where the arrangement put it: now it would go back too, which the question did not offer.
+  const back = checkUndo(undo, input([doc('C', 900, 300), doc('A', 62, 62), doc('B', 638, 62)], folded));
+  assert.deepEqual(back.changed, []);
+  assert.equal(sameUndoQuestion(asked, back), false);
+});
+
 test('the cards presentation lays the members out in whole rows and draws only what is in view', () => {
   const area = { left: 12, top: 100, width: 620, height: 300 };
   const card = { width: SEAT.width, height: SEAT.height };
@@ -299,24 +370,6 @@ test('the cards presentation lays the members out in whole rows and draws only w
   assert.equal(rowOfMember(9, 4), 2);
   assert.equal(rowOfMember(-1, 4), 0);
 });
-
-function deskWith(cards) {
-  let s = reduce(initialState(), { type: 'open-workspace', workspaceId: 'w' });
-  s = reduce(s, { type: 'select-view', viewId: 'issues' });
-  for (const c of cards) s = reduce(s, { type: 'put-on-desk', noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? 560, h: c.h ?? 520 });
-  return s;
-}
-
-// What the window does with a plan, through the real store: the desk is read
-// as the store holds it, the record is made from that, and both Apply and Undo
-// are one `arrange`.
-const WS = 'w';
-const VIEW = 'issues';
-function deskInput(state, f) {
-  return { field: f, collection: collectionOf(state, WS, VIEW), docs: deskCardsOf(state, WS, VIEW).map((c) => ({ noteId: c.noteId, x: c.x, y: c.y, w: c.w ?? 560, h: c.h ?? 520 })) };
-}
-const act = (from) => ({ type: 'arrange', cards: from.cards, order: from.order, ...(from.collection === null ? {} : { collection: from.collection }) });
-const noSession = { focusBefore: null, listBefore: null, emphasisBefore: null };
 
 test('in a field smaller than the stored collection, Apply stores no fitted size and Undo leaves the stored layout byte for byte what it was', () => {
   const stored = { x: 40, y: 60, w: 340, h: 820, collapsed: false, presentation: 'table' };
