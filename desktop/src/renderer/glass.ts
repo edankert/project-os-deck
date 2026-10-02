@@ -2095,11 +2095,12 @@ export class GlassField {
       if (count > 0) overflow.push(`${count} ${what}`);
     }
     this.el.overflow.textContent = overflow.length === 0 ? '' : `and ${overflow.join(', ')} — all listed in the navigator`;
-    // A result that differs only in the order of its rows changes no note, and is still waiting: with the
-    // collection folded or behind a document, this chip is the one place that offers it.
+    // A result that differs only in the order of its rows, or in how a heading reads, changes no note and is
+    // still waiting: with the collection folded or behind a document, this chip is the one place that offers
+    // it. It says only that the list changed; the collection's own line says how.
     this.el.pendingChip.hidden = this.input.pending === 0 && this.input.pendingAny !== true;
     this.el.pendingChip.textContent =
-      this.input.pending === 0 ? 'the list changed its order — show it' : this.input.pending === 1 ? '1 note changed — show it' : `${this.input.pending} notes changed — show them`;
+      this.input.pending === 0 ? 'the list changed — show it' : this.input.pending === 1 ? '1 note changed — show it' : `${this.input.pending} notes changed — show them`;
     // What Escape does, as two named controls (DES-0003): each is offered
     // only while it would do something.
     this.el.leaveFocus.hidden = this.focusId() === null;
