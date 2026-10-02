@@ -58,10 +58,61 @@ export class NavigatorList {
   /** The note whose row is marked, and until when, so a repaint keeps the mark. */
   private marked: { noteId: string; until: number } | null = null;
 
+  /** What the pointer was pressed on, by what it names: a row's key, and whether it was its twist. */
+  private pressed: string | null = null;
+
   constructor(container: HTMLElement, handlers: NavigatorHandlers) {
     this.container = container;
     this.handlers = handlers;
     container.addEventListener('keydown', (event) => this.onKey(event));
+    // A press that the list was drawn again under. Rows are drawn by a pool
+    // of elements in order, so when rows arrive above the pointer the row
+    // that is held still under it is handed to another element. A press that
+    // began on the one and ended on the other is not a click on either: the
+    // browser sends it to what they share, which is the list, and it was
+    // lost. Opening a note adds rows above, so the press lost was the one
+    // made on the next row a moment after. It is taken here, when the row
+    // under the release is the row that was pressed.
+    container.addEventListener('pointerdown', (event) => {
+      this.pressed = this.named(event.target);
+    });
+    container.addEventListener('click', (event) => {
+      if (event.target !== container || this.pressed === null) return;
+      const under = document.elementFromPoint(event.clientX, event.clientY);
+      const element = under instanceof HTMLElement ? (under.closest('[data-index]') as HTMLElement | null) : null;
+      if (element === null || !container.contains(element) || this.named(under) !== this.pressed) return;
+      this.pressed = null;
+      this.choose(element, under instanceof HTMLElement && under.closest('.twist') !== null);
+    });
+  }
+
+  /** What a point of the list names: the row drawn there, and whether it is that row's twist. Null off the rows. */
+  private named(target: EventTarget | null): string | null {
+    if (!(target instanceof HTMLElement)) return null;
+    const element = target.closest('[data-index]') as HTMLElement | null;
+    const row = element === null ? undefined : this.rows[Number(element.dataset['index'])];
+    if (row === undefined) return null;
+    return `${row.kind} ${row.key} ${target.closest('.twist') !== null}`;
+  }
+
+  /** A row was chosen with the pointer: a heading folds, a twist opens what a note holds, a note is opened. */
+  private choose(element: HTMLElement, onTwist: boolean): void {
+    const row = this.rows[Number(element.dataset['index'])];
+    if (row === undefined) return;
+    if (row.kind === 'group') {
+      this.handlers.fold(row.key, !row.folded);
+      return;
+    }
+    if (onTwist && row.expandable) {
+      // Folding an item uses the same map as folding a group, and an item
+      // defaults to closed, so `false` is the value that opens it.
+      this.handlers.fold(row.key, row.expanded);
+      return;
+    }
+    // The row's own card, not a lookup by id: the sidecar deliberately
+    // repeats a note in more than one group (Needs-you and its phase), and
+    // the map then holds whichever of them painted last (ISS-0015).
+    this.handlers.toggle(row.card, false);
   }
 
   /**
@@ -283,22 +334,8 @@ export class NavigatorList {
       if (row.kind === 'card' && !this.restoring) this.handlers.focusRow?.(row.card);
     });
     element.addEventListener('click', (event) => {
-      const row = this.rows[Number(element.dataset['index'])];
-      if (row === undefined) return;
-      if (row.kind === 'group') {
-        this.handlers.fold(row.key, !row.folded);
-        return;
-      }
-      if ((event.target as HTMLElement).closest('.twist') !== null && row.expandable) {
-        // Folding an item uses the same map as folding a group, and an item
-        // defaults to closed, so `false` is the value that opens it.
-        this.handlers.fold(row.key, row.expanded);
-        return;
-      }
-      // The row's own card, not a lookup by id: the sidecar deliberately
-      // repeats a note in more than one group (Needs-you and its phase), and
-      // the map then holds whichever of them painted last (ISS-0015).
-      this.handlers.toggle(row.card, false);
+      this.pressed = null;
+      this.choose(element, (event.target as HTMLElement).closest('.twist') !== null);
     });
     return element;
   }
