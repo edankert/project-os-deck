@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
-const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, named, consequence, planLanding, settle, settleUnconfirmed, returnOf, waitingFor, HANDOFF_ACK_MS } = load('shared/handoff.js');
+const { modesFor, offeredModes, canAcknowledge, describeHandoff, handoffLabel, named, consequence, planLanding, settle, settleUnconfirmed, returnOf, waitingFor, wayBackSpent, HANDOFF_ACK_MS } = load('shared/handoff.js');
 const { reduce, initialState, deskCardsOf, persistable } = load('shared/store-state.js');
 
 const desk = { kind: 'desk', label: 'desk on Display 2', windowId: 7, view: 'issues' };
@@ -175,6 +175,21 @@ test('the way back is the same handoff in reverse, carrying where it was read la
   const fromReader = settle(record('show', main, false, { source: { windowId: 9, view: 'features', label: 'reader on Display 2', kind: 'reader' } }), { type: 'ack', ok: true }).record;
   assert.equal(fromReader.state, 'done');
   assert.equal(returnOf(fromReader, null, null), null);
+});
+
+test('a "send back" that fails keeps its way back: it is used up only when the note is shown back there', () => {
+  // The note arrived on the desk window; this is it going back to the main window.
+  const done = settle(record('move', desk, true), { type: 'ack', ok: true }).record;
+  const back = { ...returnOf(done, null, null), id: 'h2', state: 'awaiting', put: true };
+  assert.equal(wayBackSpent(settle(back, { type: 'ack', ok: true }).reply), true);
+  for (const answer of [{ type: 'timeout' }, { type: 'closed' }, { type: 'display-removed' }, { type: 'ack', ok: false, error: 'this window did not draw it' }]) {
+    assert.equal(wayBackSpent(settle(back, answer).reply), false, JSON.stringify(answer));
+  }
+  // Refused before it ran, as the main process answers a refusal: nothing was sent, so nothing is used up.
+  const refused = planLanding(returnOf(done, null, null), facts({ waiting: main }));
+  assert.equal(wayBackSpent({ ok: false, error: refused.refused }), false);
+  // Landed without an answer is not shown back either.
+  assert.equal(wayBackSpent(settleUnconfirmed(back).reply), false);
 });
 
 test('a destination on the same desk, and a note kept on every view, are offered "also show" only', () => {

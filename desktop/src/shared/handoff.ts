@@ -298,3 +298,12 @@ export function returnOf(record: HandoffRecord, anchorNow: ReadingAnchor | null,
     anchor: anchorNow ?? record.anchor,
   };
 }
+
+/**
+ * Whether a "send back" has used up its way back. Only when the window the
+ * note went back to said it is showing it. Refused, unanswered or undone,
+ * the note is still here, and where it came from is still where it can go.
+ */
+export function wayBackSpent(reply: { ok?: unknown; acknowledged?: unknown }): boolean {
+  return reply.ok === true && reply.acknowledged === true;
+}

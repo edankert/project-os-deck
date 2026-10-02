@@ -31,6 +31,7 @@ import {
   settle,
   settleUnconfirmed,
   waitingFor,
+  wayBackSpent,
 } from '../shared/handoff.js';
 import type { ReadingAnchor } from '../shared/types.js';
 import { PANE_HEADER_HEIGHT } from '../shared/panes.js';
@@ -713,8 +714,14 @@ function registerIpc(): void {
     // Where the source window is now: its desk may be another view's by this time.
     const info = windowInfo.get(home.id);
     if (info?.role === 'focus') back.destination.view = store.getState().viewId;
-    cameFrom.delete(`${win.id}:${noteId}`);
-    return runHandoff(back, { edge: 'left', displayId: null, viewId: back.source.view ?? '' });
+    // Where it came from is forgotten only once it is back there. Forgotten before the return ran, a send
+    // back that was refused or not answered left the note here, and the next press was told it "did not
+    // arrive here from another window".
+    const key = `${win.id}:${noteId}`;
+    return Promise.resolve(runHandoff(back, { edge: 'left', displayId: null, viewId: back.source.view ?? '' })).then((reply) => {
+      if (wayBackSpent(reply) && cameFrom.get(key) === arrived) cameFrom.delete(key);
+      return reply;
+    });
   });
 
   /**
