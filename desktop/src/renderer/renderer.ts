@@ -1560,6 +1560,10 @@ async function saveScene(): Promise<void> {
   }
   await send({ type: 'save-scene', name, anchors: glass.readingAnchors(), field: glass.fieldSize(), savedAt: new Date().toISOString() });
   drawDesk();
+  // The list shows the scene just saved, not whichever name was chosen in it before: rename, delete and
+  // open are about the name the list shows, and after a save a person means the one they saved.
+  el.sceneList.value = name;
+  drawScenes();
   const n = deskHere().length;
   say(`scene "${name}" saved: where ${n === 1 ? 'its note stands and is' : `its ${n} notes stand and are`} being read, the collection and the search. Not the notes themselves, and not the list's rows.`);
 }

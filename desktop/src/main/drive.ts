@@ -113,9 +113,12 @@ export async function runDrive(host: DriveHost, scriptPath: string, out: string)
     log('the script stopped', error);
   }
   const after = gitStatus(host.prepared.root);
-  // What the run must never do: change the workspace it read.
-  const unchanged = before === after;
-  if (!unchanged) ok = false;
+  // What the run must never do: change the workspace it read. Where git
+  // cannot say (a throwaway copy is not a repository), the record says the
+  // check could not be made: two failed readings are equal, and that is not
+  // "unchanged". A walk on a copy compares the files itself.
+  const unchanged = before === null || after === null ? null : before === after;
+  if (unchanged === false) ok = false;
   fs.writeFileSync(
     path.join(out, 'drive.json'),
     `${JSON.stringify({ script: path.basename(scriptPath), workspace: host.prepared.name, ok, error, workspaceUnchanged: unchanged, tookMs: Date.now() - started, entries }, null, 2)}\n`,

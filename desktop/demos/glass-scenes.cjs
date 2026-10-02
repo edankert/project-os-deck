@@ -48,6 +48,17 @@ module.exports = async function (d) {
     if (replace) { await js(`[...document.querySelectorAll('#status button')].find((b) => b.textContent === 'replace it').focus()`); d.press(win, 'Return'); await d.delay(700); }
   };
 
+  // Every file of the copy, by its content. The copy is not a git repository, so the walk compares the files itself.
+  const crypto = require('node:crypto');
+  const fingerprint = () => {
+    const out = new Map();
+    const visit = (dir) => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { const full = path.join(dir, e.name); if (e.isDirectory()) visit(full); else if (e.isFile()) out.set(path.relative(root, full), crypto.createHash('sha1').update(fs.readFileSync(full)).digest('hex')); } };
+    visit(root);
+    return out;
+  };
+  const differ = (x, y) => [...new Set([...x.keys(), ...y.keys()])].filter((f) => x.get(f) !== y.get(f)).sort();
+  const filesAtStart = fingerprint();
+
   // ---- 1. A desk worth keeping ----
   const a = await openRow();
   const b = await openRow([a]);
@@ -116,6 +127,9 @@ module.exports = async function (d) {
   const back = { view: (await state()).viewId, held: await js('window.__deckDesk()'), query: (await state()).query, other: await pane(other), offered: !(await js(`document.getElementById('scene-back').hidden`)), scenes: Object.keys((await state()).desks).length };
   check(backLabel === 'Undo: back to the desk before "Review Glass"' && back.view === 'issues' && JSON.stringify(back.held) === JSON.stringify(elsewhere.held) && back.query === '' && back.other.left === elsewhere.other.left && back.other.top === elsewhere.other.top && !back.offered && back.scenes === 1, 'one press, named for what it does, puts back the Issues view with the note that was open there, where it stood; the scene is still saved', { backLabel, back });
 
+  // Saving, opening and going back wrote no file of the workspace.
+  check(differ(filesAtStart, fingerprint()).length === 0, `saving a scene, opening it and going back left every one of the copy's ${filesAtStart.size} files as it was`, differ(filesAtStart, fingerprint()));
+
   // ---- 6. Notes change on disk; the window is smaller ----
   const relOf = async (id) => js(`${glass}.hooks.cardByRel ? (${glass}.cardFor(${JSON.stringify(id)}) || {}).rel : null`);
   await t.view('features');
@@ -182,6 +196,7 @@ module.exports = async function (d) {
   check(/desk=Review(%20|\+| )Glass/.test(address) && address.includes('/features'), 'the copied address names the scene and its view, so the scene is a state Deck can be sent to', address);
 
   // ---- 7. Rename, delete, restore ----
+  const filesBeforeRename = fingerprint();
   await t.clickOn('#scene-rename', 400);
   await js(`(() => { const i = document.querySelector('#status input'); if (i) i.select(); })()`);
   await type('Compare designs');
@@ -198,6 +213,8 @@ module.exports = async function (d) {
   const restored = (await state()).desks[`${ws}:Compare designs`];
   check(restored !== undefined && restored.version === 2 && restored.cards.length === 2 && JSON.stringify(restored.anchors) === JSON.stringify(saved.anchors), 'restore puts it back as it was saved', restored && Object.keys(restored));
 
+  check(differ(filesBeforeRename, fingerprint()).length === 0, 'renaming, deleting and restoring a scene left every file of the copy as it was', differ(filesBeforeRename, fingerprint()));
+
   // ---- 8. A desk saved before scenes ----
   await js(`window.deck.state.dispatch({ type: 'save-desk', name: 'old desk', viewId: 'features' })`);
   await d.delay(400);
@@ -206,6 +223,194 @@ module.exports = async function (d) {
   await choose('old desk');
   const old = await state();
   check(old.desks[`${ws}:old desk`].version === undefined && old.viewId === 'issues' && old.query === beforeOld.query && (old.viewDesks[ws].issues || []).length === 2, 'a desk saved the old way (no version) opens as it always did: its notes, on the view that is on screen, and it brings no view or search of its own', { view: old.viewId, held: (old.viewDesks[ws].issues || []).map((c) => c.noteId) });
+
+  // ---- 8b. On a desk made for it: what is the session's, both undos, the keyboard, a failed read, a smaller field, the address ----
+  const paneEl = (id) => `[...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === ${JSON.stringify(id)})`;
+  /** Choose a scene in the list with the arrow keys, and stop there: opening is its own press. */
+  const selectScene = async (name) => {
+    await js(`document.getElementById('scene-list').focus()`);
+    for (let i = 0; i < 16; i += 1) {
+      const now = await js(`document.getElementById('scene-list').value`);
+      if (now === name) return true;
+      const order = await js(`[...document.getElementById('scene-list').options].map((o) => o.value)`);
+      d.press(win, order.indexOf(now) < order.indexOf(name) ? 'Down' : 'Up');
+      await d.delay(220);
+    }
+    return (await js(`document.getElementById('scene-list').value`)) === name;
+  };
+  const clearSearch = async () => { await js(`(() => { const s = document.getElementById('search'); s.focus(); s.select(); })()`); d.press(win, 'Backspace'); await d.delay(700); };
+  const sweep = async () => { await t.clickOn('#sweep-desk', 800).catch(() => null); };
+  await t.view('features');
+  await clearSearch();
+  if (await js(`document.getElementById('collection-as-table').getAttribute('aria-pressed') !== 'true'`)) await t.clickOn('#collection-as-table', 600);
+  await sweep();
+  await js(`document.getElementById('nav-list').scrollTop = 0`);
+  const x = await openRow();
+  const y = await openRow([x]);
+  await js(`(() => { const p = ${paneEl(y)}; const body = p.querySelector('.pane-body'); const hs = p.querySelectorAll('.pane-note h2'); const h = hs[Math.min(1, hs.length - 1)]; body.scrollTop += h.getBoundingClientRect().top - body.getBoundingClientRect().top + 40; })()`);
+  // x is made the focus, its list is opened and one relationship is picked out: three things that are the session's, not the scene's.
+  await js(`${paneEl(x)}.querySelector('.pane-head').focus()`);
+  d.press(win, 'Return');
+  await d.delay(1600);
+  await t.park();
+  d.press(win, 'r');
+  await d.delay(900);
+  const chip = await js(`(() => { const c = ${paneEl(x)}.querySelector('.kind-chip[data-kind]:not([data-kind=""])'); if (!c) return null; const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, kind: c.dataset.kind }; })()`);
+  if (chip) { await d.pointer(win, d.click(chip)); await d.delay(600); await t.park(); }
+  const session = () => js(`({ focus: ${glass}.focusId(), listOpen: !${paneEl(x)}.querySelector('.pane-links').hidden, emphasis: ${glass}.arrangeState().emphasis, held: window.__deckDesk() })`);
+  const sessionBefore = await session();
+  const anchorY = await anchorOf(y);
+  await saveAs('Kept as it is');
+  const stored = (await state()).desks[`${ws}:Kept as it is`];
+  // Opened again on the same view, timed from the press to both documents being read where they were.
+  const listShows = await js(`document.getElementById('scene-list').value`);
+  await selectScene('Kept as it is');
+  const openAt = await t.rect('#scene-open');
+  const pressedAt = Date.now();
+  await d.pointer(win, d.click(openAt));
+  let reopenMs = null;
+  for (let i = 0; i < 200; i += 1) {
+    await d.delay(25);
+    const ready = await js(`(() => { const ids = ${JSON.stringify([x, y])}; return ids.every((id) => ${glass}.documentState(id) === 'ready') && (${glass}.readingAnchor(${JSON.stringify(y)}) || {}).heading === ${JSON.stringify(anchorY.heading)}; })()`);
+    if (ready) { reopenMs = Date.now() - pressedAt; break; }
+  }
+  await d.delay(900);
+  await t.park();
+  const sessionAfter = await session();
+  check(stored !== undefined && JSON.stringify(Object.keys(stored).sort()) === JSON.stringify(['anchors', 'cards', 'collection', 'field', 'filters', 'name', 'query', 'savedAt', 'version', 'view', 'workspaceId']) && sessionBefore.focus === x && sessionBefore.listOpen && JSON.stringify(sessionAfter) === JSON.stringify(sessionBefore) && listShows === 'Kept as it is', 'after saving, the list shows the scene just saved; which document is the focus, which list is open and which relationship is picked out are not kept in a scene, and opening the scene on the same view leaves all three as they were', { listShows, before: sessionBefore, after: sessionAfter, picked: chip && chip.kind });
+  d.log('from pressing "open" to both documents read where they were, in the box', { reopenMs, documents: 2 });
+
+  // Both undos on screen at once, each named for what it puts back.
+  await t.clickOn('#arrange-read', 500);
+  d.press(win, 'Return');
+  await d.delay(1200);
+  const undos = await js(`(() => { const bar = document.querySelector('.field-bar').getBoundingClientRect(); const inBar = (e) => { const r = e.getBoundingClientRect(); return !e.hidden && r.width > 0 && r.left >= bar.left - 1 && r.right <= bar.right + 1 && r.top >= bar.top - 1 && r.bottom <= bar.bottom + 1; }; const s = document.getElementById('scene-back'); const u = document.getElementById('arrange-undo'); return { scene: s.textContent, sceneInBar: inBar(s), arrange: u.textContent, arrangeInBar: inBar(u), barHeight: Math.round(bar.height), window: window.innerWidth }; })()`);
+  check(undos.sceneInBar && undos.arrangeInBar && undos.scene.startsWith('Undo: back to the desk before') && undos.arrange.startsWith('Undo arrangement') && undos.scene !== undos.arrange, `"Undo: back to the desk before …" and "Undo arrangement" are both on screen, whole, in a window ${undos.window} px wide, and each says what it puts back`, undos);
+  await d.shot(win, '08-both-undos');
+  await t.clickOn('#arrange-undo', 1000);
+
+  // By keyboard: Tab goes through the scene controls in order, and Escape closes the question and nothing else.
+  await js(`document.getElementById('scene-list').focus()`);
+  const tabbed = [];
+  for (let i = 0; i < 5; i += 1) { d.press(win, 'Tab'); await d.delay(120); tabbed.push(await js(`document.activeElement.id`)); }
+  const outlined = await js(`(() => { const e = document.activeElement; const s = getComputedStyle(e); return s.outlineStyle !== 'none' || s.boxShadow !== 'none' || s.borderColor !== getComputedStyle(document.getElementById('scene-save')).borderColor; })()`);
+  await js(`document.getElementById('scene-save').focus()`);
+  const desksBefore = JSON.stringify(Object.keys((await state()).desks).sort());
+  const deskAsItWas = JSON.stringify((await state()).viewDesks[ws].features);
+  d.press(win, 'Return');
+  await d.delay(500);
+  const asking = await js(`!!document.querySelector('#status input')`);
+  d.press(win, 'Escape');
+  await d.delay(500);
+  const escaped = await js(`({ asking: !!document.querySelector('#status input'), held: window.__deckDesk().length, listOpen: !${paneEl(x)}.querySelector('.pane-links').hidden, report: document.getElementById('scene-report').hidden })`);
+  check(JSON.stringify(tabbed) === JSON.stringify(['scene-open', 'scene-save', 'scene-rename', 'scene-delete', 'scene-back']) && asking && !escaped.asking && escaped.held === 2 && escaped.listOpen === sessionBefore.listOpen && JSON.stringify(Object.keys((await state()).desks).sort()) === desksBefore && JSON.stringify((await state()).viewDesks[ws].features) === deskAsItWas, 'Tab goes from the list through open, save scene, rename, delete and the undo, in that order; Enter on "save scene" asks for a name and Escape closes that question and nothing else: no scene is saved, no document is closed and the open list stays open', { tabbed, focusVisible: outlined, asking, escaped });
+
+  // With reduced motion asked for, a reopened scene's documents are at their places at once.
+  const dbgScenes = win.webContents.debugger;
+  dbgScenes.attach('1.3');
+  await dbgScenes.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await sweep();
+  await d.delay(400);
+  await selectScene('Kept as it is');
+  await d.pointer(win, d.click(await t.rect('#scene-open')));
+  let firstSeen = null;
+  for (let i = 0; i < 80 && firstSeen === null; i += 1) { await d.delay(16); firstSeen = await js(`(() => { const ps = ${JSON.stringify([x, y])}.map((id) => ${paneEl('__ID__').replace('"__ID__"', 'id')}); if (ps.some((p) => !p)) return null; return ps.map((p) => { const r = p.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), p.getAnimations().length]; }); })()`); }
+  await d.delay(900);
+  const settled = await js(`${JSON.stringify([x, y])}.map((id) => { const p = [...document.querySelectorAll('.pane')].find((e) => e.dataset.noteId === id); const r = p.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), p.getAnimations().length]; })`);
+  check(firstSeen !== null && JSON.stringify(firstSeen) === JSON.stringify(settled) && settled.every((r) => r[3] === 0) && (await js(`matchMedia('(prefers-reduced-motion: reduce)').matches`)), 'with reduced motion asked for, the documents of a reopened scene are at their places the first time they are seen, and nothing is animating', { firstSeen, settled });
+  await dbgScenes.sendCommand('Emulation.setEmulatedMedia', { features: [] });
+  dbgScenes.detach();
+
+  // A document whose text cannot be read says so, and is read where it was once a retry succeeds.
+  const graphNow = await (await fetch(`${d.origin}/deck/graph/${ws}`)).json();
+  const relY = graphNow.nodes.find((n) => n.id === y).rel;
+  let refuseY = true;
+  win.webContents.session.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, done) => done({ cancel: refuseY && /\/api\/render\?/.test(details.url) && decodeURIComponent(details.url).includes(relY) }));
+  await sweep();
+  await d.delay(400);
+  await js(`${glass}.forgetBodies && ${glass}.forgetBodies()`);
+  await selectScene('Kept as it is');
+  await d.pointer(win, d.click(await t.rect('#scene-open')));
+  let failedDoc = null;
+  for (let i = 0; i < 60; i += 1) { await d.delay(200); failedDoc = await js(`(() => { const p = ${paneEl(y)}; return p ? { state: p.dataset.state, said: p.querySelector('.pane-state').textContent, retry: [...p.querySelectorAll('.pane-state button')].map((b) => b.textContent), title: p.querySelector('.pane-title').textContent } : null; })()`); if (failedDoc && failedDoc.state === 'error') break; }
+  // Longer than the wait a reading position is given, so the retry comes after it.
+  await d.delay(6500);
+  refuseY = false;
+  win.webContents.session.webRequest.onBeforeRequest(null);
+  // By keyboard: the other document may lie over the button.
+  const retryAt = await js(`(() => { const b = [...${paneEl(y)}.querySelectorAll('.pane-state button')].find((q) => q.textContent === 'retry'); if (!b) return null; b.focus(); return document.activeElement === b; })()`);
+  if (retryAt) { d.press(win, 'Return'); await d.delay(300); }
+  let retriedDoc = null;
+  for (let i = 0; i < 60; i += 1) { await d.delay(200); retriedDoc = await js(`({ state: ${glass}.documentState(${JSON.stringify(y)}), anchor: ${glass}.readingAnchor(${JSON.stringify(y)}) })`); if (retriedDoc.state === 'ready' && retriedDoc.anchor && retriedDoc.anchor.heading === anchorY.heading) break; }
+  check(failedDoc !== null && failedDoc.state === 'error' && failedDoc.said.length > 0 && failedDoc.retry.length > 0 && retryAt !== null && retriedDoc.state === 'ready' && retriedDoc.anchor !== null && retriedDoc.anchor.heading === anchorY.heading && Math.abs(retriedDoc.anchor.past - anchorY.past) <= 2, `a document of the scene whose text could not be read says so under its title, with a retry; when the retry succeeds, more than six seconds later, it is read at "${anchorY.heading}" where the scene kept it`, { failedDoc, retriedDoc, kept: anchorY });
+
+  // In a window smaller than the one the scene was arranged in, every document's header is inside the field.
+  const big = win.getBounds();
+  win.setBounds({ x: 0, y: 0, width: 900, height: 640 });
+  await d.delay(900);
+  await sweep();
+  await selectScene('Kept as it is');
+  await d.pointer(win, d.click(await t.rect('#scene-open')));
+  await d.delay(2500);
+  await t.park();
+  const small = await js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); return { field: [Math.round(f.width), Math.round(f.height)], heads: [...document.querySelectorAll('.pane')].filter((p) => !p.classList.contains('out-of-sight')).map((p) => { const h = p.querySelector('.pane-head').getBoundingClientRect(); const at = document.elementFromPoint(h.left + 24, h.top + h.height / 2); return { id: p.dataset.noteId, inside: h.left >= f.left - 1 && h.right <= f.right + 1 && h.top >= f.top - 1 && h.bottom <= f.bottom + 1, reachable: !!at && at.closest('.pane') !== null }; }), narrow: !document.getElementById('narrow-bar').hidden, bar: [...document.querySelectorAll('#narrow-bar button')].map((b) => b.textContent), report: [...document.querySelectorAll('#scene-report-lines li')].map((l) => l.textContent) }; })()`);
+  check(small.heads.length >= 1 && small.heads.every((h) => h.inside && h.reachable) && (small.heads.length === 2 || (small.narrow && small.bar.length >= 2)) && small.report.some((l) => /This window's field is \d+ by \d+; the scene was arranged in/.test(l)), `reopened in a field of ${small.field.join(' by ')}, smaller than the one it was arranged in: every document on screen has its header wholly inside the field and under the pointer, a document not on screen is one press away in the bar, and the report says the field is smaller`, small);
+  await d.shot(win, '09-a-scene-in-a-smaller-window');
+  if (!(await js(`document.getElementById('scene-report').hidden`))) await t.clickOn('#scene-report-close', 300);
+  win.setBounds(big);
+  await d.delay(900);
+
+  // The copied address, opened from another view, opens the scene on its view.
+  const { clipboard: clip } = require('electron');
+  clip.writeText('');
+  await t.clickOn('#copy-address', 600);
+  const sceneAddress = clip.readText();
+  await sweep();
+  await t.view('issues');
+  await t.clickOn('#open-address', 500);
+  // The address on the clipboard is offered already typed; Enter opens it.
+  const offeredAddress = await js(`(document.querySelector('#status input') || {}).value || ''`);
+  d.press(win, 'Return');
+  await d.delay(3500);
+  await t.park();
+  const byAddress = await js(`({ view: window.__deckLastState.viewId, desk: window.__deckLastState.deskName, held: window.__deckDesk() })`);
+  check(/desk=Kept/.test(sceneAddress) && offeredAddress === sceneAddress && byAddress.view === 'features' && byAddress.desk === 'Kept as it is' && byAddress.held.includes(x) && byAddress.held.includes(y), 'the address copied while the scene is open, opened from the Issues view, opens the scene on its own view with its documents', { sceneAddress, byAddress });
+
+  // A scene this Deck cannot read is listed with its version, cannot be opened, and is kept as it is.
+  const future = { name: 'From a newer Deck', workspaceId: ws, version: 99, view: 'features', cards: [{ noteId: x, x: 10, y: 10 }], somethingNew: { kept: true } };
+  d.store.dispatch({ type: 'restore-desk', desk: future });
+  await d.delay(700);
+  const listedFuture = await js(`(() => { const o = [...document.getElementById('scene-list').options].find((q) => q.value === 'From a newer Deck'); if (!o) return null; const l = document.getElementById('scene-list'); l.value = 'From a newer Deck'; l.dispatchEvent(new Event('change', { bubbles: true })); return { text: o.textContent, disabled: o.disabled }; })()`);
+  await d.delay(400);
+  const futureOpen = await js(`document.getElementById('scene-open').hidden`);
+  const heldBeforeFuture = JSON.stringify(await js('window.__deckDesk()'));
+  clip.writeText(`deck://${ws}/features?desk=${encodeURIComponent('From a newer Deck')}`);
+  await t.clickOn('#open-address', 500);
+  d.press(win, 'Return');
+  await d.delay(1800);
+  const refusedSaid = await t.text('#status');
+  const keptFuture = (await state()).desks[`${ws}:From a newer Deck`];
+  check(listedFuture !== null && /cannot be opened/.test(listedFuture.text) && /version 99/.test(listedFuture.text) && listedFuture.disabled && futureOpen && /saved by a newer Deck \(version 99\) and is not opened/.test(refusedSaid) && JSON.stringify(await js('window.__deckDesk()')) === heldBeforeFuture && keptFuture !== undefined && keptFuture.version === 99 && JSON.stringify(keptFuture.somethingNew) === JSON.stringify({ kept: true }), 'a scene saved by a newer Deck is listed with its version in its own text, cannot be chosen or opened, is refused by address with the reason, and is kept exactly as it was, with the field this Deck does not know', { listedFuture, refusedSaid, kept: keptFuture && Object.keys(keptFuture) });
+  await d.shot(win, '10-a-scene-this-deck-cannot-read');
+
+  // A note added to the view while the scene was put away is in its list when it is reopened: the list is read, not kept.
+  const countBefore = await t.text('#collection-count');
+  const template = fs.readdirSync(path.join(root, 'docs', 'features')).map((dir) => path.join(root, 'docs', 'features', dir)).flatMap((dir) => fs.statSync(dir).isDirectory() ? fs.readdirSync(dir).filter((f) => /^FEAT-\d+.*\.md$/.test(f)).map((f) => path.join(dir, f)) : [])[0];
+  const added = path.join(path.dirname(template), 'FEAT-9999-A-Note-Added-While-The-Scene-Was-Away.md');
+  await sweep();
+  await t.view('issues');
+  fs.writeFileSync(added, fs.readFileSync(template, 'utf-8').replace(/^id: .*$/m, 'id: FEAT-9999').replace(/^title: .*$/m, 'title: "A note added while the scene was away"').replace(/^aliases: .*$/m, 'aliases: ["FEAT-9999"]'));
+  await d.delay(4500);
+  await selectScene('Kept as it is');
+  await d.pointer(win, d.click(await t.rect('#scene-open')));
+  let withAdded = null;
+  for (let i = 0; i < 40; i += 1) { await d.delay(400); withAdded = await js(`({ count: document.getElementById('collection-count').textContent, has: window.__deckCollection.members().includes('FEAT-9999'), view: window.__deckLastState.viewId })`); if (withAdded.has) break; }
+  const n = (text) => Number((/(\d+) notes/.exec(text) || [])[1]);
+  check(withAdded.view === 'features' && withAdded.has && n(withAdded.count) === n(countBefore) + 1 && !JSON.stringify((await state()).desks[`${ws}:Kept as it is`]).includes('FEAT-9999'), `a note added to the Features view while the scene was put away is in the collection when the scene is reopened, and the count is one more (${countBefore} then ${withAdded && withAdded.count}); the saved scene itself names no member`, withAdded);
+  const sinceRename = differ(filesBeforeRename, fingerprint());
+  check(JSON.stringify(sinceRename) === JSON.stringify([path.relative(root, added)]), 'of the copy\'s files, the only one that differs since before the scenes were renamed, deleted, restored, reopened and refused is the note this walk added itself', sinceRename);
+  await sweep();
+  await t.view('issues');
 
   // ---- 9. Reload, and the served page ----
   win.webContents.reload();
@@ -224,7 +429,7 @@ module.exports = async function (d) {
 
   d.log('what this walk does not establish', [
     'whether a person finds a scene worth naming, or finds their place again faster with one: that is the acceptance check, walked by a person',
-    'a scene saved by a newer Deck: no such Deck exists to save one; the rule is checked without a window in tests/scenes.test.mjs',
+    'a scene really saved by a newer Deck: no such Deck exists, so the walk put a version-99 entry in the store itself',
     'a second display: the box has one',
   ]);
   t.finish();
