@@ -207,4 +207,14 @@ The other sections of the same run passed 98: Spread, the windows and the panels
 
 **What this run does not say.** It ran on one display, so nothing was thrown to a second one. Everything it timed was timed in software in the container, and nothing here says how fast Glass is on the Mac. It is a script: the acceptance checks that cover the same ground, [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]] among them, are walked by a person and none has been walked.
 
-**The review verdict is unchanged.** `review_verdict: changes-requested` is the second reviewer's, of 2026-09-10. `review_response:` records what this note's history shows was done about it. No review was run for this pass.
+**The review verdict is unchanged.** `review_verdict: changes-requested` is the second reviewer's, of 2026-09-10. `review_response:` records what this note's history shows was done about it. No review of this test was run for this pass.
+
+## 2026-10-02: the review of FEAT-0017 did not check this test, and what its fixes mean for this run
+
+**Neither reviewer of FEAT-0017 checked this test.** The feature's independent review of 2026-10-02 listed it among the linked tests. Both reviewers ran node suites only, and both marked it *not checked (needs a window)*. So no reviewer has broken a check of the rewritten `focus` part, and "Adequacy of the rewritten `focus` part" above still stands as written.
+
+**The review found two defects in a document's resize corner that this run does not look for.** A press and release on the corner without moving stored the size the document was drawn at, and Escape during a drag of the corner left the focus. Both are fixed in `fb829b0`. The run's two corner checks, one in `panes` and one in `focus`, each drag the corner and let go, so neither could see them. Three checks in the scripted walk `focus-neighbourhood` now look for them; FEAT-0017's "Review" names them. The run has no check for a note with no size of its own beside a note that is resized, which is the review's other defect: the `reading-size` suite holds that one in the store ([[TST-0065-A-Note-Opens-At-The-Size-A-Person-Chose]]).
+
+**The field cannot be scrolled since `2b2a928`.** A box that hides its overflow can still be scrolled by script, and putting the keyboard on a row inside a document had moved every document up under the bar. The field and the collection are clipped now. The scripted walk of the evidence panel found it ([[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]]); this run has no check for it.
+
+The count and the commit at the head of the section above are from the pass before these fixes. No pass that ran the smoke run after them is recorded here yet.

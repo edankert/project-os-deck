@@ -127,6 +127,41 @@ This section was first written at commit `4243fc2` and is brought up to commit `
 
 **Not tried.** A second display, a new reader opened on an empty display, a display really unplugged during a handoff, and a real tablet. The rule for a removed display is tested without a window. The scripted walk sent the main process the event Electron sends when a display is removed, and the main window said the display was disconnected and kept the note. No display was unplugged.
 
+## What the independent review changed in these rules, 2026-10-02
+
+Two reviewers read FEAT-0023 at commit `5e66f48` on 2026-10-02 and asked for changes. The fixes changed or sharpened several rules of this decision. Each is stated below as the rule the build now keeps, with the commit and the numbered item it belongs to. The findings and their evidence are in [[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]] under Review. This section changes no status: the decision stays proposed, and each rule here is Edwin's to accept or to send back with the rest.
+
+Two lines of the section above are no longer true and are replaced here: A4's line on a retry later than five seconds, and B2's line on the chooser cutting its sentence off.
+
+**Rules of part A as now built.**
+
+- **A2 and A4: a scene restores the list's layout whatever it was, a list nobody had moved included.** A scene saved while the list had never been moved keeps no layout for it. Reopening that scene takes the stored layout away, so the list stands where a view puts it by default. Before, the list stayed wherever it had been dragged since (commits `bb99700`, `426e3ec`).
+- **A4: a scene with no search or filters of its own clears them.** A scene restores its search and filters whatever they were. A desk from before scenes kept neither and leaves both as they are (commit `972ce73`).
+- **A2: a reading position records which occurrence of its heading it is under,** counted from 1. In a note where the same words head two sections, a position under the second goes back to the second. A position saved without a count means the first. When the text now has fewer headings with those words than the position counts, the fraction is used and the passage is said to have moved (commit `52dcd6c`).
+- **A4: a scene's reading position is kept for a late retry.** The scene reports after five seconds with what it has. A document that is still on the desk without its text keeps the scene's position, so a retry pressed later opens it where the scene had it (commit `972985f`).
+- **A5: a reopened scene always gets its message.** A scene with no document to put back says in one line that it reopened. A note that arrives from another window during the reopen does not take the scene's report away. The message stands at the field's lower left and is the first thing in the field for the Tab key (commits `22678b9`, `972985f`).
+- **A5: a document with no size of its own counts at the size it is drawn at** when the message says what fits a smaller field (commit `fd8b6a9`).
+- **A6: "back to the desk before" puts back the desk and the list the scene replaced, on the view where it replaced them.** A scene opened from another view replaces its own view's desk and list. The undo puts those back there, restores the search and the filters, and shows the view the person was on. Before, the undo went back to the view on screen and what the scene had replaced on its own view was gone for good (commits `093c198`, `4f5d266`).
+- **A7: a scene this Deck cannot read is never changed, by any control, and is said to be from a different Deck.** No save, no old-style "save desk" and no rename replaces or alters it, and it is written back with every field it had and nothing added. It can be chosen in the list. The one act offered for it is "delete", with "restore" after it. Every sentence about it says "saved by a different Deck (version N)", with the version written as it is stored, because an entry of version 1 is not newer. A7 said "newer than this Deck understands"; the rule built covers every version this Deck does not read (commit `ff25f28`).
+- **A7: "save desk" on the cards surface asks before it replaces a scene this Deck can read.** Over a desk from before scenes it replaces as it always did (commit `ff25f28`).
+- **A1 and A7: a scene's name is one its address accepts.** That is up to 64 characters and no control characters, the rule the `desk=` parameter already had. "save scene", "rename" and the store refuse any other name, so every saved scene has an address Deck can be sent to (commit `509c770`).
+- **A8: the served page opens no scene from its address.** Sent an address that names a saved desk, it scrolls nothing, says nothing was reopened, and says that it shows the desk the Mac has (commits `2646cf5`, `4f5d266`).
+
+**Rules of part B as now built.**
+
+- **B2: in the keyboard chooser the sentence for an answer is drawn whole,** above the status line, and no answer moves when it appears (commit `972985f`).
+- **B3: a note with a handoff waiting cannot be sent again.** Until the destination answers, any second send of that note is refused, whatever the act and the place, and the window says where the note is already going. Before, the same move sent twice could end with the note on no desk: the first landing timed out and took it off the destination, and the second was acknowledged and took it off the source. Another note is not held up (commit `5d5b38f`).
+- **B3: a destination that answers after the source has stopped waiting shows nothing of an arrival.** The landing has been undone by then, so the window neither marks the document nor says it arrived (commit `972ce73`).
+- **B5: a "send back" that fails keeps its way back.** Where a note came from is forgotten only when the window it went back to says it is showing it. A send back that is refused, not answered or undone can be pressed again (commit `39915fe`).
+- **What the decisions imply, a note kept on every view: the rule itself refuses to move it.** Such a note was already offered "Also show in" only. The refusal of a move is now in the tested rule, which the main process hands the fact, and no longer in the main process alone (commit `5d5b38f`).
+
+**Kept as built, though a reviewer raised it.**
+
+- **A note kept on every view is not moved to the scene's place when a scene is reopened.** It belongs to every view and not to the scene. This is the rule under "What these two decisions imply", and it stands.
+- **A second arrival replaces the first one's line.** B5 does not say how many arrival lines a window shows. It shows one, for the latest arrival. Each document that arrived keeps its own mark, and `S` on it still offers "Send back".
+
+**Left open, for a decision.** The cards surface's list of saved desks opens a scene straight through the store: no "back to the desk before", no reading position, no message. A6 and A5 are met in Glass only. Whether the cards surface should open a scene the way Glass does is not decided here.
+
 ## Acceptance
 
 Three threads are open. Each is Edwin's to settle, and the decision can be accepted with one still open.

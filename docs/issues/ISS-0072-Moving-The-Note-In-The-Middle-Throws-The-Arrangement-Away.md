@@ -48,10 +48,15 @@ The run drags ISS-0069 where it used to drag ISS-0070. Until this pass it had ma
 3. Whether the place survives. The document's place is in the store, as every held note's is, so it survives a reload. The focus, the turn and the look aside are the window's and are not stored.
 4. A re-layout and a resize. Dragging the corner keeps the focus and the cards make room: "the resized document is still the focus and its cards make room for it (13 seated, none over it)".
 
+**Two things a reviewer raised about the moved neighbourhood, both kept as built.** The independent review of FEAT-0017 on 2026-10-02 read the seating code, and FEAT-0017's "Review" records both under "Other findings".
+
+- Seats are not worked out again after the document is dragged. The cards keep the places beside the document that they had, so after a drag a card can stand under another document or above the field's top, which the seating avoids when the cards are first seated. This is kept because the neighbourhood moves with its document: "Expected" below asks that a drag "moves the ring with it, at the same offset". Seats are worked out again when the document's size, the field's height or the set of neighbours changes.
+- Six cards that all stood to one side of a document are seated on both sides of it. The reviewer's reading is that this follows from seats at fixed places, and whether it counts as "relative order intact" is Edwin's to judge.
+
 What is not shown:
 
 - Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it.
-- No check was broken on purpose to see it fail. The checks were written after the fix.
+- No check was broken on purpose to see it fail. The checks were written after the fix. Both reviewers of FEAT-0017 ran node suites only and marked "moving the document moves its neighbourhood" and "unrelated cards do not re-deal" *not checked*, because only a window could settle them.
 - The frame time the risk scan below asks for was taken in the Linux container only, which draws in software, and while turning, not while dragging: with 217 cards seated, 16.7 ms between frames at the median and 33.3 ms at the 95th percentile. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
 - In the orbit a drag of the document was not driven.
 

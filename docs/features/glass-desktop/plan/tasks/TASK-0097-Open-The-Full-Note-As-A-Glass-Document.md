@@ -44,6 +44,8 @@ ISS-0071's rule for the chosen size was built under FEAT-0017 in [[TASK-0104-Pre
 
 **Where the evidence is from.** Every smoke check and walk cited above ran on 2026-10-02 at commit `e86b2e4`, in the Linux container (the `project-os-deck-smoke` image, Electron under Xvfb). The smoke run's `document` part held 14 checks of 14 and its `served` part 6 of 6. [[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]] held 54 of 54 in its first script, `glass-desktop`, and 11 of 11 in its second, `glass-collection`. Every time above is the container's, which draws in software. Nothing here says how fast a note opens on the Mac.
 
+**Since the independent review, 2026-10-02.** The review refuted nothing in this task's boxes; what it could not settle without a window it marked *not checked*. One check the second box cites has changed. On the served page the `glass-collection` walk used to hold a note to the chosen size only when that page's field had room, and in the pass at `e86b2e4` it had none, so nothing about size was asserted there. Since commit `e3f1460` the walk opens the served page in a larger window, measures the document once its opening has ended, and requires the two sizes to be equal. No run of that check is recorded in this note yet.
+
 **Two later fixes belong here.**
 
 - A note the view does not hold is read from the card it was opened with (commit `f5d6ba9`). On a served page, a link to such a note opened a document that said the note "is on the desk and cannot be read here", and went on saying it. The `served` check on a link to RISK-0001 reads "ready, 5187 characters ... it passed through loading then ready", and would read "missing" if the defect came back.

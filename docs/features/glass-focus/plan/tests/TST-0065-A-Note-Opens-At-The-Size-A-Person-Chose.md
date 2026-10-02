@@ -17,7 +17,7 @@ covers: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", 
 issues: []
 tasks: ["[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
 artifacts: []
-adequacy: ""
+adequacy: "Measured in part on 2026-10-02. An independent reviewer removed the line that writes the view's size on a newly opened note and two tests failed. Commit 0d39033 says its three new tests fail with the fix taken out. The other rules have not been broken on purpose."
 mutation_score: ""
 reviewed_by: ""
 review_date: ""
@@ -41,6 +41,8 @@ This suite checks which size a note opens at, what a resize changes, and what a 
 - A note with no size opens at the size last chosen on that view of that workspace; with none, at 560 by 520.
 - Putting a note on the desk writes its size on its card, so resizing another note afterwards does not change it.
 - Resizing a note changes that note and the view's preference, and no other note.
+- A note with no size of its own is drawn the same before and after another note is resized. That holds for a note put on the desk with no size, for the notes of a state file older than reading sizes, and for a note kept on every view. A card with only a width stored keeps that width.
+- A press and release on the resize corner asks for nothing. A drag of the corner starts from the size the note has, not from the smaller size a small field draws it at. The size it asks for is clamped as the store clamps a resize.
 - Moving a note changes its place and not its size.
 - A field smaller than the note draws it smaller; the stored size is untouched, and a wider field draws it at its stored size again.
 - A state file written before reading sizes existed opens, with no preference.
@@ -55,8 +57,15 @@ This suite checks which size a note opens at, what a resize changes, and what a 
 
 The suite checks the rule in the store. Three runs in a window at `e86b2e4`, in the Linux container, check what a person sees. The `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]) finds the document 560 by 520 "to the pixel when opened, while dragged, after the drag, out of focus and in focus again", and finds the next note opening at the size the corner last chose. The `glass-desktop` walk finds a document back at its size after the window was narrow. The `glass-collection` walk resizes a note to 624 by 552 and finds the next note opened in that window 624 by 552.
 
-Not checked anywhere: that a note opened in a second window on the same view takes the view's size. The `glass-collection` walk opens a note on the served page, which is a second window with no bridge to the application. It compares the two sizes only when the served page's field can hold the chosen size, and in this run it could not: the field there was 772 by 446 and the size chosen was 624 by 552. So no size was compared. The note it opened there was drawn 622 by 427. No run has opened a second Deck window on the same view.
+Not checked in that pass: that a note opened in a second window on the same view takes the view's size. The `glass-collection` walk opens a note on the served page, which is a second window with no bridge to the application. In that run it compared the two sizes only when the served page's field could hold the chosen size, and it could not: the field there was 772 by 446 and the size chosen was 624 by 552. So no size was compared. The note it opened there was drawn 622 by 427. Since `e3f1460` the walk makes the served window 1440 by 900 and requires the two sizes to be equal. No pass cited here has run that check, and no run has opened a second Deck window on the same view.
+
+The count above is from before the independent review of FEAT-0017. The review's fixes added four tests (`0d39033`, `fb829b0`), and no pass that ran the suite with them is recorded here yet.
+
+**Two defects the review found, 2026-10-02, which this suite now holds.**
+
+- A note with no size of its own changed size when another note was resized. Both reviewers showed it through the built reducer: a note put on the desk with no size was drawn 560 by 520, and after a different note was resized to 820 by 700 it was drawn 820 by 700. The suite's test "resizing one note leaves every other open note the size it was" opened both notes with a size, so it never met such a note. Three tests hold the fix (`0d39033`): "a note with no size of its own is drawn the same before and after another note is resized", "a state file older than reading sizes: its notes hold their size when one of them is resized" and "a note on every view holds the size it is drawn at where the view already has a size".
+- A press and release on the resize corner, with no movement, stored the size the document was drawn at. Both reviewers found it by reading the renderer and neither ran it. The rule was moved out of the renderer into `cornerResize` in `desktop/src/shared/panes.ts`, and one test holds it (`fb829b0`): "a press and release on the corner asks for nothing, and a drag of it starts from the size the note has". What the window does with the rule, and Escape during a drag of the corner, are checked by the walk `focus-neighbourhood`, not here.
 
 ## Adequacy (who verifies this test?)
 
-Not measured. No break has been run against this suite, so nobody has seen it fail with the rule removed. The breaks made on 2026-10-02 were in the scene and handoff models, not in `panes.ts` or `store-state.ts`.
+Measured in part, on 2026-10-02. One rule was taken out by a reviewer: reviewer A of FEAT-0017 removed the line of the store that writes the view's size on a newly opened note, and two tests failed (`pass 12 fail 2`). Reviewer B broke no rule in this suite. Both named the same gap, a note with no size beside one that is resized, and row 2a of FEAT-0017's "Review" has their evidence. Commit `0d39033` says its three tests fail with the reducer's new step taken out; that run was made by the session that wrote them, not by a reviewer. No break has been run against the rules about a small field, a state file or a tablet.

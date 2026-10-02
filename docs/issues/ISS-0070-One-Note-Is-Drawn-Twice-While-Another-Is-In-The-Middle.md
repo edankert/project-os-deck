@@ -48,7 +48,8 @@ The smoke run opens ISS-0069 where it used to open this issue. Until this pass i
 What is not shown:
 
 - Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it. Edwin has not yet seen the repair in a walk.
-- No check was broken on purpose to see it fail. The checks were written after the fix, so none has been seen failing on this defect.
+- No check that runs in a window was broken on purpose to see it fail. The checks were written after the fix, so none has been seen failing on this defect. The two reviewers of FEAT-0017 ran node suites only on 2026-10-02 and marked "drawn once, without a duplicate card or ghost" *not checked*, because only a window could settle it. They did break the geometry suite on purpose; TST-0051 says what that showed under "Adequacy".
+- One thing the review found bears on this issue, and it is fixed. A neighbour for which no card could be made still took a seat, and the seat stood empty. Since `b3646d0` such a neighbour is given no seat and stays in the document's list. No route through the application produces such a neighbour today, so no walk shows it; the geometry suite holds the rule.
 - The frame time the risk scan below asks for was taken in the Linux container only, which draws in software: with 217 cards seated, 16.7 ms between frames at the median and 33.3 ms at the 95th percentile while turning. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
 
 ## Cause

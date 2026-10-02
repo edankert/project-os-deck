@@ -32,9 +32,11 @@ Tasks 1 and 3 do not depend on each other and can be built in either order. Task
 
 - A scene is read from the source every time. Nothing in a scene can be used to draw a row, a count or a note's text.
 - Opening a scene keeps the desk that was there, for this window's session, so it can be put back. A second scene opened before undoing replaces what is kept, and the control's name says which desk it returns to.
-- A scene this Deck cannot read is never rewritten. It is listed with its version and left in the state file.
+- A scene this Deck cannot read is never rewritten. It is listed with its version and left in the state file. No control saves over it, renames it or opens it. A person can delete it, and restore it after that.
 - A handoff is one record in the main process with one state. A move's source document is removed in the same step that marks the handoff acknowledged, and in no other.
 - A handoff that is not acknowledged undoes exactly what its landing added. A note the destination desk already held stays there.
+- A note with a handoff still waiting is not sent again until that one is answered. Sent twice, the first landing could time out and take the note off the destination desk while the second was acknowledged and took it off the source desk.
+- A "send back" uses up its way back only when the window the note went back to says it is showing it.
 - Nothing about a handoff is written to the state file. After a restart there is no arrival mark and no "send back".
 
 ## Open questions
@@ -50,3 +52,9 @@ One value was left to the build: how many seconds the main process waits for an 
 ## Where the plan stands, 2026-10-02
 
 All five steps are built and committed. Steps 1 and 3 are closed: [[TASK-0106-Keep-A-Scene-In-The-Store]] and [[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]] are `done`. Steps 2, 4 and 5 are `doing`: two boxes need a second display, the Mac measurements are owed, the walks do not repeat the route by keyboard alone, and no check looks for a visible focus on the scene controls. The plan stays `active` because the feature is at `doing`. Each open box is listed in its task's own note.
+
+## Where the plan stands after the review, 2026-10-02
+
+Two independent reviewers read the feature at `5e66f48` and asked for changes. Ten claims were refuted, and each is fixed in a commit named in [[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]], under Review. The fixes are in steps 1 to 4: the scene model and the store, the scene controls, the handoff rule and the main process, and what the windows say. Step 5's two walks were given checks for what the fixes changed.
+
+No step changed status. Steps 1 and 3 stay `done`, and steps 2, 4 and 5 stay `doing` with the same boxes open. No box was ticked for a fix, because no pass on the fixed code is cited in these notes yet. Round two of the review has not been run. The plan stays `active`.

@@ -52,4 +52,6 @@ This task measures the Electron experience being delivered here. The native comp
 
 **What was not tried at all:** a second display, a display unplugged, a real tablet, touch and a screen reader.
 
+**The independent review, 2026-10-02.** Both reviewers ran node suites only, so they marked what this task's boxes ask for *not checked*. On the third box reviewer A read the scale walk's script and says what the box already says: it logs the script work per frame "against a 16.7 ms frame" and asserts nothing about it, and nothing was timed on the Mac. The review requested changes to the feature for other reasons, recorded in [[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]] under Review. The walk scripts have grown since the pass cited above (`glass-collection` now makes 17 checks and `glass-desktop` 55), and no run of them is cited here yet.
+
 **One saving was made under this task.** A turn with 217 notes gathered round a document cost 8.2 ms of script work at the median and 16.7 ms at the 95th percentile, a whole frame. Two things were being redone on every frame that a turn does not change: every card was repainted, and every link line was rebuilt. Commit `002fc33` brought that to 6.1 and 11.2 ms, and at `e86b2e4` the walk reads 5.7 and 8.8 ms. All of these are the container's figures.

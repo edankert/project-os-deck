@@ -40,7 +40,7 @@ It is not TST-0063. That check is a person's, and no verdict is recorded for it 
 
 1. `colima start` if no Docker daemon is running.
 2. `bash tools/scripts/walk-in-a-box.sh glass-desktop`.
-3. `bash tools/scripts/walk-in-a-box.sh glass-collection`. This is the second script: the two filters, the collapsed header, a group heading, the wheel at both ends of the list, Escape during a drag, keyboard focus that can be seen, a verb that is refused, a document's panels, and the size the next note opens at.
+3. `bash tools/scripts/walk-in-a-box.sh glass-collection`. This is the second script: the two filters, the collapsed header, a group heading, the wheel at both ends of the list, Escape during a drag and during a resize of the collection, keyboard focus that can be seen, a verb that is refused, a document's panels, where the keyboard goes when a document is closed, the size the next note opens at, and on the served page the collection's fold, its label and the keyboard's place in a narrow window.
 4. For each, read the lines beginning `drive: ok` and `drive: FAIL`, and look at the pictures in `desktop/dist/walks/glass-desktop/` and `desktop/dist/walks/glass-collection/`. The same lines are in `drive.json` there.
 
 Both scripts run on this repository's own notes and write nothing: `git status` in the workspace is compared before and after. The first stays on the Features view. The second also opens the Intent view, to find a decision that has verbs.
@@ -59,7 +59,7 @@ Both scripts run on this repository's own notes and write nothing: `git status` 
 - **A read that fails.** With the note request refused at the network layer, the document opens, named, says it could not be read and offers retry and close. Retry reads it.
 - **Reduced motion.** With `prefers-reduced-motion: reduce` emulated, the document is at its place and size on its first frame and nothing is animated.
 - **Reload.** The collection is where it was, the documents are open at their sizes with their text, and the count is read again.
-- **A narrow window.** Under 720 px of field one object is in front and fills it, a bar names the collection and each open note, nothing overflows sideways, and a note opened there is stored at a reading size.
+- **A narrow window.** Under 720 px of field one object is in front and fills it, a bar names the collection and each open note, nothing overflows sideways, and a note opened there is stored at a reading size. Since commit `e3f1460` the Tab key is also moved to four controls there, and each must show where the keyboard is.
 - **The served page.** With the bridge absent, as a tablet loads it: "collection" brings the list in front of the Mac's documents, a row opens the full note in a document with no tick and no verb, and the desk the application keeps is unchanged.
 
 ## Expected results of the second script, `glass-collection`
@@ -68,20 +68,28 @@ Both scripts run on this repository's own notes and write nothing: `git status` 
 - **The collapsed header.** With a search, a status and a type all set and a note open, the collapsed header alone says the search, the count against the whole view and both filters. Opened again, the collection has its size, the row that was marked is marked, and the list is scrolled to the same row. With the search and both filters cleared, the list is the whole view again and names no filter.
 - **A group heading.** A press on it folds its rows away and its `aria-expanded` says so. Enter on it opens them again. The view's count does not change.
 - **The wheel at both ends of the list.** Turned up at the first row and turned down at the last row, the wheel stays in the list: the field's zoom and bearing are what they were.
-- **Escape during a drag of the collection.** The collection goes back where it was, and the open note stays open.
-- **Keyboard focus that can be seen.** Tab is pressed six times from the search box, and each control the keyboard lands on is drawn with an outline. The two filters carry a name for a screen reader, the list and a row carry a role, and the fold control says whether the list is open.
+- **Escape during a drag of the collection.** The collection goes back where it was. It stays there while the pointer moves on with the button still down, and when the button is let go. The store's layout for the view is what it was before the drag, and the open note stays open.
+- **Escape during a resize of the collection.** With the corner held and dragged, Escape puts the size back. A hand still on the button resizes nothing more, the store's layout is unchanged, every open note is still open and the focus is where it was. When the corner is not drawn, or something lies over it, the script writes a `NOT RUN` line instead.
+- **Keyboard focus that can be seen.** Tab is pressed six times from the search box, and each control the keyboard lands on is drawn with an outline or a ring. The collection's header, its "table", "cards" and fold controls and the search box are reached with Shift-Tab and Tab from the fold control, and each must show the same. The two filters carry a name for a screen reader, the list and a row carry a role, and the fold control says whether the list is open.
 - **A verb that is refused.** It is drawn inside the document, disabled, with the reason in words beside it. Pressing it asks nothing and sends nothing. The other verbs are as the sidecar gave them.
 - **A document's panels.** A document whose related list and details were open comes back with every panel closed, after "close all" and after it is closed by itself.
-- **The size the next note opens at.** A note resized with the keyboard sets the size the next note opens at on this view. On the served page a note opened on the same view takes that size when its field has room for it.
+- **Where the keyboard goes when a document is closed.** Closed with the list on screen, the keyboard is on the row the note was opened from. Closed with the collection collapsed, where that row is not on screen, the keyboard is on the collection's header and not nowhere.
+- **The size the next note opens at.** A note resized with the keyboard sets the size the next note opens at on this view. The served page is opened in a window 1440 by 900, so that its field has room. A note opened there on the same view is measured once its opening has ended and must be the same size.
+- **The collection's fold on the served page.** The Mac collapses the collection, and the served page draws it collapsed. The fold control on that page opens it there, folds it and opens it again. Through all three the Mac's window still shows it collapsed and the store's layout is unchanged.
+- **The header's label on the served page.** It names Enter, the one key that works there, and says nothing of moving or resizing.
+- **The served page in a narrow window.** In a window 760 px wide the bar between the collection and the open note is shown, and each of four controls the Tab key is moved to shows where the keyboard is.
 
-**The refusal in the seventh result is the script's own.** No note in this workspace has a verb the sidecar refuses. So the script replaces the sidecar's answer for one note, through the debugger, with one whose first verb is disabled with a reason. What is shown is how Deck draws a refusal inside a document. It is not shown on a refusal the sidecar itself made.
+**The refusal in the eighth result is the script's own.** No note in this workspace has a verb the sidecar refuses. So the script replaces the sidecar's answer for one note, through the debugger, with one whose first verb is disabled with a reason. What is shown is how Deck draws a refusal inside a document. It is not shown on a refusal the sidecar itself made.
 
 ## What it does not cover
 
 - Whether a person finds the route obvious or the motion helpful. That is TST-0063.
 - A screen reader. The names and roles are in the page and the second script reads them; nobody has listened to them.
 - A refusal the sidecar itself made, as said above.
-- The focus outline on the search box, on the collection's header and on its fold control. Tab, going forward from the search box, does not pass through them. Nor is the outline read in a narrow window or on the served page.
+- A list that changed only its order, and the words the chip in the bar above the field then shows. Neither script changes a note.
+- Enter and a double-click on the collection's header on the served page. The script presses the fold control there, by script and not with a pointer event. The `collection` suite tries all three on a stand-in page ([[TST-0067-A-Collection-Counts-Exactly-And-Keeps-Its-Place]]).
+- Closing a document while the collection shows cards, has the row folded away under its heading, or stands behind another document in a narrow field. The script closes one with the list on screen and one with the collection collapsed.
+- Escape with the collection's header pressed and not yet dragged 5 px. That key still goes to Glass.
 - Touch, and a real tablet. The served page was driven in a second Electron window with no preload bridge, with a mouse pointer.
 - A second display.
 - Timing on the Mac. The box renders in software.
@@ -111,6 +119,16 @@ What the second script saw, check by check:
 - With the related list and the details open, the document comes back with both closed after "close all" and again after Delete.
 - A note resized to 624 by 552 is followed by a note that opens at 624 by 552. **The served half of this check asserted nothing about size in this run.** The served page's field was 772 by 446, which has no room for 624 by 552, and the script holds the note to the chosen size only when the field has room. The note opened there at 622 by 427.
 
+**Both scripts have grown since this run, and no run of the grown scripts is recorded here yet.** The table and the list above are the run at `e86b2e4`. The second script now makes 17 checks where it made 11, and the first 55 where it made 54. The added checks are about these things:
+
+- Where the keyboard is drawn on the collection's header, its "table", "cards" and fold controls and the search box, which the list above does not read (commit `e3f1460`).
+- Where the keyboard is drawn in the narrow window (the first script) and on the served page in a window 760 px wide (`e3f1460`).
+- Escape while the collection is resized by its corner (`716ae82`).
+- Where the keyboard is after a document is closed, with the list on screen and with the collection collapsed (`fb79f05`).
+- On the served page, a collection the Mac collapsed being opened and folded there with the Mac's store unchanged, and the header's label (`bad5a5c`).
+
+Two checks that were already there ask for more. The Escape check moves the pointer on after Escape before it lets go, and reads the store's layout (`716ae82`). The size check opens the served page in a window with room for the chosen size and requires the two sizes to be equal, so the served half can no longer assert nothing (`e3f1460`).
+
 The first script first held all 54 on 2026-10-01 at commit `598ecc9`, when the view held 131 notes. The second script was written on 2026-10-02 (commit `7103e3c`).
 
 The first complete run of the first script, on 2026-10-01, failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
@@ -129,3 +147,12 @@ The ninth was the walk's own: it pressed a row that was hidden under a heading s
 The second script found a ninth defect in the application on 2026-10-02, fixed in commit `7103e3c`:
 
 9. Collapsing the collection and opening it again moved the list by several hundred pixels when a note was open. The script scrolls the list 60 px down, and the commit records that it came back at 665. The rows under "Joined to what you are holding" were sorted afresh at every redraw. Their order depends on where the cards stand round the open note, which is known only a moment after the note opens. So the first redraw after that, whatever caused it, moved every row, and the list followed the row it remembered. The order is now worked out when what it describes changes, and once more when the seats round the focus are first known. The check on the collapsed header reads the scroll position before and after, 60 and 60 in this run, and would read 665 again if the defect came back.
+
+**The independent review of FEAT-0020 on 2026-10-02 found four more, and one check of this walk that could not fail.** Two reviewers read the feature at `5e66f48` and ran node suites only; neither ran this walk. Each defect is fixed in the commit named, and the step that now holds it is named with what it would show if the defect came back. No run of these steps is recorded here yet.
+
+10. Escape during a drag of the collection left the drag live. The collection went back, but the next move of a hand still on the button began the drag again from the original press, and the release stored the moved place. Both reviewers showed it with a probe in node. **This walk's Escape check passed with the defect present,** because it pressed Escape and let go at the very point of the last move, so the pointer never moved after Escape. Fixed in commit `716ae82`. The check now moves the pointer on by one pixel and then further before letting go. With the defect back, the collection would follow the pointer again after Escape and the store's layout would change.
+11. Escape while the collection was resized by its corner was not used by the collection. Reviewer B's probe showed the key was not consumed; by reading, it then reached Glass's own Escape, which leaves the focus or closes every note. Fixed in the same commit. The new step drags the corner, presses Escape and moves on. With the defect back, the size would stay as dragged, and the focus or the open notes would be gone.
+12. Closing a document could leave the keyboard nowhere when the row it was opened from was not on screen. Reviewer B read this and did not run it. Fixed in commit `fb79f05`. The new step closes a document with the collection collapsed and reads which element has the keyboard. With the defect back, it would not be the collection's header.
+13. On the served page a collection the Mac had collapsed could not be opened: the fold control, Enter and a double-click did nothing, and the header's label named keys that do nothing there. Reviewer B showed it with a probe. Fixed in commit `bad5a5c`. The new step has the Mac collapse the collection and the served page open it. With the defect back, the page would show no rows after its fold control is pressed.
+
+The review's full table, with what each reviewer could not check without a window, is in [[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]] under Review.

@@ -92,3 +92,16 @@ The steps were written before anything was built. These were changed so that a p
 - **Step 11's expected result.** The arrival mark stays until the person acts. It used to fade after 2.4 seconds.
 - **Step 12.** The entry is named "Also show in the tablet".
 - **The deleted note's document.** It says there is no note at that path any more and offers "retry" and "close". The words "no longer in this workspace" are in the scene's message, not on the document.
+
+## After the independent review, 2026-10-02
+
+Two reviewers read FEAT-0023 on 2026-10-02 and ran node suites only. Both marked this check *not checked*: it is a person's walk and has not been walked. Nothing they found changes a step above, and no step names a control that the fixes removed or renamed. Nothing was walked to write this section; it comes from the commits and the code.
+
+A person walking the steps will see four things that differ from the application as it was when the steps were last corrected.
+
+- **The scene's message stands at the field's lower left,** not at the upper right over a document's header. It is the first thing in the field for the Tab key, so "dismiss" and "restore" are a few presses after the scene controls (commit `972985f`). Steps 5 and 7 read it there.
+- **In step 10 the sentence saying what an answer does is drawn above the status line,** in full (commit `972985f`).
+- **In step 3 the undo also puts back what the scene replaced on its own view,** when the scene was opened from another view (commit `093c198`). The steps open "review" from its own view, so they do not show this. To see it, switch to the Issues view before opening "review", then press the undo and look at both views.
+- **In step 9, a second press while a move is still waiting is refused.** The window says the note is already on its way and to which window (commit `5d5b38f`). And in step 8, a "send back" that fails can be pressed again (commit `39915fe`).
+
+Three things the fixes built are not in this check's steps: a name of more than 64 characters refused by "save scene", an entry from a different Deck offered "delete" only, and a tablet sent an address that names a scene. The first two are checked without a window in [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], and the scripted walk has a check for the second and the third ([[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]).

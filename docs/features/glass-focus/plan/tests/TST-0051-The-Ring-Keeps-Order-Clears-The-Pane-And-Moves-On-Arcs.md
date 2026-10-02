@@ -17,7 +17,7 @@ covers: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", 
 issues: []
 tasks: ["[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
 artifacts: []
-adequacy: ""
+adequacy: "Measured on 2026-10-02. Two independent reviewers took seven seating rules out of the built module: the suite failed for three and passed for four. Commit 0fc2c46 added a test for each of the four, and its author then broke each again and saw a test fail. The Adequacy section lists the seven."
 mutation_score: ""
 reviewed_by: ""
 review_date: ""
@@ -42,12 +42,17 @@ TASK-0104 rewrote this suite on 2026-10-01. Until then it checked the contract E
 - A seat is the size a front-band card straight ahead is drawn at, and taller than the 44 pixels of the copies it replaces.
 - Every neighbour gets a seat: 1, 6, 16, 17, 40 and 150 neighbours, on fields from 700 by 480 to 2560 by 1300, round documents from 280 by 160 to 900 by 700. The document's size is an input, and the layout returns seats only.
 - No seat lies over the document or over another seat, each keeps the gap from the document on at least one axis, and none is above or below the field.
+- No seat is closer than the 14 pixel gap to a document of any size, wherever the document stands in the field. Checked over 400 layouts made from a fixed seed.
 - Seats in sight are filled before any seat beyond the field, and adding a neighbour never takes a seat in sight away. On a 1440 by 860 field a 560 by 520 document has at least 16 seats in sight.
-- A document against the left edge seats twelve neighbours in sight, none off to the left.
+- A document against the left edge seats 12, 20, 40 and 51 neighbours in sight, none off to the left. Asked for 52 or more, it seats 51 in sight.
+- Wherever the document stands, no card is sent out of sight while a seat in sight is free. Checked over 250 layouts made from a fixed seed.
 - No seat stands under the compass or under another document.
 - A field too short for one whole seat still seats every neighbour, in one row.
 - The same request returns the same seats, nearest first, and fewer neighbours take the first of the same seats.
 - The cards keep the circular order they had round the document, whatever order they are given in, and the arrangement is turned to the seating that moves them least.
+- Whatever stood where, no other turn of the seating moves the cards less than the one chosen. Checked over 300 neighbourhoods made from a fixed seed, 198 of which need a turn.
+- Two neighbours with an equal claim to a seat are seated by id, whichever was named first.
+- A neighbour no card can be drawn for is given no seat, and neither is one that is already a document on the desk.
 - A neighbour known only by its side goes to that side; one with no place goes below.
 - The least movement brings a card into the field, and a card already there moves nothing.
 - The edge counters count what is wholly beyond each edge and nothing that is partly in the field.
@@ -60,6 +65,31 @@ TASK-0104 rewrote this suite on 2026-10-01. Until then it checked the contract E
 
 The suite checks where seats are. That the cards on screen stand at those seats, once each, is checked in a window by the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]).
 
+That count is from before the independent review of FEAT-0017. The review's fixes added five tests and extended one (`0fc2c46`, `b3646d0`), and no pass that ran the suite with them is recorded here yet.
+
+**What the review found in this suite, 2026-10-02.** The suite passed with four seating rules taken out of the module. It now holds a test for each (`0fc2c46`). That commit changed no line of the module: the tests were what was missing.
+
+- The seating was never turned. The one test for the turn placed each neighbour exactly on a seat, where no turn is needed.
+- Columns of seats stopped being offered once there were seats enough, in sight or not. The left-edge test asked for twelve seats; with twenty neighbours the broken module sent five cards out of sight.
+- A tie between two neighbours was not broken by id. The test's title said "by id" and it compared no ids.
+- The 14 pixels between a seat and the document were not kept. The four document heights the test tried happen to clear the gap anyway.
+
+**One defect in the module, found by a reviewer reading the renderer.** A neighbour for which no card could be made still took a seat, which stood empty. Who takes a seat is now a function in this module, `neighboursToSeat`, with its own test (`b3646d0`).
+
 ## Adequacy (who verifies this test?)
 
-Not measured for the suite as it stands. The four breaks recorded here on 2026-09-11 were made against the suite TASK-0104 replaced, and each of the checks they failed is gone. No break has been run against the rewritten suite. The breaks made on 2026-10-02 were in the scene and handoff models, not in `focus-ring.ts`.
+Measured on 2026-10-02 by the two independent reviewers of FEAT-0017, and again after the tests were added. The reviewers took eight rules out of the built code, seven of them in `focus-ring.ts`, and ran this suite each time.
+
+| Rule taken out | By | The suite |
+| --- | --- | --- |
+| The seating is turned to the one that moves the cards least | reviewer B | passed, 15 of 15 |
+| Columns of seats go on being offered until the seats in sight are filled | reviewer B | passed, 15 of 15 |
+| A tie between two neighbours is broken by id | reviewer B | passed, 15 of 15 |
+| A neighbour with no place is sorted to the bottom | reviewer B | 1 test failed |
+| A seat keeps 14 pixels from the document | reviewer A | passed, 15 of 15 |
+| No seat lies over the document | reviewer A | 3 tests failed |
+| Seats in sight come first in the order | reviewer A | 1 test failed |
+
+Four of the seven were not caught. Commit `0fc2c46` added a test for each of the four and says each rule was then broken again in the built module, and every break failed at least one test. That second run was made by the session that wrote the tests, not by a reviewer. FEAT-0017's "Review" has the commands and what they printed.
+
+The four breaks recorded here on 2026-09-11 were made against the suite TASK-0104 replaced, and each of the checks they failed is gone.

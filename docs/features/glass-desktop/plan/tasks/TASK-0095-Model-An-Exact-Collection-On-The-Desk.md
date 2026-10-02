@@ -46,4 +46,21 @@ This task uses existing sidecar groups. It does not create the cockpit's propose
 
 The second is to the last box. Collapsing the collection and opening it again moved the list by several hundred pixels when a note was open, because the rows under "Joined to what you are holding" were sorted afresh at every redraw. Commit `7103e3c` fixed it, and [[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]] says how.
 
+**What counts as a change to the list, since the review (2026-10-02).** The second and fifth boxes rest on the rule for a changed result, and the independent review showed that rule was too narrow. A result was compared by heading, status, owed mark and title. One that changed only the order of its rows or headings, a note's progress or severity, or the note another is held under was announced as nothing, and the list kept the old rows with nothing to press. The rule now, in `membershipChange`, `changeText` and `anyChange` of `desktop/src/shared/collection.ts` (commit `3fdc530`):
+
+- A refreshed result is a change when it differs in its order or in anything a row shows. It is announced, and applied when the person asks. No row moves before that.
+- "What a row shows" is everything the note's card carries, the note's own frontmatter included when the card came from Deck's index. So an edit to a property that no face draws is announced too.
+- The announcement counts four kinds of note: added, removed, moved in the list (under another heading, or held under another note) and changed what it shows. A note that moved and also shows something else is counted once, as moved.
+- It also names three things no single note explains: the headings are in another order, the rows that stayed under a heading are in another order, or a heading itself changed.
+- The chip in the bar above the field and the collection's line take their count from the same comparison. A result that differs only in its order counts no note, and the chip then reads "the list changed its order — show it" (commit `972ce73`).
+
+The decisions are numbered 1 to 5 in [[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]], under "Settled while fixing what the review found". Five tests of the `collection` suite hold the rule and are named in [[TST-0067-A-Collection-Counts-Exactly-And-Keeps-Its-Place]]. What a window shows of it is in [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]], whose walk adds a note, deletes one and changes one status, and makes no order-only change. No check reads the chip's words for an order-only change.
+
+The sentence the two boxes quote, "3 notes changed: 1 added, 1 removed, 1 changed", is what the walk read at `e86b2e4`. The collection now says each kind in more words, such as "1 changed what it shows" and "1 moved in the list". The boxes keep the old sentence until the last verification pass is cited here.
+
+**Two more of the review's findings belong to this task.** Both are fixed, and neither changed a tick.
+
+- The last box. The list comes back to a row by its note and by the heading the row stands under. Reviewer A removed the heading half and the `collection` suite still passed 17 of 17: every case had the list at its top, where the wrong row's answer is stopped at 0 and equals the right one. The test "a redrawn list is held by the row under its own heading, in a list that is scrolled down" now fails without it (commit `798d0b9`). The code did not change.
+- The first and third boxes. The store kept any finite place, so a state file could hold a place of 1e300. A stored place is now held between 0 and 100000 px (commit `1c2f523`). A place that is not a number is still no layout.
+
 The acceptance check [[TST-0063-A-Collection-And-Full-Note-Share-Glass]] is a person's walk and has not been walked.
