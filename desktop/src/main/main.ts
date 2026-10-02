@@ -5,7 +5,7 @@
  * so the shell and a tablet run identical bytes over one origin (ADR-0001).
  */
 import type { ChildProcess } from 'node:child_process';
-import { recordGlass } from './smoke-glass.js';
+import { type GlassSmokeContext, type OfferedNote, indexedNotes, notesOfferedVerbs, recordGlass } from './smoke-glass.js';
 import { GraphService } from './graph-service.js';
 import { runMeasure, saveMeasurement } from './measure.js';
 import { runDrive } from './drive.js';
@@ -28,12 +28,14 @@ import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, type SavedBounds, boundsKey, placeWindow } from './window-placement.js';
 import { NoteIndex, docsRootFor, pathPrefixFor, walkNotes } from './note-index.js';
 import {
+  DESIGN_VERDICT_ENDPOINT,
   SidecarWriteClient,
   WriteRefused,
   tickRequestFrom,
   transitionRequestFrom,
 } from '../shared/write-client.js';
 import { navigationFor } from '../shared/origin.js';
+import { ViewRegistry, sourceOf } from '../shared/views.js';
 import { defaultWorkspacePath, focusPolicy, smokeVerdict } from './smoke-support.js';
 
 // Read once, at start, so every window in a run is treated the same way
@@ -748,14 +750,58 @@ async function runSmoke(): Promise<void> {
    */
   const notApplicable: string[] = [];
   let drawnCards: string[] = [];
+  /** How many checks held. The verdict lists the ones that did not; this is what lets a run say how many were made. */
+  let passed = 0;
   const record = (ok: boolean, what: string): void => {
-    if (!ok) failures.push(what);
+    // One line per check when asked, in every section of the run, so a run
+    // can be read as it goes and its checks counted.
+    if (process.env['DECK_SMOKE_DEBUG'] === '1') console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`);
+    if (ok) passed += 1;
+    else failures.push(what);
+  };
+  /** Said before each section when every check is printed, so a line can be placed. */
+  const section = (name: string): void => {
+    if (process.env['DECK_SMOKE_DEBUG'] === '1') console.log(`==== ${name} ====`);
   };
   const skip = (what: string): void => {
     skipped.push(what);
   };
   const notHere = (what: string): void => {
     notApplicable.push(what);
+  };
+  /** What the Glass section is handed: the store, the windows, and this run's own record. */
+  const glassContext = (prepared: PreparedWorkspace): GlassSmokeContext => ({
+    store,
+    createWindow: (role, address, panel) => createWindow(role, address, panel),
+    addressOf: (id) => windowInfo.get(id)?.address ?? null,
+    displayCount: () => screen.getAllDisplays().length,
+    record,
+    skip,
+    notHere,
+    prepared,
+    tempDir: app.getPath('temp'),
+    untilBooted,
+    focusApp,
+    openServedPage: () => {
+      const page = new BrowserWindow({ width: 900, height: 700, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
+      void page.loadURL(`${hostOrigin}/`);
+      return page;
+    },
+    windows: () =>
+      [...windowInfo.entries()].flatMap(([id, info]) => {
+        const w = BrowserWindow.fromId(id);
+        if (w === null || w.isDestroyed()) return [];
+        return [{ id, address: info.address, displayId: screen.getDisplayMatching(w.getBounds()).id, win: w }];
+      }),
+    notesWithAnUntickedCriterion: () => notesWithAnUntickedCriterion(prepared.root),
+  });
+  /** The verdict, and with every check printed, how many checks the run made. */
+  const verdict = (extra: string[] = []): void => {
+    const all = [...failures, ...extra];
+    if (process.env['DECK_SMOKE_DEBUG'] === '1') {
+      console.log(`==== ${passed} passed, ${all.length} failed, ${skipped.length} skipped, ${notApplicable.length} not applicable ====`);
+    }
+    console.log(JSON.stringify(smokeVerdict(all, skipped, notApplicable), null, 2));
   };
   try {
     // The workspace has to exist before the first window boots: the rail is
@@ -767,36 +813,33 @@ async function runSmoke(): Promise<void> {
     if (process.env['DECK_SMOKE_ONLY'] === 'glass' && prepared !== null) {
       await ipcInvoke('deck:workspaces:open', prepared.id);
       skip('everything but Glass: DECK_SMOKE_ONLY=glass');
-      await recordGlass({
-        store,
-        createWindow: (role, address, panel) => createWindow(role, address, panel),
-        addressOf: (id) => windowInfo.get(id)?.address ?? null,
-        displayCount: () => screen.getAllDisplays().length,
-        record,
-        skip,
-        notHere,
-        prepared,
-        tempDir: app.getPath('temp'),
-        untilBooted,
-        focusApp,
-        openServedPage: () => {
-          const page = new BrowserWindow({ width: 900, height: 700, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
-          void page.loadURL(`${hostOrigin}/`);
-          return page;
-        },
-        windows: () =>
-          [...windowInfo.entries()].flatMap(([id, info]) => {
-            const w = BrowserWindow.fromId(id);
-            if (w === null || w.isDestroyed()) return [];
-            return [{ id, address: info.address, displayId: screen.getDisplayMatching(w.getBounds()).id, win: w }];
-          }),
-      });
-      console.log(JSON.stringify(smokeVerdict(failures, skipped, notApplicable), null, 2));
+      section('Glass');
+      await recordGlass(glassContext(prepared));
+      verdict();
       shutdown();
       await delay(400);
       app.exit(1);
       return;
     }
+    // The same shortcut for the verb and tick controls: the one section that
+    // presses a write, with the write stopped before it leaves Deck.
+    if (process.env['DECK_SMOKE_ONLY'] === 'verbs' && prepared !== null) {
+      await ipcInvoke('deck:workspaces:open', prepared.id);
+      skip('everything but the verb controls: DECK_SMOKE_ONLY=verbs');
+      // A window that stays open: the section opens and closes its own, and
+      // Deck quits when its last window closes.
+      const keep = createWindow('focus', null, null);
+      await once(keep.webContents, 'did-finish-load');
+      await untilBooted(keep);
+      section('the verb and tick controls');
+      await recordEveryVerbAsksWhy(record, skip, prepared);
+      verdict();
+      shutdown();
+      await delay(400);
+      app.exit(1);
+      return;
+    }
+    section('Spread, the windows and the panels');
     const focus = createWindow('focus', null, null);
     await once(focus.webContents, 'did-finish-load');
     await untilBooted(focus);
@@ -1161,50 +1204,33 @@ async function runSmoke(): Promise<void> {
     // to a synthetic click that never hit-tested.
     if (prepared === null) skip('Glass: no workspace was opened');
     else {
-      await recordGlass({
-        store,
-        createWindow: (role, address, panel) => createWindow(role, address, panel),
-        addressOf: (id) => windowInfo.get(id)?.address ?? null,
-        displayCount: () => screen.getAllDisplays().length,
-        record,
-        skip,
-        notHere,
-        prepared,
-        tempDir: app.getPath('temp'),
-        untilBooted,
-        focusApp,
-        openServedPage: () => {
-          const page = new BrowserWindow({ width: 900, height: 700, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
-          void page.loadURL(`${hostOrigin}/`);
-          return page;
-        },
-        windows: () =>
-          [...windowInfo.entries()].flatMap(([id, info]) => {
-            const w = BrowserWindow.fromId(id);
-            if (w === null || w.isDestroyed()) return [];
-            return [{ id, address: info.address, displayId: screen.getDisplayMatching(w.getBounds()).id, win: w }];
-          }),
-      });
+      section('Glass');
+      await recordGlass(glassContext(prepared));
     }
 
+    section('the navigation guard');
     await recordNavigationGuard(record);
 
     // **The tablet follows the store** (TASK-0057). A page with no bridge is
     // exactly what a tablet loads, so the check opens one here rather than
     // needing a tablet, and times how long a lift on the Mac takes to reach it.
+    section('the served page follows the store');
     await recordServedPageFollows(record, skip, prepared);
 
     // **The renderer's own guards, driven in a real window.** Neither of these
     // can be a node check: `node --test` cannot load the renderer at all
     // (ISS-0008), which is how a deletable Content-Security-Policy tag and a
     // half-fixed reason box both survived a full green suite.
+    section('a script in a note does not run');
     await recordScriptInANoteDoesNotRun(record);
+    section('the verb and tick controls');
     await recordEveryVerbAsksWhy(record, skip, prepared);
 
     // **What a tablet actually gets**, from the machine's own network address
     // rather than from loopback, which is the only way to exercise the path a
     // tablet takes (TST-0010). Safari and the visual absence of a control stay
     // a walk; the status codes do not have to.
+    section('from the network');
     await recordFromTheNetwork(record, skip, notHere, prepared);
 
     // **The quit, measured against a REAL sidecar Deck started** (TST-0011's
@@ -1214,11 +1240,12 @@ async function runSmoke(): Promise<void> {
     // could. A temporary workspace with no `.cockpit/url` forces Deck to start
     // its own child rather than borrow one, so what is measured is a process
     // Deck owns and is therefore Deck's to stop.
+    section('the quit');
     await recordQuit(record, skip);
 
-    console.log(JSON.stringify(smokeVerdict(failures, skipped, notApplicable), null, 2));
+    verdict();
   } catch (err) {
-    console.log(JSON.stringify(smokeVerdict([...failures, String(err)], skipped, notApplicable), null, 2));
+    verdict([String(err)]);
     failures.push('threw');
   }
   shutdown();
@@ -1278,8 +1305,8 @@ async function recordScriptInANoteDoesNotRun(record: (ok: boolean, what: string)
 }
 
 /**
- * Every verb asks why, and a verb Deck cannot perform is refused (ISS-0040,
- * ISS-0039).
+ * Every verb asks why, a verb is drawn as the sidecar's row says, and a verb
+ * Deck cannot perform is refused (ISS-0040, ISS-0039).
  *
  * `applyVerb` is renderer code, so no node check reaches it — `grep applyVerb
  * desktop/tests/` found nothing on the day ISS-0040 was filed, which is how
@@ -1289,6 +1316,25 @@ async function recordScriptInANoteDoesNotRun(record: (ok: boolean, what: string)
  * an address that focuses a note the sidecar offers verbs on. The write bridge
  * is replaced for the duration, so what is asserted is what the shell was
  * asked for and no note is touched.
+ *
+ * **Which note that is, is asked of the sidecar when the run is made.** This
+ * check named ISS-0008 and DES-0001 until 2026-10-02 and was red for two
+ * reasons that were not faults in Deck. ISS-0008 left `triage` on 2026-09-19,
+ * and the sidecar offers an issue verbs only there, so the note the check
+ * opened had none. And the check expected a design's Accept and Decline to be
+ * drawn disabled, which was true while the sidecar's rows for a design named
+ * an endpoint of their own for the verdict: Deck has no surface for that
+ * endpoint and refused the verb rather than post it (ISS-0039). The cockpit dropped that endpoint
+ * on 2026-09-12 (its `note_writes.py`, `VERDICT_ENDPOINTS`, now empty), so
+ * its rows for a design name no endpoint and Deck draws them as the ordinary
+ * verbs they now are. Deck decides nothing about a design: it reads the row.
+ *
+ * So there are three things here. A note with verbs today is pressed and the
+ * request read. A design, when one carries verbs today, is shown to be drawn
+ * and sent exactly as the sidecar's rows say. And the guard for a row that
+ * DOES name an endpoint Deck has no surface for is still driven, on a row
+ * this run adds the endpoint to in the page's own copy of the sidecar's
+ * answer, because no row the sidecar sends today can reach it.
  */
 async function recordEveryVerbAsksWhy(
   record: (ok: boolean, what: string) => void,
@@ -1299,8 +1345,6 @@ async function recordEveryVerbAsksWhy(
     skip('the verb controls: no workspace was opened, so no note could be focused');
     return;
   }
-  const withVerbs = 'ISS-0008';
-  const withEndpoint = 'DES-0001';
 
   // **The write is intercepted in the MAIN process, not in the page.**
   // `window.deck` comes through `contextBridge`, which freezes it, so an
@@ -1338,13 +1382,29 @@ async function recordEveryVerbAsksWhy(
     }
   };
 
-  /** Click a note's row in the navigator, which is how a person opens one. */
+  /**
+   * Click a note's row in the navigator, which is how a person opens one. A
+   * row under a heading that is folded away is drawn nowhere, so the folded
+   * headings are opened first when the row is not there.
+   */
   const openTheNote = `
     (async () => {
-      const row = document.querySelector('#nav-list [data-note-id="ID"]');
+      const find = () => document.querySelector('#nav-list .nav-row[data-note-id="ID"]:not([hidden])');
+      let row = find();
+      if (row === null) {
+        for (const group of [...document.querySelectorAll('#nav-list .nav-group[aria-expanded="false"]')]) group.click();
+        await new Promise((r) => setTimeout(r, 600));
+        row = find();
+      }
       if (row === null) return {found: false, verbs: 0};
+      // A row that is already on the desk is taken off by a click; a second click puts it back and opens it.
       row.click();
       await new Promise((r) => setTimeout(r, 1500));
+      if (document.querySelectorAll('#actuators button.verb').length === 0) {
+        const again = find();
+        if (again !== null) again.click();
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       return {found: true, verbs: document.querySelectorAll('#actuators button.verb').length};
     })()
   `;
@@ -1371,7 +1431,7 @@ async function recordEveryVerbAsksWhy(
       // confirm left the run green with the claim unmeasured; it landed
       // correctly only by luck of ordering. No backtick may appear in this
       // comment: it is inside a template literal and would close it.
-      const target = verbs.find((b) => b.dataset.confirm === 'CONFIRM');
+      const target = verbs.find((b) => b.dataset.confirm === 'CONFIRM' && !b.disabled);
       if (target === undefined) return {names, drawn, pressed: null, asked: 0, labels: [], said: ''};
       const pressed = {verb: target.textContent, confirm: target.dataset.confirm, disabled: target.disabled};
       target.click();
@@ -1395,213 +1455,477 @@ async function recordEveryVerbAsksWhy(
       return {names, drawn, pressed, asked, labels, said: (document.querySelector('#status') || {}).textContent || ''};
     })()
   `;
+  type Pressed = { names: string[]; drawn: Array<{ verb: string; confirm: string; disabled: boolean; title: string }>; pressed: { verb: string; confirm: string; disabled: boolean } | null; asked: number; labels: string[]; said: string };
   const reason = 'because the smoke run pressed it';
-  let skippedForSafety = false;
 
-  const win = createWindow('satellite', `deck://${prepared.id}/issues?note=${withVerbs}`, null);
-  try {
+  // ---- Which notes carry verbs today, and which view lists each ----
+  // Asked of the sidecar, through the read a page makes (`notesOfferedVerbs`).
+  const offered = await notesOfferedVerbs(hostOrigin, prepared.id);
+  /** Where each note is stored, by Deck's own index. */
+  const offeredIndex = new Map((await indexedNotes(hostOrigin, prepared.id)).map((n) => [n.id, n.rel]));
+  /** The modification time Deck's index holds for a note, in seconds, as a page reads it; null when it holds none. */
+  const heldTime = async (win: BrowserWindow, rel: string): Promise<number | null> => {
+    if (rel === '') return null;
+    const ms = (await win.webContents.executeJavaScript(
+      `fetch('/deck/records/${prepared.id}?rel=' + encodeURIComponent(${JSON.stringify(rel)})).then((r) => r.json()).then((p) => ((p.records || [])[0] ? p.records[0].mtimeMs : null)).catch(() => null)`,
+    )) as number | null;
+    return typeof ms === 'number' ? ms / 1000 : null;
+  };
+  const say = (n: OfferedNote): string => `${n.id}, a ${n.type} at ${n.status}: ${n.actions.map((a) => a.verb).join(', ')}`;
+  record(
+    offered.found.length > 0,
+    `the sidecar offers a person verbs on at least one note of this workspace today, so the verb controls can be pressed (${offered.found.map(say).join('; ') || 'none'}; ${offered.asked} notes asked about)`,
+  );
+  /** The views of this workspace whose list has a row for a note, by the list the sidecar returns for each. */
+  const workspace = workspaces.get(prepared.id);
+  const navViews = workspace === null ? [] : new ViewRegistry().viewsFor(workspace).views.flatMap((v) => { const source = sourceOf(v); return source.kind === 'nav' ? [{ id: v.id, mode: source.mode }] : []; });
+  const listed = new Map<string, Set<string>>();
+  /** The notes with a row straight under a heading, which is drawn as soon as the heading is open. */
+  const ownRow = new Map<string, Set<string>>();
+  for (const view of navViews) {
+    const ids = new Set<string>();
+    const top = new Set<string>();
+    try {
+      const nav = (await (await fetch(`${hostOrigin}/deck/sidecar/${prepared.id}/api/cockpit/nav?mode=${encodeURIComponent(view.mode)}`)).json()) as { groups?: Array<{ items?: unknown[] }> };
+      const walk = (items: unknown[], depth: number): void => {
+        for (const raw of items) {
+          const item = raw as { id?: unknown; children?: unknown[] };
+          if (typeof item.id === 'string') {
+            ids.add(item.id);
+            if (depth === 0) top.add(item.id);
+          }
+          walk(item.children ?? [], depth + 1);
+        }
+      };
+      for (const group of nav.groups ?? []) walk(group.items ?? [], 0);
+    } catch {
+      // A view whose list cannot be read lists nothing, and the note is looked for in the next.
+    }
+    listed.set(view.id, ids);
+    ownRow.set(view.id, top);
+  }
+  const viewOf = (noteId: string): string | null => navViews.find((v) => listed.get(v.id)?.has(noteId))?.id ?? null;
+  // A note with a verb that can be pressed without a confirmation: enabled,
+  // not confirming, and posted through the generic transition. And a design
+  // that carries verbs, when there is one today.
+  const pressable = (n: OfferedNote): boolean => viewOf(n.id) !== null && n.actions.some((a) => !a.confirm && !a.disabled && a.endpoint === '');
+  const plain = offered.found.find(pressable);
+  const design = offered.found.find((n) => n.type === 'design' && viewOf(n.id) !== null);
+  /** A row as Deck should draw it: disabled when the sidecar says so, or when it names an endpoint Deck has no surface for. */
+  const asTheRowsSay = (seen: Pressed, note: OfferedNote): boolean =>
+    seen.drawn.length === note.actions.length &&
+    note.actions.every((a, i) => seen.drawn[i]?.verb === a.verb && seen.drawn[i]?.confirm === String(a.confirm) && seen.drawn[i]?.disabled === (a.disabled || a.endpoint !== ''));
+  const drawnAs = (seen: Pressed): string => seen.drawn.map((r) => `${r.verb}${r.disabled ? ' (disabled)' : ''}`).join(', ') || 'none';
+
+  /** Open a window on a view, focused on a note, with the write path proved stopped before anything is pressed. */
+  const windowOn = async (viewId: string, noteId: string | null): Promise<BrowserWindow> => {
+    const win = createWindow('satellite', `deck://${prepared.id}/${viewId}${noteId === null ? '' : `?note=${encodeURIComponent(noteId)}`}`, null);
     await once(win.webContents, 'did-finish-load');
     await untilBooted(win);
     await delay(1200);
+    return win;
+  };
 
-    // **Prove the interception took BEFORE pressing anything.** The first
-    // version of this check replaced `window.deck.write` from inside the page.
-    // `contextBridge` freezes that object, so the assignment was refused in
-    // silence, the run pressed Accept for real, and ISS-0008 moved from
-    // `triage` to `open` in this repository with a decision callout reading
-    // "because the smoke run said so". A smoke run must never write to the
-    // repository it is checking; this is the line that makes sure.
-    const probe = (await win.webContents.executeJavaScript(
-      `window.deck.write.transition({workspaceId: 'x', id: '__smoke_probe__', to: 'x'})`,
-    )) as { ok?: boolean };
-    const intercepted = sent.length === 1 && sent[0]?.['id'] === '__smoke_probe__' && probe?.ok === true;
-    record(intercepted, 'the write path is intercepted, so nothing below can reach a note');
-    if (!intercepted) {
-      skip('the verb controls: the write path was NOT intercepted and driving them would write to this repository');
-      skippedForSafety = true;
-      return;
-    }
-    sent.length = 0;
-    const opened = (await win.webContents.executeJavaScript(openTheNote.replace('ID', withVerbs))) as { found: boolean; verbs: number };
-    record(opened.verbs > 0, `${withVerbs} opened in the reader with verbs on it, so this measures something`);
-    if (opened.verbs > 0) {
-      const seen = (await win.webContents.executeJavaScript(
-        pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason),
-      )) as { names: string[]; drawn: Array<{ verb: string; confirm: string; disabled: boolean; title: string }>; pressed: { verb: string; confirm: string; disabled: boolean } | null; asked: number; labels: string[]; said: string };
-      record(seen.names.length > 0, `the verbs drawn are the sidecar's: ${seen.names.join(', ')}`);
-      // ISS-0040: the reason used to be asked for only inside a confirmation,
-      // and Accept does not confirm.
-      record(
-        seen.pressed !== null && seen.pressed.confirm === 'false' && seen.pressed.disabled === false,
-        `the verb pressed really is one that does not stop to confirm: ${JSON.stringify(seen.pressed)}`,
-      );
-      record(
-        seen.labels.some((label) => /^why /i.test(label)),
-        'pressing a verb that does NOT stop to confirm still asks why',
-      );
-      const request = sent.at(-1) ?? {};
-      record(request['note'] === reason, 'and the reason a person typed reaches the shell, on that same verb');
-      record(
-        request['id'] === withVerbs && typeof request['to'] === 'string' && request['to'] !== '',
-        `carrying the note and the status the row named (${String(request['to'])})`,
-      );
+  try {
+    // ---- 1. A verb that does not stop to confirm still asks why, and the request carries what the row named ----
+    if (plain === undefined) {
+      if (offered.found.length > 0) record(false, `one of those notes has a row in a view and a verb that does not stop to confirm, to press (${offered.found.map((n) => `${n.id} in ${viewOf(n.id) ?? 'no view'}`).join(', ')})`);
+    } else {
+      const win = await windowOn(viewOf(plain.id) as string, plain.id);
+      try {
+        // **Prove the interception took BEFORE pressing anything.** The first
+        // version of this check replaced `window.deck.write` from inside the page.
+        // `contextBridge` freezes that object, so the assignment was refused in
+        // silence, the run pressed Accept for real, and ISS-0008 moved from
+        // `triage` to `open` in this repository with a decision callout reading
+        // "because the smoke run said so". A smoke run must never write to the
+        // repository it is checking; this is the line that makes sure.
+        const probe = (await win.webContents.executeJavaScript(
+          `window.deck.write.transition({workspaceId: 'x', id: '__smoke_probe__', to: 'x'})`,
+        )) as { ok?: boolean };
+        const intercepted = sent.length === 1 && sent[0]?.['id'] === '__smoke_probe__' && probe?.ok === true;
+        record(intercepted, 'the write path is intercepted, so nothing below can reach a note');
+        if (!intercepted) {
+          skip('the verb controls: the write path was NOT intercepted and driving them would write to this repository');
+          return;
+        }
+        sent.length = 0;
+        const opened = (await win.webContents.executeJavaScript(openTheNote.replace(/ID/g, plain.id))) as { found: boolean; verbs: number };
+        record(opened.verbs > 0, `${plain.id} opened in the reader with verbs on it, so this measures something (in the ${viewOf(plain.id)} view; its row found: ${opened.found})`);
+        if (opened.verbs > 0) {
+          const seen = (await win.webContents.executeJavaScript(pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason))) as Pressed;
+          record(
+            asTheRowsSay(seen, plain),
+            `the verbs drawn are the sidecar's, each drawn as its row says (${drawnAs(seen)} for the sidecar's ${plain.actions.map((a) => `${a.verb}${a.disabled ? ' (disabled)' : ''}`).join(', ')})`,
+          );
+          // ISS-0040: the reason used to be asked for only inside a confirmation,
+          // and a verb that moves a note forward does not confirm.
+          record(
+            seen.pressed !== null && seen.pressed.confirm === 'false' && seen.pressed.disabled === false,
+            `the verb pressed really is one that does not stop to confirm: ${JSON.stringify(seen.pressed)}`,
+          );
+          record(
+            seen.labels.some((label) => /^why /i.test(label)),
+            'pressing a verb that does NOT stop to confirm still asks why',
+          );
+          const request = sent.at(-1) ?? {};
+          const row = plain.actions.find((a) => a.verb === seen.pressed?.verb);
+          record(sent.length === 1 && request['note'] === reason, `and the reason a person typed reaches the shell, on that same verb, once (${sent.length} requests)`);
+          record(
+            request['id'] === plain.id && row !== undefined && request['to'] === row.to && row.to !== '',
+            `carrying the note and the status the sidecar's row named for that verb (${String(request['to'])} for ${row?.to ?? 'no such row'})`,
+          );
+          // The guard against a note that changed underneath: the time Deck's
+          // own index holds for the file, in seconds, which the sidecar compares.
+          const heldAt = await heldTime(win, plain.rel);
+          record(
+            typeof request['mtime'] === 'number' && heldAt !== null && Math.abs(request['mtime'] - heldAt) < 1e-6 && ticked.length === 0,
+            `and the modification time Deck's index holds for the note, through the transition channel and no other (sent ${String(request['mtime'])}; the index holds ${heldAt === null ? 'no time' : String(heldAt)} for ${plain.rel}; ${ticked.length} on the tick channel)`,
+          );
+        }
+      } finally {
+        win.destroy();
+      }
     }
 
-    // **The tick control, pressed** (ISS-0053). Six rounds hardened the verb
-    // row and nobody pressed a tick — so `attachTicks` could be deleted,
-    // leaving Deck unable to resolve a criterion anywhere, with the node
-    // suite, this run and the round-trip script all green. That script ticks
-    // through `client.tick`, which is the route with no interface on it.
+    // ---- 2. A design is drawn and sent exactly as the sidecar's rows say ----
+    // Until 2026-09-12 the sidecar's rows for a design named an endpoint Deck
+    // has no surface for, and Deck drew them disabled. They name none now.
+    // Nothing in Deck knows a design from any other note, so this is the
+    // same claim as above made on a design, and it is made here because it
+    // is the claim that changed.
+    const before = sent.length;
+    if (design !== undefined && plain !== undefined) {
+      const win = await windowOn(viewOf(design.id) as string, design.id);
+      try {
+        const opened = (await win.webContents.executeJavaScript(openTheNote.replace(/ID/g, design.id))) as { found: boolean; verbs: number };
+        record(opened.verbs > 0, `${design.id}, a design at ${design.status}, opened with verbs on it (in the ${viewOf(design.id)} view)`);
+        if (opened.verbs > 0) {
+          const endpoints = [...new Set(design.actions.map((a) => a.endpoint))].map((e) => (e === '' ? 'none' : e)).join(', ');
+          const seen = (await win.webContents.executeJavaScript(pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason))) as Pressed;
+          record(
+            asTheRowsSay(seen, design) && seen.drawn.every((r) => r.title === ''),
+            `the sidecar's rows for the design ${design.id} name no endpoint of their own today (${endpoints}), and Deck draws each as its row says: ${drawnAs(seen)}, with nothing said about a revision or the cockpit`,
+          );
+          const request = sent.at(-1) ?? {};
+          const row = design.actions.find((a) => a.verb === seen.pressed?.verb);
+          if (design.actions.some((a) => !a.confirm && !a.disabled && a.endpoint === '')) {
+            record(
+              seen.pressed !== null && seen.labels.some((label) => /^why /i.test(label)) && sent.length === before + 1 && request['id'] === design.id && row !== undefined && request['to'] === row.to && request['note'] === reason && typeof request['mtime'] === 'number',
+              `pressing ${seen.pressed?.verb ?? 'nothing'} on it asks why and sends one ordinary transition, to the status the sidecar's row named, with the reason and the note's modification time (${JSON.stringify({ id: request['id'], to: request['to'], note: request['note'] })}); the sidecar's own guards decide whether it is written`,
+            );
+          }
+
+          // ---- 3. A verb that names an endpoint Deck has no surface for is drawn disabled and refused (ISS-0039) ----
+          // INJECTED. No row the sidecar sends today names such an endpoint,
+          // so this page's copy of its answer is given the one it carried for
+          // a design until 2026-09-12, and the note is opened again. Nothing
+          // is written, and no other window sees it.
+          const sentBefore = sent.length;
+          const reopened = (await win.webContents.executeJavaScript(`
+            (async () => {
+              const real = window.fetch;
+              window.fetch = async (input, init) => {
+                const response = await real(input, init);
+                if (!String(input).includes('notes/actions?id=')) return response;
+                const payload = await response.clone().json();
+                payload.actions = (payload.actions || []).map((a) => ({ ...a, endpoint: ${JSON.stringify(DESIGN_VERDICT_ENDPOINT)} }));
+                return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } });
+              };
+              const row = document.querySelector('#nav-list .nav-row[data-note-id="${design.id}"]:not([hidden])');
+              if (row === null) return {reopened: false, drawn: []};
+              // Off the desk and on again, which reads the note and its verbs afresh.
+              row.click();
+              await new Promise((r) => setTimeout(r, 900));
+              row.click();
+              await new Promise((r) => setTimeout(r, 1500));
+              const verbs = [...document.querySelectorAll('#actuators button.verb')];
+              return {
+                reopened: true,
+                drawn: verbs.map((b) => ({verb: b.textContent, disabled: b.disabled, title: b.title})),
+                whys: [...document.querySelectorAll('#actuators .why')].map((e) => e.textContent),
+              };
+            })()
+          `)) as { reopened: boolean; drawn: Array<{ verb: string; disabled: boolean; title: string }>; whys?: string[] };
+          // **Read off the BUTTON, not the status bar** (ISS-0045). The status bar
+          // carries a sentence for many reasons, so reverting the drawn half left
+          // these green while every row still looked like a working verb.
+          record(
+            reopened.reopened && reopened.drawn.length === design.actions.length && reopened.drawn.every((r) => r.disabled),
+            `INJECTED: with the sidecar's rows for ${design.id} given the endpoint ${DESIGN_VERDICT_ENDPOINT} in this page's copy of its answer only, every verb is drawn disabled: ${JSON.stringify(reopened.drawn.map((r) => [r.verb, r.disabled]))}`,
+          );
+          record(
+            reopened.drawn.length > 0 && reopened.drawn.every((r) => /revision/i.test(r.title) && /cockpit/i.test(r.title)) && (reopened.whys ?? []).filter((w) => /revision/i.test(w) && /cockpit/i.test(w)).length === reopened.drawn.length,
+            'and each one says, on the button and beside it, that the verdict must name a revision and belongs in the cockpit',
+          );
+          // **The guard is driven, not inferred from the button** (ISS-0050).
+          // Clicking a disabled button dispatches nothing, so "it asked nothing"
+          // and "it sent nothing" were true of `<button disabled>` and would hold
+          // on any page at all — while deleting `applyVerb`'s refusal, the layer
+          // that actually stops the request, changed nothing any check could see.
+          // Re-enabling the button in the page and pressing it asks Deck the
+          // question instead of asking the DOM.
+          const forced = (await win.webContents.executeJavaScript(`
+            (async () => {
+              const button = document.querySelector('#actuators button.verb');
+              if (button === null) return {ran: false};
+              button.disabled = false;
+              button.click();
+              await new Promise((r) => setTimeout(r, 400));
+              const form = document.querySelector('#status form');
+              return {
+                ran: true,
+                askedAnything: form !== null,
+                said: (document.querySelector('#status') || {}).textContent || '',
+              };
+            })()
+          `)) as { ran: boolean; askedAnything?: boolean; said?: string };
+          record(forced.ran, 'the refusal inside applyVerb could be driven');
+          record(forced.askedAnything === false, 'pressing it asks nothing, because Deck cannot record the verdict');
+          record(sent.length === sentBefore, 'and sends nothing — with the button forced back on, so this is about Deck');
+          record(
+            /revision/i.test(forced.said ?? '') && /cockpit/i.test(forced.said ?? ''),
+            'and Deck says the verdict must name a revision and belongs in the cockpit',
+          );
+        }
+      } finally {
+        win.destroy();
+      }
+    }
+
+    // ---- 4. The tick control, pressed (ISS-0053) ----
+    // Six rounds hardened the verb row and nobody pressed a tick — so
+    // `attachTicks` could be deleted, leaving Deck unable to resolve a
+    // criterion anywhere, with the node suite, this run and the round-trip
+    // script all green. That script ticks through `client.tick`, which is the
+    // route with no interface on it.
     //
     // The note is CHOSEN by reading the workspace — see
     // `notesWithAnUntickedCriterion` — and OPENED by clicking its row in the
-    // navigator, which is the route a person takes and the one this window
-    // has already proved works.
+    // navigator, which is the route a person takes. In the view that gives
+    // the most of them a row of their own, found by asking, where this named
+    // the Issues view. A note held under another has no row until that one is
+    // opened, and the Features view holds most of its tasks that way.
     const candidates = notesWithAnUntickedCriterion(prepared.root);
     record(candidates.length > 0, 'this workspace has notes with unticked criteria, so this measures something');
-    const tick = (await win.webContents.executeJavaScript(`
-      (async () => {
-        const wanted = ${JSON.stringify(candidates)};
-        const probe = {wanted: wanted.length, tried: []};
-        // **Toggle every group, which unfolds the folded ones.** The navigator
-        // renders a folded group's rows nowhere, so every route this check
-        // tried — clicking a row, the search box, addressing the window at the
-        // note — failed for the same reason and looked like four different
-        // faults.
-        //
-        // A toggle, not an unfold: this also FOLDS any group that was already
-        // open, which is why it is written as "enough rows end up rendered"
-        // rather than "every group is open". Saying "unfold" was wrong about
-        // the code directly under it (ISS-0056).
-        for (const twist of [...document.querySelectorAll('#nav-list .twist')]) twist.click();
-        await new Promise((r) => setTimeout(r, 600));
-        probe.rows = document.querySelectorAll('#nav-list [data-note-id]').length;
-        for (const id of wanted) {
-          const row = document.querySelector('#nav-list [data-note-id="' + id + '"]');
-          if (row === null) continue;
-          row.click();
-          await new Promise((r) => setTimeout(r, 900));
-          const control = document.querySelector('#reader button.tick');
-          probe.tried.push({id, control: control !== null});
-          if (control === null) continue;
-          control.click();
-          await new Promise((r) => setTimeout(r, 250));
-          const form = document.querySelector('#status form');
-          const label = form === null ? '' : (form.textContent || '').trim();
-          if (form !== null) {
-            form.querySelector('input').value = 'the smoke run pressed it';
-            form.dispatchEvent(new Event('submit', {cancelable: true}));
-            await new Promise((r) => setTimeout(r, 400));
-          }
-          // **And once more with the box left empty**, which is the refusal a
-          // person meets most often: an empty answer is treated as no answer,
-          // so nothing should be sent and Deck should say why. (No backtick may
-          // appear in this comment — it is inside a template literal.)
-          let refusedEmpty = null;
-          const second = document.querySelector('#reader button.tick');
-          if (second !== null) {
-            second.click();
-            await new Promise((r) => setTimeout(r, 250));
-            const box = document.querySelector('#status form');
-            if (box !== null) {
-              box.querySelector('input').value = '';
-              box.dispatchEvent(new Event('submit', {cancelable: true}));
-              await new Promise((r) => setTimeout(r, 350));
-              refusedEmpty = (document.querySelector('#status') || {}).textContent || '';
-            }
-          }
-          return {found: id, asked: form !== null, label, refusedEmpty, probe};
+    const rowsIn = (viewId: string): number => candidates.filter((id) => ownRow.get(viewId)?.has(id)).length;
+    const tickView = [...navViews].sort((a, b) => rowsIn(b.id) - rowsIn(a.id))[0];
+    if (tickView === undefined) {
+      record(false, 'this workspace has a view with a list, to open a note with an unticked criterion from');
+      return;
+    }
+    const win = await windowOn(tickView.id, null);
+    try {
+      if (plain === undefined) {
+        // The interception is proved here when no verb was pressed above.
+        const probe = (await win.webContents.executeJavaScript(`window.deck.write.tick({workspaceId: 'x', id: '__smoke_probe__', criterion: 'x', evidence: 'x'})`)) as { ok?: boolean };
+        const intercepted = ticked.length === 1 && ticked[0]?.['id'] === '__smoke_probe__' && probe?.ok === true;
+        record(intercepted, 'the write path is intercepted, so nothing below can reach a note');
+        if (!intercepted) {
+          skip('the tick control: the write path was NOT intercepted and driving it would write to this repository');
+          return;
         }
-        return {found: null, probe};
-      })()
-    `)) as { found: string | null; asked?: boolean; label?: string; refusedEmpty?: string | null; probe?: unknown };
-    // Printed only when it found nothing, which is the case a person has to
-    // diagnose; on success it is noise.
-    if (tick.found === null) console.log(JSON.stringify({ tickProbe: tick }));
-
-    record(tick.found !== null, `a note with an unticked criterion offers a tick control in this view (tried ${candidates.length})`);
-    if (tick.found !== null) {
-      record(tick.asked === true && /^evidence for /i.test(tick.label ?? ''), 'pressing it asks for evidence');
-      const wrote = ticked.at(-1) ?? {};
-      record(
-        ticked.length === 1 && wrote['evidence'] === 'the smoke run pressed it',
-        'and the evidence a person typed reaches the shell',
-      );
-      record(
-        typeof wrote['criterion'] === 'string' && (wrote['criterion'] as string) !== '',
-        `naming the criterion the sidecar addressed (${String(wrote['criterion']).slice(0, 40)}…)`,
-      );
-      record(wrote['id'] === tick.found, 'on the note that was open');
-      record(
-        typeof tick.refusedEmpty === 'string' && /nothing was ticked/i.test(tick.refusedEmpty),
-        `a tick with no evidence is refused before it is sent (${String(tick.refusedEmpty).slice(0, 60)})`,
-      );
-      record(ticked.length === 1, 'and nothing more reached the shell');
-    }
-  } finally {
-    win.destroy();
-    if (skippedForSafety) putItBack();
-  }
-  if (skippedForSafety) return;
-
-  // A verb whose verdict belongs to a surface Deck does not have is drawn,
-  // refused, and explained (ISS-0039). In a window of its own.
-  const other = createWindow('satellite', `deck://${prepared.id}/intent?note=${withEndpoint}`, null);
-  try {
-    await once(other.webContents, 'did-finish-load');
-    await untilBooted(other);
-    await delay(1200);
-    const before = sent.length;
-    const opened = (await other.webContents.executeJavaScript(openTheNote.replace('ID', withEndpoint))) as { found: boolean; verbs: number };
-    record(opened.verbs > 0, `${withEndpoint} opened with verbs on it, so this measures something too`);
-    if (opened.verbs > 0) {
-      const seen = (await other.webContents.executeJavaScript(
-        pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason),
-      )) as { names: string[]; drawn: Array<{ verb: string; confirm: string; disabled: boolean; title: string }>; pressed: { verb: string; confirm: string; disabled: boolean } | null; asked: number; labels: string[]; said: string };
-      // **Read off the BUTTON, not the status bar** (ISS-0045). The status bar
-      // carries a sentence for many reasons, so reverting the drawn half left
-      // these green while every row still looked like a working verb.
-      record(
-        seen.drawn.length > 0 && seen.drawn.every((row) => row.disabled),
-        `every verb on ${withEndpoint} is drawn disabled: ${JSON.stringify(seen.drawn.map((r) => [r.verb, r.disabled]))}`,
-      );
-      record(
-        seen.drawn.every((row) => /revision/i.test(row.title) && /cockpit/i.test(row.title)),
-        'and each one says the verdict must name a revision and belongs in the cockpit',
-      );
-      // **The guard is driven, not inferred from the button** (ISS-0050).
-      // Clicking a disabled button dispatches nothing, so "it asked nothing"
-      // and "it sent nothing" were true of `<button disabled>` and would hold
-      // on any page at all — while deleting `applyVerb`'s refusal, the layer
-      // that actually stops the request, changed nothing any check could see.
-      // Re-enabling the button in the page and pressing it asks Deck the
-      // question instead of asking the DOM.
-      const forced = (await other.webContents.executeJavaScript(`
+        ticked.length = 0;
+      }
+      const tick = (await win.webContents.executeJavaScript(`
         (async () => {
-          const sent = [];
-          const button = document.querySelector('#actuators button.verb');
-          if (button === null) return {ran: false};
-          button.disabled = false;
-          button.click();
-          await new Promise((r) => setTimeout(r, 400));
-          const form = document.querySelector('#status form');
-          return {
-            ran: true,
-            askedAnything: form !== null,
-            said: (document.querySelector('#status') || {}).textContent || '',
-          };
+          const wanted = ${JSON.stringify(candidates)};
+          const probe = {wanted: wanted.length, tried: []};
+          // **Toggle every group, which unfolds the folded ones.** The navigator
+          // renders a folded group's rows nowhere, so every route this check
+          // tried — clicking a row, the search box, addressing the window at the
+          // note — failed for the same reason and looked like four different
+          // faults.
+          //
+          // A toggle, not an unfold: this also FOLDS any group that was already
+          // open, which is why it is written as "enough rows end up rendered"
+          // rather than "every group is open". Saying "unfold" was wrong about
+          // the code directly under it (ISS-0056).
+          for (const twist of [...document.querySelectorAll('#nav-list .twist')]) twist.click();
+          await new Promise((r) => setTimeout(r, 600));
+          probe.rows = document.querySelectorAll('#nav-list [data-note-id]').length;
+          for (const id of wanted) {
+            const row = document.querySelector('#nav-list [data-note-id="' + id + '"]');
+            if (row === null) continue;
+            row.click();
+            await new Promise((r) => setTimeout(r, 900));
+            const control = document.querySelector('#reader button.tick');
+            probe.tried.push({id, control: control !== null});
+            if (control === null) continue;
+            control.click();
+            await new Promise((r) => setTimeout(r, 250));
+            const form = document.querySelector('#status form');
+            const label = form === null ? '' : (form.textContent || '').trim();
+            if (form !== null) {
+              form.querySelector('input').value = 'the smoke run pressed it';
+              form.dispatchEvent(new Event('submit', {cancelable: true}));
+              await new Promise((r) => setTimeout(r, 400));
+            }
+            // **And once more with the box left empty**, which is the refusal a
+            // person meets most often: an empty answer is treated as no answer,
+            // so nothing should be sent and Deck should say why. (No backtick may
+            // appear in this comment — it is inside a template literal.)
+            let refusedEmpty = null;
+            const second = document.querySelector('#reader button.tick');
+            if (second !== null) {
+              second.click();
+              await new Promise((r) => setTimeout(r, 250));
+              const box = document.querySelector('#status form');
+              if (box !== null) {
+                box.querySelector('input').value = '';
+                box.dispatchEvent(new Event('submit', {cancelable: true}));
+                await new Promise((r) => setTimeout(r, 350));
+                refusedEmpty = (document.querySelector('#status') || {}).textContent || '';
+              }
+            }
+            return {found: id, asked: form !== null, label, refusedEmpty, probe};
+          }
+          return {found: null, probe};
         })()
-      `)) as { ran: boolean; askedAnything?: boolean; said?: string };
-      record(forced.ran, 'the refusal inside applyVerb could be driven');
-      record(forced.askedAnything === false, 'pressing it asks nothing, because Deck cannot record the verdict');
-      record(sent.length === before, 'and sends nothing — with the button forced back on, so this is about Deck');
-      record(
-        /revision/i.test(forced.said ?? '') && /cockpit/i.test(forced.said ?? ''),
-        'and Deck says the verdict must name a revision and belongs in the cockpit',
-      );
+      `)) as { found: string | null; asked?: boolean; label?: string; refusedEmpty?: string | null; probe?: unknown };
+      // Printed only when it found nothing, which is the case a person has to
+      // diagnose; on success it is noise.
+      if (tick.found === null) console.log(JSON.stringify({ tickProbe: tick }));
+
+      record(tick.found !== null, `a note with an unticked criterion offers a tick control in the ${tickView.id} view (tried ${candidates.length}, ${rowsIn(tickView.id)} of them with a row of their own there)`);
+      if (tick.found !== null) {
+        record(tick.asked === true && /^evidence for /i.test(tick.label ?? ''), 'pressing it asks for evidence');
+        const wrote = ticked.at(-1) ?? {};
+        record(
+          ticked.length === 1 && wrote['evidence'] === 'the smoke run pressed it',
+          'and the evidence a person typed reaches the shell',
+        );
+        record(
+          typeof wrote['criterion'] === 'string' && (wrote['criterion'] as string) !== '',
+          `naming the criterion the sidecar addressed (${String(wrote['criterion']).slice(0, 40)}…)`,
+        );
+        record(wrote['id'] === tick.found, 'on the note that was open');
+        const tickedRel = offeredIndex.get(tick.found) ?? '';
+        const tickedAt = await heldTime(win, tickedRel);
+        record(
+          typeof wrote['mtime'] === 'number' && tickedAt !== null && Math.abs(wrote['mtime'] - tickedAt) < 1e-6,
+          `with the modification time Deck's index holds for it, which is the sidecar's guard against a note that changed underneath (sent ${String(wrote['mtime'])}; the index holds ${tickedAt === null ? 'no time' : String(tickedAt)} for ${tickedRel || tick.found})`,
+        );
+        record(
+          typeof tick.refusedEmpty === 'string' && /nothing was ticked/i.test(tick.refusedEmpty),
+          `a tick with no evidence is refused before it is sent (${String(tick.refusedEmpty).slice(0, 60)})`,
+        );
+        record(ticked.length === 1, 'and nothing more reached the shell');
+      }
+    } finally {
+      win.destroy();
+    }
+
+    // ---- 5. In Glass the same controls are inside the note's document ----
+    // Glass is the surface Deck opens on, and since FEAT-0020 it has no
+    // reader: a note is read in its document, and its verbs and its ticks are
+    // drawn there. A write made from a document is sent with that document's
+    // own note and that note's time, which is kept apart from the reader's.
+    // The windows above are satellites, which are always Spread, so this one
+    // is a window of the kind a person works in.
+    if (plain !== undefined) {
+      store.dispatch({ type: 'open-workspace', workspaceId: prepared.id });
+      store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+      const glassWin = createWindow('focus', `deck://${prepared.id}/${viewOf(plain.id) as string}`, null);
+      glassWin.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
+      try {
+        await once(glassWin.webContents, 'did-finish-load');
+        await untilBooted(glassWin);
+        await delay(1800);
+        sent.length = 0;
+        ticked.length = 0;
+        /** Page code: open a note's document from its row, and wait for something inside it. */
+        const openDocument = (id: string, inside: string): string => `
+          (async () => {
+            const find = () => document.querySelector('#nav-list .nav-row[data-note-id="${id}"]:not([hidden])');
+            let row = find();
+            if (row === null) {
+              for (const group of [...document.querySelectorAll('#nav-list .nav-group[aria-expanded="false"]')]) group.click();
+              await new Promise((r) => setTimeout(r, 600));
+              row = find();
+            }
+            if (row === null) return {row: false, pane: false, state: '', found: 0};
+            row.click();
+            let pane = null;
+            for (let i = 0; i < 40; i += 1) {
+              await new Promise((r) => setTimeout(r, 150));
+              pane = document.querySelector('.pane[data-note-id="${id}"]');
+              if (pane !== null && pane.dataset.state === 'ready' && pane.querySelectorAll('${inside}').length > 0) break;
+            }
+            return {row: true, pane: pane !== null, state: pane === null ? '' : pane.dataset.state || '', found: pane === null ? 0 : pane.querySelectorAll('${inside}').length};
+          })()
+        `;
+        const where = (await glassWin.webContents.executeJavaScript(`({ surface: document.body.dataset.surface, reader: getComputedStyle(document.getElementById('reader')).display, strip: getComputedStyle(document.getElementById('actuators')).display })`)) as { surface: string; reader: string; strip: string };
+        const opened = (await glassWin.webContents.executeJavaScript(openDocument(plain.id, '.pane-actions button.verb'))) as { row: boolean; pane: boolean; state: string; found: number };
+        const seen = (await glassWin.webContents.executeJavaScript(
+          pressAndAnswer.replace('CONFIRM', 'false').replace('REASON', reason).split('#actuators button.verb').join(`.pane[data-note-id="${plain.id}"] .pane-actions button.verb`),
+        )) as Pressed;
+        const strip = (await glassWin.webContents.executeJavaScript(`document.querySelectorAll('#actuators button.verb').length`)) as number;
+        record(
+          where.surface === 'glass' && where.reader === 'none' && where.strip === 'none' && opened.pane && opened.state === 'ready' && asTheRowsSay(seen, plain) && strip === 0,
+          `in Glass, which has no reader (its column is ${where.reader}), ${plain.id}'s verbs are drawn inside its document, each as the sidecar's row says (${drawnAs(seen)}; the document ${opened.state || 'did not open'}, its row found: ${opened.row}), and none in the reader's strip (${strip})`,
+        );
+        const request = sent.at(-1) ?? {};
+        const row = plain.actions.find((a) => a.verb === seen.pressed?.verb);
+        const heldAt = await heldTime(glassWin, plain.rel);
+        record(
+          seen.pressed !== null && seen.labels.some((label) => /^why /i.test(label)) && sent.length === 1 && request['id'] === plain.id && row !== undefined && request['to'] === row.to && request['note'] === reason &&
+            typeof request['mtime'] === 'number' && heldAt !== null && Math.abs(request['mtime'] - heldAt) < 1e-6 && ticked.length === 0,
+          `a verb pressed in the document asks why and sends one transition with the note, the status its row named, the reason, and the time Deck's index holds for the note (${JSON.stringify({ id: request['id'], to: request['to'], note: request['note'], mtime: request['mtime'] })}; the index holds ${heldAt === null ? 'no time' : String(heldAt)})`,
+        );
+        // And a tick, in the document of a note with an open criterion: the
+        // view is changed from the switcher, as a person changes it.
+        store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+        await glassWin.webContents.executeJavaScript(`(() => { const b = [...document.querySelectorAll('#switcher button')].find((e) => e.dataset.viewId === ${JSON.stringify(tickView.id)}); if (b) b.click(); return true; })()`);
+        await delay(2000);
+        await glassWin.webContents.executeJavaScript(`(async () => { for (const twist of [...document.querySelectorAll('#nav-list .twist')]) twist.click(); await new Promise((r) => setTimeout(r, 600)); return true; })()`);
+        let inDocument: { id: string; label: string; asked: boolean } | null = null;
+        for (const id of candidates.filter((c) => ownRow.get(tickView.id)?.has(c)).slice(0, 12)) {
+          const doc = (await glassWin.webContents.executeJavaScript(openDocument(id, '.pane-note button.tick'))) as { row: boolean; pane: boolean; state: string; found: number };
+          if (doc.found === 0) {
+            store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+            await delay(400);
+            continue;
+          }
+          const pressed = (await glassWin.webContents.executeJavaScript(`
+            (async () => {
+              const control = document.querySelector('.pane[data-note-id="${id}"] .pane-note button.tick');
+              if (control === null) return {asked: false, label: ''};
+              control.click();
+              await new Promise((r) => setTimeout(r, 250));
+              const form = document.querySelector('#status form');
+              const label = form === null ? '' : (form.textContent || '').trim();
+              if (form !== null) {
+                form.querySelector('input').value = 'the smoke run pressed it in a document';
+                form.dispatchEvent(new Event('submit', {cancelable: true}));
+                await new Promise((r) => setTimeout(r, 500));
+              }
+              return {asked: form !== null, label};
+            })()
+          `)) as { asked: boolean; label: string };
+          inDocument = { id, ...pressed };
+          break;
+        }
+        if (inDocument === null) {
+          record(false, `in Glass, a note with an unticked criterion offers a tick inside its document in the ${tickView.id} view`);
+        } else {
+          const wrote = ticked.at(-1) ?? {};
+          const rel = offeredIndex.get(inDocument.id) ?? '';
+          const at = await heldTime(glassWin, rel);
+          record(
+            inDocument.asked && /^evidence for /i.test(inDocument.label) && ticked.length === 1 && wrote['id'] === inDocument.id && wrote['evidence'] === 'the smoke run pressed it in a document' && typeof wrote['criterion'] === 'string' && wrote['criterion'] !== '' &&
+              typeof wrote['mtime'] === 'number' && at !== null && Math.abs(wrote['mtime'] - at) < 1e-6 && sent.length === 1,
+            `and a tick pressed inside ${inDocument.id}'s document asks for evidence and sends it with the note, the criterion the sidecar addressed, and the time Deck's index holds for that note (sent ${String(wrote['mtime'])}, the index holds ${at === null ? 'no time' : String(at)}; ${ticked.length} tick sent)`,
+          );
+        }
+      } finally {
+        glassWin.destroy();
+        store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+      }
     }
   } finally {
-    other.destroy();
+    // The real handlers go back whatever happened, so nothing after this
+    // section, and nothing in a run that stopped here, is left with the stub.
     putItBack();
   }
 }

@@ -42,6 +42,8 @@ export interface GlassSmokeContext {
   openServedPage(): BrowserWindow;
   /** Every Deck window, with what it carries and which display it is on. */
   windows(): Array<{ id: number; address: string | null; displayId: number; win: BrowserWindow }>;
+  /** The notes of this workspace whose source still holds an unticked criterion, read from the files. */
+  notesWithAnUntickedCriterion(): string[];
 }
 
 type Step = { type: 'down' | 'move' | 'up'; x: number; y: number; wait?: number; alt?: boolean };
@@ -161,10 +163,28 @@ const PAGE_HELPERS = `
     twice: () => { const n = new Map(); for (const e of document.querySelectorAll('.field-card:not(.leaving)')) n.set(e.dataset.noteId, (n.get(e.dataset.noteId) || 0) + 1); return [...n].filter(([, c]) => c > 1).map(([id]) => id); },
     // The cards gathered round the focused document, as the page draws them.
     seated: () => [...document.querySelectorAll('.field-card.seated:not(.leaving)')].map((e) => { const r = e.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2; return { id: e.dataset.noteId, x, y, left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height, inSight: e.style.pointerEvents === 'auto', hit: e.style.pointerEvents === 'auto' && window.__t.hit(x, y) === e.dataset.noteId, lit: e.classList.contains('highlight'), shared: e.classList.contains('shared') }; }),
-    pane: (id) => { const p = document.querySelector('.pane[data-note-id="' + id + '"]'); if (!p) return null; const r = p.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height, focus: p.classList.contains('focus'), docked: p.classList.contains('docked'), outOfSight: p.classList.contains('out-of-sight'), opacity: p.style.opacity, lit: p.classList.contains('highlight') }; },
+    // A document as it is drawn. Toward the edge of sight it is dimmed by a
+    // veil and never made see-through (FEAT-0020): 'sight' is the 0..1 value
+    // Glass gives it, 'veil' is what the stylesheet draws over it, and
+    // 'opaque' is whether the element itself is still at full strength.
+    pane: (id) => { const p = document.querySelector('.pane[data-note-id="' + id + '"]'); if (!p) return null; const r = p.getBoundingClientRect(); const cs = getComputedStyle(p); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height, focus: p.classList.contains('focus'), docked: p.classList.contains('docked'), outOfSight: p.classList.contains('out-of-sight'), drawn: cs.visibility !== 'hidden', sight: Number(p.dataset.sight), veil: Number(p.style.getPropertyValue('--veil')), opaque: p.style.opacity === '' && cs.opacity === '1', lit: p.classList.contains('highlight'), wide: p.classList.contains('wide'), narrow: p.classList.contains('narrow'), state: p.dataset.state || '', chars: p.querySelector('.pane-note').textContent.length }; },
     // A point of the field with nothing over it but the field: no card, no
     // document, no control, no line, and no painted tile, which a click lifts.
-    blank: () => { const f = document.getElementById('field').getBoundingClientRect(); const g = window.__deckGlass; for (let y = f.bottom - 24; y > f.top + 40; y -= 17) for (let x = f.left + 24; x < f.right - 24; x += 23) { const e = document.elementFromPoint(x, y); if (!e || !e.closest('#field')) continue; if (e.closest('.field-card, .pane, button, .compass, .field-bar, .sector-label, .target-strip, .link-line, .field-say')) continue; if (g.tileAt && g.tileAt(x - f.left, y - f.top) !== null) continue; return { x, y }; } return null; },
+    // The collection stands on the field since FEAT-0020 and is not the
+    // field: a press on it is a press on the list, and a wheel scrolls it.
+    // 'room' leaves that many pixels of window to its left, for a drag that way.
+    blank: (room) => { const f = document.getElementById('field').getBoundingClientRect(); const g = window.__deckGlass; for (let y = f.bottom - 24; y > f.top + 40; y -= 17) for (let x = Math.max(f.left + 24, (room || 0) + 8); x < f.right - 24; x += 23) { const e = document.elementFromPoint(x, y); if (!e || !e.closest('#field')) continue; if (e.closest('.field-card, .pane, .collection, .narrow-bar, button, .compass, .field-bar, .sector-label, .target-strip, .link-line, .field-say')) continue; if (g.tileAt && g.tileAt(x - f.left, y - f.top) !== null) continue; return { x, y }; } return null; },
+    // The collection as it is drawn: where it stands in the field, what its
+    // header says, and whether the list is inside it.
+    collection: () => { const c = document.getElementById('collection'); const f = document.getElementById('field'); const r = c.getBoundingClientRect(); const fb = f.getBoundingClientRect(); const cs = getComputedStyle(c); const list = document.getElementById('nav-list'); return { inField: f.contains(c), listInside: c.contains(list) && c.contains(document.getElementById('search')), shown: !c.hidden && cs.display !== 'none' && cs.visibility !== 'hidden', x: r.left - fb.left, y: r.top - fb.top, w: r.width, h: r.height, left: r.left, top: r.top, right: r.right, bottom: r.bottom, name: __t.text('#collection-name'), count: __t.text('#collection-count'), filter: __t.shown('#collection-filter') ? __t.text('#collection-filter') : '', note: __t.shown('#collection-note') ? __t.text('#collection-note') : '', places: __t.text('#collection-places'), collapsed: c.classList.contains('collapsed'), narrow: c.classList.contains('narrow'), outOfSight: c.classList.contains('out-of-sight'), veil: Number(c.style.getPropertyValue('--veil')), opaque: c.style.opacity === '' && cs.opacity === '1', z: Number(c.style.zIndex), listShown: list.offsetParent !== null, expanded: document.getElementById('collection-fold').getAttribute('aria-expanded') }; },
+    // A row of the list that a pointer can press: in view, and first under the
+    // pointer at the point given, so not behind a heading stuck to the top of
+    // the list. Not a note that is already a document, and none of 'skip'.
+    rows: (skip) => { const held = new Set([...(window.__deckDesk ? window.__deckDesk() : []), ...[...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId), ...(skip || [])]); const out = []; for (const r of document.querySelectorAll('#nav-list .nav-row')) { if (r.hidden || held.has(r.dataset.noteId)) continue; const b = r.getBoundingClientRect(); if (b.height === 0) continue; const x = b.left + Math.min(140, b.width / 2); const y = b.top + b.height / 2; const hit = document.elementFromPoint(x, y); if (hit && hit.closest('.nav-row') === r) out.push({ id: r.dataset.noteId, x, y, top: b.top, bottom: b.bottom, index: Number(r.dataset.index) }); } return out; },
+    // What the keyboard is on: the kind of thing, and the note it is for.
+    active: () => { const a = document.activeElement; if (!a) return { on: 'nothing', id: null }; const pane = a.closest('.pane'); const on = a.classList.contains('nav-row') ? 'row' : a.classList.contains('pane-head') ? 'header' : a.id === 'collection-head' ? 'collection' : a.id === 'search' ? 'search' : pane ? 'in-document:' + a.className : (a.id || a.className || a.tagName); return { on, id: a.dataset.noteId || (pane ? pane.dataset.noteId : null), top: a.getBoundingClientRect().top }; },
+    // A point of a document's header that moves it: on the header, and not on one of its buttons.
+    head: (id) => { const p = document.querySelector('.pane[data-note-id="' + id + '"]'); if (!p) return null; const h = p.querySelector('.pane-head').getBoundingClientRect(); for (const dx of [24, 12, 40, 64]) { const x = h.left + dx, y = h.top + h.height / 2; const e = document.elementFromPoint(x, y); if (e && e.closest('.pane') === p && e.closest('.pane-head') && !e.closest('button')) return { x, y }; } return null; },
   };
   true;
 `;
@@ -212,7 +232,7 @@ const OWED_TO_INJECT = 4;
  * names the ones to run, separated by commas; `base` is the first five. A run
  * that leaves any out says which in its verdict, as a skip.
  */
-const SECTIONS = ['lift', 'hands', 'panes', 'keys', 'switch', 'throw', 'orbit', 'zoom', 'focus', 'desks', 'address'] as const;
+const SECTIONS = ['lift', 'hands', 'panes', 'keys', 'switch', 'collection', 'document', 'served', 'arrange', 'throw', 'orbit', 'zoom', 'focus', 'desks', 'address'] as const;
 type Section = (typeof SECTIONS)[number];
 const BASE: readonly Section[] = ['lift', 'hands', 'panes', 'keys', 'switch'];
 
@@ -236,7 +256,10 @@ type Js = <T>(code: string) => Promise<T>;
 type Box = { left: number; top: number; right: number; bottom: number };
 type Seen = { id: string; x: number; y: number; left: number; top: number; right: number; bottom: number; owed: boolean; seated: boolean; band: string };
 type Seated = { id: string; x: number; y: number; left: number; top: number; right: number; bottom: number; width: number; height: number; inSight: boolean; hit: boolean; lit: boolean; shared: boolean };
-type PaneSeen = { left: number; top: number; right: number; bottom: number; width: number; height: number; focus: boolean; docked: boolean; outOfSight: boolean; opacity: string; lit: boolean };
+type PaneSeen = { left: number; top: number; right: number; bottom: number; width: number; height: number; focus: boolean; docked: boolean; outOfSight: boolean; drawn: boolean; sight: number; veil: number; opaque: boolean; lit: boolean; wide: boolean; narrow: boolean; state: string; chars: number };
+type CollectionSeen = { inField: boolean; listInside: boolean; shown: boolean; x: number; y: number; w: number; h: number; left: number; top: number; right: number; bottom: number; name: string; count: string; filter: string; note: string; places: string; collapsed: boolean; narrow: boolean; outOfSight: boolean; veil: number; opaque: boolean; z: number; listShown: boolean; expanded: string | null };
+type RowSeen = { id: string; x: number; y: number; top: number; bottom: number; index: number };
+type Active = { on: string; id: string | null; top: number };
 
 /** What every part of the Glass section is handed. */
 interface Kit {
@@ -248,8 +271,23 @@ interface Kit {
   record: (ok: boolean, what: string) => void;
   /** Choose a view from the switcher, as a person does, and wait for its deal. */
   view: (id: string) => Promise<void>;
-  /** An empty desk on this view in Glass, facing the front at 1×, with motion on. */
+  /** An empty desk on this view in Glass, facing the front at 1×, with motion on, and the collection where a new desk has it. */
   fresh: (viewId: string) => Promise<void>;
+  /**
+   * Face this way, with the desk in front. The desk stands at a bearing, and
+   * the collection is on it: turned to by hand, the list is left behind, and
+   * left where an earlier check's document was opened it stands across the
+   * middle of the field, over the cards the next check presses.
+   */
+  face: (yaw: number) => Promise<void>;
+  /** The collection as it is drawn. */
+  collection: () => Promise<CollectionSeen>;
+  /**
+   * Nothing stored for a view's collection again, so the parts after find it
+   * where a new desk has it. The store has no action that forgets a layout,
+   * so its state is put back without that one entry.
+   */
+  forgetCollection: (viewId: string) => void;
   deskIds: () => string[];
   /** Escape once, to leave the focus; with no focus it does nothing, because Escape would sweep. */
   leave: (keepKeyboard?: boolean) => Promise<boolean>;
@@ -257,10 +295,9 @@ interface Kit {
 
 export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
   const { store, skip, notHere, prepared } = ctx;
-  const record = (ok: boolean, what: string): void => {
-    if (process.env['DECK_SMOKE_DEBUG'] === '1') console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`);
-    ctx.record(ok, what);
-  };
+  // Each check is printed by the run's own `record` under DECK_SMOKE_DEBUG=1,
+  // in every section, so the lines can be counted for the whole run.
+  const record = (ok: boolean, what: string): void => ctx.record(ok, what);
   const only = process.env['DECK_SMOKE_GLASS_ONLY'];
   const wanted = glassSections(only);
   if (wanted.unknown.length > 0) throw new Error(`DECK_SMOKE_GLASS_ONLY names no part of the Glass section: ${wanted.unknown.join(', ')} (the parts are ${SECTIONS.join(', ')}, and base)`);
@@ -297,17 +334,35 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
   };
   const deskIds = (): string[] => deskCardsOf(store.getState(), prepared.id).map((c) => c.noteId);
   const leave = (keepKeyboard = false): Promise<boolean> => leaveFocus(ctx, win, js, keepKeyboard);
+  const face = async (yaw: number): Promise<void> => {
+    // Out of the focus first, which also puts back a desk that was moved
+    // aside. Then the field is faced, and the desk is brought round to it by
+    // the application's own "collection" route, which puts the keyboard in
+    // the list: it is taken off again, so a key pressed next goes where the
+    // check sends it.
+    await js(`(() => { const g = __t.glass(); g.leaveFocus(); g.model.face(${yaw}); g.render(false); g.showCollection(); return true; })()`);
+    await delay(350);
+    await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+  };
+  const collection = (): Promise<CollectionSeen> => js(`__t.collection()`);
   const fresh = async (viewId: string): Promise<void> => {
     reset();
     store.dispatch({ type: 'select-surface', surface: 'glass' });
     win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
     await delay(500);
     await view(viewId);
-    await js(`window.__deckReducedMotion = false; __t.glass().zoomTo({ scale: 1, dx: 0, dy: 0 }); window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+    await js(`window.__deckReducedMotion = false; __t.glass().zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
+    await face(0);
     await pointer(win, [{ type: 'move', ...PARK }]);
     await delay(500);
   };
-  const kit: Kit = { ctx, win, js, boot, record, view, fresh, deskIds, leave };
+  const forgetCollection = (viewId: string): void => {
+    const state = JSON.parse(JSON.stringify(store.getState())) as DeckState;
+    if (state.collections[prepared.id]?.[viewId] === undefined) return;
+    delete state.collections[prepared.id]?.[viewId];
+    store.dispatch({ type: 'restore', state });
+  };
+  const kit: Kit = { ctx, win, js, boot, record, view, fresh, face, collection, forgetCollection, deskIds, leave };
   if (process.env['DECK_SMOKE_TRACE'] === '1') {
     win.webContents.on('console-message', (_e, _level, message) => {
       if (/^(glass|nav)/.test(message)) console.log(`TRACE ${message}`);
@@ -377,6 +432,12 @@ export async function recordGlass(ctx: GlassSmokeContext): Promise<void> {
       ['panes', () => recordPanes(kit)],
       ['keys', () => recordKeys(kit)],
       ['switch', () => recordSwitch(kit)],
+      // ---- FEAT-0020: the list is an object on the field, and a note is read in its document ----
+      ['collection', () => recordCollection(kit)],
+      ['document', () => recordDocument(kit)],
+      ['served', () => recordServed(kit)],
+      // ---- FEAT-0022: the collection as cards, and an arrangement shown before it is applied ----
+      ['arrange', () => recordArrange(kit)],
       // ---- TASK-0055: the throw ----
       ['throw', () => recordThrow(kit)],
       // ---- FEAT-0001: the orbit arrangement ----
@@ -468,6 +529,19 @@ async function recordLift(kit: Kit): Promise<void> {
     label: __t.text('#front-label'), owed: __t.rect('#owed-count'), requests: __t.requests() })`);
   record(lifted.cards === 0 && lifted.ghosts === 0 && lifted.slot, `the lifted note is drawn once, as its document: the field draws no card for it (${lifted.cards}) and no ghost (${lifted.ghosts}), and still holds its slot`);
   record(lifted.pane, 'the lifted note is a pane on the front plane');
+  // Until FEAT-0020 a lifted note's text was read in a column beside the
+  // field. There is no such column in Glass now: the note is read in its
+  // document, which holds the text itself, and the verbs' strip that stood
+  // above the column is not drawn either.
+  let read = { state: '', chars: 0, article: false, reader: true, actuators: true, reading: true, face: 1 };
+  for (let i = 0; i < 20 && read.state !== 'ready'; i += 1) {
+    if (i > 0) await delay(150);
+    read = await js<typeof read>(`(() => { const p = document.querySelector('.pane[data-note-id="${target.id}"]'); const n = p && p.querySelector('.pane-body article.pane-note'); return { state: p ? p.dataset.state || '' : '', chars: n ? n.textContent.trim().length : 0, article: !!n, reader: __t.shown('#reader'), actuators: __t.shown('#actuators'), reading: document.body.classList.contains('reading'), face: p ? p.querySelectorAll('.pane-face').length : 1 }; })()`);
+  }
+  record(
+    read.state === 'ready' && read.article && read.chars > 20 && !read.reader && !read.actuators && !read.reading && read.face === 0,
+    `the note is read in its document, which holds its text (${read.chars} characters, ${read.state}); Glass draws no reader column (${read.reader}), no strip of verbs beside it (${read.actuators}) and never sets the reading layout (${read.reading})`,
+  );
   record(lifted.label === 'in front: what needs you' && lifted.label === dealBefore.label, `the front label says the same thing while a note is held as before ("${lifted.label}")`);
   record(
     owedBefore !== null && lifted.owed !== null && Math.abs(owedBefore.left - lifted.owed.left) < 1 && Math.abs(owedBefore.top - lifted.owed.top) < 1,
@@ -621,16 +695,22 @@ async function recordLift(kit: Kit): Promise<void> {
     const left = leave();
     await sample(30);
     const leftFocus = await left;
-    const inFront = opened.pane !== null && !opened.pane.outOfSight && opened.pane.opacity === '1' && opened.pane.left >= opened.field.left - 1 && opened.pane.right <= opened.field.right + 1;
+    // In front means in full sight: until FEAT-0020 that was read as the
+    // element's opacity, which is no longer set. A document is dimmed by a
+    // veil, so full sight is sight 1 with no veil, the element itself opaque.
+    const inFront = opened.pane !== null && !opened.pane.outOfSight && opened.pane.sight === 1 && opened.pane.veil === 0 && opened.pane.opaque && opened.pane.left >= opened.field.left - 1 && opened.pane.right <= opened.field.right + 1;
     const turned = yaws.filter((y) => Math.abs(y - 0.8) > 1e-9).length;
+    // The collection is on the same desk, so it came round with the document.
+    const listCame = await kit.collection();
     record(
-      deskIds().includes(offFront.id) && inFront && leftFocus && turned === 0,
-      `a lift at yaw 0.8 opens the document in front of the person (${opened.pane === null ? 'no pane' : `${Math.round(opened.pane.left - opened.field.left)} px into the field, opacity ${opened.pane.opacity}`}) and neither the lift nor leaving the focus turns the field (${turned} of ${yaws.length} frames off 0.80)`,
+      deskIds().includes(offFront.id) && inFront && leftFocus && turned === 0 && listCame.shown && !listCame.outOfSight && listCame.veil === 0 && Math.abs(listCame.x - 12) < 1,
+      `a lift at yaw 0.8 opens the document in front of the person (${opened.pane === null ? 'no pane' : `${Math.round(opened.pane.left - opened.field.left)} px into the field, in sight ${opened.pane.sight}, veil ${opened.pane.veil}`}), brings the collection round with it (${Math.round(listCame.x)} px into the field, veil ${listCame.veil}), and neither the lift nor leaving the focus turns the field (${turned} of ${yaws.length} frames off 0.80)`,
     );
     store.dispatch({ type: 'clear-desk', scope: 'workspace' });
     await delay(800);
   }
-  await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+  // Back to the front, with the desk: the lift above left it at 0.8.
+  await kit.face(0);
   await delay(300);
 
   // ---- ISS-0061: under reduced motion a lift is marked, and nothing flies ----
@@ -803,8 +883,13 @@ async function recordHands(kit: Kit): Promise<void> {
 
 /**
  * Held notes as documents on the front plane (TASK-0054): dragged, resized,
- * stacked, raised, widened into the reading column, moved by keyboard, and
- * still there after a reload and in Spread.
+ * stacked, raised, made to fill the field and put back, moved by keyboard,
+ * and still there after a reload and in Spread.
+ *
+ * Until FEAT-0020 "widen" moved a note's text to a reading column beside the
+ * field, and three checks here asserted that column. The text is in the
+ * document now, so the same control makes the document as large as the field
+ * and the checks assert that instead.
  *
  * Until TASK-0104 a document was an obstacle and this part ended two of its
  * steps with "no field card is dealt under a pane". Nothing on the desk is an
@@ -843,7 +928,16 @@ async function recordPanes(kit: Kit): Promise<void> {
   }
   // The drag is short enough that the document's corner stays inside the
   // field: a document is 520 tall, and the corner is what is dragged next.
-  const headA = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-id')`);
+  // A header is pressed at the same distance from its document's left edge
+  // every time. Until FEAT-0020 the id was the first thing in a header and
+  // its middle served; the title comes first now and the id stands after it,
+  // at a place that depends on how long the title is.
+  const headOf = async (id: string): Promise<{ x: number; y: number }> => {
+    const at = await js<{ x: number; y: number } | null>(`__t.head(${JSON.stringify(id)})`);
+    if (at === null) throw new Error(`the header of ${id}'s document is not in reach`);
+    return at;
+  };
+  const headA = await headOf(paneA);
   const startA = deskCard(paneA);
   await pointer(win, drag({ x: headA.x, y: headA.y }, { x: headA.x + 40, y: headA.y + 100 }, 12));
   await delay(800);
@@ -860,21 +954,21 @@ async function recordPanes(kit: Kit): Promise<void> {
   record(sized?.w === 280, `a pane resized narrower stops at the stated minimum width (${handle.width} to ${sized?.w})`);
   // Stack: drop B's header onto A's header; it snaps below it.
   const a = deskCard(paneA);
-  const headB = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneB}"] .pane-id')`);
-  const headA2 = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-id')`);
+  const headB = await headOf(paneB);
+  const headA2 = await headOf(paneA);
   await pointer(win, drag(headB, { x: headA2.x, y: headA2.y + 4 }, 12));
   await delay(800);
   const b = deskCard(paneB);
-  record(a !== undefined && b !== undefined && b.y === a.y + 34, `a pane dropped on another’s header snaps below it (${a?.y} then ${b?.y})`);
+  record(a !== undefined && b !== undefined && b.y === a.y + 34 && b.x === a.x, `a pane dropped on another’s header snaps below it (${a?.x},${a?.y} then ${b?.x},${b?.y})`);
   // A click on the lower pane's header raises it.
-  const lower = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-id')`);
+  const lower = await headOf(paneA);
   record((await js<string | null>(`(() => { const e = document.elementFromPoint(${lower.x}, ${lower.y}); const p = e && e.closest('.pane'); return p ? p.dataset.noteId : null; })()`)) === paneA, 'the covered pane’s header is still visible and hit');
   await pointer(win, click(lower));
   await delay(600);
   record(deskIds().at(-1) === paneA, 'a click on a header raises that pane');
   // Panes stack whole: the raised pane covers the header of the pane it
   // lies on, rather than that header showing through its text (ISS-0066).
-  const atHeadB = await js<string | null>(`(() => { const r = document.querySelector('.pane[data-note-id="${paneB}"] .pane-id').getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); const p = e && e.closest('.pane'); return p ? p.dataset.noteId : null; })()`);
+  const atHeadB = await js<string | null>(`(() => { const r = document.querySelector('.pane[data-note-id="${paneB}"] .pane-head').getBoundingClientRect(); const e = document.elementFromPoint(r.left + 24, r.top + r.height / 2); const p = e && e.closest('.pane'); return p ? p.dataset.noteId : null; })()`);
   record(atHeadB === paneA, `the raised pane covers the header of the pane under it (${atHeadB} is drawn at ${paneB}'s header)`);
   // And a press on the part of the lower pane's body still showing brings it forward.
   const bodyB = await js<{ x: number; y: number } | null>(`(() => { const pane = document.querySelector('.pane[data-note-id="${paneB}"]'); const r = pane.getBoundingClientRect(); const f = document.getElementById('field').getBoundingClientRect(); for (let y = Math.min(r.bottom, f.bottom) - 6; y > r.top + 40; y -= 8) for (let x = Math.min(r.right, f.right) - 20; x > r.left + 6; x -= 8) { const e = document.elementFromPoint(x, y); if (e && !e.closest('a') && e.closest('.pane-body') && e.closest('.pane') === pane) return { x, y }; } return null; })()`);
@@ -899,24 +993,58 @@ async function recordPanes(kit: Kit): Promise<void> {
     stayed.length > 0 && movedCards.length === 0 && fieldNow.slots === slotsBefore,
     `opening two notes and moving their documents moved no card: ${stayed.length} cards are drawn where they were (${movedCards.join(', ') || 'none moved'}), ${fieldNow.behind.length} of them behind a document, and every note keeps its slot`,
   );
-  // Widen: the reading column.
+  // ---- W, or ⤢: the document fills the field, and is put back at its size ----
+  // Until FEAT-0020 this read "widen takes the pane to the reading column":
+  // the page's layout changed, the field narrowed and the text was read
+  // beside it. The document now fills the field where it stands. What the
+  // store holds for it does not change, apart from saying that it is filled.
+  const fieldBox = await js<Box & { width: number; height: number }>(`__t.rect('#field')`);
+  type Filled = { pane: PaneSeen | null; reading: boolean; reader: boolean; pressed: string | null; corner: boolean; focus: string | null };
+  const filledNow = (id: string): Promise<Filled> =>
+    js(`(() => { const p = document.querySelector('.pane[data-note-id="${id}"]'); return { pane: __t.pane(${JSON.stringify(id)}), reading: document.body.classList.contains('reading'), reader: __t.shown('#reader'), pressed: p ? p.querySelector('.pane-widen').getAttribute('aria-pressed') : null, corner: !!p && getComputedStyle(p.querySelector('.pane-resize')).display !== 'none', focus: __t.glass().focusId() }; })()`);
+  const fills = (p: PaneSeen | null): boolean =>
+    p !== null && p.wide && Math.abs(p.left - fieldBox.left - 8) < 1 && Math.abs(p.top - fieldBox.top - 8) < 1 && Math.abs(p.width - (fieldBox.width - 16)) < 1 && Math.abs(p.height - (fieldBox.height - 16)) < 1;
+  const atOwnSize = (p: PaneSeen | null, c: ReturnType<typeof deskCard>): boolean =>
+    p !== null && c !== undefined && !p.wide && Math.abs(p.left - fieldBox.left - c.x) < 1 && Math.abs(p.top - fieldBox.top - c.y) < 1 && p.width === c.w && p.height === c.h;
+  const placeOf = (id: string): string => { const c = deskCard(id); return c === undefined ? 'not held' : `${c.x},${c.y} ${c.w}x${c.h}`; };
+  const placeA = placeOf(paneA);
+  const placeB = placeOf(paneB);
   const widen = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneA}"] .pane-widen')`);
-  await pointer(win, click(widen));
-  await delay(1500);
-  const reading = await js<{ reading: boolean; reader: boolean; text: number }>(`({ reading: document.body.classList.contains('reading'), reader: __t.shown('#reader'), text: document.getElementById('reader').textContent.trim().length })`);
-  record(reading.reading && reading.reader && reading.text > 20, `widen takes the pane to the reading column (${reading.text} characters)`);
-  const widenB = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneB}"] .pane-widen')`);
-  if (process.env['DECK_SMOKE_TRACE'] === '1') {
-    console.log('DEBUG widenB', JSON.stringify(widenB), await js(`(() => { const e = document.elementFromPoint(${widenB.x}, ${widenB.y}); return e ? e.className + ' in ' + (e.closest('.pane') || {dataset:{}}).dataset.noteId : null; })()`), 'A', paneA, 'B', paneB, JSON.stringify(deskCardsOf(store.getState(), prepared.id)));
-  }
-  await pointer(win, click(widenB));
+  await pointer(win, [...click(widen), { type: 'move', ...PARK }]);
+  await delay(1200);
+  const filledA = await filledNow(paneA);
+  record(
+    fills(filledA.pane) && deskCard(paneA)?.wide === true && placeOf(paneA) === placeA && deskIds().at(-1) === paneA && filledA.pressed === 'true' && !filledA.corner && filledA.focus === null &&
+      !filledA.reading && !filledA.reader && filledA.pane !== null && filledA.pane.chars > 20,
+    `⤢ fills the field with the document (${filledA.pane === null ? 'no pane' : `${Math.round(filledA.pane.width)} by ${Math.round(filledA.pane.height)} in a field of ${Math.round(fieldBox.width)} by ${Math.round(fieldBox.height)}`}), on top, with its text in it (${filledA.pane?.chars ?? 0} characters) and nothing gathered round it; the store marks it filled and keeps the place and size it had (${placeOf(paneA)}); no reading column opens (${filledA.reading || filledA.reader})`,
+  );
+  // The filled document covers the other one, so its ⤢ cannot be pressed:
+  // the keyboard on that document's header is the way to it.
+  ctx.focusApp(win);
+  await js(`document.querySelector('.pane[data-note-id="${paneB}"] .pane-head').focus(); true`);
+  press(win, 'W');
   await delay(1200);
   const wide = deskCardsOf(store.getState(), prepared.id).filter((c) => c.wide === true).map((c) => c.noteId);
-  record(wide.join() === paneB, `widening another pane replaces the first (${wide.join(', ')})`);
-  // With the reading column open the field is narrower, and a pane stored
-  // past its edge is drawn inside it (ISS-0058). Drawing it there is for the
-  // screen only: the store keeps the place and the size it was given. Until
-  // TASK-0104 the second half read "and no card is drawn under it".
+  const filledB = await filledNow(paneB);
+  const backA = await filledNow(paneA);
+  record(
+    wide.join() === paneB && fills(filledB.pane) && deskIds().at(-1) === paneB && atOwnSize(backA.pane, deskCard(paneA)) && placeOf(paneA) === placeA && placeOf(paneB) === placeB,
+    `W on another document's header fills the field with that one instead, and the first is back at its own place and size (filled: ${wide.join(', ') || 'none'}; ${paneA} drawn ${backA.pane === null ? 'nowhere' : `${Math.round(backA.pane.width)} by ${Math.round(backA.pane.height)}`}, stored ${placeOf(paneA)})`,
+  );
+  // And ⤢ again puts it back.
+  const unwiden = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneB}"] .pane-widen')`);
+  await pointer(win, [...click(unwiden), { type: 'move', ...PARK }]);
+  await delay(1200);
+  const putBackB = await filledNow(paneB);
+  record(
+    deskCardsOf(store.getState(), prepared.id).every((c) => c.wide !== true) && atOwnSize(putBackB.pane, deskCard(paneB)) && putBackB.pressed === 'false' && putBackB.corner && placeOf(paneB) === placeB && (await js<number>(`document.querySelectorAll('.pane.wide').length`)) === 0,
+    `⤢ on the filled document puts it back at the place and size the store kept for it (${placeOf(paneB)}, drawn ${putBackB.pane === null ? 'nowhere' : `${Math.round(putBackB.pane.width)} by ${Math.round(putBackB.pane.height)}`})`,
+  );
+  // A pane stored past the field's edge is drawn inside it (ISS-0058).
+  // Drawing it there is for the screen only: the store keeps the place and
+  // the size it was given. Until TASK-0104 the second half read "and no card
+  // is drawn under it"; until FEAT-0020 the field was narrowed first, by the
+  // reading column.
   const sizeBefore = deskCard(paneA);
   store.dispatch({ type: 'move-card', noteId: paneA, x: 3000, y: 120 });
   await delay(1500);
@@ -924,7 +1052,7 @@ async function recordPanes(kit: Kit): Promise<void> {
     const pane = document.querySelector('.pane[data-note-id="${paneA}"]');
     return { left: pane.style.left, right: pane.getBoundingClientRect().right, fieldRight: document.getElementById('field').getBoundingClientRect().right };
   })()`);
-  record(clamped.left !== '3000px' && clamped.right <= clamped.fieldRight + 1, `a pane stored past the narrowed field is drawn inside it (at ${clamped.left})`);
+  record(clamped.left !== '3000px' && clamped.right <= clamped.fieldRight + 1, `a pane stored past the field's edge is drawn inside it (at ${clamped.left})`);
   const sizeHeld = deskCard(paneA);
   record(
     sizeHeld !== undefined && sizeBefore !== undefined && sizeHeld.x === 3000 && sizeHeld.w === sizeBefore.w && sizeHeld.h === sizeBefore.h,
@@ -941,11 +1069,6 @@ async function recordPanes(kit: Kit): Promise<void> {
   await delay(400);
   const afterKey = deskCard(paneA);
   record(afterKey !== undefined && afterKey.x === Math.round(drawnLeft) + 16, `an arrow key on a pane’s header moves it 16 px from where it is drawn (drawn at ${drawnLeft}, now stored at ${afterKey?.x})`);
-  // Out of the reading column again, so the field is wide enough that no
-  // pane is clamped and a position read back is the position stored.
-  const unwiden = await js<{ x: number; y: number }>(`__t.rect('.pane[data-note-id="${paneB}"] .pane-widen')`);
-  await pointer(win, click(unwiden));
-  await delay(1200);
   // A reload: the panes come back where they were, at the size they were.
   const kept = JSON.stringify(deskCardsOf(store.getState(), prepared.id));
   const paneView = store.getState().viewId;
@@ -970,6 +1093,12 @@ async function recordPanes(kit: Kit): Promise<void> {
   );
   // A click on a card lying under another brings it forward (ISS-0067):
   // a point of it that shows, and a point of it the other card covers.
+  // The desk is scrolled to the cards first. A note opened in Glass stands
+  // beside the collection since FEAT-0020, 368 px or more into the field, and
+  // Spread's desk is narrower than that at this window's width: the cards are
+  // on the desk and past its right edge until it is scrolled.
+  const scrolled = await js<{ by: number; desk: number; cards: number[] }>(`(() => { const desk = document.getElementById('desk'); const cards = [...document.querySelectorAll('#desk .card:not([hidden])')]; const lefts = cards.map((c) => parseFloat(c.style.left) || 0); desk.scrollLeft = Math.max(0, Math.min(...lefts) - 24); desk.scrollTop = 0; return { by: desk.scrollLeft, desk: Math.round(desk.clientWidth), cards: lefts }; })()`);
+  await delay(300);
   const buried = await js<{ id: string; x: number; y: number; cx: number; cy: number } | null>(`(() => {
     const top = ${JSON.stringify(deskIds().at(-1) ?? '')};
     for (const c of document.querySelectorAll('#desk .card:not([hidden])')) {
@@ -987,12 +1116,12 @@ async function recordPanes(kit: Kit): Promise<void> {
     return null;
   })()`);
   if (buried === null) {
-    record(false, 'two cards overlap in Spread, so bringing one forward can be checked');
+    record(false, `two cards overlap in Spread, so bringing one forward can be checked (cards at ${scrolled.cards.join(' and ')} px on a desk ${scrolled.desk} px wide, scrolled ${scrolled.by} px)`);
   } else {
     await pointer(win, [...click(buried), { type: 'move', ...PARK }]);
     await delay(800);
     const over = await js<string | null>(`(() => { const e = document.elementFromPoint(${buried.cx}, ${buried.cy}); const c = e && e.closest('.card'); return c ? c.dataset.noteId : null; })()`);
-    record(deskIds().at(-1) === buried.id && over === buried.id, `a click on a card lying under another brings it forward in Spread (${buried.id}: last on the desk ${deskIds().at(-1)}, drawn on top ${over})`);
+    record(deskIds().at(-1) === buried.id && over === buried.id, `a click on a card lying under another brings it forward in Spread (${buried.id}: last on the desk ${deskIds().at(-1)}, drawn on top ${over}; the desk, ${scrolled.desk} px wide, was scrolled ${scrolled.by} px to the cards at ${scrolled.cards.join(' and ')} px)`);
   }
   // A card dragged in Spread is where it was dragged in Glass: one record.
   // The card the pointer will actually grab: in Spread two cards overlap,
@@ -1025,9 +1154,15 @@ async function recordPanes(kit: Kit): Promise<void> {
   await delay(300);
 }
 
-/** The keyboard route through the navigator, and arriving at a note under reduced motion (TASK-0033). */
+/**
+ * The keyboard route through the list, where the keyboard goes when a note is
+ * opened and closed (FEAT-0020), and arriving at a note under reduced motion
+ * (TASK-0033).
+ */
 async function recordKeys(kit: Kit): Promise<void> {
   const { ctx, win, js, record, deskIds, leave } = kit;
+  const { store } = ctx;
+  const active = (): Promise<Active> => js(`__t.active()`);
   await kit.fresh('issues');
   ctx.focusApp(win);
   await delay(300);
@@ -1039,13 +1174,79 @@ async function recordKeys(kit: Kit): Promise<void> {
   press(win, 'Down');
   await delay(300);
   const focusedRow = await js<string | null>(`document.activeElement && document.activeElement.dataset.noteId || null`);
+  const rowBefore = await active();
   press(win, 'Return');
   await delay(1500);
   record(focusedRow !== null && deskIds().includes(focusedRow), `Tab, the arrow keys and Enter lift a note from the navigator (${focusedRow})`);
   record((await js<string | null>(`__t.glass().focusId()`)) === focusedRow, `and it is the focus, with what it is joined to gathered round it (FEAT-0017)`);
-  // Escape from the row itself, so the navigator keeps the keyboard for the checks that follow.
-  await leave(true);
+
+  // ---- FEAT-0020: where the keyboard is after a note is opened, and after it is closed ----
+  // Until FEAT-0020 the keyboard stayed on the row and the text was read
+  // beside the field. The text is in the document now, so a note opened with
+  // the keyboard takes the keyboard to its document; L goes back to its row
+  // and leaves it open; Delete closes it and goes back to the row.
+  const onOpen = await active();
+  record(onOpen.on === 'header' && onOpen.id === focusedRow, `Enter on a row puts the keyboard on the header of that note's document (it is on ${onOpen.on} of ${onOpen.id})`);
+  press(win, 'l');
+  await delay(600);
+  const onL = await active();
+  record(onL.on === 'row' && onL.id === focusedRow && deskIds().includes(focusedRow ?? ''), `L on the header goes back to its row and closes nothing (the keyboard is on ${onL.on} of ${onL.id}; held ${deskIds().join(', ') || 'nothing'})`);
+  // The same row again: the open document is found, not opened twice, and takes the keyboard back.
+  press(win, 'Return');
   await delay(900);
+  const onAgain = await active();
+  const panesFor = await js<number>(`document.querySelectorAll('.pane[data-note-id="${focusedRow}"]').length`);
+  record(onAgain.on === 'header' && onAgain.id === focusedRow && panesFor === 1 && deskIds().length === 1, `Enter on the row of a note that is already open goes to its document and opens no second one (${panesFor} document, the keyboard on ${onAgain.on} of ${onAgain.id})`);
+  press(win, 'Delete');
+  await delay(900);
+  const onClose = await active();
+  record(
+    !deskIds().includes(focusedRow ?? '') && rowBefore.on === 'row' && onClose.on === 'row' && onClose.id === focusedRow && Math.abs(onClose.top - rowBefore.top) <= 1,
+    `Delete on the header closes the document and returns the keyboard to the row it was opened from, where that row stood before it was opened (held ${deskIds().join(', ') || 'nothing'}; the keyboard is on ${onClose.on} of ${onClose.id}, ${Math.round(onClose.top - rowBefore.top)} px from where it was)`,
+  );
+  // A pointer is not a keyboard: a row pressed with the pointer keeps the
+  // keyboard, so the arrow keys go on down the list.
+  const pressed = (await js<RowSeen[]>(`__t.rows()`)).find((r) => r.id !== focusedRow);
+  if (pressed === undefined) {
+    record(false, 'a row was in reach of the pointer, to press');
+  } else {
+    await pointer(win, [...click(pressed), { type: 'move', ...PARK }]);
+    await delay(1300);
+    const onPress = await active();
+    record(deskIds().includes(pressed.id) && onPress.on === 'row' && onPress.id === pressed.id, `a row pressed with the pointer opens its note and leaves the keyboard on the row (held ${deskIds().join(', ') || 'nothing'}; the keyboard is on ${onPress.on} of ${onPress.id})`);
+  }
+  // The desk is swept for what follows, and the keyboard goes back to the first row opened.
+  await leave(true);
+  store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+  await delay(900);
+  // The list stands in the field since FEAT-0020, and its keys are its own.
+  // Left and Right on a row, and End and Home, which go to the last row and
+  // the first, are not also the field's keys for turning by a step and for
+  // facing behind and ahead. Arriving on a row may turn the field to show
+  // that row's card, and it does so from the desk, so the list stays where
+  // the person is working. So what is read is where the collection stands:
+  // a key that was also the field's turns the field out from under the desk,
+  // and the list slides aside or goes out of sight.
+  await js(`(() => { const r = document.querySelector('#nav-list .nav-row[data-note-id="${focusedRow}"]'); if (r) r.focus(); return true; })()`);
+  await delay(1300);
+  const listWas = await kit.collection();
+  const movedBy: string[] = [];
+  let endRow: Active | null = null;
+  for (const key of ['Right', 'Left', 'End', 'Home']) {
+    press(win, key);
+    await delay(1400);
+    const now = await kit.collection();
+    if (!now.shown || now.outOfSight || now.veil !== 0 || Math.abs(now.x - listWas.x) > 1) movedBy.push(`${key} (${now.shown ? `${Math.round(now.x - listWas.x)} px, veil ${now.veil.toFixed(2)}` : 'out of sight'})`);
+    if (key === 'End') endRow = await active();
+  }
+  const homeRow = await active();
+  const inList = (a: Active | null): boolean => a !== null && (a.on === 'row' || /nav-group/.test(a.on));
+  record(
+    movedBy.length === 0 && Math.abs(listWas.x - 12) < 1 && inList(endRow) && inList(homeRow) && (endRow?.top ?? 0) > homeRow.top,
+    `Left, Right, End and Home pressed on a row are the list's keys and not also the field's: the collection stays in front where it stood after each (${movedBy.join(', ') || 'none moved it'}), End having gone to the end of the list and Home to its start (${endRow === null ? 'no row' : `${Math.round(endRow.top)} then ${Math.round(homeRow.top)} px down the window`})`,
+  );
+  await kit.face(0);
+  await delay(300);
   await js(`(() => { const r = document.querySelector('#nav-list .nav-row[data-note-id="${focusedRow}"]'); if (r) r.focus(); return true; })()`);
   // Reduced motion: arriving is a highlight, not a flight. Let the field
   // settle first: a turn still going made the cut check below fail once (ISS-0065).
@@ -1141,14 +1342,16 @@ async function recordSwitch(kit: Kit): Promise<void> {
   }
   await js(`document.querySelectorAll('.field-card').forEach((e) => { e.__deckMark = e.dataset.noteId; e.__deckAt = e.style.transform; })`);
   const marked = await js<Array<{ id: string; seated: boolean }>>(`[...document.querySelectorAll('.field-card:not(.leaving)')].map((e) => ({ id: e.dataset.noteId, seated: e.classList.contains('seated') }))`);
-  // The switch is read 400 ms in, so the click is made here and not through
-  // `view`, which waits for the deal to finish.
+  // The switch is watched from the click until its movement is over, so the
+  // click is made here and not through `view`, which waits for the deal to
+  // finish. Until FEAT-0020's smoke this was one reading 400 ms after the
+  // click, which is before the new view's notes have arrived when the
+  // machine is slow, and read as a cut on a switch that then animated.
+  const watching = js<{ delays: string[]; frames: number; first: number }>(`new Promise((resolve) => { const f = document.getElementById('field'); const t0 = performance.now(); const out = { delays: [], frames: 0, first: -1 }; const look = () => { if (f.classList.contains('animate')) { if (out.frames === 0) { out.first = Math.round(performance.now() - t0); out.delays = [...new Set([...document.querySelectorAll('.field-card')].map((e) => getComputedStyle(e).transitionDelay))]; } out.frames += 1; } if (performance.now() - t0 < 1900) requestAnimationFrame(look); else resolve(out); }; look(); })`);
   await js(`[...document.querySelectorAll('#switcher button')].find((b) => b.dataset.viewId === 'features').click()`);
-  await delay(400);
-  const during = await js<{ delays: string[]; animating: boolean }>(`({ delays: [...new Set([...document.querySelectorAll('.field-card')].map((e) => getComputedStyle(e).transitionDelay))], animating: document.getElementById('field').classList.contains('animate') })`);
-  record(during.delays.every((d) => d.split(',').every((x) => parseFloat(x) === 0)), `the cards move together, with no per-card delay (${during.delays.join(' ')})`);
-  record(during.animating, 'the switch is a transition, not a cut');
-  await delay(1500);
+  const during = await watching;
+  record(during.frames > 0 && during.delays.every((d) => d.split(',').every((x) => parseFloat(x) === 0)), `the cards move together, with no per-card delay (${during.delays.join(' ') || 'no moving frame was seen'})`);
+  record(during.frames > 1 && during.first >= 0, `the switch is a transition, not a cut (the field was animating for ${during.frames} frames, from ${during.first} ms after the click)`);
   const kept = await js<{ same: string[]; other: number; moved: number }>(`(() => {
     const same = []; let other = 0, moved = 0;
     for (const e of document.querySelectorAll('.field-card:not(.leaving)')) {
@@ -1200,11 +1403,16 @@ async function recordSwitch(kit: Kit): Promise<void> {
     }
     record(chip.shown && /^1 note changed/.test(chip.text), `a change arriving under the field is read, counted and announced ("${chip.text}")`);
     record(placed !== null && chip.moved !== null && Math.abs(chip.moved.x - placed.x) < 1 && Math.abs(chip.moved.y - placed.y) < 1, 'and no card moved until the person acted');
+    // The collection says the same thing in its own words, with the same
+    // offer (FEAT-0020): what changed, and "apply". Its count is still the
+    // count of what is on screen, which has not changed yet.
+    const waiting = await js<{ note: string; apply: number; count: string }>(`({ note: __t.shown('#collection-note') ? __t.text('#collection-note') : '', apply: [...document.querySelectorAll('#collection-note button')].filter((b) => b.textContent === 'apply').length, count: __t.text('#collection-count') })`);
+    record(/^1 note changed: 1 changed/.test(waiting.note) && waiting.apply === 1, `and the collection says what is waiting and offers to apply it ("${waiting.note}", ${waiting.apply} apply button)`);
     if (chip.where !== null) {
       await pointer(win, click(chip.where));
       await delay(1500);
-      const applied = await js<{ chip: boolean; status: string | null }>(`({ chip: __t.shown('#pending-chip'), status: (__t.glass().entryFor(${JSON.stringify(stay.id)}) || { card: {} }).card.status || null })`);
-      record(!applied.chip, 'the chip went when the person clicked it');
+      const applied = await js<{ chip: boolean; status: string | null; note: boolean }>(`({ chip: __t.shown('#pending-chip'), status: (__t.glass().entryFor(${JSON.stringify(stay.id)}) || { card: {} }).card.status || null, note: __t.shown('#collection-note') })`);
+      record(!applied.chip && !applied.note, `the chip went when the person clicked it, and so did the collection's line (${applied.note ? 'still shown' : 'gone'})`);
       record(applied.status === 'smoke-changed', `and the change was dealt: ${stay.id} now has the status that arrived (${applied.status})`);
     }
   }
@@ -1387,10 +1595,17 @@ async function recordFocus(kit: Kit): Promise<void> {
     const atStored =
       settled.noteId === card.id && drawn !== null && kept !== undefined && drawn.focus &&
       Math.abs(drawn.left - box.left - kept.x) < 0.5 && Math.abs(drawn.top - box.top - kept.y) < 0.5 && drawn.width === kept.w && drawn.height === kept.h;
-    const across = drawn === null ? Infinity : Math.abs(drawn.left + drawn.width / 2 - (box.left + box.right) / 2);
+    // Until FEAT-0020 it stood across the middle of the field. The collection
+    // stands down the left of the field now, so a new document is centred in
+    // the room beside it: 16 px clear of the collection and of the field's
+    // right edge, and so never over the list it was opened from.
+    const list = await kit.collection();
+    const room = { left: list.right + 16, right: box.right - 16 };
+    const across = drawn === null ? Infinity : Math.abs(drawn.left + drawn.width / 2 - (room.left + room.right) / 2);
+    const clearOfList = drawn !== null && drawn.left >= list.right + 15;
     record(
-      atStored && kept?.w === expected.w && kept?.h === expected.h && across <= 1,
-      `the document is the focus and is drawn where the store holds it, at the size stamped when it opened: ${px(drawn?.width ?? 0)} by ${px(drawn?.height ?? 0)} on screen, ${kept?.w} by ${kept?.h} stored at ${kept?.x},${kept?.y}, the view's reading size being ${expected.w} by ${expected.h}; it stands across the middle of the field (${px(across)} px off)`,
+      atStored && kept?.w === expected.w && kept?.h === expected.h && across <= 1 && clearOfList && Math.abs(list.x - 12) < 1 && list.w === 340,
+      `the document is the focus and is drawn where the store holds it, at the size stamped when it opened: ${px(drawn?.width ?? 0)} by ${px(drawn?.height ?? 0)} on screen, ${kept?.w} by ${kept?.h} stored at ${kept?.x},${kept?.y}, the view's reading size being ${expected.w} by ${expected.h}; it stands across the middle of the room the collection leaves (${px(across)} px off), ${px((drawn?.left ?? 0) - list.right)} px clear of the list`,
     );
 
     // ---- 3. One object per note: its own cards, every one, at browsing size ----
@@ -1440,7 +1655,10 @@ async function recordFocus(kit: Kit): Promise<void> {
     // A whole-pixel point on the longest line that the pointer would hit: a
     // line is 1.4 pixels wide and passes under the cards, so several points
     // along it are tried.
-    const longest = await js<{ x: number; y: number; id: string } | null>(`(() => { const f = document.getElementById('field-lines').getBoundingClientRect(); const field = document.getElementById('field').getBoundingClientRect(); let best = null; for (const l of document.querySelectorAll('#field-lines .link-line')) { const x1 = +l.getAttribute('x1'), y1 = +l.getAttribute('y1'), x2 = +l.getAttribute('x2'), y2 = +l.getAttribute('y2'); const len = Math.hypot(x2 - x1, y2 - y1); for (let t = 0.02; t <= 0.98; t += 0.02) { const x = Math.round(f.left + x1 + (x2 - x1) * t), y = Math.round(f.top + y1 + (y2 - y1) * t); if (x < field.left + 2 || x > field.right - 2 || y < field.top + 2 || y > field.bottom - 2) continue; if (document.elementFromPoint(x, y) !== l) continue; if (!best || len > best.len) best = { x, y, id: l.dataset.noteId, len }; break; } } return best; })()`);
+    // The lines are kept in the desk's own coordinates and the drawing is
+    // moved by the desk's shift (TASK-0099), so a line's ends are measured
+    // from the drawing, which carries that shift, not from its layer.
+    const longest = await js<{ x: number; y: number; id: string } | null>(`(() => { const f = document.querySelector('#field-lines .link-lines').getBoundingClientRect(); const field = document.getElementById('field').getBoundingClientRect(); let best = null; for (const l of document.querySelectorAll('#field-lines .link-line')) { const x1 = +l.getAttribute('x1'), y1 = +l.getAttribute('y1'), x2 = +l.getAttribute('x2'), y2 = +l.getAttribute('y2'); const len = Math.hypot(x2 - x1, y2 - y1); for (let t = 0.02; t <= 0.98; t += 0.02) { const x = Math.round(f.left + x1 + (x2 - x1) * t), y = Math.round(f.top + y1 + (y2 - y1) * t); if (x < field.left + 2 || x > field.right - 2 || y < field.top + 2 || y > field.bottom - 2) continue; if (document.elementFromPoint(x, y) !== l) continue; if (!best || len > best.len) best = { x, y, id: l.dataset.noteId, len }; break; } } return best; })()`);
     if (longest === null) {
       record(false, 'focus: a line was clear of the cards to rest on');
     } else {
@@ -1815,10 +2033,22 @@ async function recordFocus(kit: Kit): Promise<void> {
         const paneTurned = await pane(most.id);
         const turnedState = await js<{ assignments: number; slots: string; yaw: number; find: boolean; findText: string; lines: number }>(`({ assignments: __t.assignments(), slots: __t.slots(), yaw: __t.yaw(), find: __t.shown('#find-open'), findText: __t.text('#find-open'), lines: document.querySelectorAll('#field-lines .link-line').length })`);
         const slid = paneTurned === null || paneTurn === null ? 0 : paneTurned.left - paneTurn.left;
+        // Until FEAT-0020 the document faded: its opacity fell, and two faded
+        // documents lying over each other showed each other's text. It is
+        // dimmed by a veil of the ground's colour now and stays opaque. How
+        // far it is in sight is the same number as before, and the veil is
+        // what is left of it. The collection is on the same desk and is
+        // carried and dimmed the same way.
+        const listTurned = await kit.collection();
         record(
-          Math.abs(turnedState.yaw - turnState.yaw) > 1 && Math.abs(slid) > 150 && paneTurned !== null && paneTurn !== null && !paneTurned.outOfSight && Number(paneTurned.opacity) < 0.6 && Number(paneTurned.opacity) > 0 && paneTurned.width === paneTurn.width && paneTurned.height === paneTurn.height &&
+          Math.abs(turnedState.yaw - turnState.yaw) > 1 && Math.abs(slid) > 150 && paneTurned !== null && paneTurn !== null && !paneTurned.outOfSight && paneTurned.sight < 0.6 && paneTurned.sight > 0 && Math.abs(paneTurned.veil - (1 - paneTurned.sight)) < 1e-9 && paneTurned.opaque &&
+            paneTurned.width === paneTurn.width && paneTurned.height === paneTurn.height &&
             sameOffsets(beforeTurn, turned).same && turned.noteId === most.id && turnedState.assignments === turnState.assignments && turnedState.slots === turnState.slots,
-          `turning the field ${(turnedState.yaw - turnState.yaw).toFixed(2)} radians carries the document ${px(slid)} px with it and fades it to ${paneTurned?.opacity}, at the same size, with every card still beside it and still the focus; the turn dealt nothing (${turnedState.assignments - turnState.assignments} deals)`,
+          `turning the field ${(turnedState.yaw - turnState.yaw).toFixed(2)} radians carries the document ${px(slid)} px with it and dims it to ${paneTurned?.sight.toFixed(2)} of full sight under a veil of ${paneTurned?.veil.toFixed(2)}, still opaque (${paneTurned?.opaque}), at the same size, with every card still beside it and still the focus; the turn dealt nothing (${turnedState.assignments - turnState.assignments} deals)`,
+        );
+        record(
+          paneTurned !== null && Math.abs(listTurned.veil - paneTurned.veil) < 1e-9 && listTurned.opaque && Math.abs(listTurned.x - 12 - slid) < 1 && (await js<boolean>(`__t.shown('#to-collection')`)),
+          `the collection is carried and dimmed with it (${px(listTurned.x - 12)} px, veil ${listTurned.veil.toFixed(2)}, opaque ${listTurned.opaque}), and "collection" is offered to bring it back`,
         );
         record(turnedState.find && turnedState.findText === `find ${most.id}`, `and "find" is offered for the note turned away from ("${turnedState.findText}")`);
         // Past the edge of sight the document is not drawn and takes no pointer.
@@ -1827,9 +2057,10 @@ async function recordFocus(kit: Kit): Promise<void> {
         await delay(300);
         const gone = await pane(most.id);
         const goneState = await js<{ lines: number; counters: number; find: boolean; seatedInSight: number }>(`({ lines: document.querySelectorAll('#field-lines .link-line').length, counters: [...document.querySelectorAll('#desk-beyond .beyond')].filter((b) => !b.hidden).length, find: __t.shown('#find-open'), seatedInSight: __t.seated().filter((s) => s.inSight).length })`);
+        const listGone = await kit.collection();
         record(
-          gone !== null && gone.outOfSight && gone.opacity === '0' && goneState.lines === 0 && goneState.seatedInSight === 0 && goneState.find,
-          `past the edge of sight the document is not drawn (opacity ${gone?.opacity}), its lines are gone (${goneState.lines}), none of its cards takes the pointer (${goneState.seatedInSight}), and "find" is still offered`,
+          gone !== null && gone.outOfSight && !gone.drawn && gone.sight === 0 && goneState.lines === 0 && goneState.seatedInSight === 0 && goneState.find && listGone.outOfSight && !listGone.shown,
+          `past the edge of sight the document is not drawn (in sight ${gone?.sight}, drawn ${gone?.drawn}) and neither is the collection (${listGone.shown}), its lines are gone (${goneState.lines}), none of its cards takes the pointer (${goneState.seatedInSight}), and "find" is still offered`,
         );
         const findAgain = await control('#find-open');
         if (findAgain !== null) await pointer(win, [...click(findAgain), { type: 'move', ...PARK }]);
@@ -1838,7 +2069,7 @@ async function recordFocus(kit: Kit): Promise<void> {
         const paneHome = await pane(most.id);
         const yawHome = await js<number>(`__t.yaw()`);
         record(
-          findAgain !== null && paneHome !== null && paneTurn !== null && !paneHome.outOfSight && paneHome.opacity === '1' && Math.abs(paneHome.left - paneTurn.left) < 0.5 && Math.abs(paneHome.top - paneTurn.top) < 0.5 && paneHome.width === paneTurn.width && paneHome.height === paneTurn.height &&
+          findAgain !== null && paneHome !== null && paneTurn !== null && !paneHome.outOfSight && paneHome.sight === 1 && paneHome.veil === 0 && paneHome.opaque && Math.abs(paneHome.left - paneTurn.left) < 0.5 && Math.abs(paneHome.top - paneTurn.top) < 0.5 && paneHome.width === paneTurn.width && paneHome.height === paneTurn.height &&
             Math.abs(yawHome - (yawThere + 0.4)) < 1e-9 && home.noteId === most.id && sameOffsets(beforeTurn, home).same,
           `"find" brings the desk round to where the person now faces without turning the field (yaw still ${yawHome.toFixed(2)}): the document is drawn where it is stored, at full strength and the same size, with its cards beside it`,
         );
@@ -1846,8 +2077,9 @@ async function recordFocus(kit: Kit): Promise<void> {
     }
 
     // ---- 9b. Escape leaves the focus and keeps every document; the next one sweeps ----
-    await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
-    await delay(300);
+    // Back to the front, and the desk with it: "find" above left it where the field was turned to.
+    await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); __t.glass().findOpen(); true`);
+    await delay(600);
     if ((await js<string | null>(`__t.glass().focusId()`)) === null) {
       const top = deskIds().at(-1);
       if (top !== undefined) {
@@ -1922,7 +2154,7 @@ async function recordFocus(kit: Kit): Promise<void> {
       }
       await act();
       if ((await focus()).noteId !== null) stayed.push(name);
-      // Undoing Hide notes or the reading column does not bring the focus back.
+      // Undoing Hide notes, or putting a filled document back at its size, does not bring the focus back.
       if (name === 'Hide notes') {
         await js(`document.getElementById('hide-notes').click(); true`);
         await delay(600);
@@ -1931,7 +2163,7 @@ async function recordFocus(kit: Kit): Promise<void> {
       if (name === 'W') {
         await js(`(() => { const p = document.querySelector('.pane.wide .pane-widen') || document.querySelector('.pane .pane-widen'); if (p) p.click(); return true; })()`);
         await delay(700);
-        if ((await focus()).noteId !== null) stayed.push('W, once out of the column');
+        if ((await focus()).noteId !== null) stayed.push('W, once back at its own size');
       }
     }
     record(stayed.length === 0, `Hide notes, W, ×, a view switch and a surface switch each leave the focus (${stayed.join(', ') || 'all did'})`);
@@ -2099,19 +2331,21 @@ async function recordFocus(kit: Kit): Promise<void> {
       await boot();
       if (store.getState().viewId !== 'issues') await view('issues');
       const reloaded = await focus();
-      const drawnAfter = await js<Array<{ id: string; left: string; top: string; width: string; height: string; focus: boolean; opacity: string }>>(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, left: p.style.left, top: p.style.top, width: p.style.width, height: p.style.height, focus: p.classList.contains('focus'), opacity: p.style.opacity }))`);
+      const drawnAfter = await js<Array<{ id: string; left: string; top: string; width: string; height: string; focus: boolean; sight: string; opacity: string }>>(`[...document.querySelectorAll('.pane')].map((p) => ({ id: p.dataset.noteId, left: p.style.left, top: p.style.top, width: p.style.width, height: p.style.height, focus: p.classList.contains('focus'), sight: p.dataset.sight, opacity: p.style.opacity }))`);
       const cardsHeld = JSON.parse(heldCards) as Array<{ noteId: string; x: number; y: number; w?: number; h?: number }>;
-      const inPlace = cardsHeld.length > 0 && cardsHeld.every((c) => drawnAfter.some((p) => p.id === c.noteId && p.left === `${c.x}px` && p.top === `${c.y}px` && p.width === `${c.w}px` && p.height === `${c.h}px` && !p.focus && p.opacity === '1'));
-      // The store's keys before TASK-0104, and the one it added: the size a
-      // corner last chose on each view. Nothing about the focus is in it.
-      const expectedKeys = 'actor deskCards deskName desks filters flowCursor folds indexRevisions noteId query readingSizes revision session surface viewDesks viewId workspaceId';
-      const leaked = /focusOn|bearing|deskPan|"pan"|seating|seated/i.exec(text);
+      // In full sight: sight 1, and no opacity written on the element (FEAT-0020).
+      const inPlace = cardsHeld.length > 0 && cardsHeld.every((c) => drawnAfter.some((p) => p.id === c.noteId && p.left === `${c.x}px` && p.top === `${c.y}px` && p.width === `${c.w}px` && p.height === `${c.h}px` && !p.focus && p.sight === '1' && p.opacity === ''));
+      // The store's keys before TASK-0104, the one it added (the size a corner
+      // last chose on each view) and the one FEAT-0020 added: where each
+      // view's collection stands. Nothing about the focus is in it.
+      const expectedKeys = 'actor collections deskCards deskName desks filters flowCursor folds indexRevisions noteId query readingSizes revision session surface viewDesks viewId workspaceId';
+      const leaked = /focusOn|bearing|deskPan|"pan"|seating|seated|onTop|narrowFront|localHeld/i.exec(text);
       record(
         beforeReload.noteId === last.id && reloaded.noteId === null && reloaded.seated.length === 0 && Math.abs(reloaded.bearing) < 1e-9 && reloaded.pan.x === 0 && reloaded.pan.y === 0 && (await js<number>(`__t.yaw()`)) === 0 && inPlace &&
           JSON.stringify(deskCardsOf(store.getState(), ws)) === heldCards && (await js<number>(`document.querySelectorAll('.field-card.seated').length`)) === 0,
         `after a reload nothing is the focus (${reloaded.noteId}), the field faces the front and the desk is in front of it, and ${last.id}'s document is drawn where the store holds it, at its stored size (${drawnAfter.map((p) => `${p.id} at ${p.left},${p.top}, ${p.width} by ${p.height}`).join('; ') || 'no pane'})`,
       );
-      record(keys === expectedKeys && leaked === null, `the store holds nothing about the focus, the turn or the look aside: its keys are the ones it had plus readingSizes (${keys === expectedKeys ? 'as expected' : keys}${leaked === null ? '' : `; it mentions "${leaked[0]}"`})`);
+      record(keys === expectedKeys && leaked === null, `the store holds nothing about the focus, the turn or the look aside: its keys are the ones it had plus readingSizes and collections (${keys === expectedKeys ? 'as expected' : keys}${leaked === null ? '' : `; it mentions "${leaked[0]}"`})`);
     }
   } finally {
     await js(`window.__deckReducedMotion = false; true`).catch(() => null);
@@ -2281,7 +2515,10 @@ async function recordZoom(kit: Kit): Promise<void> {
     }
 
     // ---- 14. Double-click: the background resets, a card is two clicks ----
-    const blank = await js<{ x: number; y: number } | null>(`(() => { const f = document.getElementById('field').getBoundingClientRect(); for (let y = f.top + 60; y < f.bottom - 60; y += 23) for (let x = f.left + 60; x < f.right - 60; x += 29) { const e = document.elementFromPoint(x, y); if (e && e.id === 'field' || (e && e.closest('#field') && !e.closest('.field-card, .pane, button, .compass, .field-bar, .sector-label, .target-strip'))) return { x, y }; } return null; })()`);
+    // A point of the field itself. Until FEAT-0020 this scanned from the
+    // field's left edge, where the collection now stands: a double-click
+    // there is two clicks on the list, and the zoom stays.
+    const blank = await js<{ x: number; y: number } | null>(`__t.blank()`);
     const dbl = async (at: { x: number; y: number }): Promise<void> => {
       for (const clickCount of [1, 2]) {
         win.webContents.sendInputEvent({ type: 'mouseDown', x: Math.round(at.x), y: Math.round(at.y), button: 'left', clickCount });
@@ -2295,6 +2532,34 @@ async function recordZoom(kit: Kit): Promise<void> {
       await delay(500);
     }
     record(blank !== null && beforeDbl > 1 && (await zoom()).scale === 1, `a double-click on the background returns from ${beforeDbl.toFixed(2)}× to 1×`);
+    // The collection is not the background (FEAT-0020): a wheel over the list
+    // scrolls the list, and a double-click on it leaves the zoom alone.
+    await js(`__t.glass().zoomTo({ scale: 1.5, dx: 0, dy: 0 }); true`);
+    await delay(500);
+    const overList = await js<{ x: number; y: number; top: number; room: number } | null>(`(() => { const l = document.getElementById('nav-list'); l.scrollTop = 0; const r = l.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2; const e = document.elementFromPoint(x, y); return e && l.contains(e) ? { x, y, top: l.scrollTop, room: l.scrollHeight - l.clientHeight } : null; })()`);
+    if (overList === null || overList.room <= 0) {
+      record(false, `zoom: the list was in reach with rows to scroll (${JSON.stringify(overList)})`);
+    } else {
+      await notches(overList.x, overList.y, 3, 1);
+      await delay(300);
+      const listNow = await js<{ top: number; scale: number }>(`({ top: document.getElementById('nav-list').scrollTop, scale: __t.glass().zoom().scale })`);
+      const headAt = await js<{ x: number; y: number } | null>(`__t.rect('#collection-count')`);
+      const layoutWas = JSON.stringify(await kit.collection().then((c) => [c.x, c.y, c.w, c.h, c.collapsed]));
+      if (headAt !== null) await dbl({ x: headAt.x, y: headAt.y });
+      await delay(500);
+      const afterDbl = (await zoom()).scale;
+      // A double-click on the header collapses the collection, as its Enter does; opened again for what follows.
+      const collapsedBy = (await kit.collection()).collapsed;
+      if (collapsedBy && headAt !== null) await dbl({ x: headAt.x, y: headAt.y });
+      await delay(400);
+      record(
+        listNow.top > overList.top && Math.abs(listNow.scale - 1.5) < 1e-9 && Math.abs(afterDbl - 1.5) < 1e-9,
+        `the wheel over the collection scrolls its list (${overList.top} to ${listNow.top}) and a double-click on its header is not one on the background: the zoom stays ${afterDbl.toFixed(2)}× (the header's double-click collapsed it: ${collapsedBy}; it stood at ${layoutWas})`,
+      );
+      await js(`document.getElementById('nav-list').scrollTop = 0; true`);
+    }
+    await js(`__t.glass().zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
+    await delay(500);
 
     // ---- 9. The keys, and the keys as letters in the search box ----
     ctx.focusApp(win);
@@ -2683,7 +2948,12 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     // not clear them would be measuring the pane.
     await js(`window.__deckGlass.sweep(); true`);
     await delay(900);
-    await js(`document.getElementById('field').focus(); window.__deckGlass.model.face(Math.PI); window.__deckGlass.render(false); true`);
+    // With the desk brought round. A note opened from a tile brings the desk
+    // to where the person faces, and the collection is on the desk: left at
+    // the front, it arrived over the very tile that had just been pressed,
+    // and the pointer then rested on the list and not on the tile.
+    await kit.face(Math.PI);
+    await js(`document.getElementById('field').focus(); true`);
     await delay(500);
 
     const bands = await js<BandState>(`__t.bands()`);
@@ -2844,7 +3114,8 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
       // Everything below — the drag, promotion, and the shape comparison
       // against `shapeBefore`, which was taken on Issues — reads the Issues
       // view facing the quiet band.
-      await js(`document.getElementById('field').focus(); window.__deckGlass.model.face(Math.PI); window.__deckGlass.render(false); true`);
+      await kit.face(Math.PI);
+      await js(`document.getElementById('field').focus(); true`);
       await delay(600);
     }
 
@@ -2952,7 +3223,7 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     record(backDown === 0, `zooming back out paints them again (${backDown})`);
 
     // 7. Zoom adds detail to a card that is not in the quiet band.
-    await js(`window.__deckGlass.model.face(0); window.__deckGlass.render(false); true`);
+    await kit.face(0);
     await delay(400);
     const detail = await js<{ before: string | null; after: string | null } | null>(
       `(() => { const c = document.querySelector('.field-card[data-band="mid"]'); return c ? { before: c.dataset.detail, after: null } : null; })()`,
@@ -3010,6 +3281,1045 @@ interface BandState {
   unslotted: { front: number; mid: number; outer: number };
   dealt: number;
   cursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// FEAT-0020: the list is an object on the field, and a note is read in its
+// document. What the three parts below share.
+// ---------------------------------------------------------------------------
+
+/** One row of the sidecar's answer to "what may a person do to this note". */
+export interface OfferedAction {
+  verb: string;
+  to: string;
+  confirm: boolean;
+  disabled: boolean;
+  reason: string;
+  endpoint: string;
+}
+
+/** A note the sidecar offers a person verbs on, with the answer it gave. */
+export interface OfferedNote {
+  id: string;
+  rel: string;
+  type: string;
+  status: string;
+  actions: OfferedAction[];
+}
+
+/** Every note Deck's own index holds, with the path it is stored at. Waits for the index to be built. */
+export async function indexedNotes(origin: string, workspaceId: string): Promise<Array<{ id: string; rel: string }>> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const payload = (await (await fetch(`${origin}/deck/records/${workspaceId}`)).json()) as { building?: boolean; records?: Array<{ id?: unknown; relPath?: unknown }> };
+    if (payload.building !== true) {
+      return (payload.records ?? []).flatMap((r) => (typeof r.id === 'string' && typeof r.relPath === 'string' && !r.relPath.startsWith('__templates__/') ? [{ id: r.id, rel: r.relPath }] : []));
+    }
+    await delay(250);
+  }
+  return [];
+}
+
+/**
+ * The notes the sidecar offers verbs on TODAY, found by asking it about each
+ * note Deck's index holds, through the same proxied read a page makes.
+ *
+ * Asked rather than known. Which notes carry a verb is a fact about the day:
+ * the checks that named ISS-0008 went red when that issue left `triage`, with
+ * nothing wrong in Deck. And asked of the sidecar rather than worked out from
+ * a note's type and status, because that table is the sidecar's and Deck
+ * restates none of it (TST-0033), in a check as much as in the renderer.
+ */
+export async function notesOfferedVerbs(origin: string, workspaceId: string, most = Infinity): Promise<{ asked: number; found: OfferedNote[] }> {
+  const found: OfferedNote[] = [];
+  let asked = 0;
+  for (const note of await indexedNotes(origin, workspaceId)) {
+    asked += 1;
+    let payload: { type?: unknown; status?: unknown; actions?: unknown };
+    try {
+      payload = (await (await fetch(`${origin}/deck/sidecar/${workspaceId}/api/notes/actions?id=${encodeURIComponent(note.id)}`)).json()) as typeof payload;
+    } catch {
+      continue;
+    }
+    const actions: OfferedAction[] = (Array.isArray(payload.actions) ? payload.actions : []).flatMap((entry: unknown) => {
+      if (typeof entry !== 'object' || entry === null) return [];
+      const row = entry as Record<string, unknown>;
+      if (typeof row['verb'] !== 'string' || row['verb'] === '') return [];
+      return [{ verb: row['verb'], to: typeof row['to'] === 'string' ? row['to'] : '', confirm: row['confirm'] === true, disabled: row['disabled'] === true, reason: typeof row['reason'] === 'string' ? row['reason'] : '', endpoint: typeof row['endpoint'] === 'string' ? row['endpoint'] : '' }];
+    });
+    if (actions.length === 0) continue;
+    found.push({ id: note.id, rel: note.rel, type: String(payload.type ?? ''), status: String(payload.status ?? ''), actions });
+    if (found.length >= most) break;
+  }
+  return { asked, found };
+}
+
+/** What a document holds, read in its page. */
+type DocumentRead = {
+  state: string;
+  chars: number;
+  /** Its text is, character for character, what the sidecar renders for the note's path. */
+  same: boolean;
+  article: boolean;
+  title: string;
+  id: string;
+  status: string;
+  head: string;
+  label: string;
+  faces: number;
+  verbs: Array<{ verb: string; disabled: boolean; confirm: string | null }>;
+  whys: string[];
+  actionsShown: boolean;
+  actionsInside: boolean;
+  ticks: number;
+  ticksAfterTheirBox: number;
+  boxes: number;
+  stripVerbs: number;
+  readerTicks: number;
+};
+
+/**
+ * Page code that reads one document: its state, its heading, the verbs and
+ * ticks inside it, and whether its text is the note's. The text is compared
+ * with what the sidecar renders for the same path, read again by the page,
+ * with the tick controls Deck adds taken out of the copy that is compared.
+ */
+function readDocument(workspaceId: string, id: string, rel: string | null): string {
+  return `(async () => {
+    const p = document.querySelector('.pane[data-note-id="${id}"]');
+    if (!p) return null;
+    const note = p.querySelector('.pane-body article.pane-note');
+    const actions = p.querySelector('.pane-body .pane-actions');
+    const rel = ${JSON.stringify(rel)};
+    let same = false;
+    if (note && rel !== null) {
+      const payload = await fetch('/deck/sidecar/${workspaceId}/api/render?path=' + encodeURIComponent(rel)).then((r) => r.json()).catch(() => null);
+      if (payload && typeof payload.html === 'string') {
+        const want = document.createElement('div');
+        want.innerHTML = payload.html;
+        const got = note.cloneNode(true);
+        got.querySelectorAll('.tick, .no-tick').forEach((e) => e.remove());
+        same = want.textContent.trim().length > 0 && got.textContent === want.textContent;
+      }
+    }
+    const ticks = note ? [...note.querySelectorAll('button.tick')] : [];
+    const boxes = note ? [...note.querySelectorAll('input[type="checkbox"]')].filter((b) => b.dataset.raw !== undefined && !b.checked) : [];
+    const verbs = actions ? [...actions.querySelectorAll('button.verb')] : [];
+    const head = p.querySelector('.pane-head');
+    return {
+      state: p.dataset.state || '', chars: note ? note.textContent.trim().length : 0, same, article: !!note,
+      title: p.querySelector('.pane-title').textContent, id: p.querySelector('.pane-id').textContent, status: p.querySelector('.pane-status').textContent,
+      head: head.textContent, label: head.getAttribute('aria-label') || '', faces: p.querySelectorAll('.pane-face').length,
+      verbs: verbs.map((b) => ({ verb: b.textContent, disabled: b.disabled, confirm: b.dataset.confirm === undefined ? null : b.dataset.confirm })),
+      whys: actions ? [...actions.querySelectorAll('.why')].map((e) => e.textContent) : [],
+      actionsShown: !!actions && !actions.hidden && getComputedStyle(actions).display !== 'none', actionsInside: !!actions && p.contains(actions),
+      ticks: ticks.length, ticksAfterTheirBox: ticks.filter((t) => boxes.includes(t.previousElementSibling)).length, boxes: boxes.length,
+      stripVerbs: document.querySelectorAll('#actuators button.verb').length, readerTicks: document.querySelectorAll('#reader button.tick').length,
+    };
+  })()`;
+}
+
+/** Page code that opens the note stored at a path as a document, by name: resolves to its id, or null when Deck has no note there. */
+function openByPath(rel: string): string {
+  return `window.__deckGlass.hooks.cardByRel(${JSON.stringify(rel)}).then((c) => (c ? window.__deckGlass.lift(c).then(() => c.noteId) : null))`;
+}
+
+/**
+ * Wait until a document has been read, or has said it cannot be: its state,
+ * or '' when there is no such document. `missing` is waited through, because
+ * a note the view does not hold says that until Deck's index has answered for
+ * it; a document still saying it after six seconds is returned as missing.
+ */
+async function untilRead(js: Js, id: string, tries = 40): Promise<string> {
+  let state = '';
+  for (let i = 0; i < tries; i += 1) {
+    state = await js<string>(`(document.querySelector('.pane[data-note-id="${id}"]') || { dataset: {} }).dataset.state || ''`);
+    if (state === 'ready' || state === 'error' || state === 'stale') return state;
+    await delay(150);
+  }
+  return state;
+}
+
+/** Every note the sidecar returns for a view, each once: the collection's members. */
+async function viewMembers(origin: string, workspaceId: string, mode: string): Promise<Set<string>> {
+  const nav = (await (await fetch(`${origin}/deck/sidecar/${workspaceId}/api/cockpit/nav?mode=${encodeURIComponent(mode)}`)).json()) as { groups?: Array<{ items?: unknown[] }> };
+  const members = new Set<string>();
+  const walk = (items: unknown[]): void => {
+    for (const raw of items) {
+      const item = raw as { id?: unknown; children?: unknown[]; items?: unknown[] };
+      if (typeof item.id === 'string' && item.id !== '') members.add(item.id);
+      walk(item.children ?? item.items ?? []);
+    }
+  };
+  for (const group of nav.groups ?? []) walk(group.items ?? []);
+  return members;
+}
+
+/**
+ * Page code that finds, in an open document, a link to another note that can
+ * be pressed: in view inside the document after scrolling to it, and first
+ * under the pointer. `only`, when given, is the paths the link may name.
+ */
+function linkIn(id: string, only: string[] | null): string {
+  return `(() => {
+    const body = document.querySelector('.pane[data-note-id="${id}"] .pane-body');
+    if (!body) return null;
+    const only = ${only === null ? 'null' : `new Set(${JSON.stringify(only)})`};
+    const held = new Set([...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId));
+    const b = body.getBoundingClientRect();
+    for (const a of body.querySelectorAll('.pane-note a[href^="/docs/"]')) {
+      let rel = '';
+      try { rel = decodeURIComponent(a.getAttribute('href').slice(6).split('#')[0]); } catch (e) { continue; }
+      if (only !== null && !only.has(rel)) continue;
+      if (held.has((a.textContent || '').trim())) continue;
+      body.scrollTop += a.getBoundingClientRect().top - b.top - 80;
+      const r = a.getClientRects()[0];
+      if (!r || r.width === 0 || r.top <= b.top || r.bottom >= b.bottom) continue;
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      if (hit && hit.closest('a') === a) return { href: a.getAttribute('href'), rel, x, y };
+    }
+    return null;
+  })()`;
+}
+
+/** Page code that records every state each document passes through, from now until `ms` have gone. */
+function statesFor(ms: number): string {
+  return `new Promise((resolve) => { const seen = {}; const t0 = performance.now(); const look = () => { for (const p of document.querySelectorAll('.pane')) { const id = p.dataset.noteId; const st = p.dataset.state || ''; if (!seen[id]) seen[id] = []; if (seen[id][seen[id].length - 1] !== st) seen[id].push(st); } if (performance.now() - t0 < ${ms}) requestAnimationFrame(look); else resolve(seen); }; look(); })`;
+}
+
+/** The notes the document and served parts read verbs and ticks on, found once per run. */
+let offeredOnce: Promise<{ asked: number; found: OfferedNote[] }> | null = null;
+
+/**
+ * FEAT-0020: the view's list is an object on the field (TASK-0095, TASK-0096).
+ *
+ * Until FEAT-0020 the list was a fixed column beside the field and nothing
+ * here existed. What is checked is what a person can do to the object and
+ * what the store keeps of it: where it stands, how large it is and whether it
+ * is collapsed, for each view, and never one of its rows. Its count is the
+ * exact number of notes the view's source returns.
+ */
+async function recordCollection(kit: Kit): Promise<void> {
+  const { ctx, win, js, record, deskIds } = kit;
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const origin = new URL(win.webContents.getURL()).origin;
+  const VIEW = 'features';
+  type Layout = { x: number; y: number; w: number; h: number; collapsed: boolean; presentation: string };
+  const stored = (): Layout | undefined => store.getState().collections[ws]?.[VIEW] as Layout | undefined;
+  const near = (a: number, b: number, by = 1): boolean => Math.abs(a - b) <= by;
+  const said = (c: CollectionSeen): string => `${Math.round(c.x)},${Math.round(c.y)} ${Math.round(c.w)} by ${Math.round(c.h)}`;
+  const kept = (): string => { const l = stored(); return l === undefined ? 'nothing' : `${l.x},${l.y} ${l.w} by ${l.h}${l.collapsed ? ', collapsed' : ''}`; };
+  const yawNow = (): Promise<number> => js(`__t.yaw()`);
+  await kit.fresh(VIEW);
+  ctx.focusApp(win);
+  try {
+    // ---- 1. It stands in the field, with the list inside it ----
+    const field = await js<Box & { width: number; height: number }>(`__t.rect('#field')`);
+    const c0 = await kit.collection();
+    const beside = await js<{ column: boolean; reader: boolean }>(`({ column: [...document.querySelectorAll('.body > .navigator')].some((e) => getComputedStyle(e).display !== 'none'), reader: __t.shown('#reader') })`);
+    const stored0 = stored();
+    record(
+      c0.inField && c0.listInside && c0.shown && !beside.column && !beside.reader && stored0 === undefined && near(c0.x, 12) && near(c0.y, 12) && c0.w === 340 && near(c0.h, field.height - 24),
+      `the list is an object in the field and not a column beside it: with nothing stored for the view (${kept()}) it stands at ${said(c0)} in a field of ${Math.round(field.width)} by ${Math.round(field.height)}, with the search box and the rows inside it (in the field ${c0.inField}, the list inside ${c0.listInside}, a column beside the field ${beside.column})`,
+    );
+
+    // ---- 2. Its count is exact: the notes the view's source returns ----
+    const members = await viewMembers(origin, ws, VIEW);
+    const label = await js<string>(`(document.querySelector('#switcher button[aria-selected="true"]') || {}).textContent || ''`);
+    record(
+      members.size > 0 && c0.name === label && label !== '' && c0.count === `${members.size} notes`,
+      `its header names the view and counts exactly the notes the sidecar returns for it: "${c0.name}", "${c0.count}" for ${members.size} notes in the source`,
+    );
+    // And it says where its members are: how many the field has a place for,
+    // and how many can be reached only through the list. Counted here from
+    // the field's own deal, for the view on screen.
+    const inField = await js<number>(`(() => { const placed = __t.glass().placedIds(); return window.__deckCollection.members().filter((id) => placed.has(id)).length; })()`);
+    const wanted = inField === members.size ? `all ${members.size} have a place in the field` : `${inField} have a place in the field · ${members.size - inField} are in this list only`;
+    record(
+      inField > 0 && c0.places === wanted,
+      `it says where its members are, as the field has dealt them: "${c0.places}", and the field has a place for ${inField} of the ${members.size}`,
+    );
+
+    // ---- 3. Typing in its search box narrows it, and the header says by how much ----
+    const search = await js<{ x: number; y: number } | null>(`__t.rect('#search')`);
+    if (search === null) {
+      record(false, 'collection: the search box is in reach');
+    } else {
+      await pointer(win, click(search));
+      for (const letter of 'gla') {
+        press(win, letter);
+        await delay(60);
+      }
+      await delay(900);
+      const narrowed = await kit.collection();
+      const zoomed = await js<number>(`__t.glass().zoom().scale`);
+      const of = /^(\d+) of (\d+) notes$/.exec(narrowed.count);
+      for (let i = 0; i < 3; i += 1) {
+        press(win, 'Backspace');
+        await delay(60);
+      }
+      await delay(900);
+      const cleared = await kit.collection();
+      await js(`document.activeElement && document.activeElement.blur && document.activeElement.blur(); true`);
+      record(
+        of !== null && Number(of[2]) === members.size && Number(of[1]) > 0 && Number(of[1]) < members.size && narrowed.filter.includes('gla') && zoomed === 1 && cleared.count === `${members.size} notes` && cleared.filter === '',
+        `three letters typed into its search box narrow it and the header says how many of how many, and by what ("${narrowed.count}", "${narrowed.filter}"), without zooming the field (${zoomed}×); deleted again, it is whole ("${cleared.count}")`,
+      );
+    }
+
+    // ---- 4. Dragged by its corner it is resized, and the store keeps the size ----
+    // Made shorter first: a collection as tall as the field is drawn wholly
+    // inside it, so one moved down would be drawn higher than it is stored.
+    const corner = await js<{ x: number; y: number } | null>(`__t.rect('#collection-resize')`);
+    if (corner === null) throw new Error('the collection has no corner to drag');
+    await pointer(win, [...drag(corner, { x: corner.x + 60, y: corner.y - 100 }, 8), { type: 'move', ...PARK }]);
+    await delay(500);
+    const sized = await kit.collection();
+    const sizedTo = stored();
+    record(
+      near(sized.w, c0.w + 60) && near(sized.h, c0.h - 100) && near(sized.x, c0.x) && near(sized.y, c0.y) && sizedTo !== undefined && sizedTo.w === 400 && near(sizedTo.h, c0.h - 100) && sizedTo.x === 12 && sizedTo.y === 12 && sizedTo.collapsed === false,
+      `dragged 60 by -100 by its corner it is resized by that much and stays where it was (${said(c0)} to ${said(sized)}), and the store holds the size for this view (${kept()})`,
+    );
+
+    // ---- 5. Dragged by its header it moves ----
+    const name = await js<{ x: number; y: number } | null>(`__t.rect('#collection-name')`);
+    if (name === null) throw new Error('the collection has no header to drag');
+    await pointer(win, [...drag(name, { x: name.x + 30, y: name.y + 40 }, 8), { type: 'move', ...PARK }]);
+    await delay(500);
+    const moved = await kit.collection();
+    const movedTo = stored();
+    record(
+      near(moved.x, sized.x + 30) && near(moved.y, sized.y + 40) && near(moved.w, sized.w) && near(moved.h, sized.h) && movedTo !== undefined && sizedTo !== undefined && movedTo.x === 42 && movedTo.y === 52 && movedTo.w === sizedTo.w && movedTo.h === sizedTo.h,
+      `dragged 30 by 40 by its header it moves that far and keeps its size (${said(sized)} to ${said(moved)}; stored ${kept()})`,
+    );
+    const everything = JSON.stringify(store.getState().collections);
+    const namesARow = [...members].filter((id) => everything.includes(id));
+    record(
+      movedTo !== undefined && Object.keys(movedTo).sort().join(' ') === 'collapsed h presentation w x y' && namesARow.length === 0,
+      `what the store keeps of a collection is where it stands and how it is presented, and none of its rows: its keys are "${movedTo === undefined ? 'nothing' : Object.keys(movedTo).sort().join(' ')}", and no note of the view is named in it (${namesARow.slice(0, 3).join(', ') || 'none'})`,
+    );
+
+    // ---- 6. The keyboard on its header moves it, resizes it and collapses it, and the field is not turned ----
+    const yawBefore = await yawNow();
+    await js(`document.getElementById('collection-head').focus(); true`);
+    press(win, 'Right');
+    await delay(400);
+    press(win, 'Down', ['alt']);
+    await delay(400);
+    const keyed = await kit.collection();
+    const keyedTo = stored();
+    const yawAfter = await yawNow();
+    record(
+      keyedTo !== undefined && movedTo !== undefined && keyedTo.x === movedTo.x + 16 && keyedTo.y === movedTo.y && keyedTo.w === movedTo.w && keyedTo.h === movedTo.h + 16 && near(keyed.x, moved.x + 16) && near(keyed.h, moved.h + 16),
+      `an arrow key on its header moves it 16 px and Alt with an arrow resizes it by 16 (${said(moved)} to ${said(keyed)}; stored ${kept()})`,
+    );
+    record(Math.abs(yawAfter - yawBefore) < 1e-9, `and those keys are the collection's own: the field is not turned by them (${yawBefore.toFixed(3)} to ${yawAfter.toFixed(3)})`);
+    press(win, 'Return');
+    await delay(600);
+    const shut = await kit.collection();
+    const shutTo = stored();
+    press(win, 'Return');
+    await delay(700);
+    const open = await kit.collection();
+    const openTo = stored();
+    record(
+      shutTo?.collapsed === true && shut.collapsed && near(shut.h, 34) && !shut.listShown && shut.expanded === 'false' && shut.count === `${members.size} notes` && shut.name === label &&
+        shutTo.w === keyedTo?.w && shutTo.h === keyedTo?.h && openTo?.collapsed === false && !open.collapsed && open.listShown && open.expanded === 'true' && near(open.w, keyed.w) && near(open.h, keyed.h),
+      `Enter on its header collapses it to the header alone, which still names the view and its exact count (${Math.round(shut.h)} px tall, "${shut.name}", "${shut.count}", the list drawn: ${shut.listShown}), and the store says so and keeps the size (${shutTo?.w} by ${shutTo?.h}, collapsed ${shutTo?.collapsed}); Enter again opens it at that size (${said(open)})`,
+    );
+    const fold = await js<{ x: number; y: number } | null>(`__t.rect('#collection-fold')`);
+    if (fold !== null) {
+      await pointer(win, [...click(fold), { type: 'move', ...PARK }]);
+      await delay(600);
+    }
+    const byButton = stored()?.collapsed;
+    if (fold !== null) {
+      await pointer(win, [...click(fold), { type: 'move', ...PARK }]);
+      await delay(600);
+    }
+    record(fold !== null && byButton === true && stored()?.collapsed === false, `its ▾ button, pressed, does the same (collapsed ${byButton}, then ${stored()?.collapsed})`);
+
+    // ---- 7. Turned away from, it is dimmed by a veil, and "collection" brings it back ----
+    const turnFrom = await js<{ x: number; y: number } | null>(`__t.blank(320)`);
+    if (turnFrom === null) {
+      record(false, 'collection: a point of the field with nothing on it, to turn from');
+    } else {
+      const before = await kit.collection();
+      const offeredBefore = await js<boolean>(`__t.shown('#to-collection')`);
+      // 290 px is about 70 degrees: still in sight, and dimmed.
+      await pointer(win, [...drag(turnFrom, { x: turnFrom.x - 290, y: turnFrom.y }, 16), { type: 'move', ...PARK }]);
+      await delay(500);
+      const away = await kit.collection();
+      const yawAway = await yawNow();
+      const offered = await js<{ x: number; y: number } | null>(`__t.shown('#to-collection') ? __t.rect('#to-collection') : null`);
+      record(
+        !offeredBefore && Math.abs(yawAway) > 1 && Math.abs(away.x - before.x) > 150 && away.veil > 0.4 && away.veil < 1 && away.opaque && !away.outOfSight && offered !== null,
+        `turning the field ${yawAway.toFixed(2)} radians carries the collection ${Math.round(away.x - before.x)} px with the desk and dims it under a veil of ${away.veil.toFixed(2)} while it stays opaque (${away.opaque}); "collection" is offered then (${offered !== null}) and was not before (${offeredBefore})`,
+      );
+      if (offered !== null) await pointer(win, [...click(offered), { type: 'move', ...PARK }]);
+      await delay(700);
+      const back = await kit.collection();
+      const on = await js<Active>(`__t.active()`);
+      record(
+        offered !== null && near(back.x, before.x) && near(back.y, before.y) && back.veil === 0 && !back.outOfSight && Math.abs((await yawNow()) - yawAway) < 1e-9 && !(await js<boolean>(`__t.shown('#to-collection')`)) && (on.on === 'search' || on.on === 'row'),
+        `"collection", pressed, brings it back in front where it stood (${said(back)}, veil ${back.veil}) without turning the field (yaw still ${yawAway.toFixed(2)}), puts the keyboard in it (on ${on.on}), and is no longer offered`,
+      );
+      await kit.face(0);
+    }
+
+    // ---- 8. A document lies over it until it is pressed, and "collection" is the way to it then ----
+    const row = (await js<RowSeen[]>(`__t.rows()`))[0];
+    if (row === undefined) {
+      record(false, 'collection: a row was in reach, to open a note from');
+    } else {
+      await pointer(win, [...click(row), { type: 'move', ...PARK }]);
+      await delay(1500);
+      const list = await kit.collection();
+      // Moved over the list, as a person drags it there.
+      store.dispatch({ type: 'move-card', noteId: row.id, x: Math.round(list.x) + 30, y: Math.round(list.y) + 60 });
+      await delay(700);
+      const at = await js<{ x: number; y: number }>(`(() => { const r = document.getElementById('nav-list').getBoundingClientRect(); return { x: r.left + 150, y: r.top + r.height / 2 }; })()`);
+      const over = (): Promise<string> => js(`(() => { const e = document.elementFromPoint(${at.x}, ${at.y}); return e ? (e.closest('.pane') ? 'document' : e.closest('.collection') ? 'collection' : 'other') : 'nothing'; })()`);
+      const covered = { over: await over(), offered: await js<{ x: number; y: number } | null>(`__t.shown('#to-collection') ? __t.rect('#to-collection') : null`), z: (await kit.collection()).z };
+      if (covered.offered !== null) await pointer(win, [...click(covered.offered), { type: 'move', ...PARK }]);
+      await delay(600);
+      const raised = { over: await over(), offered: await js<boolean>(`__t.shown('#to-collection')`), z: (await kit.collection()).z };
+      // A press on the document puts it over the list again.
+      const body = await js<{ x: number; y: number } | null>(`(() => { const p = document.querySelector('.pane[data-note-id="${row.id}"]'); if (!p) return null; const r = p.getBoundingClientRect(); for (let y = r.bottom - 12; y > r.top + 60; y -= 14) for (let x = r.right - 16; x > r.left + 8; x -= 14) { const e = document.elementFromPoint(x, y); if (e && e.closest('.pane') === p && !e.closest('a, button')) return { x, y }; } return null; })()`);
+      if (body !== null) await pointer(win, [...click(body), { type: 'move', ...PARK }]);
+      await delay(600);
+      const lowered = { over: await over(), offered: await js<boolean>(`__t.shown('#to-collection')`) };
+      record(
+        deskIds().includes(row.id) && covered.over === 'document' && covered.offered !== null && raised.over === 'collection' && !raised.offered && raised.z > covered.z && body !== null && lowered.over === 'document' && lowered.offered,
+        `a document moved over the list lies on top of it (${covered.over} at a point of the list) and "collection" is offered (${covered.offered !== null}); pressed, it puts the list over the document (${raised.over}) and goes (${!raised.offered}); and a press on the document puts the document over the list again (${lowered.over}, "collection" offered again: ${lowered.offered})`,
+      );
+
+      // ---- 9. A field narrower than 720 px shows one object in front, and stores nothing ----
+      const layoutWas = JSON.stringify(stored());
+      const deskWas = JSON.stringify(deskCardsOf(store.getState(), ws));
+      win.setBounds({ x: 0, y: 0, width: 780, height: 860 });
+      await delay(1200);
+      type Narrow = { field: number; bar: string[] | null; shown: string[]; pane: { left: number; top: number; width: number } | null; compass: boolean; overflow: boolean };
+      const narrowNow = (): Promise<Narrow> =>
+        js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const bar = document.getElementById('narrow-bar'); const shown = [...document.querySelectorAll('.pane')].filter((p) => getComputedStyle(p).visibility !== 'hidden'); const r = shown[0] ? shown[0].getBoundingClientRect() : null; return { field: f.width, bar: bar.hidden ? null : [...bar.querySelectorAll('button')].map((b) => b.dataset.object + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')), shown: shown.map((p) => p.dataset.noteId + (p.classList.contains('narrow') ? '' : ' (not narrow)')), pane: r ? { left: r.left - f.left, top: r.top - f.top, width: r.width } : null, compass: __t.shown('#compass'), overflow: document.documentElement.scrollWidth > window.innerWidth }; })()`);
+      const arrived = await narrowNow();
+      // Which object is in front when the window narrows depends on what was
+      // pressed last; each is asked for by name on the bar.
+      const toNote = await js<{ x: number; y: number } | null>(`__t.rect('#narrow-bar button[data-object="${row.id}"]')`);
+      if (toNote !== null) await pointer(win, [...click(toNote), { type: 'move', ...PARK }]);
+      await delay(800);
+      const narrow = await narrowNow();
+      const listBehind = await kit.collection();
+      const toList = await js<{ x: number; y: number } | null>(`__t.rect('#narrow-bar button[data-object="collection"]')`);
+      if (toList !== null) await pointer(win, [...click(toList), { type: 'move', ...PARK }]);
+      await delay(800);
+      const narrowList = await narrowNow();
+      const listFront = await kit.collection();
+      record(
+        arrived.bar !== null && arrived.bar.filter((b) => b.endsWith('*')).length === 1 && toNote !== null && narrow.field < 720 && narrow.bar !== null && narrow.bar.join(' ') === `collection ${row.id}*` && narrow.shown.join() === row.id && narrow.pane !== null && near(narrow.pane.left, 0) && near(narrow.pane.top, 36) && near(narrow.pane.width, narrow.field) && !listBehind.shown && !narrow.compass && !narrow.overflow,
+        `in a field ${Math.round(narrow.field)} px wide one object is in front, and a bar names the collection and each open note (${arrived.bar === null ? 'no bar' : arrived.bar.join(', ')}); the note's button puts its document in front, filling the field under the bar (${narrow.bar === null ? 'no bar' : narrow.bar.join(', ')}; drawn: ${narrow.shown.join(', ') || 'no document'}, ${narrow.pane === null ? 'nowhere' : `${Math.round(narrow.pane.width)} px wide at ${Math.round(narrow.pane.left)},${Math.round(narrow.pane.top)}`}), with the list not drawn behind it (${listBehind.shown}), the compass hidden (${narrow.compass}) and nothing wider than the window (${narrow.overflow})`,
+      );
+      record(
+        toList !== null && narrowList.bar !== null && narrowList.bar.join(' ') === `collection* ${row.id}` && narrowList.shown.length === 0 && listFront.shown && listFront.narrow && near(listFront.x, 0) && near(listFront.w, narrow.field) && listFront.count === `${members.size} notes` &&
+          JSON.stringify(stored()) === layoutWas && JSON.stringify(deskCardsOf(store.getState(), ws)) === deskWas,
+        `"Collection" on that bar puts the list in front at the field's width with the same exact count (${Math.round(listFront.w)} px, "${listFront.count}", ${narrowList.shown.length} documents drawn), and the narrow window stored nothing: the collection's place and the document's are what they were`,
+      );
+      win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
+      await delay(1200);
+      const wideAgain = await kit.collection();
+      const docAgain = await js<PaneSeen | null>(`__t.pane(${JSON.stringify(row.id)})`);
+      const cardNow = deskCardsOf(store.getState(), ws).find((c) => c.noteId === row.id);
+      record(
+        !(await js<boolean>(`__t.shown('#narrow-bar')`)) && !wideAgain.narrow && near(wideAgain.x, open.x) && near(wideAgain.w, open.w) && near(wideAgain.h, open.h) && docAgain !== null && !docAgain.narrow && cardNow !== undefined && docAgain.width === cardNow.w && docAgain.height === cardNow.h,
+        `made wide again, the bar goes and each object is at the place and size the store kept (the collection ${said(wideAgain)}, the document ${docAgain === null ? 'not drawn' : `${Math.round(docAgain.width)} by ${Math.round(docAgain.height)}`})`,
+      );
+    }
+  } finally {
+    win.setBounds({ x: 0, y: 0, width: 1320, height: 860 });
+    kit.forgetCollection(VIEW);
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    await delay(700);
+  }
+}
+
+/**
+ * FEAT-0020: a note is read in its document (TASK-0097, TASK-0098).
+ *
+ * Opening a note is reading it: the document holds the whole authored text,
+ * the verbs the sidecar allows and a tick for each open criterion, where the
+ * reader column and its strip of verbs used to hold them. What is checked is
+ * that the text is the note's own, that a failed read says so and can be
+ * tried again, that a second press made while a document is still growing
+ * lands on the row it was aimed at, and the order Escape ends things in.
+ *
+ * On a page of its own: the part starts with a reload, so no note has been
+ * read yet and a read that is made to fail is really made.
+ */
+async function recordDocument(kit: Kit): Promise<void> {
+  const { ctx, win, js, boot, record, deskIds } = kit;
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const origin = new URL(win.webContents.getURL()).origin;
+  const VIEW = 'features';
+  const sweep = async (): Promise<void> => {
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    await delay(800);
+    await pointer(win, [{ type: 'move', ...PARK }]);
+  };
+  const rows = (skip: string[] = []): Promise<RowSeen[]> => js(`__t.rows(${JSON.stringify(skip)})`);
+  const rels = new Map((await indexedNotes(origin, ws)).map((n) => [n.id, n.rel]));
+  const read = (id: string): Promise<DocumentRead | null> => js(readDocument(ws, id, rels.get(id) ?? null));
+  let blocking = false;
+  win.webContents.reload();
+  await boot();
+  await kit.fresh(VIEW);
+  ctx.focusApp(win);
+  try {
+    // ---- 1. A read that fails says so, and retry reads the note ----
+    // Every request for a note's text is refused on its way out of the page,
+    // which is what a sidecar that has stopped answering looks like to it.
+    win.webContents.session.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, done) => done({ cancel: blocking && /\/api\/render\?/.test(details.url) }));
+    const victim = (await rows())[0];
+    if (victim === undefined) {
+      record(false, 'document: a row was in reach, to open a note from');
+      return;
+    }
+    blocking = true;
+    await pointer(win, [...click(victim), { type: 'move', ...PARK }]);
+    await delay(600);
+    const failedState = await untilRead(js, victim.id);
+    type Failed = { state: string; said: string; shown: boolean; buttons: string[]; chars: number; title: string; busy: string | null };
+    const failedNow = (): Promise<Failed | null> =>
+      js(`(() => { const p = document.querySelector('.pane[data-note-id="${victim.id}"]'); if (!p) return null; const s = p.querySelector('.pane-state'); return { state: p.dataset.state || '', said: s.querySelector('p') ? s.querySelector('p').textContent : '', shown: !s.hidden && getComputedStyle(s).display !== 'none', buttons: [...s.querySelectorAll('button')].map((b) => b.textContent), chars: p.querySelector('.pane-note').textContent.length, title: p.querySelector('.pane-title').textContent, busy: p.querySelector('.pane-body').getAttribute('aria-busy') }; })()`);
+    const failed = await failedNow();
+    record(
+      failedState === 'error' && failed !== null && failed.shown && failed.said.startsWith(`${victim.id} could not be read: `) && failed.buttons.join() === 'retry,close' && failed.chars === 0 && failed.title.length > 0 && failed.busy === 'false' && deskIds().includes(victim.id),
+      `when a note's text cannot be read its document still opens, named ("${failed?.title ?? ''}"), says so in place of the text ("${failed?.said.slice(0, 70) ?? ''}") and offers ${failed?.buttons.join(' and ') || 'nothing'}; it shows no text and no "reading" line (${failed?.state ?? 'no document'}, ${failed?.chars ?? -1} characters)`,
+    );
+    blocking = false;
+    const retry = await js<{ x: number; y: number } | null>(`(() => { const b = document.querySelector('.pane[data-note-id="${victim.id}"] .pane-state button[data-act="retry"]'); if (!b) return null; b.scrollIntoView({ block: 'nearest' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+    if (retry !== null) await pointer(win, [...click(retry), { type: 'move', ...PARK }]);
+    await delay(300);
+    const retriedState = await untilRead(js, victim.id);
+    await delay(500);
+    const retried = await read(victim.id);
+    const stateGone = await js<boolean>(`!__t.shown('.pane[data-note-id="${victim.id}"] .pane-state')`);
+    record(
+      retry !== null && retriedState === 'ready' && retried !== null && retried.same && retried.chars > 20 && stateGone,
+      `"retry", pressed, reads the note, and its text takes the place of the message (${retriedState}, ${retried?.chars ?? 0} characters, the note's own: ${retried?.same ?? false})`,
+    );
+    await sweep();
+
+    // ---- 2. A row opens a document that holds the note's own text, under its title ----
+    const first = (await rows([victim.id]))[0];
+    if (first === undefined) {
+      record(false, 'document: a second row was in reach, to open a note from');
+      return;
+    }
+    const rowTitle = await js<string>(`(() => { const r = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && e.dataset.noteId === ${JSON.stringify(first.id)}); return r ? r.querySelector('.label').textContent : ''; })()`);
+    await pointer(win, [...click(first), { type: 'move', ...PARK }]);
+    await delay(400);
+    const firstState = await untilRead(js, first.id);
+    await delay(700);
+    const doc = await read(first.id);
+    const beside = await js<{ reader: boolean; strip: boolean; reading: boolean }>(`({ reader: __t.shown('#reader'), strip: __t.shown('#actuators'), reading: document.body.classList.contains('reading') })`);
+    const rel = rels.get(first.id) ?? '';
+    record(
+      firstState === 'ready' && doc !== null && doc.article && doc.same && doc.chars > 20 && rel !== '' && !beside.reader && !beside.strip && !beside.reading,
+      `a row pressed with the pointer opens ${first.id} as a document whose text is, character for character, what the sidecar renders for ${rel} (${doc?.chars ?? 0} characters, the same: ${doc?.same ?? false}); nothing is read beside the field (a reader ${beside.reader}, its strip of verbs ${beside.strip})`,
+    );
+    record(
+      doc !== null && doc.title === rowTitle && rowTitle !== '' && doc.id === first.id && doc.status !== '' && doc.faces === 0 && !doc.head.includes(rel) && !/\.md\b/.test(doc.head) && doc.label.includes(`stored at ${rel}`),
+      `its heading is the note's title, then its id and its status ("${doc?.title ?? ''}", "${doc?.id ?? ''}", "${doc?.status ?? ''}"); the path it is stored at is not in the heading, and is in the name a screen reader is given`,
+    );
+    const info = await js<{ x: number; y: number } | null>(`__t.rect('.pane[data-note-id="${first.id}"] .pane-info')`);
+    if (info !== null) await pointer(win, [...click(info), { type: 'move', ...PARK }]);
+    await delay(500);
+    const details = await js<{ shown: boolean; text: string; expanded: string | null }>(`(() => { const p = document.querySelector('.pane[data-note-id="${first.id}"]'); const d = p.querySelector('.pane-details'); return { shown: !d.hidden, text: d.textContent, expanded: p.querySelector('.pane-info').getAttribute('aria-expanded') }; })()`);
+    record(info !== null && details.shown && details.expanded === 'true' && details.text.includes('stored at') && details.text.includes(rel), `"details", pressed, is where the path is ("${details.text.slice(0, 80)}")`);
+
+    // ---- 3. Escape ends one thing at a time: the open list or details, then the focus, then the desk ----
+    // With the details open, the related list is opened too, and the keyboard
+    // is put on the document's header: in the document, and in neither panel.
+    const related = await js<{ x: number; y: number } | null>(`__t.rect('.pane[data-note-id="${first.id}"] .pane-related')`);
+    if (related !== null) await pointer(win, [...click(related), { type: 'move', ...PARK }]);
+    await delay(700);
+    type Ended = { list: boolean; details: boolean; focus: string | null; held: number; seated: number; on: Active };
+    const ended = (): Promise<Ended> =>
+      js(`(() => { const p = document.querySelector('.pane[data-note-id="${first.id}"]'); return { list: !!p && !p.querySelector('.pane-links').hidden, details: !!p && !p.querySelector('.pane-details').hidden, focus: __t.glass().focusId(), held: window.__deckDesk().length, seated: document.querySelectorAll('.field-card.seated:not(.leaving)').length, on: __t.active() }; })()`);
+    await js(`document.querySelector('.pane[data-note-id="${first.id}"] .pane-head').focus(); true`);
+    const e0 = await ended();
+    const steps: Ended[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      press(win, 'Escape');
+      await delay(700);
+      steps.push(await ended());
+    }
+    const [e1, e2, e3, e4] = steps as [Ended, Ended, Ended, Ended];
+    record(
+      related !== null && e0.list && e0.details && e0.focus === first.id && e0.held === 1 &&
+        !e1.list && e1.details && e1.focus === first.id && e1.held === 1 && /pane-related/.test(e1.on.on) &&
+        !e2.list && !e2.details && e2.focus === first.id && e2.held === 1 && /pane-info/.test(e2.on.on) &&
+        e3.focus === null && e3.held === 1 && e3.seated === 0 &&
+        e4.held === 0,
+      `with a document's related list and details both open and the keyboard on its header, Escape ends one thing each time: the list (the keyboard then on ${e1.on.on}), then the details (${e2.on.on}), then the focus, with the cards put back and the document still open (${e3.held} held, focus ${e3.focus}), then the desk (${e4.held} held); before each press: list ${e0.list}/${e1.list}/${e2.list}, details ${e0.details}/${e1.details}/${e2.details}, focus ${e0.focus}/${e1.focus}/${e2.focus}/${e3.focus}`,
+    );
+
+    // ---- 4. The two named controls do what the last two Escapes do ----
+    await pointer(win, [{ type: 'move', ...PARK }]);
+    const one = (await rows([victim.id]))[0];
+    if (one !== undefined) await pointer(win, [...click(one), { type: 'move', ...PARK }]);
+    await delay(1300);
+    const two = (await rows([victim.id]))[0];
+    if (two !== undefined) await pointer(win, [...click(two), { type: 'move', ...PARK }]);
+    await delay(1300);
+    if (one === undefined || two === undefined || deskIds().length !== 2) {
+      record(false, `document: two rows were in reach, to hold two notes (${deskIds().join(', ') || 'none held'})`);
+    } else {
+      const named = (): Promise<{ leave: boolean; sweep: boolean; focus: string | null; panes: number }> => js(`({ leave: __t.shown('#leave-focus'), sweep: __t.shown('#sweep-desk'), focus: __t.glass().focusId(), panes: document.querySelectorAll('.pane').length })`);
+      const n0 = await named();
+      const leaveAt = await js<{ x: number; y: number } | null>(`__t.rect('#leave-focus')`);
+      if (leaveAt !== null) await pointer(win, [...click(leaveAt), { type: 'move', ...PARK }]);
+      await delay(700);
+      const n1 = await named();
+      const heldAfterLeave = deskIds().length;
+      const sweepAt = await js<{ x: number; y: number } | null>(`__t.rect('#sweep-desk')`);
+      if (sweepAt !== null) await pointer(win, [...click(sweepAt), { type: 'move', ...PARK }]);
+      await delay(900);
+      const n2 = await named();
+      record(
+        n0.leave && n0.sweep && n0.focus === two.id && n0.panes === 2 && n1.focus === null && !n1.leave && n1.sweep && n1.panes === 2 && heldAfterLeave === 2 && n2.panes === 0 && deskIds().length === 0 && !n2.sweep,
+        `"put cards back" leaves the focus and closes nothing (${n1.panes} documents, focus ${n1.focus}), and is then gone while "close all" stays; "close all" closes every document (${n2.panes} left, ${deskIds().length} held)`,
+      );
+    }
+
+    // ---- 5. A second press made soon after the first lands on the row it was aimed at ----
+    // Two things could take it somewhere else. The list gains rows above the
+    // pointer as the desk fills, and unless it holds still the row aimed at
+    // has moved. And the document grows out of the row that was pressed, so
+    // for its first moments it lies over the rows beside that one. Each is
+    // measured by where a second press went.
+    type Press = { at: number; opening: boolean; covered: boolean; row: string | null; on: string };
+    type Pair = { a: RowSeen; b: RowSeen & { px: number } };
+    await js(`window.__deckPresses = []; if (!window.__deckPressWatch) { window.__deckPressWatch = true; document.addEventListener('pointerdown', (e) => { const t = e.target instanceof Element ? e.target : null; const row = t ? t.closest('.nav-row') : null; const p = document.querySelector('.pane.opening'); const r = p ? p.getBoundingClientRect() : null; window.__deckPresses.push({ at: performance.now(), opening: window.__deckGlass.isOpening(), covered: !!r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom, row: row ? row.dataset.noteId : null, on: t ? (t.closest('.pane') ? 'a document' : row ? 'a row' : String(t.className)) : 'nothing' }); }, true); } true`);
+    /** Two rows, one straight under the other, with a point toward the right end of the lower one. */
+    const pairOf = (skip: string[]): Promise<Pair | null> =>
+      js(`(() => { const rows = __t.rows(${JSON.stringify(skip)}); for (let i = 0; i + 1 < rows.length; i += 1) { const a = rows[i], b = rows[i + 1]; if (b.index !== a.index + 1) continue; const el = [...document.querySelectorAll('#nav-list .nav-row')].find((e) => !e.hidden && Number(e.dataset.index) === b.index); const r = el.getBoundingClientRect(); const px = r.right - 36; const hit = document.elementFromPoint(px, b.y); if (!hit || hit.closest('.nav-row') !== el) continue; return { a, b: { ...b, px } }; } return null; })()`);
+    /** Press the first row, and the second `between` ms after the first is let go, at `x`. What each press landed on. */
+    const twoPresses = async (pair: Pair, x: number, between: number): Promise<Press[]> => {
+      await js(`window.__deckPresses = []; true`);
+      await pointer(win, [
+        { type: 'move', x: pair.a.x, y: pair.a.y },
+        { type: 'down', x: pair.a.x, y: pair.a.y, wait: 10 },
+        { type: 'up', x: pair.a.x, y: pair.a.y, wait: between },
+        { type: 'move', x, y: pair.b.y, wait: 6 },
+        { type: 'down', x, y: pair.b.y, wait: 10 },
+        { type: 'up', x, y: pair.b.y, wait: 60 },
+      ]);
+      await delay(1600);
+      await pointer(win, [{ type: 'move', ...PARK }]);
+      return js<Press[]>(`window.__deckPresses`);
+    };
+    const used = [victim.id, first.id];
+    await sweep();
+    const pair = await pairOf(used);
+    if (pair === null) {
+      record(false, 'document: two rows, one under the other, were in reach to press one after the other');
+    } else {
+      used.push(pair.a.id, pair.b.id);
+      // 90 ms apart, the second where a row is usually pressed.
+      const presses = await twoPresses(pair, pair.b.x, 74);
+      const p2 = presses[1];
+      const growing = await js<{ cls: boolean; opening: boolean }>(`({ cls: document.querySelectorAll('.pane.opening').length > 0, opening: __t.glass().isOpening() })`);
+      record(
+        presses.length === 2 && presses[0]?.row === pair.a.id && p2 !== undefined && p2.row === pair.b.id && deskIds().join() === `${pair.a.id},${pair.b.id}` && !growing.cls && !growing.opening,
+        `a second press ${p2 === undefined ? 'never made' : `${Math.round(p2.at - (presses[0]?.at ?? p2.at))} ms after the first`} landed on the row it was aimed at (${p2?.row ?? p2?.on ?? 'no press'} for ${pair.b.id}): the list held still under the pointer while the first note's rows arrived above it, and both notes are open (${deskIds().join(', ') || 'nothing'}), with nothing still growing afterwards (${growing.cls || growing.opening})`,
+      );
+    }
+    // Sooner, and toward the row's right end: where the growing document lies
+    // over the row. Whether it did is read at the press, from the document's
+    // own box, so a press that came too late to meet it is made again.
+    let through: { pair: Pair; presses: Press[] } | null = null;
+    const gaps: string[] = [];
+    for (let attempt = 0; attempt < 4 && through === null; attempt += 1) {
+      await sweep();
+      const next = await pairOf(used);
+      if (next === null) break;
+      used.push(next.a.id, next.b.id);
+      const presses = await twoPresses(next, next.b.px, 18 + attempt * 8);
+      const second = presses[1];
+      gaps.push(second === undefined ? 'no second press' : `${Math.round(second.at - (presses[0]?.at ?? second.at))} ms, ${second.covered ? 'under the document' : second.opening ? 'beside the document' : 'no document growing'}`);
+      if (second !== undefined && second.covered) through = { pair: next, presses };
+    }
+    if (through === null) {
+      record(false, `document: a second press met the first note's document while it was growing over the row, so that it can be shown to go through it (${gaps.join('; ') || 'no rows to press'})`);
+    } else {
+      const second = through.presses[1] as Press;
+      record(
+        second.opening && second.covered && second.row === through.pair.b.id && deskIds().join() === `${through.pair.a.id},${through.pair.b.id}`,
+        `a press made ${Math.round(second.at - (through.presses[0]?.at ?? second.at))} ms into an opening, at a point the growing document lay over, went through it to the row under it (${second.row ?? second.on} for ${through.pair.b.id}) and opened that note: the desk holds ${deskIds().join(', ') || 'nothing'}`,
+      );
+    }
+
+    // ---- 6. A link inside a note's text opens the note it names, as another document ----
+    await sweep();
+    // A link to a note the view does not hold is taken first: that is the
+    // note whose card Deck has to fetch from its own index before it can read it.
+    const members = await viewMembers(origin, ws, VIEW);
+    const outside = [...rels].filter(([id]) => !members.has(id)).map(([, rel]) => rel);
+    const idAt = new Map([...rels].map(([id, rel]) => [rel, id]));
+    let followed: { from: string; href: string; rel: string; x: number; y: number; outside: boolean } | null = null;
+    for (const candidate of [first.id, victim.id, ...used.slice(2)]) {
+      const candidateRel = rels.get(candidate);
+      if (candidateRel === undefined) continue;
+      await js(openByPath(candidateRel));
+      await untilRead(js, candidate);
+      await delay(700);
+      await pointer(win, [{ type: 'move', ...PARK }]);
+      const beyond = await js<{ href: string; rel: string; x: number; y: number } | null>(linkIn(candidate, outside));
+      const link = beyond ?? (await js<{ href: string; rel: string; x: number; y: number } | null>(linkIn(candidate, null)));
+      if (link !== null) {
+        followed = { from: candidate, ...link, outside: beyond !== null };
+        break;
+      }
+      await sweep();
+    }
+    if (followed === null) {
+      record(false, 'document: one of the notes opened here has a link to another note in its text, to follow');
+    } else {
+      const address = win.webContents.getURL();
+      const before = deskIds();
+      // Not waited on for ever: a link that is not followed in the document
+      // takes the window somewhere else, and the page that was watching is gone.
+      const watched = Promise.race([js<Record<string, string[]>>(statesFor(2600)).catch(() => ({}) as Record<string, string[]>), delay(6000).then(() => ({}) as Record<string, string[]>)]);
+      await pointer(win, [...click(followed), { type: 'move', ...PARK }]);
+      const states = await watched;
+      if (win.webContents.getURL() !== address) {
+        record(false, `a link in ${followed.from}'s text, pressed, opens the note it names as another document: the window left Deck's page instead, for ${win.webContents.getURL()}`);
+        void win.loadURL(address);
+        await boot();
+        await kit.fresh(VIEW);
+      } else {
+      const after = deskIds();
+      const opened = after.find((id) => !before.includes(id)) ?? null;
+      if (opened !== null) await untilRead(js, opened);
+      const linked = opened === null ? null : await read(opened);
+      record(
+        win.webContents.getURL() === address && after.length === before.length + 1 && after.includes(followed.from) && opened !== null && opened === idAt.get(followed.rel) && linked !== null && linked.state === 'ready' && linked.same && (await js<string | null>(`__t.glass().focusId()`)) === opened,
+        `a link in ${followed.from}'s text, pressed, opens the note it names as another document (${followed.href} opened ${opened ?? 'nothing'}, ${followed.outside ? 'a note this view does not hold' : 'a note of this view'}), with that note's own text; the window stays in Deck and ${followed.from} stays open (${after.join(', ')})`,
+      );
+      // What the new document said while its text was on the way. A document
+      // says it is being read, and then holds the text; it does not say first
+      // that the note cannot be read here.
+      const passed = opened === null ? [] : (states[opened] ?? []);
+      record(
+        opened !== null && passed.length > 0 && passed.every((st) => st === 'loading' || st === 'ready' || st === '') && passed[passed.length - 1] === 'ready',
+        `while its text was being read, ${opened ?? 'the new document'} said only that (${passed.join(' then ') || 'no state seen'})${followed.outside ? '' : '; the link named a note of this view, so the case of a note the view does not hold was not made'}`,
+      );
+      }
+    }
+
+    // ---- 7. The verbs the sidecar allows, and a tick for each open criterion, are inside the document ----
+    await sweep();
+    offeredOnce ??= notesOfferedVerbs(origin, ws, 1);
+    const offered = await offeredOnce;
+    const withVerbs = offered.found[0];
+    if (withVerbs === undefined) {
+      record(false, `the sidecar offers a person verbs on at least one note of this workspace today, so the verbs in a document can be checked (${offered.asked} notes asked about)`);
+    } else {
+      await js(openByPath(withVerbs.rel));
+      const verbState = await untilRead(js, withVerbs.id);
+      let seen = await read(withVerbs.id);
+      for (let i = 0; i < 20 && (seen === null || seen.verbs.length === 0); i += 1) {
+        await delay(150);
+        seen = await read(withVerbs.id);
+      }
+      const asOffered = seen !== null && seen.verbs.length === withVerbs.actions.length && withVerbs.actions.every((a, i) => seen?.verbs[i]?.verb === a.verb && seen?.verbs[i]?.confirm === String(a.confirm) && seen?.verbs[i]?.disabled === (a.disabled || a.endpoint !== ''));
+      record(
+        verbState === 'ready' && seen !== null && asOffered && seen.actionsShown && seen.actionsInside && seen.stripVerbs === 0,
+        `the verbs the sidecar offers on ${withVerbs.id} (a ${withVerbs.type} at ${withVerbs.status}: ${withVerbs.actions.map((a) => `${a.verb}${a.confirm ? ', confirming' : ''}`).join('; ')}) are drawn inside its document, each as the sidecar's row says (${(seen?.verbs ?? []).map((v) => `${v.verb}${v.disabled ? ', disabled' : ''}${v.confirm === 'true' ? ', confirming' : ''}`).join('; ') || 'none drawn'}; shown ${seen?.actionsShown ?? false}, in the document ${seen?.actionsInside ?? false}, the document ${verbState}), and not in a strip beside the field (${seen?.stripVerbs ?? -1} there)`,
+      );
+    }
+    await sweep();
+    const unticked = ctx.notesWithAnUntickedCriterion().filter((id) => rels.has(id));
+    let ticked: { id: string; doc: DocumentRead } | null = null;
+    const tried: string[] = [];
+    for (const id of unticked.slice(0, 12)) {
+      tried.push(id);
+      await js(openByPath(rels.get(id) as string));
+      await untilRead(js, id);
+      await delay(600);
+      const got = await read(id);
+      if (got !== null && got.boxes > 0) {
+        ticked = { id, doc: got };
+        break;
+      }
+      await sweep();
+    }
+    if (ticked === null) {
+      record(false, `a note with an open criterion the sidecar addressed was found, so the ticks in a document can be checked (tried ${tried.join(', ') || 'none'} of ${unticked.length})`);
+    } else {
+      record(
+        ticked.doc.ticks === ticked.doc.boxes && ticked.doc.ticksAfterTheirBox === ticked.doc.ticks && ticked.doc.readerTicks === 0 && ticked.doc.same,
+        `each open criterion of ${ticked.id} that the sidecar addressed has a tick control beside it, inside the document's text (${ticked.doc.ticks} ticks for ${ticked.doc.boxes} open criteria, ${ticked.doc.ticksAfterTheirBox} of them straight after their box), and the text is otherwise the note's own (${ticked.doc.same})`,
+      );
+    }
+  } finally {
+    blocking = false;
+    win.webContents.session.webRequest.onBeforeRequest(null);
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    await delay(600);
+  }
+}
+
+/**
+ * FEAT-0020 on a served page, which is what a tablet loads: a page with no
+ * bridge reads a note in a document that belongs to that page alone. The
+ * application's desk is not changed by anything done there, and the page is
+ * drawn no verb and no tick, because it cannot write (ADR-0003, TASK-0057).
+ *
+ * The notes are the ones the document part found verbs and ticks on in the
+ * application's own window, so "none here" is said about notes that have them.
+ */
+async function recordServed(kit: Kit): Promise<void> {
+  const { ctx, win, js, record } = kit;
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const origin = new URL(win.webContents.getURL()).origin;
+  const VIEW = 'features';
+  await kit.fresh(VIEW);
+  const rels = new Map((await indexedNotes(origin, ws)).map((n) => [n.id, n.rel]));
+  const members = await viewMembers(origin, ws, VIEW);
+  const outside = [...rels].filter(([id]) => !members.has(id)).map(([, rel]) => rel);
+  const idAt = new Map([...rels].map(([id, rel]) => [rel, id]));
+  // One note on the application's desk, so there is a desk to leave alone.
+  const macNote = (await js<RowSeen[]>(`__t.rows()`))[0];
+  if (macNote !== undefined) {
+    await pointer(win, [...click(macNote), { type: 'move', ...PARK }]);
+    await delay(1400);
+  }
+  const page = ctx.openServedPage();
+  // Shown, as a tablet's page is, and without taking the keyboard: a window
+  // that is never shown draws no frames.
+  page.showInactive();
+  const pj = <T>(code: string): Promise<T> => page.webContents.executeJavaScript(code) as Promise<T>;
+  try {
+    await once(page, 'did-finish-load');
+    await ctx.untilBooted(page);
+    await delay(2500);
+    await pj(PAGE_HELPERS);
+    const desk = (): string => JSON.stringify({ viewDesks: store.getState().viewDesks, deskCards: store.getState().deskCards });
+    const deskBefore = desk();
+    const revisionBefore = store.getState().revision;
+    const opened = await pj<{ bridge: string; surface: string | undefined; view: string | null; count: string; panes: string[] }>(`({ bridge: typeof window.deck, surface: document.body.dataset.surface, view: window.__deckLastState ? window.__deckLastState.viewId : null, count: __t.text('#collection-count'), panes: [...document.querySelectorAll('.pane')].map((p) => p.dataset.noteId) })`);
+    const macCount = (await kit.collection()).count;
+    record(
+      opened.bridge === 'undefined' && opened.surface === 'glass' && opened.view === VIEW && opened.count === macCount && macNote !== undefined && opened.panes.join() === macNote.id,
+      `a page with no bridge opens on the same view in Glass, with the same exact count in its collection ("${opened.count}") and the application's open note as a document (${opened.panes.join(', ') || 'none'})`,
+    );
+    // The application's document may lie over the list on a smaller page.
+    const toList = await pj<{ x: number; y: number } | null>(`__t.shown('#narrow-bar') ? __t.rect('#narrow-bar button[data-object="collection"]') : __t.shown('#to-collection') ? __t.rect('#to-collection') : null`);
+    if (toList !== null) {
+      await pointer(page, click(toList));
+      await delay(800);
+    }
+    // ---- A row pressed there opens a document of that page's own ----
+    // The first row in reach whose note links, in its text, to a note this
+    // view does not hold: the link is followed below.
+    const row = await pj<RowSeen | null>(`(async () => {
+      const rows = __t.rows(); const rels = ${JSON.stringify(Object.fromEntries(rels))}; const outside = new Set(${JSON.stringify(outside)});
+      for (const row of rows.slice(0, 10)) {
+        const rel = rels[row.id]; if (!rel) continue;
+        const payload = await fetch('/deck/sidecar/${ws}/api/render?path=' + encodeURIComponent(rel)).then((r) => r.json()).catch(() => null);
+        if (!payload || typeof payload.html !== 'string') continue;
+        const d = document.createElement('div'); d.innerHTML = payload.html;
+        const has = [...d.querySelectorAll('a[href^="/docs/"]')].some((a) => { try { return outside.has(decodeURIComponent(a.getAttribute('href').slice(6).split('#')[0])); } catch (e) { return false; } });
+        if (has) return row;
+      }
+      return rows[0] || null;
+    })()`);
+    if (row === null) {
+      record(false, 'served: a row was in reach on the served page, to open a note from');
+    } else {
+      await pointer(page, [...click(row), { type: 'move', x: 4, y: 4 }]);
+      await delay(600);
+      const state = await untilRead(pj, row.id);
+      await delay(700);
+      const doc = await pj<DocumentRead | null>(readDocument(ws, row.id, rels.get(row.id) ?? null));
+      const onMac = await js<boolean>(`!!document.querySelector('.pane[data-note-id="${row.id}"]')`);
+      record(
+        state === 'ready' && doc !== null && doc.same && doc.chars > 20 && !onMac && !deskCardsOf(store.getState(), ws).some((c) => c.noteId === row.id),
+        `a row pressed on the served page opens ${row.id} there as a document with the note's own text (${doc?.chars ?? 0} characters, the same: ${doc?.same ?? false}), and it is that page's alone: the application's window draws no such document (${onMac}) and its desk does not hold it`,
+      );
+      // ---- A link in it, to a note the view does not hold, opens that note there too ----
+      const link = await pj<{ href: string; rel: string; x: number; y: number } | null>(linkIn(row.id, outside));
+      if (link === null) {
+        record(false, `served: ${row.id}'s text has a link to a note this view does not hold, to follow on the served page`);
+      } else {
+        const wanted = idAt.get(link.rel) ?? '';
+        const watched = pj<Record<string, string[]>>(statesFor(3200));
+        await pointer(page, [...click(link), { type: 'move', x: 4, y: 4 }]);
+        const states = await watched;
+        const linkedState = await untilRead(pj, wanted, 20);
+        const linked = await pj<DocumentRead | null>(readDocument(ws, wanted, link.rel));
+        record(
+          wanted !== '' && linkedState === 'ready' && linked !== null && linked.same && linked.chars > 0 && !deskCardsOf(store.getState(), ws).some((c) => c.noteId === wanted),
+          `a link in that document to ${wanted || link.href}, a note the view does not hold, pressed on the served page, opens that note there as another document with its own text (${linked === null ? 'no document' : `${linkedState}, ${linked.chars} characters, the same: ${linked.same}`}; it passed through ${(states[wanted] ?? []).join(' then ') || 'no state'}), and the application's desk does not hold it`,
+        );
+        const closeLinked = await pj<{ x: number; y: number } | null>(`__t.rect('.pane[data-note-id="${wanted}"] .pane-close')`);
+        if (closeLinked !== null) await pointer(page, [...click(closeLinked), { type: 'move', x: 4, y: 4 }]);
+        await delay(600);
+      }
+      // Its own × closes it; the × of the application's document does nothing there.
+      const closeOwn = await pj<{ x: number; y: number } | null>(`__t.rect('.pane[data-note-id="${row.id}"] .pane-close')`);
+      if (closeOwn !== null) await pointer(page, [...click(closeOwn), { type: 'move', x: 4, y: 4 }]);
+      await delay(700);
+      const ownGone = !(await pj<boolean>(`!!document.querySelector('.pane[data-note-id="${row.id}"]')`));
+      let macStays = false;
+      if (macNote !== undefined) {
+        const closeMac = await pj<{ x: number; y: number } | null>(`(() => { const b = document.querySelector('.pane[data-note-id="${macNote.id}"] .pane-close'); if (!b) return null; const r = b.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2; const e = document.elementFromPoint(x, y); return e === b ? { x, y } : null; })()`);
+        if (closeMac !== null) {
+          await pointer(page, [...click(closeMac), { type: 'move', x: 4, y: 4 }]);
+          await delay(700);
+          macStays = (await pj<boolean>(`!!document.querySelector('.pane[data-note-id="${macNote.id}"]')`)) && deskCardsOf(store.getState(), ws).some((c) => c.noteId === macNote.id);
+        }
+      }
+      record(closeOwn !== null && ownGone && macStays, `× on the page's own document closes it (${ownGone}), and × on the application's document, pressed on the served page, closes nothing: it is still drawn there and still on the application's desk (${macStays})`);
+    }
+    // ---- No verb and no tick, on the notes that have them in the application's window ----
+    offeredOnce ??= notesOfferedVerbs(origin, ws, 1);
+    const withVerbs = (await offeredOnce).found[0];
+    const candidates = ctx.notesWithAnUntickedCriterion().filter((id) => rels.has(id)).slice(0, 12);
+    let withBoxes: { id: string; doc: DocumentRead } | null = null;
+    for (const id of candidates) {
+      await pj(openByPath(rels.get(id) as string));
+      await untilRead(pj, id);
+      await delay(500);
+      const got = await pj<DocumentRead | null>(readDocument(ws, id, rels.get(id) ?? null));
+      if (got !== null && got.boxes > 0) {
+        withBoxes = { id, doc: got };
+        break;
+      }
+    }
+    let verbDoc: DocumentRead | null = null;
+    if (withVerbs !== undefined) {
+      await pj(openByPath(withVerbs.rel));
+      await untilRead(pj, withVerbs.id);
+      await delay(900);
+      verbDoc = await pj<DocumentRead | null>(readDocument(ws, withVerbs.id, withVerbs.rel));
+    }
+    const everywhere = await pj<{ verbs: number; ticks: number; noTick: number }>(`({ verbs: document.querySelectorAll('button.verb').length, ticks: document.querySelectorAll('button.tick').length, noTick: document.querySelectorAll('.no-tick').length })`);
+    record(
+      withVerbs !== undefined && verbDoc !== null && verbDoc.state === 'ready' && verbDoc.same && verbDoc.verbs.length === 0 && !verbDoc.actionsShown && withBoxes !== null && withBoxes.doc.same && withBoxes.doc.ticks === 0 && everywhere.verbs === 0 && everywhere.ticks === 0 && everywhere.noTick === 0,
+      `the served page is drawn no verb and no tick, on notes that have them in the application's window: ${withVerbs?.id ?? 'no note with verbs'} is read in full (${verbDoc?.state ?? 'not opened'}, the note's own text: ${verbDoc?.same ?? false}) with ${verbDoc?.verbs.length ?? -1} verbs (their place shown: ${verbDoc?.actionsShown ?? false}), and ${withBoxes?.id ?? 'no note with open criteria'} (the note's own text: ${withBoxes?.doc.same ?? false}) with ${withBoxes?.doc.ticks ?? -1} ticks for its ${withBoxes?.doc.boxes ?? 0} open criteria (${everywhere.verbs} verbs, ${everywhere.ticks} ticks and ${everywhere.noTick} notices about ticks anywhere on the page)`,
+    );
+    record(
+      desk() === deskBefore && store.getState().revision === revisionBefore,
+      `nothing done on the served page changed the application's desk: it is byte for byte what it was (${deskBefore.length} characters), and the store was sent no action at all (revision ${revisionBefore} to ${store.getState().revision})`,
+    );
+  } finally {
+    if (!page.isDestroyed()) page.destroy();
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    await delay(600);
+  }
+}
+
+/**
+ * FEAT-0022: the collection's members as cards, and an arrangement that is
+ * shown before it is applied and can be undone.
+ *
+ * Three claims, each read from the store or counted in the page. A preview
+ * that is withdrawn has moved nothing. An arrangement that is applied and
+ * undone leaves the desk as it was, to the byte. And with the collection
+ * drawn as cards beside an open note, a note is still one object: no note has
+ * two cards. `demos/glass-arrangements.cjs` walks the rest.
+ */
+async function recordArrange(kit: Kit): Promise<void> {
+  const { ctx, win, js, record, deskIds } = kit;
+  const { store, prepared } = ctx;
+  const ws = prepared.id;
+  const VIEW = 'features';
+  const desk = (): string => JSON.stringify(deskCardsOf(store.getState(), ws));
+  const layout = (): string => JSON.stringify(store.getState().collections[ws]?.[VIEW] ?? null);
+  type Arranging = { preview: unknown; undo: string | null; asking: unknown; shown: boolean; undoShown: boolean; focus: string | null; on: string };
+  const arranging = (): Promise<Arranging> =>
+    js(`(() => { const a = __t.glass().arrangeState(); return { preview: a.preview, undo: a.undo, asking: a.asking, shown: __t.shown('#arrange-preview'), undoShown: __t.shown('#arrange-undo'), focus: __t.glass().focusId(), on: document.activeElement ? document.activeElement.id : '' }; })()`);
+  const pressOn = async (selector: string, wait = 600): Promise<boolean> => {
+    const at = await js<{ x: number; y: number } | null>(`__t.shown(${JSON.stringify(selector)}) ? __t.rect(${JSON.stringify(selector)}) : null`);
+    if (at === null) return false;
+    await pointer(win, [...click(at), { type: 'move', ...PARK }]);
+    await delay(wait);
+    return true;
+  };
+  await kit.fresh(VIEW);
+  ctx.focusApp(win);
+  try {
+    const row = (await js<RowSeen[]>(`__t.rows()`))[0];
+    if (row === undefined) {
+      record(false, 'arrange: a row was in reach, to open a note from');
+      return;
+    }
+    await pointer(win, [...click(row), { type: 'move', ...PARK }]);
+    await delay(1400);
+    // The document and the collection are each moved by hand first, so the
+    // arrangement has something to put right and the store holds a place for
+    // both that an undo has to give back exactly.
+    const head = await js<{ x: number; y: number } | null>(`__t.head(${JSON.stringify(row.id)})`);
+    if (head !== null) await pointer(win, [...drag(head, { x: head.x + 60, y: head.y + 90 }, 8), { type: 'move', ...PARK }]);
+    await delay(600);
+    const name = await js<{ x: number; y: number } | null>(`__t.rect('#collection-name')`);
+    if (name !== null) await pointer(win, [...drag(name, { x: name.x + 24, y: name.y }, 6), { type: 'move', ...PARK }]);
+    await delay(600);
+    const placed = { desk: desk(), layout: layout() };
+    const before = await arranging();
+
+    // ---- 1. Read is shown, and Escape withdraws it: nothing has moved ----
+    const readShown = await pressOn('#arrange-read');
+    const shown = await arranging();
+    const whileShown = { desk: desk(), layout: layout() };
+    press(win, 'Escape');
+    await delay(500);
+    const withdrawn = await arranging();
+    record(
+      head !== null && name !== null && readShown && placed.layout !== 'null' && before.preview === null && shown.preview !== null && shown.shown && whileShown.desk === placed.desk && whileShown.layout === placed.layout &&
+        withdrawn.preview === null && !withdrawn.shown && desk() === placed.desk && layout() === placed.layout && deskIds().join() === row.id && withdrawn.focus === before.focus && withdrawn.undo === null,
+      `Read, pressed, is shown before anything moves (a preview: ${shown.preview !== null}, drawn: ${shown.shown}), and Escape withdraws it and does nothing else: the store's desk and the collection's place are byte for byte what they were (${placed.desk.length} and ${placed.layout.length} characters), ${row.id} is still open and the focus is what it was (${withdrawn.focus})`,
+    );
+
+    // ---- 2. Applied, then undone: the desk is the same bytes again ----
+    await pressOn('#arrange-read');
+    const applied = await pressOn('#arrange-apply', 1100);
+    const after = { desk: desk(), layout: layout(), state: await arranging() };
+    const undone = await pressOn('#arrange-undo', 1100);
+    const back = { desk: desk(), layout: layout(), state: await arranging() };
+    record(
+      applied && (after.desk !== placed.desk || after.layout !== placed.layout) && after.state.undo !== null && after.state.undoShown && undone && back.desk === placed.desk && back.layout === placed.layout && back.state.undo === null && back.state.asking === null && !back.state.undoShown && deskIds().join() === row.id,
+      `Apply moves what the preview showed (the desk changed: ${after.desk !== placed.desk}, the collection's place changed: ${after.layout !== placed.layout}) and offers "${after.state.undo ?? 'no undo'}"; Undo arrangement, pressed, puts the store's desk and the collection's place back to the same bytes (${back.desk === placed.desk} and ${back.layout === placed.layout}) and asks nothing, because nothing had been moved since`,
+    );
+
+    // ---- 3. The collection as cards, with a note open: still one object per note ----
+    const asCards = await pressOn('#collection-as-cards', 1000);
+    type Counted = { twice: string[]; cardForOpen: number; inCollection: number; both: number; refs: string[]; presentation: string | null; marked: string | null; listShown: boolean };
+    const counted = (): Promise<Counted> =>
+      js(`(() => { const n = new Map(); const all = [...document.querySelectorAll('.field-card:not(.leaving)')]; for (const e of all) n.set(e.dataset.noteId, (n.get(e.dataset.noteId) || 0) + 1); const l = window.__deckCollection.layout(); return { twice: [...n].filter(([, c]) => c > 1).map(([id]) => id), cardForOpen: n.get(${JSON.stringify(row.id)}) || 0, inCollection: all.filter((e) => e.classList.contains('in-collection')).length, both: all.filter((e) => e.classList.contains('in-collection') && e.classList.contains('seated')).length, refs: [...document.querySelectorAll('.grid-ref')].map((e) => e.dataset.noteId), presentation: l ? l.presentation : null, marked: document.getElementById('field-cards').dataset.inCollection || null, listShown: document.getElementById('nav-list').offsetParent !== null }; })()`);
+    const cards = await counted();
+    const storedAs = (store.getState().collections[ws]?.[VIEW] as { presentation?: string } | undefined)?.presentation;
+    record(
+      asCards && storedAs === 'cards' && cards.presentation === 'cards' && cards.inCollection > 0 && cards.marked === String(cards.inCollection) && cards.twice.length === 0 && cards.cardForOpen === 0 && cards.both === 0 && deskIds().join() === row.id,
+      `with ${row.id} open and the collection drawn as cards (${cards.inCollection} of them; the store says "${storedAs}"), a note is still one object: no note has two cards (${cards.twice.join(', ') || 'none'}), the open note has none (${cards.cardForOpen}), and no card is both the collection's and gathered round the document (${cards.both})`,
+    );
+    const asTable = await pressOn('#collection-as-table', 900);
+    const table = await counted();
+    record(
+      asTable && (store.getState().collections[ws]?.[VIEW] as { presentation?: string } | undefined)?.presentation === 'table' && table.inCollection === 0 && table.twice.length === 0 && table.listShown,
+      `as a table again, no card is left in the collection (${table.inCollection}) and the list is back (${table.listShown})`,
+    );
+  } finally {
+    store.dispatch({ type: 'clear-desk', scope: 'workspace' });
+    kit.forgetCollection(VIEW);
+    await delay(700);
+  }
 }
 
 async function recordThrow(kit: Kit): Promise<void> {
@@ -3322,7 +4632,15 @@ async function recordOrbit(kit: Kit): Promise<void> {
     const landed = deskCardsOf(store.getState(), prepared.id).some((c) => c.noteId === dot.id);
     record(landed, `landing on the dot for ${dot.id} lifts it onto the desk`);
     record(store.getState().noteId === dot.id, 'and opens it: the store, and so the address, name it');
-    record(await js<boolean>(`!!document.querySelector('.pane[data-note-id="${dot.id}"]')`), 'and it is a pane, read by the reader Deck has');
+    // Until FEAT-0020 "read by the reader Deck has": the column beside the
+    // field. In the orbit too the note is read in its document.
+    let orbitDoc: PaneSeen | null = null;
+    for (let i = 0; i < 15 && (orbitDoc === null || orbitDoc.state !== 'ready'); i += 1) {
+      if (i > 0) await delay(150);
+      orbitDoc = await js<PaneSeen | null>(`__t.pane(${JSON.stringify(dot.id)})`);
+    }
+    const orbitReader = await js<boolean>(`__t.shown('#reader') || __t.shown('#actuators')`);
+    record(orbitDoc !== null && orbitDoc.state === 'ready' && orbitDoc.chars > 0 && !orbitReader, `and it is a document that holds the note's text, with no reader column in the orbit either (${orbitDoc === null ? 'no document' : `${orbitDoc.state}, ${orbitDoc.chars} characters`}; a reader shown: ${orbitReader})`);
     // Show this in the field: from a pane, the orbit flies to it.
     await js(`__t.glass().faceFront()`);
     await delay(1300);

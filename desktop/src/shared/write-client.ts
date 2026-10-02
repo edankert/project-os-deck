@@ -84,6 +84,15 @@ export interface TickRequest {
  */
 export const IMPLEMENTED_ENDPOINTS: readonly string[] = [''];
 
+/**
+ * The endpoint the sidecar's rows for a design named until 2026-09-12, when
+ * the cockpit dropped it and a design's verdict became an ordinary transition.
+ * No row names it today. It is kept because the sentence below is about it,
+ * and because the smoke run puts it on a row to drive the guard that no row
+ * the sidecar sends can reach any more.
+ */
+export const DESIGN_VERDICT_ENDPOINT = '/api/design/verdict';
+
 /** Whether Deck can actually carry out the verb this row names (ISS-0039). */
 export function canPerform(row: Pick<ActuatorRow, 'endpoint'>): boolean {
   return IMPLEMENTED_ENDPOINTS.includes(row.endpoint ?? '');
@@ -103,7 +112,7 @@ export function canPerform(row: Pick<ActuatorRow, 'endpoint'>): boolean {
  */
 export function elsewhere(row: Pick<ActuatorRow, 'verb' | 'endpoint'>): string {
   if (canPerform(row)) return '';
-  if (row.endpoint === '/api/design/verdict') {
+  if (row.endpoint === DESIGN_VERDICT_ENDPOINT) {
     return `${row.verb} is a design verdict, and a verdict has to name the revision it judged. Deck holds no design revisions, so this decision is recorded in the cockpit.`;
   }
   return `${row.verb} is recorded through ${row.endpoint}, which Deck does not have a surface for yet; make this decision in the cockpit.`;
