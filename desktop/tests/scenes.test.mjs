@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
-const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy, actsFor, savedByOther } = load('shared/scenes.js');
+const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy, actsFor, savedByOther, ReadingWait } = load('shared/scenes.js');
 
 const WS = 'aaaa1111bbbb2222';
 const list = { x: 12, y: 12, w: 340, h: 700, collapsed: false, presentation: 'cards' };
@@ -269,6 +269,71 @@ test('a reading position under a heading whose words occur twice goes back to th
   const s = reduce(desk(), { type: 'save-scene', name: 'Twice', ...extras, anchors: { 'ISS-0001': anchor, 'ISS-0002': { heading: 'Steps', occurrence: 'second', past: 5, fraction: 0.1 } } });
   const kept = normaliseState(JSON.parse(JSON.stringify(persistable(s)))).desks[deskKey(WS, 'Twice')].anchors;
   assert.deepEqual(kept, { 'ISS-0001': anchor, 'ISS-0002': { heading: 'Steps', past: 5, fraction: 0.1 } });
+});
+
+// The wait for documents' text, driven the way the window drives it: a document whose text is in takes its
+// position and says whether its heading was found.
+function waits(onDesk = () => true) {
+  const wait = new ReadingWait(onDesk);
+  const read = (noteId, moved = false) => {
+    const kept = wait.take(noteId);
+    if (kept !== null && kept.counted) wait.placed(noteId, moved);
+    return kept === null ? null : kept.anchor;
+  };
+  return { wait, read };
+}
+const at = (heading) => ({ heading, occurrence: 1, past: 0, fraction: 0 });
+
+test('putting documents back where they were read is always answered, once, a request for nothing included', () => {
+  // A scene with no document that had text: nothing to wait for, and it is answered before `begin` returns.
+  const { wait, read } = waits();
+  const answers = [];
+  wait.begin({}, (moved) => answers.push(moved));
+  assert.deepEqual(answers, [[]], 'a request for nothing is answered at once, so the scene can still say it reopened');
+  assert.equal(wait.waiting, false);
+  // Two documents: answered when the second is placed, with the one whose heading was not found, and only once.
+  wait.begin({ A: at('Goal'), B: at('Scope') }, (moved) => answers.push(moved));
+  assert.equal(wait.waiting, true);
+  assert.deepEqual(read('A', true), at('Goal'));
+  assert.equal(answers.length, 1, 'not answered while a document is still unread');
+  assert.deepEqual(read('B'), at('Scope'));
+  assert.deepEqual(answers, [[], ['A']]);
+  assert.equal(wait.waiting, false);
+  wait.settle();
+  assert.equal(read('A'), null, 'a document is put back once');
+  assert.equal(answers.length, 2, 'and the wait ending afterwards answers nobody a second time');
+});
+
+test('a second request while the first is waiting answers the first, and its unread documents keep their place', () => {
+  const { wait, read } = waits((noteId) => noteId !== 'GONE');
+  const scene = [];
+  const arrival = [];
+  // A scene is reopened: three documents, one read at once, one slow, one whose note is gone.
+  wait.begin({ A: at('Goal'), SLOW: at('Scope'), GONE: at('Steps') }, (moved) => scene.push(moved));
+  read('A', true);
+  assert.deepEqual(scene, []);
+  // A note arrives from another window before the scene's wait is over.
+  wait.begin({ NEW: at('Result') }, (moved) => arrival.push(moved));
+  assert.deepEqual(scene, [['A']], 'the scene is answered now, with what it had found, and is not dropped');
+  assert.deepEqual(arrival, []);
+  assert.deepEqual(read('NEW'), at('Result'));
+  assert.deepEqual(arrival, [[]]);
+  // The scene's slow document is read later: it still goes where the scene had it, and nobody is told twice.
+  assert.deepEqual(read('SLOW'), at('Scope'));
+  assert.equal(read('GONE'), null, 'a note with no document on the desk keeps no place');
+  assert.deepEqual([scene.length, arrival.length], [1, 1]);
+  // The wait running out is the same: the unread document keeps its place until it leaves the desk.
+  wait.begin({ SLOW: at('Goal'), OTHER: at('Scope') }, () => undefined);
+  wait.settle();
+  wait.forget('OTHER');
+  assert.deepEqual(read('SLOW'), at('Goal'));
+  assert.equal(read('OTHER'), null);
+  // A position asked for now replaces one kept from an earlier wait.
+  wait.begin({ X: at('Goal') }, () => undefined);
+  wait.settle();
+  wait.begin({ X: at('Scope') }, () => undefined);
+  assert.deepEqual(read('X'), at('Scope'));
+  assert.equal(read('X'), null);
 });
 
 test('a reopened scene says what is not as it was saved, and nothing about the count', () => {

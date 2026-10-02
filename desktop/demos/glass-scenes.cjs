@@ -481,6 +481,15 @@ module.exports = async function (d) {
   await sweep();
   await t.view('issues');
 
+  // A scene with no note open has no document to put back where it was read, and still says it reopened.
+  await sweep();
+  await saveAs('Nothing open');
+  await t.clickOn('#scene-open', 300);
+  // What it says waits on Deck's index answering which notes exist, so it is looked for rather than timed.
+  for (let i = 0; i < 40; i += 1) { await d.delay(250); if (/reopened/.test(await t.text('#status'))) break; }
+  const emptyScene = { said: await t.text('#status'), held: await js('window.__deckDesk()'), open: (await state()).deskName, report: await js(`document.getElementById('scene-report').hidden`) };
+  check(emptyScene.held.length === 0 && emptyScene.open === 'Nothing open' && /scene "Nothing open" reopened/.test(emptyScene.said) && emptyScene.report, 'a scene saved with no note open reopens and says so in one line: with no document to put back where it was read, the scene is still answered', emptyScene);
+
   // ---- 9. Reload, and the served page ----
   win.webContents.reload();
   await new Promise((resolve) => win.webContents.once('did-finish-load', resolve));

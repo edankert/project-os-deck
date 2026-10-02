@@ -209,6 +209,94 @@ export function scrollTopForAnchor(anchor: ReadingAnchor, headings: readonly Hea
   return { top: Math.round(clamp01(anchor.fraction) * limit), moved: true };
 }
 
+/**
+ * Reading positions waiting for their documents' text.
+ *
+ * A reopened scene, and a note that arrived from another window, each ask
+ * for documents to be put back where they were being read, and each is told
+ * once which of them could not be found by their heading. A document's text
+ * may come later than the request, or never. This keeps who is waiting for
+ * what, with no window and no clock: the window scrolls the documents and
+ * owns the timer.
+ *
+ * Two rules live here. Every request is answered: one that asks for nothing
+ * is answered at once, so a scene with no document that had text still gets
+ * its message. And a request made while an earlier one is still waiting
+ * does not drop the earlier one: that one is answered first, with what was
+ * found so far, and its documents still unread keep their place for when
+ * they are read.
+ */
+export class ReadingWait {
+  private wanted = new Map<string, ReadingAnchor>();
+  /**
+   * Positions whose wait ended with the document still on the desk and
+   * unread: a document that could not be read and offers a retry. The
+   * position is kept for as long as the document is, so a retry pressed a
+   * minute later still opens it where it was being read.
+   */
+  private readonly owed = new Map<string, ReadingAnchor>();
+  private moved: string[] = [];
+  private done: ((moved: string[]) => void) | null = null;
+
+  /** `onDesk` says whether a note still has a document on the desk: one that is gone never gets text, and keeps no place. */
+  constructor(private readonly onDesk: (noteId: string) => boolean) {}
+
+  /** Whether a request has not been answered yet. */
+  get waiting(): boolean {
+    return this.done !== null;
+  }
+
+  /** Ask for these documents to be put back. `done` is told which could not be found by their heading, once. */
+  begin(anchors: Readonly<Record<string, ReadingAnchor>>, done: (moved: string[]) => void): void {
+    this.settle();
+    this.moved = [];
+    this.wanted = new Map(Object.entries(anchors));
+    // A position asked for now replaces one kept from an earlier wait.
+    for (const noteId of this.wanted.keys()) this.owed.delete(noteId);
+    this.done = done;
+    if (this.wanted.size === 0) this.settle();
+  }
+
+  /**
+   * The position a document goes to now that its text is on screen, or null
+   * when none is kept for it. `counted` is false for one whose wait ended
+   * before it could be read: it still goes to its place, and the answer has
+   * been given without it.
+   */
+  take(noteId: string): { anchor: ReadingAnchor; counted: boolean } | null {
+    const wanted = this.wanted.get(noteId);
+    if (wanted !== undefined) {
+      this.wanted.delete(noteId);
+      return { anchor: wanted, counted: true };
+    }
+    const owed = this.owed.get(noteId);
+    if (owed === undefined) return null;
+    this.owed.delete(noteId);
+    return { anchor: owed, counted: false };
+  }
+
+  /** A counted document was put at its place; `moved` when its heading was not found. The last one answers the request. */
+  placed(noteId: string, moved: boolean): void {
+    if (this.done === null) return;
+    if (moved) this.moved.push(noteId);
+    if (this.wanted.size === 0) this.settle();
+  }
+
+  /** The wait is over: the request is answered with what was found, and documents still unread keep their place. */
+  settle(): void {
+    for (const [noteId, anchor] of this.wanted) if (this.onDesk(noteId)) this.owed.set(noteId, anchor);
+    this.wanted.clear();
+    const done = this.done;
+    this.done = null;
+    done?.([...this.moved]);
+  }
+
+  /** A document left the desk: no place is kept for it. */
+  forget(noteId: string): void {
+    this.owed.delete(noteId);
+  }
+}
+
 export interface SceneReportInput {
   scene: Desk;
   /** The scene's notes that exist in the workspace now. */
