@@ -2323,6 +2323,23 @@ function showsNote(noteId: string): boolean {
 }
 
 /**
+ * Why a desk drawn as Spread cards cannot show a note, or null when it can.
+ * Spread draws the notes its view lists, and a note kept on every view; any
+ * other note on its desk is counted and not drawn (decision 7). A note handed
+ * to such a desk would be in the store and on no screen, so the handoff is
+ * refused, with the reason in words the person at the other window can act on.
+ */
+function notListedHere(noteId: string): string | null {
+  if (glass.isActive() || panel === 'note' || panel === 'needs-you') return null;
+  // The view's own list has not arrived yet: nothing can be said about it.
+  if (currentCards.length === 0) return null;
+  if (currentCards.some((c) => c.noteId === noteId)) return null;
+  const state = host.state();
+  if (isOnEveryView(state, state.workspaceId, noteId)) return null;
+  return `its view, ${currentView?.label ?? 'the one it shows'}, does not list ${noteId}, and a desk drawn as cards shows only the notes its view lists`;
+}
+
+/**
  * A note arrived from another window. This window answers once: when it is
  * showing the note, or after a few seconds that it could not. Until it
  * answers, the window it came from keeps it.
@@ -2334,10 +2351,12 @@ async function receiveArrival(raw: unknown): Promise<void> {
   let shown = false;
   for (let attempt = 0; attempt < 35 && !shown; attempt += 1) {
     shown = showsNote(arrival.noteId);
+    // A desk that will never draw it says so at once, not after the wait.
+    if (!shown && notListedHere(arrival.noteId) !== null) break;
     if (!shown) await new Promise((r) => setTimeout(r, 100));
   }
   if (!shown) {
-    await host.acknowledgeArrival({ id: arrival.id, ok: false, error: 'this window did not draw it' });
+    await host.acknowledgeArrival({ id: arrival.id, ok: false, error: notListedHere(arrival.noteId) ?? 'this window did not draw it' });
     return;
   }
   await host.acknowledgeArrival({ id: arrival.id, ok: true });
