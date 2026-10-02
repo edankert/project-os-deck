@@ -556,7 +556,9 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
    (the two undos) were out of sight with nothing to say so. Under 1500 px the bar is two rows, at a
    height that is fixed for the window's width, so a button appearing still does not resize the field. */
 @media (max-width: 1500px) {
-  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: center; row-gap: 3px; overflow-x: hidden; overflow-y: auto; }
+  /* Rows start at the top and the first row never moves: the owed count is first in the bar so that it
+     keeps its place, and centring the rows moved it up whenever a second row appeared. */
+  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: flex-start; padding-top: 5px; row-gap: 4px; overflow-x: hidden; overflow-y: auto; }
   #scene-back { max-width: 26em; overflow: hidden; text-overflow: ellipsis; }
 }
 .field-bar .spacer { flex: 1 1 auto; }

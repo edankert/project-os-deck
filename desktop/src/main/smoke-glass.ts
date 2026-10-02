@@ -946,12 +946,23 @@ async function recordPanes(kit: Kit): Promise<void> {
     startA !== undefined && movedA !== undefined && Math.abs(movedA.x - startA.x - 40) <= 2 && Math.abs(movedA.y - startA.y - 100) <= 2,
     `a pane dragged by its header lands where it was released (${startA?.x},${startA?.y} to ${movedA?.x},${movedA?.y})`,
   );
+  // A hundred pixels down, the document's resize corner lies under the compass in a window under 1500 px
+  // wide: the bar above the field is two rows there since FEAT-0023, and the field that much shorter. A
+  // corner under the compass cannot be pressed until the document is moved, so it is moved up by the
+  // keyboard, as a person would, before it is resized. (The drag above also raised it over the other pane.)
+  await js(`document.querySelector('.pane[data-note-id="${paneA}"] .pane-head').focus(); true`);
+  press(win, 'Up', ['shift']);
+  await delay(500);
   // Dragged further left than its width allows, so it stops at the minimum.
-  const handle = await js<{ x: number; y: number; width: number }>(`(() => { const p = document.querySelector('.pane[data-note-id="${paneA}"]'); const r = p.querySelector('.pane-resize').getBoundingClientRect(); return { x: r.left + 5, y: r.top + 5, width: p.getBoundingClientRect().width }; })()`);
+  const handle = await js<{ x: number; y: number; width: number; under: boolean }>(`(() => { const p = document.querySelector('.pane[data-note-id="${paneA}"]'); const h = p.querySelector('.pane-resize'); const r = h.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + 5, r.top + 5); return { x: r.left + 5, y: r.top + 5, width: p.getBoundingClientRect().width, under: hit !== h }; })()`);
   await pointer(win, drag(handle, { x: handle.x - (handle.width - 280) - 60, y: handle.y + 20 }, 8));
   await delay(600);
   const sized = deskCard(paneA);
-  record(sized?.w === 280, `a pane resized narrower stops at the stated minimum width (${handle.width} to ${sized?.w})`);
+  record(!handle.under && sized?.w === 280, `a pane resized narrower stops at the stated minimum width (${handle.width} to ${sized?.w}${handle.under ? '; its resize corner was under something else and could not be pressed' : ''})`);
+  // And back down to where it was dropped, which is where the checks below expect it.
+  await js(`document.querySelector('.pane[data-note-id="${paneA}"] .pane-head').focus(); true`);
+  press(win, 'Down', ['shift']);
+  await delay(500);
   // Stack: drop B's header onto A's header; it snaps below it.
   const a = deskCard(paneA);
   const headB = await headOf(paneB);
@@ -1272,6 +1283,25 @@ async function recordKeys(kit: Kit): Promise<void> {
     await delay(300);
     jumped = { from, first, later: await js<number>(`__t.yaw()`) };
     break;
+  }
+  if (jumped.from === jumped.first) {
+    // This view had no such row within twelve: its notes that still need somebody are few and all in
+    // front. That depends on the notes of the day, and the check does not. Features is a view whose middle
+    // band is always populated, so the same search is made there.
+    await kit.view('features');
+    await delay(600);
+    await js(`(() => { const r = [...document.querySelectorAll('#nav-list .nav-row')].find((x) => !x.hidden); if (r) r.focus(); return true; })()`);
+    for (let i = 0; i < 60; i += 1) {
+      const from = await js<number>(`__t.yaw()`);
+      press(win, 'Down');
+      await delay(120);
+      const first = await js<number>(`__t.yaw()`);
+      const onCard = await js<boolean>(`!!(document.activeElement && document.activeElement.classList.contains('nav-row') && document.activeElement.dataset.noteId && __t.where(document.activeElement.dataset.noteId))`);
+      if (!onCard || Math.abs(first - from) < 0.05) continue;
+      await delay(300);
+      jumped = { from, first, later: await js<number>(`__t.yaw()`) };
+      break;
+    }
   }
   for (let i = 0; i < 10; i += 1) {
     if (await js<boolean>(`!!document.querySelector('.field-card.highlight, .nav-row.highlight')`)) break;
@@ -2866,7 +2896,9 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     record(drawn().join() === (e ?? '') && /1 note on every view stayed/.test(said), `Escape puts back this view's own notes and leaves the note on every view, and says so (${drawn().join(', ')}; "${said}")`);
 
     // ---- 8. A desk panel keeps its view, and a throw onto it lands there ----
-    store.dispatch({ type: 'put-on-desk', noteId: 'ISS-0008', x: 30, y: 30, viewId: 'issues' });
+    // An issue that is on no desk yet: the one kept on every view above cannot also be put on one view's desk.
+    const panelNote = (await js<string | null>(`[...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].map((r) => r.dataset.noteId).find((n) => n.startsWith('ISS-') && n !== ${JSON.stringify(e)} && n !== ${JSON.stringify(o)}) || null`)) ?? 'ISS-0008';
+    store.dispatch({ type: 'put-on-desk', noteId: panelNote, x: 30, y: 30, viewId: 'issues' });
     const deskPanel = ctx.createWindow('satellite', `deck://${ws}/issues?panel=desk`, 'desk');
     deskPanel.setBounds({ x: 1330, y: 0, width: 520, height: 420 });
     try {
@@ -2875,14 +2907,14 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
       await delay(1500);
       await view('features');
       const panelDesk = (await deskPanel.webContents.executeJavaScript(`window.__deckDesk()`)) as string[];
-      record(panelDesk.includes('ISS-0008') && store.getState().viewId === 'features', `a desk panel opened on Issues still draws the Issues desk after the focus window switches to Features (${panelDesk.join(', ')})`);
-      const moveFrom = (await deskPanel.webContents.executeJavaScript(`(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === 'ISS-0008'); if (!c) return null; const r = c.getBoundingClientRect(); return { x: r.left + 30, y: r.top + 12 }; })()`)) as { x: number; y: number } | null;
-      const wasAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === 'ISS-0008');
+      record(panelDesk.includes(panelNote) && store.getState().viewId === 'features', `a desk panel opened on Issues still draws the Issues desk after the focus window switches to Features (${panelDesk.join(', ')})`);
+      const moveFrom = (await deskPanel.webContents.executeJavaScript(`(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(panelNote)}); if (!c) return null; const r = c.getBoundingClientRect(); return { x: r.left + 30, y: r.top + 12 }; })()`)) as { x: number; y: number } | null;
+      const wasAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === panelNote);
       if (moveFrom !== null) {
         await pointer(deskPanel, drag(moveFrom, { x: moveFrom.x + 90, y: moveFrom.y + 50 }, 8));
         await delay(700);
       }
-      const nowAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === 'ISS-0008');
+      const nowAt = viewCardsOf(store.getState(), ws, 'issues').find((c) => c.noteId === panelNote);
       record(moveFrom !== null && wasAt !== undefined && nowAt !== undefined && (nowAt.x !== wasAt.x || nowAt.y !== wasAt.y) && viewCardsOf(store.getState(), ws, 'features').length === 0, `a card dragged in that panel moves on the Issues desk (${wasAt?.x},${wasAt?.y} to ${nowAt?.x},${nowAt?.y})`);
       // A note handed to a desk window on another view is put on that desk and DRAWN there, marked as not in
       // that view. Until FEAT-0023 it was only put in the store, where no window drew it, and this check
@@ -3266,9 +3298,25 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     // 7. Zoom adds detail to a card that is not in the quiet band.
     await kit.face(0);
     await delay(400);
-    const detail = await js<{ before: string | null; after: string | null } | null>(
-      `(() => { const c = document.querySelector('.field-card[data-band="mid"]'); return c ? { before: c.dataset.detail, after: null } : null; })()`,
-    );
+    const midCard = (): Promise<{ before: string | null; after: string | null } | null> =>
+      js<{ before: string | null; after: string | null } | null>(
+        `(() => { const c = document.querySelector('.field-card[data-band="mid"]'); return c ? { before: c.dataset.detail, after: null } : null; })()`,
+      );
+    // The cards are dealt a moment after the field faces the front, and this view may hold no note in the
+    // middle band on a given day: Features always does. Neither is what the check is about.
+    let detail = await midCard();
+    for (let i = 0; i < 20 && detail === null; i += 1) {
+      await delay(150);
+      detail = await midCard();
+    }
+    if (detail === null) {
+      await kit.view('features');
+      await kit.face(0);
+      for (let i = 0; i < 20 && detail === null; i += 1) {
+        await delay(150);
+        detail = await midCard();
+      }
+    }
     if (detail === null) {
       ctx.skip('a mid-band card is drawn, to zoom into');
     } else {

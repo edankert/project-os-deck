@@ -7,7 +7,7 @@ status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-11
+updated: 2026-10-02
 source: ["Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "Edwin, ledger 2026-09-07 on TST-0015: 'one of the thing around relationships / dependencies I think is a little bit of an issue that I don't see this at the moment'"]
 goal: "In Glass a click lifts a note out of the field onto the desk Deck already has, and while it is held the notes joined to it take the front band, so the relationships a person cannot see today are the first thing they see."
 requirements: []
@@ -63,6 +63,8 @@ Three words are used throughout. The **field** is the cylinder of cards that [[F
 - Design: [[DES-0002-The-Glass-Cockpit]], reviewed in [[REFERENCE-DES-0002-REVIEW]]
 
 ## Where this stands
+
+**Amended 2026-10-02 (TASK-0104, [[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]): the ghost is gone.** This note's scope and acceptance say the slot a lifted note left "stays ghosted". Edwin dropped that on 2026-09-12: a note is drawn once, and an outline of it in the field was a second drawing. A lifted note is now its document, nothing is drawn in the place it left, and the field keeps that place so the card returns to it. The lines above are kept as the record of what was built on 2026-09-10. [[DES-0002-The-Glass-Cockpit]] carries the same amendment.
 
 **2026-09-10: built.** A click lifts a note into a pane and ghosts its slot; its neighbourhood takes the front band from inside and outside the view, the label says so and the owed count keeps its place; two held notes mark and count what they share; ×, ⌥× and Escape put back; the desk is Spread's. All three tasks are done. What is left is Edwin's walk, [[TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives]].
 

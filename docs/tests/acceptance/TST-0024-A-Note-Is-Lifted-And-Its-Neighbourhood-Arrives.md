@@ -6,7 +6,7 @@ title: "A note is lifted in Glass, its neighbourhood arrives at the front, two n
 status: active
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-11
+updated: 2026-10-02
 source: ["[[PHASE-0002-Glass]]", "[[FEAT-0010-Lifting-A-Note]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -56,12 +56,14 @@ Deck runs from this repository; there is no installed application yet.
 
 **Amended 2026-09-11 ([[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]).** A lift now puts the issue in the middle of the field with its feature, its tests and its backlinks on a ring around it. Press Escape once to take it out of the middle; then watch the field turn and find the neighbourhood in the front band, as the steps above describe. Where a step says to press esc to empty the desk, press it twice.
 
+**Amended 2026-10-02 (TASK-0104, [[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]).** The slot a lifted note leaves is no longer drawn: Edwin dropped the ghost on 2026-09-12, and a note is drawn once. Where a step says "its ghosted slot should fill again", the note's card returns to the place the field kept for it, and no other card moves. A lifted note is also a full document now, with its text, and not a pane beside a reader ([[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]).
+
 ## Expected results
 
 - Lifting an issue brings its feature, its tests and its backlinks to the front band, and the field turns to face them.
 - The front band's label changes to say it shows what is joined to the held note, and the owed count is drawn in the same place as before.
 - A second issue from the same feature makes the feature carry the shared mark, and the desk bar counts it.
-- × returns one note to its ghosted slot; esc returns every note; a background click does nothing.
+- × returns one note's card to the place the field kept for it (no outline stood there meanwhile); esc returns every note; a background click does nothing.
 - The desk holds the same notes in Spread and in Glass.
 - A neighbour can be reached and lifted from the navigator by keyboard alone.
 
