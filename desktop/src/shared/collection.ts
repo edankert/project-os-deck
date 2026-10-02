@@ -64,15 +64,22 @@ function side(value: unknown, least: number): number | null {
   return Math.min(COLLECTION_MAX_SIDE, Math.max(least, Math.round(value)));
 }
 
+/** No place further out than this is kept: no desk is this large, and a state file cannot then hold 1e300. */
+export const COLLECTION_MAX_PLACE = 100000;
+
 function place(value: unknown): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-  return Math.max(0, Math.round(value));
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  // Infinity is a number here, and is held to the bound like any other that
+  // is too large: it is what `1e999` in a state file reads as.
+  return Math.max(0, Math.min(COLLECTION_MAX_PLACE, Math.round(value)));
 }
 
 /**
  * A layout read from the store or from a state file: whole and in range, or
  * null. A layout missing a number is no layout, and the caller falls back to
- * the default rather than guessing half of one.
+ * the default rather than guessing half of one. A place too far out is not
+ * missing: it is held to `COLLECTION_MAX_PLACE`, and drawn inside the field
+ * like any other (`fitCollection`).
  */
 export function normaliseCollection(value: unknown): CollectionLayout | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
@@ -104,6 +111,40 @@ export function fitCollection(layout: CollectionLayout, field: { width: number; 
     x: Math.max(0, Math.min(layout.x, field.width - w)),
     y: Math.max(0, Math.min(layout.y, field.height - drawn)),
   };
+}
+
+/**
+ * A fold made on a page that arranges nothing: the served page, which draws
+ * the collection where the Mac put it. `stored` is the Mac's fold when the
+ * person on that page folded or opened the list, and `collapsed` is what they
+ * chose. It is that page's own and the store is told nothing.
+ */
+export interface OwnFold {
+  stored: boolean;
+  collapsed: boolean;
+}
+
+/**
+ * Whether the collection is drawn collapsed. The page's own fold stands while
+ * the Mac's is what it was when the page chose; once the Mac folds or opens
+ * the list, the page follows the Mac again. Without this a list the Mac had
+ * collapsed could not be opened on a tablet at all, and the list is the only
+ * way there to a note with no card in the field.
+ */
+export function foldShown(stored: boolean, own: OwnFold | null): boolean {
+  return own !== null && own.stored === stored ? own.collapsed : stored;
+}
+
+/**
+ * What the keys do on the collection's header, for its label: only what works
+ * on this page and in this field. A page that cannot arrange moves and
+ * resizes nothing, and in a narrow field the collection fills the field and
+ * is neither moved nor folded. '' when no key does anything.
+ */
+export function headKeysText(at: { canArrange: boolean; narrow: boolean; collapsed: boolean }): string {
+  if (at.narrow) return '';
+  const fold = `Enter ${at.collapsed ? 'opens' : 'collapses'} it`;
+  return at.canArrange ? `arrow keys move it, Alt and arrows resize it, ${fold}` : fold;
 }
 
 /** What a collection's Cards presentation needs to know to lay its members out. */
@@ -239,59 +280,142 @@ export function filterText(query: string, filters: Filters): string {
   return parts.join(' · ');
 }
 
+/** What differs in a list with every single note left out of it. */
+export type ListChange = 'headings-reordered' | 'rows-reordered' | 'heading-changed';
+
 export interface MembershipChange {
   /** In the new result and not in the one on screen. */
   added: string[];
   /** On screen and not in the new result. */
   removed: string[];
-  /** In both, with a different status, owed mark or heading. */
+  /** In both, standing somewhere else: under another heading, or held under another note. */
+  moved: string[];
+  /** In both and where it was, showing something else: a status, a title, an owed mark, progress, a severity. */
   changed: string[];
+  /**
+   * What differs beyond the notes counted above: the headings are in another
+   * order, the notes that stayed under a heading are in another order there,
+   * or a heading itself differs (it reads differently, or one with no rows
+   * arrived or left).
+   */
+  list: ListChange[];
 }
 
-function describe(groups: readonly CardGroup[]): Map<string, string> {
-  const out = new Map<string, string>();
-  const walk = (group: CardGroup, cards: readonly CardModel[]): void => {
+/**
+ * Each note of a result by where it stands and by what it shows. A note
+ * listed more than once (needing a person, and under its own heading) is
+ * described by all its rows, in an order that does not depend on the list's.
+ */
+function describe(groups: readonly CardGroup[]): Map<string, { place: string; shows: string }> {
+  const rows = new Map<string, { places: string[]; shows: string[] }>();
+  const walk = (group: CardGroup, cards: readonly CardModel[], under: string): void => {
     for (const card of cards) {
-      out.set(card.noteId, `${out.get(card.noteId) ?? ''}|${group.key}|${card.status}|${card.owed}|${card.title}`);
-      if (card.children.length > 0) walk(group, card.children);
+      const row = rows.get(card.noteId) ?? { places: [], shows: [] };
+      row.places.push(`${group.key}\n${under}`);
+      // Everything the card carries, which is what a row, a card and a face
+      // draw from, but not the notes it holds: each of those is described itself.
+      row.shows.push(JSON.stringify({ ...card, children: [] }));
+      rows.set(card.noteId, row);
+      if (card.children.length > 0) walk(group, card.children, card.noteId);
     }
   };
-  for (const group of groups) walk(group, group.cards);
-  return out;
+  for (const group of groups) walk(group, group.cards, '');
+  return new Map([...rows].map(([id, row]) => [id, { place: row.places.sort().join('\n\n'), shows: row.shows.sort().join('\n') }]));
+}
+
+/** What a heading's own row says: its name and its marks. */
+function heading(group: CardGroup): string {
+  return `${group.label}\n${group.needsHuman}\n${group.suppressed}`;
+}
+
+/** The notes under a heading in the list's order, top to bottom, keeping only those asked for. */
+function orderUnder(group: CardGroup, keep: ReadonlySet<string>): string {
+  const out: string[] = [];
+  const walk = (cards: readonly CardModel[]): void => {
+    for (const card of cards) {
+      if (keep.has(card.noteId)) out.push(card.noteId);
+      if (card.children.length > 0) walk(card.children);
+    }
+  };
+  walk(group.cards);
+  return out.join('\n');
 }
 
 /**
  * How a refreshed result differs from the one on screen. The list is not
  * re-ordered under a pointer: the difference is announced, and applied when
  * the person asks (REQ-0001).
+ *
+ * Anything a row shows counts, and so does the order of the rows and of the
+ * headings. A difference that is not counted here is never announced, and the
+ * list then keeps the old rows with nothing to press: a result that changed
+ * only its order, a note's progress or the note another is held under was
+ * left that way.
  */
 export function membershipChange(before: readonly CardGroup[], after: readonly CardGroup[]): MembershipChange {
   const a = describe(before);
   const b = describe(after);
   const added: string[] = [];
   const removed: string[] = [];
+  const moved: string[] = [];
   const changed: string[] = [];
-  for (const [id, signature] of b) {
-    if (!a.has(id)) added.push(id);
-    else if (a.get(id) !== signature) changed.push(id);
+  const stayed = new Set<string>();
+  for (const [id, now] of b) {
+    const was = a.get(id);
+    if (was === undefined) added.push(id);
+    else if (was.place !== now.place) moved.push(id);
+    else {
+      stayed.add(id);
+      if (was.shows !== now.shows) changed.push(id);
+    }
   }
   for (const id of a.keys()) if (!b.has(id)) removed.push(id);
-  return { added, removed, changed };
+  // The headings and the order, compared over what is in both results: a
+  // heading that arrived with a note under it is already said by that note.
+  const list: ListChange[] = [];
+  const was = new Map(before.map((g) => [g.key, g]));
+  const now = new Map(after.map((g) => [g.key, g]));
+  const inBoth = (groups: readonly CardGroup[], other: ReadonlyMap<string, CardGroup>): CardGroup[] => groups.filter((g) => other.has(g.key));
+  if (inBoth(before, now).map((g) => g.key).join('\n') !== inBoth(after, was).map((g) => g.key).join('\n')) list.push('headings-reordered');
+  if (inBoth(after, was).some((g) => orderUnder(was.get(g.key) as CardGroup, stayed) !== orderUnder(g, stayed))) list.push('rows-reordered');
+  const empty = (groups: readonly CardGroup[], other: ReadonlyMap<string, CardGroup>): boolean => groups.some((g) => !other.has(g.key) && g.cards.length === 0);
+  if (inBoth(after, was).some((g) => heading(was.get(g.key) as CardGroup) !== heading(g)) || empty(before, now) || empty(after, was)) list.push('heading-changed');
+  return { added, removed, moved, changed, list };
 }
 
+/** How many notes a change counts: the number the announcement gives, and the one the field's chip gives. */
 export function changeCount(change: MembershipChange): number {
-  return change.added.length + change.removed.length + change.changed.length;
+  return change.added.length + change.removed.length + change.moved.length + change.changed.length;
 }
 
-/** The announcement: what will change when the person applies it. '' when nothing will. */
+/** Whether applying the refreshed result would show anything else: a note counted, or the list's order or headings. */
+export function anyChange(change: MembershipChange): boolean {
+  return changeCount(change) > 0 || change.list.length > 0;
+}
+
+const LIST_CHANGE_TEXT: Record<ListChange, string> = {
+  'headings-reordered': 'the order of the headings changed',
+  'rows-reordered': 'the order of the rows changed',
+  'heading-changed': 'a heading changed',
+};
+
+/**
+ * The announcement: what will change when the person applies it, in words
+ * that say what to look for. '' when nothing will.
+ */
 export function changeText(change: MembershipChange): string {
-  const parts: string[] = [];
-  if (change.added.length > 0) parts.push(`${change.added.length} added`);
-  if (change.removed.length > 0) parts.push(`${change.removed.length} removed`);
-  if (change.changed.length > 0) parts.push(`${change.changed.length} changed`);
+  const said: string[] = [];
   const n = changeCount(change);
-  if (n === 0) return '';
-  return `${n} ${n === 1 ? 'note' : 'notes'} changed: ${parts.join(', ')}`;
+  if (n > 0) {
+    const parts: string[] = [];
+    if (change.added.length > 0) parts.push(`${change.added.length} added`);
+    if (change.removed.length > 0) parts.push(`${change.removed.length} removed`);
+    if (change.moved.length > 0) parts.push(`${change.moved.length} moved in the list`);
+    if (change.changed.length > 0) parts.push(`${change.changed.length} changed what ${change.changed.length === 1 ? 'it shows' : 'they show'}`);
+    said.push(`${n} ${n === 1 ? 'note' : 'notes'} changed: ${parts.join(', ')}`);
+  }
+  for (const what of change.list) said.push(LIST_CHANGE_TEXT[what]);
+  return said.join('; ');
 }
 
 /**

@@ -40,6 +40,13 @@ const PROJECT_OS_ID = /\b(?:FEAT|TASK|REQ|ISS|CHG|ADR|RISK|TST|REL|PHASE|WF|PLAN
 const ID_PREFIX = /^([A-Z]{2,6}-\d{3,4})(?:-|$)/;
 /** A cross-repository reference, `project-id#ID` (the cockpit's ADR-0024). */
 const CROSS_REPO = /^[a-z0-9][a-z0-9-]*#/;
+/**
+ * A frontmatter line that begins a top-level key, and the key as written. A
+ * key may hold spaces (`verified by:`), which YAML allows and a vault uses.
+ */
+const TOP_LEVEL_KEY = /^([A-Za-z_](?:[\w -]*[\w-])?):/;
+/** A list item written at the margin, with no indent: it belongs to the key above it. */
+const LIST_ITEM_AT_MARGIN = /^-(?:\s|$)/;
 
 /** The cockpit's `_LINK_BEARING_FRONTMATTER_FIELDS`. */
 export const LINK_BEARING_FIELDS: ReadonlySet<string> = new Set([
@@ -116,15 +123,18 @@ export function linksIn(text: string): Array<{ target: string; offset: number; f
   const out: Array<{ target: string; offset: number; field: string | null }> = [];
   const frontmatterEnd = frontmatterLength(text);
   // Which top-level key each line of the frontmatter belongs to: a key's own
-  // line, and the indented lines under it, such as the items of a list.
+  // line, and the lines under it, such as the items of a list. An item may be
+  // indented or may start at the margin (`tasks:` and then `- "[[TASK-0001]]"`
+  // under it): both are the same list in YAML. Read as no key, the links of
+  // a list at the margin were shown as plain links.
   const keyAt: Array<{ from: number; to: number; key: string | null }> = [];
   if (frontmatterEnd > 0) {
     let at = 0;
     let current: string | null = null;
     for (const line of text.slice(0, frontmatterEnd).split('\n')) {
-      const top = /^([A-Za-z_][\w-]*):/.exec(line);
+      const top = TOP_LEVEL_KEY.exec(line);
       if (top !== null) current = top[1] ?? null;
-      else if (!/^\s/.test(line)) current = null;
+      else if (!/^\s/.test(line) && !LIST_ITEM_AT_MARGIN.test(line)) current = null;
       keyAt.push({ from: at, to: at + line.length, key: current });
       at += line.length + 1;
     }
@@ -145,7 +155,7 @@ export function linksIn(text: string): Array<{ target: string; offset: number; f
     let lineStart = 0;
     const block = text.slice(0, frontmatterEnd);
     for (const line of block.split('\n')) {
-      const top = /^([A-Za-z_][\w-]*):/.exec(line);
+      const top = TOP_LEVEL_KEY.exec(line);
       if (top !== null) key = top[1] ?? null;
       if (key !== null && LINK_BEARING_FIELDS.has(key)) {
         const spans = [...line.matchAll(WIKILINK)].map((w) => [w.index ?? 0, (w.index ?? 0) + w[0].length]);

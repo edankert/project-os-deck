@@ -23,6 +23,7 @@ import {
   type AnchorRow,
   type CollectionLayout,
   type CollectionSummary,
+  type OwnFold,
   type ScrollAnchor,
   type CardGrid,
   type Presentation,
@@ -32,7 +33,9 @@ import {
   countText,
   defaultCollectionLayout,
   fitCollection,
+  foldShown,
   gridText,
+  headKeysText,
   rowOfMember,
   scrollTopFor,
   scrollTopForFirst,
@@ -130,6 +133,8 @@ export class CollectionView {
   private shift = { x: 0, y: 0, opacity: 1, visible: true };
   /** A drag or a resize in progress, drawn before the store hears of it. */
   private live: CollectionLayout | null = null;
+  /** The fold a person chose on a page that cannot arrange: that page's own, and the store is not told. */
+  private ownFold: OwnFold | null = null;
   private onTop = false;
   /** The pointer's height on screen while it is over the list, else null. */
   private pointerY: number | null = null;
@@ -172,10 +177,23 @@ export class CollectionView {
     return this.active;
   }
 
-  /** The layout the collection is drawn with: a drag in progress, else the store's, else the default; fitted to the field. */
+  /**
+   * The layout the collection is drawn with: a drag in progress, else the
+   * store's, else the default; fitted to the field. Folded or open as this
+   * page chose, on a page that keeps its own fold.
+   */
   layout(): CollectionLayout {
     const base = this.live ?? this.hooks.stored() ?? defaultCollectionLayout(this.field);
-    return fitCollection(base, this.field);
+    return fitCollection(this.ownFold === null ? base : { ...base, collapsed: this.folded(base.collapsed) }, this.field);
+  }
+
+  /** Whether the collection is drawn collapsed, given the store's fold: as this page chose, while its choice stands. */
+  private folded(stored: boolean): boolean {
+    // The Mac folded or opened the list since this page chose. Its fold is
+    // followed again, and the page's choice is over: it does not come back
+    // when the Mac's fold returns to what it was.
+    if (this.ownFold !== null && this.ownFold.stored !== stored) this.ownFold = null;
+    return foldShown(stored, this.ownFold);
   }
 
   /**
@@ -244,9 +262,12 @@ export class CollectionView {
     el.filter.textContent = model.filter === '' ? '' : `narrowed: ${model.filter}`;
     el.filter.hidden = model.filter === '';
     el.root.setAttribute('aria-label', `${model.name}: ${countText(model.summary)}${model.filter === '' ? '' : `, narrowed to ${model.filter}`}`);
+    // The label names the keys that work here and no others: a served page
+    // said "arrow keys move it" of a collection it cannot move.
+    const keys = headKeysText({ canArrange: this.hooks.canArrange(), narrow: this.narrow !== null, collapsed: l.collapsed });
     el.head.setAttribute(
       'aria-label',
-      `${model.name}, ${countText(model.summary)}${model.filter === '' ? '' : `, narrowed to ${model.filter}`}: arrow keys move it, Alt and arrows resize it, Enter ${l.collapsed ? 'opens' : 'collapses'} it`,
+      `${model.name}, ${countText(model.summary)}${model.filter === '' ? '' : `, narrowed to ${model.filter}`}${keys === '' ? '' : `: ${keys}`}`,
     );
     const collapsed = l.collapsed && this.narrow === null;
     el.fold.setAttribute('aria-expanded', String(!collapsed));
@@ -567,10 +588,15 @@ export class CollectionView {
     return this.anchor?.id ?? null;
   }
 
-  /** Put the keyboard on the collection's header: where focus goes when the row it would return to is gone. */
-  focusHead(): void {
+  /**
+   * Put the keyboard on the collection's header: where focus goes when the
+   * row it would return to is gone or is not on screen. False when the header
+   * did not take it, which is when the collection itself is out of sight.
+   */
+  focusHead(): boolean {
     this.raise();
     this.el.head.focus({ preventScroll: true });
+    return document.activeElement === this.el.head;
   }
 
   /** Bring it above the documents, as a press on it does. */
@@ -596,12 +622,20 @@ export class CollectionView {
 
   /** Collapse to the header, or open again at the size and the row it had. */
   toggleCollapsed(): void {
-    if (!this.hooks.canArrange() || this.narrow !== null) return;
-    const l = this.hooks.stored() ?? defaultCollectionLayout(this.field);
+    if (this.narrow !== null) return;
+    const stored = this.hooks.stored() ?? defaultCollectionLayout(this.field);
+    const l = { ...stored, collapsed: this.folded(stored.collapsed) };
     // The list's row is kept only when it is the list that is on screen: as
     // cards the list is not laid out, and has no row to measure.
     if (!l.collapsed && l.presentation === 'table') this.keepAnchor();
-    this.commit({ ...l, collapsed: !l.collapsed });
+    if (this.hooks.canArrange()) this.commit({ ...l, collapsed: !l.collapsed });
+    else {
+      // A served page arranges nothing on the Mac's desk, and the list is
+      // still its only way to a note with no card: the fold is this page's
+      // own. It changes what this page shows and the store is told nothing.
+      this.ownFold = { stored: stored.collapsed, collapsed: !l.collapsed };
+      this.place(this.field, this.shift, this.narrow);
+    }
     if (l.collapsed && l.presentation === 'table') {
       // The list was not laid out while it was collapsed; scroll once it is.
       requestAnimationFrame(() => this.restoreWhenLaidOut());
@@ -696,12 +730,15 @@ export class CollectionView {
       this.live = { ...start, x: Math.max(0, drawn.x + dx), y: Math.max(0, drawn.y + dy) };
       this.place(this.field, this.shift, this.narrow);
     };
-    const end = (e: PointerEvent): void => {
+    const finish = (): void => {
       head.removeEventListener('pointermove', move);
       head.removeEventListener('pointerup', end);
       head.removeEventListener('pointercancel', end);
       document.removeEventListener('keydown', cancel, true);
       this.el.root.classList.remove('dragging');
+    };
+    const end = (e: PointerEvent): void => {
+      finish();
       const live = this.live;
       if (!moved || live === null || e.type === 'pointercancel') {
         this.live = null;
@@ -710,15 +747,18 @@ export class CollectionView {
       }
       this.commit(live);
     };
-    // Escape during the drag puts it back, and the key goes no further: it
-    // must not also leave the focus or sweep the desk.
+    // Escape during the drag ends the drag, as it does for a document's
+    // header (glass.ts, `grabPane`): the collection is back where it was, and
+    // whatever the pointer does until it is let go moves nothing and stores
+    // nothing. Left listening, the next move of a hand still on the button
+    // began the drag again and the release stored it. The key goes no
+    // further: it must not also leave the focus or sweep the desk.
     const cancel = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape' || !moved) return;
       e.preventDefault();
       e.stopPropagation();
-      moved = false;
+      finish();
       this.live = null;
-      this.el.root.classList.remove('dragging');
       this.place(this.field, this.shift, this.narrow);
     };
     head.addEventListener('pointermove', move);
@@ -746,10 +786,14 @@ export class CollectionView {
       };
       this.place(this.field, this.shift, this.narrow);
     };
-    const end = (e: PointerEvent): void => {
+    const finish = (): void => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', end);
       handle.removeEventListener('pointercancel', end);
+      document.removeEventListener('keydown', cancel, true);
+    };
+    const end = (e: PointerEvent): void => {
+      finish();
       const live = this.live;
       if (live === null || e.type === 'pointercancel') {
         this.live = null;
@@ -758,9 +802,22 @@ export class CollectionView {
       }
       this.commit(live);
     };
+    // Escape while the corner is held cancels the resize: the size goes back
+    // and the corner is let go of, as a drag of the header is. The key goes
+    // no further. Unhandled, it reached Glass's own Escape, which left the
+    // focus or closed every note while the collection stayed half resized.
+    const cancel = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      finish();
+      this.live = null;
+      this.place(this.field, this.shift, this.narrow);
+    };
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', end);
     handle.addEventListener('pointercancel', end);
+    document.addEventListener('keydown', cancel, true);
   }
 
   /** The keyboard's way to do what the pointer does on the header: move, resize and collapse. */

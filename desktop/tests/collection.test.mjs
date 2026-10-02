@@ -7,11 +7,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
+import { El, loadWeb, standInPage } from './stand-in-page.mjs';
 
 const {
-  COLLECTION_MIN_WIDTH, COLLECTION_MIN_HEIGHT, COLLECTION_MAX_SIDE, COLLECTION_HEAD_HEIGHT,
-  defaultCollectionLayout, normaliseCollection, fitCollection, memberIds, summarise, countText, filterText,
-  membershipChange, changeCount, changeText, removedSelectionText, anchorAt, anchorUnder, anchorsFrom, scrollTopForFirst, steadyOrder, scrollTopFor, nearestSurvivor,
+  COLLECTION_MIN_WIDTH, COLLECTION_MIN_HEIGHT, COLLECTION_MAX_SIDE, COLLECTION_MAX_PLACE, COLLECTION_HEAD_HEIGHT,
+  defaultCollectionLayout, normaliseCollection, fitCollection, foldShown, headKeysText, memberIds, summarise, countText, filterText,
+  membershipChange, changeCount, anyChange, changeText, removedSelectionText, anchorAt, anchorUnder, anchorsFrom, scrollTopForFirst, steadyOrder, scrollTopFor, nearestSurvivor,
 } = load('shared/collection.js');
 const { reduce, initialState, normaliseState, persistable, collectionOf, DESK_ACTIONS, isRendererAction } = load('shared/store-state.js');
 const { servedState, TABLET_LOCAL_ACTIONS } = load('shared/served-state.js');
@@ -27,6 +28,8 @@ function opened(view = 'issues') {
   return state;
 }
 const LAYOUT = { x: 40, y: 30, w: 420, h: 600, collapsed: false, presentation: 'table' };
+/** A refreshed result that is the result on screen. */
+const NO_CHANGE = { added: [], removed: [], moved: [], changed: [], list: [] };
 
 test('the members of a collection are every note its groups hold, each once, children included, in list order', () => {
   const groups = [
@@ -70,16 +73,96 @@ test('a refreshed result is compared by note: added, removed, and changed in pla
   const before = [group('a', [card('A'), card('B'), card('C', { children: [card('C1')] })])];
   const after = [group('a', [card('A'), card('C', { status: 'fixed', children: [card('C1')] }), card('D')])];
   const change = membershipChange(before, after);
-  assert.deepEqual(change, { added: ['D'], removed: ['B'], changed: ['C'] });
+  assert.deepEqual(change, { added: ['D'], removed: ['B'], moved: [], changed: ['C'], list: [] });
   assert.equal(changeCount(change), 3);
-  assert.equal(changeText(change), '3 notes changed: 1 added, 1 removed, 1 changed');
+  assert.equal(changeText(change), '3 notes changed: 1 added, 1 removed, 1 changed what it shows');
   // The same result again is no change, so nothing is announced.
-  assert.deepEqual(membershipChange(before, before), { added: [], removed: [], changed: [] });
+  assert.deepEqual(membershipChange(before, before), NO_CHANGE);
   assert.equal(changeText(membershipChange(before, before)), '');
+  assert.equal(anyChange(membershipChange(before, before)), false);
+  // The same result read again is not the same objects: it is compared by what it holds.
+  assert.deepEqual(membershipChange(before, JSON.parse(JSON.stringify(before))), NO_CHANGE);
   // A note moved to another heading, or newly owed, is a change even with the same status.
-  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('b', [card('A')])]).changed, ['A']);
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('b', [card('A')])]).moved, ['A']);
   assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A', { owed: true })])]).changed, ['A']);
-  assert.equal(changeText({ added: [], removed: ['B'], changed: [] }), '1 note changed: 1 removed');
+  assert.equal(changeText({ ...NO_CHANGE, removed: ['B'] }), '1 note changed: 1 removed');
+});
+
+test('a refreshed result in another order is a change, and says which order', () => {
+  // The rows under one heading, reversed: no note is counted, and there is still something to apply.
+  const rows = membershipChange([group('a', [card('A'), card('B'), card('C')])], [group('a', [card('C'), card('B'), card('A')])]);
+  assert.deepEqual(rows, { ...NO_CHANGE, list: ['rows-reordered'] });
+  assert.equal(changeCount(rows), 0);
+  assert.equal(anyChange(rows), true);
+  assert.equal(changeText(rows), 'the order of the rows changed');
+  // The notes one note holds, in another order, are rows too.
+  const held = membershipChange([group('a', [card('P', { children: [card('T1'), card('T2')] })])], [group('a', [card('P', { children: [card('T2'), card('T1')] })])]);
+  assert.deepEqual(held, { ...NO_CHANGE, list: ['rows-reordered'] });
+  // The headings, swapped, with every row where it was under its own.
+  const headings = membershipChange([group('a', [card('A')]), group('b', [card('B')])], [group('b', [card('B')]), group('a', [card('A')])]);
+  assert.deepEqual(headings, { ...NO_CHANGE, list: ['headings-reordered'] });
+  assert.equal(anyChange(headings), true);
+  assert.equal(changeText(headings), 'the order of the headings changed');
+  // A note listed under two headings is not said to have moved when the headings swap.
+  const twice = membershipChange([group('needs', [card('A')]), group('b', [card('A'), card('B')])], [group('b', [card('A'), card('B')]), group('needs', [card('A')])]);
+  assert.deepEqual(twice, { ...NO_CHANGE, list: ['headings-reordered'] });
+  // Both, with a note that changed: the count is of notes, and each order is said after it.
+  const both = membershipChange(
+    [group('a', [card('A'), card('B')]), group('b', [card('C')])],
+    [group('b', [card('C', { status: 'fixed' })]), group('a', [card('B'), card('A')])],
+  );
+  assert.equal(changeText(both), '1 note changed: 1 changed what it shows; the order of the headings changed; the order of the rows changed');
+  // A note that arrives or leaves between two rows does not make the rows that stayed "reordered".
+  assert.deepEqual(membershipChange([group('a', [card('A'), card('C')])], [group('a', [card('A'), card('B'), card('C')])]), { ...NO_CHANGE, added: ['B'] });
+  assert.deepEqual(membershipChange([group('a', [card('A'), card('B'), card('C')])], [group('a', [card('A'), card('C')])]), { ...NO_CHANGE, removed: ['B'] });
+});
+
+test('a note whose row or card shows something else is a change: progress, severity, a title alone', () => {
+  const one = (was, now) => membershipChange([group('a', [card('A', was), card('B')])], [group('a', [card('A', now), card('B')])]);
+  for (const [was, now, what] of [
+    [{ progress: { done: 1, total: 5 } }, { progress: { done: 4, total: 5 } }, 'progress'],
+    [{ severity: 'low' }, { severity: 'high' }, 'severity'],
+    [{ title: 'Before' }, { title: 'After' }, 'the title alone'],
+    [{ subtitle: null }, { subtitle: 'said in a line' }, 'the line under the title'],
+    [{ owed: true, owedVerb: 'accept' }, { owed: true, owedVerb: 'verify' }, 'what is owed'],
+    [{ stale: false }, { stale: true }, 'a walk gone stale'],
+    [{ frontmatter: { role: 'hero' } }, { frontmatter: { role: 'villain' } }, 'a property a face shows'],
+  ]) {
+    const change = one(was, now);
+    assert.deepEqual(change, { ...NO_CHANGE, changed: ['A'] }, what);
+    assert.equal(changeCount(change), 1, what);
+    assert.equal(changeText(change), '1 note changed: 1 changed what it shows', what);
+  }
+  const three = membershipChange(
+    [group('a', [card('A', { severity: 'low' }), card('B', { title: 'b' }), card('C', { progress: null })])],
+    [group('a', [card('A', { severity: 'high' }), card('B', { title: 'B' }), card('C', { progress: { done: 0, total: 2 } })])],
+  );
+  assert.equal(changeText(three), '3 notes changed: 3 changed what they show');
+});
+
+test('a note held under another note than before has moved, and is counted once', () => {
+  // T was held under P and is now held under Q, under the same heading.
+  const change = membershipChange(
+    [group('a', [card('P', { children: [card('T')] }), card('Q')])],
+    [group('a', [card('P'), card('Q', { children: [card('T')] })])],
+  );
+  assert.deepEqual(change, { ...NO_CHANGE, moved: ['T'] });
+  assert.equal(changeText(change), '1 note changed: 1 moved in the list');
+  // Moved and showing something else: one note, said as moved.
+  const also = membershipChange([group('a', [card('A')]), group('b', [card('B')])], [group('a', []), group('b', [card('B'), card('A', { status: 'fixed' })])]);
+  assert.deepEqual(also, { ...NO_CHANGE, moved: ['A'] });
+  assert.equal(changeCount(also), 1);
+});
+
+test('a heading that reads differently, or an empty one that arrived or left, is a change', () => {
+  const renamed = membershipChange([group('a', [card('A')])], [group('a', [card('A')], { label: 'Another name' })]);
+  assert.deepEqual(renamed, { ...NO_CHANGE, list: ['heading-changed'] });
+  assert.equal(changeText(renamed), 'a heading changed');
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A')], { needsHuman: true })]).list, ['heading-changed']);
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A')]), group('b', [])]).list, ['heading-changed']);
+  assert.deepEqual(membershipChange([group('a', [card('A')]), group('b', [])], [group('a', [card('A')])]).list, ['heading-changed']);
+  // A heading that arrives with a note under it is said by that note, once.
+  assert.deepEqual(membershipChange([group('a', [card('A')])], [group('a', [card('A')]), group('b', [card('B')])]), { ...NO_CHANGE, added: ['B'] });
 });
 
 test('a selected note that left the result is named, and its open document is said to stay', () => {
@@ -220,6 +303,33 @@ test('a note listed under two headings is kept by the heading its row was under'
   assert.equal(scrollTopFor(anchor, grown.slice(0, 2)), 20);
 });
 
+test('a redrawn list is held by the row under its own heading, in a list that is scrolled down', () => {
+  // The list is scrolled well down, so no answer here is hidden by the stop
+  // at the top: a row matched by its note alone gives another number.
+  const rows = [
+    { id: null, top: 0, group: 'deck:held' },
+    { id: 'B', top: 30, group: 'deck:held' },
+    { id: 'C', top: 60, group: 'deck:held' },
+    { id: null, top: 400, group: 'g:high' },
+    { id: 'A', top: 430, group: 'g:high' },
+    { id: 'B', top: 460, group: 'g:high' },
+    { id: 'C', top: 490, group: 'g:high' },
+  ];
+  // The pointer rests on B under its own heading; the list is scrolled to 440.
+  const at = anchorsFrom(rows, 440, 470);
+  assert.deepEqual(at, [{ id: 'B', offset: -20, group: 'g:high' }, { id: 'C', offset: -50, group: 'g:high' }]);
+  // Four rows arrive above that heading. B's row under it is the one kept where it was.
+  const grown = [...rows.slice(0, 3), { id: null, top: 90, group: 'deck:joined' }, { id: 'D', top: 120, group: 'deck:joined' }, ...rows.slice(3).map((r) => ({ ...r, top: r.top + 120 }))];
+  assert.equal(scrollTopForFirst(at, grown), 560, 'not 10, which is where the same note stands on the desk');
+  // B leaves its own heading and is still on the desk: the row below it, under that heading, is held instead.
+  const left = grown.filter((r) => !(r.id === 'B' && r.group === 'g:high')).map((r) => (r.id === 'C' && r.group === 'g:high' ? { ...r, top: 580 } : r));
+  assert.equal(scrollTopForFirst(at, left), 530, 'not 10: B on the desk is another place in the list');
+  // Neither is under that heading any more: the first one's row elsewhere is better than losing the place.
+  assert.equal(scrollTopForFirst(at, grown.slice(0, 3)), 10);
+  assert.equal(scrollTopForFirst(at, []), null);
+  assert.equal(scrollTopForFirst([], grown), null);
+});
+
 test('a view with nothing stored draws the default collection, down the left of the field', () => {
   const field = { width: 996, height: 780 };
   const layout = defaultCollectionLayout(field);
@@ -273,6 +383,58 @@ test('a layout is clamped to what can be read, and one that is not whole is igno
   assert.equal(reduce(initialState(), { type: 'set-collection', layout: LAYOUT }).collections[WS], undefined);
 });
 
+test('a place too far out is held to a bound, so a state file cannot keep 1e300', () => {
+  assert.equal(COLLECTION_MAX_PLACE, 100000);
+  const far = normaliseCollection({ ...LAYOUT, x: 1e12, y: 1e300 });
+  assert.deepEqual(far, { ...LAYOUT, x: COLLECTION_MAX_PLACE, y: COLLECTION_MAX_PLACE });
+  // The bound itself and one short of it are kept as they are; one past it is not.
+  assert.equal(normaliseCollection({ ...LAYOUT, x: COLLECTION_MAX_PLACE }).x, COLLECTION_MAX_PLACE);
+  assert.equal(normaliseCollection({ ...LAYOUT, x: COLLECTION_MAX_PLACE - 1 }).x, COLLECTION_MAX_PLACE - 1);
+  assert.equal(normaliseCollection({ ...LAYOUT, y: COLLECTION_MAX_PLACE + 1 }).y, COLLECTION_MAX_PLACE);
+  // `1e999` in a state file reads as Infinity: held to the bound, not thrown away with the size beside it.
+  const read = JSON.parse('{"x":1e999,"y":-1e999,"w":420,"h":600,"collapsed":true,"presentation":"cards"}');
+  assert.equal(read.x, Infinity);
+  assert.deepEqual(normaliseCollection(read), { x: COLLECTION_MAX_PLACE, y: 0, w: 420, h: 600, collapsed: true, presentation: 'cards' });
+  // The other way a place stops at the field's own edge, as it did.
+  assert.equal(normaliseCollection({ ...LAYOUT, x: -1e300 }).x, 0);
+  // Through the store and out to the state file: what is written is the bound.
+  let state = reduce(opened(), { type: 'set-collection', layout: { ...LAYOUT, x: 1e300, y: Infinity } });
+  assert.deepEqual(collectionOf(state, WS, 'issues'), { ...LAYOUT, x: COLLECTION_MAX_PLACE, y: COLLECTION_MAX_PLACE });
+  const written = JSON.stringify(persistable(state).collections);
+  assert.ok(!/e\+|null/.test(written), written);
+  state = normaliseState({ workspaceId: WS, viewId: 'issues', collections: { [WS]: { issues: { ...LAYOUT, x: 1e300 } } } });
+  assert.equal(collectionOf(state, WS, 'issues').x, COLLECTION_MAX_PLACE);
+  // It is still drawn inside the field.
+  assert.equal(fitCollection(far, { width: 1400, height: 900 }).x, 1400 - LAYOUT.w);
+  // A place that is not a number at all is still no layout.
+  assert.equal(normaliseCollection({ ...LAYOUT, x: NaN }), null);
+});
+
+test('a page that cannot arrange keeps its own fold, until the Mac folds or opens the list', () => {
+  // Nothing chosen on the page: the Mac's fold is drawn.
+  assert.equal(foldShown(true, null), true);
+  assert.equal(foldShown(false, null), false);
+  // The Mac collapsed it and the page opened it: open on the page.
+  assert.equal(foldShown(true, { stored: true, collapsed: false }), false);
+  // The Mac had it open and the page folded it: folded on the page.
+  assert.equal(foldShown(false, { stored: false, collapsed: true }), true);
+  // The Mac changed its fold since: the page follows the Mac again, whichever way.
+  assert.equal(foldShown(false, { stored: true, collapsed: false }), false);
+  assert.equal(foldShown(true, { stored: false, collapsed: false }), true);
+  assert.equal(foldShown(true, { stored: false, collapsed: true }), true);
+});
+
+test('the header\'s label names only the keys that work on this page and in this field', () => {
+  assert.equal(headKeysText({ canArrange: true, narrow: false, collapsed: false }), 'arrow keys move it, Alt and arrows resize it, Enter collapses it');
+  assert.equal(headKeysText({ canArrange: true, narrow: false, collapsed: true }), 'arrow keys move it, Alt and arrows resize it, Enter opens it');
+  // A served page moves and resizes nothing, and folds for itself.
+  assert.equal(headKeysText({ canArrange: false, narrow: false, collapsed: false }), 'Enter collapses it');
+  assert.equal(headKeysText({ canArrange: false, narrow: false, collapsed: true }), 'Enter opens it');
+  // In a narrow field the collection fills the field: no key on its header does anything.
+  assert.equal(headKeysText({ canArrange: true, narrow: true, collapsed: false }), '');
+  assert.equal(headKeysText({ canArrange: false, narrow: true, collapsed: true }), '');
+});
+
 test('a state file written before collections existed loads, and a junk entry is no layout', () => {
   const before = { workspaceId: WS, viewId: 'issues', deskCards: { [WS]: [{ noteId: 'OLD', x: 1, y: 2 }] } };
   const state = normaliseState(before);
@@ -317,4 +479,200 @@ test('a field smaller than the collection draws it inside the field and changes 
   assert.equal(header.y, 480 - COLLECTION_HEAD_HEIGHT);
   // Room enough: drawn as stored.
   assert.deepEqual(fitCollection(LAYOUT, { width: 1920, height: 1080 }), LAYOUT);
+});
+
+// ---- The collection object and its list, on a stand-in page ----
+//
+// What follows drives the built `collection-view.js` and `navigator.js`: the
+// listeners a drag attaches and removes, and where the keyboard is afterwards.
+// The stand-in page (stand-in-page.mjs) lays nothing out, so nothing here is
+// about what is drawn.
+
+/** A collection on a page 1400 by 900, with the store's part played by `page.stored` and `page.told`. */
+async function collectionOnAPage({ canArrange = true, stored = LAYOUT } = {}) {
+  const document = standInPage();
+  const { CollectionView } = await loadWeb('renderer/collection-view.js');
+  const names = ['root', 'head', 'name', 'count', 'filter', 'fold', 'asTable', 'asCards', 'grid', 'note', 'places', 'body', 'resize', 'navigator', 'list', 'state'];
+  const el = Object.fromEntries(names.map((n) => [n, new El(n)]));
+  el.home = { parent: new El('home'), before: null };
+  const page = { el, document, stored, told: [], canArrange, glassEscapes: 0, applied: 0 };
+  // Glass's own Escape, which leaves the focus or closes every note (glass.ts):
+  // a key the collection used must not reach it.
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !event.defaultPrevented) page.glassEscapes += 1;
+  });
+  page.view = new CollectionView(el, {
+    canArrange: () => page.canArrange,
+    stored: () => page.stored,
+    store: (layout) => {
+      page.told.push(layout);
+      page.stored = layout;
+    },
+    raised() {},
+    applyChange: () => {
+      page.applied += 1;
+    },
+    clearFilters() {},
+    retry() {},
+    seatsChanged() {},
+    locate() {},
+  });
+  page.view.setActive(true);
+  page.view.place({ width: 1400, height: 900 }, { x: 0, y: 0, opacity: 1, visible: true }, null);
+  page.at = () => {
+    const l = page.view.layout();
+    return [l.x, l.y, l.w, l.h];
+  };
+  page.model = (extra = {}) => ({ name: 'Issues', summary: { total: 3, shown: 3, narrowed: false, inField: 3, listOnly: 0 }, filter: '', change: '', removed: null, state: 'ready', error: '', members: [], cardOf: () => null, ...extra });
+  return page;
+}
+
+test('Escape during a drag of the collection ends the drag: what the pointer does afterwards moves nothing and stores nothing', async () => {
+  const page = await collectionOnAPage();
+  const { head, root } = page.el;
+  head.fire('pointerdown', { clientX: 100, clientY: 100 });
+  head.fire('pointermove', { clientX: 240, clientY: 190 });
+  assert.deepEqual(page.at(), [180, 120, 420, 600], 'the drag did not move it');
+  assert.ok(root.classList.contains('dragging'));
+  const key = page.document.fire('keydown', { key: 'Escape' });
+  assert.deepEqual(page.at(), [40, 30, 420, 600], 'Escape did not put it back');
+  assert.ok(key.defaultPrevented && key.stopped && page.glassEscapes === 0, 'the key went on to Glass');
+  assert.ok(!root.classList.contains('dragging'));
+  // The hand is still on the button. It moves by a pixel, then a long way, then lets go.
+  head.fire('pointermove', { clientX: 241, clientY: 190 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600], 'the next move of the pointer began the drag again');
+  head.fire('pointermove', { clientX: 500, clientY: 400 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  head.fire('pointerup', { clientX: 500, clientY: 400 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  assert.deepEqual(page.told, [], 'the release stored a drag that Escape had ended');
+  // The drag is over, so the next Escape is Glass's again.
+  page.document.fire('keydown', { key: 'Escape' });
+  assert.equal(page.glassEscapes, 1);
+  // And the next drag is a drag: moved, let go, stored once.
+  head.fire('pointerdown', { clientX: 100, clientY: 100 });
+  head.fire('pointermove', { clientX: 240, clientY: 190 });
+  head.fire('pointerup', { clientX: 240, clientY: 190 });
+  assert.deepEqual(page.told, [{ ...LAYOUT, x: 180, y: 120 }]);
+});
+
+test('Escape while the collection is resized puts its size back, and the key goes no further', async () => {
+  const page = await collectionOnAPage();
+  const { resize } = page.el;
+  resize.fire('pointerdown', { clientX: 460, clientY: 630 });
+  resize.fire('pointermove', { clientX: 560, clientY: 730 });
+  assert.deepEqual(page.at(), [40, 30, 520, 700], 'the corner did not resize it');
+  const key = page.document.fire('keydown', { key: 'Escape' });
+  assert.deepEqual(page.at(), [40, 30, 420, 600], 'Escape did not put the size back');
+  assert.ok(key.defaultPrevented && key.stopped && page.glassEscapes === 0, 'the key reached Glass, which leaves the focus or closes every note');
+  // The corner is let go of: a hand still on the button resizes nothing, and its release stores nothing.
+  resize.fire('pointermove', { clientX: 600, clientY: 760 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  resize.fire('pointerup', { clientX: 600, clientY: 760 });
+  assert.deepEqual(page.told, []);
+  page.document.fire('keydown', { key: 'Escape' });
+  assert.equal(page.glassEscapes, 1, 'with no resize in progress the key is Glass\'s');
+  // Escape with the corner held and not yet moved is the same: nothing to put back, and the key is used.
+  resize.fire('pointerdown', { clientX: 460, clientY: 630 });
+  assert.ok(page.document.fire('keydown', { key: 'Escape' }).defaultPrevented);
+  resize.fire('pointerup', { clientX: 470, clientY: 640 });
+  assert.deepEqual(page.told, []);
+  // A resize that is let go is stored once, and takes its Escape listener with it.
+  resize.fire('pointerdown', { clientX: 460, clientY: 630 });
+  resize.fire('pointermove', { clientX: 560, clientY: 730 });
+  resize.fire('pointerup', { clientX: 560, clientY: 730 });
+  assert.deepEqual(page.told, [{ ...LAYOUT, w: 520, h: 700 }]);
+  page.document.fire('keydown', { key: 'Escape' });
+  assert.equal(page.glassEscapes, 2);
+});
+
+test('on a page that cannot arrange, a collection the Mac collapsed opens and folds for that page, and the store is told nothing', async () => {
+  const page = await collectionOnAPage({ canArrange: false, stored: { ...LAYOUT, collapsed: true } });
+  const { head, fold, root } = page.el;
+  page.view.paint(page.model());
+  assert.equal(page.view.layout().collapsed, true);
+  assert.equal(page.view.rect().height, COLLECTION_HEAD_HEIGHT);
+  assert.equal(head.getAttribute('aria-label'), 'Issues, 3 notes: Enter opens it', 'the label names a key that does nothing on this page');
+  // The fold control, Enter on the header and a double-click each fold or open it.
+  fold.fire('click');
+  assert.equal(page.view.layout().collapsed, false, 'the fold control did not open it');
+  assert.equal(page.view.rect().height, LAYOUT.h);
+  assert.ok(!root.classList.contains('collapsed'));
+  assert.equal(fold.getAttribute('aria-expanded'), 'true');
+  assert.equal(head.getAttribute('aria-label'), 'Issues, 3 notes: Enter collapses it');
+  head.fire('keydown', { key: 'Enter' });
+  assert.equal(page.view.layout().collapsed, true, 'Enter on the header did not fold it');
+  assert.ok(root.classList.contains('collapsed'));
+  head.fire('dblclick');
+  assert.equal(page.view.layout().collapsed, false, 'a double-click on the header did not open it');
+  // The arrow keys still move and resize nothing here, and nothing was stored by any of it.
+  head.fire('keydown', { key: 'ArrowRight' });
+  head.fire('keydown', { key: 'ArrowDown', altKey: true });
+  head.fire('pointerdown', { clientX: 100, clientY: 100 });
+  head.fire('pointermove', { clientX: 240, clientY: 190 });
+  head.fire('pointerup', { clientX: 240, clientY: 190 });
+  assert.deepEqual(page.at(), [40, 30, 420, 600]);
+  assert.deepEqual(page.told, [], 'the store was told');
+  assert.deepEqual(page.stored, { ...LAYOUT, collapsed: true }, 'the Mac\'s layout was changed');
+  // The Mac opens the list: the page follows the Mac again, and goes on following it.
+  page.stored = { ...LAYOUT, collapsed: false };
+  assert.equal(page.view.layout().collapsed, false);
+  page.stored = { ...LAYOUT, collapsed: true };
+  assert.equal(page.view.layout().collapsed, true, 'the page\'s old choice came back over the Mac\'s newer one');
+  // The page that arranges is unchanged: its fold is the store's.
+  const mac = await collectionOnAPage();
+  mac.view.paint(mac.model());
+  assert.equal(mac.el.head.getAttribute('aria-label'), 'Issues, 3 notes: arrow keys move it, Alt and arrows resize it, Enter collapses it');
+  mac.el.fold.fire('click');
+  assert.deepEqual(mac.told, [{ ...LAYOUT, collapsed: true }]);
+  assert.equal(mac.view.layout().collapsed, true);
+});
+
+test('a refreshed result that differs only in its order is offered, and applying it is one press', async () => {
+  const page = await collectionOnAPage();
+  const reordered = membershipChange([group('a', [card('A'), card('B')])], [group('a', [card('B'), card('A')])]);
+  page.view.paint(page.model({ change: changeText(reordered) }));
+  const { note } = page.el;
+  assert.equal(note.hidden, false, 'nothing is offered');
+  const [said, apply] = note.children[0].children;
+  assert.equal(said.textContent, 'the order of the rows changed');
+  assert.equal(apply.textContent, 'apply');
+  apply.fire('click');
+  assert.equal(page.applied, 1);
+  // The same result again offers nothing.
+  page.view.paint(page.model({ change: changeText(membershipChange([group('a', [card('A')])], [group('a', [card('A')])])) }));
+  assert.equal(note.hidden, true);
+});
+
+test('the keyboard is on a row or on the header only when that element took it', async () => {
+  const page = await collectionOnAPage();
+  const { NavigatorList } = await loadWeb('renderer/navigator.js');
+  const list = new NavigatorList(page.el.list, { toggle() {}, fold() {} });
+  list.render({
+    groups: [group('a', [card('A'), card('B')])],
+    faces: { default: { title: 'title', subtitle: null, image: null, fields: [], measure: 'none' }, byType: {} },
+    folds: {},
+    onDesk: new Set(),
+    currentNoteId: null,
+  });
+  const rows = page.el.list.children;
+  assert.deepEqual(rows.map((r) => r.dataset.noteId ?? null), [null, 'A', 'B']);
+  // On screen, the row takes the keyboard and says so.
+  assert.equal(list.focusNote('B', true), true);
+  assert.equal(page.document.activeElement, rows[2]);
+  // Not on screen (the collection collapsed, shown as cards, or behind a
+  // document in a narrow field), the row exists and cannot take it: the
+  // answer is no, so the caller goes on to the header.
+  for (const row of rows) row.focusable = false;
+  page.document.activeElement = null;
+  assert.equal(list.focusNote('A', true), false, 'a row that did not take the keyboard was said to have it');
+  assert.equal(page.document.activeElement, null);
+  assert.equal(list.focusNote('ZZZ', true), false);
+  assert.equal(list.reveal('A'), 'row', 'the row is still in the list');
+  // The header answers the same way.
+  assert.equal(page.view.focusHead(), true);
+  assert.equal(page.document.activeElement, page.el.head);
+  page.el.head.focusable = false;
+  page.document.activeElement = null;
+  assert.equal(page.view.focusHead(), false, 'a header that is out of sight was said to have the keyboard');
 });

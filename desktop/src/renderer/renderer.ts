@@ -25,7 +25,7 @@ import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor } fro
 import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, localDay, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
 import type { EvidenceRow, EvidenceView } from './glass.js';
 import type { Desk } from '../shared/types.js';
-import { changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
+import { anyChange, changeCount, changeText, filterText, memberIds, membershipChange, removedSelectionText, steadyOrder, summarise } from '../shared/collection.js';
 import { panelKinds, panelLabel, panelOrNull } from '../shared/panels.js';
 import { countDistinct, isNarrowed, narrowGroups, statusesIn, typesIn } from '../shared/search.js';
 import { type ActuatorRow, actuatorRows, canPerform, elsewhere, wordRefusal } from '../shared/write-client.js';
@@ -427,8 +427,11 @@ const glass = new GlassField(glassElements(), {
   toRow: (noteId) => {
     drawNavigator();
     if (navigator.focusNote(noteId, true)) return;
-    if (navigator.reveal(noteId) === 'group') say(`${noteId}'s row is folded away under the marked heading`);
-    else say(`${noteId} is not in this list`);
+    // A row that is there and did not take the keyboard is not on screen (the
+    // collection is collapsed, or shows cards): nothing is said of the list.
+    const where = navigator.reveal(noteId);
+    if (where === 'group') say(`${noteId}'s row is folded away under the marked heading`);
+    else if (where === 'absent') say(`${noteId} is not in this list`);
     collection.focusHead();
   },
   revealed: (noteId) => {
@@ -1891,6 +1894,12 @@ async function cardByRel(rel: string): Promise<CardModel | null> {
  * opened from, at the place the list was scrolled to. When that row is no
  * longer in the list, that is said and the keyboard goes to the collection
  * itself, never to some other note's row (FEAT-0020, TASK-0098).
+ *
+ * The same when the row is there and is not on screen: the collection is
+ * collapsed, or shows cards, or its heading is folded away, or it stands
+ * behind another document in a narrow field. The keyboard was left nowhere
+ * then, because the row was asked whether it exists and not whether it took
+ * the keyboard.
  */
 function documentClosed(noteId: string): void {
   documentNotes.delete(noteId);
@@ -1898,12 +1907,15 @@ function documentClosed(noteId: string): void {
   if (!glass.isActive()) return;
   drawNavigator();
   if (navigator.focusNote(noteId, true)) return;
-  if (navigator.reveal(noteId) === 'group') {
-    say(`${noteId} is closed; its row is folded away under the marked heading`);
-    return;
-  }
-  say(`${noteId} is closed; it is not in this list any more`);
-  collection.focusHead();
+  const where = navigator.reveal(noteId);
+  if (where === 'group') say(`${noteId} is closed; its row is folded away under the marked heading`);
+  else if (where === 'absent') say(`${noteId} is closed; it is not in this list any more`);
+  if (collection.focusHead()) return;
+  // The header cannot take the keyboard either when the collection itself is
+  // out of sight. It is brought into reach, as the L key on a document does,
+  // and the row is tried again now that the list is in front.
+  glass.showCollection();
+  if (where !== 'row' || !navigator.focusNote(noteId, true)) collection.focusHead();
 }
 
 async function openCard(card: CardModel): Promise<void> {
@@ -2576,9 +2588,13 @@ async function prepareChange(): Promise<void> {
     changeArriving = false;
   }
   if (currentView !== view) return;
+  // One comparison answers all three: the count on the field's chip is the
+  // count in the collection's line, and a result that differs only in its
+  // order is still one that is waiting.
+  const change = membershipChange(currentGroups, next);
   pendingGroups = next;
-  pendingCount = changedNotes(currentGroups, next);
-  pendingMoves = changeCount(membershipChange(currentGroups, next)) > 0;
+  pendingCount = changeCount(change);
+  pendingMoves = anyChange(change);
   drawDesk();
   // The collection says what will change and offers to apply it.
   drawNavigator();
@@ -2610,24 +2626,6 @@ function contextNow(ws: string, noteId: string): NoteContext | undefined {
   if (waiting && held !== undefined) return held;
   if (fresh !== undefined) lastContexts.set(key, fresh);
   return fresh ?? held;
-}
-
-/** How many notes differ between two deals: arrived, left, or moved group or status. */
-function changedNotes(before: CardGroup[], after: CardGroup[]): number {
-  const describe = (groups: CardGroup[]): Map<string, string> => {
-    const out = new Map<string, string>();
-    for (const card of flattenGroups(groups)) {
-      const group = groups.find((g) => g.cards.includes(card))?.key ?? '';
-      out.set(card.noteId, `${out.get(card.noteId) ?? ''}|${group}|${card.status}|${card.owed}`);
-    }
-    return out;
-  };
-  const a = describe(before);
-  const b = describe(after);
-  let changed = 0;
-  for (const [id, sig] of b) if (a.get(id) !== sig) changed += 1;
-  for (const id of a.keys()) if (!b.has(id)) changed += 1;
-  return changed;
 }
 
 /** The person acted on the chip: the held change is dealt, with the view switch's transitions. */

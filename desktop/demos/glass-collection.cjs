@@ -1,9 +1,10 @@
 // What the collection's and the document's tasks ask for and no other walk
 // drives (FEAT-0020, TASK-0096 and TASK-0097): the status and type filters and
 // a group heading in the Glass collection, what its collapsed header says, the
-// wheel at both ends of the list, Escape during a drag, keyboard focus that can
-// be seen, a verb the sidecar refuses with its reason inside a document, and a
-// document's panels after it has left the desk.
+// wheel at both ends of the list, Escape during a drag and during a resize,
+// keyboard focus that can be seen, a verb the sidecar refuses with its reason
+// inside a document, a document's panels after it has left the desk, where the
+// keyboard goes when a document is closed, and the served page's own fold.
 //
 // Real pointer and keyboard throughout. It changes no note:
 //   bash tools/scripts/walk-in-a-box.sh glass-collection
@@ -152,26 +153,65 @@ module.exports = async function (d) {
   await d.delay(900);
   await t.park();
 
-  // ---- 5. Escape during a drag puts the collection back, once, and closes nothing ----
+  // ---- 5. Escape during a drag ends the drag: the collection is back, what the hand does next moves and stores nothing, and nothing closes ----
   let note = await openRow();
   for (let i = 0; i < 3 && !(await js('window.__deckDesk()')).includes(note); i += 1) { await d.delay(500); note = await openRow(); }
   if (!(await js('window.__deckDesk()')).includes(note)) throw new Error(`${note} did not open from its row`);
   const head = await t.rect('#collection-name');
-  const placeBefore = await js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; })()`);
+  const boxNow = () => js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; })()`);
+  const placeNow = async () => (await boxNow()).slice(0, 2);
+  // What the store holds for the collection on this view, as this window last heard it: null when nothing was ever stored.
+  const storedNow = () => js(`JSON.stringify(((window.__deckLastState.collections || {})[${JSON.stringify(ws)}] || {}).features || null)`);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const placeBefore = await placeNow();
+  const storedBefore = await storedNow();
   await d.pointer(win, [{ type: 'move', x: head.x, y: head.y }, { type: 'down', x: head.x, y: head.y }]);
   await d.delay(120);
   for (const step of [[20, 15], [60, 40], [100, 65], [140, 90]]) { await d.pointer(win, [{ type: 'move', x: head.x + step[0], y: head.y + step[1] }]); await d.delay(60); }
   await d.delay(200);
-  const during = await js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; })()`);
+  const during = await placeNow();
   const heldDuring = await js('window.__deckDesk()');
   d.press(win, 'Escape');
   await d.delay(300);
   const heldAfterKey = await js('window.__deckDesk()');
-  await d.pointer(win, [{ type: 'up', x: head.x + 140, y: head.y + 90 }]);
-  await d.delay(400);
+  const placeAfterKey = await placeNow();
+  // The hand is still on the button. It moves on, by a pixel and then further, before it lets go: a drag that
+  // Escape only paused began again at the first of these moves, and the release stored it.
+  for (const step of [[141, 90], [170, 110], [200, 130]]) { await d.pointer(win, [{ type: 'move', x: head.x + step[0], y: head.y + step[1] }]); await d.delay(60); }
+  await d.delay(200);
+  const placeAfterMoves = await placeNow();
+  await d.pointer(win, [{ type: 'up', x: head.x + 200, y: head.y + 130 }]);
+  await d.delay(500);
   await t.park();
-  const afterEscape = { place: await js(`(() => { const r = document.getElementById('collection').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; })()`), held: await js('window.__deckDesk()') };
-  check((during[0] !== placeBefore[0] || during[1] !== placeBefore[1]) && JSON.stringify(afterEscape.place) === JSON.stringify(placeBefore) && afterEscape.held.includes(note), 'Escape while the collection is being dragged puts it back where it was, and the key goes no further: the open note is still open', { placeBefore, during, heldDuring, heldAfterKey, afterEscape, note });
+  const afterEscape = { place: await placeNow(), held: await js('window.__deckDesk()'), stored: await storedNow() };
+  check((during[0] !== placeBefore[0] || during[1] !== placeBefore[1]) && same(placeAfterKey, placeBefore) && same(placeAfterMoves, placeBefore) && same(afterEscape.place, placeBefore) && afterEscape.stored === storedBefore && afterEscape.held.includes(note), 'Escape while the collection is being dragged ends the drag: it is back where it was, it stays there while the pointer moves on with the button still down and when the button is let go, the store is told nothing, and the key goes no further: the open note is still open', { placeBefore, during, placeAfterKey, placeAfterMoves, heldDuring, heldAfterKey, afterEscape, storedBefore, note });
+
+  // ---- 5b. Escape while the corner is held cancels the resize, and the key goes no further ----
+  const corner = await t.rect('#collection-resize');
+  const cornerFree = corner !== null && (await js(`(() => { const e = document.getElementById('collection-resize'); const hit = document.elementFromPoint(${corner === null ? 0 : corner.x}, ${corner === null ? 0 : corner.y}); return !!hit && (hit === e || e.contains(hit)); })()`));
+  if (cornerFree) {
+    const boxBefore = await boxNow();
+    const storedBeforeResize = await storedNow();
+    const focusBefore = await js(`${glass}.focusId()`);
+    await d.pointer(win, [{ type: 'move', x: corner.x, y: corner.y }, { type: 'down', x: corner.x, y: corner.y }]);
+    await d.delay(120);
+    for (const step of [[20, 15], [50, 35], [80, 60]]) { await d.pointer(win, [{ type: 'move', x: corner.x + step[0], y: corner.y + step[1] }]); await d.delay(60); }
+    await d.delay(200);
+    const boxDuring = await boxNow();
+    d.press(win, 'Escape');
+    await d.delay(300);
+    const boxAfterKey = await boxNow();
+    for (const step of [[81, 60], [110, 80]]) { await d.pointer(win, [{ type: 'move', x: corner.x + step[0], y: corner.y + step[1] }]); await d.delay(60); }
+    await d.delay(200);
+    const boxAfterMoves = await boxNow();
+    await d.pointer(win, [{ type: 'up', x: corner.x + 110, y: corner.y + 80 }]);
+    await d.delay(500);
+    await t.park();
+    const afterResize = { box: await boxNow(), held: await js('window.__deckDesk()'), focus: await js(`${glass}.focusId()`), stored: await storedNow() };
+    check((boxDuring[2] !== boxBefore[2] || boxDuring[3] !== boxBefore[3]) && same(boxAfterKey, boxBefore) && same(boxAfterMoves, boxBefore) && same(afterResize.box, boxBefore) && afterResize.stored === storedBeforeResize && same(afterResize.held, heldAfterKey) && afterResize.focus === focusBefore, 'Escape while the collection is being resized by its corner puts its size back, a hand still on the button resizes nothing more, the store is told nothing, and the key goes no further: every open note is still open and the focus is where it was', { boxBefore, boxDuring, boxAfterKey, boxAfterMoves, afterResize, focusBefore });
+  } else {
+    d.log('NOT RUN: the collection\'s resize corner is not drawn, or something is drawn over its middle', { corner });
+  }
 
   // ---- 6. Keyboard focus that can be seen, and the names a screen reader is given ----
   await js(`document.getElementById('search').focus()`);
@@ -260,6 +300,21 @@ module.exports = async function (d) {
   const afterClose = await panels();
   check(wereOpen.list && wereOpen.details && afterSweep !== null && !afterSweep.list && !afterSweep.details && !afterSweep.evidence && afterClose !== null && !afterClose.list && !afterClose.details && !afterClose.evidence, 'a document whose related list and details were open comes back with every panel closed, whether it left when the desk was swept or when it was closed by itself', { wereOpen, afterSweep, afterClose });
 
+  // ---- 8b. Closing a document puts the keyboard on its row when the row is on screen, and on the collection's header when it is not ----
+  const keyboardOn = () => js(`(() => { const e = document.activeElement; return { id: e && e.id ? e.id : null, row: e && e.classList.contains('nav-row') ? e.dataset.noteId : null, tag: e ? e.tagName.toLowerCase() : null }; })()`);
+  const closeByKey = async () => { await js(`${paneEl(p)}.querySelector('.pane-head').focus()`); d.press(win, 'Delete'); await d.delay(700); };
+  await closeByKey();
+  const backOnRow = { keyboard: await keyboardOn(), held: await js('window.__deckDesk()') };
+  await reopen();
+  await t.clickOn('#collection-fold', 500);
+  const foldedForClose = await js(`document.getElementById('collection').classList.contains('collapsed')`);
+  await closeByKey();
+  const backOnHead = { keyboard: await keyboardOn(), held: await js('window.__deckDesk()') };
+  await t.clickOn('#collection-fold', 600);
+  await t.park();
+  check(backOnRow.keyboard.row === p && !backOnRow.held.includes(p) && foldedForClose && backOnHead.keyboard.id === 'collection-head' && !backOnHead.held.includes(p), `closing ${p} with the list on screen puts the keyboard on its row; closing it with the collection collapsed, where that row is not on screen, puts the keyboard on the collection's header and not nowhere`, { backOnRow, foldedForClose, backOnHead });
+  await reopen();
+
   // ---- 9. The size a person gave a note is the size the next note opens at, in this window and on the served page ----
   await js(`${paneEl(p)}.querySelector('.pane-head').focus()`);
   for (let i = 0; i < 4; i += 1) { d.press(win, 'Right', ['alt']); await d.delay(120); }
@@ -282,6 +337,30 @@ module.exports = async function (d) {
   const servedSize = servedOpened === null ? null : await d.js(page, `(() => { const e = [...document.querySelectorAll('.pane')].find((x) => x.dataset.noteId === ${JSON.stringify(servedOpened)}); if (!e) return null; const f = document.getElementById('field').getBoundingClientRect(); const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), field: [Math.round(f.width), Math.round(f.height)], narrow: !document.getElementById('narrow-bar').hidden }; })()`);
   const fits = servedSize !== null && !servedSize.narrow && servedSize.field[0] >= chosen.w && servedSize.field[1] >= chosen.h;
   check(chosen.w !== 560 && next.w === chosen.w && next.h === chosen.h && servedSize !== null && fits && servedSize.w === chosen.w && servedSize.h === chosen.h, `a note resized to ${chosen.w} by ${chosen.h} sets the size the next note opens at on this view: in this window, and in a second window on the same view (the served page, in a field of ${servedSize === null ? '?' : servedSize.field.join(' by ')}), where a note opened there is ${servedSize === null ? '?' : `${servedSize.w} by ${servedSize.h}`}`, { chosen, next, served: servedSize, servedOpened });
+  // The Mac collapses the collection. The served page draws it collapsed, and opens it for itself: the list is
+  // that page's only way to a note with no card. Its fold is its own, and the Mac's store hears nothing of it.
+  await t.clickOn('#collection-fold', 500);
+  await t.park();
+  const servedFold = () => d.js(page, `(() => { const c = document.getElementById('collection'); const f = document.getElementById('collection-fold'); return { collapsed: c.classList.contains('collapsed'), h: Math.round(c.getBoundingClientRect().height), expanded: f.getAttribute('aria-expanded'), rows: [...document.querySelectorAll('#nav-list .nav-row')].filter((r) => !r.hidden && r.getBoundingClientRect().height > 0).length, label: document.getElementById('collection-head').getAttribute('aria-label') }; })()`);
+  const macFold = async () => ({ stored: (((await t.state()).collections || {})[ws] || {}).features || null, collapsed: await js(`document.getElementById('collection').classList.contains('collapsed')`) });
+  let servedFolded = await servedFold();
+  for (let i = 0; i < 20 && !servedFolded.collapsed; i += 1) { await d.delay(250); servedFolded = await servedFold(); }
+  const macFolded = await macFold();
+  await d.js(page, `document.getElementById('collection-fold').click()`);
+  await d.delay(600);
+  const servedOpenedList = await servedFold();
+  const macAfterOpen = await macFold();
+  await d.js(page, `document.getElementById('collection-fold').click()`);
+  await d.delay(600);
+  const servedFoldedAgain = await servedFold();
+  await d.js(page, `document.getElementById('collection-fold').click()`);
+  await d.delay(600);
+  const macAfterAll = await macFold();
+  check(macFolded.collapsed && macFolded.stored !== null && macFolded.stored.collapsed === true && servedFolded.collapsed && servedFolded.rows === 0 && !servedOpenedList.collapsed && servedOpenedList.rows > 0 && servedOpenedList.expanded === 'true' && servedFoldedAgain.collapsed && JSON.stringify(macAfterOpen) === JSON.stringify(macFolded) && JSON.stringify(macAfterAll) === JSON.stringify(macFolded), `on the served page a collection the Mac collapsed is drawn collapsed, and its fold control opens it there (${servedOpenedList.rows} rows on screen), folds it and opens it again; in the Mac's window it is collapsed throughout and what the store holds for it has not changed`, { servedFolded, servedOpenedList, servedFoldedAgain, macFolded, macAfterOpen, macAfterAll });
+  check(typeof servedFolded.label === 'string' && /Enter opens it$/.test(servedFolded.label) && /Enter collapses it$/.test(servedOpenedList.label) && !/arrow keys|resize/.test(`${servedFolded.label} ${servedOpenedList.label}`), 'on the served page the collection header\'s label names the one key that works there, Enter, and says nothing of moving or resizing it', { collapsed: servedFolded.label, open: servedOpenedList.label });
+  // The Mac opens it again, for what follows.
+  await t.clickOn('#collection-fold', 600);
+  await t.park();
   // The served page in a narrow window, as a tablet held upright has it: the bar between the collection and
   // the open note, and the document's header, show where the keyboard is.
   page.setBounds({ x: 0, y: 0, width: 760, height: 900 });

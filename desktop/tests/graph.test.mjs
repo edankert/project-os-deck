@@ -79,6 +79,60 @@ test('a link carries the frontmatter key it was written under, and a link in the
   for (const link of linksIn(text)) assert.equal(link.field === null, link.offset >= bodyStart, `${link.target} at ${link.offset}`);
 });
 
+test('a list written at the margin, and a key with a space, give their links the key', () => {
+  // Both are plain YAML: a list's items need no indent under their key, and a
+  // key may hold a space. Read as no key, each was shown as a plain "link".
+  const text = [
+    '---',
+    'id: FEAT-0001',
+    'tasks:',
+    '- "[[TASK-0001]]"',
+    '- "[[TASK-0002]]"',
+    'verified by: "[[TST-0001]]"',
+    'related:',
+    '- ISS-0004',
+    '-',
+    '  "[[ISS-0005]]"',
+    'depends on:',
+    '  - "[[FEAT-0002]]"',
+    '# a comment at the margin ends the list above it',
+    '- "[[ISS-0007]]"',
+    'parent: "[[PHASE-0001]]"',
+    '---',
+    'A link in the text after such a list: [[ISS-0006]], and [[TASK-0001]] again.',
+    '- "[[ISS-0008]]"',
+    'verified by: "[[TST-0002]]"',
+    '',
+  ].join('\n');
+  const links = linksIn(text);
+  const fields = (target) => links.filter((l) => l.target === target).map((l) => l.field);
+  assert.deepEqual(fields('TASK-0001'), ['tasks', null], 'the item at the margin has its list\'s key, and the same note in the text has none');
+  assert.deepEqual(fields('TASK-0002'), ['tasks']);
+  assert.deepEqual(fields('TST-0001'), ['verified by'], 'the key is given as it was written, space included');
+  // A bare id in a list at the margin, under a key meant to point at notes.
+  assert.deepEqual(fields('ISS-0004'), ['related']);
+  assert.deepEqual(fields('ISS-0005'), ['related']);
+  assert.deepEqual(fields('FEAT-0002'), ['depends on']);
+  // Nothing is invented: an item that follows no key has none.
+  assert.deepEqual(fields('ISS-0007'), [null]);
+  // The key after a list at the margin is its own.
+  assert.deepEqual(fields('PHASE-0001'), ['parent']);
+  // The body is the body, whatever its lines look like.
+  assert.deepEqual(fields('ISS-0006'), [null]);
+  assert.deepEqual(fields('ISS-0008'), [null]);
+  assert.deepEqual(fields('TST-0002'), [null]);
+  const bodyStart = text.indexOf('A link in the text');
+  for (const link of links) if (link.offset >= bodyStart) assert.equal(link.field, null, `${link.target} at ${link.offset}`);
+  // A key with a space is its own key for a bare id too: `verified by` is not
+  // one of the keys meant to point at notes, so its bare id is no link, and
+  // it is not read as belonging to the key above it.
+  const bare = linksIn('---\nrelated:\n- ISS-0001\nverified by: TST-0009\n---\n');
+  assert.deepEqual(bare.map((l) => `${l.target}:${l.field}`), ['ISS-0001:related']);
+  // The same file with Windows line ends.
+  const crlf = linksIn('---\r\ntasks:\r\n- "[[TASK-0001]]"\r\nverified by: "[[TST-0001]]"\r\n---\r\nbody [[ISS-0001]]\r\n');
+  assert.deepEqual(crlf.map((l) => `${l.target}:${l.field}`), ['TASK-0001:tasks', 'TST-0001:verified by', 'ISS-0001:null']);
+});
+
 test('an edge keeps the field of the link that made it', () => {
   const graph = buildGraph([
     source('TASK-0009.md', '---\nid: TASK-0009\nparent: "[[FEAT-0002]]"\ntests: ["[[TST-0001]]"]\n---\nSee [[FEAT-0002]] and [[ISS-0003]].\n', { id: 'TASK-0009' }),
