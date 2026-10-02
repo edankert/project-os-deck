@@ -95,6 +95,26 @@ export function sceneKind(desk: Desk): SceneKind {
 }
 
 /**
+ * What the scene controls offer for an entry. One this Deck cannot read is
+ * never changed: it is not opened and not renamed, since both would have this
+ * Deck handle fields it does not know. It can still be deleted, and a delete
+ * can be restored, because both move the entry whole.
+ */
+export function actsFor(kind: SceneKind): { open: boolean; rename: boolean; remove: boolean } {
+  return { open: kind !== 'unreadable', rename: kind !== 'unreadable', remove: true };
+}
+
+/**
+ * Who saved an entry this Deck cannot read, as the words every refusal uses.
+ * "A different Deck", not "a newer one": a version of 1, or the text "2", is
+ * not this Deck's either, and neither is newer. The version is written as it
+ * is stored, so the text "2" reads `"2"` and is not taken for the number.
+ */
+export function savedByOther(desk: Desk): string {
+  return `saved by a different Deck (version ${JSON.stringify(desk.version)})`;
+}
+
+/**
  * The view whose desk and list opening this replaces. A scene opens on the
  * view it was saved on, whichever view is on screen. A desk from before
  * scenes has no view of its own and opens on the one on screen. The window
@@ -127,7 +147,7 @@ export function listScenes(desks: Readonly<Record<string, Desk>>, workspaceId: s
         view: typeof d.view === 'string' ? d.view : null,
         notes: Array.isArray(d.cards) ? d.cards.length : 0,
         savedAt: typeof d.savedAt === 'string' ? d.savedAt : null,
-        why: kind === 'unreadable' ? `saved by a newer Deck (version ${String(d.version)}); this one reads version ${SCENE_VERSION}, so it is kept and not opened` : null,
+        why: kind === 'unreadable' ? `${savedByOther(d)}; this one reads version ${SCENE_VERSION}, so it is kept and not opened` : null,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -217,8 +237,11 @@ function listOf(names: readonly string[]): string {
  * A desk with no version is a desk from before scenes: only its cards are
  * read, as they always were. Version 2 is read field by field, and a field
  * that is not what it should be is dropped rather than guessed at. A version
- * this Deck does not know is returned exactly as it was found, so a newer
- * Deck's scene survives being opened and saved by an older one.
+ * this Deck does not know is returned exactly as it was found, so another
+ * Deck's scene survives being loaded and saved by this one. That includes
+ * `cards`: missing, or something other than a list, it is written back
+ * missing or as that other thing, so nothing reads an unreadable entry's
+ * cards without checking they are a list.
  */
 export function normaliseScene(
   value: unknown,
@@ -236,7 +259,7 @@ export function normaliseScene(
   if (version === undefined) return { name, workspaceId, cards: normaliseCards(raw['cards']) };
   if (version !== SCENE_VERSION) {
     // Not ours to interpret. Kept untouched; `sceneKind` says it cannot be opened.
-    return { ...(raw as unknown as Desk), name, workspaceId, cards: Array.isArray(raw['cards']) ? (raw['cards'] as DeskCard[]) : [] };
+    return { ...(raw as unknown as Desk) };
   }
   const scene: Desk = { name, workspaceId, cards: normaliseCards(raw['cards']), version: SCENE_VERSION };
   if (typeof raw['view'] === 'string' && raw['view'] !== '') scene.view = raw['view'];

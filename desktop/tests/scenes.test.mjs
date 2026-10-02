@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, persistable, deskCardsOf, collectionOf, deskKey } = load('shared/store-state.js');
-const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy } = load('shared/scenes.js');
+const { SCENE_VERSION, sceneKind, listScenes, readingAnchorAt, scrollTopForAnchor, sceneReport, sceneFrom, normaliseScene, viewReplacedBy, actsFor, savedByOther } = load('shared/scenes.js');
 
 const WS = 'aaaa1111bbbb2222';
 const list = { x: 12, y: 12, w: 340, h: 700, collapsed: false, presentation: 'cards' };
@@ -150,18 +150,54 @@ test('a desk saved before scenes opens exactly as it did', () => {
   assert.deepEqual(read.desks[deskKey(WS, 'older')], { name: 'older', workspaceId: WS, cards: [{ noteId: 'A', x: 1, y: 2 }] });
 });
 
-test('a scene saved by a newer Deck is kept untouched, listed as unreadable, not opened and not overwritten', () => {
+test('a scene of a version this Deck does not know is kept untouched, listed as unreadable, not opened and never changed', () => {
   const future = { name: 'from the future', workspaceId: WS, version: 3, cards: [{ noteId: 'A', x: 1, y: 2 }], camera: { yaw: 1.2 }, somethingNew: [1, 2, 3] };
   let s = normaliseState({ ...JSON.parse(JSON.stringify(persistable(desk()))), desks: { [deskKey(WS, 'from the future')]: future } });
   assert.deepEqual(s.desks[deskKey(WS, 'from the future')], future, 'every field survives, including ones this Deck has never heard of');
   assert.deepEqual(JSON.parse(JSON.stringify(persistable(s))).desks[deskKey(WS, 'from the future')], future, 'and is written back as it was');
   const entry = listScenes(s.desks, WS).find((e) => e.name === 'from the future');
   assert.equal(entry.kind, 'unreadable');
-  assert.match(entry.why, /newer Deck \(version 3\)/);
+  assert.equal(entry.why, 'saved by a different Deck (version 3); this one reads version 2, so it is kept and not opened');
   s = reduce(s, { type: 'open-workspace', workspaceId: WS });
   s = reduce(s, { type: 'select-view', viewId: 'issues' });
   assert.equal(reduce(s, { type: 'open-desk', name: 'from the future' }), s, 'it is not opened');
-  assert.equal(reduce(s, { type: 'save-scene', name: 'from the future', ...extras }), s, 'and a scene saved under its name does not replace it');
+  assert.equal(reduce(s, { type: 'save-scene', name: 'from the future', ...extras }), s, 'a scene saved under its name does not replace it');
+  assert.equal(reduce(s, { type: 'save-desk', name: 'from the future' }), s, 'nor does a desk saved the old way, which would drop its version and every field with it');
+  assert.equal(reduce(s, { type: 'rename-desk', workspaceId: WS, from: 'from the future', to: 'renamed' }), s, 'and it is not renamed: its name is one of its fields');
+  // What the controls offer follows the same rule: neither open nor rename; delete stays.
+  assert.deepEqual(actsFor('unreadable'), { open: false, rename: false, remove: true });
+  assert.deepEqual(actsFor('scene'), { open: true, rename: true, remove: true });
+  assert.deepEqual(actsFor('desk'), { open: true, rename: true, remove: true });
+  // Deleted, it is gone; restored, it is back whole.
+  const gone = reduce(s, { type: 'delete-desk', workspaceId: WS, name: 'from the future' });
+  assert.equal(deskKey(WS, 'from the future') in gone.desks, false);
+  assert.deepEqual(reduce(gone, { type: 'restore-desk', desk: future }).desks[deskKey(WS, 'from the future')], future);
+});
+
+test('an unreadable scene is written back with every field it had, a missing or malformed list of cards included', () => {
+  const odd = { name: 'odd', workspaceId: WS, version: 3, documents: [1], cards: { byId: {} } };
+  const none = { name: 'none', workspaceId: WS, version: 3, documents: [1] };
+  const s = normaliseState({ desks: { [deskKey(WS, 'odd')]: odd, [deskKey(WS, 'none')]: none } });
+  const written = JSON.parse(JSON.stringify(persistable(s))).desks;
+  assert.deepEqual(written[deskKey(WS, 'odd')], odd, 'cards that are not a list stay what they were');
+  assert.deepEqual(written[deskKey(WS, 'none')], none, 'and an entry with no cards gains none');
+  assert.equal('cards' in written[deskKey(WS, 'none')], false);
+  // The list still names both, and claims no notes for either.
+  assert.deepEqual(listScenes(s.desks, WS).map((e) => [e.name, e.kind, e.notes]), [['none', 'unreadable', 0], ['odd', 'unreadable', 0]]);
+});
+
+test('an entry whose version is not this Deck\'s is said to be from a different Deck, not a newer one', () => {
+  const said = (version) => listScenes({ k: { name: 'o', workspaceId: WS, version, cards: [] } }, WS)[0];
+  assert.equal(said(1).kind, 'unreadable');
+  assert.match(said(1).why, /^saved by a different Deck \(version 1\); this one reads version 2/);
+  // The text "2" is not the number 2, and is shown as text so the two are not taken for each other.
+  assert.equal(said('2').kind, 'unreadable');
+  assert.match(said('2').why, /^saved by a different Deck \(version "2"\); this one reads version 2/);
+  assert.match(said(2.5).why, /\(version 2\.5\)/);
+  assert.match(said(null).why, /\(version null\)/);
+  assert.equal(savedByOther({ name: 'o', workspaceId: WS, version: 99, cards: [] }), 'saved by a different Deck (version 99)');
+  for (const version of [1, '2', 2.5, null, 3]) assert.doesNotMatch(said(version).why, /newer/);
+  assert.equal(said(SCENE_VERSION).why, null);
 });
 
 test('rename keeps the scene, delete removes it, and restore puts it back only into the gap it left', () => {

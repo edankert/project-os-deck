@@ -351,7 +351,7 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const saved = state.desks[deskKey(ws, action.name)];
       if (saved === undefined) return state;
       // A scene brings its view, its search and its collection with it. One
-      // saved by a newer Deck is not opened: its fields are not ours to read.
+      // of a version this Deck does not know is not opened: its fields are not ours to read.
       const kind = sceneKind(saved);
       if (kind === 'unreadable') return state;
       if (kind === 'scene') return applyScene(state, ws, saved, action.name);
@@ -368,6 +368,10 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
     }
     case 'save-desk': {
       if (state.workspaceId === null) return state;
+      // An entry this Deck cannot read is never changed, and a plain desk
+      // saved over it would drop its version and every field with it.
+      const held = state.desks[deskKey(state.workspaceId, action.name)];
+      if (held !== undefined && sceneKind(held) === 'unreadable') return state;
       // What the view draws, both lists, flat and in stacking order: the
       // `Desk` shape is unchanged, so every saved desk still reads.
       const desk: Desk = {
@@ -385,7 +389,7 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const name = typeof action.name === 'string' ? action.name.trim() : '';
       if (view === null || name === '') return state;
       const key = deskKey(ws, name);
-      // A scene a newer Deck saved is not overwritten by one it could not read.
+      // A scene another Deck saved is not overwritten by one that could not read it.
       const existing = state.desks[key];
       if (existing !== undefined && sceneKind(existing) === 'unreadable') return state;
       const scene = sceneFrom(
@@ -416,6 +420,8 @@ export function reduce(state: DeckState, action: DeckAction): DeckState {
       const desk = state.desks[from];
       // Never onto a name that is taken: that would be deleting the other one.
       if (desk === undefined || name === '' || from === to || to in state.desks) return state;
+      // Nor an entry this Deck cannot read: its name is one of the fields that are not ours to change.
+      if (sceneKind(desk) === 'unreadable') return state;
       const desks = { ...state.desks };
       delete desks[from];
       desks[to] = { ...desk, name };

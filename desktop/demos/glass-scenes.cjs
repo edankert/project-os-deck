@@ -421,13 +421,13 @@ module.exports = async function (d) {
   const byAddress = await js(`({ view: window.__deckLastState.viewId, desk: window.__deckLastState.deskName, held: window.__deckDesk() })`);
   check(/desk=Kept/.test(sceneAddress) && offeredAddress === sceneAddress && byAddress.view === 'features' && byAddress.desk === 'Kept as it is' && byAddress.held.includes(x) && byAddress.held.includes(y), 'the address copied while the scene is open, opened from the Issues view, opens the scene on its own view with its documents', { sceneAddress, byAddress });
 
-  // A scene this Deck cannot read is listed with its version, cannot be opened, and is kept as it is.
+  // A scene this Deck cannot read is listed with its version, cannot be opened or renamed, and is kept as it is.
   const future = { name: 'From a newer Deck', workspaceId: ws, version: 99, view: 'features', cards: [{ noteId: x, x: 10, y: 10 }], somethingNew: { kept: true } };
   d.store.dispatch({ type: 'restore-desk', desk: future });
   await d.delay(700);
   const listedFuture = await js(`(() => { const o = [...document.getElementById('scene-list').options].find((q) => q.value === 'From a newer Deck'); if (!o) return null; const l = document.getElementById('scene-list'); l.value = 'From a newer Deck'; l.dispatchEvent(new Event('change', { bubbles: true })); return { text: o.textContent, disabled: o.disabled }; })()`);
   await d.delay(400);
-  const futureOpen = await js(`document.getElementById('scene-open').hidden`);
+  const futureActs = await js(`({ chosen: document.getElementById('scene-list').value, open: !document.getElementById('scene-open').hidden, rename: !document.getElementById('scene-rename').hidden, del: !document.getElementById('scene-delete').hidden })`);
   const heldBeforeFuture = JSON.stringify(await js('window.__deckDesk()'));
   clip.writeText(`deck://${ws}/features?desk=${encodeURIComponent('From a newer Deck')}`);
   await t.clickOn('#open-address', 500);
@@ -435,7 +435,31 @@ module.exports = async function (d) {
   await d.delay(1800);
   const refusedSaid = await t.text('#status');
   const keptFuture = (await state()).desks[`${ws}:From a newer Deck`];
-  check(listedFuture !== null && /cannot be opened/.test(listedFuture.text) && /version 99/.test(listedFuture.text) && listedFuture.disabled && futureOpen && /saved by a newer Deck \(version 99\) and is not opened/.test(refusedSaid) && JSON.stringify(await js('window.__deckDesk()')) === heldBeforeFuture && keptFuture !== undefined && keptFuture.version === 99 && JSON.stringify(keptFuture.somethingNew) === JSON.stringify({ kept: true }), 'a scene saved by a newer Deck is listed with its version in its own text, cannot be chosen or opened, is refused by address with the reason, and is kept exactly as it was, with the field this Deck does not know', { listedFuture, refusedSaid, kept: keptFuture && Object.keys(keptFuture) });
+  check(listedFuture !== null && /cannot be opened/.test(listedFuture.text) && /saved by a different Deck \(version 99\)/.test(listedFuture.text) && !listedFuture.disabled && futureActs.chosen === 'From a newer Deck' && !futureActs.open && !futureActs.rename && futureActs.del && /saved by a different Deck \(version 99\) and is not opened/.test(refusedSaid) && JSON.stringify(await js('window.__deckDesk()')) === heldBeforeFuture && keptFuture !== undefined && keptFuture.version === 99 && JSON.stringify(keptFuture.somethingNew) === JSON.stringify({ kept: true }), 'a scene of a version this Deck does not know is listed with that version in its own text and can be chosen; "delete" is offered for it and neither "open" nor "rename"; it is refused by address with the reason, and is kept exactly as it was, with the field this Deck does not know', { listedFuture, futureActs, refusedSaid, kept: keptFuture && Object.keys(keptFuture) });
+  // Spread's "save desk" is the other way to save under a name. Under the unreadable scene's name it is refused
+  // with the reason; under a scene's name it asks first, as "save scene" does.
+  const toSurface = async (id) => { await js(`document.querySelector('#surface-toggle button[data-surface="${id}"]').click()`); await d.delay(1500); };
+  const saveDeskAs = async (name) => {
+    await js(`document.getElementById('save-desk').click()`);
+    await d.delay(400);
+    await js(`(() => { const i = document.querySelector('#status input'); if (i) i.select(); })()`);
+    await type(name);
+    d.press(win, 'Return');
+    await d.delay(700);
+  };
+  await toSurface('spread');
+  await saveDeskAs('From a newer Deck');
+  const spreadRefused = await t.text('#status');
+  const sceneBeforeSaveDesk = JSON.stringify((await state()).desks[`${ws}:Kept as it is`]);
+  await saveDeskAs('Kept as it is');
+  const spreadAsked = await js(`[...document.querySelectorAll('#status button')].map((b) => b.textContent)`);
+  if (spreadAsked.includes('keep it')) {
+    await js(`[...document.querySelectorAll('#status button')].find((b) => b.textContent === 'keep it').focus()`);
+    d.press(win, 'Return');
+    await d.delay(600);
+  }
+  check(/saved by a different Deck \(version 99\) and is not replaced/.test(spreadRefused) && JSON.stringify((await state()).desks[`${ws}:From a newer Deck`]) === JSON.stringify(keptFuture) && spreadAsked.includes('replace it') && spreadAsked.includes('keep it') && JSON.stringify((await state()).desks[`${ws}:Kept as it is`]) === sceneBeforeSaveDesk, 'on the cards surface, "save desk" under the unreadable scene\'s name is refused with the reason and leaves it as it was; under a scene\'s name it asks first, and "keep it" leaves the scene exactly as it was saved', { spreadRefused, spreadAsked });
+  await toSurface('glass');
   await d.shot(win, '10-a-scene-this-deck-cannot-read');
 
   // A note added to the view while the scene was put away is in its list when it is reopened: the list is read, not kept.

@@ -21,7 +21,7 @@ import { type QueryIndex, runQuery, toCard } from '../shared/query.js';
 import type { NoteRecord } from '../shared/records.js';
 import { CARD_WIDTH, clampToSurface, deskBounds, nextSlot, placementBounds, reconcileDesk } from '../shared/desk.js';
 import { DESK_ACTIONS, collectionOf, deskCardsOf, deskKey, deskViewOf, everyViewCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
-import { listScenes, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor, viewReplacedBy } from '../shared/scenes.js';
+import { actsFor, listScenes, savedByOther, sceneFrom, sceneKind, sceneReport, scrollTopForAnchor, viewReplacedBy } from '../shared/scenes.js';
 import { type LedgerRead, NAMED_ON_LINE, historyLine, keyPhrase, localDay, platformLedger, platformsFrom, recordedFor, recordedSentence, runnerText, testFacts, testsNamedOnLine, testsVerifying } from '../shared/evidence.js';
 import type { EvidenceRow, EvidenceView } from './glass.js';
 import type { Desk } from '../shared/types.js';
@@ -1463,8 +1463,8 @@ function drawScenes(): void {
       const where = scene.view === null ? '' : ` · ${scene.view}`;
       // An entry this Deck cannot read says so in its own words, with its version: a tooltip is not seen on a list.
       option.textContent = scene.kind === 'unreadable' ? `${scene.name} (cannot be opened${scene.why === null ? '' : `: ${scene.why}`})` : `${scene.name}${where} · ${scene.notes} ${scene.notes === 1 ? 'note' : 'notes'}`;
-      // Listed and not openable: it is there, and this Deck cannot read it.
-      option.disabled = scene.kind === 'unreadable';
+      // Listed and not openable: it is there, and this Deck cannot read it. It can be chosen, because it
+      // can still be deleted, and a control that can never be reached is no control.
       if (scene.why !== null) option.title = scene.why;
       return option;
     });
@@ -1476,10 +1476,11 @@ function drawScenes(): void {
   // The three acts are about the name chosen in the list, which need not be the scene that is open.
   const chosen = el.sceneList.value;
   const entry = scenes.find((s) => s.name === chosen);
-  el.sceneOpen.hidden = entry === undefined || entry.kind === 'unreadable';
+  const acts = entry === undefined ? null : actsFor(entry.kind);
+  el.sceneOpen.hidden = acts === null || !acts.open;
   el.sceneOpen.title = entry === undefined ? '' : `Replace this view's desk with "${entry.name}". What it holds is read afresh; one press brings back the desk that is here now.`;
-  el.sceneRename.hidden = entry === undefined;
-  el.sceneDelete.hidden = entry === undefined;
+  el.sceneRename.hidden = acts === null || !acts.rename;
+  el.sceneDelete.hidden = acts === null || !acts.remove;
   el.sceneBack.hidden = beforeScene === null;
   if (beforeScene !== null) {
     el.sceneBack.textContent = `Undo: back to the desk before "${beforeScene.opened}"`;
@@ -1533,7 +1534,7 @@ async function openScene(name: string, undoable = true): Promise<void> {
   }
   const kind = sceneKind(scene);
   if (kind === 'unreadable') {
-    say(`"${name}" was saved by a newer Deck (version ${String(scene.version)}) and is not opened; it is kept as it is`, true);
+    say(`"${name}" was ${savedByOther(scene)} and is not opened; it is kept as it is`, true);
     drawScenes();
     return;
   }
@@ -1581,7 +1582,7 @@ async function saveScene(): Promise<void> {
   }
   const existing = state.desks[deskKey(ws, name)];
   if (existing !== undefined && sceneKind(existing) === 'unreadable') {
-    say(`"${name}" was saved by a newer Deck and is not replaced; choose another name`, true);
+    say(`"${name}" was ${savedByOther(existing)} and is not replaced; choose another name`, true);
     return;
   }
   // Asked whenever the name is taken, the open scene's own name included: saving over a scene replaces what it kept (ADR-0007 A7).
@@ -1626,7 +1627,12 @@ async function renameScene(): Promise<void> {
   const state = host.state();
   const ws = state.workspaceId;
   const from = el.sceneList.value;
-  if (ws === null || from === '' || !(deskKey(ws, from) in state.desks)) return;
+  const held = ws === null ? undefined : state.desks[deskKey(ws, from)];
+  if (ws === null || from === '' || held === undefined) return;
+  if (!actsFor(sceneKind(held)).rename) {
+    say(`"${from}" was ${savedByOther(held)} and is not renamed; it is kept as it is`, true);
+    return;
+  }
   const asked = await askText(`rename "${from}" to:`, from);
   const to = asked === null ? '' : asked.trim();
   if (to === '' || to === from) return;
@@ -2993,6 +2999,24 @@ function wireControls(): void {
         // they copy the address and Deck rejects its own string.
         say('that name cannot go in an address: up to 64 characters, and no control characters', true);
         return;
+      }
+      // A desk saved over a scene keeps the cards and drops the rest: the scene's view, search, list and
+      // reading places. One this Deck cannot read is never replaced; one it can read is asked about first,
+      // as "save scene" asks.
+      const existing = state.desks[deskKey(workspace.id, name)];
+      if (existing !== undefined && sceneKind(existing) === 'unreadable') {
+        say(`"${name}" was ${savedByOther(existing)} and is not replaced; choose another name`, true);
+        return;
+      }
+      if (existing !== undefined && sceneKind(existing) === 'scene') {
+        const answer = await askChoice(`a scene called "${name}" exists:`, [
+          { value: 'replace', label: 'replace it', says: `"${name}" will keep the cards on the desk now. The view, the search, the list and the reading places it kept are gone.` },
+          { value: 'keep', label: 'keep it', says: `"${name}" stays as it was saved and nothing is saved now.` },
+        ]);
+        if (answer !== 'replace') {
+          say(`"${name}" was kept as it was`);
+          return;
+        }
       }
       await send({ type: 'save-desk', name });
       drawDesk();
