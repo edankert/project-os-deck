@@ -344,7 +344,7 @@ module.exports = async function (d) {
   win.webContents.session.webRequest.onBeforeRequest(null);
 
   // ---- 11. Reduced motion: the same end state, with no movement ----
-  await t.clickOn('#sweep-desk', 900).catch(() => null);
+  await t.clickIfShown('#sweep-desk', 900);
   d.press(win, 'Escape'); await d.delay(300); d.press(win, 'Escape'); await d.delay(700);
   const dbg = win.webContents.debugger;
   dbg.attach('1.3');

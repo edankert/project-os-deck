@@ -283,7 +283,7 @@ module.exports = async function (d) {
     await t.park();
     const pickedAfter = await js(`(() => { const p = ${paneA}; return { emphasis: ${glass}.arrangeState().emphasis, asking: ${glass}.arrangeState().asking, listOpen: !p.querySelector('.pane-links').hidden, loud: [...p.querySelectorAll('.link-row:not(.quiet)')].map((r) => r.dataset.noteId).sort(), said: (p.querySelector('.kinds-said') || {}).textContent || '' }; })()`);
     check(pickedBefore !== null && pickedBefore.kind === pick.kind && pickedDuring === null && pickedAfter.emphasis !== null && pickedAfter.emphasis.noteId === a && pickedAfter.emphasis.kind === pick.kind && (!pickedAfter.listOpen || JSON.stringify(pickedAfter.loud) === JSON.stringify(want)), `Undo arrangement puts back the relationship that was picked out when the arrangement was applied: "${pick.kind}" is picked out again after it had been cleared`, { pickedBefore, pickedDuring, pickedAfter });
-    if (pickedAfter.listOpen) await t.clickOn('.pane.focus .kind-clear', 600).catch(() => null);
+    if (pickedAfter.listOpen) await t.clickIfShown('.pane.focus .kind-clear', 600);
     else await js(`${glass}.setEmphasis(${JSON.stringify(a)}, null)`);
   }
 

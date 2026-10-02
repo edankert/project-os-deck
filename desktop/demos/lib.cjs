@@ -21,6 +21,10 @@ module.exports = function lib(d, win) {
   const clickOn = async (selector, wait = 300) => {
     const at = await rect(selector);
     if (at === null) throw new Error(`nothing to click at ${selector}`);
+    // A press goes to whatever is drawn at the point. Where the thing meant is cut off or covered there, the
+    // press would land on something else and the walk would go on as if it had not, so it stops and says so.
+    const covered = await js(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); const hit = document.elementFromPoint(${at.x}, ${at.y}); if (hit && (e === hit || e.contains(hit) || hit.contains(e))) return null; return hit ? (hit.id ? '#' + hit.id : hit.className ? '.' + String(hit.className).split(' ')[0] : hit.tagName.toLowerCase()) : 'nothing'; })()`);
+    if (covered !== null) throw new Error(`${selector} cannot be pressed at its middle: ${covered} is drawn there`);
     await d.pointer(win, d.click(at));
     await d.delay(wait);
     return at;
@@ -32,6 +36,13 @@ module.exports = function lib(d, win) {
   const background = (room = 320) =>
     js(`(() => { const f = document.getElementById('field').getBoundingClientRect(); const g = ${glass}; for (let y = f.bottom - 24; y > f.top + 40; y -= 22) for (let x = f.right - 30; x > f.left + ${room} + 20; x -= 26) { let clear = true; for (const dx of [0, -${room}]) { const e = document.elementFromPoint(x + dx, y); if (!e || (e.id !== 'field' && e.id !== 'field-canvas' && !e.classList.contains('field-cards') && !e.classList.contains('field-panes') && !e.classList.contains('field-sectors'))) { clear = false; break; } } if (clear && g.bandState().tiles.every((t) => Math.abs(t.x - (x - f.left)) > t.w / 2 + 2 || Math.abs(t.y - (y - f.top)) > t.h / 2 + 2)) return { x, y }; } return null; })()`);
   /** Park the pointer where it rests on nothing that reacts. */
+  // A control that is hidden when there is nothing for it to do: pressed if it is drawn, left alone if not.
+  // Drawn and not pressable is still a failure, which `clickOn` reports.
+  const clickIfShown = async (selector, wait = 300) => {
+    if ((await rect(selector)) === null) return false;
+    await clickOn(selector, wait);
+    return true;
+  };
   const park = async () => {
     const f = await field();
     await d.pointer(win, [{ type: 'move', x: f.right - 6, y: f.top + 6 }]);
@@ -67,5 +78,5 @@ module.exports = function lib(d, win) {
     d.log('summary', s);
     if (s.failed.length > 0) throw new Error(`${s.failed.length} of ${s.checks} checks did not hold: ${s.failed.join(' | ')}`);
   };
-  return { js, check, rect, text, field, glass, state, clickOn, park, background, view, keys, drawnTwice, pane, rows, rowInReach, summary, finish, results };
+  return { js, check, rect, text, field, glass, state, clickOn, clickIfShown, park, background, view, keys, drawnTwice, pane, rows, rowInReach, summary, finish, results };
 };

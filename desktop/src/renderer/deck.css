@@ -552,18 +552,30 @@ body[data-surface="list"] .reader { flex: 1 1 auto; max-width: none; }
   background: var(--panel);
   font-size: 12px;
 }
+.field-bar::-webkit-scrollbar { display: none; }
 /* Scenes and arrangements together are wider than a laptop's window. Scrolled sideways, the last controls
-   (the two undos) were out of sight with nothing to say so. Under 1500 px the bar is two rows, at a
-   height that is fixed for the window's width, so a button appearing still does not resize the field. */
+   (the two undos) were out of sight with nothing to say so. Under 1500 px the bar is two rows and under
+   1200 px three, at a height that is fixed for the window's width, so a button appearing still does not
+   resize the field. */
 @media (max-width: 1500px) {
   /* Rows start at the top and the first row never moves: the owed count is first in the bar so that it
      keeps its place, and centring the rows moved it up whenever a second row appeared. */
-  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: flex-start; padding-top: 5px; row-gap: 4px; overflow-x: hidden; overflow-y: auto; }
+  .field-bar { flex-basis: 62px; height: 62px; flex-wrap: wrap; align-content: flex-start; padding-top: 8px; row-gap: 4px; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
+  /* What the rows cannot hold is reached by scrolling the bar, and here the bar shows that it scrolls. */
+  .field-bar::-webkit-scrollbar { display: block; width: 6px; }
+  .field-bar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
   #scene-back { max-width: 26em; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 1200px) {
+  /* Two rows held the scene controls and the arrangements in a window of 1440. At 900 the third row
+     ("Read", "Compare", "close all") was cut off by the bar's lower edge, and a press on it landed on
+     whatever stood in the field beneath. */
+  .field-bar { flex-basis: 86px; height: 86px; }
+  /* A group wider than the bar wraps inside itself rather than being cut at the bar's right edge. */
+  .field-bar .scenes, .field-bar .arrange { flex: 0 1 auto; min-width: 0; flex-wrap: wrap; row-gap: 4px; }
 }
 .field-bar .spacer { flex: 1 1 auto; }
 .field-bar .action { padding: 1px 8px; line-height: 1.4; flex: 0 0 auto; }
-.field-bar::-webkit-scrollbar { display: none; }
 .front-label { color: var(--ink); font-weight: 600; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .treatments { flex: 0 0 auto; }
 .field.holding ~ .field-bar .front-label,

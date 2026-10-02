@@ -187,7 +187,7 @@ module.exports = async function (d) {
   // ---- 7. A verb the sidecar refuses is drawn refused, with the reason in words, inside the document ----
   // No note in this workspace has such a verb today. The sidecar's answer for one note is replaced by this
   // walk, through the debugger, with one whose first verb is disabled with a reason.
-  await t.clickOn('#sweep-desk', 700).catch(() => null);
+  await t.clickIfShown('#sweep-desk', 700);
   await t.view('intent');
   const withVerb = await js(`[...document.querySelectorAll('#nav-list .nav-row[data-note-id]')].filter((r) => !r.hidden).map((r) => r.dataset.noteId).find((id) => /^(ADR|DES)-/.test(id)) || null`);
   const offered = withVerb === null ? null : await (await fetch(`${d.origin}/deck/sidecar/${ws}/api/notes/actions?id=${encodeURIComponent(withVerb)}`)).json();

@@ -178,7 +178,7 @@ module.exports = async function (d) {
     return (await js('window.__deckDesk()')).includes(targetId);
   };
   const close = (id, wait = 700) => t.clickOn(`.pane[data-note-id="${id}"] .pane-close`, wait);
-  const sweep = async () => { await t.clickOn('#sweep-desk', 800).catch(() => null); };
+  const sweep = async () => { await t.clickIfShown('#sweep-desk', 800); };
   // A fact's own colour says whether it holds the check open: the alarm colour, which no other fact has.
   const getTone = (row, fact) => (row.facts.indexOf(fact) === 0 ? row.tone : fact.colour === 'rgb(247, 118, 142)' ? 'blocking' : 'other');
   const fieldNow = () => js(`({ zoom: ${glass}.zoom(), yaw: ${glass}.model.yaw })`);
