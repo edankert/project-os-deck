@@ -783,7 +783,7 @@ function round(value: number): number {
 }
 
 function sameFilters(a: Filters, b: Filters): boolean {
-  return a.statuses.join(' ') === b.statuses.join(' ') && a.types.join(' ') === b.types.join(' ');
+  return a.statuses.join('\0') === b.statuses.join('\0') && a.types.join('\0') === b.types.join('\0');
 }
 
 function normaliseFilters(value: unknown): Filters {

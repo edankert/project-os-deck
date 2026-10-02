@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { load } from './helpers.mjs';
+import { desktopRoot, load } from './helpers.mjs';
 
 const { reduce, initialState, normaliseState, deskKey } = load('shared/store-state.js');
 const { DeckStore } = load('main/store.js');
@@ -64,6 +64,26 @@ test('a filter belongs to the view it was set on; a search string does not', () 
   state = reduce(state, { type: 'select-view', viewId: 'features' });
   assert.deepEqual(state.filters, { statuses: [], types: [] }, 'a filter outlived the view it was set on');
   assert.equal(state.query, 'ble', 'the search box was emptied by a view change');
+});
+
+test('two filters are the same only when every value is, and the store\'s source is text', () => {
+  // The reducer compares two lists by joining each with a character no status
+  // or type can hold. Until 2026-10-02 that character stood in the source as
+  // four raw NUL bytes, so `file` called the source data and `grep` skipped
+  // it. It is written as an escape now, and is the same character.
+  const state = reduce(initialState(), { type: 'set-filters', filters: { statuses: ['a', 'b'], types: ['x', 'y'] } });
+  assert.equal(reduce(state, { type: 'set-filters', filters: { statuses: ['a', 'b'], types: ['x', 'y'] } }), state);
+  for (const other of [['ab'], ['a b'], ['a,b'], ['a', 'b', 'c'], ['b', 'a']]) {
+    assert.notEqual(reduce(state, { type: 'set-filters', filters: { statuses: other, types: ['x', 'y'] } }), state, `statuses ${JSON.stringify(other)} read as a, b`);
+    assert.notEqual(reduce(state, { type: 'set-filters', filters: { statuses: ['a', 'b'], types: other } }), state, `types ${JSON.stringify(other)} read as x, y`);
+  }
+  // The one pair the join cannot tell apart is the pair that shows which
+  // character it is: a value holding a NUL. Any other separator fails here.
+  assert.equal(reduce(state, { type: 'set-filters', filters: { statuses: ['a\0b'], types: ['x', 'y'] } }), state);
+  assert.equal(reduce(state, { type: 'set-filters', filters: { statuses: ['a', 'b'], types: ['x\0y'] } }), state);
+  const source = fs.readFileSync(path.join(desktopRoot, 'src', 'shared', 'store-state.ts'));
+  const control = [...source].filter((byte) => byte < 0x20 && byte !== 0x0a && byte !== 0x09);
+  assert.deepEqual(control, [], 'the source holds bytes that are not text');
 });
 
 test('an action this build does not know is ignored rather than fatal', () => {
