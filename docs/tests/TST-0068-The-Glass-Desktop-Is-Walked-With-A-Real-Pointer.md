@@ -6,7 +6,7 @@ title: "The Glass desktop is walked with a real pointer and keyboard: the collec
 status: passing
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -14,7 +14,7 @@ level: integration
 kind: manual
 entrypoint: "desktop/demos/glass-desktop.cjs"
 command: ""
-last_verified: 2026-10-01
+last_verified: 2026-10-02
 automation: "one command, run by hand: bash tools/scripts/walk-in-a-box.sh glass-desktop. Not run by run-tests.py or by CI, which have no Docker."
 covers: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[REQ-0001-Glass-Collections-Remain-Exact-And-Interactive]]", "[[REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
 issues: []
@@ -65,15 +65,19 @@ It runs on this repository's own notes, on the Features view, and writes nothing
 
 - Whether a person finds the route obvious or the motion helpful. That is TST-0063.
 - A screen reader. The names are in the page; nobody has listened to them.
-- Touch. The served page was driven with a mouse pointer.
+- Touch, and a real tablet. The served page was driven in a second Electron window with no preload bridge, with a mouse pointer.
+- A second display.
 - Timing on the Mac. The box renders in software.
+- The two filter boxes, and a group heading pressed with the pointer. The walk opens every heading through the store before it counts rows.
 - A change on disk while the list is open, which is [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]].
 
 ## Evidence
 
-**2026-10-01**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900), on this repository at commit `598ecc9` plus the walk's own tidying: 54 checks recorded, 54 held, 23 pictures, workspace unchanged, 61 seconds. Run twice after the last fix to the application, with the same result both times.
+**2026-10-02**, in the Linux box (`project-os-deck-smoke` image, Electron under Xvfb, screen 1440 by 900, window 1440 by 873), on this repository at commit `4243fc2`, from a separate clone: 54 checks recorded, 54 held, 23 pictures, workspace unchanged, 62 seconds. No part of the walk was left out. The Features view held 144 notes, and the collection counted 144.
 
-The first complete run failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
+This was one run in a verification pass that also made the smoke run and the other walks. The walk first held all 54 on 2026-10-01 at commit `598ecc9`, when the view held 131 notes.
+
+The first complete run, on 2026-10-01, failed nine checks. Eight were defects in the application and are fixed; each was seen failing before its fix and holding after it:
 
 1. Escape on a document's header left the focus instead of closing the open related list.
 2. A note opened with Enter left the keyboard on the row.

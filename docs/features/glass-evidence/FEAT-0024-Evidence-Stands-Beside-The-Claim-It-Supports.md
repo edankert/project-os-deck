@@ -2,7 +2,7 @@
 type: "[[feature]]"
 id: FEAT-0024
 title: "Evidence stands beside the claim it supports"
-status: doing
+status: review
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02
@@ -90,14 +90,15 @@ Five threads are open under ADR-0008's Acceptance section, and each is Edwin's. 
 
 ## Verification
 
-Nothing is built by this note and no check has been run. The checks that will hold the evidence are:
+Built on 2026-10-02 and checked at `4243fc2`.
 
-- [[TST-0077-A-Claims-Evidence-Stands-Beside-It]], the acceptance check a person walks, including the tablet.
-- [[TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not]], the evidence model without a window: `bash tools/scripts/run-desktop-tests.sh evidence`.
-- [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]], the host suite, which TASK-0112 extends to the new path: `bash tools/scripts/run-desktop-tests.sh host`.
-- [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], the scripted walk in the box: `bash tools/scripts/walk-in-a-box.sh glass-evidence --copy`.
+- **`npm test` in `desktop/`: 586 tests, all passing** (run at `0169d7f`, which differs from `4243fc2` by notes and one word in a comment). The evidence model is [[TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not]] (`bash tools/scripts/run-desktop-tests.sh evidence`, 18 tests). Each of its rules was broken once in the module and a test failed; the list is in that note. The host's refusals on the new path are in [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]] (`bash tools/scripts/run-desktop-tests.sh host`).
+- **The scripted walk, [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], in the Linux box.** On a copy of this repository: 36 checks, all holding, none not run. On a copy of `your-trainer`, which keeps ledgers for two platforms: 28 checks, all holding, 3 parts not run. That note lists what was seen, the measurements and seven defects the walks found, each fixed here.
+- **The earlier walks were run again in the same pass,** after the document's structure changed to hold the panel beside the text, and all held: the Glass desktop, arrangements, scenes, handoff, the collection's refresh and the neighbourhood.
+- **Not done: a person's walk.** [[TST-0077-A-Claims-Evidence-Stands-Beside-It]] has not been walked and the ledger holds no verdict for it. Its steps were checked against the built application and two were rewritten to routes that exist.
+- **The full smoke run, on loopback and on the network, with this feature in the build:** `bash tools/scripts/smoke-in-a-box.sh both` exits 0 at `4243fc2`. The loopback half, run once more with each check printed, shows 389 checks passing, none failing and none skipped, 291 of them in the Glass section. The run's comparison of a document's text with the note's own leaves out the evidence control, as it does the tick control.
 
-TASK-0114 records the pictures and what was seen on two real workspaces. Before the review, this section is replaced by the full test command, its date and its result count.
+The feature rests at `review`. It is built and its automated checks pass. `done` needs REQ-0006's criteria ticked with evidence, and two of them name the walk a person takes.
 
 ## Impact analysis
 
@@ -126,7 +127,7 @@ Scanned on 2026-10-02 against the five triggers in `tools/instructions/LIFECYCLE
 - **A new external dependency or version constraint: yes.** Deck starts reading a payload the cockpit owns. Its shape may change, and its `schema_version` is 4 today. A changed field would not fail loudly. It would make a check a person passed read "not walked", which is the one false statement this feature exists to avoid. [[RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes]] is opened for it, with TASK-0111 and TASK-0112 as mitigation.
 - **A new required environment variable or configuration surface: none.**
 - **A directory layout or artifact path change: none.** The walk writes to `desktop/dist/walks/glass-evidence/`, which is build output and is not committed.
-- **A runtime increase or new long-running step: a small one, to be measured.** Opening the panel on a note with an acceptance check makes one request to learn the ledger's platforms and one more per platform. The payload covers every acceptance check in the workspace. TASK-0114 records its size and time on this workspace and on a larger one. Nothing is requested until a panel is opened.
+- **A runtime increase or new long-running step: a small one, measured.** Opening the panel on a note with an acceptance check makes one request to learn the ledger's platforms and one more per platform. The payload covers every acceptance check in the workspace. In the box, on this repository the panel was filled 152 ms after the key press (448 KB per answer); on `your-trainer` in 466 ms (3.3 MB and 4.0 MB). Nothing is requested until a panel that lists an acceptance check is opened, and the answers are kept until the notes change.
 - **A security, credential or licence exposure: one, named.** Under `--lan`, the ledger's content becomes readable on the local network through Deck's host: each verdict's mark, date, reason and author. The tablet could already read every note's text and could not read the ledger. RISK-0008 records it, and ADR-0008's second thread asks Edwin whether the reason and author should be left off the served page.
 
 ## External dependencies

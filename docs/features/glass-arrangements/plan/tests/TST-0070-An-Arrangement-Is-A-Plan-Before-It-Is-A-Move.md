@@ -49,3 +49,14 @@ REQ-0003 says an arrangement changes layout only, can be previewed, cancelled an
 - A document that was moved, resized or closed since, and a collection that was changed since, are named and left alone.
 - The Cards presentation lays the members out in whole rows inside its area with no two overlapping, draws only the rows in view, and reaches every member exactly once by moving the first row.
 - The store applies an arrangement as one revision, changes no size and no reading-size preference, opens no note, and ignores a place it cannot use.
+
+## Evidence
+
+The file holds 15 tests. `npm test` in `desktop/` builds and runs every suite, this one among them. On 2026-10-02 at commit `9379a0c` it passed 586 of 586. That run was the main session's, and this close-out did not run it again. `9379a0c` is the last commit that changed application code before the verification pass at `4243fc2`. The suite's file and `desktop/src/shared/arrange.ts` have not changed since `b017807`, the commit that added them.
+
+This note records no verdict. The suite has a `command:`, so CI is its verdict (`STATUSES.md`, `[[test]]`).
+
+## What it does not cover
+
+- Anything drawn. The outline, the bar that names what moves, the travel and the keyboard are walked in [[TST-0071-Collection-Forms-And-Arrangements-Are-Walked-With-A-Real-Pointer]].
+- The undo putting back the focus, the open list and the relationship picked out. Those are the window's and are not part of `checkUndo`.

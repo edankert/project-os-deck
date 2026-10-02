@@ -3,18 +3,18 @@ type: "[[issue]]"
 id: ISS-0072
 aliases: ["ISS-0072"]
 title: "Dragging the note open in the middle of Glass by a few pixels makes its neighbours vanish and moves every card on screen"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["Edwin 2026-09-12, running Deck: 'The user might move the note but that then means that the associated notes should also move with it ...'; 'the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)'"]
 reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[PHASE-0002-Glass]]", "[[TASK-0104]]", "[[DES-0003]]"]
-tests: ["[[TST-0052]]"]
+tests: ["[[TST-0052]]", "[[TST-0045]]"]
 ---
 
 # Dragging the opened note moves every card on screen
@@ -26,6 +26,32 @@ tests: ["[[TST-0052]]"]
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "The user might move the note but that then means that the associated notes should also move with it ..."
 > "Also the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)"
+
+## Fixed, 2026-10-02
+
+**Dragging the opened note now moves it with the cards gathered round it, keeps it open, and moves no other card.** Leaving the arrangement is an explicit act again: Escape, ×, Hide notes, filling the field with W, or switching view or surface. Built in `81d4632` (TASK-0104).
+
+**The checks that show the defect gone** are in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which drags the document's header 90 by 50 pixels with a real pointer in a real window. At `4243fc2` they read:
+
+- "a drag of its header moves the document 90 by 50 in the store (466,16 to 556,66) and on screen, keeps the focus (ISS-0070: until TASK-0104 a drag left it) and changes no size".
+- "every seated card keeps its place beside the document through the drag (16 cards; none shifted)". It compares each card's offset from the document before and after.
+- "no card outside the neighbourhood moves because the document did: 3 cards are drawn exactly where they were (none moved) and the deal is the same deal".
+
+If the defect came back, the first would report that the dragged note is no longer the focus, the second would find no cards seated, and the third would name the cards that moved and report a new deal. A fourth check starts from a fresh lift and requires that a drag does not leave the focus ("the dragged document is still the focus with its cards round it"). The scripted walk `glass-desktop` checked the same with 29 cards round the document.
+
+**What was settled, against the four questions below.**
+
+1. Where the group may go. The cards round the document run past the field's left and right edges and are not clamped. The document itself is drawn within the field's width, with its header in sight, while the desk faces the person: the store keeps the place a drag gave it and the drawing stops at the edge. This is not Edwin's answer of 2026-09-12 that nothing is clamped, and it is Edwin's to accept or change. A turn does carry the document and its cards out of sight together.
+2. The way back. A button on the compass, reading "find" and the note's id, is offered when the desk is turned or moved away, and brings it back. A counter at each edge says how many related cards stand beyond it. Each row of the document's list shows where its card is. The smoke run presses all three.
+3. Whether the place survives. The document's place is in the store, as every held note's is, so it survives a reload. The focus, the turn and the look aside are the window's and are not stored.
+4. A re-layout and a resize. Dragging the corner keeps the focus and the cards make room: "the resized document is still the focus and its cards make room for it (15 seated, none over it)".
+
+What is not shown:
+
+- Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it.
+- No check was broken on purpose to see it fail. The checks were written after the fix.
+- The frame time the risk scan below asks for was taken in the Linux container only, which draws in software, and while turning, not while dragging: with 217 cards seated, 16.7 ms between frames at the median and 33.4 ms at the 95th percentile. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
+- In the orbit a drag of the document was not driven.
 
 ## Cause
 
@@ -73,14 +99,14 @@ No trigger applies: no new dependency, env var, path or exposure. A dragged grou
 
 ## Implementation ownership
 
-[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] owns the coupled repair under FEAT-0017. The current feature, plan and TST-0052 now state Edwin's chosen behavior; DES-0003 connects it to FEAT-0020. This issue remains open until the implementation and its regression evidence satisfy the decision. No runtime fix is claimed by the documentation update.
+[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] built the repair under FEAT-0017, together with ISS-0070 and ISS-0071. "Fixed, 2026-10-02" above says what shows it.
 
 ## Next Actions
 
 - [x] **Edwin confirmed the drag carries the ring, 2026-09-12, and rejected both options at the field's edge: nothing is clamped and nothing is folded away.** Recorded below.
 - [x] **Settled 2026-09-12, Edwin: "turning moves the note and the whole ring".** The arrangement is anchored to the cylinder, so the ring's places are bearings; a neighbour off the edge of sight is reached by turning, which is what "a huge space to play with" already means in Glass. Recorded in [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]].
-- [ ] The way back is still owed, and it is now cheaper than it looked: with the arrangement on the cylinder, a note dragged out of sight is at a bearing, so the compass can name it and turn to it rather than needing a new mechanism.
-- [ ] Then FEAT-0017's decision 13 is rewritten and tasks follow: an offset in `focusLayout` (pure, with its suite), the drag handler moving the group, a way back to a note the person has dragged out of sight, and a smoke check that drags the note in the middle and finds the ring still drawn with every neighbour at the same offset.
+- [x] The way back: a control that names the note out of sight and returns to it. Built as a button reading "find" and the note's id, with the edge counters and the list beside it. It stands on the compass, as this box proposed. It brings the desk round to where the person faces and does not turn the field. Shown by the smoke run's `focus` checks "and "find" is offered for the note turned away from ("find PHASE-0002")" and ""find" brings the desk back", at `4243fc2`.
+- [x] Then FEAT-0017's decision 13 is rewritten and tasks follow: the layout follows the document's place (pure, with its suite), the drag handler moves the group, there is a way back, and a smoke check drags the note and finds every neighbour at the same offset. Done as TASK-0104. FEAT-0017's rule is now the fourth of its interaction decisions, "Movement preserves the group". The layout takes the document's rectangle wherever it stands, which is what the box called an offset. The smoke check is quoted under "Fixed, 2026-10-02".
 
 ## Decision record
 
@@ -88,6 +114,8 @@ No trigger applies: no new dependency, env var, path or exposure. A dragged grou
 > Neighbours / notes in general can fall of the edge and move out of vision ... there should be a huge space to play with.
 
 ## Checked against the code, 2026-09-19: still true, kept
+
+This is the record of that day's check. The defect it confirms was fixed on 2026-10-02; see "Fixed, 2026-10-02" above.
 
 **What a user notices:** A person nudges the opened note and the whole screen rearranges: the neighbours around it disappear and every card is dealt somewhere new. Edwin expects the neighbours to move with the note.
 

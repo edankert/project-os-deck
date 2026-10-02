@@ -4,7 +4,7 @@ title: "Put the collection and full note on Glass"
 status: active
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"]
 implements: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"]
 related: ["[[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]]"]
@@ -30,6 +30,10 @@ TASK-0104 is a hard dependency of TASK-0098. TASK-0095 and TASK-0097 may proceed
 
 ## State ownership and bounded decisions
 
-The design proposes query identity, filters, collapse state and layout in the per-view desk; selection and scroll anchor are window interaction state. Derive fresh rows on restore. Camera yaw, zoom and current focus remain session state until the scenes feature adopts a new contract. The proposed reading-size precedence and per-view persistence are defined in DES-0003 and implemented by TASK-0104; old state defaults safely and temporary narrow layouts do not overwrite saved sizes.
+As built, the store keeps a collection's place, size, collapse state and presentation per view, and one search text and one set of filters for all windows; a view change clears the filters. Selection and scroll anchor are window interaction state. Rows are derived afresh on restore. Camera yaw, zoom and current focus remain session state until the scenes feature adopts a new contract. The proposed reading-size precedence and per-view persistence are defined in DES-0003 and implemented by TASK-0104; old state defaults safely and temporary narrow layouts do not overwrite saved sizes.
 
-Supported header fields come from each current view's existing data. Missing progress or relationship semantics are omitted or labelled generically. Motion duration and layout dimensions are trial values and need recorded evaluation before implementation is accepted.
+Supported header fields come from each current view's existing data. Missing progress or relationship semantics are omitted or labelled generically. Motion duration and layout dimensions are trial values and need recorded evaluation before implementation is accepted. The opening was built at 300 ms and measured in the container; no person has evaluated it.
+
+## Where the sequence stands, 2026-10-02
+
+Steps 1 to 4 are built. TASK-0095, TASK-0098 and TASK-0100 are `done`. TASK-0096 and TASK-0097 stay `doing` on boxes that no check shows yet, listed in the feature note under Verification. Step 5's demonstration was driven by scripted walks at commit `4243fc2` and is still owed by a person: [[TST-0063-A-Collection-And-Full-Note-Share-Glass]] has not been walked, and nothing was measured on the Mac, so TASK-0099 stays `doing`. Steps 6 and 7 are other features' and are closed out in their own notes. The plan stays `active` while the feature is `doing`.

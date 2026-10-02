@@ -6,7 +6,7 @@ title: "A collection counts exactly the notes its view returns, keeps where it s
 status: active
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[TASK-0095-Model-An-Exact-Collection-On-The-Desk]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -46,3 +46,16 @@ The collection is the view's list as an object on the Glass desk. What it is all
 - A changed result is described as added, removed and changed, and is not applied by being described.
 - When the selected note leaves the result the text names it, and says its document stays open when one is.
 - The scroll position is kept as a note and the heading it is under, so a list that gains rows above comes back to the same row, and a note listed under two headings comes back to the row that was meant.
+- While the pointer rests on the list, the row under it stays where it is when rows arrive above it. When that row leaves, the row below it is the one held still.
+- Rows that come from the desk keep their order while a person is on the list, and new ones are added after them.
+- A tablet is told the layout of a workspace it can open, and cannot change it.
+
+## Evidence
+
+This test has a `command:`, so it records no verdict here; CI is the verdict.
+
+**2026-10-02**, commit `9379a0c`: `npm test` in `desktop/` ran every suite and passed 586 of 586. Seventeen of those tests are this suite's. `9379a0c` is the last commit to change application code before the verification pass at `4243fc2`.
+
+The suite began with 13 tests when the collection was built (commit `762bdfd`). Four came with defects the walks found: one about a note listed under two headings (`598ecc9`), and three about rows holding still under the pointer (`d91fc7e`). The last three Expected results above were added on 2026-10-02 to name what those tests check.
+
+What the suite cannot show is the list on screen. That is [[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]] and [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]], and the `collection` part of the smoke run, 17 checks of 17 at `4243fc2`.

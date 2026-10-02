@@ -62,8 +62,8 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0002"
-  feature: "FEAT-0024"
-  task: "TASK-0113"
+  feature: "FEAT-0023"
+  task: "TASK-0109"
   issue: ""
   note: "2026-10-01: Glass is delivered in the Electron application; the native Rust evaluation (FEAT-0019) was dropped and removed. TASK-0104 (one object per note, chosen reading size, the neighbourhood moves with the document) is built and its node suites pass; its smoke run is being reconciled, so it is still in progress and ISS-0070/0071/0072 stay open until that evidence exists. FEAT-0020 is being built now, TASK-0095 first: the collection and the full document on the Glass desk. Then FEAT-0022 (arrangements), FEAT-0023 (scenes and handoff) and the evidence experience under FEAT-0021. The acceptance walks TST-0052, TST-0063 and TST-0064 are a person's and are not walked."
 # Canonical state for tracked items (empty for a fresh template).
@@ -1013,7 +1013,7 @@ items:
     ISS-0070:
       file: "docs/issues/ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle.md"
       title: "While a note is open in Glass, each of its neighbours is shown twice, and the opened note leaves an empty dashed frame where it was"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -1023,7 +1023,7 @@ items:
     ISS-0071:
       file: "docs/issues/ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose.md"
       title: "The note open in the middle of Glass ignores the size the person gave it, and changes size as soon as it is dragged"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -1033,7 +1033,7 @@ items:
     ISS-0072:
       file: "docs/issues/ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away.md"
       title: "Dragging the note open in the middle of Glass by a few pixels makes its neighbours vanish and moves every card on screen"
-      status: open
+      status: fixed
       owner: user:edwin
       phase: PHASE-0002
       severity: high
@@ -2389,7 +2389,7 @@ metrics:
     tests_total: 57
     tests_passing: 8
     tests_failing: 0
-    issues_open: 6
+    issues_open: 3
     issues_triage: 0
     risks_open: 2
     releases_total: 0

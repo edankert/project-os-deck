@@ -6,24 +6,25 @@ title: "Glass is driven with a real pointer in a real window: the field, the lif
 status: passing
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-11
+updated: 2026-10-02
 source: ["[[PHASE-0002-Glass]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
 level: integration
 entrypoint: "desktop/src/main/smoke-glass.ts"
 command: ""
-last_verified: 2026-09-11
+last_verified: 2026-10-02
 automation: "one command, run manually or by the deck-smoke CI job; not by run-tests.py, which has no sidecar"
 covers: ["[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]", "[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
-issues: []
-tasks: ["[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[TASK-0060-Hide-Notes-And-Show-Them-Again]]", "[[TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk]]", "[[TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk]]", "[[TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]]", "[[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]"]
+issues: ["[[ISS-0070]]", "[[ISS-0071]]", "[[ISS-0072]]"]
+tasks: ["[[TASK-0031-The-Field-Renders-And-Turns]]", "[[TASK-0032-A-View-Switch-Re-Arranges]]", "[[TASK-0033-Glass-Is-Addressed-And-Opened-First]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0037-What-These-Share]]", "[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]", "[[TASK-0001-The-Whole-Edge-List-Is-One-Payload]]", "[[TASK-0003-The-Field-Renders-And-Flies]]", "[[TASK-0004-Landing-Opens-The-Note]]", "[[TASK-0060-Hide-Notes-And-Show-Them-Again]]", "[[TASK-0061-Glass-And-Spread-Draw-The-Views-Own-Desk]]", "[[TASK-0062-Desk-Panels-Throws-And-The-Tablet-Use-The-Right-Views-Desk]]", "[[TASK-0063-The-Smoke-Run-Drives-Desks-Per-View-And-Hide]]", "[[TASK-0065-The-Wheel-And-Three-Keys-Zoom-The-Field]]", "[[TASK-0066-The-Smoke-Run-Zooms-With-A-Real-Wheel]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]]", "[[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]", "[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
 artifacts: ["tools/scripts/run-smoke.sh"]
 adequacy: "Measured by breaking each fix on purpose, one break per run of the Glass section. After the second review, seven breaks each made their check fail (ISS-0065 lists them); the second reviewer's four breaks failed five checks. One check cannot fail when its fix is reverted, and says so: the reduced-motion lift from a turned field (ISS-0064), because a second deal hides the first. Before any review the run found five defects in Glass before a person saw them."
 mutation_score: "about 60 breaks run against the Glass section on 2026-09-10 and 2026-09-11, each seen to fail a check or recorded where one did not; not a full mutation run, which takes eight minutes a mutant"
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-10
 review_verdict: changes-requested
+review_response: "Recorded 2026-10-02 from this note's own history; the verdict stays the reviewer's. The second review's findings were fixed on 2026-09-10 under ISS-0064 and ISS-0065. Finding 1: the reduced-motion cut check now waits for the earlier lift to settle and starts from a yaw away from the note. Finding 3: every shared note is checked for a front slot, and the compass's quiet count is compared with the notes dealt there. Finding 4: a reduced-motion lift is checked from a turned field; that one check cannot fail when its fix is reverted, and the adequacy field says so. Finding 5: the reduced-motion view switch requires the card and the row. Finding 7: a reach's wire is read back from the canvas as a pixel. Seven breaks each made their check fail (ISS-0065). Finding 6: command stays empty, and 'Where this test's verdict comes from' says why. Edwin stopped the review loop after this round (PHASE-0002, 2026-09-10), so no third review was run. Since then TASK-0104 replaced two of those checks: that every shared note is dealt into the front band, and that no card is dealt under a pane. Holding a note no longer deals its neighbourhood forward, and a document no longer pushes cards aside."
 related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 ---
 # Glass is driven with a real pointer
@@ -34,8 +35,10 @@ related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-T
 
 ## What it covers
 
+These bullets were written as each feature landed. The two about lifting and about an opened note were rewritten on 2026-10-02. In the others, a check that no card is dealt under a pane, or that shared notes are dealt into the front band, has been replaced; the 2026-10-02 section at the end says by what.
+
 - **The field.** An address with no surface opens in Glass; the near bands are elements and the quiet band has none; the toggle offers Glass, Spread and List; the same address with `surface=spread` shows the desk.
-- **Lifting.** The hit test at a front card's centre finds the card; a real click lifts it, draws the ghost and the pane, changes the front label, keeps the owed count still, and asks for one context. A second lift is counted and the shared notes are marked and listed. ×, ⌥×, Escape and a background click each do exactly what they say.
+- **Lifting.** The hit test at a front card's centre finds the card; a real click lifts it, and it is drawn once, as its document, with no card and no ghost while its slot is kept; the front label and the owed count stay as they were; one context is asked for; holding a note deals nothing forward. A second lift is counted, the shared notes are marked and listed, and a note joined to both documents is one card with a line from each. ×, ⌥×, Escape and a background click each do exactly what they say.
 - **Turning.** A drag and an arrow key turn the field and deal nothing; the compass counts what is out of sight.
 - **The hands.** A pull, a refused push with its sentence, a push, the counts on the bar and the compass, the pull surviving a view switch, and let go.
 - **Reach.** A pass asks nothing, a rest reaches with at most one request, moving off clears it, a second rest asks nothing, and no element is added.
@@ -49,7 +52,7 @@ related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-T
 - **After Edwin's evaluation (ISS-0066, ISS-0067).** A raised pane covers the header of the pane it lies on; a press on a pane's body raises it; in Spread a click on a card lying under another brings it forward, and a dragged card is on top where it lands.
 - **Desks per view and Hide notes (FEAT-0015).** A note lifted on Issues has no pane on Features and is back in place on Issues; the bar names the other view that holds notes; Hide notes hides the panes, leaves the store's desk alone, reads "Show 2 notes", lets the field deal into the panes' space, and `H` shows them again; a reload shows them; `h` typed in the search box hides nothing; Spread's cards hide and show; the mark keeps a note on every view, drawn with its body and status on Features and as a "not in this view" card in Spread, and `V` gives it back; a press raises a note on every view above the view's own pane; Escape leaves the notes on every view and says so; a desk panel keeps its view and a throw onto it lands there; the tablet draws the Mac's current view's desk and follows a switch; an old state file draws the same panes on two views, marked.
 - **Zoom (FEAT-0016).** Real wheel events: the card under the pointer stays under it; the zoom stops at 2.5× and 0.6×; a pinch zooms the field and not the page; the wheel over a pane scrolls it; Shift turns; no card is left under a pane when the wheel stops; a click at a zoomed card lifts it; in the orbit a zoomed link rests and a zoomed dot lands where it is drawn; the keys, and the keys as letters in the search box; the compass reading; a double-click resets; the bands and the orbit keep their own zoom; nothing is stored; a key's step is a cut under reduced motion.
-- **The note in the middle (FEAT-0017).** The pane grows where the card stood and moves to the middle while the store keeps its place; the ring's mini notes clear the pane and each other; they keep their circular order; solid and dashed lines; resting on a line shows its sentence; the field is not dealt; a mini note is a door and the note it came from sits opposite; the dock swaps on a click and ignores a drag; Tab reaches the ring and Enter opens; Escape leaves, then sweeps; every other way out leaves and does not come back; "+N more" and the navigator's group; a cut and a highlight under reduced motion; the orbit opens a note the same way and holds still; nothing is kept across a reload.
+- **An opened note and its neighbourhood (FEAT-0017, as TASK-0104 repaired it).** The document opens from the card that was pressed, in 300 ms, at the size stamped when it opened; one note is one object, with no ghost, no copy on a ring, no "+N more" and no dock; every neighbour is the field's own card at a seat, at browsing size, with a solid or a dashed line to it; resting on a line shows its sentence; a broadcast moves nothing; a drag of the header keeps the focus, the size and every card's place beside the document, and moves no other card; Escape during a drag puts the document back; Escape leaves the focus and every card is back where it stood; the corner and Alt with an arrow resize, and the view remembers the size; R opens the list of every neighbour; a seated card opens as a second document; a note with 217 neighbours has a place for each; edge counters, a row's "show where it is" and "find" reach what is out of sight; a turn carries and dims the desk; reduced motion marks instead of moving; the orbit opens a note the same way and holds still; nothing about the focus is stored.
 - **Nothing is written.** `git status` in the workspace is the same before and after.
 
 ## Evidence
@@ -155,3 +158,42 @@ FEAT-0018's round-one independent review found that two of the fourteen checks [
 **None of the eleven has been run**, and neither has the whole suite since these changes. The run opens windows; Docker was not running on 2026-09-17, so the container [[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]] built was not available either. `npm test` (468 node checks) and both typechecks pass and cover none of this.
 
 **The `changes-requested` verdict of 2026-09-10 still stands in this note's frontmatter** and is not cleared by the above. [[PHASE-0002-Glass]] records why: Edwin asked to stop the review loop after the second round on 2026-09-10, and the verdicts stay recorded.
+
+## 2026-10-02: the whole run at `4243fc2`, with the count for each part
+
+**The smoke run passed in both modes, and its Glass section passed 291 checks with none failed.** It ran in the Linux container (the `project-os-deck-smoke` image, Electron under Xvfb, 1440 by 900, one display), from a separate clone at `4243fc2`. `bash tools/scripts/smoke-in-a-box.sh both` exited 0 after 1131 seconds, on loopback and then on the network. The loopback half was then run once more at the same commit with `DECK_SMOKE_DEBUG=1`, so that each check is printed and can be counted: 389 passed, 0 failed, 0 skipped, 2 not applicable. The two are the throw to a display with no Deck window, on a machine with one display, and the tablet-shaped checks, which the network half makes. `npm test` passed 586 of 586 at `9379a0c`, the last commit before `4243fc2` that changed application code.
+
+| Part of the Glass section | Checks passed |
+|---|---|
+| Before the parts: the field opens, and what the view owes | 8 |
+| `lift` | 27 |
+| `hands` | 25 |
+| `panes` | 21 |
+| `keys` | 12 |
+| `switch` | 11 |
+| `collection` | 17 |
+| `document` | 14 |
+| `served` | 6 |
+| `arrange` | 4 |
+| `throw` | 11 |
+| `orbit` | 22 |
+| `zoom` | 15 |
+| `focus` | 47 |
+| `desks` | 47 |
+| `address` | 3 |
+| After the parts: `git status` in the workspace is unchanged | 1 |
+| The Glass section | 291 |
+
+The other sections of the same run passed 98: Spread, the windows and the panels 55, the navigation guard 4, the served page following the store 4, a script in a note 2, the verb and tick controls 31, the quit 2.
+
+**The Issues view owed nothing that day, so the run made its own owed notes.** It first asserted that the front band was empty and the bar read "0 owed". It then marked four of the six open issues owed in the page's own copy of the navigation payload, and said so on a line beginning INJECTED: ISS-0070, ISS-0071, ISS-0072 and ISS-0008. No file was written. Those three issues were set to `fixed` after this run, which leaves three of the six that were open that day. The run needs two open issues. No run has been made since.
+
+**What changed in the run since the 2026-09-11 evidence above.** Commit `6be167a` rewrote the `focus` part against FEAT-0017 as TASK-0104 repaired it; "What it covers" lists what it asserts now. The same commit removed "no card is dealt under a pane" from four places, because a document no longer pushes cards aside, and put in its place that opening, moving, zooming past or hiding a document moves no card. "Every shared note is dealt into the front band" went too: holding a note deals nothing forward now, and the run checks that a note joined to two documents is one card with a line from each. The parts `collection`, `document`, `served` and `arrange` are new since then and belong to FEAT-0020 and FEAT-0022. `DECK_SMOKE_GLASS_ONLY` names the parts to run, and a partial run lists the parts it left out as a skip. A part that throws is recorded as a failure by name and the later parts still run.
+
+**The checks written on 2026-09-17 have now run.** The section above says none of the eleven had been run. They ran in the `desks` part of this pass and passed: the pointer cursor on a tile, the callout naming the note, `p` on the shelf, the pulled finished note after a view switch, a downward drag from a tile, a sideways drag that still turns the field, and the promoted cards' boxes. `6be167a` records that three checks no run had reached were wrong and corrected them first: the tile callout was read from an id the page never had, the pulled finished note was looked for on a view that does not hold it, and two zooms were compared after a wheel had turned over a document.
+
+**Adequacy of the rewritten `focus` part.** No check in it was broken on purpose to see it fail. Two were seen to fail on a real defect at `6be167a`, before the renderer was fixed. "Under reduced motion a lift marks the document and every card gathered round it" read 0 of 38, and reads 38 of 38 since `b2a99d6`. "R on the header opens the document's list of related notes with the keyboard on its first row" failed while R left the keyboard on the button, and passes at `4243fc2`.
+
+**What this run does not say.** It ran on one display, so nothing was thrown to a second one. Everything it timed was timed in software in the container, and nothing here says how fast Glass is on the Mac. It is a script: the acceptance checks that cover the same ground, [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]] among them, are walked by a person and none has been walked.
+
+**The review verdict is unchanged.** `review_verdict: changes-requested` is the second reviewer's, of 2026-09-10. `review_response:` now records what this note's history shows was done about it. No review was run for this pass.

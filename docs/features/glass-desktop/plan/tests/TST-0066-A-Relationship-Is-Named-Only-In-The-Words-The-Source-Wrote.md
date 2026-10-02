@@ -6,7 +6,7 @@ title: "A relationship between two notes is named only in the words the source w
 status: active
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[TASK-0098-Keep-Collection-Document-And-Field-In-Sync]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -34,7 +34,7 @@ DES-0003 allows a link to say "parent" or "implements" only when the source repo
 ## Procedure
 
 1. `bash tools/scripts/run-desktop-tests.sh relations`.
-2. The two tests in `desktop/tests/graph.test.mjs` whose names begin "a link written under a frontmatter key" run with `bash tools/scripts/run-desktop-tests.sh graph`.
+2. Two tests in `desktop/tests/graph.test.mjs` check that the index records the key: "a link carries the frontmatter key it was written under, and a link in the text carries none" and "an edge keeps the field of the link that made it". They run with `bash tools/scripts/run-desktop-tests.sh graph`.
 
 ## Expected results
 
@@ -43,3 +43,13 @@ DES-0003 allows a link to say "parent" or "implements" only when the source repo
 - Two notes joined in both directions keep each direction's own words.
 - A key is shown as the author wrote it. It is not translated, reversed ("parent" does not become "child") or grouped under a heading Deck chose.
 - The sentence for a row or a hover says which note wrote the link and under which key.
+
+## Evidence
+
+This test has a `command:`, so it records no verdict here; CI is the verdict.
+
+**2026-10-02**, commit `9379a0c`: `npm test` in `desktop/` ran every suite and passed 586 of 586. Six of those tests are this suite's, and ten are the `graph` suite's, which holds the two tests named in step 2. `9379a0c` is the last commit to change application code before the verification pass at `4243fc2`.
+
+The same rule is checked on real notes by the `glass-desktop` walk ([[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]]). At `4243fc2` its check "every relationship word is a frontmatter key the source wrote for that pair, or 'link'; none is invented" held for the 16 rows of one note's related list: 11 rows named a key and none was invented.
+
+Step 2 of the Procedure named two tests by a title that no test has. It was corrected on 2026-10-02 to the titles in the file.

@@ -36,6 +36,21 @@ Which sources are read, what is shown for each kind of test and the exact words 
 - [ ] The panel is closed until a person opens it, opens and closes by pointer and by keyboard with focus returned to the control that opened it, and appears without travel under reduced motion. — evidence to be collected: [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], [[TST-0077-A-Claims-Evidence-Stands-Beside-It]]
 - [ ] Nothing in the panel writes: it offers no control that records or changes a verdict, the served page shows the same panel through the same GET, Deck's host answers 405 to every method that is not GET or HEAD on the forwarded acceptance path, and `git status` in the workspace is unchanged by using the panel. — evidence to be collected: [[TST-0007-The-Host-Serves-Reads-And-Refuses-Everything-Else]], [[TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer]], [[TST-0077-A-Claims-Evidence-Stands-Beside-It]]
 
+### Evidence collected, 2026-10-02
+
+No criterion is ticked here. Ticking a criterion with evidence is a person's act in the cockpit, and two criteria name the acceptance check, which no one has walked. This is what exists for whoever ticks them.
+
+| Criterion | What exists | What is still owed |
+| --- | --- | --- |
+| The tests that name a note, by key; "no test names this note" | TST-0078 (18 tests, passing at `4243fc2`); TST-0079 on two workspaces | A person's walk, TST-0077 steps 2 and 9 |
+| An acceptance check's verdict, "not walked", an invalidation, the history | TST-0078; TST-0079 compared with the ledger files on both workspaces, two platforms on one | TST-0077 steps 3 and 6 to 8 |
+| A manual test's status and date, stale after 90 days; a test with a command | TST-0078, including the day it turns stale; TST-0079 | TST-0077 steps 4 and 5 |
+| A verdict is never a status; an unread record is not "not walked" | TST-0078; TST-0079 with the request refused | Nothing further is planned |
+| Source, date and the original; the excerpt | TST-0079 on this repository | TST-0077 step 10 |
+| A criterion's own control | TST-0078 for the rule; TST-0079 on REQ-0001 | TST-0077 step 11 |
+| Closed until opened, keyboard, focus, reduced motion | TST-0079, with reduced motion emulated | TST-0077 step 13, with the real setting |
+| Nothing writes; the served page; 405 | TST-0007 (the host suite); TST-0079 with the served page and the files compared at the end | TST-0077 steps 12 and 14, on a tablet |
+
 ## Approval
 
 Approved for building on 2026-10-02. Edwin asked for this to be delivered with DES-0003 as the baseline: “Deliver the structured-evidence experience described under FEAT-0021, establishing its required source contracts first. Respect the documented phase and authority boundaries. Do not fabricate evidence, relationship meanings or unsupported backend fields. Identify any genuinely external dependency precisely and continue all independent work.” The acceptance criteria above are the ones the implementation is built against. They are ticked only with evidence, at the feature's close-out.

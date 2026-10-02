@@ -3,7 +3,7 @@ type: "[[issue]]"
 id: ISS-0070
 aliases: ["ISS-0070"]
 title: "While a note is open in Glass, each of its neighbours is shown twice, and the opened note leaves an empty dashed frame where it was"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
@@ -14,7 +14,7 @@ severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0035-A-Note-Is-Lifted-And-Put-Back]]", "[[DES-0002-The-Glass-Cockpit]]", "[[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]", "[[PHASE-0002-Glass]]", "[[TASK-0104]]", "[[DES-0003]]"]
-tests: ["[[TST-0052]]"]
+tests: ["[[TST-0052]]", "[[TST-0045]]", "[[TST-0051]]"]
 ---
 
 # An opened note's neighbours are shown twice, and the note leaves an empty frame
@@ -27,6 +27,27 @@ tests: ["[[TST-0052]]"]
 > "it shows associated notes around the note in the middle but this using a very small view of the notes, why not the same size view as when browsing?"
 > "Also the notes circling the note now all of a sudden change back to normal notes and are showed around the note (they might overlap with existing notes already visible in that location)"
 > "When opening a note the corresponding smaller version seems to turn into just a frame, this should not be the case, there should only be one note on the deck."
+
+## Fixed, 2026-10-02
+
+**A note opened in Glass is now drawn once: its neighbours are the field's own cards, moved to seats round its document at the size they are browsed at, and the opened note leaves no frame behind.** A seat is the place one card takes beside the document. Edwin's option 1 was built in `81d4632` (TASK-0104): the renderer that painted ring copies, `ring-view.ts`, is deleted, and the ghost is no longer drawn. The opened note's slot is kept for it and nothing is drawn there.
+
+**The check that shows the defect gone** is in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which opens a note with a real click in a real window. At `4243fc2` it read: "one note is one object: no card is drawn for the open note (0), no note is drawn twice (none), and there is no ghost (0), no copy on a ring (0) and no "+N more" (0)". It counts the field cards drawn for each note id, and the elements the old build drew. If the defect came back, a neighbour drawn as a second card would be named in the "drawn twice" list, a copy on a ring would make its count 1 or more, and a frame left behind would make the ghost count 1. Any of those fails the check.
+
+Four more checks in the same run bear on it, and all passed:
+
+- "every neighbour is seated round the document, each once, none over the document or another card (16 seated of 16 neighbours…)", and for the note with the most neighbours, 217 places for 217.
+- "a seated card is the size a card is browsed at: 138.2 to 138.2 px wide against 138.2 by 68.4 for the front-band card straight ahead, not the 168 by 44 of a copy". This is the half of the report that asked why the neighbours were shown so small.
+- In the `lift` part: "the lifted note is drawn once, as its document: the field draws no card for it (0) and no ghost (0), and still holds its slot".
+- In the orbit: the opened note has no card and no dot, and none of its 27 neighbours is also a dot or drawn twice.
+
+The scripted walk `glass-desktop` checked the same thing ("the open note is one object: no card is drawn for it and no neighbour is drawn twice"), and the `glass-scale` walks found 63 neighbours here and 217 in Your Trainer each seated once. The geometry suite `focus-ring` ([[TST-0051-The-Ring-Keeps-Order-Clears-The-Pane-And-Moves-On-Arcs]]) checks that a seat is the browsing size and that every neighbour gets one.
+
+What is not shown:
+
+- Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it. Edwin has not yet seen the repair in a walk.
+- No check was broken on purpose to see it fail. The checks were written after the fix, so none has been seen failing on this defect.
+- The frame time the risk scan below asks for was taken in the Linux container only, which draws in software: with 217 cards seated, 16.7 ms between frames at the median and 33.4 ms at the 95th percentile while turning. Nothing was measured on the Mac. That measurement is the open box in [[TASK-0104]].
 
 ## Cause
 
@@ -77,13 +98,13 @@ No trigger applies: no new dependency, env var, path, artifact or exposure. Opti
 
 ## Implementation ownership
 
-[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] owns the coupled repair under FEAT-0017. The current feature, plan and TST-0052 now state Edwin's chosen behavior; DES-0003 connects it to FEAT-0020. This issue remains open until the implementation and its regression evidence satisfy the decision. No runtime fix is claimed by the documentation update.
+[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] built the repair under FEAT-0017, together with ISS-0071 and ISS-0072. "Fixed, 2026-10-02" above says what shows it.
 
 ## Next Actions
 
 - [x] **Edwin chose option 1 and dropped the ghost, 2026-09-12.** Recorded below.
 - [x] Amend [[DES-0002-The-Glass-Cockpit]]: the ghost is gone, and the slot a lifted note left is reserved rather than drawn. Done 2026-10-02, as a dated amendment under "So opening is lifting".
-- [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]], with a smoke check that counts the drawn elements per note id while a note is in the middle and fails at two.
+- [x] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]], with a smoke check that counts the drawn elements per note id while a note is in the middle and fails at two. Done as TASK-0104; the check is "one note is one object" in the `focus` part of the smoke run, which passed at `4243fc2` on 2026-10-02.
 
 ## Decision record
 
@@ -94,6 +115,8 @@ No trigger applies: no new dependency, env var, path, artifact or exposure. Opti
 **The capacity cost named in option 1 is gone.** It assumed the ring had to fit inside the visible field. [[ISS-0071-The-Note-In-The-Middle-Is-Not-The-Size-The-Person-Chose]] and [[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]] were both answered on the same day with the opposite rule — the arrangement is laid out in a space larger than the window, and neighbours may stand off-screen — so full-size cards on the ring no longer cost places. What it costs instead is that some neighbours are off-screen until the person turns to them, which is the point of those two decisions.
 
 ## Checked against the code, 2026-09-19: still true, kept
+
+This is the record of that day's check. The defect it confirms was fixed on 2026-10-02; see "Fixed, 2026-10-02" above.
 
 **What a user notices:** Each neighbour of the opened note appears twice, in two sizes, and the opened note leaves a dashed empty outline in its old place. The small copies are harder to read than the cards the person was just browsing.
 

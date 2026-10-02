@@ -3,18 +3,18 @@ type: "[[issue]]"
 id: ISS-0071
 aliases: ["ISS-0071"]
 title: "The note open in the middle of Glass ignores the size the person gave it, and changes size as soon as it is dragged"
-status: open
+status: fixed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["Edwin 2026-09-12, running Deck: 'Then when moving the note out of the middle the main note size changes (this should never happen, move should not change the size)'; 'The main thing is that note is selected so this means that this is the user's main note, the user makes a decision on how big the note should be and this should be respected (note: new notes opened should open in that size)'"]
 reported_by: user:edwin
 severity: high
 component: renderer
 parent: ""
 related: ["[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]", "[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]", "[[ISS-0070-One-Note-Is-Drawn-Twice-While-Another-Is-In-The-Middle]]", "[[ISS-0072-Moving-The-Note-In-The-Middle-Throws-The-Arrangement-Away]]", "[[PHASE-0002-Glass]]", "[[TASK-0104]]", "[[DES-0003]]"]
-tests: ["[[TST-0052]]"]
+tests: ["[[TST-0052]]", "[[TST-0045]]", "[[TST-0065]]", "[[TST-0051]]"]
 ---
 
 # The opened note ignores the size the person gave it
@@ -26,6 +26,30 @@ tests: ["[[TST-0052]]"]
 > [!quote] As reported — 2026-09-12 (user:edwin)
 > "Then when moving the note out of the middle the main note size changes (this should never happen, move should not change the size)"
 > "The main thing is that note is selected so this means that this is the user's main note, the user makes a decision on how big the note should be and this should be respected (note: new notes opened should open in that size)"
+
+## Fixed, 2026-10-02
+
+**The note open in Glass is now drawn at the size the person gave it, and dragging it changes only where it is.** A note with a size of its own opens at that size. A note with none opens at the size last chosen on that view, and where nobody has chosen one, at 560 by 520. The corner, or Alt with an arrow on the header, is the only way a size changes. More neighbours make the arrangement round the note wider and never the note smaller. Built in `81d4632` (TASK-0104).
+
+**The check that shows the defect gone** is in the `focus` part of the smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which drags the document's header with a real pointer in a real window. At `4243fc2` it read: "Enter on its header makes ISS-0070 the focus again with its 16 neighbours, and the document is 560 by 520 to the pixel when opened, while dragged, after the drag, out of focus and in focus again (560x520, 560x520, 560x520, 560x520, 560x520)". It reads the drawn width and height at those five moments and requires all five to equal the view's size. If the defect came back, the size while dragged or out of focus would differ from the size in focus, by the snap to the stored size that this issue reports, and the check would print the five sizes and fail. The check before it holds the pointer down mid-drag and requires the same width and height as before the press.
+
+The second repro step, a resized note coming back at another size, is covered by three more checks in the same part, all passed:
+
+- "dragging the corner 40 by 30 resizes the document in the store and on screen (560 by 520 to 600 by 550, drawn 600 by 550), leaves it where it was, and the view remembers that size".
+- "the resized document is still the focus and its cards make room for it (15 seated, none over it), and the other document keeps its own size (560 by 520)".
+- "PHASE-0002, opened from its row in the list, takes the size the corner last chose on this view (616 by 550…), while ISS-0070 keeps 616 by 550 and ISS-0071 keeps 560 by 520". This is Edwin's "new notes opened should open in that size".
+
+The rule itself is checked without a window by the `reading-size` suite ([[TST-0065-A-Note-Opens-At-The-Size-A-Person-Chose]], 14 tests): which size wins, that a move changes no size, that a state file written before the view's size existed still loads, and that a small window changes what is drawn and never what is stored. The `focus-ring` suite checks that every neighbour gets a seat whatever size the document is, so the layout never needs the document smaller. Both ran inside `npm test`, 586 of 586, at `9379a0c`.
+
+**Where the remembered size lives.** In the store, under `readingSizes`, one size for each view of each workspace. Every window reads that store.
+
+**How the frame was built, where it differs from the sketch below.** Edwin chose "turning moves the note and the whole ring", and that is what happens: a turn carries the document and its cards together, dims them, and past the edge of sight stops drawing them. The smoke run checks each of those. The sketch under "The frame the ring is laid out in" made every seat a bearing of its own and a drag a turn plus a height change. What was built is one desk at one bearing: the document and the cards round it have places on that desk in pixels, and a drag changes the document's stored left and top.
+
+What is not shown:
+
+- Nobody has walked [[TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms]], and the ledger holds no verdict for it.
+- No run opened a note in a second window on the same view to watch it take the view's size.
+- No check and neither suite was broken on purpose to see it fail.
 
 ## Cause
 
@@ -75,14 +99,16 @@ No trigger applies for the layout change. The remembered reading size, if it goe
 
 ## Implementation ownership
 
-[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] owns the coupled repair under FEAT-0017. The current feature, plan and TST-0052 now state Edwin's chosen behavior; DES-0003 connects it to FEAT-0020. This issue remains open until the implementation and its regression evidence satisfy the decision. No runtime fix is claimed by the documentation update.
+[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]] built the repair under FEAT-0017, together with ISS-0070 and ISS-0072. "Fixed, 2026-10-02" above says what shows it.
 
 ## Next Actions
 
 - [x] **Edwin accepted the consequences, 2026-09-12, and changed the frame the ring is laid out in.** Recorded below.
 - [x] **Settled 2026-09-12, Edwin: "turning moves the note and the whole ring" — option 1.** The pane is anchored to a bearing on the cylinder and drawn flat, at the person's size, with no perspective.
-- [ ] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]: `focusLayout` takes the pane size and lays out beyond the viewport (pure, with its suite), the renderer passes the stored size, and a smoke check drags the note in the middle and fails if its width or height changes by a pixel.
-- [ ] Implement and verify DES-0003's proposed persisted per-view reading-size preference in TASK-0104, including older state, another window on the same view and narrow-window restoration.
+- [x] Then tasks under [[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]: the layout takes the document's size and lays out beyond the viewport (pure, with its suite), the renderer passes the stored size, and a smoke check drags the note and fails if its width or height changes by a pixel. Done as TASK-0104. `seatsAround` in `desktop/src/shared/focus-ring.ts` replaced `focusLayout`; its suite is `focus-ring`; the smoke check is quoted under "Fixed, 2026-10-02" and passed at `4243fc2`.
+- [x] Implement DES-0003's proposed persisted per-view reading-size preference in TASK-0104, and verify it for older state and narrow-window restoration. Shown by the `reading-size` suite, by the `glass-desktop` walk's check "made wide again, each document is at the size it had before the window was narrow", and by the smoke run's corner checks. This box also named another window; that part is the next box.
+- [ ] Verify the view's size in another window on the same view.
+  Missing: no run opened a note in a second window. The suite checks that the store keeps one size for a view and writes it on a newly opened note's card. Step 9 of TST-0052 asks a person to look.
 
 ## Decision record
 
@@ -109,6 +135,8 @@ One thing that does not follow, and has to be decided rather than assumed: **the
 > 1. turning moves the note and the whole ring
 
 ## Checked against the code, 2026-09-19: still true, kept
+
+This is the record of that day's check. The defect it confirms was fixed on 2026-10-02; see "Fixed, 2026-10-02" above.
 
 **What a user notices:** A person resizes the opened note, opens another note, comes back, and finds the first note at a different size. Dragging the opened note by a few pixels also makes it jump to another size.
 

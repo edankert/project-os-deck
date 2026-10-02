@@ -6,7 +6,7 @@ status: active
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 source: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"]
 scope: feature
 level: acceptance
@@ -44,14 +44,14 @@ Use desktop pointer and keyboard, a narrow window, and the served tablet or serv
 
 1. Open the view's collection on Glass. Compare the count and complete membership with the recorded source. Search, filter, fold groups, move and resize it.
 2. Select a row, scroll away from the top, collapse and reopen the collection. Verify its header names the query, exact count and active filters and restores size, selection and scroll anchor.
-3. Open a visible field card and then an out-of-sight or unplaced member from the collection. Observe continuity and try scrolling or following a link before the opening motion finishes. Interrupt opening with another selection. Repeat with reduced motion. Delay a document response, force a fetch failure and retry; check the identified loading/error frame and confirm full text appears as soon as available without a summary click or waiting for animation.
-4. Read the full long note, select text by dragging, drag the header and resize it. Turn the field and move the neighbourhood off-screen. Use Find open note to return. Confirm the neighbourhood stays attached and the chosen reading size remains unchanged.
+3. Open a visible field card and then an out-of-sight or unplaced member from the collection. Observe continuity and try scrolling or following a link before the opening motion finishes. Interrupt opening with another selection. Repeat with reduced motion. Delay a document response, force a fetch failure and press "retry"; check the identified loading/error frame and confirm full text appears as soon as available without a summary click or waiting for animation. The application has no control that delays or refuses a read, so say how it was done, or record this part as not walked.
+4. Read the full long note, select text by dragging, drag the header and resize it. Turn the field and move the neighbourhood off-screen. Press "find", which is offered beside the compass with the note's id while the open note is out of sight, to return. Confirm the neighbourhood stays attached and the chosen reading size remains unchanged.
 5. Inspect a relationship with a supported semantic field and one generic link. Compare labels, direction and every neighbour in the linked list with the source. Open two subjects sharing a neighbour and count its spatial representations.
-6. Open an already held note from its row. Close it and inspect focus and scroll restoration. Trigger a result change while the pointer rests on a row; apply the announced update. Repeat with the selected note removed from the results and then close its document.
-7. Wheel over the collection and document at the top and bottom. Drag text and then the header. Open a local control and press Escape; verify one local dismissal. Exercise the remaining documented focus and desk exit sequence separately.
-8. Toggle the checkbox in the disposable workspace and inspect an available guarded action. Verify the expected file change, then undo that deliberate edit before comparing the final source state.
+6. Open an already held note from its row. Close it and inspect focus and scroll restoration. Trigger a result change while the pointer rests on a row; press "apply" in the collection. Repeat with the selected note removed from the results and then close its document.
+7. Wheel over the collection and document at the top and bottom. Drag text and then the header. Open a document's related list (R on its header) or its details (D) and press Escape; verify one local dismissal. Exercise the remaining documented focus and desk exit sequence separately.
+8. In the disposable workspace, press the tick control beside an open criterion inside a document and give the evidence it asks for, then inspect an available guarded action; both stand inside the document, above and within its text. Verify the expected file change, then undo that deliberate edit before comparing the final source state.
 9. Repeat opening, following a link and return using only keyboard, including an overlapped object. Switch views, reload a current desk, then load the older saved desk. Inspect restored queries, live counts, defaults and chosen document sizes.
-10. Exercise a narrow window, the served host and existing second-window send/arrival behavior. Preserve the served host's read-only authority. Record a disconnected second display's fallback without claiming enhanced FEAT-0023 handoff exists.
+10. Exercise a narrow window, the served host and existing second-window send/arrival behavior. Preserve the served host's read-only authority. Record a disconnected second display's fallback. The handoff that FEAT-0023 has built since this check was written is walked in [[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]], not here.
 11. Record a real-data demonstration: collection to issue, full text, connected feature/tests, group movement, close and return to the initiating row. Compare task time, mistaken selections and lost-context incidents with the previous UI. TASK-0099 records foreground frame cost with these objects present.
 
 ## Expect
@@ -69,3 +69,13 @@ Use desktop pointer and keyboard, a narrow window, and the served tablet or serv
 ## Not this check
 
 Stack/table/cards and Read/Compare/Show related arrangements have TST-0064. Named scenes, enhanced cross-screen handoff, structured evidence, cockpit levels and native renderer performance belong to their separate work. TST-0052 is reconciled with the continuity repair under TASK-0104; its old ghost and mini-card assertions are not carried into this walk. No acceptance outcome has been recorded by updating this procedure.
+
+## Where this stands
+
+**This check has not been walked.** No person has taken these steps, and the acceptance ledger (`docs/releases/ledgers/WORKING-app.json`) holds no verdict for TST-0063 on any platform. Nothing below is a verdict.
+
+What exists is scripted. On 2026-10-02, at commit `4243fc2`, in a Linux container that draws in software, three scripts sent real pointer and key events to the application along much of this route and every check they made held: [[TST-0068-The-Glass-Desktop-Is-Walked-With-A-Real-Pointer]] (54 checks, this repository), [[TST-0069-The-Collection-Holds-Still-When-Notes-Change-On-Disk]] (10 checks, a copy of this repository's notes) and [[TST-0072-Glass-Is-Measured-At-The-Size-Of-A-Real-Workspace]] (8 checks on this repository and 8 on a copy of Your Trainer). A script cannot say whether the route is obvious, whether the motion helps, or how long a person takes.
+
+The scripts did not cover the following at all, so the walk is the first time each is tried: the two filter boxes and a group heading pressed with the pointer (step 1); the wheel at the list's first and last row (step 7); a disabled action's reason inside a document (step 8); an older saved desk opened in the application (step 9); a second display, a real tablet, touch and a screen reader (steps 9 and 10); and every time, count of mistakes and comparison with the previous UI in step 11. Nothing was timed on the Mac.
+
+**Steps corrected on 2026-10-02 to match the built application.** Step 4 named a control "Find open note"; the control reads "find" and the note's id. Step 7 said "a local control"; it now names the related list and the details. Step 8 said to toggle a checkbox; an open criterion has a tick control that asks for evidence. Step 3 now says the application offers no way to delay or refuse a read. Step 6 names the "apply" button. Step 10 no longer says FEAT-0023's handoff does not exist, because it has been built. No step was removed and nothing in Expect was changed.

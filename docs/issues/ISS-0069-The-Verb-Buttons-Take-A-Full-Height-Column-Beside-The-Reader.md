@@ -7,7 +7,7 @@ status: open
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-11
-updated: "2026-09-19"
+updated: "2026-10-02"
 source: ["Edwin 2026-09-11: 'On spread an list when selecting an item which needs to be approved or declined it opens a huge vertical area on the right, this should probably be handled differently and shown as just a strip somewhere??? Review and suggest.'", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]"]
 reported_by: user:edwin
 severity: medium
@@ -54,6 +54,8 @@ A full-height column of its own, which narrows the desk or the list.
 3. **A decision bar across the bottom of the window**, like the status line: "ISS-0012 is owed: approve · decline". Always visible, but far from the note, and it competes with the status messages.
 
 The reference suggests the first now, and the second in Glass once the note in the middle exists.
+
+**2026-10-02, where the verbs stand in Glass since FEAT-0020:** in Glass the buttons are a strip inside the note's document, above its text (`.pane-actions` in `desktop/src/renderer/glass.ts`), and the column is not drawn there (`deck.css` hides `.actuators` on the Glass surface). The smoke run at commit `4243fc2` shows it in its `document` part: the verbs the sidecar offers on ADR-0005 "are drawn inside its document, each as the sidecar's row says ... and not in a strip beside the field (0 there)". That is close to option 2, in the document's body instead of on its header. Spread and List still have the column (`<div class="actuators">` is still a child of `.body`, now at `index.html:196`), so this issue stays open on Edwin's choice.
 
 ## Evidence
 

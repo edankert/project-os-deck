@@ -38,6 +38,18 @@ A second, smaller hazard comes with the same read. **Under `--lan`, the ledger's
 - **Keep the adoption table true.** TASK-0112 marks `api.read.check-history` adopted in `docs/reference/cockpit-adoption.md`, so a change to that row in the cockpit's register is something grooming sees.
 - **The exposure on the local network is Edwin's to accept or narrow.** ADR-0008 lists it as an open thread. The host stays loopback-only unless Deck is started with `--lan`.
 
+### What is in place, 2026-10-02
+
+- The model refuses an answer that is not schema 4 or lacks `view.tiers` or `view.history`, and the panel then says the record could not be read. TST-0078 breaks each refusal once and a test fails.
+- `desktop/fixtures/acceptance/app.json` is the sidecar's answer as recorded on 2026-10-02 at cockpit `d1df13c`, and the suite reads it.
+- The client always names the platform. The walk counts the requests.
+- The walk compares the panel with the ledger file on disk on two workspaces. It also holds the sidecar's own answer to the file wherever a platform's ledger is one file.
+- The adoption table carries the row.
+
+The risk stays `open`. Two things are not mitigated. Nothing runs when the cockpit changes: the fixture catches a change only when someone records it again. And the exposure on the local network is Edwin's to accept or narrow (ADR-0008, second thread).
+
+**One case the build found, of exactly this kind.** The first draft read a row's `invalidated_by` as the ledger's invalidation. It is the test note's own frontmatter. Nothing failed on this repository, where the field is empty. The walk on `your-trainer` showed a check named as invalidated by an undated task from long ago. A second workspace is what caught it.
+
 ## Triggers
 
 - The cockpit's `SCHEMA_VERSION` changes from 4, or a change note there touches the acceptance payload, the ledger or `api.read.check-history`.

@@ -18,13 +18,13 @@ related: ["[[ADR-0007-A-Scene-Is-A-Saved-Desk-Read-Live-And-A-Handoff-Waits-For-
 2. **[[TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass]]: scenes on screen.** Glass gains the controls, captures and applies reading anchors, shows the message about what changed, and offers the undo back to the desk before. The served page offers none of it.
 3. **[[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]]: the handoff's states.** A pure module, `desktop/src/shared/handoff.ts`, holds the states a handoff passes through and what each failure undoes. The main process (`desktop/src/main/main.ts`, around `deck:window:throw`) lands the note, waits for the destination, and commits or undoes. The preload bridge carries the arrival and the acknowledgement. Checked by `desktop/tests/handoff.test.mjs`.
 4. **[[TASK-0109-Show-The-Destination-The-Arrival-And-The-Way-Back]]: the handoff on screen.** The target strip and the `S` chooser name the destination and the act. The destination marks the arrival, names the source and offers "send back".
-5. **[[TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale]]: the walk.** The scripted walk `desktop/demos/glass-scenes.cjs` drives both with a real pointer and keyboard and keeps pictures. Measurements are taken on real workspaces. [[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]] is a person's and is not walked by a script.
+5. **[[TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale]]: the walks.** Two scripted walks drive the feature with a real pointer and keyboard and keep pictures: `desktop/demos/glass-scenes.cjs` for scenes and `desktop/demos/glass-handoff.cjs` for the handoff. Measurements are taken on real workspaces. [[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]] is a person's and is not walked by a script.
 
 Tasks 1 and 3 do not depend on each other and can be built in either order. Task 2 needs 1, task 4 needs 3, and task 5 needs 2 and 4.
 
 ## Dependencies
 
-- **Hard:** FEAT-0020's document and collection on the desk, and FEAT-0022's arrangement undo, because scene undo has to sit beside it. Both are at `doing` on 2026-10-02 with their code in the tree. TASK-0101, which is the focus while this plan is written, is finished first.
+- **Hard:** FEAT-0020's document and collection on the desk, and FEAT-0022's arrangement undo, because scene undo has to sit beside it. Both had their code in the tree when this feature was built.
 - **Hard:** none outside this repository. The sidecar is not asked for anything, and no route is added to Deck's host.
 - **Soft:** FEAT-0014's throw checks in the smoke run and in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]. TASK-0108 changes what a throw answers and when, so those checks are reconciled in that task and not left to fail.
 
@@ -45,4 +45,8 @@ These are Edwin's and none of them blocks the build. Each is recorded under ADR-
 - Should a scene remember its view? FEAT-0015 left this to Edwin for saved desks. Default: yes for a scene, unchanged for a desk with no version.
 - May a reading anchor keep the words of a heading? Default: yes, as a locator, with the fraction as the fallback.
 
-One value is left to the build and recorded when it is chosen: how many seconds the main process waits for an acknowledgement. TASK-0108 sets it as a named constant and TASK-0110 records the acknowledgement times the walk measured beside it.
+One value was left to the build: how many seconds the main process waits for an acknowledgement. It is four seconds for a desk (`HANDOFF_ACK_MS` in `desktop/src/shared/handoff.ts`) and twelve for a reader window, which has to load a page first. TASK-0110 records the acknowledgement times the walk measured beside it.
+
+## Where the plan stands, 2026-10-02
+
+All five steps are built and committed. The plan stays `active` because the feature is at `doing`: each task has an open box or an open step, listed in the task's own note.

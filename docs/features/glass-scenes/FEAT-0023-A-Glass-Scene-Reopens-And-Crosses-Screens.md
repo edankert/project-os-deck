@@ -29,7 +29,9 @@ A person sends a document to another Deck window or display and knows, before le
 
 ## Scope
 
-This feature extends two things the code already has. The store keeps named desks (`state.desks`, with `save-desk`, `open-desk` and `delete-desk`, and the `desk=` address parameter), and Spread has controls for them. A card can be thrown to another window or sent there with `S` (`deck:window:throw`). Glass has no control for a saved desk, and a sent note is reported as landed before the other window draws it.
+This feature extends two things the code already had. The store keeps named desks (`state.desks`, with `save-desk`, `open-desk` and `delete-desk`, and the `desk=` address parameter), and Spread has controls for them. A card can be thrown to another window or sent there with `S` (`deck:window:throw`). Before this feature Glass had no control for a saved desk, and a sent note was reported as landed before the other window drew it.
+
+The list below is what was asked for. Where the build differs, the difference is under Decisions, "Settled while building", and in ADR-0007's section dated 2026-10-02.
 
 **Scenes.**
 
@@ -66,14 +68,35 @@ This feature extends two things the code already has. The store keeps named desk
 
 ## Verification
 
-Nothing is built and no check has been run. The checks that will hold the evidence are:
+**Where it stands, 2026-10-02.** The feature is built and committed (`b1bfa1d`, `9b7a062`, `f80339f`, `a37f8f2`, `5f706a5`, `0df09fe`, `9379a0c`, `4243fc2`). It stays at `doing`: all five tasks are at `doing`, each with an open box or an open step listed in its own note. The acceptance check has not been walked. None of these commits is pushed, so no CI run covers them.
 
-- [[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]], the acceptance check a person walks, including a second display and the tablet.
-- [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], the scene model without a window: `bash tools/scripts/run-desktop-tests.sh scenes`.
-- [[TST-0075-A-Move-Is-Never-Half-Done]], the handoff's states without a window: `bash tools/scripts/run-desktop-tests.sh handoff`.
-- [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]], the scripted walk in the box: `bash tools/scripts/walk-in-a-box.sh glass-scenes --copy`.
+**What was run.**
 
-TASK-0110 records the measurements and the pictures. Before the review, this section is replaced by the full test command, its date and its result count.
+- **Every node suite.** `cd desktop && npm test`, on 2026-10-02 at commit `9379a0c`: 586 of 586 passed. `9379a0c` is the last commit that changed application code. The session that built the feature ran it and reported the count; the close-out that wrote this section did not run it again. The two suites of this feature are in that run: `scenes`, nine tests ([[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]]), and `handoff`, sixteen tests ([[TST-0075-A-Move-Is-Never-Half-Done]]).
+- **The smoke run.** `bash tools/scripts/smoke-in-a-box.sh both`, on 2026-10-02 at commit `4243fc2`, in the `project-os-deck-smoke` Linux container (Electron under Xvfb, 1440 by 900, software rendering), from a separate clone: exit 0 for the loopback half and the network half. The loopback half was run once more with each check printed: 389 passed, 0 failed, 0 skipped, 2 not applicable (the throw to an empty display, and the checks shaped for a tablet on the network). The Glass section is 291 of those. The parts that drive this feature: `throw`, 11 checks; `desks`, 47 checks, two of which hand a note to a desk panel; `address`, 4 checks, the last of which is "git status in the workspace is unchanged after every Glass check"; and the verb section, 31 checks, one of which is the popped-out window keeping its own list after a write.
+- **The scenes walk.** `bash tools/scripts/walk-in-a-box.sh glass-scenes --copy`, same day, commit and container: exit 0, 26 checks, none failed, four pictures.
+- **The handoff walk.** `bash tools/scripts/walk-in-a-box.sh glass-handoff`, same day, commit and container: exit 0, 24 checks, none failed, seven pictures. `git status` in the workspace was the same before and after it.
+
+Both walks are recorded in [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]], which moved to `passing` on 2026-10-02. A scripted walk sends real pointer and key events to the real application and checks what is on screen. It is not a person's walk.
+
+**What was not done.**
+
+- **[[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]] has not been walked.** It is a person's, it rests at `active`, and the ledger holds no verdict for it. Its steps were corrected against the built application on 2026-10-02 from the code and the walks' records.
+- **Nothing was tried on a second display.** That leaves unseen: a window landing on another display, a new reader opened on an empty display, and a display unplugged during a handoff. The rule for a removed display is tested without a window, and the listener in the main process has never fired in a run.
+- **Nothing was tried on a real tablet, with a screen reader or by touch.** The served page was a second window on the same machine with no preload bridge.
+- **Nothing was timed on the Mac.** The two times recorded, 159 ms to a desk window and 904 ms to a reader, are one reading each in the container. The time to reopen a scene and the frame cadence while one is restored were not measured anywhere.
+- **Neither walk was run on a second workspace.**
+- **No rule was broken on purpose to see a test fail,** so TST-0074 and TST-0075 have no adequacy record.
+- **No files were compared for the scene actions.** The scenes walk runs on a copy that is not a git repository.
+- **The walks do not repeat the route by keyboard alone or under reduced motion.** The keyboard chooses a scene in the list, types a name, and opens the handoff chooser. Reduced motion is emulated for one "send back".
+- **The independent review has not been run.** TST-0076 reaching `passing` is one of its gates; the feature's one review covers it.
+- **No invalidation event was written to the ledger** for the acceptance checks this feature reopened (TST-0038, TST-0063, TST-0064).
+
+**Known and not fixed.** Each was found at the close-out on 2026-10-02 and is in code this feature changed.
+
+- "Send back" is offered for a window that has closed. The handoff walk's record shows it, and no check asserts against it ([[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]], Notes).
+- In a window 1180 pixels wide Glass's bar does not fit, and the undo button is cut off by the window's edge ([[TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass]], Notes).
+- The entry for a new reader on an empty display reads "Also show in the a new reader on …". A unit test asserts the same words in another sentence. No machine with one display shows it.
 
 ## Decisions
 
@@ -90,6 +113,28 @@ The five questions this note listed before implementation are answered in [[ADR-
 One more was settled while building, 2026-10-02, and it changes a view outside this feature.
 
 - **A desk window draws a note handed to it even when its view does not list that note.** A desk window is always drawn as Spread cards, and Spread dropped a card its view does not list unless the note was kept on every view ([[FEAT-0015-Each-View-Keeps-Its-Own-Desk]], decision 7). So "Move to the desk on …" from another view could never arrive. Spread now draws any note on its desk that the workspace has, marked "not in this view", as a Glass document already is. The first fix tried was a refusal with the reason (commit `5f706a5`); it was replaced because it left an offer that could never be taken up (commit `9379a0c`). The scripted walk had reported this move as working. It worked only because of a defect fixed in `a37f8f2`: after a write a popped-out window listed the main window's view. That is recorded in [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]].
+
+**Settled while building, 2026-10-02.** These are routine details. Each says what the build does, with the reason where a commit or the code gives one. Those that differ from ADR-0007 are also listed there, in its section dated 2026-10-02, for Edwin to accept or send back.
+
+- **Opening a scene is its own press.** Choosing a name in the list changes nothing, and an "open" button opens it. On some systems the arrow keys change a list's value at every step, and opening on that replaced the desk with each scene passed on the way (commit `b1bfa1d`).
+- **A scene's name is asked for in the status line, with the open scene's name already typed.** Saving under another scene's name asks "replace it", "keep it" or "cancel". Saving under the open scene's own name replaces it without asking. No commit says why, and ADR-0007 A7 says saving under a name that exists asks first.
+- **The list says what each entry is by what it shows.** A scene reads "name · view · n notes", a desk from before scenes reads "name · n notes", and a scene of a newer version reads "name (cannot be opened)", cannot be chosen, and has its version in a tooltip.
+- **The desk before a scene is kept by the window.** The window builds it with the function that builds a scene and puts it back with one store action, `apply-scene`, so one piece of code applies both. It is never in the state file.
+- **Opening a scene clears "Undo arrangement".** The desk that arrangement would put back was replaced as a whole.
+- **A reading position waits five seconds for its text.** After that the scene reports with what it has, because a note that is gone never gets text. A retry that succeeds later is not scrolled to the saved position.
+- **A document built again goes back to where this window last read the note,** for the session. Before, it opened at its top (commit `f80339f`). A scene's or a handoff's reading position is applied after it and wins.
+- **Which of a scene's notes still exist is asked of Deck's own index.** When the index does not answer, the message says Deck could not check, and makes no claim.
+- **A missing note's document keeps the text this window read earlier,** labelled as last read, with "retry" and "close".
+- **The wait for a destination is four seconds, and twelve for a reader window.** A reader has to load a page before it can answer.
+- **A destination answers for itself.** It looks every 100 ms for up to 3.5 seconds for the note on its own screen. If it has not drawn it by then it says so, and the landing is undone at once with that reason. It counts a card as shown only when the card is on screen, not when a hidden element still carries the note's id (commit `9379a0c`).
+- **A landed note stands near the top left of the destination desk,** 16 pixels in, stepped down by one header for each note already there. So a note sent back does not return to the place it left.
+- **A document goes only where it is released on a named entry of the strip.** A fast release past the edge sends a document nowhere. The speed of a throw is read only for a card from the field, which carries no act and is shown, not moved.
+- **What releasing does is the strip entry's tooltip.** The entry's label names the act, what the window carries and its display. The keyboard chooser's rows carry the label only.
+- **A window is named by what it carries and its display,** "the desk on the main display", and not by the view it draws.
+- **After a release on the strip the window says it is waiting for the other window.** The document carries no mark of being sent.
+- **The arrival mark is an outline for 2.4 seconds, in Glass.** The message is the window's status line, with "send back" in it. A desk window and a reader show the message and no mark.
+- **`S` on a note that arrived lists "Send back to …" first.**
+- **The box's image carries git,** so a run can ask whether the workspace is as it was. Without it a run could only say it was unable to ask (commit `9379a0c`).
 
 Three threads are open under ADR-0007's Acceptance section, and each is Edwin's: whether a scene names a note whose file moved, whether a scene should remember its view (FEAT-0015 left that question to him), and whether a heading's words may be kept as a locator.
 
@@ -149,4 +194,6 @@ Its delivery boundary said to start after FEAT-0020 and FEAT-0022 established ob
 - Requirements: [[REQ-0004-A-Glass-Scene-Reopens-With-Live-Content-And-Says-What-Changed]], [[REQ-0005-A-Handoff-Is-Acknowledged-Before-The-Source-Lets-Go]]
 - Tasks: [[TASK-0106-Keep-A-Scene-In-The-Store]], [[TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass]], [[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]], [[TASK-0109-Show-The-Destination-The-Arrival-And-The-Way-Back]], [[TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale]]
 - Acceptance: [[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]]
+- Tests: [[TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived]], [[TST-0075-A-Move-Is-Never-Half-Done]], [[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]
+- Issue found and fixed: [[ISS-0091-A-Popped-Out-Window-Switches-The-Main-Windows-View]]
 - Baseline: [[DES-0003-Collections-And-Documents-On-Glass]] states the principles this is built on and does not draw scenes or handoff, so this note carries no `design:` link.
