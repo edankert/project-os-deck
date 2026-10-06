@@ -5,13 +5,12 @@ title: "The visual parity gate rejects mismatched work"
 status: "retired"
 owner: "user:edwin"
 created: "2026-09-29"
-updated: "2026-10-01"
+updated: "2026-10-06"
 source: ["[[TASK-0094-Match-Decks-Visible-Glass-Work-In-A-Native-Compatibility-Mode]]"]
 scope: "feature"
 level: "system"
 entrypoint: "prototypes/native-glass/tools/test-verify-parity.mjs"
-command: "node --test prototypes/native-glass/tools/test-verify-parity.mjs"
-last_verified: ""
+last_verified: "2026-10-01"
 covers: ["[[FEAT-0019-Native-Glass-Is-Measured-Without-Population-Caps]]"]
 issues: []
 tasks: ["[[TASK-0094-Match-Decks-Visible-Glass-Work-In-A-Native-Compatibility-Mode]]"]
@@ -152,3 +151,5 @@ The current r3 hover routes deliver all 473 actions per application on both fixt
 ## Retired, 2026-10-01
 
 The subject is gone. Edwin dropped the native Rust evaluation on 2026-10-01 and [[TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree]] removed the prototype this test exercised, so it can no longer be run. Any result recorded above describes the prototype as it stood and says nothing about Deck.
+
+On 2026-10-06 the `command:` line was removed. It still named the deleted `test-verify-parity.mjs`, so the pre-push hook ran it, found no file, and refused the push. The other retired native-Glass tests had already dropped theirs. `last_verified:` now holds 2026-10-01, the day of the last comparison reports above and of the prototype's removal, because the validator asks a test with no command for one.
