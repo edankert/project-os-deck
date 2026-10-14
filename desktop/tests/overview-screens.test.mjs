@@ -126,7 +126,11 @@ for (const name of WORKSPACES) {
 for (const name of WORKSPACES) {
   test(`${name}: no two neighbours of a ticket share a place, even for the most linked tickets`, () => {
     const m = model(name);
-    const busiest = Object.values(m.tickets).sort((a, b) => linkedTo(m, b.id).size - linkedTo(m, a.id).size).slice(0, 25);
+    // Each ticket's degree, worked out once: sorting by linkedTo() directly scans the
+    // whole corpus per comparison and took 17 seconds on your-trainer.
+    const degree = new Map(Object.keys(m.tickets).map((id) => [id, new Set(m.tickets[id].links.filter((o) => o !== id && m.tickets[o] !== undefined))]));
+    for (const t of Object.values(m.tickets)) for (const o of t.links) if (o !== t.id && degree.has(o)) degree.get(o).add(t.id);
+    const busiest = Object.values(m.tickets).sort((a, b) => degree.get(b.id).size - degree.get(a.id).size).slice(0, 25);
     for (const t of busiest) {
       const scene = ticketScene(m, t.id, ctx);
       const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined && n.ticket !== t.id);
