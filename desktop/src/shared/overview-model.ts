@@ -102,8 +102,8 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
   const byPath = new Map(notes.map((r) => [r.relPath, r]));
   const resolve = (raw: string): NoteRecord | undefined => {
     let target = raw.replace(/^\[\[|\]\]$/g, '').split('|')[0]?.trim() ?? '';
-    // A cross-project id never resolves locally. A heading on a local link may.
-    if (/^[a-z0-9][a-z0-9-]*#/.test(target)) return undefined;
+    // A local filename or alias wins before interpreting name#heading as a
+    // project reference. Never resolve the fragment as a local ticket id.
     target = target.split('#')[0] ?? '';
     target = target.replace(/\.md$/i, '');
     return byPath.get(target) ?? byPath.get(`${target}.md`) ?? byPath.get(resolver.resolve(target) ?? '');
@@ -168,7 +168,8 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
     else if (member) { ticket.phase = member; ticket.placedBy = 'member-list'; }
   }
   const place = (id: string, visiting = new Set<string>()): string | null => {
-    const ticket = model.tickets[id]!;
+    const ticket = model.tickets[id];
+    if (ticket === undefined) return null;
     if (ticket.phase !== null || ticket.placedBy === 'project-wide') return ticket.phase;
     if (visiting.has(id)) return null;
     visiting.add(id);
