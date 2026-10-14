@@ -119,46 +119,52 @@ export function* walkScene(nodes: SceneNode[]): Generator<SceneNode> {
   }
 }
 
-/** The palette and the look, written once for the renderer and for the plates. */
+/**
+ * The palette: the six state colours, tuned for the dark field, and the
+ * instrument colours of the Glass look. Literal values rather than CSS
+ * variables, so a plate rendered outside a browser draws the same colours.
+ */
+export const PALETTE = {
+  ink: 'hsl(195 60% 88%)',
+  dim: 'hsl(205 25% 58%)',
+  line: 'hsl(190 90% 60%)',
+  closed: 'hsl(160 62% 46%)',
+  progress: 'hsl(205 92% 62%)',
+  failed: 'hsl(355 88% 62%)',
+  owed: 'hsl(275 78% 70%)',
+  open: 'hsl(38 96% 58%)',
+  dropped: 'hsl(220 12% 32%)',
+} as const;
+
+const STATES = ['closed', 'progress', 'failed', 'owed', 'open', 'dropped'] as const;
+
+/** The look, written once for the renderer and for the plates. */
 export const OVERVIEW_CSS = `
-.ov { --ov-bg: #04070d; --ov-ink: hsl(195 60% 88%); --ov-dim: hsl(205 25% 55%); --ov-line: hsl(190 90% 60%);
-  --st-closed: hsl(160 62% 46%); --st-progress: hsl(205 92% 62%); --st-failed: hsl(355 88% 62%);
-  --st-owed: hsl(275 78% 70%); --st-open: hsl(38 96% 58%); --st-dropped: hsl(220 12% 32%);
-  font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
-.ov text { fill: var(--ov-ink); }
-.ov .ov-dim { fill: var(--ov-dim); }
+.ov { font-family: "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.ov text { fill: ${PALETTE.ink}; }
+.ov text.ov-dim { fill: ${PALETTE.dim}; }
 .ov .ov-id { font-family: "SF Mono", Menlo, monospace; letter-spacing: 0.04em; }
 .ov .ov-num { font-family: "SF Mono", Menlo, monospace; font-weight: 600; }
 .ov .ov-title { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.ov .st-closed { fill: var(--st-closed); }
-.ov .st-progress { fill: var(--st-progress); }
-.ov .st-failed { fill: var(--st-failed); }
-.ov .st-owed { fill: var(--st-owed); }
-.ov .st-open { fill: var(--st-open); }
-.ov .st-dropped { fill: var(--st-dropped); }
-.ov .ov-stroke { fill: none; stroke: var(--ov-line); stroke-width: 1.2; opacity: 0.7; }
-.ov .ov-track { fill: hsl(210 40% 50% / 0.08); stroke: hsl(195 80% 60% / 0.18); stroke-width: 1; }
-.ov .ov-glass { fill: hsl(205 60% 40% / 0.12); stroke: hsl(190 90% 65% / 0.45); stroke-width: 1; }
+${STATES.map((s) => `.ov .st-${s} { fill: ${PALETTE[s]}; }`).join('\n')}
+.ov .ov-track { fill: hsla(210, 60%, 50%, 0.07); stroke: hsla(195, 80%, 60%, 0.16); stroke-width: 1; }
+.ov .ov-glass { fill: hsla(205, 60%, 40%, 0.14); stroke: hsla(190, 90%, 65%, 0.5); stroke-width: 1; }
 .ov .ov-faint { opacity: 0.35; }
 .ov .ov-ghost { opacity: 0.12; }
-.ov .ov-wire { fill: none; stroke: hsl(190 90% 65% / 0.35); stroke-width: 1; }
-.ov .ov-wire.st-closed, .ov .ov-wire.st-progress, .ov .ov-wire.st-failed, .ov .ov-wire.st-owed, .ov .ov-wire.st-open, .ov .ov-wire.st-dropped { fill: none; stroke-width: 1.2; }
-.ov .ov-wire.st-closed { stroke: var(--st-closed); } .ov .ov-wire.st-progress { stroke: var(--st-progress); }
-.ov .ov-wire.st-failed { stroke: var(--st-failed); } .ov .ov-wire.st-owed { stroke: var(--st-owed); }
-.ov .ov-wire.st-open { stroke: var(--st-open); } .ov .ov-wire.st-dropped { stroke: var(--st-dropped); }
+.ov .ov-hit { fill: transparent; stroke: none; }
+.ov .ov-hover { display: none; }
+.ov .ov-wire { fill: none; stroke: hsla(190, 90%, 65%, 0.35); stroke-width: 1; }
 .ov .ov-arc { fill: none; stroke-linecap: round; }
-.ov .ov-arc.st-closed { stroke: var(--st-closed); } .ov .ov-arc.st-progress { stroke: var(--st-progress); }
-.ov .ov-arc.st-failed { stroke: var(--st-failed); } .ov .ov-arc.st-owed { stroke: var(--st-owed); }
-.ov .ov-arc.st-open { stroke: var(--st-open); } .ov .ov-arc.st-dropped { stroke: var(--st-dropped); }
-.ov .ov-arc.ov-track { stroke: hsl(195 80% 60% / 0.14); }
-.ov .ov-control { fill: hsl(190 90% 55% / 0.14); stroke: var(--ov-line); stroke-width: 1.5; }
-.ov .ov-control.ov-go { fill: hsl(160 62% 46% / 0.22); stroke: var(--st-closed); }
-.ov .ov-control.ov-stop { fill: hsl(355 88% 62% / 0.16); stroke: var(--st-failed); }
+.ov .ov-arc.ov-track { stroke: hsla(195, 80%, 60%, 0.16); fill: none; }
+${STATES.map((s) => `.ov .ov-wire.st-${s}, .ov .ov-arc.st-${s} { fill: none; stroke: ${PALETTE[s]}; }`).join('\n')}
+.ov .ov-control { fill: hsla(190, 90%, 55%, 0.14); stroke: ${PALETTE.line}; stroke-width: 1.5; }
+.ov .ov-control.ov-go { fill: hsla(160, 62%, 46%, 0.22); stroke: ${PALETTE.closed}; }
+.ov .ov-control.ov-stop { fill: hsla(355, 88%, 62%, 0.16); stroke: ${PALETTE.failed}; }
 .ov .ov-control.ov-off { opacity: 0.3; }
 .ov .glow { filter: url(#ov-glow); }
 .ov [data-target], .ov [data-action] { cursor: pointer; }
-.ov [data-target]:focus, .ov [data-action]:focus { outline: none; stroke: #fff; stroke-width: 2; }
-.ov image { opacity: 0.96; }
+.ov [data-target]:focus, .ov [data-action]:focus { outline: none; }
+.ov [data-target]:focus > .ov-hit, .ov [data-action]:focus { stroke: #fff; stroke-width: 2; }
 `;
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -230,7 +236,7 @@ export const OVERVIEW_DEFS =
   '<radialGradient id="ov-field" cx="50%" cy="45%" r="75%">' +
   '<stop offset="0%" stop-color="#0c1a2b"/><stop offset="60%" stop-color="#060c16"/><stop offset="100%" stop-color="#02040a"/></radialGradient>' +
   '<pattern id="ov-grid" width="40" height="40" patternUnits="userSpaceOnUse">' +
-  '<path d="M40 0H0V40" fill="none" stroke="hsl(195 80% 60% / 0.05)" stroke-width="1"/></pattern>' +
+  '<path d="M40 0H0V40" fill="none" stroke="hsla(195,80%,60%,0.05)" stroke-width="1"/></pattern>' +
   '</defs>';
 
 /**
@@ -252,4 +258,40 @@ export function sceneToSvg(scene: Scene, options: { standalone?: boolean } = {})
     scene.nodes.map(nodeSvg).join('') +
     '</svg>'
   );
+}
+
+/** What a screen needs to know about where it is drawn: the workspace, the view, and how to write an address. */
+export interface ScreenContext {
+  workspaceId: string;
+  viewId: string;
+  /** The address of another screen, written by the address grammar. */
+  address(parts: AddressParts): string;
+}
+
+export interface AddressParts {
+  page?: string | null;
+  flow?: string | null;
+  note?: string | null;
+  step?: string | null;
+}
+
+/**
+ * A context that writes addresses the way `formatAddress` does, without the
+ * vocabulary check: for the plate script and for a node test that has not
+ * registered the page kinds. The key order is the grammar's (`note` before
+ * `page`), so a scene's address round-trips through `parseAddress`.
+ */
+export function plainContext(workspaceId: string, viewId: string): ScreenContext {
+  return {
+    workspaceId,
+    viewId,
+    address(parts) {
+      const query: string[] = [];
+      for (const key of ['note', 'page', 'flow', 'step'] as const) {
+        const value = parts[key];
+        if (value !== undefined && value !== null) query.push(`${key}=${encodeURIComponent(value)}`);
+      }
+      return `deck://${workspaceId}/${viewId}${query.length > 0 ? `?${query.join('&')}` : ''}`;
+    },
+  };
 }
