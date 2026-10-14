@@ -72,7 +72,9 @@ The resolved results were also compared with `tools/scripts/release-test.py` aga
 
 The first review's findings are fixed on `lane/codex-fix` under TASK-0140, through fixture commit `a1d8876`. The model reads acceptance history, the checks enforce the scene contract, and both fixtures have been rebuilt with recorded source provenance. All 704 desktop tests pass without skips. FEAT-0026 remains at `review`; Claude owns round two and merging. Edwin owns acceptance. Nothing was pushed or merged, and FEAT-0029's files were not touched.
 
-## Review, round one
+## Review
+
+### Round one
 
 2026-10-14 fixes: `5ca1405` closes the five screen-check holes; `4abe421` fixes local heading links and guards parent lookup, with tests that catch broken parent, tie and phase-order rules; `306e7bf` reads and refreshes ledger results in the host and CLI, adds the agreed dirty field and removes the localhost skip. `a1d8876` rebuilds both fixtures with dirty provenance, ledger states and the declared phase order. The Verification section records the final 704-test run.
 
