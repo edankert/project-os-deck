@@ -67,6 +67,7 @@ function wordsAtRest(scene) {
 
 fs.mkdirSync(out, { recursive: true });
 const rsvg = spawnSync('rsvg-convert', ['--version']).status === 0;
+const sips = process.platform === 'darwin' && spawnSync('sips', ['--help']).status === 0;
 const plates = [];
 
 for (const [ws, choice] of Object.entries(CHOICES)) {
@@ -98,6 +99,14 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     if (rsvg) {
       const result = spawnSync('rsvg-convert', ['-w', '1440', '-o', path.join(out, `${base}.png`), path.join(out, `${base}.svg`)]);
       if (result.status === 0) png = `${base}.png`;
+      // A dark field compresses to half as a JPEG, and these are pictures to look at, not to measure.
+      if (png !== null && sips) {
+        const jpeg = spawnSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '82', path.join(out, png), '--out', path.join(out, `${base}.jpg`)]);
+        if (jpeg.status === 0) {
+          fs.rmSync(path.join(out, png));
+          png = `${base}.jpg`;
+        }
+      }
     }
     const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined).length;
     plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, rows: scene.list.length, address: scene.address });

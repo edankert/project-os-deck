@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="ov ov-test-run" viewBox="0 0 1440 1000" width="1440" height="1000" role="img" aria-label="Release test" data-address="deck://abcd1234/features?flow=test-run&amp;step=desktop"><style>
+.ov { font-family: "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.ov text { fill: hsl(195 60% 88%); }
+.ov text.ov-dim { fill: hsl(205 25% 58%); }
+.ov .ov-id { font-family: "SF Mono", Menlo, monospace; letter-spacing: 0.04em; }
+.ov .ov-num { font-family: "SF Mono", Menlo, monospace; font-weight: 600; }
+.ov .ov-title { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.ov .st-closed { fill: hsl(160 62% 46%); }
+.ov .st-progress { fill: hsl(205 92% 62%); }
+.ov .st-failed { fill: hsl(355 88% 62%); }
+.ov .st-owed { fill: hsl(275 78% 70%); }
+.ov .st-open { fill: hsl(38 96% 58%); }
+.ov .st-dropped { fill: hsl(220 12% 32%); }
+.ov .ov-track { fill: hsla(210, 60%, 50%, 0.07); stroke: hsla(195, 80%, 60%, 0.16); stroke-width: 1; }
+.ov .ov-glass { fill: hsla(205, 60%, 40%, 0.14); stroke: hsla(190, 90%, 65%, 0.5); stroke-width: 1; }
+.ov .ov-faint { opacity: 0.35; }
+.ov .ov-ghost { opacity: 0.12; }
+.ov .ov-hit { fill: transparent; stroke: none; }
+.ov .ov-hover { display: none; }
+.ov .ov-wire { fill: none; stroke: hsla(190, 90%, 65%, 0.35); stroke-width: 1; }
+.ov .ov-frame { stroke: hsla(190, 90%, 65%, 0.55); }
+.ov .ov-bezel { stroke: hsla(190, 90%, 65%, 0.22); }
+.ov .ov-scan { stroke: hsla(190, 90%, 70%, 0.35); }
+.ov .ov-arc { fill: none; stroke-linecap: round; }
+.ov .ov-arc.ov-track { stroke: hsla(195, 80%, 60%, 0.16); fill: none; }
+.ov .ov-wire.st-closed, .ov .ov-arc.st-closed { fill: none; stroke: hsl(160 62% 46%); }
+.ov .ov-wire.st-progress, .ov .ov-arc.st-progress { fill: none; stroke: hsl(205 92% 62%); }
+.ov .ov-wire.st-failed, .ov .ov-arc.st-failed { fill: none; stroke: hsl(355 88% 62%); }
+.ov .ov-wire.st-owed, .ov .ov-arc.st-owed { fill: none; stroke: hsl(275 78% 70%); }
+.ov .ov-wire.st-open, .ov .ov-arc.st-open { fill: none; stroke: hsl(38 96% 58%); }
+.ov .ov-wire.st-dropped, .ov .ov-arc.st-dropped { fill: none; stroke: hsl(220 12% 32%); }
+.ov .ov-control { fill: hsla(190, 90%, 55%, 0.14); stroke: hsl(190 90% 60%); stroke-width: 1.5; }
+.ov .ov-control.ov-go { fill: hsla(160, 62%, 46%, 0.22); stroke: hsl(160 62% 46%); }
+.ov .ov-control.ov-stop { fill: hsla(355, 88%, 62%, 0.16); stroke: hsl(355 88% 62%); }
+.ov .ov-control.ov-off { opacity: 0.3; }
+.ov .glow { filter: url(#ov-glow); }
+.ov [data-target], .ov [data-action] { cursor: pointer; }
+.ov [data-target]:focus, .ov [data-action]:focus { outline: none; }
+.ov [data-target]:focus > .ov-hit, .ov [data-action]:focus { stroke: #fff; stroke-width: 2; }
+</style><defs><filter id="ov-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><radialGradient id="ov-field" cx="50%" cy="45%" r="75%"><stop offset="0%" stop-color="#0c1a2b"/><stop offset="60%" stop-color="#060c16"/><stop offset="100%" stop-color="#02040a"/></radialGradient><pattern id="ov-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="hsla(195,80%,60%,0.05)" stroke-width="1"/></pattern></defs><rect width="1440" height="1000" fill="url(#ov-field)"/><rect width="1440" height="1000" fill="url(#ov-grid)"/><g data-key="back" data-target="deck://abcd1234/features?page=wheel" data-label="Back to the wheel" tabindex="0" role="button" aria-label="Back to the wheel"><circle cx="52" cy="52" r="26" class="ov-hit" data-label="Back to the wheel"><title>Back to the wheel</title></circle><path d="M53.2 32.04A20 20 0 0 1 68.69 40.98L59.51 47.04A9 9 0 0 0 52.54 43.02Z" class="st-closed ov-faint"/><path d="M69.89 43.06A20 20 0 0 1 69.89 60.94L60.05 56.02A9 9 0 0 0 60.05 47.98Z" class="st-progress ov-faint"/><path d="M68.69 63.02A20 20 0 0 1 53.2 71.96L52.54 60.98A9 9 0 0 0 59.51 56.96Z" class="st-open ov-faint"/><path d="M50.8 71.96A20 20 0 0 1 35.31 63.02L44.49 56.96A9 9 0 0 0 51.46 60.98Z" class="st-owed ov-faint"/><path d="M34.11 60.94A20 20 0 0 1 34.11 43.06L43.95 47.98A9 9 0 0 0 43.95 56.02Z" class="st-closed ov-faint"/><path d="M35.31 40.98A20 20 0 0 1 50.8 32.04L51.46 43.02A9 9 0 0 0 44.49 47.04Z" class="st-open ov-faint"/><circle cx="52" cy="52" r="25" class="ov-glass"/></g><text x="100" y="70" font-size="22" text-anchor="start" class="ov-title" data-role="name">Release test</text><circle cx="720" cy="500" r="340" class="ov-arc ov-track" data-target="deck://abcd1234/features?flow=test-run&amp;step=desktop" data-label="desktop" tabindex="0" role="button" aria-label="desktop"><title>desktop</title></circle><text x="720" y="148" font-size="13" text-anchor="middle" class="ov-dim" data-role="name">desktop</text><circle cx="720" cy="500" r="60" class="ov-arc ov-track" data-mark="progress-desktop-total" data-label="desktop: 0 of 0 results"><title>desktop: 0 of 0 results</title></circle><path d="M720 440A60 60 0 0 1 720 440" stroke-width="5" class="st-closed ov-arc" data-mark="progress-desktop-done" data-label="desktop: 0 of 0 results"><title>desktop: 0 of 0 results</title></path><text x="714" y="610" font-size="14" text-anchor="end" class="ov-num" data-role="number" data-mark-ref="progress-desktop-done">0</text><text x="720" y="610" font-size="14" text-anchor="middle" data-role="label">/</text><text x="726" y="610" font-size="14" text-anchor="start" class="ov-num" data-role="number" data-mark-ref="progress-desktop-total">0</text><text x="720" y="505" font-size="18" text-anchor="middle" data-role="label">No release</text></svg>
