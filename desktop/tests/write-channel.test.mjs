@@ -217,7 +217,9 @@ function builtModules() {
     for (const entry of fs.readdirSync(at, { withFileTypes: true })) {
       const full = path.join(at, entry.name);
       if (entry.isDirectory()) {
-        walk(full);
+        // Only application output roots belong in this scan. Temporary test
+        // repositories beside them can disappear while other suites run.
+        if (at !== dir || ['main', 'renderer', 'shared', 'web'].includes(entry.name)) walk(full);
         continue;
       }
       if (!entry.name.endsWith('.js')) continue;
