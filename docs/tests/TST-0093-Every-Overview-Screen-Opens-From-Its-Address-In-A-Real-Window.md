@@ -49,6 +49,8 @@ From `desktop/`, after `npm run build`:
 
 ## Results
 
+**2026-10-14, third run, passing on both workspaces** at commit `9db237e`, after Codex's review made the run assert where Escape lands, that the served page offers no enabled control, and that every screen is registered. Every screen's marks matched again (Deck's wheel now 377, your-trainer's 2,747; your-trainer's FEAT-0051 draws its 202 neighbours on the new rings). Escape from a ticket returned to its phase, L opened the list twin with every row, the served page showed every ticket with no enabled control, and neither workspace changed.
+
 **2026-10-14, passing on both workspaces**, after commit `99eeeab`.
 
 | Screen | Deck: marks in scene = in window | your-trainer: marks in scene = in window |
