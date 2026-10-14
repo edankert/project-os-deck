@@ -87,4 +87,19 @@ module.exports = async (d) => {
   assert.equal(twin.open, true, 'L opens the list twin');
   assert.equal(twin.rows, twin.scene, 'the list twin holds every row of the scene');
   d.log('summary', results);
+
+  // The served page, as a tablet loads it: no bridge, no writes. It opens on the
+  // wheel too, and a flow's controls are drawn off.
+  const served = d.openServedPage();
+  await new Promise((resolve) => served.webContents.once('did-finish-load', resolve));
+  for (let i = 0; i < 60; i += 1) {
+    if (await d.js(served, 'Boolean(window.__deckOverview && window.__deckOverview.current())')) break;
+    await d.delay(250);
+  }
+  const tablet = await d.js(served, `({ screen: document.body.dataset.overviewScreen, marks: document.querySelectorAll('#overview-area [data-ticket]').length, write: document.querySelectorAll('#overview-area [data-action]:not(.ov-off)').length })`);
+  d.log('the served page', tablet);
+  assert.equal(tablet.screen, 'wheel', 'the served page opens on the wheel');
+  assert.ok(tablet.marks > 0, 'the served wheel draws its tickets');
+  await d.shot(served, 'served-wheel');
+  served.close();
 };
