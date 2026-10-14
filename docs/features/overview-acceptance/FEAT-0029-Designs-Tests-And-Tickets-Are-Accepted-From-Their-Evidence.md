@@ -53,9 +53,9 @@ Out of scope:
 
 ## Verification
 
-2026-10-14: `npm test` from `desktop/` passed **718 tests**, with **0 failures and 0 skips**. It includes the TypeScript build. The three new suites contribute 30 tests: 11 for scenes and recorded payloads (TST-0085), 4 for the image route (TST-0086), and 15 for flow actions and shell writes (TST-0087). Their focused command is `node --test desktop/tests/overview-flows.test.mjs desktop/tests/file-route.test.mjs desktop/tests/overview-flow-writes.test.mjs`, after the build.
+2026-10-14: `npm test` from `desktop/` passed **736 tests**, with **0 failures and 0 skips**. It includes the TypeScript build. The three new suites contribute 31 tests: 12 for scenes and recorded payloads (TST-0085), 4 for the image route (TST-0086), and 15 for flow actions and shell writes (TST-0087). Their focused command is `node --test desktop/tests/overview-flows.test.mjs desktop/tests/file-route.test.mjs desktop/tests/overview-flow-writes.test.mjs`, after the build.
 
-The six flow fixtures pass `checkScene` on both workspaces. Every recorded platform section also passes with More expanded. The tests cover malformed or missing evidence, printed-step aggregation, stale local progress, identity sanitization, exact sidecar refusals, preload dispatch and the served host's refusal to write. The image route rejects traversal, symlinks that escape docs, unsupported types and write methods.
+The six flow fixtures pass `checkScene` on both workspaces. Completed counts name progress arcs and total counts name rings. Zero counts remain paired, and unknown lamps keep their question marks. Recorded flow scenes use at most 49 words at rest; a complete five-lamp gate uses 30. Every recorded platform section also passes with More expanded. The tests cover malformed or missing evidence, printed-step aggregation, stale local progress, identity sanitization, exact sidecar refusals, preload dispatch and the served host's refusal to write. The image route rejects traversal, symlinks that escape docs, unsupported types and write methods.
 
 The image audit counted 25 copies, **1,604,537 bytes** in total, with a maximum width of **900 pixels**. SVG scenes were rasterized and inspected without opening a window. TST-0088, TST-0089 and TST-0100 are Edwin's active acceptance checks; none has been run by him or given a verdict here. Claude's independent review is pending. No Electron or smoke command ran.
 
@@ -63,7 +63,7 @@ The image audit counted 25 copies, **1,604,537 bytes** in total, with a maximum 
 
 ## Where this stands
 
-2026-10-14: **FEAT-0029 is at review on `lane/codex`.** The shared scenes, mappers, six fixtures and bounded image copies are in `602e9bb`. The image route and sidecar read allowlist are in `9ad200d`. The three registered renderer flows and main-process write verbs are in `a50ffcb`. The implementation tasks are complete; Claude reviews and merges, and Edwin runs the three acceptance walks. Nothing was pushed or merged by Codex.
+2026-10-14: **FEAT-0029 remains at review on `lane/codex`.** TASK-0141 repairs the integration with FEAT-0026: each side of an S6 or S7 ratio now has its own text and mark. All 736 desktop tests pass without skips. The shared scenes, mappers, six fixtures and bounded image copies are in `602e9bb`. The image route and sidecar read allowlist are in `9ad200d`. The three registered renderer flows and main-process write verbs are in `a50ffcb`. The implementation tasks are complete; Claude reviews and merges, and Edwin runs the three acceptance walks. Nothing was pushed or merged by Codex.
 
 S6 keeps each printed step separate from a test note. It writes a note verdict only after all of that note's printed steps have results, using the cockpit's result ordering. Local progress is scoped by workspace, release, platform and check content, and expires when the ledger evidence changes. Historical releases remain read-only because `mark-check` writes to the working release.
 

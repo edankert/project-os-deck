@@ -305,9 +305,12 @@ export function testRunScene(_model: OverviewModel, data: TestRunData, ctx: Scre
       at += span;
     });
     const tally = p.sections.flatMap(s => s.checks).filter(c => !c.preparation).length, pr = 60 + pi * 15;
-    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy, r: pr }, cls: 'ov-arc ov-track', markId: `progress-${p.id}`, count: done, label: `${p.id}: ${done} of ${tally} results` });
-    if (done) nodes.push({ kind: 'mark', tag: 'path', attrs: { d: arc(cx, cy, pr, 0, TAU * done / Math.max(1, tally)), 'stroke-width': 5 }, cls: 'ov-arc', state: 'closed' });
-    nodes.push({ kind: 'text', x: cx, y: cy + 110 + pi * 22, text: `${done}/${tally}`, rest: true, role: 'number', markRef: `progress-${p.id}`, anchor: 'middle', size: 14 });
+    const label = `${p.id}: ${done} of ${tally} results`, y = cy + 110 + pi * 22;
+    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy, r: pr }, cls: 'ov-arc ov-track', markId: `progress-${p.id}-total`, count: tally, label });
+    nodes.push({ kind: 'mark', tag: 'path', attrs: { d: arc(cx, cy, pr, 0, TAU * done / Math.max(1, tally)), 'stroke-width': 5 }, cls: 'ov-arc', state: 'closed', markId: `progress-${p.id}-done`, count: done, label });
+    nodes.push({ kind: 'text', x: cx - 6, y, text: String(done), rest: true, role: 'number', markRef: `progress-${p.id}-done`, anchor: 'end', size: 14 });
+    nodes.push({ kind: 'text', x: cx, y, text: '/', rest: true, role: 'label', anchor: 'middle', size: 14 });
+    nodes.push({ kind: 'text', x: cx + 6, y, text: String(tally), rest: true, role: 'number', markRef: `progress-${p.id}-total`, anchor: 'start', size: 14 });
   });
   nodes.push({ kind: 'text', x: cx, y: cy + 5, text: data.release ?? 'No release', role: data.release ? 'id' : 'label', rest: true, anchor: 'middle', size: 18 });
   if (open) {
@@ -345,7 +348,12 @@ export function gateNodes(data: AcceptData, x: number, y: number, scale: number)
     }
     nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy: y, r: 22 * scale, tabindex: 0, role: 'img' }, state: complete ? 'closed' : lamp.known ? 'open' : 'owed', cls: complete ? '' : 'ov-faint', glow: complete, label });
     nodes.push({ kind: 'text', x: cx, y: y + 112 * scale, text: lamp.label, role: 'label', rest: true, anchor: 'middle', size: 16 * scale });
-    nodes.push({ kind: 'text', x: cx, y: y + 142 * scale, text: lamp.known ? `${lamp.done}/${lamp.total}` : '?', role: lamp.known ? 'number' : 'label', markRef: lamp.known ? markId : undefined, rest: true, anchor: 'middle', size: 18 * scale });
+    if (lamp.known) {
+      nodes.push({ kind: 'mark', tag: 'path', attrs: { d: arc(cx, y, r + 10 * scale, 0, TAU * lamp.done / Math.max(1, lamp.total)), 'stroke-width': 3 * scale }, cls: 'ov-arc', state: 'closed', markId: `${markId}-done`, count: lamp.done, label });
+      nodes.push({ kind: 'text', x: cx - 8 * scale, y: y + 142 * scale, text: String(lamp.done), role: 'number', markRef: `${markId}-done`, rest: true, anchor: 'end', size: 18 * scale });
+      nodes.push({ kind: 'text', x: cx, y: y + 142 * scale, text: '/', role: 'label', rest: true, anchor: 'middle', size: 18 * scale });
+      nodes.push({ kind: 'text', x: cx + 8 * scale, y: y + 142 * scale, text: String(lamp.total), role: 'number', markRef: markId, rest: true, anchor: 'start', size: 18 * scale });
+    } else nodes.push({ kind: 'text', x: cx, y: y + 142 * scale, text: '?', role: 'label', rest: true, anchor: 'middle', size: 18 * scale });
   });
   return nodes;
 }
