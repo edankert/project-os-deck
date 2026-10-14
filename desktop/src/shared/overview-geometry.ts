@@ -52,7 +52,7 @@ export function polygon(cx: number, cy: number, r: number, sides: number, rotate
 
 /** The first `n` words of a name, so a label stays a label. */
 export function shortName(name: string, words = 2): string {
-  const parts = name.replace(/^The /, '').split(/\s+/).filter(Boolean);
+  const parts = plainName(name).replace(/^The /, '').split(/\s+/).filter(Boolean);
   return parts.length <= words ? parts.join(' ') : `${parts.slice(0, words).join(' ')}…`;
 }
 
@@ -95,4 +95,9 @@ export function gridFit(count: number, x: number, y: number, w: number, h: numbe
   const points: Array<[number, number]> = [];
   for (let i = 0; i < count; i++) points.push([left + (i % cols) * pitch, top + Math.floor(i / cols) * pitch]);
   return { points, pitch };
+}
+
+/** A phase's name without a "Phase 21:" prefix, which the wheel already says with its number. */
+export function plainName(name: string): string {
+  return name.replace(/^Phase\s+\d+\s*[:\u2014-]\s*/i, '');
 }

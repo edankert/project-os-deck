@@ -11,7 +11,7 @@
  * what is closed far back as dust. A glyph's shape is its kind.
  */
 import { backControl, bezel, frame, heading } from './overview-chrome.js';
-import { arc, glyph, gridFit, polar, polygon, TAU } from './overview-geometry.js';
+import { arc, glyph, gridFit, plainName, polar, polygon, TAU } from './overview-geometry.js';
 import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
 import {
   allPhases,
@@ -168,7 +168,7 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
   const phase = allPhases(model).find((p) => p.id === phaseId);
   if (phase === undefined) throw new Error(`the overview has no phase ${phaseId}`);
   const back = backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
-  const nodes: SceneNode[] = [back.node, ...heading(phase.id, phase.name)];
+  const nodes: SceneNode[] = [back.node, ...heading(phase.id, plainName(phase.name))];
   nodes.push(...frame(PHASE_SCREEN.width, PHASE_SCREEN.height), ...bezel(PHASE_SCREEN.webX, PHASE_SCREEN.webY, PHASE_SCREEN.webR + 72, 90));
 
 
