@@ -90,6 +90,20 @@ interface OverviewModel {
 
 **The fixtures come first.** Codex's first commit writes `desktop/test/fixtures/overview/deck.json` and `desktop/test/fixtures/overview/your-trainer.json` in this shape, converted from the data in DES-0004's prototype. Claude's screens are built and tested against them. The live model replaces them in Deck when FEAT-0026 lands, and the same tests then run against both.
 
+## The run Edwin started on 2026-10-14
+
+**On 2026-10-14 Edwin asked for the whole phase to be built and tested in one run.** Claude coordinates it from Claude Code and builds the drawing lane. Codex runs as `codex exec` (GPT-6 Astra) in its own worktree, one feature at a time. Three things differ from the rules below for this run, and only for it:
+
+- **Ids come from fixed ranges, not from a race.** Codex takes TASK-0115 to TASK-0124 and TST-0080 to TST-0089. Claude takes TASK-0125 to TASK-0139 and TST-0090 to TST-0099. Neither pushes; Claude merges `lane/codex` and `lane/claude` into `main` and pushes.
+- **Codex does not wait on Gate B.** Edwin's instruction to build the phase stands in for starting the build. DES-0005 still goes to him as `proposed`, and his verdict on it is still his to give.
+- **Window-opening runs are batched by Claude**, once per feature, because both lanes share one screen.
+
+**Two files are the contracts, and Claude wrote them before either lane started.** `desktop/src/shared/overview-types.ts` is the model's shape. `desktop/src/shared/overview-scene.ts` describes a screen as data: marks, texts with `rest: true` or `false`, images, groups, and the list twin. Every screen is a pure function from the model (and, for S5 to S7, from what the sidecar returns) to a `Scene`. The renderer draws a scene with `sceneToSvg`, the plate script draws the same scene into DES-0005's pictures, and the screen checks read it in a node test.
+
+**The addresses.** A screen is a page or a flow on whatever view is current: `?page=wheel` (S1, and what Deck opens on), `?page=phase&note=PHASE-0002` (S2), `?page=ticket&note=FEAT-0024` (S3), `?page=rephase` (S4), `?flow=design&note=DES-0005` (S5), `?flow=test-run&step=android` (S6, a platform, or `android.3` for its third section), `?flow=accept&note=FEAT-0024` (S7). Each registers itself in `pageKinds` or `flowKinds` in `desktop/src/shared/vocabularies.ts`.
+
+**Where the data comes from.** The model is served by Deck's host at `/deck/overview/<workspaceId>`, built in the main process from the note index. S5 to S7 read the sidecar through the host's existing `/deck/sidecar/<workspaceId>/...` forwarding, and write only through the main process's `write-client.ts`.
+
 ## Working side by side without colliding
 
 - **Each agent works in its own git worktree, on its own branch**: `lane/claude` and `lane/codex`. Each rebases on `main` at least at the start of every session, and lands work on `main` in small fast-forward merges. This is the "parallel feature work" case where Edwin allows branches.
