@@ -62,10 +62,10 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0005"
-  feature: "FEAT-0026"
+  feature: "FEAT-0029"
   task: ""
   issue: ""
-  note: "2026-10-14: TASK-0141 and TASK-0142 are done on lane/codex. S6 and S7 counts and numeric names pass the strict checks; the test scan excludes temporary fixtures. All 737 desktop tests pass with zero skips, and the bounded independent review is approved. Both features remain at review for Claude and Edwin."
+  note: "2026-10-14: PHASE-0005 is built by Claude and Codex (GPT-6 Astra), tested (752 node tests, the window run on Deck and your-trainer) and reviewed twice across models; every feature is at review. Left for Edwin: accept DES-0005, run TST-0091, TST-0092, TST-0088, TST-0089 and TST-0100, and decide the narrowings in PHASE-0005's Where this stands. TASK-0005's orbit comparison is still his to choose and is untouched."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
