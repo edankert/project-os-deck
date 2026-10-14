@@ -224,3 +224,31 @@ test('a promoted tile is taller than the flat tile it replaces, because it is a 
   assert.ok(box.height > band.height * (apparent / band.width), 'a promoted card kept the tile\'s flat proportions');
   assert.ok(box.height / box.width > band.height / band.width, 'a promoted card is no taller in proportion than a tile');
 });
+
+test('a quiet note is drawn dimmer than current work at every bearing, painted or promoted', () => {
+  // A promoted card used to take a front card's opacity, so zooming toward
+  // the shelf lit finished work up to the brightness of current work
+  // (TASK-0084). The canvas and `place()` now read this one rule, so the
+  // check is that the rule keeps the quiet band below every other band.
+  const { bandOpacity, VISIBLE_HALF_ANGLE, DEG } = load('shared/slots.js');
+  for (let deg = -90; deg <= 90; deg += 1) {
+    const phi = deg * DEG;
+    for (const layer of [0, 1, 2]) {
+      const quiet = bandOpacity('deep', phi, layer);
+      for (const band of ['front', 'mid', 'outer']) {
+        assert.ok(quiet < bandOpacity(band, phi), `a quiet note at ${deg} degrees, layer ${layer}, is as bright as a ${band} note`);
+      }
+    }
+  }
+  // Straight ahead a front card is fully opaque and a quiet note is not.
+  assert.equal(bandOpacity('front', 0), 1);
+  assert.ok(bandOpacity('deep', 0, 0) <= 0.75, 'the brightest a quiet note is drawn is no longer dimmed');
+  // Every other band is drawn exactly as it was before the rule was shared.
+  for (let deg = -90; deg <= 90; deg += 5) {
+    const phi = deg * DEG;
+    const fade = Math.max(0, Math.min(1, (VISIBLE_HALF_ANGLE - Math.abs(phi)) / (26 * DEG)));
+    assert.equal(bandOpacity('front', phi), 0.3 + 0.7 * fade);
+    assert.equal(bandOpacity('outer', phi), 0.3 + 0.7 * fade);
+    assert.equal(bandOpacity('mid', phi), 0.9 * (0.3 + 0.7 * fade));
+  }
+});

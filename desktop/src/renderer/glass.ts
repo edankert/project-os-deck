@@ -41,6 +41,7 @@ import {
   FieldModel,
   PERSPECTIVE,
   VISIBLE_HALF_ANGLE,
+  bandOpacity,
   cardRect,
   cardTransform,
   norm,
@@ -1419,8 +1420,8 @@ export class GlassField {
     element.dataset['detail'] = detailFor(lift ? box.width : p.scale * box.width);
     element.style.transform = cardTransform(draw, box);
     element.style.zIndex = String(p.z);
-    const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
-    const target = !p.visible ? 0 : (slot.band === 'mid' ? 0.9 : 1) * (0.3 + 0.7 * fade);
+    // The quiet band's opacity is its tile's, so a promoted card stays dimmed (TASK-0084).
+    const target = !p.visible ? 0 : bandOpacity(slot.band, p.phi, slot.layer);
     const dim = this.held.length > 0 && !this.joined.has(element.dataset['noteId'] ?? '') && slot.band !== 'front' ? 0.45 : 1;
     // While a document is the focus, what is not gathered round it steps back.
     const aside = this.focusId() !== null ? FOCUS_DIM : 1;
@@ -1628,8 +1629,7 @@ export class GlassField {
       // projection is already computed here, so the hit test costs a lookup
       // rather than a second pass over the band (TASK-0076).
       this.tiles.push({ x: p.x, y: p.y, w, h, id: noteId, depth: slot.depth });
-      const fade = Math.max(0, Math.min(1, (78 * DEG - Math.abs(p.phi)) / (26 * DEG)));
-      ctx.globalAlpha = (0.25 + 0.5 * fade) * (slot.layer === 0 ? 1 : 0.7);
+      ctx.globalAlpha = bandOpacity('deep', p.phi, slot.layer);
       const status = entry === undefined ? 'planned' : bandFor(entry.card.status);
       ctx.fillStyle = '#1b1f2b';
       ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);

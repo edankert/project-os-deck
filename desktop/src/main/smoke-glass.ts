@@ -17,7 +17,7 @@ import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type { DeckState, WindowRole } from '../shared/types.js';
 import { type DeckAction, deskCardsOf, isOnEveryView, viewCardsOf } from '../shared/store-state.js';
-import { bandShapeFor } from '../shared/slots.js';
+import { bandOpacity, bandShapeFor } from '../shared/slots.js';
 import { detailFor, holdsDetail } from '../shared/detail.js';
 
 export interface GlassSmokeContext {
@@ -3296,6 +3296,12 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     // needs, which is the same rule `detail.test.mjs` asserts.
     const wrong = fit.filter((c) => !holdsDetail({ width: c.w, height: c.h }, detailFor(c.w)));
     record(wrong.length === 0, `every promoted card's box holds the level its width earns (${wrong.length} short${wrong[0] === undefined ? '' : `, e.g. ${wrong[0].id} at ${wrong[0].w}x${wrong[0].h} for ${detailFor(wrong[0].w)}`})`);
+    // And it is still dimmed: drawn no brighter than its tile was ever
+    // painted, rather than at a front card's opacity (TASK-0084).
+    const brightest = await js<number>(
+      `Math.max(0, ...[...document.querySelectorAll('.field-card[data-band="deep"]')].map((c) => Number(c.style.opacity)))`,
+    );
+    record(brightest > 0 && brightest <= bandOpacity('deep', 0, 0) + 0.001, `every promoted card is drawn as dim as its tile (brightest ${brightest.toFixed(2)}, a tile at most ${bandOpacity('deep', 0, 0).toFixed(2)})`);
     await js(`window.__deckGlass.zoomTo({ scale: 1, dx: 0, dy: 0 }); true`);
     await delay(500);
     const backDown = await js<number>(`__t.bands().promoted.length`);

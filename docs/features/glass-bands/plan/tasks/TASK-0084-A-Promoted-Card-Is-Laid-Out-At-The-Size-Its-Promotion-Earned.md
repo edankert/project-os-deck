@@ -7,7 +7,7 @@ status: doing
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: 2026-10-14
 source: ["[[ISS-0084-A-Promoted-Tile-Is-Drawn-In-The-Tiles-Box-So-The-Detail-It-Was-Promoted-To-Show-Is-Clipped]]", "Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
 parent: "FEAT-0018"
 effort: "S"
@@ -45,6 +45,7 @@ Whichever form is chosen, the invariant to hold is that the detail `detailFor` a
 - [ ] Lay a promoted card out at the box its detail needs rather than at the quiet band's.
 - [ ] Add the box-fits-detail check to [[TST-0055-Detail-Follows-Apparent-Size]].
 - [ ] Say in the smoke run that the promoted card's content fits, not only that it exists.
+- [ ] Draw a promoted card at the opacity its tile was painted at, from one rule both share, so it stays dimmed (added 2026-10-14).
 
 ## Where this stands
 
@@ -57,3 +58,12 @@ Whichever form is chosen, the invariant to hold is that the detail `detailFor` a
 **Verified, and the checks were shown to fail.** Three checks in [[TST-0055-Detail-Follows-Apparent-Size]] assert the box holds the level, that the apparent width does not jump, and that a promoted card is card-shaped. Replacing `promotedBox` with the old tile-box behaviour makes all three fail; restored, all 468 node checks pass and `git status` is clean.
 
 **What is owed: a run.** Two smoke checks were added — that no promoted card's `scrollHeight` passes its `clientHeight`, and that every promoted card's measured box holds the level its width earns — and neither has been run, for the same reason as [[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]].
+
+**2026-10-14: the run happened, and it showed the second acceptance line was never true.**
+
+**The two owed smoke checks ran on 2026-10-02 and passed.** The smoke run at `18f5405`, in the Linux container, printed `every promoted card draws its more without clipping it (36 promoted, 0 clipped)` and `every promoted card's box holds the level its width earns (0 short)` (`~/.cache/deck-verify/smoke-loopback-debug-6.log`, lines 397 and 398). Nothing under `desktop/` has changed since that commit. That run exercised only the `more` level, because at 2.5x this repository's quiet tiles are drawn about 350 pixels wide; `full` and `brief` are covered by the node checks over five shelf sizes and four zooms.
+
+**A promoted card is brighter than the tile it replaces, so it is not "still dimmed".** A painted quiet tile is drawn at 25 to 75 percent opacity, and at 70 percent of that on a back layer (`glass.ts`, `paintCanvas`). The moment it is promoted, `place()` gives it a front card's opacity, up to 100 percent. Zooming toward the shelf therefore makes finished work light up to the brightness of current work, which is the opposite of what [[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]] asked for. Nothing in the stylesheet dims `data-band="deep"`; the finished status only colours the card's left border.
+
+**The fix is one rule for both.** `bandOpacity(band, phi, layer)` in `desktop/src/shared/slots.ts` says how opaque a note in a band is drawn at a bearing. The canvas paints a tile with it and `place()` draws a promoted card with it, so the two cannot drift apart and a promoted card keeps its tile's brightness. A node check in TST-0055 asserts that a quiet note is dimmer than a front or mid note at every bearing, and a smoke check measures a real promoted card's opacity against a front card's.
+

@@ -485,6 +485,22 @@ export function project(slot: { theta: number; depth: number; y: number }, yaw: 
 }
 
 /**
+ * How opaque a note in this band is drawn at this bearing from straight ahead.
+ *
+ * Every note fades over the last 26 degrees before the edge of sight. A note
+ * in the quiet band is finished work and is drawn dimmer at every bearing,
+ * and dimmer still on a back layer. The canvas paints a tile with this and
+ * `place()` draws a promoted card with it, so a finished note keeps its
+ * tile's brightness when it becomes a card (TASK-0084). Before that the card
+ * took a front card's opacity and lit up as a person zoomed toward the shelf.
+ */
+export function bandOpacity(band: BandName, phi: number, layer = 0): number {
+  const fade = Math.max(0, Math.min(1, (VISIBLE_HALF_ANGLE - Math.abs(phi)) / (26 * DEG)));
+  if (band === 'deep') return (0.25 + 0.5 * fade) * (layer === 0 ? 1 : 0.7);
+  return (band === 'mid' ? 0.9 : 1) * (0.3 + 0.7 * fade);
+}
+
+/**
  * The CSS transform that puts a card's box on its projected centre.
  *
  * The one place the anchor is applied. The card is positioned at the field's
