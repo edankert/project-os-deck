@@ -60,6 +60,24 @@ test('only five known complete lamps offer Accept; global zero badges cannot sup
  const raw=json('flows/raw/deck-accept.json'),a=F.acceptFromPayloads(m,'FEAT-0024',{...raw,criteria:{},acceptance:{schema_version:999},obligations:{views:{},total:0}},true);
  for(const k of ['requirements','automated','acceptance'])assert.equal(a.lamps.find(l=>l.key===k).known,false);
 });
+test('gate ratios pair completed counts with arcs and totals with rings, including zero',()=>{
+ const m=json('deck.json'),base=F.gateFromModel(m,'FEAT-0024');
+ for(const [done,total] of [[0,0],[0,3],[2,3],[3,3]]) {
+  const data={...base,lamps:base.lamps.map(l=>({...l,known:true,done,total,missing:[]}))};
+  const scene=F.acceptScene(m,data,ctx),nodes=[...walkScene(scene.nodes)];look(scene);
+  for(const lamp of data.lamps) {
+   const counts=nodes.filter(n=>n.kind==='text'&&n.role==='number'&&n.markRef?.startsWith(`gate-${data.id}-${lamp.key}`));
+   assert.equal(counts.length,2);
+   assert.deepEqual(counts.map(n=>Number(n.text)),[done,total]);
+   const marks=counts.map(n=>nodes.find(m=>m.kind==='mark'&&m.markId===n.markRef));
+   assert.deepEqual(marks.map(m=>m.count),[done,total]);
+   assert.deepEqual(marks.map(m=>m.tag),['path','circle']);
+  }
+ }
+ const unknown=[...walkScene(F.acceptScene(m,base,ctx).nodes)];
+ assert.equal(unknown.filter(n=>n.kind==='text'&&n.text==='?').length,5);
+ assert.equal(unknown.filter(n=>n.kind==='text'&&n.role==='number').length,0);
+});
 test('copied images stay below 3 MB and the opened real check has both captures',()=>{
  const images=json('flows/images.json'),base=path.resolve(desktopRoot,'../docs/designs/__attachments__/DES-0005');assert.ok(images.reduce((n,i)=>n+fs.statSync(path.join(base,i.file)).size,0)<3_000_000);
  const r=json('flows/your-trainer-test-run.json'),c=r.platforms.flatMap(p=>p.sections.flatMap(s=>s.checks)).find(c=>c.key===r.open);assert.ok(c.before?.href&&c.after?.href);assert.ok(c.before.label.includes('workout-selection'));

@@ -12,7 +12,7 @@ related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]
 
 # Plan for FEAT-0026
 
-The original delivery is complete. [[TASK-0140-Fix-The-Overview-Review-Findings]] repairs the first review on `lane/codex-fix`; FEAT-0026 stays at review for Claude. The concurrent FEAT-0029 lane is excluded.
+The original delivery is complete. [[TASK-0140-Fix-The-Overview-Review-Findings]] repairs the first review on `lane/codex-fix`; FEAT-0026 stays at review for Claude. After both lanes merged, TASK-0141 repairs the S6 and S7 count integration and numeric-name checks on `lane/codex`. TASK-0142 confines the module scan to application output after a full test run exposed a fixture-deletion race.
 
 ## Delivery sequence
 

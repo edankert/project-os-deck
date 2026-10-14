@@ -11,7 +11,7 @@ updated: 2026-10-14
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Every overview screen reads one model of the workspace's tickets, so no two screens can disagree, and every screen is checked automatically against the look's rules on two real workspaces."
 requirements: []
-tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]"]
+tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -53,17 +53,19 @@ Out of scope:
 
 ## Verification
 
-`cd desktop && npm test` passed on 2026-10-14 in this worktree: **704 tests passed, none failed, none skipped**. Temporary test files stayed under `desktop/dist/tmp`. No Electron process or window was started.
+`cd desktop && npm test` passed on 2026-10-14 in this worktree: **737 tests passed, none failed, none skipped**. Temporary test files stayed under `desktop/dist/tmp`. No Electron process or window was started.
 
 | Suite within that run | Passed | Failed | Skipped |
 | --- | ---: | ---: | ---: |
 | `overview-model` | 21 | 0 | 0 |
 | `overview-route` | 12 | 0 | 0 |
 | `overview-fixtures` | 3 | 0 | 0 |
-| `overview-checks` | 14 | 0 | 0 |
+| `overview-checks` | 15 | 0 | 0 |
 | `overview-screens` (drawing lane) | 8 | 0 | 0 |
 
-Five new screen-check tests failed before the fix. The local lowercase heading-link test failed with the old resolver. Deliberately removing the feature-parent restriction, reversing the member-list tie winner and replacing phase order with id order each failed its regression. The recorded Deck ledger failed against the old service and command. The new tests cover ledger edits without a note revision, multiple platforms, sealed excuses, old `mark` fields, date ordering, malformed files and dirty note provenance. The localhost socket test runs without an EPERM or EACCES skip.
+The TASK-0141 numeric-name regression failed before repair. The focused suites now pass 15 scene-check tests and 12 flow tests. Both workspaces and every recorded release-test section pass all four rules; their maximum is 49 words at rest. The complete five-lamp gate uses 30 words.
+
+The original TASK-0140 run showed five new screen-check tests failing before its fix. The local lowercase heading-link test failed with the old resolver. Deliberately removing the feature-parent restriction, reversing the member-list tie winner and replacing phase order with id order each failed its regression. The recorded Deck ledger failed against the old service and command. The new tests cover ledger edits without a note revision, multiple platforms, sealed excuses, old `mark` fields, date ordering, malformed files and dirty note provenance. The localhost socket test runs without an EPERM or EACCES skip.
 
 The resolved results were also compared with `tools/scripts/release-test.py` against both real repositories. Every surviving verdict agreed: 5 on Deck's app platform, 541 on Your Trainer's Android platform and 1 on iOS. The overview additionally retains invalidations as the owed-again state.
 
@@ -71,7 +73,9 @@ The resolved results were also compared with `tools/scripts/release-test.py` aga
 
 ## Where this stands
 
-The first review's findings are fixed on `lane/codex-fix` under TASK-0140, through fixture commit `a1d8876`. The model reads acceptance history, the checks enforce the scene contract, and both fixtures have been rebuilt with recorded source provenance. All 704 desktop tests pass without skips. FEAT-0026 remains at `review`; Claude owns round two and merging. Edwin owns acceptance. Nothing was pushed or merged, and FEAT-0029's files were not touched.
+The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan. `b5f65df` adds the independently requested numeric cases and deterministic scan regression.
+
+TASK-0141 repairs the merged S6 and S7 ratio texts on `lane/codex` and rejects bare counts disguised as names. TASK-0142 prevents the built-module scan from racing temporary overview fixtures. All 737 desktop tests pass without skips. Both FEAT-0026 and FEAT-0029 remain at review; Claude owns the feature review and merge, and Edwin owns acceptance. Nothing was pushed or merged.
 
 ## Review
 
@@ -98,6 +102,20 @@ Claude added one: the wheel's sectors are in id order, not in the order the phas
 
 A reviewer also noted that a text with role `name` skips the count check, so a bare count marked as a name would pass. Codex closes that with the ratio fix that follows FEAT-0029's merge.
 
+### Count integration review (TASK-0141 and TASK-0142)
+
+Two fresh-context independent-reviewer agents reviewed `40645b2..0eeddf7` on 2026-10-14. Both inherit the session model; this is a bounded review of these repairs and does not replace Claude's feature review. Their combined round-one verdict was changes-requested:
+
+| Claim | Verdict | Evidence |
+| --- | --- | --- |
+| S6 and S7 pair each ratio count with a separate mark, including zero. | holds | Both reviewers tested zero, partial and complete ratios. Removing S6 zero marks failed both workspace flow tests. |
+| Recorded scenes remain within 60 words. | holds | Both reviewers measured maxima of 25 words for Deck and 49 for Your Trainer. |
+| Numeric names are refused while real names retain digits. | refuted | Reviewer B showed `1 k` and `0x10` passing with and without marks, at rest and off rest. The existing regression caught removal of the guard but omitted those forms. |
+| The module scan includes application outputs and excludes temporary repositories. | holds | Both reviewers checked the scan boundary; reviewer A's forbidden-write sentinel in root preload.js failed the write-channel check. |
+| The scanner tests catch removal of its temporary-directory exclusion. | refuted | Reviewer A restored unrestricted recursion and all 26 write-channel tests passed. Reviewer B reproduced the gap on all three scan callers. |
+
+The follow-up expands numeric-name coverage to spaced suffixes and hexadecimal, octal and binary literals. A deterministic scan regression includes a temporary JavaScript fixture and requires the root preload and representative main, shared and web modules. Round two approved both fixes in `b5f65df`. The reviewer reran all 15 scene-check tests and four targeted scan tests. Removing spaced-suffix handling failed on `1 k`; removing radix handling failed on `0x10`; unrestricted recursion failed on the temporary fixture. The full suite passes 737 tests, with no failures or skips. This approval covers only the integration repairs; Claude's full feature review remains pending.
+
 ## Model and route
 
 `desktop/src/shared/overview-model.ts` exports `buildOverview(records, options)`. The caller supplies the workspace name, commit, generation time and `readBody(relPath)`. The builder reads no filesystem or clock and changes no input record. It uses the existing graph link parser and resolver for frontmatter and body links. Cross-project links never become local links.
@@ -114,7 +132,7 @@ After `cd desktop && npm run build`, run `node desktop/scripts/overview.mjs <rep
 
 ## Screen checks
 
-`desktop/src/shared/overview-checks.ts` returns the four results `words`, `numbers`, `address` and `twin`. The exact count rule is documented at the top of that module. Each count needs its own text and `markRef`, resolving to one mark with the same nonnegative integer count. Split ratios and multi-count labels into separate texts. Explicit phase labels, real ids, dates, times and version strings are excluded from inferred counts. A padded number in a label still counts. A `number` role requires a mark even on hover. An `id` role accepts only ids or bare padded phase numbers; prose fails and still counts toward the word limit. Word counting excludes only complete REQ, FEAT, TASK, TST, ISS, ADR, DES, RISK, PHASE, CHG and REL ids followed by a number.
+`desktop/src/shared/overview-checks.ts` returns the four results `words`, `numbers`, `address` and `twin`. The exact count rule is documented at the top of that module. A name consisting only of numeric tokens fails, even with a mark reference or off rest. Names containing digits, such as Schwinn 800IC and Model 3, remain valid. Each count needs its own text and `markRef`, resolving to one mark with the same nonnegative integer count. Split ratios and multi-count labels into separate texts. Explicit phase labels, real ids, dates, times and version strings are excluded from inferred counts. A padded number in a label still counts. A `number` role requires a mark even on hover. An `id` role accepts only ids or bare padded phase numbers; prose fails and still counts toward the word limit. Word counting excludes only complete REQ, FEAT, TASK, TST, ISS, ADR, DES, RISK, PHASE, CHG and REL ids followed by a number.
 
 Use `formatAddress(addressFor(...))` to make scene addresses canonical. Its query order puts `note` before `page` or `flow`. The seven overview page and flow names are registered. An address must name the scene it restores, not merely round-trip. Dotted test steps such as `android.3` now round-trip. Other malformed steps remain refused.
 
@@ -195,3 +213,4 @@ The risk scan found no new external dependency, environment setting, storage lay
 - Phase: [[PHASE-0005-Overview]]
 - Design: [[DES-0005-The-Overview-Is-Drawn-Not-Written]]
 - Plan: [plan/PLAN.md](plan/PLAN.md)
+- Integration repair: [[CHG-20261014-Give-every-flow-count-its-own-mark]].

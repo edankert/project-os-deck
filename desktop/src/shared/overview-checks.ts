@@ -1,6 +1,6 @@
 /** PHASE-0005's word, count, address and list-twin checks, without a window.
  * Each count needs one text and one markRef; split ratios and multi-count labels.
- * Number roles need a mark even on hover. Names are words, never counts.
+ * Number roles need a mark even on hover. Names need words beyond numeric tokens.
  * Other rest text excludes real ids, explicit "Phase 2", dates, times and versions
  * from inferred counts. Id roles must contain only identifiers or padded phase
  * numbers (at least three digits, or a leading zero). They cannot hide prose.
@@ -20,6 +20,11 @@ const tokens = (value: string): string[] => value.trim().split(/\s+/).filter(Boo
 const unpunctuated = (token: string): string => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 const validIdText = (text: TextNode): boolean => tokens(text.text).length > 0 && tokens(text.text).every((token) =>
   ID_TOKEN.test(token) || TICKET_ID.test(token) || /^(?:0\d+|\d{3,})$/.test(token));
+// Ratios, percentages, scientific notation and abbreviated counts are not names.
+// Keep digits within real names, including "Schwinn 800IC" and "Model 3".
+const bareCountName = (value: string): boolean => /\d/.test(value) && !/\p{L}/u.test(value
+  .replace(/\b0(?:x[\da-f]+|o[0-7]+|b[01]+)\b/gi, '')
+  .replace(/\b\d[\d,.]*(?:e[+-]?\d+|\s*[kmb])?\b/gi, '').replace(/\bof\b/gi, ''));
 
 function countValues(text: TextNode): number[] {
   let value = text.text;
@@ -45,6 +50,7 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
   const numberErrors: string[] = [];
   for (const text of texts) {
     if (text.role === 'id' && !validIdText(text)) numberErrors.push(`"${text.text}" is not id text`);
+    if (text.role === 'name' && bareCountName(text.text)) numberErrors.push(`"${text.text}" is a count, not a name`);
     const values = countValues(text);
     if (text.role !== 'number' && values.length === 0) continue;
     const matching = text.markRef === undefined ? [] : marks.filter((m) => m.markId === text.markRef);
