@@ -1,0 +1,66 @@
+---
+type: "[[test]]"
+id: TST-0093
+aliases: ["TST-0093"]
+title: "Every overview screen opens from its address in a real Deck window on Deck and on your-trainer, draws as many ticket marks as its scene, follows a click and Escape, and leaves the workspace unchanged"
+status: passing
+owner: system:claude
+created: 2026-10-14
+updated: 2026-10-14
+source: ["[[TASK-0131-Run-The-Overview-Screens-In-A-Window-Once]]"]
+phase: "[[PHASE-0005-Overview]]"
+scope: system
+level: e2e
+entrypoint: "desktop/scripts/overview-drive.cjs"
+command: ""
+last_verified: 2026-10-14
+covers: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]", "[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]", "[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]"]
+issues: []
+tasks: ["[[TASK-0131-Run-The-Overview-Screens-In-A-Window-Once]]"]
+artifacts: []
+adequacy: ""
+mutation_score: ""
+reviewed_by: ""
+review_date: ""
+review_verdict: ""
+related: ["[[PHASE-0005-Overview]]", "[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-Look]]"]
+area: "overview"
+---
+
+# Every overview screen opens from its address in a real window
+
+## Purpose
+
+The node suites check each scene as data. This run checks that a real Deck window draws them: the address parses, the layer shows over the field, every mark is on screen, a click goes where the scene says, Escape goes back, L opens the list twin, the served page shows the wheel without writes, and nothing in the workspace changes. It opens windows, so it is not a `command:` the pre-push hook runs; it is run on request, once per feature, and its result is recorded here.
+
+## Procedure
+
+From `desktop/`, after `npm run build`:
+
+1. `npx electron . --drive scripts/overview-drive.cjs --drive-out dist/overview-drive-deck`
+2. `npx electron . --drive scripts/overview-drive.cjs --drive-out dist/overview-drive-yt --workspace <path to your-trainer>`
+
+## Expected results
+
+- Each of S1 to S7 opens from its address, and the number of ticket marks in the window equals the number in its scene.
+- A click on the wheel opens a phase or a ticket, Escape goes back one screen, and L opens the list twin with as many rows as the scene's list.
+- The served page opens on the wheel, draws its tickets, and offers no enabled control.
+- The workspace's `git status` is the same before and after.
+
+## Results
+
+**2026-10-14, passing on both workspaces**, after commit `99eeeab`.
+
+| Screen | Deck: marks in scene = in window | your-trainer: marks in scene = in window |
+| --- | --- | --- |
+| S1 wheel | 374 = 374 | 2,747 = 2,747 |
+| S2 phase | 139 = 139 (PHASE-0001) | 9 = 9 (PHASE-015) |
+| S3 ticket | 83 = 83 (TST-0045) | 203 = 203 (FEAT-0051) |
+| S4 re-phase | 1 = 1 | 987 = 987 |
+| S5 design | 1 = 1 (DES-0001) | 1 = 1 (DES-0006) |
+| S6 acceptance test | 0 = 0 (no release) | 1,388 = 1,388 (REL-0017) |
+| S7 ticket acceptance | 1 = 1 (FEAT-0018) | 1 = 1 (FEAT-0118) |
+
+A click on the wheel opened a ticket and Escape returned to its phase on both. L opened the list twin with every row of the scene (152 and 11). The served page opened on the wheel with every ticket drawn (374 and 2,747) and no enabled control. `drive.json` records `workspaceUnchanged: true` for both runs, which took 15 and 21 seconds.
+
+**The first run, earlier the same day, failed**, and it found two defects the node suites could not see. Glass's collection panel, cards and compass were drawn over the wheel, and Escape and L did nothing after a click on the picture, because the keyboard was on the body. Both were fixed in `99eeeab` before the passing run.

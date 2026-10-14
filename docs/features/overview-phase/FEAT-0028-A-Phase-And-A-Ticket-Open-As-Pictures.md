@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0028
 aliases: ["FEAT-0028"]
 title: "A phase and a ticket open as pictures: the phase's web, exit-criteria ring and depth field; a ticket's lifecycle track and neighbourhood; re-phasing as moving particles"
-status: backlog
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -52,11 +52,13 @@ Out of scope:
 
 ## Verification
 
-Node suites for layout and counts; window-opening runs batched once with Edwin's permission; one acceptance test per screen. Nothing has been run yet.
+- `bash tools/scripts/run-desktop-tests.sh overview-screens`, 2026-10-14: 8 tests, 8 passed (TST-0090), every phase of both workspaces and a ticket of every kind and state.
+- `cd desktop && npm test`, 2026-10-14: 737 tests, 737 passed, none skipped.
+- The window run, TST-0093, 2026-10-14: S2, S3 and S4 opened in a real window on both workspaces.
 
 ## Where this stands
 
-2026-10-14: defined, not started. PHASE-0005 is `active` since 2026-10-14, so the lane can start. The owner creates the task notes from [the plan](plan/PLAN.md) before writing code, taking each id as the brief says.
+2026-10-14: built and at review. TASK-0127, TASK-0128 and TASK-0129 are done; TASK-0129's cockpit issue is cut from this run and written in the adoption table instead. Codex reviews it, as the agent that did not build it. Edwin's acceptance test is [[TST-0092-A-Phase-A-Ticket-And-Re-Phasing-Read-As-Pictures]], not yet run.
 
 ## Questions between the lanes
 

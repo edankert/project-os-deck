@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0027
 aliases: ["FEAT-0027"]
 title: "Deck opens on the wheel of phases: the circular overview, with finished phases on a shelf, the backlog in a tray and tickets with no phase in the core"
-status: backlog
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -53,11 +53,13 @@ Out of scope:
 
 ## Verification
 
-Node suites for the geometry and the counts. Window-opening runs are batched once, after asking Edwin. One acceptance test at `docs/tests/acceptance/` for Edwin. Nothing has been run yet.
+- `bash tools/scripts/run-desktop-tests.sh overview-screens`, 2026-10-14: 8 tests, 8 passed (TST-0090).
+- `cd desktop && npm test`, 2026-10-14: 737 tests, 737 passed, none skipped.
+- The window run, TST-0093, 2026-10-14: passed on Deck (374 tickets) and your-trainer (2,747) after `99eeeab`; its first run found two defects, fixed there.
 
 ## Where this stands
 
-2026-10-14: defined, not started. PHASE-0005 is `active` since 2026-10-14, so the lane can start. The owner creates the task notes from [the plan](plan/PLAN.md) before writing code, taking each id as the brief says.
+2026-10-14: built and at review. TASK-0125, TASK-0126 and TASK-0131 are done. Codex reviews it, as the agent that did not build it. Edwin's acceptance test is [[TST-0091-Deck-Opens-On-The-Wheel-And-It-Reads-As-A-Picture]], not yet run.
 
 ## Questions between the lanes
 

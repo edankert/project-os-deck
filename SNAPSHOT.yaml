@@ -299,37 +299,37 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0125:
       file: docs/features/overview-wheel/plan/tasks/TASK-0125-The-Overview-Contracts-And-The-Wheel-As-A-Scene.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0126:
       file: docs/features/overview-wheel/plan/tasks/TASK-0126-Deck-Opens-On-The-Wheel.md
-      status: backlog
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0127:
       file: docs/features/overview-phase/plan/tasks/TASK-0127-A-Phase-Opens-As-Its-Web-Its-Exit-Ring-And-Its-Depth-Field.md
-      status: backlog
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0128:
       file: docs/features/overview-phase/plan/tasks/TASK-0128-A-Ticket-Opens-As-Its-Lifecycle-And-Its-Neighbours.md
-      status: backlog
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0129:
       file: docs/features/overview-phase/plan/tasks/TASK-0129-Unplaced-Tickets-Drift-Toward-Their-Suggested-Phase.md
-      status: backlog
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0130:
       file: docs/features/overview-design/plan/tasks/TASK-0130-Draw-DES-0005s-Plates-From-The-Screen-Code.md
-      status: backlog
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0131:
       file: docs/features/overview-wheel/plan/tasks/TASK-0131-Run-The-Overview-Screens-In-A-Window-Once.md
-      status: backlog
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0140:
@@ -2445,9 +2445,9 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 133
-    tasks_done: 107
-    tests_total: 66
-    tests_passing: 8
+    tasks_done: 114
+    tests_total: 67
+    tests_passing: 9
     tests_failing: 0
     issues_open: 3
     issues_triage: 0

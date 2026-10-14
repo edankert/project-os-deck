@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0129
 title: "Unplaced tickets drift toward their suggested phase"
-status: backlog
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -14,7 +14,7 @@ due: ""
 depends: []
 blocks: []
 related: ["[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
-tests: []
+tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-Look]]"]
 ---
 
 # Unplaced tickets drift toward their suggested phase
@@ -22,9 +22,11 @@ tests: []
 S4: tickets with no phase as particles in the core, a line to each suggested sector, and accepting a group moving them on screen only. An issue is filed in the cockpit asking for a sidecar action that sets `phase:`.
 
 ## Definition of Done
-- [ ] `rephaseScene(model)` passes the screen checks on both fixtures.
-- [ ] Accepting a group moves its particles and writes nothing.
-- [ ] The cockpit issue exists and is linked here. **Not yet:** the request is written in [[REFERENCE-COCKPIT-ADOPTION]], "Requests to the cockpit"; the cockpit repository held another session's uncommitted work on 2026-10-14, so no issue number was taken there.
+- [x] `rephaseScene(model)` passes the screen checks on both fixtures.
+- [x] Accepting a group moves its particles and writes nothing.
+- [~] The cockpit issue exists and is linked here. Cut from this run: **Not yet:** the request is written in [[REFERENCE-COCKPIT-ADOPTION]], "Requests to the cockpit"; the cockpit repository held another session's uncommitted work on 2026-10-14, so no issue number was taken there.
 
 ## Notes
+2026-10-14: built in `be87baf`; TST-0090 checks it on both workspaces. The request for a write that sets `phase:` is written in REFERENCE-COCKPIT-ADOPTION and is not yet filed in the cockpit, because that repository held another session's uncommitted work.
+
 Drawing lane (Claude), PHASE-0005.
