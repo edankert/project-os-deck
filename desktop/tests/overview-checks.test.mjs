@@ -144,6 +144,22 @@ test('each count needs its own text and mark, even equal counts and ratios', () 
   assert.equal(verdict(scene, 'numbers').ok, true);
 });
 
+test('name roles cannot hide bare counts, ratios, percentages or numeric tokens', () => {
+  for (const value of ['12', '012', '1,200', '50%', '3/3', '3 / 3', '3 of 3', '-12', '12.5', '1k', '1e3']) {
+    for (const rest of [true, false]) {
+      const scene = good();
+      scene.nodes.push(text(value, { role: 'name', rest }));
+      assert.equal(verdict(scene, 'numbers').ok, false, `${value}, rest=${rest}`);
+    }
+  }
+  const scene = good();
+  scene.nodes.push(text('1', { role: 'name', markRef: 'features' }));
+  assert.equal(verdict(scene, 'numbers').ok, false, 'even a marked bare count must use a count role');
+  scene.nodes.pop();
+  for (const value of ['Schwinn 800IC', 'Model 3', 'R2-D2', 'Étape 2']) scene.nodes.push(text(value, { role: 'name' }));
+  assert.equal(verdict(scene, 'numbers').ok, true, 'digits remain valid inside real names');
+});
+
 test('a zero-padded count is still a count in a label', () => {
   const scene = good(); scene.nodes.push(text('012 open'));
   assert.equal(verdict(scene, 'numbers').ok, false);
