@@ -111,7 +111,23 @@ export function initOverview(host: OverviewHostApi): void {
   stage.addEventListener('pointerleave', () => hideCallout());
   stage.addEventListener('focusin', (event) => onFocus(event));
   stage.addEventListener('focusout', () => hideCallout());
-  area.addEventListener('keydown', (event) => void onKey(event));
+  // On the document, not the layer: after a click on the picture the keyboard is on the
+  // body, and Escape and L must still work. Ignored while the overview is hidden.
+  // In the capture phase, so the field's own shortcuts (H, Escape's sweep) do not also
+  // act on a field the person cannot see.
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (!isOverviewShown()) return;
+      if (event.key === 'Escape' || event.key === 'l' || event.key === 'L' || event.key === 'h' || event.key === 'H') {
+        const element = event.target as Element | null;
+        const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
+        if (!typing) event.stopPropagation();
+      }
+      void onKey(event);
+    },
+    true,
+  );
   // For the window run (TST-0093): what is drawn, and a way to follow an address as a click would.
   (globalThis as { __deckOverview?: unknown }).__deckOverview = {
     current: () => current?.scene ?? null,
@@ -409,7 +425,7 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     }
     return;
   }
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && !(element instanceof HTMLInputElement)) {
     if (listPanel !== null && !listPanel.hidden) {
       toggleList(false);
       return;
@@ -421,7 +437,10 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     }
     return;
   }
-  if ((event.key === 'l' || event.key === 'L') && !(element instanceof HTMLInputElement)) {
+  // Typing in a field elsewhere (the status bar's question, a search box) is not a shortcut.
+  const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
+  if (typing) return;
+  if (event.key === 'l' || event.key === 'L') {
     event.preventDefault();
     toggleList();
   }

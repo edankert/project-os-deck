@@ -1522,7 +1522,7 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
    shared/overview-scene.ts; what is here is the layer around the picture. */
 .body { position: relative; }
 .overview-area {
-  position: absolute; inset: 0 0 0 180px; z-index: 30;
+  position: absolute; inset: 0 0 0 180px; z-index: 900;
   background: radial-gradient(ellipse at 50% 42%, #0c1a2b 0%, #060c16 60%, #02040a 100%);
   color: hsl(195 60% 88%);
   overflow: hidden;
@@ -1580,3 +1580,8 @@ body[data-overview-screen]:not([data-overview-screen=""]) .overview-toggle { bac
 }
 .ov-phase .ov-scan, .ov-ticket .ov-scan, .ov-rephase .ov-scan { animation: none; }
 @keyframes ov-scan { to { transform: rotate(360deg); } }
+/* While the overview is shown, the field, the desk and the navigator under it are hidden,
+   not only covered: Glass draws its panels and compass at their own stacking levels. */
+body[data-overview-screen]:not([data-overview-screen=""]) .field-area,
+body[data-overview-screen]:not([data-overview-screen=""]) .desk-area,
+body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibility: hidden; }
