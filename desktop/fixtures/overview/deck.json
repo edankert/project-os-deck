@@ -1,0 +1,4187 @@
+{
+"workspace": "Deck",
+"head": "ac3c039",
+"generated": "2026-10-08T00:00:00Z",
+"phases": [
+{
+"id": "PHASE-0001",
+"number": "001",
+"name": "Deck",
+"status": "active",
+"kind": "open",
+"exit": {
+"items": [
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "Deck served over the local network opens in Safari on a tablet, reads the notes, and refuses every write at its own host. 2026-09-06: the host is buil\u2026",
+"ticked": false
+},
+{
+"text": "Built 2026-09-09; the acceptance test is owed. A .base file from ~/Notes reads as a Deck description, and every construct the evaluator does not suppo\u2026",
+"ticked": false
+},
+{
+"text": "Built 2026-09-09; the acceptance test is owed. A criterion ticked in Deck, with evidence, is ticked in the file and shows as ticked in the cockpit, an\u2026",
+"ticked": false
+},
+{
+"text": "Built 2026-09-09; the tablet acceptance test is owed. The served page offers no verb at all: not greyed out, absent. Checked on a real tablet in TST-0\u2026",
+"ticked": false
+}
+],
+"prose": false
+},
+"counts": {
+"dec": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"risk": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"req": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"feat": {
+"closed": 10,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"task": {
+"closed": 38,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"test": {
+"closed": 28,
+"progress": 0,
+"failed": 0,
+"owed": 2,
+"open": 3,
+"dropped": 0
+},
+"iss": {
+"closed": 55,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 1,
+"dropped": 2
+}
+},
+"tickets": [
+"FEAT-0002",
+"FEAT-0003",
+"FEAT-0004",
+"FEAT-0005",
+"FEAT-0006",
+"FEAT-0007",
+"FEAT-0008",
+"FEAT-0011",
+"FEAT-0012",
+"FEAT-0013",
+"TASK-0006",
+"TASK-0007",
+"TASK-0008",
+"TASK-0009",
+"TASK-0010",
+"TASK-0011",
+"TASK-0012",
+"TASK-0013",
+"TASK-0014",
+"TASK-0015",
+"TASK-0016",
+"TASK-0017",
+"TASK-0018",
+"TASK-0019",
+"TASK-0020",
+"TASK-0021",
+"TASK-0022",
+"TASK-0023",
+"TASK-0024",
+"TASK-0025",
+"TASK-0026",
+"TASK-0027",
+"TASK-0028",
+"TASK-0038",
+"TASK-0039",
+"TASK-0040",
+"TASK-0041",
+"TASK-0042",
+"TASK-0043",
+"TASK-0044",
+"TASK-0045",
+"TASK-0046",
+"TASK-0047",
+"TASK-0048",
+"TASK-0049",
+"TASK-0050",
+"TASK-0051",
+"TASK-0052",
+"TST-0008",
+"TST-0009",
+"TST-0012",
+"TST-0013",
+"TST-0001",
+"TST-0002",
+"TST-0003",
+"TST-0004",
+"TST-0005",
+"TST-0006",
+"TST-0007",
+"TST-0014",
+"TST-0016",
+"TST-0017",
+"TST-0018",
+"TST-0019",
+"TST-0020",
+"TST-0021",
+"TST-0022",
+"TST-0029",
+"TST-0030",
+"TST-0031",
+"TST-0032",
+"TST-0033",
+"TST-0034",
+"TST-0035",
+"TST-0036",
+"TST-0037",
+"TST-0010",
+"TST-0011",
+"TST-0026",
+"TST-0027",
+"TST-0028",
+"ISS-0001",
+"ISS-0002",
+"ISS-0003",
+"ISS-0004",
+"ISS-0005",
+"ISS-0006",
+"ISS-0007",
+"ISS-0009",
+"ISS-0010",
+"ISS-0011",
+"ISS-0012",
+"ISS-0013",
+"ISS-0014",
+"ISS-0015",
+"ISS-0017",
+"ISS-0018",
+"ISS-0019",
+"ISS-0020",
+"ISS-0021",
+"ISS-0022",
+"ISS-0023",
+"ISS-0024",
+"ISS-0025",
+"ISS-0026",
+"ISS-0027",
+"ISS-0028",
+"ISS-0029",
+"ISS-0030",
+"ISS-0031",
+"ISS-0032",
+"ISS-0033",
+"ISS-0034",
+"ISS-0035",
+"ISS-0036",
+"ISS-0037",
+"ISS-0038",
+"ISS-0039",
+"ISS-0040",
+"ISS-0041",
+"ISS-0042",
+"ISS-0043",
+"ISS-0044",
+"ISS-0045",
+"ISS-0046",
+"ISS-0047",
+"ISS-0048",
+"ISS-0049",
+"ISS-0050",
+"ISS-0051",
+"ISS-0052",
+"ISS-0053",
+"ISS-0054",
+"ISS-0055",
+"ISS-0057",
+"ISS-0067",
+"ISS-0069",
+"ISS-0016",
+"ISS-0056"
+]
+},
+{
+"id": "PHASE-0002",
+"number": "002",
+"name": "Glass",
+"status": "active",
+"kind": "open",
+"exit": {
+"items": [
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "An exit criterion already ticked",
+"ticked": true
+},
+{
+"text": "The current collection and full authored document share the Glass desk with exact membership, stable identity, chosen reading size, protected input an\u2026",
+"ticked": false
+},
+{
+"text": "The continuity repair in TASK-0104 satisfies ISS-0070/71/72 and the revised TST-0052: no duplicated spatial note or ghost, no size jump on movement, a\u2026",
+"ticked": false
+},
+{
+"text": "Stack/table/cards and Read/Compare/Show related preserve exact members, document sizes and live content. Preview, cancel, apply and layout-only undo s\u2026",
+"ticked": false
+},
+{
+"text": "FEAT-0023's scene and handoff contracts are decided and its eventual acceptance acceptance test records restoration, fresh query membership and recove\u2026",
+"ticked": false
+},
+{
+"text": "Deck opens a workspace in Glass: the owed notes are in front, the view's subject fills the middle and the outer field, and the quiet band is behind yo\u2026",
+"ticked": false
+},
+{
+"text": "Lifting a note brings its neighbourhood into the front band, the front plane says what it now means, and with two or more notes on the desk the field\u2026",
+"ticked": false
+},
+{
+"text": "Glass opens in Safari on the tablet served by Deck's host, with no backdrop-filter over the moving field. Amended 2026-09-10: and the tablet shows the\u2026",
+"ticked": false
+},
+{
+"text": "A person arranges the field by hand and it behaves as stated: a pulled note stands in the front band across a view switch, a pushed note is behind the\u2026",
+"ticked": false
+},
+{
+"text": "A note flicked off the field toward a second display opens in the reader window there, or opens a new one on an empty display, with the flight going t\u2026",
+"ticked": false
+},
+{
+"text": "After a week of daily use in Glass, Edwin records from the compass how often he turned to look behind and whether anything was lost there. The DES-000\u2026",
+"ticked": false
+},
+{
+"text": "FEAT-0001's two other measurements are written as numbers: the size and time of the one request that returns the whole edge list, and the position dri\u2026",
+"ticked": false
+},
+{
+"text": "Edwin has chosen the orbit arrangement's treatment, and TASK-0005 records the choice and its cost. All three are drawn and switchable on 2026-09-10; t\u2026",
+"ticked": false
+}
+],
+"prose": false
+},
+"counts": {
+"dec": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"risk": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"req": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 6,
+"dropped": 0
+},
+"feat": {
+"closed": 3,
+"progress": 9,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 1
+},
+"task": {
+"closed": 57,
+"progress": 9,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 10
+},
+"test": {
+"closed": 29,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 12,
+"dropped": 4
+},
+"iss": {
+"closed": 27,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 2,
+"dropped": 3
+}
+},
+"tickets": [
+"REQ-0001",
+"REQ-0002",
+"REQ-0003",
+"REQ-0004",
+"REQ-0005",
+"REQ-0006",
+"FEAT-0009",
+"FEAT-0010",
+"FEAT-0014",
+"FEAT-0001",
+"FEAT-0015",
+"FEAT-0016",
+"FEAT-0017",
+"FEAT-0018",
+"FEAT-0020",
+"FEAT-0022",
+"FEAT-0023",
+"FEAT-0024",
+"FEAT-0019",
+"TASK-0001",
+"TASK-0002",
+"TASK-0003",
+"TASK-0004",
+"TASK-0029",
+"TASK-0030",
+"TASK-0031",
+"TASK-0032",
+"TASK-0033",
+"TASK-0034",
+"TASK-0035",
+"TASK-0036",
+"TASK-0037",
+"TASK-0053",
+"TASK-0054",
+"TASK-0055",
+"TASK-0056",
+"TASK-0057",
+"TASK-0058",
+"TASK-0059",
+"TASK-0060",
+"TASK-0061",
+"TASK-0062",
+"TASK-0063",
+"TASK-0064",
+"TASK-0065",
+"TASK-0066",
+"TASK-0067",
+"TASK-0068",
+"TASK-0069",
+"TASK-0070",
+"TASK-0071",
+"TASK-0072",
+"TASK-0073",
+"TASK-0074",
+"TASK-0075",
+"TASK-0076",
+"TASK-0077",
+"TASK-0078",
+"TASK-0079",
+"TASK-0081",
+"TASK-0085",
+"TASK-0095",
+"TASK-0096",
+"TASK-0097",
+"TASK-0098",
+"TASK-0100",
+"TASK-0101",
+"TASK-0102",
+"TASK-0105",
+"TASK-0106",
+"TASK-0107",
+"TASK-0108",
+"TASK-0111",
+"TASK-0112",
+"TASK-0113",
+"TASK-0114",
+"TASK-0005",
+"TASK-0082",
+"TASK-0083",
+"TASK-0084",
+"TASK-0099",
+"TASK-0103",
+"TASK-0104",
+"TASK-0109",
+"TASK-0110",
+"TASK-0080",
+"TASK-0086",
+"TASK-0087",
+"TASK-0088",
+"TASK-0089",
+"TASK-0090",
+"TASK-0091",
+"TASK-0092",
+"TASK-0093",
+"TASK-0094",
+"TST-0039",
+"TST-0040",
+"TST-0041",
+"TST-0042",
+"TST-0043",
+"TST-0044",
+"TST-0045",
+"TST-0046",
+"TST-0047",
+"TST-0049",
+"TST-0050",
+"TST-0051",
+"TST-0053",
+"TST-0054",
+"TST-0055",
+"TST-0057",
+"TST-0065",
+"TST-0066",
+"TST-0067",
+"TST-0068",
+"TST-0069",
+"TST-0070",
+"TST-0071",
+"TST-0072",
+"TST-0074",
+"TST-0075",
+"TST-0076",
+"TST-0078",
+"TST-0079",
+"TST-0023",
+"TST-0024",
+"TST-0025",
+"TST-0038",
+"TST-0048",
+"TST-0052",
+"TST-0056",
+"TST-0063",
+"TST-0064",
+"TST-0073",
+"TST-0077",
+"TST-0059",
+"TST-0058",
+"TST-0060",
+"TST-0061",
+"TST-0062",
+"ISS-0058",
+"ISS-0059",
+"ISS-0060",
+"ISS-0061",
+"ISS-0062",
+"ISS-0063",
+"ISS-0064",
+"ISS-0065",
+"ISS-0066",
+"ISS-0070",
+"ISS-0071",
+"ISS-0072",
+"ISS-0073",
+"ISS-0074",
+"ISS-0075",
+"ISS-0076",
+"ISS-0078",
+"ISS-0079",
+"ISS-0080",
+"ISS-0081",
+"ISS-0082",
+"ISS-0083",
+"ISS-0084",
+"ISS-0085",
+"ISS-0087",
+"ISS-0090",
+"ISS-0091",
+"ISS-0008",
+"ISS-0086",
+"ISS-0068",
+"ISS-0077",
+"ISS-0088"
+]
+},
+{
+"id": "PHASE-0003",
+"number": "003",
+"name": "Vault",
+"status": "planned",
+"kind": "open",
+"exit": {
+"items": [
+{
+"text": "~/Notes opens in Deck as a workspace, discovered by its .obsidian directory.",
+"ticked": false
+},
+{
+"text": "The Comics notes arrive typed: characters, pages, panels, locations and chapters appear under their own types, and the count matches the 43 typed Comi\u2026",
+"ticked": false
+},
+{
+"text": "The four Comic base views \u2014 Characters, Chapters, Locations, Pages \u2014 appear as Deck views, each with the base's own filter, sort and card image.",
+"ticked": false
+},
+{
+"text": "A base using anything outside the supported subset renders as \"not supported\" and names the expression it could not read.",
+"ticked": false
+},
+{
+"text": "The supported Bases subset is named in a note in this repository.",
+"ticked": false
+},
+{
+"text": "The four Comics .canvas files open as Spread boards, and a session of browsing the vault leaves git status in ~/Notes unchanged.",
+"ticked": false
+},
+{
+"text": "What needs attention in a world is decided and written down, and the vault's front plane shows it.",
+"ticked": false
+}
+],
+"prose": false
+},
+"counts": {
+"dec": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"risk": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"req": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"feat": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"task": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"test": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"iss": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+}
+},
+"tickets": []
+},
+{
+"id": "PHASE-0004",
+"number": "004",
+"name": "Parity",
+"status": "planned",
+"kind": "open",
+"exit": {
+"items": [
+{
+"text": "Edwin does one real task in Deck instead of the cockpit, for example triaging a day's issues across two screens, and records which of the two he would\u2026",
+"ticked": false
+},
+{
+"text": "The console decision is recorded as an ADR naming what was evaluated (T3 Code's terminal against the cockpit's), what was measured, and what was chose\u2026",
+"ticked": false
+},
+{
+"text": "Several consoles are open at once in Deck, each a slab that drags, resizes and fades on its own, and a console survives a Deck restart the way the coc\u2026",
+"ticked": false
+},
+{
+"text": "Every row of the cockpit's capability register is adopted, replaced by or not applicable in REFERENCE-COCKPIT-ADOPTION, with a reason on every not app\u2026",
+"ticked": false
+},
+{
+"text": "Every verb Deck offers goes through the sidecar's existing guards, and the served host still refuses every method that is not a read.",
+"ticked": false
+}
+],
+"prose": false
+},
+"counts": {
+"dec": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"risk": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"req": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"feat": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 1,
+"dropped": 0
+},
+"task": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"test": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 1,
+"dropped": 0
+},
+"iss": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+}
+},
+"tickets": [
+"FEAT-0021",
+"TST-0015"
+]
+}
+],
+"shelf": [],
+"backlog": [],
+"core": {
+"tickets": [
+"ADR-0001",
+"ADR-0002",
+"ADR-0003",
+"ADR-0004",
+"ADR-0006",
+"ADR-0005",
+"ADR-0007",
+"ADR-0008",
+"DES-0001",
+"DES-0002",
+"DES-0003",
+"RISK-0001",
+"RISK-0002",
+"RISK-0003",
+"RISK-0004",
+"RISK-0005",
+"RISK-0006",
+"RISK-0007",
+"RISK-0008",
+"ISS-0089"
+],
+"counts": {
+"dec": {
+"closed": 5,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 6,
+"dropped": 0
+},
+"risk": {
+"closed": 6,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 2,
+"dropped": 0
+},
+"req": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"feat": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"task": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"test": {
+"closed": 0,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+},
+"iss": {
+"closed": 1,
+"progress": 0,
+"failed": 0,
+"owed": 0,
+"open": 0,
+"dropped": 0
+}
+}
+},
+"tickets": {
+"REQ-0001": {
+"id": "REQ-0001",
+"kind": "req",
+"state": "open",
+"status": "todo",
+"title": "Glass collections remain exact and interactive",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"REQ-0002": {
+"id": "REQ-0002",
+"kind": "req",
+"state": "open",
+"status": "todo",
+"title": "Glass opens the full note on its desk",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"REQ-0003": {
+"id": "REQ-0003",
+"kind": "req",
+"state": "open",
+"status": "todo",
+"title": "Glass arrangements preserve membership and reading size",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"REQ-0004": {
+"id": "REQ-0004",
+"kind": "req",
+"state": "open",
+"status": "todo",
+"title": "A Glass scene reopens with live content and says what changed",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"REQ-0005": {
+"id": "REQ-0005",
+"kind": "req",
+"state": "open",
+"status": "todo",
+"title": "A handoff between windows is acknowledged before the source lets go",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"REQ-0006": {
+"id": "REQ-0006",
+"kind": "req",
+"state": "open",
+"status": "todo",
+"title": "Evidence beside a claim names its source and says what is missing",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0009": {
+"id": "FEAT-0009",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "The field where depth carries priority: Glass is the view Deck opens, and what needs you i",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0010": {
+"id": "FEAT-0010",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Lifting a note: the desk in Glass, and the neighbourhood that takes the front band while y",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0014": {
+"id": "FEAT-0014",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "The hands: a person arranges the field, throws a note to another screen, and reaches for a",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0001": {
+"id": "FEAT-0001",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "The corpus has an inside \u2014 an orbit view of the whole link graph, flown rather than listed",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0015": {
+"id": "FEAT-0015",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "Each view keeps its own desk, a note can be kept on every view, and one button hides every",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0016": {
+"id": "FEAT-0016",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "The mouse wheel zooms Glass and the orbit toward the pointer, and three keys do the same f",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0017": {
+"id": "FEAT-0017",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "An opened note stands in the middle of its neighbours: in Glass and in the orbit a lifted ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0018": {
+"id": "FEAT-0018",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "Every note the view holds has a place in the field, every band says what it could not plac",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0020": {
+"id": "FEAT-0020",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "Collections and full notes live on the Glass desktop",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0022": {
+"id": "FEAT-0022",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "Collections and documents can be arranged and restored",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0023": {
+"id": "FEAT-0023",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "A Glass scene reopens and crosses screens without losing its work",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0024": {
+"id": "FEAT-0024",
+"kind": "feat",
+"state": "progress",
+"status": "doing",
+"title": "Evidence stands beside the claim it supports",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0019": {
+"id": "FEAT-0019",
+"kind": "feat",
+"state": "dropped",
+"status": "drop",
+"title": "Native Glass is measured without population caps",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0001": {
+"id": "TASK-0001",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The whole edge list is one payload \u2014 every link, with the offset that lets the edge quote ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0002": {
+"id": "TASK-0002",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The layout is computed once and kept \u2014 and a new note takes a place without moving its nei",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0003": {
+"id": "TASK-0003",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The field renders and flies \u2014 1537 nodes and 16148 edges, coloured by status band, at a fr",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0004": {
+"id": "TASK-0004",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Landing opens the note in the reader that already exists, so the field never becomes a sec",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0029": {
+"id": "TASK-0029",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The band section of every description, and the function that applies it: front, mid and de",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0030": {
+"id": "TASK-0030",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The slot geometry: a cylinder of slots dealt from the bands, a shape for a thousand quiet ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0031": {
+"id": "TASK-0031",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The field renders and turns: near bands as bound cards, the quiet band on one canvas, fog ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0032": {
+"id": "TASK-0032",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A view switch re-arranges the same cards, and a change arriving mid-view is announced rath",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0033": {
+"id": "TASK-0033",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Glass has an address, is the surface Deck opens, and the navigator beside it is the keyboa",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0034": {
+"id": "TASK-0034",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The field is measured on the largest workspace, and the numbers go in the note",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0035": {
+"id": "TASK-0035",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A note is lifted out of the field onto the desk, its slot stays ghosted, and closing is th",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0036": {
+"id": "TASK-0036",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The neighbourhood takes the front band while a note is held, the front plane says what it ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0037": {
+"id": "TASK-0037",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "What these share: with several notes on the desk the field marks what is joined to more th",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0053": {
+"id": "TASK-0053",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Pull forward and push behind: a card is placed in the front band or behind you by hand for",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0054": {
+"id": "TASK-0054",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A held note is a pane: moved, resized and stacked on the front plane by hand, its header a",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0055": {
+"id": "TASK-0055",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Throw to a screen: a drag that leaves the field toward another window lands the note in th",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0056": {
+"id": "TASK-0056",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Reach: hovering a card on the desktop, or pressing and holding it on the tablet, draws wir",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0057": {
+"id": "TASK-0057",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The served page follows the store: Deck's host gains two read routes, a tablet shows the d",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0058": {
+"id": "TASK-0058",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The store keeps a desk for each view, and a state file written before this reads unchanged",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0059": {
+"id": "TASK-0059",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A note is kept on every view: the mark moves it between the view's own list and the worksp",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0060": {
+"id": "TASK-0060",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Hide notes: one button hides every held note in this window and shows them again, and the ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0061": {
+"id": "TASK-0061",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Glass and Spread draw the view's own desk and the notes kept on every view, with the mark ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0062": {
+"id": "TASK-0062",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Desk panels, throws and the tablet use the right view's desk",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0063": {
+"id": "TASK-0063",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The smoke run drives desks per view, the every-view mark and hide with a real pointer, and",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0064": {
+"id": "TASK-0064",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The zoom is a pure view transform: it scales around a point, keeps that point still, stops",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0065": {
+"id": "TASK-0065",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The wheel, a pinch and three keys zoom the field in Glass and the orbit, clicks still land",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0066": {
+"id": "TASK-0066",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The smoke run zooms with a real wheel, a pinch and the keys, and each check is seen to fai",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0067": {
+"id": "TASK-0067",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The ring is a pure layout: the pane's place, up to sixteen places that never overlap it, w",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0068": {
+"id": "TASK-0068",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "An opened note moves to the middle: its card grows into a pane where it stood, the pane mo",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0069": {
+"id": "TASK-0069",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The neighbours gather on a ring as mini notes, each with a line from the pane, and a mini ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0070": {
+"id": "TASK-0070",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The orbit opens a note the same way: the note in the middle, its direct links on the ring ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0071": {
+"id": "TASK-0071",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The smoke run drives the note in the middle and its ring with a real pointer, and the chec",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0072": {
+"id": "TASK-0072",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Every band has a capacity and the deal places a fourth: the middle's remainder stands in t",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0073": {
+"id": "TASK-0073",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Each band's shape follows what it holds: one pure function from a band's population to its",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0074": {
+"id": "TASK-0074",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Detail follows apparent size, not the band: one pure function turns the width a card is dr",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0075": {
+"id": "TASK-0075",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The field draws four bands and states every remainder: the outer field's cards, detail fro",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0076": {
+"id": "TASK-0076",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Anything visible is clickable, on the canvas too: a hit test for the quiet band's tiles, a",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0077": {
+"id": "TASK-0077",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A tile large enough becomes a real card: past the promotion threshold a quiet note stops b",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0078": {
+"id": "TASK-0078",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The smoke run clicks a finished note with a real pointer, pulls it forward, walks the shel",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0079": {
+"id": "TASK-0079",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The field is measured again on all three workspaces, throttled as well as not, and the num",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0081": {
+"id": "TASK-0081",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A Linux box for the smoke run to open its windows in, so verifying a deliberate break cost",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0085": {
+"id": "TASK-0085",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Fix the three defects the 2026-09-19 issue review left in Deck, each with a test that fail",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0095": {
+"id": "TASK-0095",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Model an exact derived collection on the desk",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0096": {
+"id": "TASK-0096",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Draw and operate the collection in Glass",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0097": {
+"id": "TASK-0097",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Open the full note as a Glass document",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0098": {
+"id": "TASK-0098",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Keep collection, document and field in sync",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0100": {
+"id": "TASK-0100",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Document the Glass interaction direction",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0101": {
+"id": "TASK-0101",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Change a collection between stack, table and cards",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0102": {
+"id": "TASK-0102",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Preview, apply and undo Glass arrangements",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0105": {
+"id": "TASK-0105",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Remove the native Glass evaluation from the tree",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0106": {
+"id": "TASK-0106",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Keep a scene in the store",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0107": {
+"id": "TASK-0107",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Save, reopen and undo scenes in Glass",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0108": {
+"id": "TASK-0108",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Acknowledge a handoff in the main process",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0111": {
+"id": "TASK-0111",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Work out a note's evidence without a window",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0112": {
+"id": "TASK-0112",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Forward the acceptance record as a read",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0113": {
+"id": "TASK-0113",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Show evidence beside the claim in the Glass document",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0114": {
+"id": "TASK-0114",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Acceptance test: evidence panel on two real workspaces",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0005": {
+"id": "TASK-0005",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "The treatment is chosen, not assumed \u2014 the sky, the instrument and the wooden table are dr",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0082": {
+"id": "TASK-0082",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "The hover callout and the pointer cursor run in the field as well as in the orbit, and the",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0083": {
+"id": "TASK-0083",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "A finished note is pulled to the front band from the shelf as it is drawn, by the keyboard",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0084": {
+"id": "TASK-0084",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "A promoted card is laid out at the size its apparent width earned rather than in the tile'",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0099": {
+"id": "TASK-0099",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "Acceptance test: Glass desktop at real scale",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0103": {
+"id": "TASK-0103",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "Acceptance test: collection forms and arrangements at scale",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0104": {
+"id": "TASK-0104",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "Preserve note identity, chosen size and neighbourhood while moving",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0109": {
+"id": "TASK-0109",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "Show the destination, the arrival and the way back",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0110": {
+"id": "TASK-0110",
+"kind": "task",
+"state": "progress",
+"status": "doing",
+"title": "Acceptance test: scenes and handoff at real scale",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0080": {
+"id": "TASK-0080",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "A free list behind Glass's note-to-element map, built only if the measurement asks: a remo",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0086": {
+"id": "TASK-0086",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Define the experiment, freeze the benchmark protocol and capture the current Deck baseline",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0087": {
+"id": "TASK-0087",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Export complete workspace fixtures and deterministic larger datasets",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0088": {
+"id": "TASK-0088",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Boot an isolated Rust window with reproducible builds and measurement output",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0089": {
+"id": "TASK-0089",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Give every note a stable place and a route into view without population caps",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0090": {
+"id": "TASK-0090",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Draw realistic card content with cached text and bounded graphics work",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0091": {
+"id": "TASK-0091",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Make the field interactive and open a representative native note reader",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0092": {
+"id": "TASK-0092",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Measure both implementations and record correctness, latency and resource limits",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0093": {
+"id": "TASK-0093",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Report what the evidence supports and define the next architecture decision",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TASK-0094": {
+"id": "TASK-0094",
+"kind": "task",
+"state": "dropped",
+"status": "drop",
+"title": "Match Deck's visible Glass work in a native compatibility mode",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0039": {
+"id": "TST-0039",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The served page follows the store by reading it: the state a tablet is told, the choices i",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0040": {
+"id": "TST-0040",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The field deals every view into three bands: owed in front and never moved by a hand, the ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0041": {
+"id": "TST-0041",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The slot geometry places every note, gives a thousand quiet tiles a stated shape, keeps an",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0042": {
+"id": "TST-0042",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Nothing in the stylesheet blurs or puts a backdrop filter over the field, only near-band c",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0043": {
+"id": "TST-0043",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The hands\u2019 state is shared and never kept: pull, push and let go are store transitions the",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0044": {
+"id": "TST-0044",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The neighbourhood is read once per note per revision and shared by the lift and the reach,",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0045": {
+"id": "TST-0045",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Glass is driven with a real pointer in a real window: the field, the lift, the hands, the ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0046": {
+"id": "TST-0046",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The whole link graph is read from Deck\u2019s own index: every link with its offset, resolved t",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0047": {
+"id": "TST-0047",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The orbit\u2019s layout is solved once and kept, fills the cylinder, moves nothing already plac",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0049": {
+"id": "TST-0049",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A desk for each view and a note on every view, in the store: an old state file reads uncha",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0050": {
+"id": "TST-0050",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Zoom keeps the point under the pointer still, stays between 0.6 and 2.5 times, never loses",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0051": {
+"id": "TST-0051",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The seats round an opened note hold every neighbour at browsing size, never overlap the do",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0053": {
+"id": "TST-0053",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Every note the view holds has a band and every band states its remainder: the four lists p",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0054": {
+"id": "TST-0054",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Each band's shape follows how much it holds: a table of populations from forty to twenty-s",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0055": {
+"id": "TST-0055",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Detail follows apparent size: the thresholds are monotonic, the unzoomed field resolves to",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0057": {
+"id": "TST-0057",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A measurement run writes its numbers to a file as well as printing them, so a trimmed term",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0065": {
+"id": "TST-0065",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A note opens at the size a person chose: its own size first, then the size last chosen on ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0066": {
+"id": "TST-0066",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A relationship between two notes is named only in the words the source wrote: the frontmat",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0067": {
+"id": "TST-0067",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A collection counts exactly the notes its view returns, keeps where it stands and never it",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0068": {
+"id": "TST-0068",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The Glass desktop is run with a real pointer and keyboard: the collection on the field, a ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0069": {
+"id": "TST-0069",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The collection holds still when notes change on disk: the change is announced and applied ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0070": {
+"id": "TST-0070",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "An arrangement is a plan before it is a move: Read, Compare and Show related name what the",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0071": {
+"id": "TST-0071",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Collection forms and arrangements are run with a real pointer and keyboard: the same membe",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0072": {
+"id": "TST-0072",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Glass is measured at the size of a real workspace, with the collection and full documents ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0074": {
+"id": "TST-0074",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A scene keeps places and nothing derived: what it holds and never holds, a reading positio",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0075": {
+"id": "TST-0075",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A move is never half done: the source keeps its document until the destination has drawn t",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0076": {
+"id": "TST-0076",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Scenes and handoff are run with a real pointer and keyboard: a scene saved, the workspace ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0078": {
+"id": "TST-0078",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Evidence says what is recorded and names what is not: the tests that name a note by the ke",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0079": {
+"id": "TST-0079",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The evidence panel is run with a real pointer and keyboard: the tests that name a note, a ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0023": {
+"id": "TST-0023",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "Glass opens first, and a day's notes are read in it: the owed work in front, the quiet wor",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0024": {
+"id": "TST-0024",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A note is lifted in Glass, its neighbourhood arrives at the front, two notes show what the",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0025": {
+"id": "TST-0025",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A planted orphan and a cluster hanging by one edge are both visible in the orbit without b",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0038": {
+"id": "TST-0038",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "The field is arranged by hand, a note is thrown to another screen, the tablet shows what t",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0048": {
+"id": "TST-0048",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "Each view keeps its own desk, a note kept on every view follows every switch, and Hide not",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0052": {
+"id": "TST-0052",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A note opened in Glass or the orbit stands in the middle of its neighbours and Escape puts",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0056": {
+"id": "TST-0056",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "Every note the view holds is somewhere in the field, and a finished note can be clicked, r",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0063": {
+"id": "TST-0063",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A collection and full note share Glass",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0064": {
+"id": "TST-0064",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "Glass collections and arrangements stay exact",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0073": {
+"id": "TST-0073",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A scene reopens and a note crosses screens",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0077": {
+"id": "TST-0077",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A claim's evidence stands beside it",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0059": {
+"id": "TST-0059",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "The native Glass evaluation is reproducible",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0058": {
+"id": "TST-0058",
+"kind": "test",
+"state": "dropped",
+"status": "drop",
+"title": "Every note can be reached in the native prototype",
+"phase": "PHASE-0002",
+"placedBy": "parent",
+"links": []
+},
+"TST-0060": {
+"id": "TST-0060",
+"kind": "test",
+"state": "dropped",
+"status": "drop",
+"title": "The native Glass fixtures reconcile and regenerate",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0061": {
+"id": "TST-0061",
+"kind": "test",
+"state": "dropped",
+"status": "drop",
+"title": "The visual parity gate rejects mismatched work",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"TST-0062": {
+"id": "TST-0062",
+"kind": "test",
+"state": "dropped",
+"status": "drop",
+"title": "The native scene keeps every note reachable",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0058": {
+"id": "ISS-0058",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A card can be drawn under a pane: the field keeps cards clear of where a pane is stored, n",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0059": {
+"id": "ISS-0059",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The front band hides what a hand or a lift asked for: a pull into a full band vanishes, a ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0060": {
+"id": "ISS-0060",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Deck can reopen in Spread with no address asking for it, because the chosen surface surviv",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0061": {
+"id": "ISS-0061",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Reduced motion is missing from a lift and a view switch: neither highlights what it arrive",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0062": {
+"id": "ISS-0062",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A display holding only a Needs-you strip cannot receive a throw, unnamed displays read odd",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0063": {
+"id": "ISS-0063",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Some checks and notes claim more than they measure: the frame time was taken with no panes",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0064": {
+"id": "ISS-0064",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A reduced-motion lift leaves cards under a pane, a pull beside a pane still vanishes while",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0065": {
+"id": "ISS-0065",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Five checks still cannot fail for the defect they are named for, and four notes are stale ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0066": {
+"id": "ISS-0066",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A pane\u2019s header shows through the pane lying on top of it in Glass, because every header i",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0070": {
+"id": "ISS-0070",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "While a note is open in Glass, each of its neighbours is shown twice, and the opened note ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0071": {
+"id": "ISS-0071",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The note open in the middle of Glass ignores the size the person gave it, and changes size",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0072": {
+"id": "ISS-0072",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Dragging the note open in the middle of Glass by a few pixels makes its neighbours vanish ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0073": {
+"id": "ISS-0073",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A finished note cannot be opened from the Glass field at all: the quiet band is painted on",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0074": {
+"id": "ISS-0074",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Zooming in makes a card and its type bigger and tells the person nothing new, because how ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0075": {
+"id": "ISS-0075",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Running the smoke checks on the Mac pulls the keyboard away from whatever the person is ty",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0076": {
+"id": "ISS-0076",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The quiet band's shape is a constant sized for the largest workspace on the fleet, so a pr",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0078": {
+"id": "ISS-0078",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The quiet band is the only band that insists on drawing every note it holds, where the fro",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0079": {
+"id": "ISS-0079",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A note the view's own rule puts in the mid band, past that band's sixty-four slots, is dra",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0080": {
+"id": "ISS-0080",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A frame-rate measurement is lost if its terminal output is cut off, because the numbers ar",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0081": {
+"id": "ISS-0081",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Resting the pointer on a quiet-band tile shows neither the note's name nor the pointer cur",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0082": {
+"id": "ISS-0082",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A finished note in the quiet band can only be pulled to the front band once it has been pr",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0083": {
+"id": "ISS-0083",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Two of the smoke run's fourteen new checks are written so that they pass whatever the rend",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0084": {
+"id": "ISS-0084",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A quiet tile promoted into a real card is laid out in the tile's box and only magnified, s",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0085": {
+"id": "ISS-0085",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "If a workspace's own view description leaves out the outer field's size, and the default o",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0087": {
+"id": "ISS-0087",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The fix for the clipped promoted card left it clipped, because the minimum heights were gu",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0090": {
+"id": "ISS-0090",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "After a smoke run in the box, this repository's cockpit address file names a port nothing ",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0091": {
+"id": "ISS-0091",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A popped-out window for another view switches the main window to that view, and every note",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0008": {
+"id": "ISS-0008",
+"kind": "iss",
+"state": "open",
+"status": "todo",
+"title": "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make c",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0086": {
+"id": "ISS-0086",
+"kind": "iss",
+"state": "open",
+"status": "todo",
+"title": "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the fea",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0068": {
+"id": "ISS-0068",
+"kind": "iss",
+"state": "dropped",
+"status": "drop",
+"title": "The throw checks sometimes draw no target strip, and every Glass check after them fails in",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0077": {
+"id": "ISS-0077",
+"kind": "iss",
+"state": "dropped",
+"status": "drop",
+"title": "Glass creates and destroys one DOM element per note and never uses the card pool Spread bu",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ISS-0088": {
+"id": "ISS-0088",
+"kind": "iss",
+"state": "dropped",
+"status": "drop",
+"title": "Now that the hover handler runs in the field, every pointer move over the quiet band scans",
+"phase": "PHASE-0002",
+"placedBy": "own",
+"links": []
+},
+"ADR-0001": {
+"id": "ADR-0001",
+"kind": "dec",
+"state": "closed",
+"status": "done",
+"title": "Deck serves its own renderer over HTTP and proxies the sidecar read-only",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0002": {
+"id": "ADR-0002",
+"kind": "dec",
+"state": "closed",
+"status": "done",
+"title": "Glass is Deck's main view, built before parity with the cockpit; Spread stays a view besid",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0003": {
+"id": "ADR-0003",
+"kind": "dec",
+"state": "closed",
+"status": "done",
+"title": "Deck writes through the shell to the loopback sidecar, and the host it serves a tablet nev",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0004": {
+"id": "ADR-0004",
+"kind": "dec",
+"state": "closed",
+"status": "done",
+"title": "A view is a description, evaluated over Deck's own index, in a language Deck owns and seed",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0006": {
+"id": "ADR-0006",
+"kind": "dec",
+"state": "closed",
+"status": "done",
+"title": "Collections and documents occupy the Glass desk",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0005": {
+"id": "ADR-0005",
+"kind": "dec",
+"state": "open",
+"status": "todo",
+"title": "The Glass field has four bands, every band places only what fits and states the rest on sc",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0007": {
+"id": "ADR-0007",
+"kind": "dec",
+"state": "open",
+"status": "todo",
+"title": "A scene is a saved desk that is read live when reopened, and a handoff between windows wai",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ADR-0008": {
+"id": "ADR-0008",
+"kind": "dec",
+"state": "open",
+"status": "todo",
+"title": "Evidence is read from Deck's index, the acceptance ledger's payload and the rendered note,",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"DES-0001": {
+"id": "DES-0001",
+"kind": "dec",
+"state": "open",
+"status": "todo",
+"title": "Nine ways to read the record, and a tenth that was cut and then asked for \u2014 whole applicat",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"DES-0002": {
+"id": "DES-0002",
+"kind": "dec",
+"state": "open",
+"status": "todo",
+"title": "The glass cockpit \u2014 depth is priority, every view is a re-arrangement rather than a page, ",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"DES-0003": {
+"id": "DES-0003",
+"kind": "dec",
+"state": "open",
+"status": "todo",
+"title": "Collections and documents form one controllable Glass workspace",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0001": {
+"id": "RISK-0001",
+"kind": "risk",
+"state": "closed",
+"status": "done",
+"title": "A second sidecar on the same repository takes over the cockpit's focus routing",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0002": {
+"id": "RISK-0002",
+"kind": "risk",
+"state": "closed",
+"status": "done",
+"title": "Deck's read-only guarantee rests on the sidecar's own path checks for anything carried in ",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0003": {
+"id": "RISK-0003",
+"kind": "risk",
+"state": "closed",
+"status": "done",
+"title": "Obsidian and Deck both evaluate the Bases language over the same base files, and the same ",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0004": {
+"id": "RISK-0004",
+"kind": "risk",
+"state": "closed",
+"status": "done",
+"title": "Deck's index and the sidecar's index read the same notes and can disagree about them, so t",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0005": {
+"id": "RISK-0005",
+"kind": "risk",
+"state": "closed",
+"status": "done",
+"title": "A native prototype wins by doing less work",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0006": {
+"id": "RISK-0006",
+"kind": "risk",
+"state": "closed",
+"status": "done",
+"title": "Native rendering leaves Decks reader and tablet behind",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0007": {
+"id": "RISK-0007",
+"kind": "risk",
+"state": "open",
+"status": "todo",
+"title": "Glass restoration loses identity or layout",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"RISK-0008": {
+"id": "RISK-0008",
+"kind": "risk",
+"state": "open",
+"status": "todo",
+"title": "The evidence panel misreports a verdict when the sidecar's acceptance payload changes",
+"phase": null,
+"placedBy": "project-wide",
+"links": []
+},
+"ISS-0089": {
+"id": "ISS-0089",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Three real defects found by the 2026-09-19 issue review are still in Deck, each small enou",
+"phase": null,
+"placedBy": "none",
+"links": [],
+"suggestion": {
+"phase": "PHASE-0002",
+"by": "links"
+}
+},
+"FEAT-0002": {
+"id": "FEAT-0002",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Deck opens a workspace: an Electron shell that finds a repository, starts the sidecar and ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0003": {
+"id": "FEAT-0003",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "One store in the main process: every window reads the same state and watches it change",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0004": {
+"id": "FEAT-0004",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Windows on any screen: a panel pops out, remembers the display it was on, and never steals",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0005": {
+"id": "FEAT-0005",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Spread: notes as cards on a desk, and a desk you can save and come back to",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0006": {
+"id": "FEAT-0006",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Every reachable Deck state has an address, so a layout is a list of addresses and some geo",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0007": {
+"id": "FEAT-0007",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Views come from a provider: the renderer holds no fixed set of view buttons",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0008": {
+"id": "FEAT-0008",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "One renderer, two hosts: the Electron shell locally, and Deck's own read-only host for a t",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0011": {
+"id": "FEAT-0011",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "Deck's own index: the main process reads the workspace's Markdown itself, so a view can ar",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0012": {
+"id": "FEAT-0012",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "A view is a description: what a view selects, groups, bands and shows becomes a document D",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0013": {
+"id": "FEAT-0013",
+"kind": "feat",
+"state": "closed",
+"status": "done",
+"title": "The first write: Deck ticks a criterion and makes one transition, through the shell to the",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0006": {
+"id": "TASK-0006",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The application builds and boots \u2014 one compile, a main process, a preload bridge and a ren",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0007": {
+"id": "TASK-0007",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The sidecar starts and stops with Deck \u2014 one per workspace, on a free loopback port, waite",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0008": {
+"id": "TASK-0008",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Workspaces are found and remembered \u2014 a project-os repository is the one that carries a SN",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0009": {
+"id": "TASK-0009",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A typed read-only client over the sidecar \u2014 one method per endpoint Deck reads, and no met",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0010": {
+"id": "TASK-0010",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The store holds the state and broadcasts it \u2014 one record in the main process, every window",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0011": {
+"id": "TASK-0011",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The state survives a restart \u2014 written when it settles, read at launch, and never fatal wh",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0012": {
+"id": "TASK-0012",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A panel opens in its own window \u2014 the same renderer, a different address, and a role that ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0013": {
+"id": "TASK-0013",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A window reopens where it was \u2014 bounds remembered per window and placed on the display it ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0014": {
+"id": "TASK-0014",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Satellites do not steal focus \u2014 one window owns navigation and the others watch",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0015": {
+"id": "TASK-0015",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Notes become cards \u2014 the sidecar's list, drawn as several cards at once, each carrying its",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0016": {
+"id": "TASK-0016",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A desk is saved and reopened \u2014 an arrangement with a name, and a card whose note is gone d",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0017": {
+"id": "TASK-0017",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The address grammar \u2014 one string covering the workspace, the view, the desk and the note, ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0018": {
+"id": "TASK-0018",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Copy the address and open one \u2014 the round trip a person can actually perform",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0019": {
+"id": "TASK-0019",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The provider interface, and the project-os provider whose views match the cockpit's",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0020": {
+"id": "TASK-0020",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The switcher draws what the provider returned \u2014 and the renderer holds no list of view nam",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0021": {
+"id": "TASK-0021",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Deck's own read-only host \u2014 it serves the renderer and proxies reads, and refuses every me",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0022": {
+"id": "TASK-0022",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Capability is detected, not assumed \u2014 the renderer asks its host what it can do, and shell",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0023": {
+"id": "TASK-0023",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The groups the sidecar already sends are drawn, so Needs you comes first, phases hold thei",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0024": {
+"id": "TASK-0024",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A navigator panel beside a desk that starts empty, so a desk is a subset a person chose ra",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0025": {
+"id": "TASK-0025",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Cards are dragged and removed, and where a card was left is what the desk saves",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0026": {
+"id": "TASK-0026",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A popped-out window carries one panel, so a second display can hold the Needs-you strip, a",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0027": {
+"id": "TASK-0027",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Search and filter live in the renderer, because a pooled DOM means the browser's own find ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0028": {
+"id": "TASK-0028",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A card face per type, so a phase shows progress, an issue shows severity and a test shows ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0038": {
+"id": "TASK-0038",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Records from the workspace's Markdown: frontmatter parsed, a list-valued type counted unde",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0039": {
+"id": "TASK-0039",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The index watches the workspace and carries a revision, so a view knows its picture is old",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0040": {
+"id": "TASK-0040",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The records reach the renderer through Deck's own host, read-only, on both hosts",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0041": {
+"id": "TASK-0041",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The description shape, its version and its extension namespace, and a parser that refuses ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0042": {
+"id": "TASK-0042",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The project-os provider emits seven mode-sourced descriptions, and nothing a person sees c",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0043": {
+"id": "TASK-0043",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The evaluator for the seeded language over Deck's index: filters, functions, sort and grou",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0044": {
+"id": "TASK-0044",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Band and face are read from the description: faces.ts becomes a reader, and the vocabulari",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0045": {
+"id": "TASK-0045",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The navigator draws any description, whether its notes came from a sidecar mode or from a ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0046": {
+"id": "TASK-0046",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "A base file reads as a description \u2014 the parser half only, so the Vault phase inherits a l",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0047": {
+"id": "TASK-0047",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The write channel: bridge, IPC and a loopback call, with the write capability false when D",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0048": {
+"id": "TASK-0048",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The actor is a setting in Deck's store, because the cockpit's hard-coded name cannot be co",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0049": {
+"id": "TASK-0049",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The actuator rows come from the sidecar, and one transition is wired end to end",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0050": {
+"id": "TASK-0050",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "Ticking a criterion with evidence, addressed by the data-raw the sidecar stamped, with the",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0051": {
+"id": "TASK-0051",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The changed-under-you mark: a write makes every other window stale, and the change is anno",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TASK-0052": {
+"id": "TASK-0052",
+"kind": "task",
+"state": "closed",
+"status": "done",
+"title": "The address grammar gains surface, page, flow and step; panel kinds come from a registry; ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0008": {
+"id": "TST-0008",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Spread opens the same views and the same notes as the cockpit, for this repository, checke",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0009": {
+"id": "TST-0009",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A status window carrying one panel reopens on the display it was left on, across a restart",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0012": {
+"id": "TST-0012",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Two windows show the same state, and Deck reopens where you left it",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0013": {
+"id": "TST-0013",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "An address survives being written down: copy it, quit, come back and paste it",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0001": {
+"id": "TST-0001",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The sidecar client reads what Deck needs and has no way to write",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0002": {
+"id": "TST-0002",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The store broadcasts to every window and survives a restart, including a corrupt state fil",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0003": {
+"id": "TST-0003",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A window is placed on the display it was on, and on the primary display when that monitor ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0004": {
+"id": "TST-0004",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A desk reopens as it was left, and a desk naming a note that is gone opens without it",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0005": {
+"id": "TST-0005",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Every state round-trips through its address, and a malformed address is refused rather tha",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0006": {
+"id": "TST-0006",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Views come from the provider, match the cockpit's list, and appear nowhere as literals in ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0007": {
+"id": "TST-0007",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The host serves the renderer, proxies reads, and refuses every method and path that is not",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0014": {
+"id": "TST-0014",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A card the pool has hidden leaves the screen, and no stylesheet rule can put it back",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0016": {
+"id": "TST-0016",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The groups the sidecar sends are drawn, and no note is lost or repeated on the way",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0017": {
+"id": "TST-0017",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Search and filter narrow the navigator, and find a note no card on screen holds",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0018": {
+"id": "TST-0018",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A card shows what its note is, and a type Deck has never heard of still draws",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0019": {
+"id": "TST-0019",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The desk is a chosen set of cards a person arranges, and it survives being saved and reope",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0020": {
+"id": "TST-0020",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A popped-out window carries one named panel, and an address naming a panel Deck cannot dra",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0021": {
+"id": "TST-0021",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A port another process is listening on is never offered as free",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0022": {
+"id": "TST-0022",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A sidecar refused its port is started on another one, two windows asking at once get one s",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0029": {
+"id": "TST-0029",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The index reads what is on disk, counts types the way the sidecar does, follows a change, ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0030": {
+"id": "TST-0030",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A description parses or says why not, the seven project-os views still match the cockpit, ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0031": {
+"id": "TST-0031",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The evaluator runs the seeded language over Deck's index, the three type spellings agree, ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0032": {
+"id": "TST-0032",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "Band and face follow the description rather than the code, and the status vocabulary Deck ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0033": {
+"id": "TST-0033",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The write channel exists in the shell and not when served, the verbs come from the sidecar",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0034": {
+"id": "TST-0034",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The grammar carries surface, page, flow and step, every old address still round-trips, and",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0035": {
+"id": "TST-0035",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "One directory is one workspace and one sidecar, however its path is spelled",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0036": {
+"id": "TST-0036",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "The smoke run opens a workspace by default, a run that skipped checks is not a run that pa",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0037": {
+"id": "TST-0037",
+"kind": "test",
+"state": "closed",
+"status": "done",
+"title": "A note cannot run script in the window that writes, every verb asks why, and a verdict Dec",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"TST-0010": {
+"id": "TST-0010",
+"kind": "test",
+"state": "owed",
+"status": "owed",
+"title": "Deck served over the local network opens on a tablet, reads the notes and refuses writes",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0011": {
+"id": "TST-0011",
+"kind": "test",
+"state": "owed",
+"status": "owed",
+"title": "Deck opens a workspace you add, and leaves nothing running when you quit",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0026": {
+"id": "TST-0026",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "Deck's own index counts what the cockpit counts, on a project-os repository and on the vau",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0027": {
+"id": "TST-0027",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "The seven project-os views look exactly as they did, and a base file from the vault reads ",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"TST-0028": {
+"id": "TST-0028",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "A criterion ticked in Deck is ticked in the file and in the cockpit, one transition moves ",
+"phase": "PHASE-0001",
+"placedBy": "parent",
+"links": []
+},
+"ISS-0001": {
+"id": "ISS-0001",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Cards from the previous view stay on screen \u2014 the pool hides a spare card with the `hidden",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0002": {
+"id": "ISS-0002",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A second Deck cannot start and says nothing \u2014 the free-port probe binds loopback while the",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0003": {
+"id": "ISS-0003",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A served page cannot open a workspace the shell has not opened, and the only thing it tell",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0004": {
+"id": "ISS-0004",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Two Decks bind the same port, because the free-port probe passes on loopback while another",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0005": {
+"id": "ISS-0005",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A card jumps hundreds of pixels when it is dragged on a desk that has scrolled, because th",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0006": {
+"id": "ISS-0006",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A clean quit forgets every popped-out panel, and only a kill preserves them, because the w",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0007": {
+"id": "ISS-0007",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Four smaller defects in the renderer: an unclamped restored position, a count of two diffe",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0009": {
+"id": "ISS-0009",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A sidecar Deck starts can be refused the port Deck offered it, because Deck's probe sets a",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0010": {
+"id": "ISS-0010",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Two windows opening one workspace at the same time kill each other's sidecar, so both show",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0011": {
+"id": "ISS-0011",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A read from the served page kills the sidecar Deck is still waiting for, so a tablet openi",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0012": {
+"id": "ISS-0012",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A filter set on one view still narrows the next one, and the dropdowns say nothing is filt",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0013": {
+"id": "ISS-0013",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The remove control still appears on a card in the Needs-you strip and now silently does no",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0014": {
+"id": "ISS-0014",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Deck's forwarding allow-list constrains the path and never the query, so a request from th",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0015": {
+"id": "ISS-0015",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Four smaller things the close-out review found: a check asserting on a message the code no",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0017": {
+"id": "ISS-0017",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A card restored below the desk's window creeps further down on every repaint, so it walks ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0018": {
+"id": "ISS-0018",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A popped-out Needs-you panel silently re-points at whatever view the main window last chos",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0019": {
+"id": "ISS-0019",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Pasting an address copied from a popped-out window hides the main window's navigator and r",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0020": {
+"id": "ISS-0020",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Closing the main window promotes a satellite that keeps drawing one panel, so Deck is left",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0021": {
+"id": "ISS-0021",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A sidecar spawned after the quit began, or any quit that came from a signal, still left a ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0022": {
+"id": "ISS-0022",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The smoke run's popped-out desk window shows no cards at all: one put on the desk from ano",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0023": {
+"id": "ISS-0023",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Deck starts a second sidecar for a repository the cockpit already has open when the two sp",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0024": {
+"id": "ISS-0024",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A key whose value is followed by an indented list makes Deck's YAML reader abandon everyth",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0025": {
+"id": "ISS-0025",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A literal block scalar silently loses every blank line and every line beginning with a has",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0026": {
+"id": "ISS-0026",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The check that Deck and the sidecar agree about every note skips any note Deck failed to i",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0027": {
+"id": "ISS-0027",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Four paths in the evaluator select the wrong notes and report nothing, which is the failur",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0028": {
+"id": "ISS-0028",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "TST-0033's command and entrypoint name a suite file that was never created, so the reposit",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0029": {
+"id": "ISS-0029",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Nothing stops a Deck window navigating away from its own host, and the preload bridge \u2014 wh",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0030": {
+"id": "ISS-0030",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A change to any file at all rebuilds Deck's index and tells every window its notes changed",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0031": {
+"id": "ISS-0031",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Three different ways of dropping the path prefix each leave every check passing, so the fi",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0032": {
+"id": "ISS-0032",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The guards that keep the write bridge on Deck's own origin are checked by searching the bu",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0033": {
+"id": "ISS-0033",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "file.hasLink answers from a note's frontmatter alone, so a backlink query misses every lin",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0034": {
+"id": "ISS-0034",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The comparison against the sidecar reads key names and never values, so replacing every fr",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0035": {
+"id": "ISS-0035",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The fix that stopped a block scalar losing its blank lines introduced two new silent mis-r",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0036": {
+"id": "ISS-0036",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Six numbers written into the close-out notes do not reproduce when the reader re-runs them",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0037": {
+"id": "ISS-0037",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A decision made in Deck moves the status and records no reason, because the field carrying",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0038": {
+"id": "ISS-0038",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "One meta tag stops a note's own markup running script in the window that can write to the ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0039": {
+"id": "ISS-0039",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Deck draws Accept and Decline on every proposed design and both are dead, because it ignor",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0040": {
+"id": "ISS-0040",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Deck asks why only for a verb that stops to confirm, so accepting an issue still records n",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0041": {
+"id": "ISS-0041",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A change that leaves a note's modification time alone updates Deck's records and raises no",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0042": {
+"id": "ISS-0042",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Each of the three scripts written to settle an acceptance walk reports success while the t",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0043": {
+"id": "ISS-0043",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Three counts in the section added to TST-0027 do not reproduce, written on the day the iss",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0044": {
+"id": "ISS-0044",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The three guards added to close the third review run only in a command nobody's gate runs,",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0045": {
+"id": "ISS-0045",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A verb Deck cannot perform is drawn identical to one it can \u2014 same colour, same cursor, no",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0046": {
+"id": "ISS-0046",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "An empty view is excused when the word filter appears anywhere in a location, so naming a ",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0047": {
+"id": "ISS-0047",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The note explaining why records carry a digest names two causes that do not happen, claims",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0048": {
+"id": "ISS-0048",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Six statements across the close-out notes do not reproduce: a count invalidated by its own",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0049": {
+"id": "ISS-0049",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Naming the smoke run as a test put it in the gate that has no Electron, so the non-bypassa",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0050": {
+"id": "ISS-0050",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Disabling the button left the guard that stops the request with no check at all, and turne",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0051": {
+"id": "ISS-0051",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Three checks cannot fail any more: one reads the working tree after reverting it, one take",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0052": {
+"id": "ISS-0052",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A fourth consecutive round of numbers that do not reproduce, including the count written t",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0053": {
+"id": "ISS-0053",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Deck can stop offering a tick control on every note in the application and every check sta",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0054": {
+"id": "ISS-0054",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The smoke runner re-execs itself by a path that no longer resolves, the gate that must run",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0055": {
+"id": "ISS-0055",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "A ticked criterion says two where the evidence four lines below it says four, and one date",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0057": {
+"id": "ISS-0057",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "The first push turned both CI jobs red: a fixture check that cannot pass on a fresh checko",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0067": {
+"id": "ISS-0067",
+"kind": "iss",
+"state": "closed",
+"status": "done",
+"title": "Spread never brings a card forward: selecting or dragging a card leaves it under the cards",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0069": {
+"id": "ISS-0069",
+"kind": "iss",
+"state": "open",
+"status": "todo",
+"title": "The approve and decline buttons take a full-height column of their own between the desk an",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0016": {
+"id": "ISS-0016",
+"kind": "iss",
+"state": "dropped",
+"status": "drop",
+"title": "The validator's acceptance gate reads a mark: field on the test note and never the release",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"ISS-0056": {
+"id": "ISS-0056",
+"kind": "iss",
+"state": "dropped",
+"status": "drop",
+"title": "The seventh review approved all three features and found eight things nobody fixed, the la",
+"phase": "PHASE-0001",
+"placedBy": "own",
+"links": []
+},
+"FEAT-0021": {
+"id": "FEAT-0021",
+"kind": "feat",
+"state": "open",
+"status": "todo",
+"title": "Project-to-evidence levels guide Deck after cockpit contracts are decided",
+"phase": "PHASE-0004",
+"placedBy": "own",
+"links": []
+},
+"TST-0015": {
+"id": "TST-0015",
+"kind": "test",
+"state": "open",
+"status": "todo",
+"title": "One real task done in Deck instead of the cockpit, and a record of which Edwin would rathe",
+"phase": "PHASE-0004",
+"placedBy": "parent",
+"links": []
+}
+}
+}
