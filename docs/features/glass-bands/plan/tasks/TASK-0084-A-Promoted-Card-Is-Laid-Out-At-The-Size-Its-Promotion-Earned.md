@@ -42,9 +42,9 @@ Whichever form is chosen, the invariant to hold is that the detail `detailFor` a
 
 ## Steps
 
-- [ ] Lay a promoted card out at the box its detail needs rather than at the quiet band's.
-- [ ] Add the box-fits-detail check to [[TST-0055-Detail-Follows-Apparent-Size]].
-- [ ] Say in the smoke run that the promoted card's content fits, not only that it exists.
+- [x] Lay a promoted card out at the box its detail needs rather than at the quiet band's.
+- [x] Add the box-fits-detail check to [[TST-0055-Detail-Follows-Apparent-Size]].
+- [x] Say in the smoke run that the promoted card's content fits, not only that it exists.
 - [ ] Draw a promoted card at the opacity its tile was painted at, from one rule both share, so it stays dimmed (added 2026-10-14).
 
 ## Where this stands
@@ -67,3 +67,4 @@ Whichever form is chosen, the invariant to hold is that the detail `detailFor` a
 
 **The fix is one rule for both.** `bandOpacity(band, phi, layer)` in `desktop/src/shared/slots.ts` says how opaque a note in a band is drawn at a bearing. The canvas paints a tile with it and `place()` draws a promoted card with it, so the two cannot drift apart and a promoted card keeps its tile's brightness. A node check in TST-0055 asserts that a quiet note is dimmer than a front or mid note at every bearing, and a smoke check measures a real promoted card's opacity against a front card's.
 
+**2026-10-14, later: the rule is built and its node check is shown to fail.** The fix is in `f3556dd`. The detail suite ([[TST-0055-Detail-Follows-Apparent-Size]]) passes 16 of 16. Two breaks in `slots.ts` were each caught by the new check: the quiet band taking a front card's opacity, and the quiet band losing its back-layer dimming. The fourth step stays open until the smoke check that measures a real promoted card's opacity has run once as written and once against a break.

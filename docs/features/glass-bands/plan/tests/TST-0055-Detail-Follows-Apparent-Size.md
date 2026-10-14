@@ -6,7 +6,7 @@ title: "Detail follows apparent size: the thresholds are monotonic, the unzoomed
 status: active
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-10-14
 source: ["[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -15,10 +15,10 @@ entrypoint: "desktop/tests/detail.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh detail"
 covers: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]"]
 issues: ["[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]"]
-tasks: ["[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]"]
+tasks: ["[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]"]
 artifacts: []
-adequacy: "Eight deliberate breaks across two rounds; all eight caught. The first three, 2026-09-12, were the threshold, the hysteresis and the level table. The next five, 2026-09-17, are the box-fits-detail rule: promotedBox returning the tile box (4 checks fail), deleting the MIN_BOX_FOR height floor (2), setting full back to 62 (2), the quiet cursor taking pointer events (1) and the title clamp dropping to one line (1). Each substitution was rebuilt before its run and the file restored with git checkout afterwards; the tree was clean after each."
-mutation_score: "8/8 breaks caught, 2026-09-12 and 2026-09-17"
+adequacy: "Eight deliberate breaks across two rounds; all eight caught. The first three, 2026-09-12, were the threshold, the hysteresis and the level table. The next five, 2026-09-17, are the box-fits-detail rule: promotedBox returning the tile box (4 checks fail), deleting the MIN_BOX_FOR height floor (2), setting full back to 62 (2), the quiet cursor taking pointer events (1) and the title clamp dropping to one line (1). The last two, 2026-10-14, are the opacity rule: the quiet band taking a front card's opacity (1) and the quiet band losing its back-layer dimming with its ceiling raised to 0.95 (1). Each substitution was rebuilt before its run and the file restored with git checkout afterwards; the tree was clean after each."
+mutation_score: "10/10 breaks caught, 2026-09-12, 2026-09-17 and 2026-10-14"
 reviewed_by: model:claude-opus-5
 review_date: 2026-09-17
 review_verdict: approved
@@ -93,3 +93,13 @@ Three checks, from [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promo
 **Adequacy, 2026-09-17, restated after round two.** The first version of this sentence said replacing `promotedBox` with the old behaviour makes all three checks fail. Round two showed that is true only of the band-box form of the defect: `promotedBox` returning a fixed 58 by 16 box makes checks 2 and 3 fail and **check 1 pass**, because check 1 took the level from the box's own width and `detailFor(58)` is `tile`, which 58 by 16 does hold. Check 1's width axis was true by construction for the same reason, and the loop asserting `holdsDetail(MIN_BOX_FOR[level], level)` was `x >= x`.
 
 **What replaced it.** The minimum heights are now computed from the stylesheet's own sizes, `full` is asserted to equal `CARD_BOX.height` — the 92 pixels a front-band card has drawn full detail in since [[FEAT-0009-The-Field-Where-Depth-Carries-Priority]] — and a fourth check asserts the height floor is what decides a promoted card's height rather than a card's proportions, which is the part that was dead code. Five breaks were run against the result and all five were caught; the counts are in `adequacy:`. Restored, all 470 node checks pass and `git status` is clean.
+
+## Added 2026-10-14: a finished note stays dimmed when it becomes a card
+
+One check, from [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]. A promoted quiet card used to be drawn at a front card's opacity, so zooming toward the shelf lit finished work up to the brightness of current work.
+
+- **A quiet note is drawn dimmer than current work at every bearing.** `bandOpacity` in `desktop/src/shared/slots.ts` is the one rule the canvas paints a tile with and `place()` draws a card with. The check walks every degree from -90 to 90 on three layers and asserts the quiet band is below the front, mid and outer bands. It also asserts the other three bands kept the values they had before the rule was shared.
+
+**Adequacy, 2026-10-14.** Two breaks in `slots.ts`, each rebuilt and run, both caught by this check and by nothing else: the quiet band taking a front card's opacity, and the quiet band losing its back-layer dimming with its ceiling raised from 0.75 to 0.95. The file was restored with `git checkout --` after each. Restored, the suite's 16 checks pass.
+
+**What this check does not cover.** It holds the rule, not the renderer's use of it. That `place()` actually calls the rule for a promoted card is measured by the Glass smoke run ([[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]), which reads a real promoted card's opacity.
