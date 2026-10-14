@@ -18,8 +18,8 @@ acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
 review_date: 2026-10-14
-review_verdict: changes-requested
-review_round: 1
+review_verdict: approve
+review_round: 2
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -73,6 +73,10 @@ Out of scope:
 4. TST-0093 logged where Escape landed and whether the served page offered a write, without asserting either (both).
 
 Fixed in `57c2e3d`: the wheel waits for the index and never keeps the empty answer; the tray glows; every ticket mark takes focus by the arrow keys from its sector, and Enter opens it; the window run asserts Escape and the served page and fails on a missing screen. TST-0090 now checks focus and glow on every ticket.
+
+### Round two
+
+2026-10-14: two Codex reviewers (GPT-6 Astra), round two. Both found all four findings fixed, each shown by breaking the fix and watching a test or probe fail: the wheel waits for an index still being built, the tray glows, every one of 361 and 2,747 tickets is reached and opened by the arrow keys and Enter, and the window run asserts Escape, the served page and every screen. Both approved.
 
 ## Questions between the lanes
 

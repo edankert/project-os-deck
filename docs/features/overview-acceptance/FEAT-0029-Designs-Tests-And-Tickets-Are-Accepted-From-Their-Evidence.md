@@ -18,8 +18,8 @@ acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-14
-review_verdict: changes-requested
-review_round: 1
+review_verdict: approve
+review_round: 2
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -129,6 +129,10 @@ Claude’s round-two packet can be regenerated with `python3 tools/scripts/revie
 7. **`acceptance-run` sends reconciled criteria as `skipped`**; whether the cockpit reads them that way was not checked.
 
 Claude adds one from the plates: **S5's fanned plates** are drawn nearly as opaque as the selected one and muddle it; behind a busy plate they should be outlines or much dimmer.
+
+### Round two
+
+2026-10-14: two Claude reviewers, round two, on the fixes `a6fb6c7..4a5baa0`. Both found all eight findings fixed, each with a guard broken and a named test failing: S7 offers Accept and Send back only when the sidecar lists them, an unknown lamp always says why, an empty lamp is hollow and supplies no evidence, the Reviews lamp reads strings and lists, saved S6 results survive commits, `skipped` matches the cockpit's meaning, and S5's other plates are outlines. Both found the two criteria narrowed because of the cockpit stated honestly. Both approved. Whether the narrowed feature is acceptable is Edwin's decision.
 
 ## Links
 

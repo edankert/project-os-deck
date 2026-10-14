@@ -19,7 +19,8 @@ design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
 review_date: 2026-10-14
 review_verdict: changes-requested
-review_round: 1
+review_round: 2
+review_response: "Round two: both Codex reviewers found the neighbour overlap fixed (202 neighbours on 202 places), and the band and neighbour tests now fail when broken. Not fixed: the re-phase test still passed when tickets stopped moving, because a size change counted as movement; fixed after it in d844e5e, where the test compares centres and fails on both workspaces with the move switched off. The cockpit issue stays unfiled, as TASK-0129 records. No third round."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -71,6 +72,10 @@ Out of scope:
 3. The cockpit issue for a write that sets `phase:` is not filed (both); it is cut from this run, as TASK-0129 says.
 
 Fixed in `57c2e3d`: neighbours stand on wide rings that hold only what fits, below the track and gate, so every neighbour has its own place; TST-0090 works out the front band and the neighbours itself, checks that no two neighbours of the 25 most linked tickets share a place, and checks that accepting a group moves exactly its tickets.
+
+### Round two
+
+2026-10-14: two Codex reviewers (GPT-6 Astra), round two. Both found fixed: neighbours share no place on either workspace, and TST-0090 fails when failed and owed tickets leave the front band or neighbours are dropped. Both found not fixed: the re-phase test passed with the move switched off, because a glyph that only shrank counted as moved; and the cockpit issue is unfiled. Both requested changes. Fixed after it in `d844e5e`: the test compares where each glyph's centre is, and fails on both workspaces with the move switched off. The cockpit issue is cut from this run, as TASK-0129 says. No third round was run; the verdict stays the reviewers'.
 
 ## Questions between the lanes
 

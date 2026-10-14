@@ -16,10 +16,11 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ["model:gpt-6-astra"]
+reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
 review_date: 2026-10-14
 review_verdict: changes-requested
-review_round: 1
+review_round: 2
+review_response: "Round two: one Codex reviewer found six of seven findings fixed and the prototype's navigation partly fixed, because a press on a ticket did nothing. Fixed after it in d844e5e: the page follows a press on any ticket. No third round."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -66,6 +67,10 @@ Out of scope:
 2026-10-14: one Codex reviewer (GPT-6 Astra), in a clean worktree, reviewed the packet. Codex reviewed it because Claude built it. Verdict: changes requested. Held: the fourteen plates reproduce byte for byte, the word counts agree three ways, every reference is local, and the four answers are proposed. Refuted: two plates had no caption (Deck's S4 and your-trainer's S7); the Revisions line did not say what Edwin decides; the scope still said the tickets came from DES-0004 and that nothing in `desktop/` changes; the page could not be navigated from the wheel; and no test failed when three screens were removed from the plate script or when every mark was lost.
 
 Fixed in `57c2e3d`: both captions, the Revisions line, the scope rewritten to what was built, the page following a press on a mark, and [[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]], which fails on a missing plate or lost marks.
+
+### Round two
+
+2026-10-14: one Codex reviewer (GPT-6 Astra), round two. Fixed: both captions, the Revisions line, the scope, and both test gaps (removing three screens or every mark now fails TST-0094). Partly fixed: the prototype followed a press on a mark with an address, but not on a ticket, so the design, release-test and gate screens could not be reached from the wheel's marks. Verdict: changes requested. Fixed after it in `d844e5e`: a press on a ticket opens the screen Deck opens next for its kind. A review gate runs two rounds at most, so no third round was run; the verdict stays the reviewer's.
 
 ## Questions between the lanes
 

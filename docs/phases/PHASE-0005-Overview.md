@@ -83,11 +83,11 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 ## Exit Criteria
 
 - [ ] DES-0005 is accepted by Edwin, with one plate per screen S1 to S7, drawn from Deck's and your-trainer's real tickets.
-- [ ] Deck opens on the wheel for both workspaces. Every ticket the overview model returns is drawn exactly once, and the counts on screen equal the model's counts (automated).
-- [ ] Every screen S1 to S7 passes the look's checks 1, 2 and 5: at most 60 words at rest, no number without a mark, an address that restores it and a list twin (automated, on both workspaces).
-- [ ] From the wheel, a phase, a ticket, a design, a release test check and a feature gate are each reached in at most two clicks, and by keyboard alone.
+- [x] Deck opens on the wheel for both workspaces. Every ticket the overview model returns is drawn exactly once, and the counts on screen equal the model's counts (automated). Evidence: TST-0090 on both fixtures; TST-0093's window run on 2026-10-14 drew 377 of 377 tickets on Deck and 2,747 of 2,747 on your-trainer.
+- [x] Every screen S1 to S7 passes the look's checks 1, 2 and 5: at most 60 words at rest, no number without a mark, an address that restores it and a list twin (automated, on both workspaces). Evidence: `checkScene` in TST-0090 (S1 to S4) and the overview-flows suite (S5 to S7) on both workspaces, and TST-0094 on every plate; words at rest range from 5 to 37.
+- [x] From the wheel, a phase, a ticket, a design, a release test check and a feature gate are each reached in at most two clicks, and by keyboard alone. Evidence: a sector opens its phase and a wedge its ticket (one click; TST-0093); on a ticket's screen its glyph opens its design, release test or gate (two clicks), and an owed-again badge opens the release test in one. Tab reaches every sector, disc and control, and the arrow keys and Enter reach and open all 361 and 2,747 tickets (Codex's round-two review of FEAT-0027).
 - [ ] Edwin accepts a design in S5, records a Pass and a Fail in S6 and accepts a feature in S7, and each verdict appears in the cockpit. The same verbs from an agent session are refused.
-- [ ] Each feature has an independent review by the agent that did not build it, recorded on the feature.
+- [x] Each feature has an independent review by the agent that did not build it, recorded on the feature. Evidence: two rounds each, Claude reviewing FEAT-0026 and FEAT-0029, Codex (GPT-6 Astra) reviewing FEAT-0025, FEAT-0027 and FEAT-0028; verdicts and fixes are under each feature's Review.
 - [ ] Edwin's acceptance tests for each feature pass, including whether the screens read as pictures rather than text.
 
 ## Notes
@@ -95,3 +95,14 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 - **Order.** `order: 5` only because the field cannot repeat. Edwin set Glass aside on 2026-10-08 to get the overview right first (DES-0004), so this phase is worked next. He set it `active` on 2026-10-14. Moving it in [PHASES.md](../PHASES.md) is his call.
 - **Open questions carried from DES-0004.** How a backlog phase is marked (an id ending in 999, or `kind: backlog`); whether an open risk is amber; whether accepting a re-phase suggestion should write. The design lane proposes an answer to each in DES-0005, and Edwin decides when he accepts it.
 - **Depends on PHASE-0001** for the store, the addresses, the view provider and Deck's index. It does not depend on PHASE-0002's unfinished work.
+
+## Where this stands
+
+2026-10-14, end of the build run: every feature is built, tested and reviewed twice by the other agent, and at `review`. The full suite passes (752 tests on the last run), and the window run passes on Deck and your-trainer. Four of the seven exit criteria are ticked with evidence. The three left are Edwin's:
+
+1. **Accept or decline DES-0005**, in the cockpit or in Deck's S5.
+2. **Run the acceptance tests**: TST-0091 and TST-0092 (the drawing lane), and TST-0088, TST-0089 and TST-0100 (the three flows). They include the step where an agent tries a verdict and is refused.
+3. **Decide three narrowings**: FEAT-0029's criteria narrowed to what the cockpit's sidecar allows (it moves no feature out of review and refuses an agent only on `acceptance-run`); FEAT-0026's your-trainer fixture, captured from a working tree with another session's uncommitted notes; and TASK-0129's cockpit issue, written in the adoption table instead of filed.
+
+**What the cockpit owes Deck** is listed under "Requests to the cockpit" in [[REFERENCE-COCKPIT-ADOPTION]]: a guarded write that sets `phase:`, person-only feature transitions, and agent refusal on `decide` and `mark-check`.
+
