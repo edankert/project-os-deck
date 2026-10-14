@@ -62,21 +62,23 @@ export const designFlow: ScreenDefinition = {
 };
 
 /** Kept per workspace and release; changing an action changes its key too. */
+const marksKey = (input: ScreenInput): string => `deck:steps:v2:${input.ctx.workspaceId}`;
 function marksFor(input: ScreenInput): StepMarks {
-  if (input.memory.has('test-run:marks')) return input.memory.get('test-run:marks') as StepMarks;
+  const key = marksKey(input);
+  if (input.memory.has(key)) return input.memory.get(key) as StepMarks;
   let marks: StepMarks = {};
   try {
-    const raw = object(JSON.parse(globalThis.localStorage?.getItem(`deck:steps:${input.ctx.workspaceId}:${input.model.head}`) ?? '{}'));
+    const raw = object(JSON.parse(globalThis.localStorage?.getItem(key) ?? '{}'));
     for (const [key, v] of Object.entries(raw)) {
       const m = object(v);
       if ((RESULTS as readonly unknown[]).includes(m['result']) && typeof m['reason'] === 'string') marks[key] = { result: m['result'] as typeof RESULTS[number], reason: m['reason'], baseline: text(m['baseline']) };
     }
   } catch { /* A restricted host still keeps this session's steps. */ }
-  input.memory.set('test-run:marks', marks); return marks;
+  input.memory.set(key, marks); return marks;
 }
 function saveMarks(input: ScreenInput, marks: StepMarks): void {
-  input.memory.set('test-run:marks', marks);
-  try { globalThis.localStorage?.setItem(`deck:steps:${input.ctx.workspaceId}:${input.model.head}`, JSON.stringify(marks)); } catch { /* Session memory remains. */ }
+  input.memory.set(marksKey(input), marks);
+  try { globalThis.localStorage?.setItem(marksKey(input), JSON.stringify(marks)); } catch { /* Session memory remains. */ }
 }
 async function runData(input: ScreenInput): Promise<TestRunData> {
   const suite = object(await input.read('/api/cockpit/acceptance?platform=all'));
@@ -97,11 +99,23 @@ async function runData(input: ScreenInput): Promise<TestRunData> {
   data.open = typeof saved === 'string' ? saved : data.platforms.find(p => p.id === firstPlatform)?.sections.find(s => s.number === sectionNo)?.checks.find(c => !c.preparation)?.key;
   data.more = input.memory.get('test-run:more') === true;
   const marks = marksFor(input);
+  let dropped = false;
+  // Only prune inventories successfully read for this release; preserve other releases and platforms.
+  for (const p of data.platforms.filter(p => !p.error)) {
+    const currentKeys = new Set(p.sections.flatMap(s => s.checks.map(c => c.key)));
+    for (const key of Object.keys(marks)) {
+      try {
+        const scope: unknown = JSON.parse(key);
+        if (Array.isArray(scope) && scope[0] === data.release && scope[1] === p.id && !currentKeys.has(key)) { delete marks[key]; dropped = true; }
+      } catch { delete marks[key]; dropped = true; }
+    }
+  }
   for (const p of data.platforms) for (const s of p.sections) for (const c of s.checks) {
     const mark = marks[c.key];
     if (mark && mark.baseline === c.evidence) { c.result = mark.result; c.reason = mark.reason; }
-    else if (mark) delete marks[c.key];
+    else if (mark) { delete marks[c.key]; dropped = true; }
   }
+  if (dropped) saveMarks(input, marks);
   return data;
 }
 export const testRunFlow: ScreenDefinition = {

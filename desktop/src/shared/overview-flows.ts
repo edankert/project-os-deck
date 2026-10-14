@@ -130,7 +130,7 @@ export function testRunFromPayloads(payloads: unknown[], imageLink: ImageLink = 
         const expected = arr(check['expected']).map(obj);
         const tags = unique([...strings(check['tags']), ...expected.flatMap(e => [...strings(e['tags']), ...strings(e['passed'])])]).sort();
         const action = str(check['action']);
-        const key = JSON.stringify([release, platform, slug, tags, action]);
+        const key = JSON.stringify([release, platform, slug, tags, action, tickets, expected, check['preparation'] === true]);
         const recorded = tickets.map(t => obj(results[t]));
         const result = tickets.length && recorded.every(r => str(r['result'])) ? worstResult(recorded.map(r => resultFrom(r['result']))) : 'not-run';
         return { key, evidence: JSON.stringify(tickets.map(t => results[t] ?? null)), number: num(check['number']), tickets, action, expected: expected.map(e => str(e['text'])).join(' '), result,

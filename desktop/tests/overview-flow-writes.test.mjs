@@ -100,7 +100,7 @@ test('S6 cancelled reasons and served controls never write; refused results do n
  await testRunFlow.onAction(actions[0].action,i);i.ask=async()=>null;assert.equal(await testRunFlow.onAction('mark:fail',i),false);assert.equal(seen.length,0);
  i.canWrite=false;await assert.rejects(testRunFlow.onAction('mark:pass',i),/does not write/);i.canWrite=true;
  await testRunFlow.onAction('mark:pass',i);await testRunFlow.onAction(actions[1].action,i);i.write=async()=>({ok:false,error:'agent verdict refused'});
- await assert.rejects(testRunFlow.onAction('mark:pass',i),e=>e.message==='agent verdict refused');assert.equal(Object.keys(i.memory.get('test-run:marks')).length,1);
+ await assert.rejects(testRunFlow.onAction('mark:pass',i),e=>e.message==='agent verdict refused');assert.equal(Object.keys(i.memory.get('deck:steps:v2:'+i.ctx.workspaceId)).length,1);
 });
 test('S6 historic release is readable but cannot write into the current ledger',async()=>{
  const {i,seen}=runInput();i.address.note='REL-0016';const read=i.read;i.read=async at=>{const p=await read(at);if(at.includes('release=REL-0016'))p.release='REL-0016';return p;};
@@ -143,9 +143,9 @@ test('coverage is not a run: a manual verdict cannot light the automated lamp',a
 test('a changed ledger result invalidates an unfinished local step',async()=>{
  const {i}=runInput();const scene=await testRunFlow.scene(i);
  const first=scene.list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts');
- await testRunFlow.onAction(first.action,i);await testRunFlow.onAction('mark:pass',i);assert.equal(Object.keys(i.memory.get('test-run:marks')).length,1);
+ await testRunFlow.onAction(first.action,i);await testRunFlow.onAction('mark:pass',i);assert.equal(Object.keys(i.memory.get('deck:steps:v2:'+i.ctx.workspaceId)).length,1);
  const read=i.read;i.read=async at=>{const p=await read(at);if(at.startsWith('/api/cockpit/release-test'))p.results={'TST-0001':{result:'fail',reason:'another run',date:'2026-10-14'}};return p;};
- await testRunFlow.scene(i);assert.equal(Object.keys(i.memory.get('test-run:marks')).length,0);
+ await testRunFlow.scene(i);assert.equal(Object.keys(i.memory.get('deck:steps:v2:'+i.ctx.workspaceId)).length,0);
 });
 test('each More result requires a reason and sends its exact cockpit result word',async()=>{
  for(const verdict of ['partial','question','blocked','na','excused']){
@@ -180,4 +180,38 @@ test('S7 offers the opted-in stamp without transitions and counts reconciled cri
  assert.ok(nodes.find(n=>n.action==='accept:back').cls.includes('ov-off'));
  await acceptFlow.onAction('accept:accept',i);
  assert.deepEqual(seen,[['acceptance-run',{id:'FEAT-9999',passed:3,failed:0,skipped:2,complete:true,issues:[]}]]);
+});
+
+function storedSteps(t) {
+ const saved=new Map(),previous=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)}});
+ t.after(()=>{if(previous)Object.defineProperty(globalThis,'localStorage',previous);else delete globalThis.localStorage;});
+ return saved;
+}
+test('S6 saved steps survive a changed head but separate workspace, release, platform and expected content',async t=>{
+ const saved=storedSteps(t),{i}=runInput();await testRunFlow.scene(i);await testRunFlow.onAction('mark:pass',i);
+ assert.equal(saved.size,1);
+ const persisted=[...saved.values()][0];
+ const resumed=runInput().i;resumed.model={...model,head:'an unrelated commit'};
+ const first=scene=>scene.list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts');
+ assert.match(first(await testRunFlow.scene(resumed)).label,/— pass/);
+ const another=runInput().i;another.memory=resumed.memory;another.ctx=plainContext('bbbbbbbb','features');
+ assert.match(first(await testRunFlow.scene(another)).label,/— not-run/);
+ const otherRelease=runInput().i;otherRelease.address.note='REL-0018';const releaseRead=otherRelease.read;
+ otherRelease.read=async at=>{const p=await releaseRead(at);if(p.release)p.release='REL-0018';return p;};
+ assert.match(first(await testRunFlow.scene(otherRelease)).label,/— not-run/);
+ assert.equal([...saved.values()][0],persisted,'reading another release must preserve this release');
+ const ios=(await testRunFlow.scene(resumed)).list.find(r=>r.action?.startsWith('check:')&&r.group==='ios: Workouts');assert.match(ios.label,/— not-run/);
+ const changed=runInput().i,read=changed.read;
+ changed.read=async at=>{const p=await read(at);if(p.sections)p.sections[0].groups[0].checks[0].expected=[{text:'See a different list'}];return p;};
+ assert.match(first(await testRunFlow.scene(changed)).label,/— not-run/);
+ assert.deepEqual(JSON.parse([...saved.values()][0]),{},'changed content drops the old result from storage');
+});
+test('S6 persists stale ledger-result deletion and cannot resurrect it on reload',async t=>{
+ const saved=storedSteps(t),{i}=runInput();await testRunFlow.scene(i);await testRunFlow.onAction('mark:pass',i);
+ assert.equal(Object.keys(JSON.parse([...saved.values()][0])).length,1);
+ const read=i.read;i.read=async at=>{const p=await read(at);if(p.sections)p.results={'TST-0001':{result:'fail',date:'2026-10-15'}};return p;};
+ await testRunFlow.scene(i);assert.deepEqual(JSON.parse([...saved.values()][0]),{});
+ const reloaded=runInput().i;
+ assert.match((await testRunFlow.scene(reloaded)).list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts').label,/— not-run/);
 });
