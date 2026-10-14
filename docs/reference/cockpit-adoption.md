@@ -6,7 +6,7 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-12
+updated: 2026-10-14
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
@@ -27,9 +27,11 @@ Deck is built beside project-os-cockpit and shares its sidecar. The cockpit stay
 
 The cockpit's rule, mirrored here: a change note there that adds, changes or retires capability updates its register in the same commit. Deck's rule: when a new row appears there, it appears here as `not yet` with the date, and grooming decides.
 
-**Read against:** cockpit register at `d1df13c`, 2026-10-02.
+**Read against:** cockpit register at `d1df13c`, 2026-10-02. The six rows adopted for FEAT-0029 were checked again at `032a6f8` on 2026-10-14.
 
-**Positions last moved 2026-10-02**, when [[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]] was built: `api.read.check-history` moved from `not yet` to `adopted`. The register was re-read the same day and six keys had arrived that this table did not carry. They are added as `not yet`, and grooming decides.
+**Positions last moved 2026-10-14.** FEAT-0029 adopts six rows for the exact S5–S7 uses stated below. Code and node tests establish these paths; Edwin's three acceptance walks remain pending. The cockpit still refuses feature status transitions and does not prove every person-only agent guard. RISK-0009 records those limits.
+
+**Positions moved 2026-10-02**, when [[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]] was built: `api.read.check-history` moved from `not yet` to `adopted`. The register was re-read the same day and six keys had arrived that this table did not carry. They are added as `not yet`, and grooming decides.
 
 **Positions last moved 2026-09-07**, when the six tasks from [[REFERENCE-PHASE-0001-REVIEW]] landed: `shell.nav.needs-you`, `shell.nav.hide-completed` and `shell.stage.find` moved from `not yet` to `adopted`. The register was re-read the same day at `c0ed9e3` and two keys had arrived that this table did not carry: `shell.checks.mark-dialog` and `api.read.check-history`, both from the cockpit's acceptance-checks work of 2026-09-06. Both are `not yet`, and grooming decides.
 
@@ -66,7 +68,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.stage.quick-switch` | not yet | |
 | `shell.stage.capture` | not yet | |
 | `shell.reader.render` | adopted | 2026-09-06: Deck shows the HTML the sidecar rendered and parses no Markdown of its own |
-| `shell.reader.actuators` | not yet | same verbs, same guards. 2026-09-08: [[FEAT-0013-The-First-Write]] is the feature that adopts this row. It reads the legal verbs from `GET /api/notes/actions` and draws the rows returned, restating no verb table (the cockpit's REQ-0026), and wires one transition end to end. The row moves to `adopted` when that transition is walked in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]] |
+| `shell.reader.actuators` | adopted | 2026-10-14: adopted for S5's design controls only (FEAT-0029). Accept uses `/api/notes/decide`; Decline reads the legal action row and sends its target and reason through `/api/notes/transition`. The generic reader's separate walk in TST-0028 remains pending. |
 | `shell.reader.viewer` | not yet | **new 2026-09-12**: the cockpit's `~view/<rel>` frames any HTML page inside a workspace's `docs/`, served by `/framed/<rel>`. Nothing in Deck frames a file yet |
 | ~~`shell.reader.design`~~ | **retired upstream 2026-09-12** | the design bench was removed (cockpit [[project-os-cockpit#CHG-20260912-The-Design-Bench-Becomes-One-Viewer]]). Deck never adopted it, so nothing here breaks. A design is now a note with pictures in `__attachments__/`, which `shell.reader.render` already covers |
 | `shell.context.pane` | replaced by | the neighbourhood in Glass: since 2026-09-10 a held note's linked notes and backlinks take the front band, read from `/api/cockpit/context` (TASK-0036), and reach shows them as wires before a lift (TASK-0056); a context panel in Spread is still not built |
@@ -77,8 +79,8 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.pages.release` | not yet | |
 | `shell.pages.release.settle` | not yet | new in the cockpit on 2026-09-08, read here 2026-09-09: the checks a release owes, on one screen, each settled with `na`, `excused` or `blocked` and one ledger event carrying a reason and an author. A release page SETTLES a check and never passes one — `pass`, `partial`, `fail` and `question` are refused by name at the server (the cockpit's ADR-0041). Deck has no release page, so this arrives with `shell.pages.release`. Worth noting when it does: Deck's own write path already follows the same shape, posting to the endpoint the sidecar named and restating no verb |
 | `shell.pages.release.coverage` | not yet | new in the cockpit on 2026-09-08, read here 2026-09-09: what a release ships that nothing verifies — features no acceptance check names in `covers:`, and requirements with unticked criteria — computed mechanically, with a verb that dispatches an agent to draft the missing `TST-*` notes for review as a diff. Arrives with `shell.pages.release`. The agent-dispatch half is a bigger question than the page: Deck offers no agent verbs at all and [[ADR-0003-Deck-Writes-Through-The-Shell]] scopes its writes to two |
-| `shell.pages.release-test` | not yet | new in the cockpit on 2026-09-27, read here 2026-10-02: one platform's release test in the Tests view, replacing the cockpit's walk page |
-| `shell.pages.accept` | not yet | stepwise, not a list |
+| `shell.pages.release-test` | adopted | 2026-10-14: S6 draws per-platform section rings, printed checks and section captures. Local step results produce one `/api/notes/mark-check` result only after all printed steps for that note have results. Release preparation, sealing and publication are not adopted by this row. Edwin's walk is TST-0089. |
+| `shell.pages.accept` | adopted | 2026-10-14: S7 adopts the feature gate and verdict controls, with per-feature criteria and ledger evidence. It records an opted-in acceptance run; other acceptance and send-back transitions remain subject to the sidecar's refusal. Stepwise criterion editing is not part of this adoption. Edwin's walk is TST-0100. |
 | `shell.pages.test-run` | not yet | |
 | `shell.pages.session` | not yet | |
 | `shell.pages.agents` | not yet | |
@@ -104,14 +106,14 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.nav` | adopted | 2026-09-06: read as is, through Deck's own host, which proxies GET and HEAD and refuses everything else. The list of views is Deck's own and the sidecar is not asked for it (Edwin, 2026-09-06) |
 | `api.read.note` | adopted | 2026-09-06: `/api/render`, read through the same proxy; its HTML goes straight into the reader |
 | `api.read.record` | adopted | 2026-09-06: the stats payload only, which is what the overview view draws |
-| `api.read.check-history` | adopted | 2026-10-02: `GET /api/cockpit/acceptance?platform=<p>`, read through Deck's own host, which forwards it for GET and HEAD and refuses every other method. The evidence panel of a Glass document shows each acceptance check's standing verdict and opens its history ([[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], [[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]). Deck records no verdict |
-| `api.read.obligations` | not yet | 2026-10-02: one of its seven routes, `/api/cockpit/acceptance`, is read for a check's standing verdict (the row above). The other six are not read, and Deck draws no obligation from any of them |
-| `api.read.release-test` | not yet | new in the cockpit on 2026-09-27, read here 2026-10-02: the release test as data, for one platform |
+| `api.read.check-history` | adopted | 2026-10-02: `GET /api/cockpit/acceptance?platform=<p>`, read through Deck's own host, which forwards it for GET and HEAD and refuses every other method. The evidence panel of a Glass document shows each acceptance check's standing verdict and opens its history ([[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], [[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]). 2026-10-14: S7 also reads union standings and dated automated methods; S6 now records results through the separate shell write path. |
+| `api.read.obligations` | adopted | 2026-10-14: adopted for two of this row's seven routes: `/api/cockpit/obligations` and `/api/cockpit/acceptance?platform=all` in S7. Per-feature criteria come from the separate note read `/api/notes/acceptance?id=…`. Aggregate badges never certify a feature's evidence. Other obligation routes remain unadopted. |
+| `api.read.release-test` | adopted | 2026-10-14: S6 reads `/api/cockpit/release-test?platform=<p>&release=<REL>` through Deck's GET/HEAD host. It preserves printed steps separately from test-note results. Recorded Android and iOS payloads cover REL-0017. |
 | `api.read.vocabulary` | not yet | new in the cockpit on 2026-09-20, read here 2026-10-02: the status bands, severities and callout types as data. The cockpit's register says Deck can drop `desktop/src/shared/statuses.ts` and its recorded fixture and read these instead |
 | `api.read.agents` | not yet | |
 | `api.read.validation` | not yet | |
 | `api.read.state` | not yet | needs a Deck address grammar first |
-| `api.write.notes` | not yet | **Moved from `not applicable` on 2026-09-08.** The old position said "Deck adds no write path at all". [[ADR-0003-Deck-Writes-Through-The-Shell]] reverses that: Deck's shell writes through its main process to the sidecar on loopback, using these endpoints unchanged. [[FEAT-0013-The-First-Write]] adopts two of them — a tick with evidence and one status transition — and the rest wait for [[PHASE-0004-Parity]]. Deck's host still answers 405 to every method that is not a read, and the served page is offered no verb at all, which is a rule and not a wait |
+| `api.write.notes` | adopted | 2026-10-14: adopted for the existing transition/tick channel and S5–S7's `decide`, `mark-check` and `acceptance-run` verbs only. Identity comes from the shell's store; all requests leave through main-process `write-client.ts`. The HTTP host forwards no write. Unused note verbs remain unadopted. Person-only sidecar refusals and real verdicts still require TST-0088, TST-0089 and TST-0100. |
 | ~~`api.write.design`~~ | **retired upstream 2026-09-12** | `/api/design/capture`, `comment`, `offer-review`, `verdict` and `/api/notes/choose-variant` are gone from the shared sidecar. **Deck calls none of them** — checked by grep over `desktop/src` on the day they went — so this is a narrowing of the API Deck shares, not a break. A design's Accept and Decline moved to `api.write.note`, which Deck tracks under `shell.reader.actuators` |
 | `api.write.agents` | not yet | |
 | `api.write.inbox` | not yet | |

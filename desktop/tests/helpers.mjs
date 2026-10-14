@@ -30,7 +30,12 @@ export async function fakeSidecar(routes = {}) {
     // at, which is a miserable thing to debug from a CI log.
     req.on('error', () => {});
     res.on('error', () => {});
-    received.push({ method: req.method, url: req.url });
+    const entry = { method: req.method, url: req.url };
+    received.push(entry);
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => {
+    if (data) { try { entry.body = JSON.parse(data); } catch { entry.body = data; } }
     const url = new URL(req.url, 'http://fake.invalid');
     const route = routes[url.pathname];
     if (route === undefined) {
@@ -38,7 +43,7 @@ export async function fakeSidecar(routes = {}) {
       res.end(JSON.stringify({ ok: false, error: 'no such route' }));
       return;
     }
-    const body = typeof route === 'function' ? route(url) : route;
+    const body = typeof route === 'function' ? route(url, entry) : route;
     if (body === null) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('boom');
@@ -46,6 +51,7 @@ export async function fakeSidecar(routes = {}) {
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(typeof body === 'string' ? body : JSON.stringify(body));
+    });
   });
   server.on('clientError', () => {});
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));

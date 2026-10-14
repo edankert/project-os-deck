@@ -11,7 +11,7 @@ updated: 2026-10-14
 goal: "Deck opens on the circular overview, a wheel with one sector per unfinished phase and one wedge per ticket. Every screen reached from it, including accepting a design, running an acceptance test and accepting a feature, shows status and progress as diagrams and images rather than lists of text."
 features: ["[[FEAT-0025]]", "[[FEAT-0026]]", "[[FEAT-0027]]", "[[FEAT-0028]]", "[[FEAT-0029]]"]
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]"]
 issues: []
 depends: ["[[PHASE-0001-Deck]]"]
 related: ["[[DES-0004-The-Phase-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]

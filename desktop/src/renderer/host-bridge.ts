@@ -14,6 +14,7 @@ import type { Capabilities, DeckState, Workspace } from '../shared/types.js';
 import { type DeckAction, initialState, reduce } from '../shared/store-state.js';
 import { SERVED_CAPABILITIES, normaliseCapabilities } from '../shared/capability.js';
 import { TABLET_LOCAL_ACTIONS, mergeServed } from '../shared/served-state.js';
+import type { WriteVerb } from '../shared/write-client.js';
 
 interface BridgeShape {
   capabilities(): Promise<unknown>;
@@ -40,7 +41,7 @@ interface BridgeShape {
     sendBack(request: unknown): Promise<unknown>;
   };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
-  write: { transition(request: unknown): Promise<unknown>; tick(request: unknown): Promise<unknown> };
+  write: Record<WriteVerb, (request: unknown) => Promise<unknown>>;
 }
 
 /** What a write came back as: the sidecar's own words when it refused. */
@@ -307,13 +308,14 @@ export class Host {
    * control that is greyed out is a promise that it could work (ADR-0003).
    */
   async write(
-    verb: 'transition' | 'tick',
+    verb: WriteVerb,
     request: Record<string, unknown>,
   ): Promise<WriteResult> {
     const b = bridge();
     if (b === null || !this.caps.write) {
       return { ok: false, error: 'this host does not write' };
     }
+    if (typeof b.write[verb] !== 'function') return { ok: false, error: 'this shell does not support that verb' };
     return (await b.write[verb](request)) as WriteResult;
   }
 

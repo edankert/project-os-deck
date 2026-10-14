@@ -1,0 +1,89 @@
+{
+  "id": "FEAT-0024",
+  "title": "Evidence stands beside the claim it supports",
+  "status": "review",
+  "canWrite": true,
+  "lamps": [
+    {
+      "key": "requirements",
+      "label": "Requirements",
+      "known": true,
+      "total": 8,
+      "done": 0,
+      "missing": [
+        "REQ-0006: The evidence panel of a note lists every test note that names it under `covers` or `tasks`, or that it names under `tests` or `verifies`, and no other; each row shows the frontmatter key the link was written under; a note no test names reads \"no test names this note\", and nothing is inferred from its status, its feature's status or its tasks.",
+        "REQ-0006: A test at `level: acceptance` shows the standing verdict the ledger holds for it, with its date, who recorded it, by which method and on which platform; with no entry it reads \"not walked: no verdict is recorded\"; an invalidated verdict is said to be invalidated, with the change and the date, beside the verdict before it; the history of every verdict opens from the row.",
+        "REQ-0006: A manual test that is not at acceptance level shows its own status and last-verified date, labelled as coming from the test note, and is labelled stale with the rule's name when that date is more than 90 days old; a test with a `command:` reads \"run by a command; its result is not recorded anywhere Deck can read\" and shows no verdict and no date.",
+        "REQ-0006: A recorded verdict is never called a status and a note's status is never shown as a verdict; when the acceptance record cannot be read the panel reads \"the acceptance record could not be read\" with the reason, and no row reads \"not walked\".",
+        "REQ-0006: Each evidence row names its source and its date and opens the full original, the test note as a document on the desk, at its Evidence section when it has one; an excerpt is that note's own text under its Evidence heading, and a note with no such heading reads \"this test note has no Evidence section\"; nothing is quoted from anywhere else.",
+        "REQ-0006: A criterion line in a note's text gets an evidence control only when that line itself carries a link to a test note; the control reads \"named on this line\" and lists only the tests the line names; a line with no such link gets no control.",
+        "REQ-0006: The panel is closed until a person opens it, opens and closes by pointer and by keyboard with focus returned to the control that opened it, and appears without travel under reduced motion.",
+        "REQ-0006: Nothing in the panel writes: it offers no control that records or changes a verdict, the served page shows the same panel through the same GET, Deck's host answers 405 to every method that is not GET or HEAD on the forwarded acceptance path, and `git status` in the workspace is unchanged by using the panel."
+      ]
+    },
+    {
+      "key": "tasks",
+      "label": "Tasks",
+      "known": true,
+      "total": 4,
+      "done": 4,
+      "missing": []
+    },
+    {
+      "key": "automated",
+      "label": "Automated",
+      "known": false,
+      "total": 26,
+      "done": 0,
+      "missing": [
+        "TST-0057: command result is not exposed by the sidecar",
+        "TST-0044: command result is not exposed by the sidecar",
+        "TST-0039: command result is not exposed by the sidecar",
+        "TST-0043: command result is not exposed by the sidecar",
+        "TST-0078: command result is not exposed by the sidecar",
+        "TST-0067: command result is not exposed by the sidecar",
+        "TST-0066: command result is not exposed by the sidecar",
+        "TST-0070: command result is not exposed by the sidecar",
+        "TST-0007: command result is not exposed by the sidecar",
+        "TST-0034: command result is not exposed by the sidecar",
+        "TST-0049: command result is not exposed by the sidecar",
+        "TST-0050: command result is not exposed by the sidecar",
+        "TST-0032: command result is not exposed by the sidecar",
+        "TST-0075: command result is not exposed by the sidecar",
+        "TST-0074: command result is not exposed by the sidecar",
+        "TST-0042: command result is not exposed by the sidecar",
+        "TST-0041: command result is not exposed by the sidecar",
+        "TST-0040: command result is not exposed by the sidecar",
+        "TST-0065: command result is not exposed by the sidecar",
+        "TST-0051: command result is not exposed by the sidecar",
+        "TST-0047: command result is not exposed by the sidecar",
+        "TST-0046: command result is not exposed by the sidecar",
+        "TST-0054: command result is not exposed by the sidecar",
+        "TST-0053: command result is not exposed by the sidecar",
+        "TST-0055: command result is not exposed by the sidecar",
+        "TST-0033: command result is not exposed by the sidecar"
+      ]
+    },
+    {
+      "key": "acceptance",
+      "label": "Acceptance",
+      "known": false,
+      "total": 0,
+      "done": 0,
+      "missing": [
+        "no acceptance checks name this feature"
+      ]
+    },
+    {
+      "key": "reviews",
+      "label": "Reviews",
+      "known": true,
+      "total": 2,
+      "done": 0,
+      "missing": [
+        "independent review: changes-requested, 2 reviewers recorded"
+      ]
+    }
+  ],
+  "acceptanceRequested": false
+}

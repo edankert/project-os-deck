@@ -102,11 +102,9 @@ test('only the reads Deck actually makes are forwarded', async () => {
       '/_inbox/screenshot.png',
       '/api/cockpit/dispatch',
       '/api/cockpit/state',
-      // Neighbours of the one acceptance read Deck forwards (FEAT-0024): none of them is it.
+      // Unadopted neighbours of the acceptance reads (FEAT-0024 and FEAT-0029).
       '/api/cockpit/acceptance-debt',
-      '/api/cockpit/release-test',
       '/api/cockpit/scope-tests',
-      '/api/notes/acceptance',
       '/api/notes/mark-check',
       '/api/notes/seal-ledger',
       '/api/cockpit/sessions',
@@ -152,7 +150,7 @@ test('the acceptance record is a read Deck forwards, by GET and HEAD, and record
         assert.equal((await fetch(`${at}?platform=${way}`)).status, 403, `${bind}: platform=${way} was forwarded`);
       }
       // Its neighbours are not let through by it: the rule matches whole segments.
-      for (const near of ['/api/cockpit/acceptance-debt', '/api/notes/acceptance?id=FEAT-0001', '/api/cockpit/scope-tests?id=FEAT-0001', '/api/cockpit/release-item', '/api/cockpit/release-test', '/docs/attachments/x.png']) {
+      for (const near of ['/api/cockpit/acceptance-debt', '/api/cockpit/scope-tests?id=FEAT-0001', '/api/cockpit/release-item', '/docs/attachments/x.png']) {
         assert.equal((await fetch(`${origin}/deck/sidecar/${WORKSPACE.id}${near}`)).status, 403, `${bind}: ${near} was forwarded`);
       }
       // The routes that DO record a verdict: not forwarded as reads, and refused as writes.

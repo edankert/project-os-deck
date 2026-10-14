@@ -53,6 +53,9 @@ const FORWARDABLE = [
   // was recorded. It lets nobody record anything: marking a check is a POST,
   // and this host answers 405 to every method that is not GET or HEAD.
   '/api/cockpit/acceptance',
+  '/api/cockpit/release-test',
+  '/api/cockpit/obligations',
+  '/api/notes/acceptance',
 ];
 
 export function isForwardable(sidecarPath: string): boolean {
@@ -164,6 +167,8 @@ export interface HostOptions {
   listWorkspaces: () => Workspace[];
   /** The sidecar base for a workspace, or null when none is running. */
   sidecarBaseFor: (workspaceId: string) => string | null;
+  /** Registered workspace's docs root, for read-only image delivery. */
+  docsRootFor?: (workspaceId: string) => string | null;
   /**
    * Called when a sidecar stopped answering. Deck may have borrowed one that
    * has since exited, and the next attempt to open the workspace has to look
@@ -284,6 +289,13 @@ export class DeckHost {
       return;
     }
 
+    // Inspect this route before URL normalisation can erase a traversal.
+    const rawFilePath = (req.url ?? '/').split('?')[0]!;
+    if (rawFilePath.startsWith('/deck/file/')) {
+      this.workspaceImage(rawFilePath.slice('/deck/file/'.length), method, res);
+      return;
+    }
+
     const url = new URL(req.url ?? '/', 'http://deck.invalid');
     const rawPathname = url.pathname;
     const pathname = decodeSafely(rawPathname);
@@ -344,6 +356,38 @@ export class DeckHost {
       return;
     }
     this.serveFile(pathname, method, res);
+  }
+
+  private workspaceImage(raw: string, method: string, res: http.ServerResponse): void {
+    const decoded = decodeSafely(raw);
+    if (decoded === null || decoded.includes('%') || decoded.includes('\\') || namesAWayOut(decoded)) {
+      plain(res, 400, 'that image path leaves the docs root'); return;
+    }
+    const [id = '', ...segments] = decoded.split('/');
+    if (!/^[a-z0-9]{4,64}$/.test(id) || !this.options.listWorkspaces().some(w => w.id === id)) {
+      plain(res, 404, 'no such workspace'); return;
+    }
+    const types: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
+    const rel = segments.join('/'), type = types[path.extname(rel).toLowerCase()];
+    if (!rel || segments.some(s => !s) || !type) { plain(res, 403, 'only docs images are served here'); return; }
+    const root = this.options.docsRootFor?.(id);
+    if (!root) { plain(res, 404, 'no docs root for that workspace'); return; }
+    let fd: number | undefined;
+    try {
+      const realRoot = fs.realpathSync(root);
+      const real = fs.realpathSync(path.join(realRoot, rel));
+      if (!real.startsWith(realRoot + path.sep) || !types[path.extname(real).toLowerCase()]) {
+        plain(res, 403, 'that image leaves the docs root'); return;
+      }
+      fd = fs.openSync(real, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+      const stat = fs.fstatSync(fd);
+      if (!stat.isFile()) { plain(res, 404, 'no image there'); return; }
+      res.writeHead(200, { 'Content-Type': type, 'Content-Length': stat.size, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache',
+        // Authored SVG must not acquire the renderer's same-origin authority.
+        'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'" });
+      res.end(method === 'HEAD' ? undefined : fs.readFileSync(fd));
+    } catch { plain(res, 404, 'no image there'); }
+    finally { if (fd !== undefined) fs.closeSync(fd); }
   }
 
   /** The workspaces whose sidecar is answering, which is what the network may be told about. */

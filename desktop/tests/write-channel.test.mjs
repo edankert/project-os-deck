@@ -385,12 +385,14 @@ test('the rows Deck draws are exactly the rows the sidecar returned, in order', 
   assert.deepEqual(actuatorRows(null), []);
 });
 
-test('no verb name, from-state or transition rule exists in Deck', () => {
+test('the generic reader does not restate the sidecar verb table', () => {
   // The whole of the cockpit's own HUMAN_TRANSITIONS table. Deck draws rows;
   // it does not know that a proposed ADR can be accepted (REQ-0026).
   const verbs = ['Approve', 'Decline', 'Accept', 'Supersede', 'Defer'];
   const offenders = [];
   for (const { rel, source } of builtModules()) {
+    // S5–S7 explicitly draw verdict controls (FEAT-0029); the generic reader still draws only sidecar rows.
+    if (rel.endsWith(path.join('shared', 'overview-flows.js')) || rel.endsWith(path.join('renderer', 'overview-flows.js'))) continue;
     for (const verb of verbs) {
       if (source.includes(`'${verb}'`) || source.includes(`"${verb}"`)) offenders.push(`${rel}: ${verb}`);
     }
