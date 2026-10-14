@@ -133,6 +133,7 @@ const host = new DeckHost({
   capabilities: SERVED_CAPABILITIES,
   listWorkspaces: () => workspaces.list(),
   sidecarBaseFor: (id) => sidecars.handle(id)?.base ?? null,
+  docsRootFor: (id) => { const workspace = workspaces.get(id); return workspace ? docsRootFor(workspace.root) : null; },
   onSidecarUnreachable: (id) => sidecars.forget(id),
   isSidecarStarting: (id) => sidecars.isStarting(id),
   indexFor: (id) => indexes.get(id)?.snapshot() ?? null,

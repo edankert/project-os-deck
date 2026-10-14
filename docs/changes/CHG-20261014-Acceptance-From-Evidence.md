@@ -26,7 +26,7 @@ related: ["[[RISK-0009-Acceptance-Flows-Depend-On-Changing-Sidecar-Payloads-And-
 
 ## Summary
 
-This note tracks FEAT-0029’s implementation of S5, S6 and S7. A person sees design plates, release-test captures and the feature’s five evidence lamps before acting. The implementation record and verification counts are filled at close-out.
+This note tracks FEAT-0029’s implementation of S5, S6 and S7. A person sees design plates, release-test captures and the feature’s five evidence lamps before acting. The shared scenes and six fixtures are implemented in 602e9bb. The guarded image route passes 4 HTTP tests.
 
 The flows read the existing sidecar through Deck’s host. Their writes leave through the shell’s main process. The image route `/deck/file/<workspaceId>/<docs-relative path>` permits GET and HEAD for allowed images under the workspace’s docs root.
 

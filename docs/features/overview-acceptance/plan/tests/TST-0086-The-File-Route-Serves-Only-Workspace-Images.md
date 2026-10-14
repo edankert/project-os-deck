@@ -20,7 +20,7 @@ tasks:
 - '[[TASK-0121-Serve-Only-Images-Under-The-Workspaces-Docs]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 artifacts: []
-adequacy: ''
+adequacy: "Real HTTP requests use raw paths so URL normalization cannot hide traversal inputs. The test asserts both refusals and absence of image bytes."
 mutation_score: ''
 reviewed_by: ''
 review_date: ''
@@ -49,7 +49,7 @@ The image route reads only permitted images from the selected workspace.
 
 ## Evidence
 
-Not run yet. The executable check holds no verdict in its note status.
+2026-10-14: `node --test desktop/tests/file-route.test.mjs` passed 4 tests, failed none and skipped none after `npm --prefix desktop run build`. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

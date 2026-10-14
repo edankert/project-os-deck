@@ -2,7 +2,7 @@
 type: '[[task]]'
 id: TASK-0121
 title: Serve only images under the workspace’s docs
-status: backlog
+status: done
 phase: '[[PHASE-0005-Overview]]'
 owner: system:codex
 created: '2026-10-14'
@@ -26,14 +26,14 @@ tests:
 
 ## Definition of Done
 
-- [ ] GET and HEAD /deck/file/<workspaceId>/<docs-relative path> serve png, jpg, jpeg, gif, webp and svg only from that workspace’s docs root.
-- [ ] Unknown workspaces, traversal, symlink escapes, unsupported types and non-read methods are refused with no image bytes leaked.
-- [ ] Runtime image hrefs use this host route and the route suite exercises genuine localhost requests with no skips.
+- [x] GET and HEAD /deck/file/<workspaceId>/<docs-relative path> serve png, jpg, jpeg, gif, webp and svg only from that workspace’s docs root.
+- [x] Unknown workspaces, traversal, symlink escapes, unsupported types and non-read methods are refused with no image bytes leaked.
+- [x] Runtime image hrefs use this host route and the route suite exercises genuine localhost requests with no skips.
 
 ## Steps
 
-- [ ] Resolve a workspace’s docs root before opening a requested file.
-- [ ] Guard methods, extensions and resolved paths, then test successful and refused requests.
+- [x] Resolve a workspace’s docs root before opening a requested file.
+- [x] Guard methods, extensions and resolved paths, then test successful and refused requests.
 
 ## Notes
 
@@ -41,4 +41,4 @@ The user authorizes implementation in this worktree on `lane/codex`. Claude merg
 
 ## Evidence
 
-Not run yet.
+2026-10-14: `node --test desktop/tests/file-route.test.mjs` passed 4 tests, failed none and skipped none after the TypeScript build. Real HTTP requests exercised all six formats, HEAD, unsafe paths, a symlink escape, refused methods and the three new sidecar GETs.

@@ -341,7 +341,7 @@ items:
     TASK-0121:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0121-Serve-Only-Images-Under-The-Workspaces-Docs.md
       title: Serve only images under the workspace’s docs
-      status: doing
+      status: done
       owner: system:codex
       phase: PHASE-0005
       parent: FEAT-0029
@@ -2607,7 +2607,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 130
-    tasks_done: 101
+    tasks_done: 102
     tests_total: 66
     tests_passing: 8
     tests_failing: 0

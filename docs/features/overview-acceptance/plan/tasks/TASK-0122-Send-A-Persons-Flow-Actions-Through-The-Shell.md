@@ -2,7 +2,7 @@
 type: '[[task]]'
 id: TASK-0122
 title: Send a person’s flow actions through the shell
-status: backlog
+status: doing
 phase: '[[PHASE-0005-Overview]]'
 owner: system:codex
 created: '2026-10-14'
