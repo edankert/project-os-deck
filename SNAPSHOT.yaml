@@ -53,23 +53,35 @@ counters:
   ISS: 91
   PHASE: 5
   REQ: 6
-  RISK: 8
+  RISK: 9
   REL: 0
   TASK: 131
-  TST: 93
+  TST: 100
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
-  phase: "PHASE-0005"
-  feature: "FEAT-0027"
-  task: "TASK-0125"
+  phase: PHASE-0005
+  feature: FEAT-0029
+  task: TASK-0120
   issue: ""
-  note: "2026-10-14: Edwin asked for PHASE-0005 to be built and tested in one run, with Claude and Codex (GPT-6 Astra) each taking a lane of the two-agent brief. Claude writes the two contracts and the wheel first; Codex builds the overview model, the fixtures and the screen checks in its own worktree. TASK-0005's orbit comparison (DES-0001-orbit-comparison.html, uncommitted) still waits on Edwin's choice and is untouched."
+  note: "2026-10-14: Codex builds FEAT-0029, the design, release-test and feature acceptance flows, on lane/codex. TASK-0120 starts with pure scenes and recorded evidence. Claude coordinates the merge and reviews; Edwin alone gives acceptance verdicts. No windows or sibling repository writes are authorised."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
+    FEAT-0029:
+      file: docs/features/overview-acceptance/FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence.md
+      title: 'Designs, acceptance tests and tickets are accepted from a picture of their evidence: S5, S6 and S7, writing through the cockpit''s sidecar'
+      status: doing
+      owner: system:codex
+      phase: PHASE-0005
+      requirements: []
+      tasks:
+      - TASK-0120
+      - TASK-0121
+      - TASK-0122
+      - TASK-0123
     FEAT-0024:
       file: "docs/features/glass-evidence/FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports.md"
       title: "Evidence stands beside the claim it supports"
@@ -282,6 +294,79 @@ items:
       tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
   tasks:
+    TASK-0125:
+      file: docs/features/overview-wheel/plan/tasks/TASK-0125-The-Overview-Contracts-And-The-Wheel-As-A-Scene.md
+      status: doing
+      parent: FEAT-0027
+      phase: "[[PHASE-0005]]"
+    TASK-0126:
+      file: docs/features/overview-wheel/plan/tasks/TASK-0126-Deck-Opens-On-The-Wheel.md
+      status: backlog
+      parent: FEAT-0027
+      phase: "[[PHASE-0005]]"
+    TASK-0127:
+      file: docs/features/overview-phase/plan/tasks/TASK-0127-A-Phase-Opens-As-Its-Web-Its-Exit-Ring-And-Its-Depth-Field.md
+      status: backlog
+      parent: FEAT-0028
+      phase: "[[PHASE-0005]]"
+    TASK-0128:
+      file: docs/features/overview-phase/plan/tasks/TASK-0128-A-Ticket-Opens-As-Its-Lifecycle-And-Its-Neighbours.md
+      status: backlog
+      parent: FEAT-0028
+      phase: "[[PHASE-0005]]"
+    TASK-0129:
+      file: docs/features/overview-phase/plan/tasks/TASK-0129-Unplaced-Tickets-Drift-Toward-Their-Suggested-Phase.md
+      status: backlog
+      parent: FEAT-0028
+      phase: "[[PHASE-0005]]"
+    TASK-0130:
+      file: docs/features/overview-design/plan/tasks/TASK-0130-Draw-DES-0005s-Plates-From-The-Screen-Code.md
+      status: backlog
+      parent: FEAT-0025
+      phase: "[[PHASE-0005]]"
+    TASK-0131:
+      file: docs/features/overview-wheel/plan/tasks/TASK-0131-Run-The-Overview-Screens-In-A-Window-Once.md
+      status: backlog
+      parent: FEAT-0027
+      phase: "[[PHASE-0005]]"
+    TASK-0120:
+      file: docs/features/overview-acceptance/plan/tasks/TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence.md
+      title: Draw the acceptance flows from recorded evidence
+      status: doing
+      owner: system:codex
+      phase: PHASE-0005
+      parent: FEAT-0029
+      tests:
+      - TST-0085
+    TASK-0121:
+      file: docs/features/overview-acceptance/plan/tasks/TASK-0121-Serve-Only-Images-Under-The-Workspaces-Docs.md
+      title: Serve only images under the workspace’s docs
+      status: backlog
+      owner: system:codex
+      phase: PHASE-0005
+      parent: FEAT-0029
+      tests:
+      - TST-0086
+    TASK-0122:
+      file: docs/features/overview-acceptance/plan/tasks/TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell.md
+      title: Send a person’s flow actions through the shell
+      status: backlog
+      owner: system:codex
+      phase: PHASE-0005
+      parent: FEAT-0029
+      tests:
+      - TST-0087
+    TASK-0123:
+      file: docs/features/overview-acceptance/plan/tasks/TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin.md
+      title: Verify the flows and hand them to Edwin
+      status: backlog
+      owner: system:codex
+      phase: PHASE-0005
+      parent: FEAT-0029
+      tests:
+      - TST-0085
+      - TST-0086
+      - TST-0087
     TASK-0111:
       file: "docs/features/glass-evidence/plan/tasks/TASK-0111-Work-Out-A-Notes-Evidence-Without-A-Window.md"
       title: "Work out a note's evidence without a window"
@@ -1694,6 +1779,35 @@ items:
       phase: PHASE-0002
       implements: FEAT-0020
   phases:
+    PHASE-0005:
+      file: docs/phases/PHASE-0005-Overview.md
+      title: Overview — Deck opens on a wheel of the project's phases, and every screen behind it shows progress as a picture, including the screens where a design, an acceptance test and a ticket are accepted
+      status: active
+      owner: user:edwin
+      requirements: []
+      tasks:
+      - TASK-0125
+      - TASK-0126
+      - TASK-0127
+      - TASK-0128
+      - TASK-0129
+      - TASK-0130
+      - TASK-0131
+      - TASK-0115
+      - TASK-0116
+      - TASK-0117
+      - TASK-0118
+      - TASK-0119
+      - TASK-0120
+      - TASK-0121
+      - TASK-0122
+      - TASK-0123
+      features:
+      - FEAT-0025
+      - FEAT-0026
+      - FEAT-0027
+      - FEAT-0028
+      - FEAT-0029
     PHASE-0001:
       file: "docs/phases/PHASE-0001-Deck.md"
       title: "Deck — one store, windows on any screen, and Spread as the first view"
@@ -1739,6 +1853,17 @@ items:
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
+    RISK-0009:
+      file: docs/risks/RISK-0009-Acceptance-Flows-Depend-On-Changing-Sidecar-Payloads-And-Guards.md
+      title: Acceptance flows depend on changing sidecar payloads and guards
+      status: open
+      owner: system:codex
+      phase: PHASE-0005
+      mitigation:
+      - TASK-0120
+      - TASK-0121
+      - TASK-0122
+      - TASK-0123
     RISK-0008:
       file: "docs/risks/RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes.md"
       title: "The evidence panel misreports a verdict when the sidecar's acceptance payload changes"
@@ -1793,6 +1918,96 @@ items:
       phase: PHASE-0001
       note: "Risk scan for FEAT-0011, 2026-09-08, from Edwin's decision that Deck keeps its own index. Same shape as RISK-0002: Deck depends on behaviour in ANOTHER REPOSITORY and nothing in Deck watches it. The visible failure is two applications disagreeing about a number in front of one person -- the cockpit says 34 issues need triage and Deck says 31 -- after which he trusts neither. Three drifts: a rule mirrored wrongly at the start (the type spelling is the obvious one), a sidecar change nobody notices, and a DELIBERATE difference nobody wrote down. The third is the trap: cockpit ISS-0279 drops a note whose type: is a list, Deck must not reproduce it, so Deck's count will be right and the equality test will fail for a GOOD reason -- and somebody will loosen the assertion instead of recording it. MITIGATION: mirror with a citation to the upstream rule; pin the RESULT (a fixture of the sidecar's own library groups, with its date and commit) rather than the implementation; record every deliberate difference as a NAMED ROW; keep Deck's index claiming only which notes a query selects, with obligations, render, context and writes left to the sidecar."
   tests:
+    TST-0085:
+      file: docs/features/overview-acceptance/plan/tests/TST-0085-Flow-Scenes-And-Payloads-Keep-The-Recorded-Evidence.md
+      title: Flow scenes and payloads keep the recorded evidence
+      status: active
+      owner: system:codex
+      phase: PHASE-0005
+      tasks:
+      - TASK-0120
+      - TASK-0123
+      scope: feature
+      level: unit
+      entrypoint: desktop/tests/overview-flows.test.mjs
+      command: bash tools/scripts/run-desktop-tests.sh overview-flows
+      covers:
+      - FEAT-0029
+    TST-0086:
+      file: docs/features/overview-acceptance/plan/tests/TST-0086-The-File-Route-Serves-Only-Workspace-Images.md
+      title: The file route serves only workspace images
+      status: active
+      owner: system:codex
+      phase: PHASE-0005
+      tasks:
+      - TASK-0121
+      - TASK-0123
+      scope: feature
+      level: integration
+      entrypoint: desktop/tests/file-route.test.mjs
+      command: bash tools/scripts/run-desktop-tests.sh file-route
+      covers:
+      - FEAT-0029
+    TST-0087:
+      file: docs/features/overview-acceptance/plan/tests/TST-0087-Flow-Actions-Use-The-Shell-And-Preserve-Refusals.md
+      title: Flow actions use the shell and preserve refusals
+      status: active
+      owner: system:codex
+      phase: PHASE-0005
+      tasks:
+      - TASK-0122
+      - TASK-0123
+      scope: feature
+      level: integration
+      entrypoint: desktop/tests/overview-flow-writes.test.mjs
+      command: bash tools/scripts/run-desktop-tests.sh overview-flow-writes
+      covers:
+      - FEAT-0029
+    TST-0088:
+      file: docs/tests/acceptance/TST-0088-Accept-A-Design-From-Its-Plates.md
+      title: Accept a design from its plates
+      status: active
+      owner: user:edwin
+      phase: PHASE-0005
+      tasks:
+      - TASK-0120
+      - TASK-0122
+      scope: feature
+      level: acceptance
+      entrypoint: Deck desktop overview flow
+      command: ''
+      covers:
+      - FEAT-0029
+    TST-0089:
+      file: docs/tests/acceptance/TST-0089-Run-A-Release-Test-From-Its-Captures.md
+      title: Run a release test from its captures
+      status: active
+      owner: user:edwin
+      phase: PHASE-0005
+      tasks:
+      - TASK-0120
+      - TASK-0122
+      scope: feature
+      level: acceptance
+      entrypoint: Deck desktop overview flow
+      command: ''
+      covers:
+      - FEAT-0029
+    TST-0100:
+      file: docs/tests/acceptance/TST-0100-Accept-A-Feature-From-Its-Five-Lamps.md
+      title: Accept a feature from its five lamps
+      status: active
+      owner: user:edwin
+      phase: PHASE-0005
+      tasks:
+      - TASK-0120
+      - TASK-0122
+      scope: feature
+      level: acceptance
+      entrypoint: Deck desktop overview flow
+      command: ''
+      covers:
+      - FEAT-0029
     TST-0077:
       file: "docs/tests/acceptance/TST-0077-A-Claims-Evidence-Stands-Beside-It.md"
       title: "A claim's evidence stands beside it"
@@ -2270,6 +2485,13 @@ items:
   releases: {}
   workflows: {}
   changes:
+    CHG-20261014-Acceptance-From-Evidence:
+      file: docs/changes/CHG-20261014-Acceptance-From-Evidence.md
+      title: Accept designs, checks and features from their evidence
+      status: merged
+      owner: system:codex
+      features:
+      - FEAT-0029
     CHG-20261001-Glass-Interaction-Delivery-Plan:
       file: "docs/changes/CHG-20261001-Glass-Interaction-Delivery-Plan.md"
       title: "Document the endorsed Glass interaction direction and delivery sequence"
@@ -2384,13 +2606,13 @@ metrics:
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 126
+    tasks_total: 130
     tasks_done: 100
-    tests_total: 63
+    tests_total: 66
     tests_passing: 8
     tests_failing: 0
     issues_open: 3
     issues_triage: 0
-    risks_open: 2
+    risks_open: 3
     releases_total: 0
     decisions_total: 8

@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0029
 aliases: ["FEAT-0029"]
 title: "Designs, acceptance tests and tickets are accepted from a picture of their evidence: S5, S6 and S7, writing through the cockpit's sidecar"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -11,7 +11,7 @@ updated: 2026-10-14
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person accepts a design from its plates, records an acceptance test result from a before-and-after picture, and accepts a feature from a gate that shows what is missing, each in Deck and each written through the cockpit's sidecar."
 requirements: []
-tasks: []
+tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -53,11 +53,27 @@ Out of scope:
 
 ## Verification
 
-Node suites for the reads, the gate logic and the refusal of agent verdicts; window-opening runs batched once with Edwin's permission; one acceptance test per flow, run by Edwin on your-trainer and on Deck. Nothing has been run yet.
+The executable checks are TST-0085 (scenes and recorded payloads), TST-0086 (image route) and TST-0087 (flow actions and shell writes). TST-0088, TST-0089 and TST-0100 are Edwin’s acceptance checks for S5, S6 and S7. No window opens in this run. No tests have run yet; commands, date and counts are recorded here at close-out.
 
 ## Where this stands
 
-2026-10-14: defined, not started. PHASE-0005 is `active` since 2026-10-14, so the lane can start. The owner creates the task notes from [the plan](plan/PLAN.md) before writing code, taking each id as the brief says.
+2026-10-14: the implementation is authorized on `lane/codex` after FEAT-0026 and the drawing lane’s S1 to S4 were merged. TASK-0120 is doing; TASK-0121 to TASK-0123 are allocated. The task and test notes exist before code. The user’s instruction for this run permits building before Edwin accepts DES-0005; it does not record his verdict. Claude merges and reviews the result. Edwin runs the three acceptance checks. The feature stops at review.
+
+## Preflight
+
+The request is bounded to S5, S6 and S7, their existing sidecar reads and writes, image delivery and fixtures. The specified signatures, addresses, fixtures and checks make completion observable. No new requirement note is needed; PHASE-0005 and DES-0005 already state the acceptance criteria.
+
+The impact check covered FEAT-0026’s model and scene contract, FEAT-0028’s small S3 gate, FEAT-0013 and ADR-0003’s shell write boundary, and FEAT-0024 with REQ-0006’s evidence rules. The existing Glass evidence panel remains read-only. Missing evidence in S7 stays unknown. The explicit request for `ov-off` controls on S5 when `canWrite` is false determines their appearance in this flow; it never grants the served host a write capability. The actor remains a visible store setting, not a hard-coded person.
+
+PHASE-0005 expressly adopts these three Parity flows early. No future-phase dependency blocks Deck’s implementation. The external payload and guard risk is [[RISK-0009-Acceptance-Flows-Depend-On-Changing-Sidecar-Payloads-And-Guards]].
+
+## Sidecar limits
+
+The cockpit source inspected on 2026-10-14 does not offer a reason on `/api/notes/decide`; the existing design transition carries one. Its human transition table does not offer feature `review` to `done` or `doing`. An acceptance run stamps an opted-in feature and does not change status. The source does not establish a universal refusal of agent verdicts. Deck will send the supported request and show the sidecar’s refusal in its own words. Edwin’s acceptance checks must record these gaps as failures when encountered. No alternate write path or invented success closes them.
+
+## Fixture availability
+
+Your Trainer has no feature at review in the current tree or its existing overview fixture. The implementation lead checked all 135 feature notes on 2026-10-14: 72 done, 38 backlog, 11 doing, 9 superseded, 2 deferred, 2 planned and 1 cancelled. Its accept fixture therefore uses a real doing feature with its actual status. Deck’s fixture uses FEAT-0024 at review as requested. This is a source limitation, not a fabricated review state.
 
 ## Questions between the lanes
 

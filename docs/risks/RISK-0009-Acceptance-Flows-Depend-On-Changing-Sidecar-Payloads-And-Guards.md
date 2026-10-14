@@ -1,0 +1,48 @@
+---
+type: '[[risk]]'
+id: RISK-0009
+title: Acceptance flows depend on changing sidecar payloads and guards
+status: open
+owner: system:codex
+created: '2026-10-14'
+updated: '2026-10-14'
+source:
+- '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
+- FEAT-0029 risk scan, 2026-10-14
+phase: '[[PHASE-0005-Overview]]'
+likelihood: medium
+impact: high
+mitigation:
+- '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
+- '[[TASK-0121-Serve-Only-Images-Under-The-Workspaces-Docs]]'
+- '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
+- '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
+related:
+- '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
+- '[[RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes]]'
+- '[[ADR-0003-Deck-Writes-Through-The-Shell]]'
+---
+
+# Acceptance flows depend on changing sidecar payloads and guards
+
+## Description
+
+A changed sidecar payload could show a false pass or light a feature lamp without supporting evidence. S5 to S7 depend on the design note and images, `/api/cockpit/release-test?platform=<p>&release=<REL>`, `/api/cockpit/acceptance` and `/api/cockpit/obligations`. The release-test response includes the template’s `release-test.py --json` output and current results. These are external contracts owned by project-os-cockpit and the project-os template.
+
+The write contracts also have limits found by reading the cockpit source on 2026-10-14. `/api/notes/decide` accepts `id`, `reviewer`, `accept` and `mtime`, with no reason field. Design transitions can carry a reason. The human transition table does not offer a feature’s `review` to `done` or `doing` transition. An acceptance run stamps an opted-in feature but does not itself change status. The decision writer checks for a nonblank reviewer; the release ledger records `by` and `method`. These findings do not prove a universal agent refusal. Deck must not claim that the sidecar enforces a guard that was not observed.
+
+## Mitigation
+
+- TASK-0120 records dated payloads and source commits, maps them with pure functions and keeps absent or malformed evidence unknown. A note status alone never certifies automated test results.
+- TASK-0121 confines image reads to the resolved docs root and allowed image types, including symlink and traversal checks.
+- TASK-0122 sends the existing endpoint bodies from the main process, preserves the configured actor and displays a refusal unchanged. It does not add a write route through Deck’s host or work around missing sidecar verbs.
+- TASK-0123 keeps the adopted capability scope explicit and records the test counts. Edwin’s three acceptance tests include the agent-session refusal steps and fail if the sidecar accepts those verdicts.
+
+The real sidecar owns new transitions, reason fields and agent guards. This run does not edit either sibling repository.
+
+## Triggers
+
+- A recorded payload changes shape, schema, result vocabulary, release selection or platform meaning.
+- The cockpit shows a different result from the same check or a gate lamp contradicts its evidence.
+- A non-person verdict succeeds, or a supported person action is refused by the current endpoint.
+- A fixture cannot be refreshed without changing the pure mapper.
