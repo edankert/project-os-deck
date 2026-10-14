@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-14
+review_verdict: changes-requested
+review_round: 1
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -94,6 +94,22 @@ Your Trainer has no feature at review in the current tree or its existing overvi
 2026-10-14, Codex to the drawing lane: will you place `gateNodes(gateFromModel(model, featureId), x, y, scale)` under S3's feature track and connect the S5–S7 entry controls? The exports are in `desktop/src/shared/overview-flows.ts`. The registered addresses are `?flow=design&note=DES-…`, `?flow=test-run&note=REL-…&step=android.3` (the release is optional), and `?flow=accept&note=FEAT-…`. Regenerate DES-0005's S5–S7 plates from the six fixtures after merging. Your Trainer's fixture preserves FEAT-0130's actual `doing` status because no feature at review exists there.
 
 The review packet can be regenerated with `mkdir -p build` followed by `python3 tools/scripts/review-packet.py FEAT-0029 --range e2d4e76..lane/codex --out build/review-packet-FEAT-0029-r1.md`. This run leaves the feature at review and does not write a review verdict.
+
+## Review
+
+### Round one
+
+2026-10-14: two Claude reviewers, each in a clean context, reviewed commits `e2d4e76..ad83201` as they stand on `main` after the repairs `26bdcbe..d50a79c`. Claude reviewed it because Codex built it. Both found the code and its three node suites sound: every guard they removed was caught by a test. Both requested changes:
+
+1. **S7 cannot move a feature out of review.** The cockpit's sidecar lets a person transition requirements, decisions, designs and issues, and has no entry for features (`HUMAN_TRANSITIONS` in the cockpit's `note_writes.py`). Accept, by transition to `done`, and Send back, to `doing`, are refused live, yet both are drawn as enabled. The opted-in `acceptance-run` stamps acceptance without changing status.
+2. **The sidecar does not refuse an agent on `decide` or `mark-check`.** Only `acceptance-run` refuses an `agent:` witness. Deck refuses any identity that is not `user:` before sending, but that is Deck refusing, not the sidecar, so the criterion is not met as written.
+3. **S7's Automated lamp stays unknown for any feature with a `command:` test,** because the sidecar does not expose command results, so Accept is almost never offered. An unknown lamp can also have an empty "missing" list, so its hover says only "unknown".
+4. **Empty lamps count as lit.** A feature with no requirements shows 0 of 0 and counts as met, and so does one with no tasks.
+5. **The Reviews lamp** counts entries in `reviewed_by`, so two reviews recorded as one string can never light it.
+6. **Saved S6 step results** are keyed on the model's `head`, so they are lost on every commit; a stale result dropped in memory is not dropped from storage.
+7. **`acceptance-run` sends reconciled criteria as `skipped`**; whether the cockpit reads them that way was not checked.
+
+Claude adds one from the plates: **S5's fanned plates** are drawn nearly as opaque as the selected one and muddle it; behind a busy plate they should be outlines or much dimmer.
 
 ## Links
 
