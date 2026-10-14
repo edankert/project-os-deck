@@ -111,7 +111,7 @@ Deck's FEAT-0024 at its gate. Each lamp is a ring of beads, one per item, lit wh
 
 ![S7 Ticket acceptance on your-trainer](__attachments__/DES-0005/accept-your-trainer.jpg)
 
-your-trainer's FEAT-0130 at its gate. It is still `doing`, so Accept is not offered. **25 words at rest.**
+your-trainer's FEAT-0130 at its gate. It is still `doing`, so Accept is not offered. **26 words at rest.**
 
 ## Answers proposed to DES-0004's open questions
 
