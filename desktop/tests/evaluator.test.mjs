@@ -395,12 +395,13 @@ test("the cockpit's own base file draws what the cockpit draws", () => {
     counts[view.name] = result.groups.reduce((n, g) => n + g.cards.length, 0);
     assert.deepEqual(result.unsupported, [], `${view.name} could not be evaluated: ${JSON.stringify(result.unsupported)}`);
   }
-  // Read off this repository's own snapshot: twenty-four features and four
+  // Read off this repository's own snapshot: twenty-nine features and five
   // phases. If a feature or a phase is added, this fails and says so, which is
   // the right way round for a check about agreeing with another program.
-  // Twenty-four since 2026-10-02, when FEAT-0024 was planned.
-  assert.equal(counts['Features (All)'], 24);
-  assert.equal(counts['Phases (All)'], 4);
+  // Twenty-nine and five since 2026-10-14, when PHASE-0005 and FEAT-0025 to
+  // FEAT-0029 were planned.
+  assert.equal(counts['Features (All)'], 29);
+  assert.equal(counts['Phases (All)'], 5);
   assert.ok(counts['Features (Open)'] <= counts['Features (All)']);
 });
 
