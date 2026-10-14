@@ -8,7 +8,7 @@ import {desktopRoot,load,fakeSidecar} from './helpers.mjs';
 const {SidecarWriteClient,transitionRequestFrom}=load('shared/write-client.js');
 const {DeckHost}=load('main/host.js');
 const {SERVED_CAPABILITIES,SHELL_CAPABILITIES}=load('shared/capability.js');
-const {plainContext}=load('shared/overview-scene.js');
+const {plainContext,walkScene}=load('shared/overview-scene.js');
 const {addressFor}=load('shared/address.js');
 const {designFlow,testRunFlow,acceptFlow}=await import(pathToFileURL(path.join(desktopRoot,'dist/web/renderer/overview-flows.js')));
 const {Host}=await import(pathToFileURL(path.join(desktopRoot,'dist/web/renderer/host-bridge.js')));
@@ -106,12 +106,13 @@ test('S6 historic release is readable but cannot write into the current ledger',
  const {i,seen}=runInput();i.address.note='REL-0016';const read=i.read;i.read=async at=>{const p=await read(at);if(at.includes('release=REL-0016'))p.release='REL-0016';return p;};
  await testRunFlow.scene(i);await assert.rejects(testRunFlow.onAction('mark:pass',i),/current release/);assert.equal(seen.length,0);
 });
-function acceptInput(requested=false){
+function acceptInput(requested=false,actions=[{to:'done',disabled:false},{to:'doing',disabled:false}]){
  const seen=[],m=structuredClone(model);m.tickets['FEAT-9999']={id:'FEAT-9999',title:'Example',kind:'feat',status:'review',state:'progress',phase:null,placedBy:'none',links:[]};
  const payload={schema_version:4,exists:true,platform:'',tiers:[{manual:false,items:[{id:'TST-9991',refs:['FEAT-9999'],name:'Automatic',automation:'full',mark:'done',stale:false}]},{manual:true,items:[{id:'TST-9992',refs:['FEAT-9999'],name:'Manual',automation:'partial',mark:'done',stale:false}]}],view:{tiers:[{areas:[{items:[{id:'TST-9991',mark:'done',verdict_method:'automated',verdict_date:'2026-10-14',stale:false}]}]}]}};
  const i=input('accept','FEAT-9999',{model:m,ask:async()=>'needs work',read:async at=>{
   if(at.startsWith('/api/cockpit/locate'))return{found:true,rel:'feature.md'};
   if(at.startsWith('/api/render'))return{title:'Example',frontmatter:{id:'FEAT-9999',status:'review',tasks:[],requirements:[],reviewed_by:['model:a','model:b'],review_verdict:'approved',review_date:'2026-10-14',review_round:1,acceptance:requested?'requested':''}};
+  if(at.startsWith('/api/notes/actions'))return{actions};
   if(at.startsWith('/api/notes/acceptance'))return{id:'FEAT-9999',requirements:[],totals:{open:0,ticked:0,reconciled:0}};
   if(at.startsWith('/api/cockpit/acceptance'))return payload;
   if(at.startsWith('/api/cockpit/obligations'))return{views:{},total:0};
@@ -136,7 +137,7 @@ test('S7 refreshes the evidence before accepting, honours cancellation and shows
 
 test('coverage is not a run: a manual verdict cannot light the automated lamp',async()=>{
  const {i,payload,seen}=acceptInput();payload.view.tiers[0].areas[0].items[0].verdict_method='manual';
- const scene=await acceptFlow.scene(i);assert.ok(!scene.list.some(r=>r.action==='accept:accept'));
+ const scene=await acceptFlow.scene(i);assert.ok([...walkScene(scene.nodes)].find(n=>n.action==='accept:accept').cls.includes('ov-off'));
  await assert.rejects(acceptFlow.onAction('accept:accept',i),/missing evidence/);assert.equal(seen.length,0);
 });
 test('a changed ledger result invalidates an unfinished local step',async()=>{
@@ -152,4 +153,31 @@ test('each More result requires a reason and sends its exact cockpit result word
   await testRunFlow.scene(i);let prompts=0;i.ask=async()=>{prompts++;return 'observed reason';};
   await testRunFlow.onAction('mark:'+verdict,i);assert.equal(prompts,1);assert.deepEqual(seen,[['mark-check',{id:'TST-0001',platform:'android',verdict,reason:'check 1: observed reason'}]]);
  }
+});
+
+test('S7 disables absent, refused and differently routed transitions and rechecks before writing',async()=>{
+ for(const actions of [[],[{to:'done',disabled:true},{to:'doing',disabled:true}],[{to:'done',disabled:false,endpoint:'/other'},{to:'doing',disabled:false,endpoint:'/other'}]]){
+  const {i,seen}=acceptInput(false,actions),scene=await acceptFlow.scene(i);
+  for(const action of ['accept:accept','accept:back']){
+   const button=[...walkScene(scene.nodes)].find(n=>n.action===action);
+   assert.ok(button.cls.includes('ov-off'));assert.match(button.label,/cockpit does not yet move a feature out of review/);
+   assert.match(scene.list.find(r=>r.action===action).label,/cockpit does not yet move/);
+   await assert.rejects(acceptFlow.onAction(action,i),/cockpit does not yet move/);
+  }assert.equal(seen.length,0);
+ }
+ const actions=[{to:'done',disabled:false},{to:'doing',disabled:false}],{i,seen}=acceptInput(false,actions);
+ assert.ok(![...walkScene((await acceptFlow.scene(i)).nodes)].find(n=>n.action==='accept:accept').cls.includes('ov-off'));
+ actions.length=0;await assert.rejects(acceptFlow.onAction('accept:accept',i),/cockpit does not yet move/);assert.equal(seen.length,0);
+ const read=i.read;i.read=at=>at.startsWith('/api/notes/actions')?Promise.reject(new Error('offline')):read(at);
+ assert.ok([...walkScene((await acceptFlow.scene(i)).nodes)].find(n=>n.action==='accept:back').cls.includes('ov-off'));
+});
+test('S7 offers the opted-in stamp without transitions and counts reconciled criteria as skipped',async()=>{
+ const {i,seen}=acceptInput(true,[]),read=i.read;
+ i.read=async at=>{const p=await read(at);if(at.startsWith('/api/notes/acceptance'))p.totals={open:0,ticked:3,reconciled:2};return p;};
+ const scene=await acceptFlow.scene(i),nodes=[...walkScene(scene.nodes)];
+ assert.ok(nodes.some(n=>n.rest&&n.text==='Records acceptance without changing status'));
+ assert.ok(!nodes.find(n=>n.action==='accept:accept').cls.includes('ov-off'));
+ assert.ok(nodes.find(n=>n.action==='accept:back').cls.includes('ov-off'));
+ await acceptFlow.onAction('accept:accept',i);
+ assert.deepEqual(seen,[['acceptance-run',{id:'FEAT-9999',passed:3,failed:0,skipped:2,complete:true,issues:[]}]]);
 });

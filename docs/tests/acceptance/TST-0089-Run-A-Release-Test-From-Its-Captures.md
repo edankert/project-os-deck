@@ -51,7 +51,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 4. In the disposable workspace, mark one printed check Pass and another Fail with a reason. Complete every printed step that cites each corresponding test note, then compare the aggregated note results in the cockpit.
 5. Open More, select another supported result and cancel its reason, then repeat with a reason.
 6. Copy and reopen the platform and section addresses; reach a bead and result controls using the keyboard list.
-7. From an agent session in the disposable workspace, try the same mark-check verb with the agent’s own identity and record the response.
+7. Configure Deck with an `agent:` identity in the disposable workspace and try the same mark-check verb. Record Deck’s refusal and verify that no request reaches the sidecar.
 8. Open the same flow through Deck’s served host and try its unavailable result controls.
 
 ## Expect
@@ -60,7 +60,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 - Android and iOS retain their own checks and results; the section address restores its section.
 - The open check shows both captures when present, its action and expected result. Missing captures are stated plainly.
 - Printed-step progress stays local until every step citing a test note has a result. The note then receives its most serious result in the cockpit. Cancelling a reason sends no write; sidecar refusals keep their wording.
-- The agent’s verdict is refused by the sidecar. If it is accepted, record a failed check with the response.
+- Deck refuses the agent’s verdict before sending a request. A refused person request displays the sidecar’s own words. This does not prove a server guard against direct agent calls.
 - The served host records nothing and forwards no write.
 
 ## Not this check

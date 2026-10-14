@@ -11,7 +11,7 @@ updated: 2026-10-14
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person accepts a design from its plates, records an acceptance test result from a before-and-after picture, and accepts a feature from a gate that shows what is missing, each in Deck and each written through the cockpit's sidecar."
 requirements: []
-tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]"]
+tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -35,7 +35,7 @@ Lane: `system:codex`. How the two agents share this phase is in [[REFERENCE-OVER
 
 - S5 Design acceptance: plates, revision strip, review pins; Accept through `/api/notes/decide`, and Decline with a reason through the sidecar's advertised `/api/notes/transition` action.
 - S6 Acceptance test: platform rings from `/api/cockpit/release-test`, check beads, before-and-after captures; results through `/api/notes/mark-check`, with a reason for every result but Pass.
-- S7 Ticket acceptance: the five-lamp gate from `/api/notes/acceptance`, `/api/cockpit/acceptance`, `/api/cockpit/obligations`, current notes and Deck's index; Accept and Send back through `/api/notes/transition` or an opted-in acceptance stamp through `/api/notes/acceptance-run`.
+- S7 Ticket acceptance: the five-lamp gate from `/api/notes/acceptance`, `/api/cockpit/acceptance`, `/api/cockpit/obligations`, current notes and Deck's index; Accept and Send back through `/api/notes/transition` only when `/api/notes/actions` offers them, or an opted-in acceptance stamp through `/api/notes/acceptance-run` that records acceptance without changing status.
 - A gate component small enough for S3 to show (FEAT-0028).
 - Rows in [[REFERENCE-COCKPIT-ADOPTION]] moved to adopted for exactly what these screens use, and a risk note if a payload Deck now depends on can change under it.
 
@@ -46,9 +46,9 @@ Out of scope:
 
 ## Acceptance
 
-- Edwin accepts a design in S5, records a Pass and a Fail in S6, and accepts a feature in S7; each verdict shows in the cockpit afterwards.
-- The same three verbs from an agent session are refused by the sidecar, and Deck shows the refusal.
-- S7 offers Accept only when every lamp is lit, and each unlit lamp names what is missing on hover.
+- Edwin accepts a design in S5 and records a Pass and a Fail in S6; each verdict shows in the cockpit afterwards. In S7, Deck offers feature status changes only when the sidecar advertises them. For an opted-in feature with complete evidence, Edwin can record acceptance without changing status, and that acceptance stamp shows in the cockpit.
+- Deck never sends a verdict as an agent: its shell requires a configured `user:` identity. When the sidecar refuses a person’s request, Deck shows the refusal in the sidecar’s own words.
+- S7 enables Accept only when every nonempty lamp is known and complete, no evidence is missing, at least one known item exists, and the sidecar supports the action. Known empty lamps are hollow and say “nothing to check”; every unknown or incomplete lamp explains the gap on hover.
 - Each screen passes FEAT-0026's screen checks; S6 is checked on your-trainer's REL-0017 and on Deck with no release.
 
 ## Verification
@@ -83,7 +83,26 @@ PHASE-0005 expressly adopts these three Parity flows early. No future-phase depe
 
 ## Sidecar limits
 
-The cockpit source inspected on 2026-10-14 at `032a6f8` does not offer a reason on `/api/notes/decide`; the existing design transition carries one. Its human transition table does not offer feature `review` to `done` or `doing`. An acceptance run stamps an opted-in feature and does not change status. The source does not establish a universal refusal of agent verdicts. Deck sends the existing request and shows a refusal in the sidecar's own words. Edwin's acceptance checks must record these gaps as failures when encountered. No alternate write path or invented success closes them.
+The cockpit source inspected on 2026-10-14 at `ff08a0c` has no feature entry in `HUMAN_TRANSITIONS` in `src/project_os_cockpit/note_writes.py`. S7 reads `/api/notes/actions?id=<FEAT>` and leaves unsupported Accept and Send back controls unavailable. Their hover says the cockpit does not yet move a feature out of review. An opted-in acceptance run records acceptance without changing status; S7 says that on screen.
+
+Deck's `requirePerson` refuses any identity outside `user:` before sending a verdict. The cockpit's `decide` and `mark-check` paths do not enforce that rule. Its acceptance-run rejects a plain `agent:` witness, although a witness naming an authorized charter has a separate delegation path. That is not a universal sidecar guard. Requests for person-only feature transitions and guards on `decide` and `mark-check` are recorded at the end of [[REFERENCE-COCKPIT-ADOPTION]]. RISK-0009 remains open.
+
+### Acceptance narrowed for round one
+
+Both changes below narrow this feature because of the cockpit. Edwin decides whether that narrower feature is acceptable. PHASE-0005's broader exit criteria are not claimed as satisfied.
+
+- The first criterion originally said: “Edwin accepts a design in S5, records a Pass and a Fail in S6, and accepts a feature in S7; each verdict shows in the cockpit afterwards.” S7 now promises only advertised transitions and the opted-in acceptance stamp, since the cockpit cannot move a feature out of review.
+- The second criterion originally said: “The same three verbs from an agent session are refused by the sidecar, and Deck shows the refusal.” It now promises Deck's local identity refusal and the unchanged display of a sidecar refusal. The cockpit does not enforce agent refusal on `decide` or `mark-check`.
+
+### Lamp evidence and empty lamps
+
+Every nonempty lamp must be known and complete, and no lamp may have missing evidence. A known zero-item lamp is neutral: hollow, labelled “nothing to check”, and unable to make the gate ready by itself. Accept requires at least one known item across the five lamps. Empty requirement and task lists are known empty. Missing automated or acceptance records remain unknown because they do not establish a complete empty inventory. Review provenance accepts a list or a string containing reviewer identities; one person or two model reviewers must accompany an approved verdict, date and round.
+
+Command results remain unknown. `tools/scripts/run-tests.py` prints outcomes and returns an exit code without saving a result file. `tools/scripts/hooks/pre-push` only invokes it. The CI workflows record job outcomes and logs but publish no per-test result artifact through Deck's reads. A note's status or prose about an old run cannot certify a current command result. Every unknown lamp carries a non-empty missing list; the Automated hover explains the absent command result.
+
+### Acceptance-run totals
+
+The cockpit's acceptance runner increments `skipped` after reconciling a criterion with a reason (`desktop/src/renderer/renderer.ts`, the `kind === 'skip'` branch). `stamp_acceptance_run` records that count as “skipped” and does not treat it as passed. S7 summarizes existing criteria: ticked criteria are `passed`, reconciled criteria are `skipped`, and `failed` is zero only when no open criteria remain. This is a summary of recorded evidence, not a claim that S7 ran the checks again. The request is tested with nonzero reconciled totals. The opted-in stamp changes acceptance fields, never lifecycle status.
 
 ## Fixture availability
 

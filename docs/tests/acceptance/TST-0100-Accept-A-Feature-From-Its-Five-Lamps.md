@@ -50,17 +50,17 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 3. Use the keyboard list to inspect the same gate. Copy and reopen its address.
 4. In a disposable workspace with complete evidence, use Accept and compare the sidecar response and cockpit record.
 5. On a feature that opted into acceptance, verify that Accept records an acceptance run and stamps `acceptance: accepted`. Its lifecycle status stays at review because the sidecar does not move it to done.
-6. Choose Send back, cancel its reason, then repeat with a reason and inspect the response and resulting cockpit record.
-7. From an agent session in the disposable workspace, try the same acceptance/transition verb with the agent’s own identity and record the response.
+6. With the current cockpit, inspect the unavailable Accept and Send back controls and their explanation. On a sidecar that advertises feature transitions, choose Send back, cancel its reason, then repeat with a reason and inspect the cockpit record.
+7. Configure Deck with an `agent:` identity in the disposable workspace and try an otherwise available acceptance action. Record Deck’s refusal and verify that no request reaches the sidecar.
 8. Open S7 on the served host and try its unavailable actions.
 
 ## Expect
 
-- Every lamp depicts its count and lights only for complete evidence. Unknown or unreadable evidence stays unlit and is explained.
-- An incomplete gate offers no working Accept control; each unlit lamp names its missing evidence on hover or focus.
-- A supported person transition is reflected in the cockpit. If the sidecar does not allow review-to-done or review-to-doing, Deck shows that exact refusal and never claims success.
+- Every nonempty lamp depicts its count and lights only for complete evidence. Known empty lamps are hollow and say “nothing to check”; empty requirements and tasks explain that no items are recorded. Unknown or unreadable evidence stays unlit and is explained.
+- Accept needs at least one known item and every nonempty lamp complete. Empty lamps supply no evidence. Each unknown or incomplete lamp names its missing evidence on hover or focus.
+- A supported person transition is reflected in the cockpit. Unsupported transitions stay unavailable with a hover saying the cockpit does not yet move a feature out of review. The opted-in stamp says on screen that it records acceptance without changing status.
 - Cancelling a reason sends no write. The served host records nothing.
-- The sidecar refuses an agent’s person-only verdict. If its guard is absent, record this acceptance check as failed and keep the response.
+- Deck refuses an agent’s verdict before sending a request. A refused person request displays the sidecar’s own words. Direct sidecar agent guards remain cockpit work.
 - The gate reads as a picture at rest; the list and address preserve the same subject and actions.
 
 ## Not this check

@@ -1,6 +1,6 @@
 /** Acceptance controls only write after a person's action, through the shell. */
 import {
-  acceptFromPayloads, acceptScene, deckImageHref, designFromPayload, designScene, gateReady,
+  acceptFromPayloads, acceptScene, deckImageHref, designFromPayload, designScene, gateReady, FEATURE_TRANSITION_UNAVAILABLE,
   linkIds, noteVerdicts, RESULTS, testRunFromPayloads, testRunScene,
   type AcceptData, type DesignFlowData, type StepMarks, type TestRunData,
 } from '../shared/overview-flows.js';
@@ -138,10 +138,11 @@ async function acceptData(input: ScreenInput): Promise<AcceptData> {
   const scope = new Set([id, ...linkIds(fm['requirements'])]);
   const testIds = Object.values(input.model.tickets).filter(t => t.kind === 'test' && (t.links.some(l => scope.has(l)) || input.model.tickets[id]?.links.includes(t.id))).map(t => t.id);
   const taskIds = linkIds(fm['tasks']);
-  const [criteria, acceptance, obligations, tests, tasks] = await Promise.all([
+  const [criteria, acceptance, obligations, tests, tasks, actions] = await Promise.all([
     input.read(`/api/notes/acceptance?id=${encodeURIComponent(id)}`), input.read('/api/cockpit/acceptance?platform=all'), input.read('/api/cockpit/obligations'),
     Promise.all(testIds.map(t => note(input, t).catch(() => ({ frontmatter: { id: t, command: 'unread' } })))),
     Promise.all(taskIds.map(t => note(input, t).catch(() => ({ frontmatter: { id: t, status: 'unread' } })))),
+    input.read(`/api/notes/actions?id=${encodeURIComponent(id)}`).catch(() => ({})),
   ]);
   // The overview model may be cached while another window reopens a task.
   const currentModel = { ...input.model, tickets: { ...input.model.tickets } };
@@ -150,7 +151,7 @@ async function acceptData(input: ScreenInput): Promise<AcceptData> {
     const previous = currentModel.tickets[taskId];
     if (previous) currentModel.tickets[taskId] = { ...previous, status: text(fields['status']) };
   }
-  return acceptFromPayloads(currentModel, id, { note: rendered, criteria, acceptance, obligations, tests }, input.canWrite);
+  return acceptFromPayloads(currentModel, id, { note: rendered, criteria, acceptance, obligations, tests, actions }, input.canWrite);
 }
 export const acceptFlow: ScreenDefinition = {
   scene: async input => acceptScene(input.model, await acceptData(input), input.ctx),
@@ -158,17 +159,21 @@ export const acceptFlow: ScreenDefinition = {
     if (action !== 'accept:accept' && action !== 'accept:back') return false;
     writable(input);
     const data = await acceptData(input);
+    if (data.status !== 'review') throw new Error('this feature is not at review');
     const stamp = data.mtime === undefined ? {} : { mtime: data.mtime };
     if (action === 'accept:back') {
+      if (!data.transitions.includes('doing')) throw new Error(FEATURE_TRANSITION_UNAVAILABLE);
       const why = await reason(input, 'What must change before this feature can be accepted?');
       if (why === null) return false;
       await write(input, 'transition', { id: data.id, to: 'doing', note: why, ...stamp });
     } else {
+      if (!data.acceptanceRequested && !data.transitions.includes('done')) throw new Error(FEATURE_TRANSITION_UNAVAILABLE);
       if (data.status !== 'review' || !gateReady(data)) throw new Error('the feature still has missing evidence');
       if (data.acceptanceRequested) {
         const criteria = object(await input.read(`/api/notes/acceptance?id=${encodeURIComponent(data.id)}`));
         const totals = object(criteria['totals']);
         if (totals['open'] !== 0) throw new Error('the feature criteria changed; reload before accepting');
+        // The cockpit's Skip reconciles a criterion with a reason. This summarizes that evidence, not a new walk.
         await write(input, 'acceptance-run', { id: data.id, passed: totals['ticked'], failed: 0, skipped: totals['reconciled'], complete: true, issues: [], ...stamp });
       } else await write(input, 'transition', { id: data.id, to: 'done', ...stamp });
     }

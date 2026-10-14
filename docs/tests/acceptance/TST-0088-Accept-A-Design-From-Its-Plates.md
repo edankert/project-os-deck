@@ -50,14 +50,14 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 3. Choose Decline, cancel the reason, then repeat with a reason and compare the cockpit’s recorded decision.
 4. Use another proposed design, choose Accept and compare its status in the cockpit.
 5. Open a design without pictures and a design that is no longer proposed. Open the same address on the served host.
-6. From an agent session in the disposable workspace, try the same decision verb with the agent’s own identity and record the response.
+6. Configure Deck with an `agent:` identity in the disposable workspace and try the same decision verb. Record Deck’s refusal and verify that no request reaches the sidecar.
 
 ## Expect
 
 - Plates dominate the screen; the empty design reads “nothing to look at”.
 - Cancelling the reason changes no note. A supported decline records the reason; any endpoint refusal appears in the sidecar’s own words.
 - A valid person decision appears in the cockpit; a non-proposed design and the served host cannot write.
-- The agent’s attempt is refused by the sidecar. If the endpoint accepts it, record this check as failed and preserve the response as evidence.
+- Deck refuses the agent’s attempt before sending a request. A refused person request displays the sidecar’s own words. This does not prove a server guard against direct agent calls.
 - Copying and reopening the address restores S5. The picture and list offer the same tickets and actions.
 
 ## Not this check
