@@ -1,7 +1,8 @@
 {
   "workspace": "project-os-deck",
-  "head": "22b19e43c051f3ad4c7e0d2c4d04b29ae1120c37",
-  "generated": "2026-10-14T21:30:24.615Z",
+  "head": "306e7bf3482930caaad83c71ee04a1b5c1ee1921",
+  "dirty": false,
+  "generated": "2026-10-14T21:52:57.797Z",
   "phases": [
     {
       "id": "PHASE-0001",
@@ -100,11 +101,11 @@
           "dropped": 0
         },
         "test": {
-          "closed": 24,
+          "closed": 28,
           "progress": 0,
           "failed": 0,
-          "owed": 0,
-          "open": 9,
+          "owed": 2,
+          "open": 3,
           "dropped": 0
         },
         "iss": {
@@ -172,6 +173,10 @@
         "TST-0005",
         "TST-0006",
         "TST-0007",
+        "TST-0008",
+        "TST-0009",
+        "TST-0012",
+        "TST-0013",
         "TST-0014",
         "TST-0016",
         "TST-0017",
@@ -189,12 +194,8 @@
         "TST-0035",
         "TST-0036",
         "TST-0037",
-        "TST-0008",
-        "TST-0009",
         "TST-0010",
         "TST-0011",
-        "TST-0012",
-        "TST-0013",
         "TST-0026",
         "TST-0027",
         "TST-0028",
@@ -836,20 +837,20 @@
           "dropped": 0
         },
         "task": {
-          "closed": 5,
-          "progress": 1,
+          "closed": 4,
+          "progress": 2,
           "failed": 0,
           "owed": 0,
           "open": 6,
-          "dropped": 0
+          "dropped": 1
         },
         "test": {
           "closed": 5,
           "progress": 0,
           "failed": 0,
           "owed": 0,
-          "open": 0,
-          "dropped": 0
+          "open": 2,
+          "dropped": 1
         },
         "iss": {
           "closed": 0,
@@ -870,18 +871,22 @@
         "TASK-0116",
         "TASK-0117",
         "TASK-0118",
-        "TASK-0119",
         "TASK-0125",
+        "TASK-0140",
         "TASK-0126",
         "TASK-0127",
         "TASK-0128",
         "TASK-0129",
         "TASK-0130",
         "TASK-0131",
+        "TASK-0119",
         "TST-0080",
         "TST-0081",
         "TST-0082",
         "TST-0083",
+        "TST-0090",
+        "TST-0091",
+        "TST-0092",
         "TST-0084"
       ]
     }
@@ -4362,7 +4367,8 @@
         "TASK-0116",
         "TASK-0117",
         "TASK-0118",
-        "TASK-0119"
+        "TASK-0119",
+        "TASK-0140"
       ]
     },
     "TASK-0115": {
@@ -4439,8 +4445,8 @@
     "TASK-0119": {
       "id": "TASK-0119",
       "kind": "task",
-      "state": "closed",
-      "status": "done",
+      "state": "dropped",
+      "status": "cancelled",
       "title": "Report when localhost tests cannot run",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -4451,6 +4457,25 @@
         "PHASE-0005",
         "REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF",
         "TST-0084"
+      ]
+    },
+    "TASK-0140": {
+      "id": "TASK-0140",
+      "kind": "task",
+      "state": "progress",
+      "status": "doing",
+      "title": "Fix the overview review findings",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0004",
+        "DES-0005",
+        "FEAT-0026",
+        "PHASE-0005",
+        "TST-0080",
+        "TST-0081",
+        "TST-0082",
+        "TST-0083"
       ]
     },
     "TST-0080": {
@@ -4512,8 +4537,8 @@
     "TST-0084": {
       "id": "TST-0084",
       "kind": "test",
-      "state": "closed",
-      "status": "active",
+      "state": "dropped",
+      "status": "retired",
       "title": "Localhost checks skip only when listeners are forbidden",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -4583,7 +4608,27 @@
         "DES-0005",
         "FEAT-0028",
         "PHASE-0005",
+        "REFERENCE-COCKPIT-ADOPTION",
         "REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF"
+      ]
+    },
+    "TST-0090": {
+      "id": "TST-0090",
+      "kind": "test",
+      "state": "closed",
+      "status": "active",
+      "title": "The wheel, a phase, a ticket and re-phasing are drawn from the overview model, each ticket once, with at most 60 words at rest, every number beside its mark and a list twin holding the same tickets",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0027",
+        "FEAT-0028",
+        "PHASE-0005",
+        "TASK-0125",
+        "TASK-0127",
+        "TASK-0128",
+        "TASK-0129"
       ]
     },
     "FEAT-0027": {
@@ -7514,7 +7559,7 @@
     "TST-0008": {
       "id": "TST-0008",
       "kind": "test",
-      "state": "open",
+      "state": "closed",
       "status": "active",
       "title": "Spread opens the same views and the same notes as the cockpit, for this repository, checked side by side",
       "phase": "PHASE-0001",
@@ -7529,7 +7574,7 @@
     "TST-0009": {
       "id": "TST-0009",
       "kind": "test",
-      "state": "open",
+      "state": "closed",
       "status": "active",
       "title": "A status window carrying one panel reopens on the display it was left on, across a restart",
       "phase": "PHASE-0001",
@@ -7543,7 +7588,7 @@
     "TST-0010": {
       "id": "TST-0010",
       "kind": "test",
-      "state": "open",
+      "state": "owed",
       "status": "active",
       "title": "Deck served over the local network opens on a tablet, reads the notes and refuses writes",
       "phase": "PHASE-0001",
@@ -7558,7 +7603,7 @@
     "TST-0011": {
       "id": "TST-0011",
       "kind": "test",
-      "state": "open",
+      "state": "owed",
       "status": "active",
       "title": "Deck opens a workspace you add, and leaves nothing running when you quit",
       "phase": "PHASE-0001",
@@ -7573,7 +7618,7 @@
     "TST-0012": {
       "id": "TST-0012",
       "kind": "test",
-      "state": "open",
+      "state": "closed",
       "status": "active",
       "title": "Two windows show the same state, and Deck reopens where you left it",
       "phase": "PHASE-0001",
@@ -7586,7 +7631,7 @@
     "TST-0013": {
       "id": "TST-0013",
       "kind": "test",
-      "state": "open",
+      "state": "closed",
       "status": "active",
       "title": "An address survives being written down: copy it, quit, come back and paste it",
       "phase": "PHASE-0001",
@@ -7943,6 +7988,41 @@
         "TST-0063",
         "TST-0078",
         "TST-0079"
+      ]
+    },
+    "TST-0091": {
+      "id": "TST-0091",
+      "kind": "test",
+      "state": "open",
+      "status": "active",
+      "title": "Deck opens on the wheel of phases, the state of every phase is read from it without reading a sentence, and every phase is reached from it by pointer and by keyboard",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0027",
+        "PHASE-0005",
+        "TASK-0125",
+        "TASK-0126",
+        "TST-0090"
+      ]
+    },
+    "TST-0092": {
+      "id": "TST-0092",
+      "kind": "test",
+      "state": "open",
+      "status": "active",
+      "title": "A phase shows what it owes as a web, an exit ring and a depth field, a ticket shows where it is in its life and what it is joined to, and re-phasing shows where unplaced tickets would go, each without reading a list",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0028",
+        "PHASE-0005",
+        "TASK-0127",
+        "TASK-0128",
+        "TASK-0129",
+        "TST-0091"
       ]
     },
     "TST-0036": {
