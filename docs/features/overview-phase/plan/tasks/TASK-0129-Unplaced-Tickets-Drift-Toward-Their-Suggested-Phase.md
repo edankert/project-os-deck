@@ -24,7 +24,7 @@ S4: tickets with no phase as particles in the core, a line to each suggested sec
 ## Definition of Done
 - [ ] `rephaseScene(model)` passes the screen checks on both fixtures.
 - [ ] Accepting a group moves its particles and writes nothing.
-- [ ] The cockpit issue exists and is linked here.
+- [ ] The cockpit issue exists and is linked here. **Not yet:** the request is written in [[REFERENCE-COCKPIT-ADOPTION]], "Requests to the cockpit"; the cockpit repository held another session's uncommitted work on 2026-10-14, so no issue number was taken there.
 
 ## Notes
 Drawing lane (Claude), PHASE-0005.

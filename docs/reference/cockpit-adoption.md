@@ -129,3 +129,9 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 - Re-read the cockpit register whenever `git log --since=<last read> -- docs/changes` in project-os-cockpit returns anything, and add a dated line here saying what was read and which rows changed.
 - 2026-09-06 — written against baseline `570da22`; every row `not yet` except `api.guards`, and three `replaced by`.
 - 2026-09-07 — three rows moved to `adopted` (`shell.nav.needs-you`, `shell.nav.hide-completed`, `shell.stage.find`) as the work landed. The register was re-read at `c0ed9e3`: one cockpit change note has landed since `570da22` and it touched no capability, but the 2026-09-06 acceptance-checks work had added two keys this table never carried. `shell.checks.mark-dialog` and `api.read.check-history` are added here as `not yet`. Every one of the register's 55 keys now has a position in this table.
+
+## Requests to the cockpit
+
+Capabilities Deck needs that the cockpit's sidecar does not offer. Each is filed as an issue in the cockpit repository; until it is, it is listed here with what it asks.
+
+- **A sidecar action that sets a note's `phase:`** (asked 2026-10-14, [[TASK-0129-Unplaced-Tickets-Drift-Toward-Their-Suggested-Phase]]). Deck's re-phase screen suggests a phase for each ticket that names none: 987 such tickets in your-trainer on 2026-10-14. Accepting a suggestion moves the tickets on screen only, because no write sets `phase:`. The request is a guarded, person-only write, `POST /api/notes/set-phase` with `{id, phase, mtime}`, that writes one frontmatter field and refuses a phase the workspace does not have. **Not filed yet:** on 2026-10-14 the cockpit repository held another session's uncommitted work, including its `SNAPSHOT.yaml`, so taking an issue number there would have collided with it. Filing it is the next step for whoever next works in the cockpit.
