@@ -12,7 +12,7 @@ related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]
 
 # Plan for FEAT-0029
 
-The four tasks separate the shared pictures and evidence, image delivery, person-triggered writes, and the review handoff. They use the remaining ids in Codex’s assigned range.
+The original four tasks separate the shared pictures and evidence, image delivery, person-triggered writes, and the review handoff. TASK-0143 repairs the eight findings from round one.
 
 ## Delivery sequence
 
@@ -24,7 +24,7 @@ The four tasks separate the shared pictures and evidence, image delivery, person
 ## Dependencies
 
 - FEAT-0026’s model, route, screen contract and checks are present. The drawing lane’s S1 to S4 and overview renderer are present.
-- The run brief permits Codex to build before Gate B. DES-0005 is currently draft; the drawing lane proposes it and Edwin alone decides it.
+- The run brief permits Codex to build before Gate B. DES-0005 is currently proposed; the drawing lane proposes it and Edwin alone decides it.
 - Read-only source inspection and fixture capture may use `../your-trainer` and `../project-os-cockpit`. No action in this run writes either repository.
 - The sidecar owns feature transition availability, acceptance-run semantics and person-only guards. Read the actual payload before choosing its request body; unsupported writes must remain refusals.
 
@@ -34,6 +34,6 @@ The four tasks separate the shared pictures and evidence, image delivery, person
 
 ## Open questions
 
-Implementation is complete and FEAT-0029 is at review. Claude reviews the commits, integrates the small gate and flow entry controls into S3, and refreshes the design plates. Edwin runs TST-0088, TST-0089 and TST-0100. The plan stays active until that feature closes.
+Implementation is complete and FEAT-0029 is at review. TASK-0143 repairs round one and refreshes the design plates. Claude reviews round two and merges the commits. Edwin runs TST-0088, TST-0089 and TST-0100. The plan stays active until that feature closes.
 
 The sidecar limits in the feature and RISK-0009 remain external constraints. The feature's dated question names the drawing-lane integration seam and the actual Your Trainer fixture status.

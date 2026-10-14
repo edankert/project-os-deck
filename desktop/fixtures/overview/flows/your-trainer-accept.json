@@ -84,11 +84,12 @@
       "label": "Reviews",
       "known": true,
       "total": 2,
-      "done": 1,
+      "done": 0,
       "missing": [
-        "independent review: approved, 1 reviewers recorded"
+        "independent review: approved, 0 reviewers recorded"
       ]
     }
   ],
-  "acceptanceRequested": false
+  "acceptanceRequested": false,
+  "transitions": []
 }

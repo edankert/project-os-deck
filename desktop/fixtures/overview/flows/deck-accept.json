@@ -85,5 +85,6 @@
       ]
     }
   ],
-  "acceptanceRequested": false
+  "acceptanceRequested": false,
+  "transitions": []
 }

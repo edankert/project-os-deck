@@ -32,8 +32,9 @@ export interface GateLamp {
 }
 export interface AcceptData {
   id: string; title: string; status: string; canWrite: boolean; lamps: GateLamp[];
-  acceptanceRequested: boolean; mtime?: number;
+  acceptanceRequested: boolean; transitions: string[]; mtime?: number;
 }
+export const FEATURE_TRANSITION_UNAVAILABLE = 'the cockpit does not yet move a feature out of review';
 export type ImageLink = (docsRelative: string) => string;
 const obj = (v: unknown): Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v) ? v as Record<string, unknown> : {};
 const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
@@ -129,7 +130,7 @@ export function testRunFromPayloads(payloads: unknown[], imageLink: ImageLink = 
         const expected = arr(check['expected']).map(obj);
         const tags = unique([...strings(check['tags']), ...expected.flatMap(e => [...strings(e['tags']), ...strings(e['passed'])])]).sort();
         const action = str(check['action']);
-        const key = JSON.stringify([release, platform, slug, tags, action]);
+        const key = JSON.stringify([release, platform, slug, tags, action, tickets, expected, check['preparation'] === true]);
         const recorded = tickets.map(t => obj(results[t]));
         const result = tickets.length && recorded.every(r => str(r['result'])) ? worstResult(recorded.map(r => resultFrom(r['result']))) : 'not-run';
         return { key, evidence: JSON.stringify(tickets.map(t => results[t] ?? null)), number: num(check['number']), tickets, action, expected: expected.map(e => str(e['text'])).join(' '), result,
@@ -168,20 +169,24 @@ export function gateFromModel(model: OverviewModel, featureId: string): AcceptDa
     return { key, label, known: false, total: items.length, done: items.filter(n => n.state === 'closed').length,
       missing: [`${label}: the model has links and statuses, not the complete evidence`, ...items.filter(n => n.state !== 'closed').map(n => `${n.id}: ${n.title}`)] };
   });
-  return { id: featureId, title: t?.title ?? featureId, status: t?.status ?? '', canWrite: false, lamps, acceptanceRequested: false };
+  return { id: featureId, title: t?.title ?? featureId, status: t?.status ?? '', canWrite: false, lamps, acceptanceRequested: false, transitions: [] };
 }
 
 /** S7 enriches the model with per-feature criteria, note fields and the union ledger.
  * Global obligation badges are never evidence that a particular feature passed.
  * Command test results are not exposed by these APIs; they remain unknown.
  */
-export function acceptFromPayloads(model: OverviewModel, featureId: string, payload: { note: unknown; criteria: unknown; acceptance: unknown; obligations: unknown; tests: unknown[] }, canWrite = false): AcceptData {
+export function acceptFromPayloads(model: OverviewModel, featureId: string, payload: { note: unknown; criteria: unknown; acceptance: unknown; obligations: unknown; tests: unknown[]; actions?: unknown }, canWrite = false): AcceptData {
   const data = gateFromModel(model, featureId), note = obj(payload.note), fm = obj(note['frontmatter']);
   if (str(fm['id']) !== featureId) throw new Error('the feature evidence names a different note');
   data.title = str(note['title']) || data.title; data.status = str(fm['status']); data.canWrite = canWrite;
   data.acceptanceRequested = fm['acceptance'] === 'requested';
+  data.transitions = arr(obj(payload.actions)['actions']).map(obj)
+    .filter(a => a['disabled'] === false && (!a['endpoint'] || a['endpoint'] === '/api/notes/transition'))
+    .map(a => str(a['to'])).filter(to => to === 'done' || to === 'doing');
   if (typeof note['mtime'] === 'number') data.mtime = note['mtime'];
   const set = (key: GateKey, known: boolean, done: number, total: number, missing: string[]): void => {
+    if (!known && !missing.length) missing = [`${key}: the evidence payload is incomplete or unreadable`];
     const lamp = data.lamps.find(l => l.key === key)!; Object.assign(lamp, { known, done, total, missing });
   };
   const criteria = obj(payload.criteria);
@@ -215,25 +220,35 @@ export function acceptFromPayloads(model: OverviewModel, featureId: string, payl
     const unrecorded = commands.filter(f => !auto.some(c => c['id'] === f['id'])).map(f => `${str(f['id'])}: command result is not exposed by the sidecar`);
     set('automated', valid && unrecorded.length === 0 && auto.length > 0 && auto.every(recorded), auto.length - autoMissing.length, auto.length + unrecorded.length, [...autoMissing, ...unrecorded, ...(auto.length || unrecorded.length ? [] : ['no automated results recorded'])]);
   }
-  // This endpoint carries aggregate badges only. A malformed read cannot certify a gate.
-  if (typeof obligations['total'] !== 'number' || !('views' in obligations)) data.lamps.forEach(l => { l.known = false; l.missing.push('the obligations payload could not be read'); });
-  const reviewers = Array.isArray(fm['reviewed_by']) ? strings(fm['reviewed_by']) : str(fm['reviewed_by']) ? [str(fm['reviewed_by'])] : [];
+  // Both scalar and list frontmatter can name several reviewers, including two of the same model.
+  const reviewers = (Array.isArray(fm['reviewed_by']) ? strings(fm['reviewed_by']) : [str(fm['reviewed_by'])])
+    .flatMap(value => value.match(/\b(?:user|model):[\w.-]+/g) ?? []);
   const human = reviewers.some(r => r.startsWith('user:'));
   const reviewTotal = human ? 1 : 2;
   const approved = fm['review_verdict'] === 'approved' && !!str(fm['review_date']) && !!String(fm['review_round'] ?? '');
   set('reviews', true, approved ? Math.min(reviewTotal, reviewers.length) : 0, reviewTotal,
     approved && reviewers.length >= reviewTotal ? [] : [`independent review: ${str(fm['review_verdict']) || 'no verdict'}, ${reviewers.length} reviewers recorded`]);
+  // This endpoint carries aggregate badges only. A malformed read cannot certify a gate.
+  if (typeof obligations['total'] !== 'number' || !('views' in obligations)) data.lamps.forEach(l => { l.known = false; l.missing.push('the obligations payload could not be read'); });
   return data;
 }
-export const lampComplete = (l: GateLamp): boolean => l.known && Number.isSafeInteger(l.total) && l.total >= 0 && l.done === l.total && l.missing.length === 0;
-export const gateReady = (d: AcceptData): boolean => GATES.every(([key]) => d.lamps.filter(l => l.key === key).length === 1 && lampComplete(d.lamps.find(l => l.key === key)!));
+export const lampEmpty = (l: GateLamp): boolean => l.known && l.total === 0 && l.done === 0 && l.missing.length === 0;
+export const lampComplete = (l: GateLamp): boolean => l.known && Number.isSafeInteger(l.total) && l.total > 0 && l.done === l.total && l.missing.length === 0;
+export const gateReady = (d: AcceptData): boolean => d.lamps.length === GATES.length && d.lamps.some(lampComplete)
+  && GATES.every(([key]) => d.lamps.filter(l => l.key === key).length === 1 && (lampComplete(d.lamps.find(l => l.key === key)!) || lampEmpty(d.lamps.find(l => l.key === key)!)));
+function lampLabel(l: GateLamp): string {
+  if (lampEmpty(l)) return `${l.label}: nothing to check — no ${l.label.toLowerCase()} items recorded`;
+  const details = l.missing.length ? l.missing.join('; ') : l.known ? 'all recorded items complete' : 'no readable evidence is available';
+  return `${l.label}: ${l.known ? `${l.done} of ${l.total}` : 'unknown'} · ${details}`;
+}
 
-function control(nodes: SceneNode[], list: ListRow[], action: string, label: string, x: number, y: number, enabled: boolean, tone = '', width = 200): void {
-  nodes.push({ kind: 'mark', tag: 'rect', attrs: { x, y, width, height: 64, rx: 32 }, cls: `ov-control ${tone}${enabled ? '' : ' ov-off'}`, glow: enabled, label: enabled ? label : `${label}: unavailable` });
+function control(nodes: SceneNode[], list: ListRow[], action: string, label: string, x: number, y: number, enabled: boolean, tone = '', width = 200, unavailable = 'unavailable'): void {
+  const description = enabled ? label : `${label}: ${unavailable}`;
+  nodes.push({ kind: 'mark', tag: 'rect', attrs: { x, y, width, height: 64, rx: 32 }, cls: `ov-control ${tone}${enabled ? '' : ' ov-off'}`, glow: enabled, label: description });
   nodes.push({ kind: 'text', x: x + width / 2, y: y + 40, text: label, rest: true, role: 'control', anchor: 'middle', size: 22 });
   // A transparent hit surface over the label means clicking its letters works too.
-  nodes.push({ kind: 'mark', tag: 'rect', attrs: { x, y, width, height: 64, rx: 32 }, cls: `ov-hit${enabled ? '' : ' ov-off'}`, action, label: enabled ? label : `${label}: unavailable` });
-  list.push({ id: action, label: enabled ? label : `${label}: unavailable`, group: 'Controls', action });
+  nodes.push({ kind: 'mark', tag: 'rect', attrs: { x, y, width, height: 64, rx: 32 }, cls: `ov-hit${enabled ? '' : ' ov-off'}`, action, label: description });
+  list.push({ id: action, label: description, group: 'Controls', action });
 }
 function base(screen: Scene['screen'], id: string, title: string, ctx: ScreenContext, parts: { step?: string; note?: string }): Scene {
   const back = backControl(ctx, id ? { page: 'ticket', note: id } : { page: 'wheel' }, id ? `Back to ${id}` : 'Back to the wheel');
@@ -253,8 +268,8 @@ export function designScene(_model: OverviewModel, data: DesignFlowData, ctx: Sc
     const top = i === selected, offset = top ? 0 : 14 + (depth % 5) * 12;
     const plate = data.plates[i]!;
     nodes.push({ kind: 'group', key: `plate-${i}`, transform: top ? undefined : `rotate(${(depth % 2 ? -1 : 1) * (2 + depth % 4)} 720 440)`, cls: top ? '' : 'ov-faint', children: [
-      { kind: 'mark', tag: 'rect', attrs: { x: 260 + offset, y: 170 - offset / 2, width: 920, height: 540, rx: 8 }, cls: 'ov-glass' },
-      { kind: 'image', href: plate.href, label: plate.label, x: 270 + offset, y: 180 - offset / 2, w: 900, h: 520 },
+      { kind: 'mark', tag: 'rect', attrs: { x: 260 + offset, y: 170 - offset / 2, width: 920, height: 540, rx: 8 }, cls: top ? 'ov-glass' : 'ov-wire' },
+      ...(top ? [{ kind: 'image' as const, href: plate.href, label: plate.label, x: 270, y: 180, w: 900, h: 520 }] : []),
     ] });
   });
   data.plates.forEach((p, i) => {
@@ -338,17 +353,18 @@ export function testRunScene(_model: OverviewModel, data: TestRunData, ctx: Scre
 export function gateNodes(data: AcceptData, x: number, y: number, scale: number): SceneNode[] {
   const nodes: SceneNode[] = [{ kind: 'mark', tag: 'line', attrs: { x1: x, y1: y, x2: x + 960 * scale, y2: y }, cls: 'ov-wire' }];
   data.lamps.forEach((lamp, i) => {
-    const cx = x + i * 240 * scale, r = 72 * scale, complete = lampComplete(lamp), markId = `gate-${data.id}-${lamp.key}`;
-    const label = `${lamp.label}: ${lamp.known ? `${lamp.done} of ${lamp.total}` : 'unknown'}${lamp.missing.length ? ` · ${lamp.missing.join('; ')}` : ''}`;
+    const cx = x + i * 240 * scale, r = 72 * scale, complete = lampComplete(lamp), empty = lampEmpty(lamp), markId = `gate-${data.id}-${lamp.key}`;
+    const label = lampLabel(lamp);
     nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy: y, r }, cls: 'ov-glass', markId, count: lamp.total, label });
     const total = Math.max(0, Math.min(5000, lamp.total));
     for (let b = 0; b < total; b++) {
       const [bx, by] = polar(cx, y, r, TAU * b / Math.max(1, total));
       nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: bx, cy: by, r: Math.max(.6, Math.min(5 * scale, TAU * r / Math.max(1, total) * .35)) }, state: lamp.known && b < lamp.done ? 'closed' : 'open', label });
     }
-    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy: y, r: 22 * scale, tabindex: 0, role: 'img' }, state: complete ? 'closed' : lamp.known ? 'open' : 'owed', cls: complete ? '' : 'ov-faint', glow: complete, label });
+    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy: y, r: 22 * scale, tabindex: 0, role: 'img' }, state: empty ? undefined : complete ? 'closed' : lamp.known ? 'open' : 'owed', cls: empty ? 'ov-wire' : complete ? '' : 'ov-faint', glow: complete, label });
     nodes.push({ kind: 'text', x: cx, y: y + 112 * scale, text: lamp.label, role: 'label', rest: true, anchor: 'middle', size: 16 * scale });
-    if (lamp.known) {
+    if (empty) nodes.push({ kind: 'text', x: cx, y: y + 142 * scale, text: 'nothing to check', role: 'label', rest: true, anchor: 'middle', size: 14 * scale });
+    else if (lamp.known) {
       nodes.push({ kind: 'mark', tag: 'path', attrs: { d: arc(cx, y, r + 10 * scale, 0, TAU * lamp.done / Math.max(1, lamp.total)), 'stroke-width': 3 * scale }, cls: 'ov-arc', state: 'closed', markId: `${markId}-done`, count: lamp.done, label });
       nodes.push({ kind: 'text', x: cx - 8 * scale, y: y + 142 * scale, text: String(lamp.done), role: 'number', markRef: `${markId}-done`, rest: true, anchor: 'end', size: 18 * scale });
       nodes.push({ kind: 'text', x: cx, y: y + 142 * scale, text: '/', role: 'label', rest: true, anchor: 'middle', size: 18 * scale });
@@ -363,8 +379,12 @@ export function acceptScene(model: OverviewModel, data: AcceptData, ctx: ScreenC
   nodes.push({ kind: 'mark', tag: 'polygon', attrs: { points: '720,225 757,246 757,288 720,309 683,288 683,246' }, ticket: data.id, state: model.tickets[data.id]?.state ?? 'open', glow: true, label: `${data.id}: ${data.status}` });
   list.push({ id: data.id, label: `${data.title}: ${data.status}`, group: 'Feature', target: ctx.address({ page: 'ticket', note: data.id }) });
   nodes.push(...gateNodes(data, 240, 490, 1));
-  for (const l of data.lamps) list.push({ id: `gate-${l.key}`, label: `${l.label}: ${l.known ? `${l.done}/${l.total}` : 'unknown'}. ${l.missing.join('; ')}`, group: 'Evidence' });
-  if (gateReady(data)) control(nodes, list, 'accept:accept', 'Accept', 480, 820, data.canWrite && data.status === 'review', 'ov-go');
-  control(nodes, list, 'accept:back', 'Send back', gateReady(data) ? 760 : 620, 820, data.canWrite, 'ov-stop');
+  for (const l of data.lamps) list.push({ id: `gate-${l.key}`, label: lampLabel(l), group: 'Evidence' });
+  const canAccept = data.acceptanceRequested || data.transitions?.includes('done');
+  const canSendBack = data.transitions?.includes('doing');
+  const why = !data.canWrite ? 'this host does not write' : data.status !== 'review' ? 'this feature is not at review' : 'the feature still has missing evidence';
+  control(nodes, list, 'accept:accept', 'Accept', 480, 820, data.canWrite && data.status === 'review' && gateReady(data) && !!canAccept, 'ov-go', 200, canAccept ? why : FEATURE_TRANSITION_UNAVAILABLE);
+  control(nodes, list, 'accept:back', 'Send back', 760, 820, data.canWrite && data.status === 'review' && !!canSendBack, 'ov-stop', 200, canSendBack ? why : FEATURE_TRANSITION_UNAVAILABLE);
+  if (data.acceptanceRequested) nodes.push({ kind: 'text', x: 720, y: 930, text: 'Records acceptance without changing status', role: 'label', rest: true, anchor: 'middle', size: 17 });
   return scene;
 }

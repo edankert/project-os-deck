@@ -50,12 +50,12 @@ test('a note waits for all printed steps; platform, release and action separate 
 test('a failed release-test read leaves no markable checks',()=>{
  const r=F.testRunFromPayloads([{platform:'android',release:'REL-0017',error:'unavailable',sections:[{number:1,groups:[]}]}]);assert.deepEqual(r.platforms[0].sections,[]);assert.equal(r.platforms[0].error,'unavailable');
 });
-test('only five known complete lamps offer Accept; global zero badges cannot supply evidence',()=>{
+test('only five known complete lamps enable Accept; global zero badges cannot supply evidence',()=>{
  const m=json('deck.json'),d=F.gateFromModel(m,'FEAT-0024');assert.equal(d.lamps.length,5);assert.equal(F.gateReady(d),false);
- const complete={...d,status:'review',canWrite:true,lamps:d.lamps.map(l=>({...l,known:true,done:3,total:3,missing:[]}))};
+ const complete={...d,status:'review',canWrite:true,transitions:['done','doing'],lamps:d.lamps.map(l=>({...l,known:true,done:3,total:3,missing:[]}))};
  assert.equal(F.gateReady(complete),true);look(F.acceptScene(m,complete,ctx));assert.ok(F.acceptScene(m,complete,ctx).list.some(r=>r.action==='accept:accept'));
  for(const lamp of complete.lamps)for(const change of [{known:false},{done:2},{missing:['missing']}]) {
-  const a={...complete,lamps:complete.lamps.map(l=>l===lamp?{...l,...change}:l)};assert.equal(F.gateReady(a),false);assert.ok(!F.acceptScene(m,a,ctx).list.some(r=>r.action==='accept:accept'));
+  const a={...complete,lamps:complete.lamps.map(l=>l===lamp?{...l,...change}:l)};assert.equal(F.gateReady(a),false);assert.ok([...walkScene(F.acceptScene(m,a,ctx).nodes)].find(n=>n.action==='accept:accept').cls.includes('ov-off'));
  }
  const raw=json('flows/raw/deck-accept.json'),a=F.acceptFromPayloads(m,'FEAT-0024',{...raw,criteria:{},acceptance:{schema_version:999},obligations:{views:{},total:0}},true);
  for(const k of ['requirements','automated','acceptance'])assert.equal(a.lamps.find(l=>l.key===k).known,false);
@@ -67,6 +67,7 @@ test('gate ratios pair completed counts with arcs and totals with rings, includi
   const scene=F.acceptScene(m,data,ctx),nodes=[...walkScene(scene.nodes)];look(scene);
   for(const lamp of data.lamps) {
    const counts=nodes.filter(n=>n.kind==='text'&&n.role==='number'&&n.markRef?.startsWith(`gate-${data.id}-${lamp.key}`));
+   if(total===0){assert.equal(counts.length,0);continue;}
    assert.equal(counts.length,2);
    assert.deepEqual(counts.map(n=>Number(n.text)),[done,total]);
    const marks=counts.map(n=>nodes.find(m=>m.kind==='mark'&&m.markId===n.markRef));
@@ -81,4 +82,57 @@ test('gate ratios pair completed counts with arcs and totals with rings, includi
 test('copied images stay below 3 MB and the opened real check has both captures',()=>{
  const images=json('flows/images.json'),base=path.resolve(desktopRoot,'../docs/designs/__attachments__/DES-0005');assert.ok(images.reduce((n,i)=>n+fs.statSync(path.join(base,i.file)).size,0)<3_000_000);
  const r=json('flows/your-trainer-test-run.json'),c=r.platforms.flatMap(p=>p.sections.flatMap(s=>s.checks)).find(c=>c.key===r.open);assert.ok(c.before?.href&&c.after?.href);assert.ok(c.before.label.includes('workout-selection'));
+});
+
+function evidence(overrides={}) {
+ return {note:{frontmatter:{id:'FEAT-0024',status:'review',tasks:[],requirements:[],reviewed_by:['model:a','model:b'],review_verdict:'approved',review_date:'2026-10-14',review_round:1}},criteria:{id:'FEAT-0024',requirements:[]},acceptance:{schema_version:4,exists:true,platform:'',tiers:[],view:{tiers:[]}},obligations:{total:0,views:{}},tests:[],...overrides};
+}
+test('empty lamps are hollow and neutral, with at least one real item needed to accept',()=>{
+ const m=json('deck.json'),d=F.gateFromModel(m,'FEAT-0024');
+ d.lamps=d.lamps.map(l=>({...l,known:true,total:0,done:0,missing:[]}));
+ assert.equal(F.gateReady(d),false);assert.ok(d.lamps.every(l=>!F.lampComplete(l)));
+ let scene=F.acceptScene(m,d,ctx),nodes=[...walkScene(scene.nodes)];look(scene);
+ assert.equal(nodes.filter(n=>n.attrs?.role==='img'&&n.cls==='ov-wire'&&!n.glow).length,5);
+ assert.equal(nodes.filter(n=>n.text==='nothing to check').length,5);
+ assert.ok(scene.list.filter(r=>r.group==='Evidence').every(r=>r.label.includes('nothing to check')));
+ d.lamps[4]={...d.lamps[4],total:1,done:1};assert.equal(F.gateReady(d),true);
+ d.lamps[0].known=false;assert.equal(F.gateReady(d),false);
+ const mapped=F.acceptFromPayloads(m,d.id,evidence());
+ for(const key of ['requirements','tasks']){
+  const lamp=mapped.lamps.find(l=>l.key===key);assert.equal(F.lampEmpty(lamp),true);
+  assert.match(F.acceptScene(m,mapped,ctx).list.find(r=>r.id==='gate-'+key).label,/nothing to check/);
+ }
+});
+test('every unknown lamp explains missing evidence, including malformed tiers and command results',()=>{
+ const m=json('deck.json');
+ const fixtures=[evidence(),evidence({acceptance:{}}),evidence({obligations:{}}),evidence({tests:[{frontmatter:{id:'TST-1111',command:'npm test'}}]}),
+  evidence({acceptance:{schema_version:4,exists:true,platform:'',tiers:[{manual:false,items:[{id:'TST-1111',refs:['FEAT-0024'],mark:'done',stale:false}]},{items:[]}],view:{tiers:[{areas:[{items:[{id:'TST-1111',mark:'done',stale:false,verdict_method:'automated',verdict_date:'2026-10-14'}]}]}]}}})];
+ for(const payload of fixtures){
+  const d=F.acceptFromPayloads(m,'FEAT-0024',payload);assert.equal(F.gateReady(d),false);
+  for(const l of d.lamps.filter(l=>!l.known))assert.ok(l.missing.some(s=>s.trim()),l.key);
+  for(const row of F.acceptScene(m,d,ctx).list.filter(r=>r.group==='Evidence'))assert.ok(row.label.split(' · ')[1]||row.label.includes('nothing to check'),row.label);
+ }
+ const d=F.acceptFromPayloads(m,'FEAT-0024',fixtures[3]);assert.match(d.lamps.find(l=>l.key==='automated').missing.join(' '),/TST-1111: command result is not exposed/);
+});
+test('review provenance reads scalar and list identities without inventing a second reviewer',()=>{
+ for(const reviewers of [['model:a','model:b'],'model:a, model:b','model:a; model:a',['user:edwin'],'user:edwin']){
+  const p=evidence();p.note.frontmatter.reviewed_by=reviewers;
+  assert.equal(F.lampComplete(F.acceptFromPayloads(json('deck.json'),'FEAT-0024',p).lamps.find(l=>l.key==='reviews')),true,JSON.stringify(reviewers));
+ }
+ for(const reviewers of ['model:a','',[], 'approved']){
+  const p=evidence();p.note.frontmatter.reviewed_by=reviewers;
+  assert.equal(F.lampComplete(F.acceptFromPayloads(json('deck.json'),'FEAT-0024',p).lamps.find(l=>l.key==='reviews')),false);
+ }
+});
+
+test('S5 fans outlines behind one selected image and keeps every plate selectable',()=>{
+ const m=json('deck.json'),d=json('flows/deck-design.json');
+ for(const selected of [0,d.plates.length-1]){
+  const scene=F.designScene(m,{...d,selected},ctx),nodes=[...walkScene(scene.nodes)];look(scene);
+  assert.deepEqual(nodes.filter(n=>n.kind==='image').map(n=>n.href),[d.plates[selected].href]);
+  const behind=scene.nodes.filter(n=>n.kind==='group'&&n.key?.startsWith('plate-')&&n.key!=='plate-'+selected);
+  assert.equal(behind.length,d.plates.length-1);
+  assert.ok(behind.every(n=>n.children.length===1&&n.children[0].cls==='ov-wire'));
+  assert.equal(scene.list.filter(r=>r.group==='Plates').length,d.plates.length);
+ }
 });

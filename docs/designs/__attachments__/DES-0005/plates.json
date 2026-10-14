@@ -78,9 +78,9 @@
     "label": "Deck",
     "svg": "accept-deck.svg",
     "png": "accept-deck.jpg",
-    "words": 25,
+    "words": 26,
     "marks": 1,
-    "rows": 8,
+    "rows": 9,
     "address": "deck://abcd1234/features?note=FEAT-0024&flow=accept"
   },
   {
@@ -162,9 +162,9 @@
     "label": "your-trainer",
     "svg": "accept-your-trainer.svg",
     "png": "accept-your-trainer.jpg",
-    "words": 25,
+    "words": 26,
     "marks": 1,
-    "rows": 8,
+    "rows": 9,
     "address": "deck://abcd1234/features?note=FEAT-0130&flow=accept"
   }
 ]

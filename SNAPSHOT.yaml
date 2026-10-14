@@ -55,7 +55,7 @@ counters:
   REQ: 6
   RISK: 9
   REL: 0
-  TASK: 142
+  TASK: 143
   TST: 100
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
@@ -2444,8 +2444,8 @@ metrics:
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 133
-    tasks_done: 114
+    tasks_total: 134
+    tasks_done: 115
     tests_total: 68
     tests_passing: 9
     tests_failing: 0
