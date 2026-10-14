@@ -13,8 +13,9 @@ if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
 } else {
   try {
     const { docsRootFor, walkNotes } = require('../dist/main/note-index.js');
-    const { repositoryHead } = require('../dist/main/overview-service.js');
+    const { repositoryHead, repositoryDirty } = require('../dist/main/overview-service.js');
     const { describeWorkspace } = require('../dist/main/workspaces.js');
+    const { readAcceptanceLedger } = require('../dist/main/overview-ledger.js');
     const { buildOverview } = require('../dist/shared/overview-model.js');
     const root = path.resolve(args[0]);
     if (!fs.statSync(root).isDirectory()) throw new Error(`Not a directory: ${root}`);
@@ -22,7 +23,7 @@ if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
     const { records, problems } = walkNotes(docsRoot);
     if (problems.length) throw new Error(`Cannot build a complete overview: ${problems.map((p) => `${p.relPath}: ${p.reason}`).join('; ')}`);
     const model = buildOverview(records, { workspace: describeWorkspace(root)?.name ?? path.basename(root),
-      head: repositoryHead(root), generated: new Date().toISOString(),
+      head: repositoryHead(root), dirty: repositoryDirty(root), acceptanceResults: readAcceptanceLedger(docsRoot).results, generated: new Date().toISOString(),
       readBody: (rel) => fs.readFileSync(path.join(docsRoot, rel), 'utf8') });
     if (args[1] === '--json') console.log(JSON.stringify(model, null, 2));
     else {
@@ -34,7 +35,7 @@ if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
       }
       const unplaced = model.core.tickets.filter((id) => model.tickets[id].placedBy === 'none').length;
       console.log(`Core: ${model.core.tickets.length} tickets; ${unplaced} with no phase, ${model.core.tickets.length - unplaced} project-wide`);
-      console.log('Acceptance states use note status; active means open. Automated active/passing are status approximations of CI.');
+      console.log('Acceptance states use recorded platform results; missing results stay open. Automated active/passing are status approximations of CI.');
     }
   } catch (error) {
     console.error(`overview: ${error.message}`); process.exitCode = 1;

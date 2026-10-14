@@ -10,9 +10,9 @@ const { docsRootFor, walkNotes } = load('main/note-index.js');
 const { checkScene } = load('shared/overview-checks.js');
 
 const expected = {
-  deck: { total: 357, unplaced: 1, core: 22, kinds: { req: 6, feat: 29, task: 126, test: 84, iss: 91, dec: 13, risk: 8 },
-    phases: { 'PHASE-0001': 139, 'PHASE-0002': 172, 'PHASE-0003': 0, 'PHASE-0004': 2, 'PHASE-0005': 22 }, groups: [5, 0, 0], exits: 47 },
-  'your-trainer': { total: 2747, unplaced: 987, core: 1028, kinds: { req: 240, feat: 135, task: 1084, test: 698, iss: 549, dec: 24, risk: 17 },
+  deck: { dirty: false, testStates: { closed: 62, open: 18, dropped: 5, owed: 2 }, total: 361, unplaced: 1, core: 22, kinds: { req: 6, feat: 29, task: 127, test: 87, iss: 91, dec: 13, risk: 8 },
+    phases: { 'PHASE-0001': 139, 'PHASE-0002': 172, 'PHASE-0003': 0, 'PHASE-0004': 2, 'PHASE-0005': 26 }, groups: [5, 0, 0], exits: 47 },
+  'your-trainer': { dirty: true, testStates: { dropped: 232, closed: 9, open: 276, owed: 180, failed: 1 }, total: 2747, unplaced: 987, core: 1028, kinds: { req: 240, feat: 135, task: 1084, test: 698, iss: 549, dec: 24, risk: 17 },
     phases: { 'PHASE-001': 60, 'PHASE-002': 39, 'PHASE-003': 102, 'PHASE-004': 51, 'PHASE-005': 36, 'PHASE-006': 29,
       'PHASE-007': 46, 'PHASE-008': 16, 'PHASE-009': 7, 'PHASE-010': 142, 'PHASE-011': 80, 'PHASE-012': 123,
       'PHASE-013': 4, 'PHASE-014': 91, 'PHASE-015': 9, 'PHASE-016': 48, 'PHASE-017': 23, 'PHASE-018': 31,
@@ -25,8 +25,11 @@ for (const [name, want] of Object.entries(expected)) {
     const model = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', `${name}.json`), 'utf8'));
     const tickets = Object.values(model.tickets);
     const phases = [...model.phases, ...model.shelf, ...model.backlog];
-    assert.match(model.head, /^[a-f0-9]{40}$/); assert.ok(Number.isFinite(Date.parse(model.generated)));
+    assert.match(model.head, /^[a-f0-9]{40}$/); assert.equal(typeof model.dirty, 'boolean'); assert.ok(Number.isFinite(Date.parse(model.generated)));
     assert.equal(tickets.length, want.total);
+    assert.equal(model.dirty, want.dirty);
+    assert.deepEqual(tickets.filter((t) => t.kind === 'test').reduce((counts, t) => { counts[t.state] = (counts[t.state] ?? 0) + 1; return counts; }, {}), want.testStates);
+    if (name === 'deck') assert.deepEqual(model.phases.map((p) => p.id), ['PHASE-0001', 'PHASE-0002', 'PHASE-0004', 'PHASE-0003', 'PHASE-0005']);
     assert.equal(tickets.filter((t) => t.placedBy === 'none').length, want.unplaced);
     assert.equal(model.core.tickets.length, want.core);
     assert.deepEqual([model.phases.length, model.shelf.length, model.backlog.length], want.groups);

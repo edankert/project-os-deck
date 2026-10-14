@@ -35,8 +35,8 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Procedure
 
-- Drive the host handler with Node HTTP messages against a temporary workspace; also try a localhost socket when permitted.
-- Repeat the request at the same revision, then change the index and request it again.
+- Drive the host handler with Node HTTP messages against a temporary workspace; also request it through a real localhost socket.
+- Repeat the request at the same revision, then change notes and ledger files independently. Check sealed histories, platform gaps and malformed ledgers.
 - Try write methods and unknown workspaces; run the print command against a temporary repository.
 
 ## Expected results
@@ -47,7 +47,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-14: `bash tools/scripts/run-desktop-tests.sh overview-route` passed 5 tests, failed none and skipped 1. The skipped check needs a localhost listener; the sandbox returns EPERM. The route and guards passed through Node HTTP request and response objects in memory.
+2026-10-14: the `overview-route` suite passed 12 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 704 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
 
 ## Adequacy
 

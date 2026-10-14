@@ -12,7 +12,7 @@ related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]
 
 # Plan for FEAT-0026
 
-Five tasks deliver FEAT-0026 on `lane/codex`. TASK-0120 to TASK-0124 and TST-0085 to TST-0089 remain available for FEAT-0029.
+The original delivery is complete. [[TASK-0140-Fix-The-Overview-Review-Findings]] repairs the first review on `lane/codex-fix`; FEAT-0026 stays at review for Claude. The concurrent FEAT-0029 lane is excluded.
 
 ## Delivery sequence
 
@@ -21,7 +21,7 @@ Five tasks deliver FEAT-0026 on `lane/codex`. TASK-0120 to TASK-0124 and TST-008
 3. [[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]] replaces both fixtures and explains the measured differences from DES-0004 ([[TST-0082-Both-Fixtures-Keep-Every-Ticket-And-Its-Counts]]).
 4. [[TASK-0118-Check-Every-Screen-As-Data]] checks words, count marks, addresses and list twins, and registers the pages and flows ([[TST-0083-Screen-Checks-Refuse-Text-And-Missing-Marks]]).
 
-5. [[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]] makes unavailable socket tests report a skip without swallowing assertions ([[TST-0084-Localhost-Checks-Skip-Only-When-Listeners-Are-Forbidden]]).
+5. [[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]] was cancelled. TASK-0140 removes the remaining permission skip from the overview route test. All localhost tests must run.
 
 The scene checks can proceed independently of the model. The fixture paths stay `desktop/fixtures/overview/deck.json` and `desktop/fixtures/overview/your-trainer.json`.
 

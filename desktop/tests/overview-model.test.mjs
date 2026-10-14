@@ -30,14 +30,14 @@ for (const [type, statuses] of rows) test(`state table: ${type}`, () => {
   assert.equal(run([note('TICKET-001', type, 'unknown')]).tickets['TICKET-001'].state, 'open');
 });
 
-test('acceptance uses supplied platform results, otherwise status, and never calls active a pass', () => {
+test('acceptance uses platform results and never treats a note status as a verdict', () => {
   const check = note('TST-0001', 'test', 'active', { level: 'acceptance' });
   for (const [results, expected] of [
-    [[], 'open'], [['passed', 'excused'], 'closed'], [['passed', 'not-run'], 'open'],
+    [[], 'open'], [['pass', 'na'], 'closed'], [['pass', 'partial'], 'open'], [['pass', 'fail'], 'failed'], [['passed', 'excused'], 'closed'], [['passed', 'not-run'], 'open'],
     [['passed', 'withdrawn'], 'owed'], [['invalidated', 'failed'], 'failed'], [['passed', 'failed'], 'failed'],
   ]) assert.equal(run([check], { acceptanceResults: { 'TST-0001': results } }).tickets['TST-0001'].state, expected);
   assert.equal(run([check]).tickets['TST-0001'].state, 'open');
-  for (const [status, expected] of [['passing', 'closed'], ['failing', 'failed'], ['withdrawn', 'owed'], ['retired', 'dropped']]) {
+  for (const [status, expected] of [['passing', 'open'], ['failing', 'open'], ['withdrawn', 'open'], ['retired', 'dropped']]) {
     assert.equal(run([{ ...check, status }]).tickets['TST-0001'].state, expected);
   }
   assert.equal(run([{ ...check, status: 'retired' }], { acceptanceResults: { 'TST-0001': ['failed'] } }).tickets['TST-0001'].state, 'dropped');
@@ -141,4 +141,56 @@ test('templates and other note types are excluded; duplicate ticket ids fail ins
   assert.equal(model.head, 'abc'); assert.equal(model.generated, '2026-10-14T12:00:00Z');
   assert.deepEqual(records, before);
   assert.equal(Object.keys(run([note('__proto__', 'test', 'retired')]).tickets).length, 1, 'an unusual declared id cannot overwrite the dictionary prototype');
+});
+
+test('only feature parents place a ticket, even when another ticket has a phase', () => {
+  for (const field of ['parent', 'implements', 'covers']) {
+    const model = run([phase('PHASE-0001'),
+      note('TASK-0001', 'task', 'done', { phase: '[[PHASE-0001]]' }),
+      note('TST-0001', 'test', 'active', { [field]: ['[[TASK-0001]]'] })]);
+    assert.equal(model.tickets['TST-0001'].phase, null, field);
+    assert.equal(model.tickets['TST-0001'].placedBy, 'none', field);
+  }
+});
+
+test('a parent link to a non-ticket note is harmless and does not hide a feature parent', () => {
+  const model = run([phase('PHASE-0001'), note('REF-0001', 'reference', 'active'),
+    note('FEAT-0001', 'feature', 'doing', { phase: '[[PHASE-0001]]' }),
+    note('TASK-0001', 'task', 'doing', { parent: ['[[REF-0001]]', '[[PHASE-0001]]', '[[FEAT-0001]]'] }),
+    note('TASK-0002', 'task', 'doing', { parent: '[[REF-0001]]' })]);
+  assert.equal(model.tickets['TASK-0001'].phase, 'PHASE-0001');
+  assert.equal(model.tickets['TASK-0002'].phase, null);
+});
+
+test('member-list ties choose the first phase by order, then by id', () => {
+  const p1 = phase('PHASE-0001', { order: 2, tasks: ['[[TASK-0001]]'] });
+  const p2 = phase('PHASE-0002', { order: 1, tasks: ['[[TASK-0001]]'] });
+  const task = note('TASK-0001', 'task', 'doing');
+  assert.equal(run([p1, p2, task]).tickets[task.id].phase, 'PHASE-0002');
+  p1.frontmatter.order = 1;
+  assert.equal(run([p2, p1, task]).tickets[task.id].phase, 'PHASE-0001');
+});
+
+test('local lowercase filenames and aliases keep heading links local', () => {
+  const local = { ...note('FEAT-0001', 'feature', 'doing', { phase: '[[PHASE-0001]]' }),
+    relPath: 'features/some-note.md', fileName: 'some-note', aliases: ['local-alias'] };
+  const model = run([phase('PHASE-0001'), local,
+    note('TASK-0001', 'task', 'doing', { parent: '[[some-note#Heading]]' }),
+    note('TASK-0002', 'task', 'doing', { parent: '[[local-alias#Heading]]' })],
+  { readBody: (rel) => rel === 'TASK-0001.md' ? '[[some-note#Heading|shown]] [[other-project#FEAT-0001]]' : '' });
+  for (const id of ['TASK-0001', 'TASK-0002']) {
+    assert.equal(model.tickets[id].phase, 'PHASE-0001');
+    assert.deepEqual(model.tickets[id].links, ['FEAT-0001']);
+  }
+});
+
+test('real phase frontmatter orders the wheel, shelf and backlog with id ties', () => {
+  // Exercise the YAML/index boundary as well as the builder; Deck puts Parity before Vault.
+  const parsed = (id, order, status, kind = '') => recordFrom(`${id}.md`,
+    `---\nid: ${id}\ntype: phase\nstatus: ${status}\n${order === null ? '' : `order: ${order}\n`}kind: ${kind}\n---\n# ${id}`, 0).record;
+  for (const [status, kind, group] of [['active', '', 'phases'], ['done', '', 'shelf'], ['active', 'backlog', 'backlog']]) {
+    const model = run([parsed('PHASE-0003', 4, status, kind), parsed('PHASE-0004', 3, status, kind),
+      parsed('PHASE-0002', null, status, kind), parsed('PHASE-0005', 4, status, kind)]);
+    assert.deepEqual(model[group].map((p) => p.id), ['PHASE-0002', 'PHASE-0004', 'PHASE-0003', 'PHASE-0005']);
+  }
 });

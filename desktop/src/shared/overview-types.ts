@@ -96,6 +96,8 @@ export interface OverviewModel {
   workspace: string;
   /** The commit the model was built at, when known. */
   head: string;
+  /** Whether the source tree had uncommitted note or ledger changes. */
+  dirty?: boolean;
   /** ISO date-time the model was built. */
   generated: string;
   /** Phases still to finish, in phase order: the wheel's sectors. */

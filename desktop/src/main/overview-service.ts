@@ -1,8 +1,9 @@
-/** A read-only overview, rebuilt once per workspace index revision (TASK-0116). */
+/** A read-only overview, cached by note revision and ledger content (TASK-0140). */
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildOverview } from '../shared/overview-model.js';
+import { readAcceptanceLedger } from './overview-ledger.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { Workspace } from '../shared/types.js';
 import type { IndexSnapshot } from './note-index.js';
@@ -16,16 +17,26 @@ export function repositoryHead(root: string): string {
   catch { return ''; } // A vault need not be a Git repository.
 }
 
+/** Only notes and ledger history affect this provenance flag, not build output. */
+export function repositoryDirty(root: string): boolean | undefined {
+  try {
+    return execFileSync('git', ['--no-optional-locks', '-C', root, 'status', '--porcelain', '-z', '--untracked-files=all', '--',
+      ':(glob)**/*.md', ':(glob)**/releases/ledgers/*.json', 'SNAPSHOT.yaml'],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).length > 0;
+  } catch { return undefined; } // A vault need not be a Git repository.
+}
+
 export interface OverviewIo {
   readFile: (file: string) => string;
   head: (root: string) => string;
   now: () => string;
+  dirty?: (root: string) => boolean | undefined;
 }
 
 export class OverviewService {
-  private readonly cached = new Map<string, { revision: number; docsRoot: string; root: string; name: string; reply: OverviewReply }>();
+  private readonly cached = new Map<string, { revision: number; ledgerRevision: string; docsRoot: string; root: string; name: string; reply: OverviewReply }>();
   constructor(private readonly io: OverviewIo = {
-    readFile: (file) => fs.readFileSync(file, 'utf8'), head: repositoryHead, now: () => new Date().toISOString(),
+    readFile: (file) => fs.readFileSync(file, 'utf8'), head: repositoryHead, dirty: repositoryDirty, now: () => new Date().toISOString(),
   }) {}
 
   /** Clear on workspace removal: reopening starts a new index at revision one. */
@@ -36,17 +47,19 @@ export class OverviewService {
       this.forget(workspace.id);
       return { workspaceId: workspace.id, revision: snapshot.revision, building: true };
     }
+    const ledger = readAcceptanceLedger(snapshot.docsRoot);
     const known = this.cached.get(workspace.id);
-    if (known?.revision === snapshot.revision && known.docsRoot === snapshot.docsRoot && known.root === workspace.root && known.name === workspace.name) return known.reply;
+    if (known?.revision === snapshot.revision && known.ledgerRevision === ledger.revision && known.docsRoot === snapshot.docsRoot && known.root === workspace.root && known.name === workspace.name) return known.reply;
     const model = buildOverview(snapshot.records, {
-      workspace: workspace.name, head: this.io.head(workspace.root), generated: this.io.now(),
+      workspace: workspace.name, head: this.io.head(workspace.root), dirty: this.io.dirty?.(workspace.root),
+      acceptanceResults: ledger.results, generated: this.io.now(),
       readBody: (rel) => {
         try { return this.io.readFile(path.join(snapshot.docsRoot, rel)); }
         catch { return ''; } // A file removed after indexing gets no body until the next revision.
       },
     });
     const reply: OverviewReply = { ...model, workspaceId: workspace.id, revision: snapshot.revision, building: false };
-    this.cached.set(workspace.id, { revision: snapshot.revision, docsRoot: snapshot.docsRoot, root: workspace.root, name: workspace.name, reply });
+    this.cached.set(workspace.id, { revision: snapshot.revision, ledgerRevision: ledger.revision, docsRoot: snapshot.docsRoot, root: workspace.root, name: workspace.name, reply });
     return reply;
   }
 }
