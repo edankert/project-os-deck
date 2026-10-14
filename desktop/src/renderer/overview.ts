@@ -103,7 +103,12 @@ export function initOverview(host: OverviewHostApi): void {
   stage.addEventListener('focusin', (event) => onFocus(event));
   stage.addEventListener('focusout', () => hideCallout());
   area.addEventListener('keydown', (event) => void onKey(event));
-  (globalThis as { __deckOverview?: unknown }).__deckOverview = { current: () => current?.scene ?? null, models };
+  // For the window run (TST-0093): what is drawn, and a way to follow an address as a click would.
+  (globalThis as { __deckOverview?: unknown }).__deckOverview = {
+    current: () => current?.scene ?? null,
+    screens: () => ({ pages: [...pages.keys()], flows: [...flows.keys()] }),
+    go: (raw: string) => go(raw),
+  };
 }
 
 export function isOverviewShown(): boolean {

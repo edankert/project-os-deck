@@ -1,0 +1,90 @@
+// TST-0093 — every overview screen opens from its address in a real window
+// (PHASE-0005, TASK-0131). Run from desktop/ after `npm run build`:
+//   npx electron . --drive scripts/overview-drive.cjs --drive-out dist/overview-drive [--workspace <repo>]
+// It opens windows, so it is run on request and never by the pre-push hook.
+const assert = require('node:assert/strict');
+
+module.exports = async (d) => {
+  const ws = d.prepared.id;
+  const base = `deck://${ws}/features`;
+  const win = await d.open(base, { width: 1440, height: 960 });
+  const js = (code) => d.js(win, code);
+  const settle = async () => {
+    for (let i = 0; i < 40; i += 1) {
+      if (await js('Boolean(window.__deckOverview && window.__deckOverview.current())')) break;
+      await d.delay(250);
+    }
+    await d.delay(900);
+  };
+  // An address with no page goes to the view; Deck opens on the wheel only when no
+  // address is given, so the first screen is asked for by its address.
+  await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+  await settle();
+  const screens = await js('window.__deckOverview.screens()');
+  d.log('screens registered', screens);
+  const model = await (await fetch(`${d.origin}/deck/overview/${ws}`)).json();
+  d.log('model', { tickets: Object.keys(model.tickets).length, phases: model.phases.length, shelf: model.shelf.length, backlog: model.backlog.length, core: model.core.tickets.length });
+
+  const phase = model.phases[0]?.id ?? model.shelf[0]?.id;
+  const linked = Object.values(model.tickets).sort((a, b) => b.links.length - a.links.length)[0];
+  const design = Object.values(model.tickets).find((t) => t.id.startsWith('DES-') && t.status === 'proposed') ?? Object.values(model.tickets).find((t) => t.id.startsWith('DES-'));
+  const feature = Object.values(model.tickets).find((t) => t.kind === 'feat' && t.status === 'review') ?? Object.values(model.tickets).find((t) => t.kind === 'feat');
+  const wanted = [
+    ['wheel', `${base}?page=wheel`],
+    ['phase', phase ? `${base}?note=${encodeURIComponent(phase)}&page=phase` : null],
+    ['ticket', linked ? `${base}?note=${encodeURIComponent(linked.id)}&page=ticket` : null],
+    ['rephase', `${base}?page=rephase`],
+    ['design', design ? `${base}?note=${encodeURIComponent(design.id)}&flow=design` : null],
+    ['test-run', `${base}?flow=test-run&step=android`],
+    ['accept', feature ? `${base}?note=${encodeURIComponent(feature.id)}&flow=accept` : null],
+  ];
+  const results = [];
+  for (const [screen, address] of wanted) {
+    const kind = ['design', 'test-run', 'accept'].includes(screen) ? 'flows' : 'pages';
+    if (address === null || !screens[kind].includes(screen)) {
+      d.log(`skipped ${screen}`, { reason: address === null ? 'nothing to open it on' : 'not registered' });
+      results.push({ screen, skipped: true });
+      continue;
+    }
+    await js(`window.__deckOverview.go(${JSON.stringify(address)})`);
+    await settle();
+    const seen = await js(`(() => {
+      const scene = window.__deckOverview.current();
+      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); } return out; };
+      return { screen: scene.screen, address: scene.address, sceneMarks: walk(scene.nodes, []).length,
+        domMarks: document.querySelectorAll('#overview-area [data-ticket]').length,
+        rows: scene.list.length, shown: !document.getElementById('overview-area').hidden, overview: document.body.dataset.overview };
+    })()`);
+    assert.equal(seen.shown, true, `${screen}: the overview layer is shown`);
+    assert.equal(seen.screen, screen, `${screen}: the scene drawn is the one asked for`);
+    assert.equal(seen.domMarks, seen.sceneMarks, `${screen}: every mark in the scene is in the window`);
+    await d.shot(win, `${screen}`);
+    d.log(`opened ${screen}`, seen);
+    results.push(seen);
+  }
+
+  // A click on a sector opens its phase, Escape returns, L opens the twin.
+  await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+  await settle();
+  const sector = await js(`(() => { const e = document.querySelector('#overview-area .ov-sector .ov-hit'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+  if (sector !== null) {
+    // The hit area's centre can fall in the wheel's hollow; aim at a wedge of the sector instead.
+    const wedge = await js(`(() => { const e = document.querySelector('#overview-area .ov-sector path[data-ticket]:not(.ov-hit)'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+    const at = wedge ?? sector;
+    await d.pointer(win, d.click(at));
+    await settle();
+    const after = await js('document.body.dataset.overview');
+    d.log('clicked the wheel', { at, now: after });
+    assert.ok(after === 'phase' || after === 'ticket', `a click on the wheel opens a phase or a ticket, not ${after}`);
+    d.press(win, 'Escape');
+    await settle();
+    d.log('pressed Escape', { now: await js('document.body.dataset.overview') });
+  }
+  d.press(win, 'L');
+  await d.delay(400);
+  const twin = await js(`({ open: !document.querySelector('.ov-list').hidden, rows: document.querySelectorAll('.ov-list li').length, scene: window.__deckOverview.current().list.length })`);
+  d.log('the list twin', twin);
+  assert.equal(twin.open, true, 'L opens the list twin');
+  assert.equal(twin.rows, twin.scene, 'the list twin holds every row of the scene');
+  d.log('summary', results);
+};
