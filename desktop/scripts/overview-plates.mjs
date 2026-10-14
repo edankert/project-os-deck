@@ -111,7 +111,7 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
       }
     }
     const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined).length;
-    plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, rows: scene.list.length, address: scene.address });
+    plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, rows: scene.list.length, address: scene.address, ...(key === 'ticket' ? { ticket: choice.ticket } : {}) });
     console.log(`${base}: ${wordsAtRest(scene)} words at rest, ${marks} ticket marks, ${scene.list.length} list rows${png ? '' : ' (no PNG: rsvg-convert is not installed)'}`);
   }
 }
@@ -163,10 +163,19 @@ document.getElementById('plate').addEventListener('load', () => {
   try { doc = document.getElementById('plate').contentDocument; } catch (e) { doc = null; }
   if (!doc) return;
   doc.addEventListener('click', (e) => {
-    const el = e.target.closest && e.target.closest('[data-target]');
+    const el = e.target.closest && e.target.closest('[data-target], [data-ticket]');
     if (!el) return;
-    const q = new URLSearchParams(el.getAttribute('data-target').split('?')[1] || '');
-    const next = SCREEN_OF[q.get('page') || q.get('flow') || ''];
+    let next = null;
+    if (el.hasAttribute('data-target')) {
+      const q = new URLSearchParams(el.getAttribute('data-target').split('?')[1] || '');
+      next = SCREEN_OF[q.get('page') || q.get('flow') || ''];
+    } else {
+      // A ticket. Deck opens its own screen, and from there where it is accepted. The page
+      // has one ticket plate per workspace, so another ticket shows where Deck takes it next.
+      const id = el.getAttribute('data-ticket');
+      const plate = plates.find((p) => p.ws === ws && p.key === 'ticket');
+      next = plate && plate.ticket === id ? 'ticket' : id.startsWith('DES-') ? 'design' : id.startsWith('TST-') ? 'test-run' : id.startsWith('FEAT-') ? 'accept' : 'ticket';
+    }
     if (next && plates.some((p) => p.ws === ws && p.key === next)) { screen = next; show(); }
   });
 });

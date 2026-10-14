@@ -33,7 +33,8 @@
     "words": 12,
     "marks": 20,
     "rows": 23,
-    "address": "deck://abcd1234/features?note=FEAT-0024&page=ticket"
+    "address": "deck://abcd1234/features?note=FEAT-0024&page=ticket",
+    "ticket": "FEAT-0024"
   },
   {
     "key": "rephase",
@@ -117,7 +118,8 @@
     "words": 11,
     "marks": 14,
     "rows": 17,
-    "address": "deck://abcd1234/features?note=TST-0656&page=ticket"
+    "address": "deck://abcd1234/features?note=TST-0656&page=ticket",
+    "ticket": "TST-0656"
   },
   {
     "key": "rephase",

@@ -145,7 +145,15 @@ for (const name of WORKSPACES) {
     for (const t of unplaced(m)) if (t.suggestion !== undefined) groups.set(t.suggestion.phase, [...(groups.get(t.suggestion.phase) ?? []), t.id]);
     if (groups.size === 0) return;
     const [phase, members] = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)[0];
-    const placesIn = (scene) => new Map([...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined).map((n) => [n.ticket, placeOf(n)]));
+    // Where a glyph's centre is, and nothing else: a glyph that only shrinks has not moved.
+    const centreOf = (n) => {
+      if (n.attrs.cx !== undefined) return `${Math.round(Number(n.attrs.cx))},${Math.round(Number(n.attrs.cy))}`;
+      const xy = String(n.attrs.points).split(/[ ,]/).map(Number);
+      const xs = xy.filter((_, i) => i % 2 === 0);
+      const ys = xy.filter((_, i) => i % 2 === 1);
+      return `${Math.round(xs.reduce((a, b) => a + b, 0) / xs.length)},${Math.round(ys.reduce((a, b) => a + b, 0) / ys.length)}`;
+    };
+    const placesIn = (scene) => new Map([...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined).map((n) => [n.ticket, centreOf(n)]));
     const before = placesIn(rephaseScene(m, ctx));
     const after = placesIn(rephaseScene(m, ctx, new Set([phase])));
     for (const id of members) assert.notEqual(after.get(id), before.get(id), `${id} did not move into ${phase}`);
