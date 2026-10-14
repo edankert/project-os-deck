@@ -256,6 +256,10 @@ function place(): void {
   const railBox = rail === null || document.body.classList.contains('pinned') ? null : rail.getBoundingClientRect();
   area.style.top = `${Math.round(top)}px`;
   area.style.left = `${railBox === null || railBox.width === 0 ? 0 : Math.round(railBox.right)}px`;
+  // Above the status line, which is where Deck says what it is doing.
+  const status = document.getElementById('status');
+  const statusTop = status === null ? window.innerHeight : status.getBoundingClientRect().top;
+  area.style.bottom = `${Math.max(0, Math.round(window.innerHeight - statusTop))}px`;
 }
 
 /** Draw the current screen again, from a model read afresh. */
