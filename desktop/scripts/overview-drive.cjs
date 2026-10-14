@@ -97,6 +97,14 @@ module.exports = async (d) => {
   // wheel too, and a flow's controls are drawn off.
   const served = d.openServedPage();
   await new Promise((resolve) => served.webContents.once('did-finish-load', resolve));
+  // The served page follows the Mac's view; its Deck name opens the overview, read only.
+  for (let i = 0; i < 60; i += 1) {
+    if (await d.js(served, 'window.__deckReady === true')) break;
+    await d.delay(250);
+  }
+  await d.delay(1500);
+  assert.equal(await d.js(served, 'document.body.dataset.overviewScreen || ""'), '', 'the served page follows the Mac rather than opening on the wheel');
+  await d.js(served, "document.getElementById('overview-toggle').click()");
   for (let i = 0; i < 60; i += 1) {
     if (await d.js(served, 'Boolean(window.__deckOverview && window.__deckOverview.current())')) break;
     await d.delay(250);

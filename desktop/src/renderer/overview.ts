@@ -106,6 +106,7 @@ export function initOverview(host: OverviewHostApi): void {
   area.append(stage, callout, listPanel, listToggle);
 
   stage.addEventListener('click', (event) => void onClick(event));
+  window.addEventListener('resize', () => place());
   stage.addEventListener('pointerover', (event) => onPoint(event));
   stage.addEventListener('pointermove', (event) => moveCallout(event));
   stage.addEventListener('pointerleave', () => hideCallout());
@@ -240,9 +241,21 @@ export async function showOverview(address: DeckAddress): Promise<void> {
   if (ticket !== drawing) return;
   paint(scene);
   current = { address, scene, definition };
+  place();
   area.hidden = false;
   document.body.dataset['overviewScreen'] = scene.screen;
   document.title = `Deck — ${scene.title}`;
+}
+
+/** Under the header and beside the rail, measured, because the layer is fixed to the window. */
+function place(): void {
+  if (area === null) return;
+  const bar = document.querySelector('.bar');
+  const rail = document.getElementById('rail');
+  const top = bar === null ? 0 : bar.getBoundingClientRect().bottom;
+  const railBox = rail === null || document.body.classList.contains('pinned') ? null : rail.getBoundingClientRect();
+  area.style.top = `${Math.round(top)}px`;
+  area.style.left = `${railBox === null || railBox.width === 0 ? 0 : Math.round(railBox.right)}px`;
 }
 
 /** Draw the current screen again, from a model read afresh. */

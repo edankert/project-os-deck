@@ -44,7 +44,7 @@ Start Deck with `npm start` in `desktop/` on a build that includes TASK-0126. Ha
 4. Click a sector, then press Escape. Click a shelf disc. Click the backlog tray. Click the core.
 5. With the keyboard only: Tab to a sector and press Enter; press Escape; press L and use the list to open a ticket.
 6. Press Copy address on the wheel and on a phase, then Open address with each.
-7. Press the Overview button in the header to leave the overview, and press it again to come back.
+7. Press the Deck name at the left of the header to leave the overview, and press it again to come back.
 8. Turn on reduced motion and move between the wheel and a phase.
 
 ## Expect

@@ -2323,7 +2323,7 @@ async function recordFocus(kit: Kit): Promise<void> {
         const yaw6 = await js<number>(`__t.yaw()`);
         record(
           inOrbit.noteId === dot.id && orbitState.pane && orbitState.cards === 0 && !orbitState.dot && orbitState.twice.length === 0 && orbitState.seatedDots.length === 0 && orbitSeats.length > 0 && orbitSeats.length === orbitAll.size && orbitSeats.every((s) => orbitAll.has(s.id)),
-          `in the orbit a click on the dot for ${dot.id} opens it as the focused document, and it is one object there too: no card (${orbitState.cards}) and no dot (${orbitState.dot}) for it, and its ${orbitAll.size} neighbours are ${orbitSeats.length} seated cards, none of them also a dot (${orbitState.seatedDots.length}) or drawn twice (${orbitState.twice.length})`,
+          `in the orbit a click on the dot for ${dot.id} opens it as the focused document, and it is one object there too: no card (${orbitState.cards}) and no dot (${orbitState.dot}) for it, and its ${orbitAll.size} neighbours are ${orbitSeats.length} seated cards, none of them also a dot (${orbitState.seatedDots.length}) or drawn twice (${orbitState.twice.length})${orbitSeats.some((s) => !orbitAll.has(s.id)) ? `; seated but not joined to it: ${orbitSeats.filter((s) => !orbitAll.has(s.id)).map((s) => s.id).join(', ')}` : ''}`,
         );
         await escape();
         await delay(600);

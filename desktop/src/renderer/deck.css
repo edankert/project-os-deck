@@ -1520,9 +1520,11 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
    so switching workspace from the rail shows the next workspace's wheel. The
    palette and the marks' look are in overview.css, generated from
    shared/overview-scene.ts; what is here is the layer around the picture. */
-.body { position: relative; }
+/* Fixed rather than absolute: giving .body a position moved what every Glass card and
+   pane is placed against, and the Glass smoke run caught it. overview.ts sets top and
+   left to sit under the header and beside the rail when the layer is shown. */
 .overview-area {
-  position: absolute; inset: 0 0 0 180px; z-index: 900;
+  position: fixed; top: 47px; left: 180px; right: 0; bottom: 0; z-index: 900;
   background: radial-gradient(ellipse at 50% 42%, #0c1a2b 0%, #060c16 60%, #02040a 100%);
   color: hsl(195 60% 88%);
   overflow: hidden;
@@ -1573,8 +1575,10 @@ body.pinned .overview-area { left: 0; }
 .ov:has(.ov-sector:hover) .ov-sector:not(:hover) { opacity: 0.45; }
 @keyframes ov-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
 @keyframes ov-drift { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(4deg) scale(1.02); } }
-.overview-toggle { font-weight: 600; }
-body[data-overview-screen]:not([data-overview-screen=""]) .overview-toggle { background: hsla(190, 90%, 55%, 0.18); }
+/* The Deck name, drawn exactly as the name was, and pressable. */
+button.brand.overview-toggle { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-weight: 600; letter-spacing: 0.04em; color: inherit; cursor: pointer; }
+button.brand.overview-toggle:hover, button.brand.overview-toggle:focus-visible { text-decoration: underline; text-underline-offset: 3px; outline: none; }
+body[data-overview-screen]:not([data-overview-screen=""]) .overview-toggle { color: hsl(190 90% 60%); }
 @media (prefers-reduced-motion: no-preference) {
   .ov .ov-scan { animation: ov-scan 60s linear infinite; transform-box: view-box; transform-origin: 50% 44%; }
 }

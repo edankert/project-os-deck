@@ -614,8 +614,10 @@ async function boot(): Promise<void> {
     const chosen = workspaceById(state.workspaceId) ?? workspaces[0] ?? null;
     if (chosen !== null) {
       await selectWorkspace(chosen.id);
-      // Deck opens on the wheel (PHASE-0005). A popped-out window keeps its panel.
-      if (!pinned) await openWheel();
+      // The desktop opens on the wheel (PHASE-0005). A popped-out window keeps its panel,
+      // and a served page follows the Mac's view, as it always has; the wheel is one
+      // press away there.
+      if (!pinned && host.isShell()) await openWheel();
     } else say('no workspace yet — add one from the rail');
   }
 
