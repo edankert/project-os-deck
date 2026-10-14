@@ -72,7 +72,7 @@ The resolved results were also compared with `tools/scripts/release-test.py` aga
 
 ## Where this stands
 
-The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan.
+The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan. `b5f65df` adds the independently requested numeric cases and deterministic scan regression.
 
 TASK-0141 repairs the merged S6 and S7 ratio texts on `lane/codex` and rejects bare counts disguised as names. TASK-0142 prevents the built-module scan from racing temporary overview fixtures. All 737 desktop tests pass without skips. Both FEAT-0026 and FEAT-0029 remain at review; Claude owns the feature review and merge, and Edwin owns acceptance. Nothing was pushed or merged.
 
@@ -95,7 +95,7 @@ Claude added one: the wheel's sectors are in id order, not in the order the phas
 
 ### Count integration review (TASK-0141 and TASK-0142)
 
-Two fresh-context independent-reviewer agents reviewed `40645b2..0eeddf7` on 2026-10-14. Both inherit the session model; this is a bounded review of these repairs and does not replace Claude's feature review. Their combined verdict is changes-requested:
+Two fresh-context independent-reviewer agents reviewed `40645b2..0eeddf7` on 2026-10-14. Both inherit the session model; this is a bounded review of these repairs and does not replace Claude's feature review. Their combined round-one verdict was changes-requested:
 
 | Claim | Verdict | Evidence |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ Two fresh-context independent-reviewer agents reviewed `40645b2..0eeddf7` on 202
 | The module scan includes application outputs and excludes temporary repositories. | holds | Both reviewers checked the scan boundary; reviewer A's forbidden-write sentinel in root preload.js failed the write-channel check. |
 | The scanner tests catch removal of its temporary-directory exclusion. | refuted | Reviewer A restored unrestricted recursion and all 26 write-channel tests passed. Reviewer B reproduced the gap on all three scan callers. |
 
-The follow-up expands numeric-name coverage to spaced suffixes and hexadecimal, octal and binary literals. A deterministic scan regression includes a temporary JavaScript fixture and requires the root preload and representative main, shared and web modules. Round two checks these two findings only. The full suite now passes 737 tests, with no failures or skips.
+The follow-up expands numeric-name coverage to spaced suffixes and hexadecimal, octal and binary literals. A deterministic scan regression includes a temporary JavaScript fixture and requires the root preload and representative main, shared and web modules. Round two approved both fixes in `b5f65df`. The reviewer reran all 15 scene-check tests and four targeted scan tests. Removing spaced-suffix handling failed on `1 k`; removing radix handling failed on `0x10`; unrestricted recursion failed on the temporary fixture. The full suite passes 737 tests, with no failures or skips. This approval covers only the integration repairs; Claude's full feature review remains pending.
 
 ## Model and route
 

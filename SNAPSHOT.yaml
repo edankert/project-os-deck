@@ -63,9 +63,9 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0026"
-  task: "TASK-0142"
+  task: ""
   issue: ""
-  note: "2026-10-14: TASK-0141 repairs S6 and S7 count marks after integration and rejects bare counts disguised as names. Work stays on lane/codex; both features remain at review."
+  note: "2026-10-14: TASK-0141 and TASK-0142 are done on lane/codex. S6 and S7 counts and numeric names pass the strict checks; the test scan excludes temporary fixtures. All 737 desktop tests pass with zero skips, and the bounded independent review is approved. Both features remain at review for Claude and Edwin."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -289,12 +289,12 @@ items:
   tasks:
     TASK-0142:
       file: docs/features/overview-model/plan/tasks/TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan.md
-      status: doing
+      status: done
       parent: FEAT-0026
       phase: "[[PHASE-0005]]"
     TASK-0141:
       file: docs/features/overview-model/plan/tasks/TASK-0141-Give-Every-Flow-Count-Its-Own-Mark.md
-      status: doing
+      status: done
       parent: FEAT-0026
       phase: "[[PHASE-0005]]"
     TASK-0125:
@@ -2445,7 +2445,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 133
-    tasks_done: 105
+    tasks_done: 107
     tests_total: 66
     tests_passing: 8
     tests_failing: 0

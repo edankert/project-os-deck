@@ -63,7 +63,7 @@ The image audit counted 25 copies, **1,604,537 bytes** in total, with a maximum 
 
 ## Where this stands
 
-The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan.
+The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan. `b5f65df` closes the two findings from the bounded independent review, which is now approved.
 
 2026-10-14: **FEAT-0029 remains at review on `lane/codex`.** TASK-0141 repairs the integration with FEAT-0026: each side of an S6 or S7 ratio now has its own text and mark. All 737 desktop tests pass without skips. The shared scenes, mappers, six fixtures and bounded image copies are in `602e9bb`. The image route and sidecar read allowlist are in `9ad200d`. The three registered renderer flows and main-process write verbs are in `a50ffcb`. The implementation tasks are complete; Claude reviews and merges, and Edwin runs the three acceptance walks. Nothing was pushed or merged by Codex.
 

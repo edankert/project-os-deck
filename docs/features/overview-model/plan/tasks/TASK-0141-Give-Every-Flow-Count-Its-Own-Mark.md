@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0141
 title: "Give every flow count its own mark"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -21,10 +21,10 @@ S6 and S7 must pass the stricter count rule after the two data-lane features wer
 
 ## Definition of Done
 
-- [ ] Each ratio count has its own text and matching mark; every recorded flow stays within 60 words at rest.
-- [ ] Bare numeric names fail the numbers rule, while names containing digits remain valid, with regression coverage.
-- [ ] All desktop tests pass without skips, and documentation validation passes.
-- [ ] Small local commits carry the requested co-author trailer; both features remain at review.
+- [x] Each ratio count has its own text and matching mark; every recorded flow stays within 60 words at rest.
+- [x] Bare numeric names fail the numbers rule, while names containing digits remain valid, with regression coverage.
+- [x] All desktop tests pass without skips, and documentation validation passes.
+- [x] Small local commits carry the requested co-author trailer; both features remain at review.
 
 ## Notes
 
@@ -37,3 +37,7 @@ Work is confined to lane/codex. Temporary files stay in this worktree. No window
 ## Evidence
 
 2026-10-14: `cd desktop && npm test` passes all 737 tests, with zero failures and zero skips. `bash tools/agents/check-docs-first.sh` and `bash tools/scripts/validate-docs.sh` pass. Temporary files and npm cache stay under `desktop/dist/tmp`; no window opens.
+
+## Review
+
+The two fresh-context reviewers confirmed the count diagrams and found numeric-name examples and a scan regression gap. Commit `b5f65df` fixes both findings. The bounded second review approved both on 2026-10-14: removing spaced-suffix or radix-literal handling fails the name test, and unrestricted directory recursion fails the new scan test. No feature acceptance verdict is recorded.

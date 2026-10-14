@@ -7,7 +7,7 @@ owner: system:codex
 created: 2026-10-14
 updated: 2026-10-14
 source: ["Edwin's 2026-10-14 integration-fix request"]
-commit: ""
+commit: "45a907c"
 pr: ""
 impacts: ["[[TST-0089]]", "[[TST-0100]]"]
 platforms: [app]
@@ -44,4 +44,4 @@ Deck has no surface-note registry, so these existing screen names identify the a
 
 ## Verification
 
-Verification is recorded in TASK-0141 and TASK-0142. The module scanner now excludes temporary fixture directories while retaining application outputs, including the root preload module. It changes no product behavior.
+`cd desktop && npm test` passes all 737 tests with zero failures and zero skips. `bash tools/agents/check-docs-first.sh` and `bash tools/scripts/validate-docs.sh` pass. Two independent reviewers checked the repairs; the bounded second round approved both follow-up fixes. Recorded flow scenes use at most 49 words at rest. The module scanner now excludes temporary fixture directories while retaining application outputs, including the root preload module. It changes no product behavior.

@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0142
 title: "Keep test fixtures out of the built module scan"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -21,8 +21,8 @@ The write-channel scan must inspect compiled application modules without racing 
 
 ## Definition of Done
 
-- [ ] Scan every application build module, including the root preload module, while excluding temporary fixture directories.
-- [ ] The full desktop suite passes with no skipped tests.
+- [x] Scan every application build module, including the root preload module, while excluding temporary fixture directories.
+- [x] The full desktop suite passes with no skipped tests.
 
 ## Notes
 
@@ -33,3 +33,7 @@ This known test-tooling defect is repaired in its own task and commit under the 
 ## Evidence
 
 2026-10-14: `cd desktop && npm test` passes all 737 tests, with zero failures and zero skips. `bash tools/agents/check-docs-first.sh` and `bash tools/scripts/validate-docs.sh` pass. Temporary files and npm cache stay under `desktop/dist/tmp`; no window opens.
+
+## Review
+
+The two fresh-context reviewers confirmed the count diagrams and found numeric-name examples and a scan regression gap. Commit `b5f65df` fixes both findings. The bounded second review approved both on 2026-10-14: removing spaced-suffix or radix-literal handling fails the name test, and unrestricted directory recursion fails the new scan test. No feature acceptance verdict is recorded.
