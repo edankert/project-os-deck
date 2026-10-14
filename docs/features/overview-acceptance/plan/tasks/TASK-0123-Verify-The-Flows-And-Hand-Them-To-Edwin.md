@@ -2,7 +2,7 @@
 type: '[[task]]'
 id: TASK-0123
 title: Verify the flows and hand them to Edwin
-status: backlog
+status: doing
 phase: '[[PHASE-0005-Overview]]'
 owner: system:codex
 created: '2026-10-14'

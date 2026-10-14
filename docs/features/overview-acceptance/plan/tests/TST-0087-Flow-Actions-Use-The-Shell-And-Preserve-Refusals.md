@@ -20,7 +20,7 @@ tasks:
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 artifacts: []
-adequacy: ''
+adequacy: "Tests execute the built renderer definitions, Host bridge and preload with a stub Electron import. Fake sidecars inspect request bodies and refusal text. They distinguish local steps from ledger results, each result word, stale reads, cancellation and served controls."
 mutation_score: ''
 reviewed_by: ''
 review_date: ''
@@ -51,7 +51,7 @@ A person’s flow controls use the shell write boundary and show the sidecar’s
 
 ## Evidence
 
-Not run yet. The executable check holds no verdict in its note status.
+2026-10-14: `node --test desktop/tests/overview-flow-writes.test.mjs` passed 15 tests, failed none and skipped none after the TypeScript build. The full desktop suite passed 718 tests. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

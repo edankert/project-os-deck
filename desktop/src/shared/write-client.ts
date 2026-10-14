@@ -75,6 +75,30 @@ export interface TickRequest {
   reason?: string;
 }
 
+export type FlowWriteVerb = 'decide' | 'mark-check' | 'acceptance-run';
+export type WriteVerb = 'transition' | 'tick' | FlowWriteVerb;
+
+function requirePerson(actor: string): void {
+  if (!/^user:\S+$/.test(actor)) throw new Error("Deck needs a person's name before recording a verdict");
+}
+
+/** The main process supplies identity; no window may nominate its witness. */
+export function flowRequestFrom(verb: FlowWriteVerb, request: Record<string, unknown>, actor: string): Record<string, unknown> {
+  requirePerson(actor);
+  const body: Record<string, unknown> = { id: String(request['id'] ?? '') };
+  if (typeof request['mtime'] === 'number' && Number.isFinite(request['mtime'])) body['mtime'] = request['mtime'];
+  if (verb === 'decide') return { ...body, reviewer: actor, accept: request['accept'] === true };
+  if (verb === 'mark-check') {
+    return { ...body, by: actor, method: 'manual', platform: String(request['platform'] ?? ''), verdict: String(request['verdict'] ?? ''), reason: String(request['reason'] ?? '') };
+  }
+  const count = (key: string): number => {
+    const n = request[key];
+    if (typeof n !== 'number' || !Number.isSafeInteger(n) || n < 0) throw new Error(`the acceptance run needs a nonnegative ${key} count`);
+    return n;
+  };
+  return { ...body, actor, passed: count('passed'), failed: count('failed'), skipped: count('skipped'), issues: Array.isArray(request['issues']) ? request['issues'].filter(x => typeof x === 'string') : [], complete: request['complete'] === true };
+}
+
 /**
  * The endpoints Deck knows how to post to.
  *
@@ -133,6 +157,7 @@ export function elsewhere(row: Pick<ActuatorRow, 'verb' | 'endpoint'>): string {
  * window cannot claim to be somebody else.
  */
 export function transitionRequestFrom(request: Record<string, unknown>, actor: string): TransitionRequest {
+  requirePerson(actor);
   const text = (key: string): Record<string, string> => {
     const value = request[key];
     return typeof value === 'string' && value !== '' ? { [key]: value } : {};
@@ -150,6 +175,7 @@ export function transitionRequestFrom(request: Record<string, unknown>, actor: s
 
 /** The same, for a criterion. See {@link transitionRequestFrom}. */
 export function tickRequestFrom(request: Record<string, unknown>, actor: string): TickRequest {
+  requirePerson(actor);
   const reason = request['reason'];
   return {
     id: String(request['id'] ?? ''),
@@ -220,6 +246,13 @@ export class SidecarWriteClient {
     if (request.mtime !== undefined) body['mtime'] = request.mtime;
     if (request.reason !== undefined && request.reason !== '') body['reason'] = request.reason;
     return this.post('/api/notes/tick', body);
+  }
+
+  /** These fixed endpoints have their own payloads and the sidecar's own guards. */
+  async flow(verb: FlowWriteVerb, request: Record<string, unknown>, actor: string): Promise<unknown> {
+    const endpoint = { decide: '/api/notes/decide', 'mark-check': '/api/notes/mark-check', 'acceptance-run': '/api/notes/acceptance-run' }[verb];
+    if (!endpoint) throw new Error('unknown flow write');
+    return this.post(endpoint, flowRequestFrom(verb, request, actor));
   }
 
   private async post(path: string, body: Record<string, unknown>): Promise<unknown> {

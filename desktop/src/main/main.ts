@@ -773,6 +773,11 @@ function registerIpc(): void {
     write(String(request?.workspaceId ?? ''), (client, actor) => client.tick(tickRequestFrom(request, actor))),
   );
 
+  for (const verb of ['decide', 'mark-check', 'acceptance-run'] as const) {
+    handle(`deck:write:${verb}`, async (_e, request: Record<string, unknown>) =>
+      write(String(request?.['workspaceId'] ?? ''), (client, actor) => client.flow(verb, request, actor)));
+  }
+
   handle('deck:clipboard:write', (_e, text: string) => {
     clipboard.writeText(String(text));
     return { ok: true };

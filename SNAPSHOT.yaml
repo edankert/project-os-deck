@@ -63,7 +63,7 @@ counters:
 focus:
   phase: PHASE-0005
   feature: FEAT-0029
-  task: TASK-0122
+  task: TASK-0123
   issue: ""
   note: "2026-10-14: Codex builds FEAT-0029, the design, release-test and feature acceptance flows, on lane/codex. TASK-0120 starts with pure scenes and recorded evidence. Claude coordinates the merge and reviews; Edwin alone gives acceptance verdicts. No windows or sibling repository writes are authorised."
 # Canonical state for tracked items (empty for a fresh template).
@@ -350,7 +350,7 @@ items:
     TASK-0122:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell.md
       title: Send a person’s flow actions through the shell
-      status: doing
+      status: done
       owner: system:codex
       phase: PHASE-0005
       parent: FEAT-0029
@@ -359,7 +359,7 @@ items:
     TASK-0123:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin.md
       title: Verify the flows and hand them to Edwin
-      status: backlog
+      status: doing
       owner: system:codex
       phase: PHASE-0005
       parent: FEAT-0029
@@ -2607,7 +2607,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 130
-    tasks_done: 102
+    tasks_done: 103
     tests_total: 66
     tests_passing: 8
     tests_failing: 0

@@ -46,6 +46,7 @@ import { joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 // The overview (PHASE-0005): a layer over the field, and the screens registered with it.
 import { hideOverview, initOverview, isOverviewAddress, isOverviewShown, overviewAddress, showOverview } from './overview.js';
 import './overview-pages.js';
+import './overview-flows.js';
 
 const host = new Host();
 const registry = new ViewRegistry();

@@ -87,6 +87,9 @@ const api = {
   write: {
     transition: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:transition', request),
     tick: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:tick', request),
+    decide: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:decide', request),
+    'mark-check': (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:mark-check', request),
+    'acceptance-run': (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:write:acceptance-run', request),
   },
 };
 
