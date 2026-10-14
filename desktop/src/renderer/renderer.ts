@@ -43,6 +43,9 @@ import { DEFAULT_SURFACE } from '../shared/store-state.js';
 import { surfaceKinds } from '../shared/vocabularies.js';
 import { cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
 import { joinedTo, sharedAmong } from '../shared/neighbourhood.js';
+// The overview (PHASE-0005): a layer over the field, and the screens registered with it.
+import { hideOverview, initOverview, isOverviewAddress, isOverviewShown, overviewAddress, showOverview } from './overview.js';
+import './overview-pages.js';
 
 const host = new Host();
 const registry = new ViewRegistry();
@@ -71,6 +74,7 @@ const el = {
   count: must('count'),
   hostMark: must('host-mark'),
   copyAddress: must('copy-address') as HTMLButtonElement,
+  overviewToggle: must('overview-toggle') as HTMLButtonElement,
   openAddress: must('open-address') as HTMLButtonElement,
   popOut: must('pop-out') as HTMLButtonElement,
   saveDesk: must('save-desk') as HTMLButtonElement,
@@ -581,6 +585,15 @@ async function boot(): Promise<void> {
 
   workspaces = await host.workspaces();
   renderRail();
+  initOverview({
+    workspaceId: () => host.state().workspaceId,
+    viewId: () => host.state().viewId,
+    canWrite: () => host.isShell(),
+    say,
+    leaveTo: async (raw) => {
+      await applyAddress(raw);
+    },
+  });
 
   const requested = new URLSearchParams(location.search).get('address');
   if (requested !== null) {
@@ -594,8 +607,11 @@ async function boot(): Promise<void> {
   } else {
     const state = host.state();
     const chosen = workspaceById(state.workspaceId) ?? workspaces[0] ?? null;
-    if (chosen !== null) await selectWorkspace(chosen.id);
-    else say('no workspace yet — add one from the rail');
+    if (chosen !== null) {
+      await selectWorkspace(chosen.id);
+      // Deck opens on the wheel (PHASE-0005). A popped-out window keeps its panel.
+      if (!pinned) await openWheel();
+    } else say('no workspace yet — add one from the rail');
   }
 
   host.onState((state) => {
@@ -699,6 +715,19 @@ async function selectWorkspace(id: string): Promise<void> {
   }
   if (view !== undefined) await selectView(view.id);
   await reopenFocusedNote();
+  // Switching workspace while the overview is shown shows the new workspace's wheel.
+  if (isOverviewShown()) await openWheel();
+}
+
+/** The wheel of the current workspace, on the current view's address. */
+async function openWheel(): Promise<void> {
+  const state = host.state();
+  if (state.workspaceId === null || state.viewId === null) return;
+  try {
+    await showOverview(addressFor(state.workspaceId, state.viewId, { page: 'wheel' }));
+  } catch (err) {
+    say(err instanceof Error ? err.message : String(err), true);
+  }
 }
 
 function renderSwitcher(): void {
@@ -2767,6 +2796,7 @@ function grabCard(card: CardModel, element: HTMLElement, event: PointerEvent): v
 }
 
 function currentAddress(): string | null {
+  if (isOverviewShown()) return overviewAddress();
   const state = host.state();
   if (state.workspaceId === null || state.viewId === null) return null;
   try {
@@ -2818,6 +2848,14 @@ async function applyAddress(raw: string): Promise<void> {
     say(`that address carries the ${address.panel} panel, which belongs to a popped-out window; opening the rest of it here`);
   }
   await selectWorkspace(workspace.id);
+  // A page or a flow the overview draws: the view underneath is selected, so
+  // leaving the overview returns to it, and the overview is drawn over it.
+  if (isOverviewAddress(address)) {
+    await selectView(address.viewId);
+    await showOverview(address);
+    return;
+  }
+  hideOverview();
   // After the workspace, which opens in Glass (ISS-0060), and before the
   // view, so the view is drawn once, on the surface the address names. No
   // surface in the address means Glass.
@@ -2928,6 +2966,15 @@ function askChoice<T extends string>(label: string, options: Array<{ value: T; l
 }
 
 function wireControls(): void {
+  el.overviewToggle.addEventListener('click', () => {
+    void (async () => {
+      if (isOverviewShown()) {
+        hideOverview();
+        applySurface();
+        drawDesk();
+      } else await openWheel();
+    })();
+  });
   el.copyAddress.addEventListener('click', () => {
     void (async () => {
       const address = currentAddress();

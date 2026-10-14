@@ -16,4 +16,10 @@ await mkdir(out, { recursive: true });
 for (const file of ['index.html', 'deck.css']) {
   await cp(path.join(src, file), path.join(out, file));
 }
-console.log(`copy-assets: index.html and deck.css -> ${path.relative(process.cwd(), out)}`);
+// The overview's palette and look are written once, in shared/overview-scene.ts,
+// for the renderer and for DES-0005's plates. The page's policy allows no inline
+// style, so the built module's stylesheet is written out as a file here.
+const { writeFile } = await import('node:fs/promises');
+const scene = await import(path.join(here, '..', 'dist', 'shared', 'overview-scene.js'));
+await writeFile(path.join(out, 'overview.css'), scene.OVERVIEW_CSS ?? scene.default.OVERVIEW_CSS);
+console.log(`copy-assets: index.html, deck.css and overview.css -> ${path.relative(process.cwd(), out)}`);

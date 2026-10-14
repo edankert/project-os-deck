@@ -1514,3 +1514,64 @@ body[data-surface="orbit"] .body > .navigator { display: none; }
 /* The one object in front fills a narrow field: the compass would lie over
    what is being read, and the bar already moves between the objects. */
 .field.narrow .compass, .field.narrow .desk-beyond { display: none; }
+
+/* ---- The overview (PHASE-0005): seven screens drawn as pictures. ----
+   The layer covers the navigator, the desk and the field, and leaves the rail,
+   so switching workspace from the rail shows the next workspace's wheel. The
+   palette and the marks' look are in overview.css, generated from
+   shared/overview-scene.ts; what is here is the layer around the picture. */
+.body { position: relative; }
+.overview-area {
+  position: absolute; inset: 0 0 0 180px; z-index: 30;
+  background: radial-gradient(ellipse at 50% 42%, #0c1a2b 0%, #060c16 60%, #02040a 100%);
+  color: hsl(195 60% 88%);
+  overflow: hidden;
+}
+body.pinned .overview-area { left: 0; }
+.overview-area[hidden] { display: none; }
+.ov-stage { position: absolute; inset: 0; }
+.ov-stage svg { width: 100%; height: 100%; display: block; }
+.ov-stage svg > rect:first-of-type { display: none; }
+.ov-callout {
+  position: absolute; max-width: 420px; padding: 8px 12px; pointer-events: none;
+  background: hsla(205, 60%, 12%, 0.92); border: 1px solid hsla(190, 90%, 65%, 0.55);
+  border-radius: 8px; box-shadow: 0 0 18px hsla(190, 90%, 55%, 0.25);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: hsl(195 60% 92%);
+}
+.ov-callout[hidden] { display: none; }
+.ov-list-toggle {
+  position: absolute; right: 14px; top: 12px; width: 34px; height: 34px; border-radius: 50%;
+  background: hsla(205, 60%, 30%, 0.25); border: 1px solid hsla(190, 90%, 65%, 0.5); color: hsl(195 60% 88%);
+  font-size: 16px; cursor: pointer;
+}
+.ov-list {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 380px; overflow: auto; padding: 56px 16px 16px;
+  background: hsla(210, 50%, 8%, 0.94); border-left: 1px solid hsla(190, 90%, 65%, 0.35);
+}
+.ov-list[hidden] { display: none; }
+.ov-list h2 { font-size: 14px; margin: 0 0 8px; }
+.ov-list h3 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(205 25% 62%); margin: 14px 0 4px; }
+.ov-list ul { list-style: none; margin: 0; padding: 0; }
+.ov-list button {
+  display: block; width: 100%; text-align: left; padding: 4px 6px; border: 0; border-left: 3px solid transparent;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.ov-list button:hover, .ov-list button:focus { background: hsla(190, 90%, 55%, 0.12); outline: none; }
+.ov-list button[data-state="closed"] { border-left-color: hsl(160 62% 46%); }
+.ov-list button[data-state="progress"] { border-left-color: hsl(205 92% 62%); }
+.ov-list button[data-state="failed"] { border-left-color: hsl(355 88% 62%); }
+.ov-list button[data-state="owed"] { border-left-color: hsl(275 78% 70%); }
+.ov-list button[data-state="open"] { border-left-color: hsl(38 96% 58%); }
+.ov-list button[data-state="dropped"] { border-left-color: hsl(220 12% 32%); }
+/* The Glass look moves: what needs a person breathes, the unplaced cloud drifts.
+   Neither runs for a person who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .ov .glow { animation: ov-breathe 3.2s ease-in-out infinite; }
+  .ov .ov-pulse { animation: ov-drift 7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .ov .ov-sector { transition: opacity 180ms ease; }
+}
+.ov:has(.ov-sector:hover) .ov-sector:not(:hover) { opacity: 0.45; }
+@keyframes ov-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+@keyframes ov-drift { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(4deg) scale(1.02); } }
+.overview-toggle { font-weight: 600; }
+body[data-overview]:not([data-overview=""]) .overview-toggle { background: hsla(190, 90%, 55%, 0.18); }

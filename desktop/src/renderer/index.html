@@ -15,10 +15,14 @@
     />
     <title>Deck</title>
     <link rel="stylesheet" href="./deck.css" />
+    <!-- Generated at build from shared/overview-scene.ts, so the app and DES-0005's plates draw one palette. -->
+    <link rel="stylesheet" href="./overview.css" />
   </head>
   <body>
     <header class="bar">
       <div class="brand">Deck</div>
+      <!-- The overview (PHASE-0005): the wheel of phases, and the screens behind it. -->
+      <button type="button" class="action overview-toggle" id="overview-toggle" title="The overview: every phase as a wheel">Overview</button>
       <nav class="switcher" id="switcher" role="tablist" aria-label="Views"></nav>
       <!-- Which surface draws the view. A toggle beside the views, never a view called Glass (TASK-0033). -->
       <div class="surface-toggle" id="surface-toggle" role="radiogroup" aria-label="Surface"></div>
@@ -67,6 +71,8 @@
         <div class="desk" id="desk" aria-live="polite"></div>
       </main>
 
+      <!-- The overview (PHASE-0005): seven screens drawn as pictures over the field. -->
+      <section class="overview-area" id="overview-area" aria-label="Overview" hidden></section>
       <!-- Glass: the field where depth carries priority (FEAT-0009). The containers
            are pointer-transparent and the cards are not (TASK-0031). -->
       <main class="field-area" id="field-area" hidden>
