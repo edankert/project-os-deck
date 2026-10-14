@@ -11,7 +11,7 @@ updated: 2026-10-14
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Edwin can look at all seven overview screens, drawn from Deck's and your-trainer's real tickets, and accept or decline the design before any of it is built."
 requirements: []
-tasks: []
+tasks: ["[[TASK-0130]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
