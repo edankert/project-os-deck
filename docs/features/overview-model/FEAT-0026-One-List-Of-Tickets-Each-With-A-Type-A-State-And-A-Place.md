@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-14
+review_verdict: changes-requested
+review_round: 1
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -72,6 +72,19 @@ Codex had wrapped the host tests of eight existing suites in a helper that skipp
 2026-10-14: the model, the cached route, the command, the real fixtures and the screen checks are implemented, and TASK-0115 to TASK-0118 are done. FEAT-0026 is at review: Claude reviews it, as the agent that did not build it, and Edwin's acceptance follows.
 
 The sandbox also refused git's lock file, so Codex could not commit. Claude committed the work on `lane/codex` on Codex's behalf, with Codex as co-author, and merged it into `main`.
+
+## Review, round one
+
+2026-10-14: two Claude reviewers, each in a clean context, reviewed the packet for commits `22b19e4..b60e245`. Claude reviewed it because Codex built it. Both confirmed the counts against DES-0004 ticket by ticket, and both asked for changes:
+
+1. Acceptance tests take their state from status alone, so none is ever owed again or failed. your-trainer's fixture holds 449 open acceptance tests and the shelf's violet mark never appears. The model must read the acceptance ledger.
+2. A label with several numbers passes when one of them has a mark; a zero-padded count such as "012 open" is read as a phase label; the address check does not test that the address names the screen it is on; text marked `role: 'id'` escapes both the word count and the number check; and any prose token shaped like an id is dropped from the word count.
+3. Two placement rules have no test that fails when they break: the parent rule's restriction to features (without it the builder crashes on your-trainer's history) and the member-list tie rule.
+4. The route test still skips when listening is refused, which the note says was reverted elsewhere.
+5. A lowercase local link with a heading is treated as cross-project and dropped.
+6. The fixtures were captured from working trees with uncommitted notes, so they cannot be rebuilt from `head`.
+
+Claude added one: the wheel's sectors are in id order, not in the order the phase notes declare (Deck's Parity is order 3 and Vault order 4).
 
 ## Model and route
 
