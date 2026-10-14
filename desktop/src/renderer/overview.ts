@@ -33,6 +33,12 @@ export interface ScreenInput {
   memory: Map<string, unknown>;
   /** Whether this window may ask for a write: false on the served host. */
   canWrite: boolean;
+  /** Ask the shell for a write; it goes through `write-client.ts` and the sidecar's guards (ADR-0003). */
+  write(verb: string, request: Record<string, unknown>): Promise<{ ok: boolean; error?: string }>;
+  /** Ask the person for a line of text (a reason); null when they decline. */
+  ask(label: string): Promise<string | null>;
+  /** Read through Deck's host from the workspace's sidecar, e.g. `/api/cockpit/release-test?platform=android`. */
+  read(sidecarPath: string): Promise<unknown>;
 }
 
 export interface ScreenDefinition {
@@ -46,6 +52,9 @@ export interface OverviewHostApi {
   viewId(): string | null;
   canWrite(): boolean;
   say(message: string, error?: boolean): void;
+  write(verb: string, request: Record<string, unknown>): Promise<{ ok: boolean; error?: string }>;
+  ask(label: string): Promise<string | null>;
+  read(workspaceId: string, sidecarPath: string): Promise<unknown>;
   /** Leave the overview for an ordinary address (no page, no flow). */
   leaveTo(address: string): Promise<void>;
 }
@@ -169,6 +178,20 @@ function memoryFor(workspaceId: string): Map<string, unknown> {
   return memory;
 }
 
+function inputFor(model: OverviewModel, address: DeckAddress): ScreenInput {
+  const host = api!;
+  return {
+    model,
+    address,
+    ctx: contextFor(address.workspaceId, address.viewId),
+    memory: memoryFor(address.workspaceId),
+    canWrite: host.canWrite(),
+    write: (verb, request) => host.write(verb, { workspaceId: address.workspaceId, ...request }),
+    ask: (label) => host.ask(label),
+    read: (sidecarPath) => host.read(address.workspaceId, sidecarPath),
+  };
+}
+
 /** Draw the screen an address names. Throws when nothing draws it. */
 export async function showOverview(address: DeckAddress): Promise<void> {
   if (api === null || area === null || stage === null) throw new Error('the overview layer is not ready');
@@ -176,13 +199,7 @@ export async function showOverview(address: DeckAddress): Promise<void> {
   if (definition === undefined) throw new Error(`nothing draws ${address.page ?? address.flow ?? 'that address'}`);
   const ticket = ++drawing;
   const model = await modelFor(address.workspaceId);
-  const input: ScreenInput = {
-    model,
-    address,
-    ctx: contextFor(address.workspaceId, address.viewId),
-    memory: memoryFor(address.workspaceId),
-    canWrite: api.canWrite(),
-  };
+  const input = inputFor(model, address);
   const scene = await definition.scene(input);
   // A slower draw that a newer one overtook is dropped, not painted over it.
   if (ticket !== drawing) return;
@@ -302,13 +319,7 @@ async function act(action: string): Promise<void> {
   const { definition, address } = current;
   if (definition.onAction === undefined) return;
   try {
-    const input: ScreenInput = {
-      model: await modelFor(address.workspaceId),
-      address,
-      ctx: contextFor(address.workspaceId, address.viewId),
-      memory: memoryFor(address.workspaceId),
-      canWrite: api.canWrite(),
-    };
+    const input = inputFor(await modelFor(address.workspaceId), address);
     const redraw = await definition.onAction(action, input);
     if (redraw) await showOverview(address);
   } catch (err) {

@@ -590,6 +590,10 @@ async function boot(): Promise<void> {
     viewId: () => host.state().viewId,
     canWrite: () => host.isShell(),
     say,
+    // The overview's flows write through the same bridge as every other verb (ADR-0003).
+    write: (verb, request) => host.write(verb as Parameters<Host['write']>[0], request),
+    ask: (label) => askText(label),
+    read: (workspaceId, sidecarPath) => host.read(workspaceId, sidecarPath),
     leaveTo: async (raw) => {
       await applyAddress(raw);
     },
