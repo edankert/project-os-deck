@@ -154,7 +154,7 @@ FEAT-0018's round-one independent review found that two of the fourteen checks [
 - A downward drag that begins on a painted tile pulls it forward, and the field's yaw does not move while it does.
 - No promoted card's content overflows the box it is drawn in.
 - Every promoted card's measured box holds the level its width earns.
-- Every promoted card is drawn no brighter than its tile was ever painted, so finished work stays dimmed when it becomes a card (added 2026-10-14, [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]).
+- Every promoted card is drawn no brighter than its tile was ever painted, so finished work stays dimmed when it becomes a card (added 2026-10-14, [[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]). **Not yet run:** the run of 2026-10-02 behind this note's `passing` came before this check, and the task closed without a run.
 
 **Round two found two more that could not fail — both of them checks added above, on the same day.** The drag check pressed `t.x + t.w / 2` with no field offset, where `__t.bands().tiles` reports a tile's centre in the field's own coordinates; it pressed a point that was neither the tile's centre nor near the tile. And the check that a downward drag does not turn the field was true by construction: `drag` interpolates in a straight line, so a purely vertical drag has no horizontal travel and could never turn the field whatever the code does. Both are corrected: the drag converts the way the click check does and reuses its "is anything in front of it" test, and the yaw check is replaced by a sideways drag from a tile, which can fail and is the real regression risk.
 

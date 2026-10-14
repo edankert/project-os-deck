@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0084
 aliases: ["TASK-0084"]
 title: "A promoted card is laid out at the size its apparent width earned rather than in the tile's box, so the detail it was promoted to show has room to be drawn"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
@@ -16,6 +16,8 @@ depends: []
 blocks: []
 related: ["[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]"]
 tests: ["[[TST-0055-Detail-Follows-Apparent-Size]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
+verification_waiver: "One smoke check in TST-0045, that a real promoted card is drawn no brighter than its tile, has never been run. Edwin chose on 2026-10-14 to close without it. The rule it checks is held by the node check in TST-0055, shown to fail against two breaks."
+waiver_expires: 2026-10-31
 ---
 
 # A promoted card is laid out at the size its promotion earned
@@ -45,7 +47,7 @@ Whichever form is chosen, the invariant to hold is that the detail `detailFor` a
 - [x] Lay a promoted card out at the box its detail needs rather than at the quiet band's.
 - [x] Add the box-fits-detail check to [[TST-0055-Detail-Follows-Apparent-Size]].
 - [x] Say in the smoke run that the promoted card's content fits, not only that it exists.
-- [ ] Draw a promoted card at the opacity its tile was painted at, from one rule both share, so it stays dimmed (added 2026-10-14).
+- [x] Draw a promoted card at the opacity its tile was painted at, from one rule both share, so it stays dimmed (added 2026-10-14). The smoke check for it has not been run; see below.
 
 ## Where this stands
 
@@ -68,3 +70,9 @@ Whichever form is chosen, the invariant to hold is that the detail `detailFor` a
 **The fix is one rule for both.** `bandOpacity(band, phi, layer)` in `desktop/src/shared/slots.ts` says how opaque a note in a band is drawn at a bearing. The canvas paints a tile with it and `place()` draws a promoted card with it, so the two cannot drift apart and a promoted card keeps its tile's brightness. A node check in TST-0055 asserts that a quiet note is dimmer than a front or mid note at every bearing, and a smoke check measures a real promoted card's opacity against a front card's.
 
 **2026-10-14, later: the rule is built and its node check is shown to fail.** The fix is in `f3556dd`. The detail suite ([[TST-0055-Detail-Follows-Apparent-Size]]) passes 16 of 16. Two breaks in `slots.ts` were each caught by the new check: the quiet band taking a front card's opacity, and the quiet band losing its back-layer dimming. The fourth step stays open until the smoke check that measures a real promoted card's opacity has run once as written and once against a break.
+
+**2026-10-14, closed: done, with the smoke check for the opacity rule never run.** Edwin chose to close the task without that run, after two attempts to run it in the box were cancelled. The check is written in `desktop/src/main/smoke-glass.ts` and listed in [[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]], marked there as not yet run. The frontmatter waiver says so and expires on 2026-10-31. What the rule rests on until then is the node check in [[TST-0055-Detail-Follows-Apparent-Size]], which two breaks in `slots.ts` were shown to fail. A break in `place()` itself, such as handing the quiet band a front card's opacity there, would pass every node check; only the smoke check would catch it.
+
+**Verification on `ffbd3fd`:** the detail suite passes 16 of 16, and `npm test` passes 646 of 646. Nothing under `desktop/` changed at close-out.
+
+**Risk scan:** no trigger applies. The rule adds no dependency, environment variable, path, long-running step or exposure.
