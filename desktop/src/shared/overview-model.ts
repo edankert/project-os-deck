@@ -10,13 +10,11 @@ import { CORE_KINDS, PHASE_KINDS, STATE_ORDER, emptyCounts, type Kind, type Stat
 export interface OverviewOptions {
   workspace: string;
   head?: string;
+  dirty?: boolean;
   generated?: string;
   /** Full Markdown or body only; called once per phase or ticket. */
   readBody: (relPath: string) => string;
-  /** Latest result on EACH applicable platform, if an authoritative reader supplies it.
-   * The index has no ledger revision. The host and CLI therefore use status,
-   * not a second ledger reducer that could silently lose an invalidation.
-   */
+  /** Resolved result on every ledger platform, including not-run and withdrawals. */
   acceptanceResults?: Readonly<Record<string, readonly string[]>>;
   /** Without CI evidence, active/passing are status approximations, not a CI verdict. */
   ciGreen?: boolean;
@@ -42,10 +40,10 @@ function stateFor(record: NoteRecord, kind: Kind, options: OverviewOptions): Sta
   const status = record.status ?? '';
   if (DROPPED[kind].includes(status)) return 'dropped';
   if (kind === 'test' && record.frontmatter['level'] === 'acceptance') {
-    const results = options.acceptanceResults?.[record.id] ?? [status];
-    if (results.some((r) => ['failed', 'failing'].includes(r))) return 'failed';
+    const results = options.acceptanceResults?.[record.id] ?? [];
+    if (results.some((r) => ['fail', 'failed', 'failing'].includes(r))) return 'failed';
     if (results.some((r) => ['invalidated', 'withdrawn', 'owed', 'owed-again'].includes(r))) return 'owed';
-    if (results.length > 0 && results.every((r) => ['passed', 'passing', 'excused'].includes(r))) return 'closed';
+    if (results.length > 0 && results.every((r) => ['pass', 'passed', 'passing', 'excused', 'na'].includes(r))) return 'closed';
     return 'open';
   }
   if (kind === 'test' && status === 'failing') return 'failed';
@@ -129,7 +127,7 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
     });
   }
   const model: OverviewModel = {
-    workspace: options.workspace, head: options.head ?? '', generated: options.generated ?? '',
+    workspace: options.workspace, head: options.head ?? '', ...(options.dirty === undefined ? {} : { dirty: options.dirty }), generated: options.generated ?? '',
     phases: [], shelf: [], backlog: [], core: { tickets: [], counts: emptyCounts() }, tickets: Object.create(null) as Record<string, Ticket>,
   };
   const ticketNotes = new Map<string, NoteRecord>();

@@ -30,14 +30,14 @@ for (const [type, statuses] of rows) test(`state table: ${type}`, () => {
   assert.equal(run([note('TICKET-001', type, 'unknown')]).tickets['TICKET-001'].state, 'open');
 });
 
-test('acceptance uses supplied platform results, otherwise status, and never calls active a pass', () => {
+test('acceptance uses platform results and never treats a note status as a verdict', () => {
   const check = note('TST-0001', 'test', 'active', { level: 'acceptance' });
   for (const [results, expected] of [
-    [[], 'open'], [['passed', 'excused'], 'closed'], [['passed', 'not-run'], 'open'],
+    [[], 'open'], [['pass', 'na'], 'closed'], [['pass', 'partial'], 'open'], [['pass', 'fail'], 'failed'], [['passed', 'excused'], 'closed'], [['passed', 'not-run'], 'open'],
     [['passed', 'withdrawn'], 'owed'], [['invalidated', 'failed'], 'failed'], [['passed', 'failed'], 'failed'],
   ]) assert.equal(run([check], { acceptanceResults: { 'TST-0001': results } }).tickets['TST-0001'].state, expected);
   assert.equal(run([check]).tickets['TST-0001'].state, 'open');
-  for (const [status, expected] of [['passing', 'closed'], ['failing', 'failed'], ['withdrawn', 'owed'], ['retired', 'dropped']]) {
+  for (const [status, expected] of [['passing', 'open'], ['failing', 'open'], ['withdrawn', 'open'], ['retired', 'dropped']]) {
     assert.equal(run([{ ...check, status }]).tickets['TST-0001'].state, expected);
   }
   assert.equal(run([{ ...check, status: 'retired' }], { acceptanceResults: { 'TST-0001': ['failed'] } }).tickets['TST-0001'].state, 'dropped');
