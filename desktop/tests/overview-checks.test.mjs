@@ -11,7 +11,7 @@ function good() {
     nodes: [{ kind: 'group', children: [
       { kind: 'mark', tag: 'circle', attrs: { r: 4 }, ticket: 'FEAT-0001', markId: 'features', count: 1, action: 'open' },
       text('1 feature', { role: 'number', markRef: 'features' }), text('FEAT-0001', { role: 'id' }),
-      text('Phase 2'), text('003 Vault'), text('Title appears on focus '.repeat(100), { rest: false }),
+      text('Phase 2'), text('003', { role: 'id' }), text('Vault', { role: 'name' }), text('Title appears on focus '.repeat(100), { rest: false }),
     ] }], list: [{ id: 'FEAT-0001', label: 'First feature', group: 'Features', action: 'open' }] };
 }
 const verdict = (scene, rule, options) => checkScene(scene, options).find((r) => r.rule === rule);
@@ -29,7 +29,7 @@ test('a text-heavy scene fails, while 60 words and id text do not exceed the bud
   assert.match(verdict(scene, 'words').detail, /61 words/);
   scene.nodes = [text('word '.repeat(60)), text('FEAT-0001 TASK-0002 (TST-0003)')];
   assert.equal(verdict(scene, 'words').ok, true);
-  scene.nodes.push(text('word '.repeat(100), { role: 'id' }));
+  scene.nodes.push(text('PHASE-0002 002', { role: 'id' }));
   assert.equal(verdict(scene, 'words').ok, true);
   assert.equal(verdict(scene, 'words', { maxWords: 59 }).ok, false);
 });
@@ -66,8 +66,8 @@ test('number roles require marks even off rest; missing and invalid count values
 
 test('ticket ids, phase numbers, dates and versions are not counts, and hover prose is ignored', () => {
   const scene = good();
-  for (const label of ['TASK-0115', 'PHASE-0002', 'Phase 21', '002 Glass', '2026-10-14', '12:30', 'v2.3.0']) scene.nodes.push(text(label));
-  scene.nodes.push(text('21', { role: 'id' }), text('500 tickets in a callout', { rest: false }));
+  for (const label of ['TASK-0115', 'PHASE-0002', 'Phase 21', '2026-10-14', '12:30', 'v2.3.0']) scene.nodes.push(text(label));
+  scene.nodes.push(text('021', { role: 'id' }), text('500 tickets in a callout', { rest: false }));
   assert.equal(verdict(scene, 'numbers').ok, true);
   scene.nodes.push(text('Phase 2 has 12 tickets'));
   assert.equal(verdict(scene, 'numbers').ok, false, 'a phase label does not exempt its count');
@@ -80,6 +80,7 @@ test('addresses cover all seven screens and dotted test steps, and must round-tr
     { flow: 'design', note: 'DES-0005' }, { flow: 'test-run', step: 'android' }, { flow: 'test-run', step: 'android.3' },
     { flow: 'accept', note: 'FEAT-0024' },
   ]) {
+    scene.screen = parts.flow ?? parts.page;
     scene.address = formatAddress(addressFor('aaaa1111', 'features', parts));
     assert.equal(verdict(scene, 'address').ok, true, scene.address);
   }
@@ -127,4 +128,59 @@ test('a name counts as words, and its digits are never read as a count', () => {
   assert.match(results.words.detail, /^3 words/);
   scene.nodes[0].role = 'label';
   assert.equal(Object.fromEntries(check(scene).map((r) => [r.rule, r])).numbers.ok, false, 'the same digits in a label are a count');
+});
+
+
+test('each count needs its own text and mark, even equal counts and ratios', () => {
+  for (const value of ['1 closed, 2 open', '1 closed, 1 open', '1/2', '1/1']) {
+    const scene = good();
+    scene.nodes.push(text(value, { markRef: 'features' }));
+    assert.equal(verdict(scene, 'numbers').ok, false, value);
+  }
+  const scene = good();
+  scene.nodes.push(text('1 closed', { markRef: 'features' }),
+    { kind: 'mark', tag: 'circle', attrs: {}, markId: 'open', count: 2 },
+    text('2 open', { markRef: 'open' }));
+  assert.equal(verdict(scene, 'numbers').ok, true);
+});
+
+test('a zero-padded count is still a count in a label', () => {
+  const scene = good(); scene.nodes.push(text('012 open'));
+  assert.equal(verdict(scene, 'numbers').ok, false);
+});
+
+test('an address must name the screen, not only round-trip', () => {
+  const screens = ['wheel', 'phase', 'ticket', 'rephase', 'design', 'test-run', 'accept'];
+  for (const screen of screens) {
+    const scene = good(); scene.screen = screen;
+    for (const destination of screens) {
+      const parts = ['design', 'test-run', 'accept'].includes(destination) ? { flow: destination } : { page: destination };
+      scene.address = formatAddress(addressFor('aaaa1111', 'features', parts));
+      assert.equal(verdict(scene, 'address').ok, screen === destination, `${screen} / ${destination}`);
+    }
+    scene.address = 'deck://aaaa1111/features';
+    assert.equal(verdict(scene, 'address').ok, false, screen);
+  }
+  const scene = good();
+  scene.address = 'deck://aaaa1111/features?page=wheel&flow=design';
+  assert.equal(verdict(scene, 'address').ok, false, 'an overlaid flow is not the wheel');
+});
+
+test('id text may contain only identifiers or bare padded phase numbers', () => {
+  for (const value of ['12 tickets', '012 open', 'FEAT-0001 prose', 'word '.repeat(100), 'ABC-123']) {
+    const scene = good(); scene.nodes.push(text(value, { role: 'id' }));
+    assert.equal(verdict(scene, 'numbers').ok, false, value);
+  }
+  const scene = good(); scene.nodes.push(text('word '.repeat(61), { role: 'id' }));
+  assert.equal(verdict(scene, 'words').ok, false, 'mislabelled prose cannot evade the word budget');
+  scene.nodes = [text('FEAT-0001 PHASE-0002 002 999 ACCEPTANCE-RUN-2.2.0', { role: 'id' })];
+  assert.equal(verdict(scene, 'numbers').ok, true);
+});
+
+test('word count excludes only complete ticket or phase id tokens', () => {
+  const scene = good();
+  scene.nodes = [text('REQ-1 FEAT-2 TASK-3 TST-4 ISS-5 ADR-6 DES-7 RISK-8 PHASE-9 CHG-10 REL-11 (TST-12),')];
+  assert.match(verdict(scene, 'words').detail, /^0 words/);
+  scene.nodes.push(text('COVID-19 ABC-123 FEAT-1st PHASE-2-more CHG-20261014-Title'));
+  assert.match(verdict(scene, 'words').detail, /^5 words/);
 });

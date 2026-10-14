@@ -1,16 +1,10 @@
-/** PHASE-0005, The look: rules 1, 2 and 5, with no renderer or window.
- *
- * Count rule: role=number ALWAYS needs a mark, even on hover. Otherwise only
- * rest text is inspected. Identifiers (role=id or ticket-id tokens), explicit
- * "Phase 2" labels, padded phase labels ("002 Glass"), ISO dates, clock times
- * and dotted version labels are not counts. Any remaining digit run is a
- * count, including a fraction or percentage. Its markRef must resolve uniquely
- * to a mark with a finite, nonnegative integer count matching a displayed
- * value. A ratio can name its numerator or denominator. This verifies the
- * declared count, not whether SVG geometry actually draws that many things.
- * Use role=id for a bare phase number; never use it to hide a count. A
- * role=name text (a phase's or a ticket's title) counts as words but is never
- * read as a count.
+/** PHASE-0005's word, count, address and list-twin checks, without a window.
+ * Each count needs one text and one markRef; split ratios and multi-count labels.
+ * Number roles need a mark even on hover. Names are words, never counts.
+ * Other rest text excludes real ids, explicit "Phase 2", dates, times and versions
+ * from inferred counts. Id roles must contain only identifiers or padded phase
+ * numbers (at least three digits, or a leading zero). They cannot hide prose.
+ * This checks declared integer counts, not the geometry of the mark.
  */
 import { formatAddress, parseAddress } from './address.js';
 import { walkScene, type Scene, type TextNode } from './overview-scene.js';
@@ -21,16 +15,19 @@ export interface SceneCheckOptions { maxWords?: number }
 // Your Trainer also has four retired, typed test notes predating TST ids.
 // They remain tickets in the index; phase ids and aggregate mark ids do not.
 const TICKET_ID = /^(?:(?:REQ|FEAT|TASK|TST|ISS|ADR|DES|RISK)-\d+|ACCEPTANCE-(?:CHECKLIST|RUN|TESTS)-[\w.-]+)$/;
-const ID_TOKEN = /^[A-Z]+-\d+/;
+const ID_TOKEN = /^(?:REQ|FEAT|TASK|TST|ISS|ADR|DES|RISK|PHASE|CHG|REL)-\d+$/;
+const tokens = (value: string): string[] => value.trim().split(/\s+/).filter(Boolean);
+const unpunctuated = (token: string): string => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+const validIdText = (text: TextNode): boolean => tokens(text.text).length > 0 && tokens(text.text).every((token) =>
+  ID_TOKEN.test(token) || TICKET_ID.test(token) || /^(?:0\d+|\d{3,})$/.test(token));
 
 function countValues(text: TextNode): number[] {
   let value = text.text;
   if (text.role !== 'number') {
     // A name's digits belong to the name: the 800 in "Schwinn 800IC" counts nothing.
     if (text.role === 'id' || text.role === 'name' || !text.rest) return [];
-    value = value.replace(/\b[A-Z]+-\d+(?:-[\w-]+)?\b/g, '')
+    value = tokens(value).filter((token) => !ID_TOKEN.test(unpunctuated(token))).join(' ')
       .replace(/\bphase\s+\d+\b/gi, '')
-      .replace(/^0\d{2,}(?=\s+[A-Za-z]|$)/, '')
       .replace(/\b\d{4}-\d{2}-\d{2}(?:T[\d:.]+Z?)?\b/g, '')
       .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, '')
       .replace(/\bv?\d+\.\d+\.\d+(?:-[\w.-]+)?\b/gi, '');
@@ -42,22 +39,30 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
   const nodes = [...walkScene(scene.nodes)];
   const texts = nodes.filter((n) => n.kind === 'text');
   const marks = nodes.filter((n) => n.kind === 'mark');
-  const words = texts.filter((n) => n.rest && n.role !== 'id').flatMap((n) => n.text.trim().split(/\s+/))
-    .filter((token) => token !== '' && !ID_TOKEN.test(token.replace(/^[^\p{L}\p{N}]+/u, ''))).length;
+  const words = texts.filter((n) => n.rest && !(n.role === 'id' && validIdText(n))).flatMap((n) => tokens(n.text))
+    .filter((token) => !ID_TOKEN.test(unpunctuated(token))).length;
   const limit = options.maxWords ?? 60;
   const numberErrors: string[] = [];
   for (const text of texts) {
+    if (text.role === 'id' && !validIdText(text)) numberErrors.push(`"${text.text}" is not id text`);
     const values = countValues(text);
     if (text.role !== 'number' && values.length === 0) continue;
     const matching = text.markRef === undefined ? [] : marks.filter((m) => m.markId === text.markRef);
     const mark = matching[0];
-    if (matching.length !== 1 || mark?.count === undefined || !Number.isSafeInteger(mark.count) || mark.count < 0 || !values.includes(mark.count)) {
+    if (values.length !== 1 || matching.length !== 1 || mark?.count === undefined || !Number.isSafeInteger(mark.count) || mark.count < 0 || !values.includes(mark.count)) {
       numberErrors.push(`"${text.text}" needs one mark with the displayed count (${text.markRef ?? 'no markRef'})`);
     }
   }
   let addressError = '';
   try {
-    if (formatAddress(parseAddress(scene.address)) !== scene.address) addressError = 'Address does not round-trip exactly';
+    const address = parseAddress(scene.address);
+    if (formatAddress(address) !== scene.address) addressError = 'Address does not round-trip exactly';
+    else {
+      const flow = ['design', 'test-run', 'accept'].includes(scene.screen);
+      if (flow ? address.flow !== scene.screen : address.page !== scene.screen || address.flow !== null) {
+        addressError = `Address does not name the ${scene.screen} screen`;
+      }
+    }
   } catch (error) { addressError = error instanceof Error ? error.message : String(error); }
   const drawn = new Set(marks.flatMap((m) => m.ticket === undefined ? [] : [m.ticket]));
   const listed = new Set(scene.list.filter((r) => TICKET_ID.test(r.id)).map((r) => r.id));
