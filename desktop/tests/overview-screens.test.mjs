@@ -46,11 +46,12 @@ function holdsTheLook(scene) {
       continue;
     }
     if (node.role === 'id') continue;
+    // A name's digits are part of the name; it still counts as words.
     words.push(...node.text.split(/\s+/).filter((w) => w !== '' && !TICKET_ID.test(w)));
   }
   assert.ok(words.length <= 60, `${scene.screen}: ${words.length} words at rest: ${words.join(' ')}`);
   const marked = new Set(drawn(scene).keys());
-  const listed = new Set(scene.list.map((r) => r.id).filter((id) => TICKET_ID.test(id)));
+  const listed = new Set(scene.list.map((r) => r.id).filter((id) => TICKET_ID.test(id) && !id.startsWith('PHASE-')));
   assert.deepEqual([...marked].filter((id) => !listed.has(id)), [], `${scene.screen}: drawn but not in the list twin`);
   assert.deepEqual([...listed].filter((id) => !marked.has(id)), [], `${scene.screen}: in the list twin but not drawn`);
   assert.ok(scene.address.startsWith('deck://abcd1234/features?'), scene.address);
@@ -65,8 +66,10 @@ for (const name of WORKSPACES) {
     const scene = wheelScene(m, ctx);
     const counts = drawn(scene);
     for (const id of Object.keys(m.tickets)) assert.equal(counts.get(id), 1, `${id} drawn ${counts.get(id) ?? 0} times`);
-    for (const p of [...m.phases, ...m.shelf, ...m.backlog]) assert.equal(counts.get(p.id), 1, `${p.id} drawn ${counts.get(p.id) ?? 0} times`);
-    assert.equal(counts.size, Object.keys(m.tickets).length + m.phases.length + m.shelf.length + m.backlog.length);
+    assert.equal(counts.size, Object.keys(m.tickets).length);
+    // Every phase is drawn once too, by the mark that carries its id.
+    const phaseMarks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && String(n.markId ?? '').startsWith('phase-'));
+    assert.deepEqual(phaseMarks.map((n) => n.markId).sort(), [...m.phases, ...m.shelf, ...m.backlog].map((p) => `phase-${p.id}`).sort());
     holdsTheLook(scene);
     assert.equal(scene.address, 'deck://abcd1234/features?page=wheel');
   });

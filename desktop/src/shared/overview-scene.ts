@@ -54,8 +54,12 @@ export interface TextNode {
   y: number;
   text: string;
   rest: boolean;
-  /** `id` text is not counted as words; a `number` must name its mark. */
-  role: 'id' | 'label' | 'number' | 'control';
+  /**
+   * `id` text is not counted as words; a `number` must name its mark. A `name`
+   * (a phase's or a ticket's title) is counted as words but never read as a
+   * count: the 800 in "Schwinn 800IC" counts nothing.
+   */
+  role: 'id' | 'label' | 'name' | 'number' | 'control';
   /** For a `number`: the `markId` of the mark drawing the same count. */
   markRef?: string;
   size?: number;

@@ -32,7 +32,7 @@ export function backControl(ctx: ScreenContext, parts: AddressParts, label: stri
 
 /** The screen's heading: an id in small type above a name. */
 export function heading(id: string, name: string, x = 100, y = 46): SceneNode[] {
-  const out: SceneNode[] = [{ kind: 'text', x, y: y + 24, text: name, rest: true, role: 'label', size: 22, cls: 'ov-title' }];
+  const out: SceneNode[] = [{ kind: 'text', x, y: y + 24, text: name, rest: true, role: 'name', size: 22, cls: 'ov-title' }];
   if (id !== '') out.unshift({ kind: 'text', x, y, text: id, rest: true, role: 'id', size: 13, cls: 'ov-dim' });
   return out;
 }

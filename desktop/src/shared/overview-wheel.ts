@@ -167,7 +167,7 @@ function sectorNodes(model: OverviewModel, phase: Phase, a0: number, a1: number,
   const anchor = Math.abs(Math.sin(mid)) < 0.25 ? 'middle' : Math.sin(mid) > 0 ? 'start' : 'end';
   const labels: TextNode[] = [
     { kind: 'text', x: lx, y: ly - 4, text: phase.number, rest: true, role: 'id', size: 13, anchor, cls: 'ov-dim' },
-    { kind: 'text', x: lx, y: ly + 13, text: shortName(phase.name), rest: true, role: 'label', size: 15, anchor, cls: 'ov-title' },
+    { kind: 'text', x: lx, y: ly + 13, text: shortName(phase.name), rest: true, role: 'name', size: 15, anchor, cls: 'ov-title' },
   ];
   nodes.push({
     kind: 'group',
@@ -181,7 +181,7 @@ function sectorNodes(model: OverviewModel, phase: Phase, a0: number, a1: number,
         tag: 'path',
         attrs: { d: annularSector(cx, cy, WHEEL.ringInner - 6, WHEEL.ringOuter + 30, a0, a1) },
         cls: 'ov-hit',
-        ticket: phase.id,
+        markId: `phase-${phase.id}`,
         label: `${phaseLabel(phase)} · ${phase.status}`,
       },
       ...children,
@@ -219,7 +219,7 @@ function disc(model: OverviewModel, phase: Phase, x: number, y: number, size: nu
   const r1 = Math.min(26, size * 0.38);
   const r0 = r1 * 0.5;
   const children: SceneNode[] = [
-    { kind: 'mark', tag: 'circle', attrs: { cx: x, cy: y, r: r1 + 4 }, cls: 'ov-glass', ticket: phase.id, label: phaseLabel(phase) },
+    { kind: 'mark', tag: 'circle', attrs: { cx: x, cy: y, r: r1 + 4 }, cls: 'ov-glass', markId: `phase-${phase.id}`, label: phaseLabel(phase) },
   ];
   const ids = phase.tickets;
   const width = ids.length > 0 ? TAU / ids.length : 0;
@@ -270,7 +270,7 @@ function tray(model: OverviewModel, phases: Phase[], x: number, y: number, w: nu
     while (pitch > 3 && Math.floor((w - 2 * pad) / pitch) * Math.floor((h - 2 * pad) / pitch) < cells) pitch -= 1;
     const cols = Math.max(1, Math.floor((w - 2 * pad) / pitch));
     const children: SceneNode[] = [
-      { kind: 'mark', tag: 'rect', attrs: { x, y: top, width: w, height: h, rx: 10 }, cls: 'ov-glass', ticket: phase.id, label: phaseLabel(phase) },
+      { kind: 'mark', tag: 'rect', attrs: { x, y: top, width: w, height: h, rx: 10 }, cls: 'ov-glass', markId: `phase-${phase.id}`, label: phaseLabel(phase) },
     ];
     ids.forEach((id, i) => {
       const t = model.tickets[id];
@@ -303,7 +303,7 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext): Scene {
   const usable = TAU - WHEEL.topGap - Math.max(0, n - 1) * WHEEL.sectorGap;
   const sector = n > 0 ? usable / n : 0;
 
-  nodes.push({ kind: 'text', x: 40, y: 56, text: model.workspace, rest: true, role: 'label', size: 22, cls: 'ov-title' });
+  nodes.push({ kind: 'text', x: 40, y: 56, text: model.workspace, rest: true, role: 'name', size: 22, cls: 'ov-title' });
   nodes.push(coreNodes(model, ctx));
 
   model.phases.forEach((phase, i) => {

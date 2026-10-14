@@ -56,7 +56,7 @@ export function rephaseScene(model: OverviewModel, ctx: ScreenContext, accepted:
       target: ctx.address({ page: 'phase', note: p.id }),
       label: `${phaseLabel(p)} · ${p.status}`,
       children: [
-        { kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, ringR, ringR + 26, a0, a1) }, cls: finished ? 'ov-track ov-faint' : 'ov-track', ticket: p.id, label: phaseLabel(p) },
+        { kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, ringR, ringR + 26, a0, a1) }, cls: finished ? 'ov-track ov-faint' : 'ov-track', markId: `phase-${p.id}`, label: phaseLabel(p) },
         { kind: 'text', ...labelAt(cx, cy, ringR + 13, (a0 + a1) / 2, true), text: p.number, rest: true, role: 'id', size: 10, cls: 'ov-dim' },
       ],
     });

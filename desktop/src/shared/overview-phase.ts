@@ -196,7 +196,7 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
 
   const list: ListRow[] = [back.row, { id: phase.id, label: `${phaseLabel(phase)} — ${closed} of ${live} closed, ${phase.status}`, group: 'This phase' }, ...exit.rows, ...f.rows];
   // The phase's own id is drawn by the lamp's neighbour: a mark carrying it keeps the twin exact.
-  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: 86, cy: 140, r: 12 }, cls: 'ov-hit', ticket: phase.id, label: phaseLabel(phase) });
+  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: 86, cy: 140, r: 12 }, cls: 'ov-hit', markId: `phase-${phase.id}`, label: phaseLabel(phase) });
   return {
     screen: 'phase',
     address: ctx.address({ page: 'phase', note: phase.id }),
