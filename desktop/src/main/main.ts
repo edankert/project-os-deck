@@ -42,6 +42,7 @@ import { WorkspaceBook } from './workspaces.js';
 import { PanelBook, WindowBook } from './window-book.js';
 import { type DisplayInfo, type SavedBounds, boundsKey, placeWindow } from './window-placement.js';
 import { NoteIndex, docsRootFor, pathPrefixFor, walkNotes } from './note-index.js';
+import { OverviewService } from './overview-service.js';
 import {
   DESIGN_VERDICT_ENDPOINT,
   SidecarWriteClient,
@@ -124,6 +125,7 @@ function closeIndexes(): void {
 
 /** The orbit's graph and its kept layout, from Deck's own index (TASK-0001, TASK-0002). */
 const graphs = new GraphService(app.getPath('userData'));
+const overviews = new OverviewService();
 
 const host = new DeckHost({
   webRoot: WEB_ROOT,
@@ -134,6 +136,11 @@ const host = new DeckHost({
   onSidecarUnreachable: (id) => sidecars.forget(id),
   isSidecarStarting: (id) => sidecars.isStarting(id),
   indexFor: (id) => indexes.get(id)?.snapshot() ?? null,
+  overviewFor: (id) => {
+    const workspace = workspaces.get(id);
+    const snapshot = indexes.get(id)?.snapshot();
+    return workspace && snapshot ? overviews.read(snapshot, workspace) : null;
+  },
   // A tablet follows the Mac's desk by READING it (TASK-0057). Nothing a
   // served page sends can reach the store: this host answers 405 to every
   // method that is not a read, and the page has no bridge.
@@ -513,6 +520,7 @@ function registerIpc(): void {
     sidecars.stopOne(id);
     indexes.get(id)?.close();
     indexes.delete(id);
+    overviews.forget(id);
     return { ok: true };
   });
 

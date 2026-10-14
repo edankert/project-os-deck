@@ -2384,9 +2384,9 @@ metrics:
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 121
-    tasks_done: 96
-    tests_total: 58
+    tasks_total: 126
+    tasks_done: 100
+    tests_total: 63
     tests_passing: 8
     tests_failing: 0
     issues_open: 3

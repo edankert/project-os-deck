@@ -57,17 +57,15 @@ test('surface round-trips, and refuses a surface nothing draws', () => {
   assert.match(refused.reason, /hologram/, 'and the value it could not read');
 });
 
-test('page and flow are empty today, and say so rather than pretending', () => {
-  // Deck draws no page and runs no flow. An empty vocabulary is the guarantee
-  // working, not a gap: an address cannot name what Deck cannot draw.
-  assert.deepEqual(pageKinds.ids(), []);
-  assert.deepEqual(flowKinds.ids(), []);
+test('overview pages and flows are registered, while unknown values still fail', () => {
+  assert.deepEqual(pageKinds.ids(), ['wheel', 'phase', 'ticket', 'rephase']);
+  assert.deepEqual(flowKinds.ids(), ['design', 'test-run', 'accept']);
   const page = tryParseAddress(`deck://${WORKSPACE}/issues?page=release`);
   assert.equal(page.ok, false);
-  assert.match(page.reason, /no page is registered/);
+  assert.match(page.reason, /not a page/);
   const flow = tryParseAddress(`deck://${WORKSPACE}/issues?flow=acceptance`);
   assert.equal(flow.ok, false);
-  assert.match(flow.reason, /no flow is registered/);
+  assert.match(flow.reason, /not a flow/);
 });
 
 test('a step outside a flow names nothing, and is refused for saying so', () => {
