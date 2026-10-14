@@ -8,7 +8,7 @@
  * ticket as a large glyph; around it, every note it links to or that links to
  * it, as glyphs coloured by state on wires coloured the same way.
  */
-import { backControl, heading, words } from './overview-chrome.js';
+import { backControl, bezel, frame, heading, words } from './overview-chrome.js';
 import { glyph, polar, TAU } from './overview-geometry.js';
 import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
 import { KIND_WORD, STATE_WORD, type Kind, type OverviewModel, type Ticket } from './overview-types.js';
@@ -96,6 +96,8 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   const list: ListRow[] = [back.row, { id: t.id, label: `${t.title} — ${STATE_WORD[t.state]} (${KIND_WORD[t.kind]}, ${t.status})`, group: 'This ticket', state: t.state }];
 
   nodes.push(...track(t));
+  nodes.push(...frame(TICKET_SCREEN.width, TICKET_SCREEN.height), ...bezel(cx, cy, 104, 72));
+
 
   // The neighbourhood: one ring, or two when it is crowded.
   const near = neighboursOf(model, t.id);

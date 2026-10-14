@@ -158,6 +158,9 @@ ${STATES.map((s) => `.ov .st-${s} { fill: ${PALETTE[s]}; }`).join('\n')}
 .ov .ov-hit { fill: transparent; stroke: none; }
 .ov .ov-hover { display: none; }
 .ov .ov-wire { fill: none; stroke: hsla(190, 90%, 65%, 0.35); stroke-width: 1; }
+.ov .ov-frame { stroke: hsla(190, 90%, 65%, 0.55); }
+.ov .ov-bezel { stroke: hsla(190, 90%, 65%, 0.22); }
+.ov .ov-scan { stroke: hsla(190, 90%, 70%, 0.35); }
 .ov .ov-arc { fill: none; stroke-linecap: round; }
 .ov .ov-arc.ov-track { stroke: hsla(195, 80%, 60%, 0.16); fill: none; }
 ${STATES.map((s) => `.ov .ov-wire.st-${s}, .ov .ov-arc.st-${s} { fill: none; stroke: ${PALETTE[s]}; }`).join('\n')}

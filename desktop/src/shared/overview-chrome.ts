@@ -2,7 +2,7 @@
  * The pieces every overview screen but the wheel carries: a way back, and a
  * heading that names what the screen is about in as few words as it can.
  */
-import { annularSector, TAU } from './overview-geometry.js';
+import { annularSector, arc, polar, TAU } from './overview-geometry.js';
 import type { AddressParts, ListRow, SceneNode, ScreenContext } from './overview-scene.js';
 
 /**
@@ -41,4 +41,43 @@ export function heading(id: string, name: string, x = 100, y = 46): SceneNode[] 
 export function words(text: string, n: number): string {
   const parts = text.split(/\s+/).filter(Boolean);
   return parts.length <= n ? parts.join(' ') : `${parts.slice(0, n).join(' ')}…`;
+}
+
+/**
+ * The instrument's frame: four corner brackets. Decoration with no words, so
+ * every screen reads as one instrument.
+ */
+export function frame(width: number, height: number): SceneNode[] {
+  const m = 14;
+  const l = 34;
+  const corners: Array<[number, number, number, number]> = [
+    [m, m, 1, 1],
+    [width - m, m, -1, 1],
+    [m, height - m, 1, -1],
+    [width - m, height - m, -1, -1],
+  ];
+  return corners.map(([x, y, sx, sy]) => ({
+    kind: 'mark' as const,
+    tag: 'path' as const,
+    attrs: { d: `M${x} ${y + sy * l}V${y}H${x + sx * l}`, 'stroke-width': 1.5 },
+    cls: 'ov-wire ov-frame',
+  }));
+}
+
+/**
+ * A bezel round a circular instrument: a ring of tick marks, every fifth one
+ * longer, and a dashed scan ring that turns slowly unless less motion is asked for.
+ */
+export function bezel(cx: number, cy: number, r: number, ticks = 120): SceneNode[] {
+  const parts: string[] = [];
+  for (let i = 0; i < ticks; i++) {
+    const a = (i * TAU) / ticks;
+    const [x0, y0] = polar(cx, cy, r, a);
+    const [x1, y1] = polar(cx, cy, r + (i % 5 === 0 ? 9 : 4), a);
+    parts.push(`M${x0.toFixed(1)} ${y0.toFixed(1)}L${x1.toFixed(1)} ${y1.toFixed(1)}`);
+  }
+  return [
+    { kind: 'mark', tag: 'path', attrs: { d: parts.join('') }, cls: 'ov-wire ov-bezel' },
+    { kind: 'mark', tag: 'path', attrs: { d: arc(cx, cy, r + 16, 0, TAU), 'stroke-dasharray': '2 14 40 14', 'stroke-width': 1.2 }, cls: 'ov-wire ov-scan' },
+  ];
 }

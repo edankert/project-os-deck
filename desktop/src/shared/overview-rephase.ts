@@ -10,7 +10,7 @@
  * only: writing `phase:` into a note needs a sidecar action the cockpit does
  * not have (PHASE-0005, Out of scope).
  */
-import { backControl, heading } from './overview-chrome.js';
+import { backControl, bezel, frame, heading } from './overview-chrome.js';
 import { annularSector, arc, glyph, polar, TAU } from './overview-geometry.js';
 import type { ListRow, SceneNode, Scene, ScreenContext } from './overview-scene.js';
 import { allPhases, KIND_WORD, STATE_WORD, type OverviewModel, type Phase, type Ticket } from './overview-types.js';
@@ -46,6 +46,8 @@ export function rephaseScene(model: OverviewModel, ctx: ScreenContext, accepted:
   const back = backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
   const nodes: SceneNode[] = [back.node, ...heading('', 'Tickets with no phase')];
   const list: ListRow[] = [back.row];
+  nodes.push(...frame(REPHASE_SCREEN.width, REPHASE_SCREEN.height), ...bezel(cx, cy, ringR + 96));
+
 
   for (const p of ringPhases) {
     const [a0, a1] = angleOf.get(p.id)!;

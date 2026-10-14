@@ -12,6 +12,7 @@
  * workspace's name, each sector's number and short name, the ring initials and
  * the two shelf captions; everything else is on hover.
  */
+import { bezel, frame } from './overview-chrome.js';
 import { annularSector, arc, polar, shortName, TAU } from './overview-geometry.js';
 import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext, TextNode } from './overview-scene.js';
 import {
@@ -303,6 +304,7 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext): Scene {
   const usable = TAU - WHEEL.topGap - Math.max(0, n - 1) * WHEEL.sectorGap;
   const sector = n > 0 ? usable / n : 0;
 
+  nodes.push(...frame(WHEEL.width, WHEEL.height), ...bezel(WHEEL.cx, WHEEL.cy, WHEEL.ringOuter + 40));
   nodes.push({ kind: 'text', x: 40, y: 56, text: model.workspace, rest: true, role: 'name', size: 22, cls: 'ov-title' });
   nodes.push(coreNodes(model, ctx));
 

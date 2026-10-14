@@ -1575,3 +1575,8 @@ body.pinned .overview-area { left: 0; }
 @keyframes ov-drift { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(4deg) scale(1.02); } }
 .overview-toggle { font-weight: 600; }
 body[data-overview-screen]:not([data-overview-screen=""]) .overview-toggle { background: hsla(190, 90%, 55%, 0.18); }
+@media (prefers-reduced-motion: no-preference) {
+  .ov .ov-scan { animation: ov-scan 60s linear infinite; transform-box: view-box; transform-origin: 50% 44%; }
+}
+.ov-phase .ov-scan, .ov-ticket .ov-scan, .ov-rephase .ov-scan { animation: none; }
+@keyframes ov-scan { to { transform: rotate(360deg); } }
