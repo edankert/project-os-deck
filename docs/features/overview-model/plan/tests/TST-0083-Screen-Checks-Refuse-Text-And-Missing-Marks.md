@@ -47,11 +47,11 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-14: the `overview-checks` suite passed 15 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 736 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
+2026-10-14: the `overview-checks` suite passed 15 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 737 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
 
 ## Adequacy
 
-The numeric-name regression fails without the new guard. It covers bare, padded, grouped, fractional and signed counts, ratios, percentages, scientific notation and abbreviated counts. Both rest and hover text are checked. Real names retain their digits.
+The numeric-name regression fails without the new guard. It covers bare, padded, grouped, fractional and signed counts, ratios, percentages, scientific notation, spaced abbreviations and hexadecimal, octal and binary literals. Both rest and hover text are checked. Real names retain their digits.
 
 The original five regressions failed before repair: multiple counts in one text, padded counts in labels, addresses naming another screen, prose disguised as id text and capitalised dashed words excluded from the word budget.
 

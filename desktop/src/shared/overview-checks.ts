@@ -23,7 +23,8 @@ const validIdText = (text: TextNode): boolean => tokens(text.text).length > 0 &&
 // Ratios, percentages, scientific notation and abbreviated counts are not names.
 // Keep digits within real names, including "Schwinn 800IC" and "Model 3".
 const bareCountName = (value: string): boolean => /\d/.test(value) && !/\p{L}/u.test(value
-  .replace(/\b\d[\d,.]*(?:e[+-]?\d+|[kmb])?\b/gi, '').replace(/\bof\b/gi, ''));
+  .replace(/\b0(?:x[\da-f]+|o[0-7]+|b[01]+)\b/gi, '')
+  .replace(/\b\d[\d,.]*(?:e[+-]?\d+|\s*[kmb])?\b/gi, '').replace(/\bof\b/gi, ''));
 
 function countValues(text: TextNode): number[] {
   let value = text.text;

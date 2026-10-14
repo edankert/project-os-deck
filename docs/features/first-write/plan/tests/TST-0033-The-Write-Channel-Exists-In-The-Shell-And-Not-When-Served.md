@@ -62,6 +62,8 @@ Deck writes for the first time, and [[ADR-0003-Deck-Writes-Through-The-Shell]] p
 
 ## Evidence
 
+2026-10-14: TASK-0142 adds a deterministic scan-boundary regression. Temporary JavaScript fixtures must be excluded; root preload.js and representative main, shared and web outputs must remain included. The full desktop run passes 737 tests with no failures or skips.
+
 - `bash tools/scripts/run-desktop-tests.sh write-channel`: 21 checks pass, 2026-09-09.
 - The smoke run's line asserting the served page offers no verb: the served host answers `write: false`, the shell answers `write: true`, and the shell shows the name it writes with.
 - A LIVE write against the sidecar this repository was already running, on 2026-09-09, reverted with `git checkout` afterwards and the working tree left clean:

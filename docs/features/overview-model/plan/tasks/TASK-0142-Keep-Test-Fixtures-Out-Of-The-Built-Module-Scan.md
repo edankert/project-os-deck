@@ -32,4 +32,4 @@ This known test-tooling defect is repaired in its own task and commit under the 
 
 ## Evidence
 
-2026-10-14: `cd desktop && npm test` passes all 736 tests, with zero failures and zero skips. `bash tools/agents/check-docs-first.sh` and `bash tools/scripts/validate-docs.sh` pass. Temporary files and npm cache stay under `desktop/dist/tmp`; no window opens.
+2026-10-14: `cd desktop && npm test` passes all 737 tests, with zero failures and zero skips. `bash tools/agents/check-docs-first.sh` and `bash tools/scripts/validate-docs.sh` pass. Temporary files and npm cache stay under `desktop/dist/tmp`; no window opens.

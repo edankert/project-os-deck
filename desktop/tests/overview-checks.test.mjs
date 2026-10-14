@@ -145,11 +145,13 @@ test('each count needs its own text and mark, even equal counts and ratios', () 
 });
 
 test('name roles cannot hide bare counts, ratios, percentages or numeric tokens', () => {
-  for (const value of ['12', '012', '1,200', '50%', '3/3', '3 / 3', '3 of 3', '-12', '12.5', '1k', '1e3']) {
+  for (const value of ['12', '012', '1,200', '50%', '3/3', '3 / 3', '3 of 3', '-12', '12.5', '1k', '1 k', '1.2 M', '1e3', '0x10', '0xFF', '0o10', '0b10']) {
     for (const rest of [true, false]) {
-      const scene = good();
-      scene.nodes.push(text(value, { role: 'name', rest }));
-      assert.equal(verdict(scene, 'numbers').ok, false, `${value}, rest=${rest}`);
+      for (const markRef of [undefined, 'features']) {
+        const scene = good();
+        scene.nodes.push(text(value, { role: 'name', rest, markRef }));
+        assert.equal(verdict(scene, 'numbers').ok, false, `${value}, rest=${rest}, markRef=${markRef}`);
+      }
     }
   }
   const scene = good();

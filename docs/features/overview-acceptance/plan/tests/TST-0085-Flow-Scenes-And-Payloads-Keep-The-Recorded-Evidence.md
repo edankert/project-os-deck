@@ -50,7 +50,7 @@ The flow pictures preserve the evidence and obey PHASE-0005’s screen rules.
 
 ## Evidence
 
-2026-10-14: `node --test desktop/tests/overview-flows.test.mjs` passed 12 tests, failed none and skipped none after `npm --prefix desktop run build`. Every S5–S7 fixture passes the scene contract, including every release-test section with More expanded. The full desktop suite passes 736 tests with no failures or skips. Gate ratios cover zero, partial and complete counts with separate text references to arcs and rings. Unknown lamps still show question marks. Recorded scenes stay at or below 49 words. The executable check holds no verdict in its note status.
+2026-10-14: `node --test desktop/tests/overview-flows.test.mjs` passed 12 tests, failed none and skipped none after `npm --prefix desktop run build`. Every S5–S7 fixture passes the scene contract, including every release-test section with More expanded. The full desktop suite passes 737 tests with no failures or skips. Gate ratios cover zero, partial and complete counts with separate text references to arcs and rings. Unknown lamps still show question marks. Recorded scenes stay at or below 49 words. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

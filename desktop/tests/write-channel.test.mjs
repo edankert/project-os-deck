@@ -234,6 +234,17 @@ function builtModules() {
   return out;
 }
 
+test('the module scan keeps application outputs and excludes temporary repositories', (t) => {
+  const root = fs.mkdtempSync(path.join(desktopRoot, 'dist', 'module-scan-test-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(root, 'fixture.js'), 'export const fixture = true;');
+  const modules = new Set(builtModules().map(({ rel }) => rel));
+  for (const file of ['preload.js', 'main/host.js', 'shared/write-client.js', 'web/renderer/overview.js', 'web/shared/write-client.js']) {
+    assert.ok(modules.has(path.normalize(file)), `the scan must cover ${file}`);
+  }
+  assert.equal(modules.has(path.join(path.basename(root), 'fixture.js')), false, 'temporary repositories are not application modules');
+});
+
 const IS_WRITE_CLIENT = (rel) =>
   rel === path.join('shared', 'write-client.js') || rel === path.join('web', 'shared', 'write-client.js');
 
