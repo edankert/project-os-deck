@@ -52,3 +52,9 @@ Add one entry per person when you want explicit membership mapping.
 ### `system:llm`
 - Purpose: LLM/agent actions (when you want a non-human owner label).
   - Note: list this under a team/group “Automation” section when it is part of their tooling, but not as a human member.
+
+### `system:claude`
+- Purpose: work done by Claude Opus in Claude Code. Used on PHASE-0005's lanes so a reader can see which agent drives a note; the split is in `reference/overview-goal-two-agent-brief.md`.
+
+### `system:codex`
+- Purpose: work done by GPT-6 Astra in OpenAI Codex. Used on PHASE-0005's lanes, as above.

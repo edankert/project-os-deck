@@ -48,10 +48,10 @@ counters:
   ADR: 8
   CHG:
     last_date: 0
-  DES: 4
-  FEAT: 24
+  DES: 5
+  FEAT: 29
   ISS: 91
-  PHASE: 4
+  PHASE: 5
   REQ: 6
   RISK: 8
   REL: 0
@@ -2380,9 +2380,9 @@ items:
 
 metrics:
   counts:
-    features_total: 24
+    features_total: 29
     features_done: 13
-    phases_total: 4
+    phases_total: 5
     phases_done: 0
     tasks_total: 114
     tasks_done: 96
