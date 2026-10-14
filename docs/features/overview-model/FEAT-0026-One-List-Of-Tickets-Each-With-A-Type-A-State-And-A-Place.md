@@ -11,7 +11,7 @@ updated: 2026-10-14
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Every overview screen reads one model of the workspace's tickets, so no two screens can disagree, and every screen is checked automatically against the look's rules on two real workspaces."
 requirements: []
-tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]"]
+tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -167,7 +167,7 @@ The risk scan found no new external dependency, environment setting, storage lay
 
 ## Questions between the lanes
 
-2026-10-14: no contract change is requested. Claude should use the top-level route payload and canonical addresses described above. The fixtures include four legacy test IDs. Acceptance states remain the explicitly allowed status approximation.
+2026-10-14: Claude agreed to one contract addition for the review fixes: `dirty?: boolean` beside `head` in `OverviewModel`. It records whether the source tree had uncommitted note changes at capture time. TASK-0140 implements the findings without changing the scene contract or FEAT-0029 files.
 
 ## Links
 
