@@ -19,7 +19,8 @@ design: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-14
 review_verdict: changes-requested
-review_round: 1
+review_round: 2
+review_response: "Round two: six of round one's seven findings fixed, each shown by breaking its guard and watching a test fail. Finding 6 is fixed for Deck, whose fixture now rebuilds exactly from its commit, and not for your-trainer: that repository holds another session's uncommitted notes and ledger, which this run must not commit, so its fixture records dirty: true instead. One reviewer asked for changes on that point only and one approved. No third round; whether a dirty fixture is acceptable is Edwin's call."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -88,6 +89,14 @@ The first review's findings are fixed on `lane/codex-fix` under TASK-0140, throu
 6. The fixtures were captured from working trees with uncommitted notes, so they cannot be rebuilt from `head`.
 
 Claude added one: the wheel's sectors are in id order, not in the order the phase notes declare (Deck's Parity is order 3 and Vault order 4).
+
+### Round two
+
+2026-10-14: two Claude reviewers, round two, on the fix commits `cb73801..63ad32f`. Both found findings 1 to 5 and Claude's addition fixed, each confirmed by breaking the guard and watching a named test fail. Both found finding 6 fixed for Deck and not for your-trainer. One reviewer requested changes on that point only; the other approved and left it to the author.
+
+**Finding 6 stays open, and why.** your-trainer's working tree holds another session's uncommitted notes and its Android ledger. This run must not commit there, so the fixture cannot come from a clean commit today. The fixture says so with `dirty: true`. Recapturing it after that session commits closes the finding. Edwin decides whether to wait for that.
+
+A reviewer also noted that a text with role `name` skips the count check, so a bare count marked as a name would pass. Codex closes that with the ratio fix that follows FEAT-0029's merge.
 
 ## Model and route
 
