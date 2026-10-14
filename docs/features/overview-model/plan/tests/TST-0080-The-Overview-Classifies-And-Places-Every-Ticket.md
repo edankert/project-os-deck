@@ -36,7 +36,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 ## Procedure
 
 - Drive the built builder with synthetic records covering every state-table row.
-- Exercise all five placement rules in order, each phase kind, exit checkboxes and prose.
+- Exercise all five placement rules, feature-only parents, non-ticket parent links, member-list ties, local heading links, phase order in all three groups, exit checkboxes and prose.
 - Exercise linked and dated suggestions, ties and missing dates, and kind/state ordering.
 
 ## Expected results
@@ -47,7 +47,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-14: `bash tools/scripts/run-desktop-tests.sh overview-model` passed 16 tests, failed none and skipped 0. The command builds the modules and opens no window.
+2026-10-14: the `overview-model` suite passed 21 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 704 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
 
 ## Adequacy
 

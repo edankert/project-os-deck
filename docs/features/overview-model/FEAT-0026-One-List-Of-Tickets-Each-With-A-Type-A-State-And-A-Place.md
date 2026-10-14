@@ -33,9 +33,9 @@ Lane: `system:codex`. How the two agents share this phase is in [[REFERENCE-OVER
 
 ## Scope
 
-- Replace Claude’s placeholder fixtures at `desktop/fixtures/overview/deck.json` and `desktop/fixtures/overview/your-trainer.json` with the builder’s real output. Record each source commit in `head`.
+- Replace Claude’s placeholder fixtures at `desktop/fixtures/overview/deck.json` and `desktop/fixtures/overview/your-trainer.json` with the builder’s real output. Record each source commit in `head` and uncommitted source-note changes in `dirty`.
 - The model, computed from Deck's index: DES-0004's state table, its five placement rules, its three kinds of phase, the exit criteria read from each phase note, and the re-phase suggestions from links and from dates.
-- Serve the model at `GET /deck/overview/<workspaceId>` on both hosts, cached by index revision. Print it with `node desktop/scripts/overview.mjs <repo-root> [--json]`.
+- Serve the model at `GET /deck/overview/<workspaceId>` on both hosts, cached by index revision and ledger content. Print it with `node desktop/scripts/overview.mjs <repo-root> [--json]`.
 - The screen checks, as a module any screen's test calls: visible words at rest (at most 60, ticket ids not counted), every number paired with a mark, an address that restores the screen, and a list twin holding the same ids.
 
 Out of scope:
@@ -52,28 +52,29 @@ Out of scope:
 
 ## Verification
 
-The targeted suites ran in Codex's sandbox on 2026-10-14 without opening a window. That sandbox refused to listen on localhost, so one route test was skipped there:
+`cd desktop && npm test` passed on 2026-10-14 in this worktree: **704 tests passed, none failed, none skipped**. Temporary test files stayed under `desktop/dist/tmp`. No Electron process or window was started.
 
-| Command | Passed | Failed | Skipped |
+| Suite within that run | Passed | Failed | Skipped |
 | --- | ---: | ---: | ---: |
-| `bash tools/scripts/run-desktop-tests.sh overview-model` | 16 | 0 | 0 |
-| `bash tools/scripts/run-desktop-tests.sh overview-route` | 5 | 0 | 1 |
-| `bash tools/scripts/run-desktop-tests.sh overview-fixtures` | 3 | 0 | 0 |
-| `bash tools/scripts/run-desktop-tests.sh overview-checks` | 8 | 0 | 0 |
+| `overview-model` | 21 | 0 | 0 |
+| `overview-route` | 12 | 0 | 0 |
+| `overview-fixtures` | 3 | 0 | 0 |
+| `overview-checks` | 14 | 0 | 0 |
+| `overview-screens` (drawing lane) | 8 | 0 | 0 |
 
-**The full run, outside the sandbox:** `cd desktop && npm test`, 2026-10-14, run by Claude on `lane/codex` before the merge: 679 tests, 679 passed, none failed, none skipped.
+Five new screen-check tests failed before the fix. The local lowercase heading-link test failed with the old resolver. Deliberately removing the feature-parent restriction, reversing the member-list tie winner and replacing phase order with id order each failed its regression. The recorded Deck ledger failed against the old service and command. The new tests cover ledger edits without a note revision, multiple platforms, sealed excuses, old `mark` fields, date ordering, malformed files and dirty note provenance. The localhost socket test runs without an EPERM or EACCES skip.
 
-Codex had wrapped the host tests of eight existing suites in a helper that skipped them when listening was refused (TASK-0119). Claude reverted that before the merge, because the same skip would hide a real failure in CI; TASK-0119 is cancelled and its test TST-0084 retired.
+The resolved results were also compared with `tools/scripts/release-test.py` against both real repositories. Every surviving verdict agreed: 5 on Deck's app platform, 541 on Your Trainer's Android platform and 1 on iOS. The overview additionally retains invalidations as the owed-again state.
 
-`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. No CI run or human acceptance verdict is claimed.
+`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. The validator reports existing advisory warnings. No CI run or human acceptance verdict is claimed.
 
 ## Where this stands
 
-2026-10-14: the model, the cached route, the command, the real fixtures and the screen checks are implemented, and TASK-0115 to TASK-0118 are done. FEAT-0026 is at review: Claude reviews it, as the agent that did not build it, and Edwin's acceptance follows.
-
-The sandbox also refused git's lock file, so Codex could not commit. Claude committed the work on `lane/codex` on Codex's behalf, with Codex as co-author, and merged it into `main`.
+The first review's findings are fixed on `lane/codex-fix` under TASK-0140, through fixture commit `a1d8876`. The model reads acceptance history, the checks enforce the scene contract, and both fixtures have been rebuilt with recorded source provenance. All 704 desktop tests pass without skips. FEAT-0026 remains at `review`; Claude owns round two and merging. Edwin owns acceptance. Nothing was pushed or merged, and FEAT-0029's files were not touched.
 
 ## Review, round one
+
+2026-10-14 fixes: `5ca1405` closes the five screen-check holes; `4abe421` fixes local heading links and guards parent lookup, with tests that catch broken parent, tie and phase-order rules; `306e7bf` reads and refreshes ledger results in the host and CLI, adds the agreed dirty field and removes the localhost skip. `a1d8876` rebuilds both fixtures with dirty provenance, ledger states and the declared phase order. The Verification section records the final 704-test run.
 
 2026-10-14: two Claude reviewers, each in a clean context, reviewed the packet for commits `22b19e4..b60e245`. Claude reviewed it because Codex built it. Both confirmed the counts against DES-0004 ticket by ticket, and both asked for changes:
 
@@ -110,14 +111,21 @@ The list twin includes ordinary ticket IDs and the four legacy acceptance-docume
 
 ## Fixture comparison with DES-0004
 
-The fixtures are real builder output captured on 2026-10-14. Deck's `head` is `22b19e43c051f3ad4c7e0d2c4d04b29ae1120c37`; your-trainer's is `c38475f8862520eca61d64383ac946163e1d5bd9`. Both repositories had working-tree changes at capture time. The `head` records the checked-out commit, not a claim that the tree was clean. Deck includes this lane's new notes. The your-trainer repository was read only.
+The fixtures are real builder output captured on 2026-10-14. Deck's `head` is `306e7bf3482930caaad83c71ee04a1b5c1ee1921`, with `dirty: false`. Your Trainer's is `c38475f8862520eca61d64383ac946163e1d5bd9`, with `dirty: true`. The flag covers Markdown notes, ledger files and `SNAPSHOT.yaml`, including staged and untracked changes. Build output does not set it. Your Trainer was read only, and Git's optional index writes were disabled.
 
 | Workspace | DES-0004 tickets | Current tickets | No phase, excluding project-wide | Open / finished / backlog phases |
 | --- | ---: | ---: | ---: | --- |
-| Deck | 333 | 357 | 1 | 5 / 0 / 0 |
+| Deck | 333 | 361 | 1 | 5 / 0 / 0 |
 | your-trainer | 2,646 | 2,747 | 987 | 9 / 17 / 1 |
 
 Deck's core contains 22 tickets: 21 project-wide and one unplaced. Your Trainer's core contains 1,028 tickets: 41 project-wide and 987 unplaced. The captured exit criteria contain 47 boxes for Deck and 144 for Your Trainer. PHASE-019 and PHASE-999 in Your Trainer have prose exit criteria.
+
+| Acceptance tests | Closed | Failed | Owed again | Open | Retired (dropped) | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Deck | 4 | 0 | 2 | 17 | 1 | 24 |
+| your-trainer | 1 | 1 | 180 | 267 | 221 | 670 |
+
+DES-0004's **257 withdrawn passes counts platforms**, not distinct checks: 91 Android and 166 iOS at historical commit `0318ab0`. Those sets overlapped in 62 checks, so they covered 195 distinct checks. The current ledgers hold 102 Android and 170 iOS withdrawals, totalling 272, or 15 more. Android gained 13 withdrawals and cleared 2; iOS gained 4. The current sets overlap in 73 checks and cover 199 distinct checks. Nineteen are now retired, leaving **180 owed-again tickets**, including 95 on the shelf. One check failed and takes the failed state. Only one active check has a surviving pass or excuse on every applicable platform, so only one is closed.
 
 The comparison also rebuilt both historical trees through `recordFrom` and `buildOverview`, reading Git blobs without checking out or writing either tree. The source commits are DES-0004's `ac3c039` for Deck and `0318ab0` for Your Trainer. This separates builder differences from later note edits.
 
@@ -142,7 +150,7 @@ Five Your Trainer requirements differ from the prototype's state at the historic
 | `REQ-0138` | cancelled | dropped | open |
 | `REQ-0169` | cancelled | dropped | open |
 
-Acceptance-state differences come from the authorised status fallback. In historical Deck, TST-0008, TST-0009, TST-0012 and TST-0013 change from closed to open; TST-0010 and TST-0011 change from owed to open. In historical Your Trainer, 252 tests change from closed to open, 177 from owed to open, and TST-0656 from failed to open. Their notes say active; their ledger verdict is not in the index. In the current capture, one of those owed checks has since retired, leaving 176 owed-to-open differences and one owed-to-dropped difference.
+The old fixtures used note status and showed 449 open acceptance tests in Your Trainer. Reading the ledger now separates those same active checks into 1 closed, 1 failed, 180 owed again and 267 open. Most Android passes have no iOS result; they stay open rather than claiming every platform passed. The older prototype's closed total therefore is not a target for the all-platform rule.
 
 Repository growth after those historical commits accounts for the remaining ticket increases. No historical typed ticket disappeared:
 
@@ -150,12 +158,12 @@ Repository growth after those historical commits accounts for the remaining tick
 | --- | ---: | ---: |
 | Requirements | 0 | 4 |
 | Features | 5 | 4 |
-| Tasks | 12 | 58 |
-| Tests | 5 | 14 |
+| Tasks | 13 | 58 |
+| Tests | 8 | 14 |
 | Issues | 0 | 12 |
 | Decisions and designs | 2 | 3 |
 | Risks | 0 | 2 |
-| Total new notes | 24 | 97 |
+| Total new notes | 28 | 97 |
 
 Thus Your Trainer's total is 2,646 + 4 previously omitted test documents + 97 new notes = 2,747. Its unplaced count is 968 + 4 legacy documents + 11 new unplaced tickets + 5 existing tickets that lost placement − 1 that gained placement = 987. Twenty-two existing tickets changed placement as the notes moved on, including the work moved out of finished PHASE-020. Deck's shared tickets keep their placements. Its fifth phase and this run's notes account for the larger total.
 

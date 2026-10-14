@@ -47,8 +47,10 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-14: `bash tools/scripts/run-desktop-tests.sh overview-checks` passed 8 tests, failed none and skipped 0. The command builds the modules and opens no window.
+2026-10-14: the `overview-checks` suite passed 14 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 704 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
 
 ## Adequacy
+
+Five regressions failed before repair: multiple counts in one text, padded counts in labels, addresses naming another screen, prose disguised as id text and capitalised dashed words excluded from the word budget.
 
 Independent defective scenes exercise each refusal. Boundary cases at 60 and 61 words catch off-by-one errors; identifier cases prevent treating phase numbers as counts.
