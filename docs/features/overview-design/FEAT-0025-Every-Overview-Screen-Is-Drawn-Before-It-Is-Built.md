@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:gpt-6-astra"]
+review_date: 2026-10-14
+review_verdict: changes-requested
+review_round: 1
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -58,6 +58,14 @@ Out of scope:
 ## Where this stands
 
 2026-10-14: built and at review. Codex reviews it, as the agent that did not build it. Edwin's verdict on DES-0005 is the acceptance, given through the cockpit's Accept or Decline on the note, or in Deck's S5 once FEAT-0029 is accepted.
+
+## Review
+
+### Round one
+
+2026-10-14: one Codex reviewer (GPT-6 Astra), in a clean worktree, reviewed the packet. Codex reviewed it because Claude built it. Verdict: changes requested. Held: the fourteen plates reproduce byte for byte, the word counts agree three ways, every reference is local, and the four answers are proposed. Refuted: two plates had no caption (Deck's S4 and your-trainer's S7); the Revisions line did not say what Edwin decides; the scope still said the tickets came from DES-0004 and that nothing in `desktop/` changes; the page could not be navigated from the wheel; and no test failed when three screens were removed from the plate script or when every mark was lost.
+
+Fixed in `57c2e3d`: both captions, the Revisions line, the scope rewritten to what was built, the page following a press on a mark, and [[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]], which fails on a missing plate or lost marks.
 
 ## Questions between the lanes
 

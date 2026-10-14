@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
+review_date: 2026-10-14
+review_verdict: changes-requested
+review_round: 1
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -60,6 +60,19 @@ Out of scope:
 ## Where this stands
 
 2026-10-14: built and at review. TASK-0125, TASK-0126 and TASK-0131 are done. Codex reviews it, as the agent that did not build it. Edwin's acceptance test is [[TST-0091-Deck-Opens-On-The-Wheel-And-It-Reads-As-A-Picture]], not yet run.
+
+## Review
+
+### Round one
+
+2026-10-14: two Codex reviewers (GPT-6 Astra), each in a clean worktree, reviewed the packet. Codex reviewed it because Claude built it. Both requested changes. Held: every ticket drawn once on both workspaces, the screen checks, every sector and disc reachable and opening its phase, the address, the list twin, reduced motion, and the served page read-only. Refuted:
+
+1. Opening the wheel while the index is still being built cached the empty answer and failed twice with one request (one reviewer).
+2. Owed-again tests in the backlog tray did not glow (one reviewer).
+3. No wedge could take keyboard focus (both).
+4. TST-0093 logged where Escape landed and whether the served page offered a write, without asserting either (both).
+
+Fixed in `57c2e3d`: the wheel waits for the index and never keeps the empty answer; the tray glows; every ticket mark takes focus by the arrow keys from its sector, and Enter opens it; the window run asserts Escape and the served page and fails on a missing screen. TST-0090 now checks focus and glow on every ticket.
 
 ## Questions between the lanes
 

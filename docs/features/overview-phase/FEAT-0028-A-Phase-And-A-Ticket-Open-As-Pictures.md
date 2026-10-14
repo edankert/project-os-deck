@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
+review_date: 2026-10-14
+review_verdict: changes-requested
+review_round: 1
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -59,6 +59,18 @@ Out of scope:
 ## Where this stands
 
 2026-10-14: built and at review. TASK-0127, TASK-0128 and TASK-0129 are done; TASK-0129's cockpit issue is cut from this run and written in the adoption table instead. Codex reviews it, as the agent that did not build it. Edwin's acceptance test is [[TST-0092-A-Phase-A-Ticket-And-Re-Phasing-Read-As-Pictures]], not yet run.
+
+## Review
+
+### Round one
+
+2026-10-14: two Codex reviewers (GPT-6 Astra), each in a clean worktree, reviewed the packet. Codex reviewed it because Claude built it. Both requested changes. Held: S2, S3 and S4 pass the screen checks on every phase and every ticket of both workspaces; S3's neighbours are exactly the model's links; re-phase acceptance moves every accepted ticket and writes nothing. Refuted:
+
+1. At your-trainer scale neighbours share places: FEAT-0051 drew 202 neighbours on 116 places, and 94 exact collisions were found across the corpus (both).
+2. TST-0090 still passed when failed and owed tickets were sent to the far band, when neighbours were dropped, and when accepted particles stopped moving, because it reused the module's own rules (both).
+3. The cockpit issue for a write that sets `phase:` is not filed (both); it is cut from this run, as TASK-0129 says.
+
+Fixed in `57c2e3d`: neighbours stand on wide rings that hold only what fits, below the track and gate, so every neighbour has its own place; TST-0090 works out the front band and the neighbours itself, checks that no two neighbours of the 25 most linked tickets share a place, and checks that accepting a group moves exactly its tickets.
 
 ## Questions between the lanes
 
