@@ -8,7 +8,9 @@
  * to a mark with a finite, nonnegative integer count matching a displayed
  * value. A ratio can name its numerator or denominator. This verifies the
  * declared count, not whether SVG geometry actually draws that many things.
- * Use role=id for a bare phase number; never use it to hide a count.
+ * Use role=id for a bare phase number; never use it to hide a count. A
+ * role=name text (a phase's or a ticket's title) counts as words but is never
+ * read as a count.
  */
 import { formatAddress, parseAddress } from './address.js';
 import { walkScene, type Scene, type TextNode } from './overview-scene.js';
@@ -24,7 +26,8 @@ const ID_TOKEN = /^[A-Z]+-\d+/;
 function countValues(text: TextNode): number[] {
   let value = text.text;
   if (text.role !== 'number') {
-    if (text.role === 'id' || !text.rest) return [];
+    // A name's digits belong to the name: the 800 in "Schwinn 800IC" counts nothing.
+    if (text.role === 'id' || text.role === 'name' || !text.rest) return [];
     value = value.replace(/\b[A-Z]+-\d+(?:-[\w-]+)?\b/g, '')
       .replace(/\bphase\s+\d+\b/gi, '')
       .replace(/^0\d{2,}(?=\s+[A-Za-z]|$)/, '')

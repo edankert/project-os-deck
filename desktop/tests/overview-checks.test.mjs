@@ -115,3 +115,16 @@ test('retired acceptance documents from the real corpus also need list twins', (
   scene.nodes.pop();
   assert.equal(verdict(scene, 'twin').ok, false, 'a legacy row without a mark also fails');
 });
+
+test('a name counts as words, and its digits are never read as a count', () => {
+  const { checkScene: check } = load('shared/overview-checks.js');
+  const scene = {
+    screen: 'ticket', address: 'deck://abcd1234/features?page=wheel', width: 10, height: 10, title: 't', list: [],
+    nodes: [{ kind: 'text', x: 0, y: 0, text: 'Schwinn 800IC trainers', rest: true, role: 'name' }],
+  };
+  const results = Object.fromEntries(check(scene).map((r) => [r.rule, r]));
+  assert.equal(results.numbers.ok, true, results.numbers.detail);
+  assert.match(results.words.detail, /^3 words/);
+  scene.nodes[0].role = 'label';
+  assert.equal(Object.fromEntries(check(scene).map((r) => [r.rule, r])).numbers.ok, false, 'the same digits in a label are a count');
+});

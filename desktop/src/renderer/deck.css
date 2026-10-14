@@ -1574,4 +1574,4 @@ body.pinned .overview-area { left: 0; }
 @keyframes ov-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
 @keyframes ov-drift { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(4deg) scale(1.02); } }
 .overview-toggle { font-weight: 600; }
-body[data-overview]:not([data-overview=""]) .overview-toggle { background: hsla(190, 90%, 55%, 0.18); }
+body[data-overview-screen]:not([data-overview-screen=""]) .overview-toggle { background: hsla(190, 90%, 55%, 0.18); }

@@ -53,7 +53,7 @@ module.exports = async (d) => {
       const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); } return out; };
       return { screen: scene.screen, address: scene.address, sceneMarks: walk(scene.nodes, []).length,
         domMarks: document.querySelectorAll('#overview-area [data-ticket]').length,
-        rows: scene.list.length, shown: !document.getElementById('overview-area').hidden, overview: document.body.dataset.overview };
+        rows: scene.list.length, shown: !document.getElementById('overview-area').hidden, overview: document.body.dataset.overviewScreen };
     })()`);
     assert.equal(seen.shown, true, `${screen}: the overview layer is shown`);
     assert.equal(seen.screen, screen, `${screen}: the scene drawn is the one asked for`);
@@ -73,12 +73,12 @@ module.exports = async (d) => {
     const at = wedge ?? sector;
     await d.pointer(win, d.click(at));
     await settle();
-    const after = await js('document.body.dataset.overview');
+    const after = await js('document.body.dataset.overviewScreen');
     d.log('clicked the wheel', { at, now: after });
     assert.ok(after === 'phase' || after === 'ticket', `a click on the wheel opens a phase or a ticket, not ${after}`);
     d.press(win, 'Escape');
     await settle();
-    d.log('pressed Escape', { now: await js('document.body.dataset.overview') });
+    d.log('pressed Escape', { now: await js('document.body.dataset.overviewScreen') });
   }
   d.press(win, 'L');
   await d.delay(400);

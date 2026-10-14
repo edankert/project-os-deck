@@ -17,6 +17,8 @@ const { wheelScene } = load('shared/overview-wheel.js');
 const { phaseScene, bandOf } = load('shared/overview-phase.js');
 const { ticketScene, neighboursOf, LIFECYCLE } = load('shared/overview-ticket.js');
 const { rephaseScene, unplaced } = load('shared/overview-rephase.js');
+const { checkScene } = load('shared/overview-checks.js');
+const { pageKinds } = load('shared/vocabularies.js');
 
 const WORKSPACES = ['deck', 'your-trainer'];
 const model = (name) => JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', `${name}.json`), 'utf-8'));
@@ -32,32 +34,11 @@ function drawn(scene) {
   return out;
 }
 
-/** The look's rules 1, 2 and 5, as far as this lane can check them before FEAT-0026's module lands. */
+/** The look's rules 1, 2 and 5, as FEAT-0026's screen checks state them. */
 function holdsTheLook(scene) {
-  const words = [];
-  const marks = new Map();
-  for (const node of walkScene(scene.nodes)) if (node.kind === 'mark' && node.markId !== undefined) marks.set(node.markId, node);
-  for (const node of walkScene(scene.nodes)) {
-    if (node.kind !== 'text' || !node.rest) continue;
-    if (node.role === 'number') {
-      const mark = marks.get(node.markRef);
-      assert.ok(mark !== undefined, `${scene.screen}: the number "${node.text}" names no mark (${node.markRef})`);
-      assert.equal(mark.count, Number(node.text), `${scene.screen}: the number "${node.text}" and its mark disagree`);
-      continue;
-    }
-    if (node.role === 'id') continue;
-    // A name's digits are part of the name; it still counts as words.
-    words.push(...node.text.split(/\s+/).filter((w) => w !== '' && !TICKET_ID.test(w)));
-  }
-  assert.ok(words.length <= 60, `${scene.screen}: ${words.length} words at rest: ${words.join(' ')}`);
-  const marked = new Set(drawn(scene).keys());
-  const listed = new Set(scene.list.map((r) => r.id).filter((id) => TICKET_ID.test(id) && !id.startsWith('PHASE-')));
-  assert.deepEqual([...marked].filter((id) => !listed.has(id)), [], `${scene.screen}: drawn but not in the list twin`);
-  assert.deepEqual([...listed].filter((id) => !marked.has(id)), [], `${scene.screen}: in the list twin but not drawn`);
-  assert.ok(scene.address.startsWith('deck://abcd1234/features?'), scene.address);
+  for (const result of checkScene(scene)) assert.ok(result.ok, `${scene.screen} ${scene.address}: ${result.rule}: ${result.detail}`);
   // It must serialise: the renderer and the plates both draw the SVG.
   assert.match(sceneToSvg(scene, { standalone: true }), /^<svg /);
-  return words.length;
 }
 
 for (const name of WORKSPACES) {

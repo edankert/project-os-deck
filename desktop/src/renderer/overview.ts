@@ -127,7 +127,7 @@ export function isOverviewShown(): boolean {
 export function hideOverview(): void {
   if (area === null) return;
   area.hidden = true;
-  document.body.dataset['overview'] = '';
+  document.body.dataset['overviewScreen'] = '';
   current = null;
   hideCallout();
 }
@@ -206,7 +206,7 @@ export async function showOverview(address: DeckAddress): Promise<void> {
   paint(scene);
   current = { address, scene, definition };
   area.hidden = false;
-  document.body.dataset['overview'] = scene.screen;
+  document.body.dataset['overviewScreen'] = scene.screen;
   document.title = `Deck — ${scene.title}`;
 }
 
