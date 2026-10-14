@@ -268,8 +268,8 @@ export function designScene(_model: OverviewModel, data: DesignFlowData, ctx: Sc
     const top = i === selected, offset = top ? 0 : 14 + (depth % 5) * 12;
     const plate = data.plates[i]!;
     nodes.push({ kind: 'group', key: `plate-${i}`, transform: top ? undefined : `rotate(${(depth % 2 ? -1 : 1) * (2 + depth % 4)} 720 440)`, cls: top ? '' : 'ov-faint', children: [
-      { kind: 'mark', tag: 'rect', attrs: { x: 260 + offset, y: 170 - offset / 2, width: 920, height: 540, rx: 8 }, cls: 'ov-glass' },
-      { kind: 'image', href: plate.href, label: plate.label, x: 270 + offset, y: 180 - offset / 2, w: 900, h: 520 },
+      { kind: 'mark', tag: 'rect', attrs: { x: 260 + offset, y: 170 - offset / 2, width: 920, height: 540, rx: 8 }, cls: top ? 'ov-glass' : 'ov-wire' },
+      ...(top ? [{ kind: 'image' as const, href: plate.href, label: plate.label, x: 270, y: 180, w: 900, h: 520 }] : []),
     ] });
   });
   data.plates.forEach((p, i) => {

@@ -45,4 +45,4 @@ Deck has no surface-note registry. These names identify its existing screens. TS
 
 ## Verification
 
-Pending the focused checks, full suite and documentation gates. FEAT-0029 stays at review for Claude and Edwin.
+2026-10-14: `cd desktop && npm test` passed 745 tests, with zero failures and zero skips. The build and headless plate script regenerated all 14 plates; the changed S5 and S7 pictures were inspected. The documentation validator and whitespace checks pass. FEAT-0029 stays at review for Claude and Edwin.

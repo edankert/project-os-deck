@@ -83,7 +83,7 @@ your-trainer's tickets with no phase. Each group points at the sector its ticket
 
 ![S5 Design acceptance on your-trainer](__attachments__/DES-0005/design-your-trainer.jpg)
 
-your-trainer's DES-0006. The selected plate is large, with the others fanned behind; the dots below pick a plate, the line below them is the revisions, and the lamp at the top right is the status. Accept and Decline write through the sidecar, and Decline asks why. **9 words at rest.**
+your-trainer's DES-0006. The selected plate is large, with the others fanned behind as faint outlines; the dots below pick a plate, the line below them is the revisions, and the lamp at the top right is the status. Accept and Decline write through the sidecar, and Decline asks why. **9 words at rest.**
 
 ![S5 Design acceptance on Deck](__attachments__/DES-0005/design-deck.jpg)
 
@@ -103,7 +103,7 @@ Deck has no release yet, so the rings are empty and the screen says so. **8 word
 
 ![S7 Ticket acceptance on Deck](__attachments__/DES-0005/accept-deck.jpg)
 
-Deck's FEAT-0024 at its gate. Each lamp is a ring of beads, one per item, lit when closed: requirements 0 of 8, tasks 4 of 4, reviews 0 of 2. Automated and acceptance say "?", because the sidecar does not report those results per feature. Accept appears only when every lamp is lit; Send back is always there and asks why. **25 words at rest.**
+Deck's FEAT-0024 at its gate. Each lamp is a ring of beads, one per item, lit when closed: requirements 0 of 8, tasks 4 of 4, reviews 0 of 2. Automated and acceptance say "?", because the sidecar does not report those results per feature. Accept and Send back are unavailable because the cockpit advertises neither feature transition. Hover explains that limit. Known empty lamps are hollow and say “nothing to check”; they supply no evidence. An opted-in acceptance stamp records acceptance without changing status. **26 words at rest.**
 
 ## Answers proposed to DES-0004's open questions
 

@@ -124,3 +124,15 @@ test('review provenance reads scalar and list identities without inventing a sec
   assert.equal(F.lampComplete(F.acceptFromPayloads(json('deck.json'),'FEAT-0024',p).lamps.find(l=>l.key==='reviews')),false);
  }
 });
+
+test('S5 fans outlines behind one selected image and keeps every plate selectable',()=>{
+ const m=json('deck.json'),d=json('flows/deck-design.json');
+ for(const selected of [0,d.plates.length-1]){
+  const scene=F.designScene(m,{...d,selected},ctx),nodes=[...walkScene(scene.nodes)];look(scene);
+  assert.deepEqual(nodes.filter(n=>n.kind==='image').map(n=>n.href),[d.plates[selected].href]);
+  const behind=scene.nodes.filter(n=>n.kind==='group'&&n.key?.startsWith('plate-')&&n.key!=='plate-'+selected);
+  assert.equal(behind.length,d.plates.length-1);
+  assert.ok(behind.every(n=>n.children.length===1&&n.children[0].cls==='ov-wire'));
+  assert.equal(scene.list.filter(r=>r.group==='Plates').length,d.plates.length);
+ }
+});
