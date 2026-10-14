@@ -41,8 +41,10 @@ module.exports = async (d) => {
   const results = [];
   for (const [screen, address] of wanted) {
     const kind = ['design', 'test-run', 'accept'].includes(screen) ? 'flows' : 'pages';
-    if (address === null || !screens[kind].includes(screen)) {
-      d.log(`skipped ${screen}`, { reason: address === null ? 'nothing to open it on' : 'not registered' });
+    // Every screen must be registered: a missing one fails the run, it is never skipped.
+    assert.ok(screens[kind].includes(screen), `${screen} is not registered as a ${kind === 'flows' ? 'flow' : 'page'}`);
+    if (address === null) {
+      d.log(`skipped ${screen}`, { reason: 'this workspace has nothing to open it on' });
       results.push({ screen, skipped: true });
       continue;
     }
@@ -76,9 +78,12 @@ module.exports = async (d) => {
     const after = await js('document.body.dataset.overviewScreen');
     d.log('clicked the wheel', { at, now: after });
     assert.ok(after === 'phase' || after === 'ticket', `a click on the wheel opens a phase or a ticket, not ${after}`);
+    // Escape goes back one screen: from a ticket to its phase (or the wheel), from a phase to the wheel.
     d.press(win, 'Escape');
     await settle();
-    d.log('pressed Escape', { now: await js('document.body.dataset.overviewScreen') });
+    const back = await js('document.body.dataset.overviewScreen');
+    d.log('pressed Escape', { now: back });
+    assert.ok(after === 'ticket' ? back === 'phase' || back === 'wheel' : back === 'wheel', `Escape from ${after} went to ${back}`);
   }
   d.press(win, 'L');
   await d.delay(400);
@@ -100,6 +105,7 @@ module.exports = async (d) => {
   d.log('the served page', tablet);
   assert.equal(tablet.screen, 'wheel', 'the served page opens on the wheel');
   assert.ok(tablet.marks > 0, 'the served wheel draws its tickets');
+  assert.equal(tablet.write, 0, 'the served page offers no enabled control');
   await d.shot(served, 'served-wheel');
   served.close();
 };

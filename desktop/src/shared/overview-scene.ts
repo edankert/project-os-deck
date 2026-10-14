@@ -194,7 +194,13 @@ function markSvg(node: MarkNode): string {
     attr('data-action', node.action) +
     attr('data-mark', node.markId) +
     attr('data-label', node.label) +
-    (focusable ? ` tabindex="0" role="button"${attr('aria-label', node.label ?? node.ticket ?? node.action)}` : '');
+    (focusable
+      ? ` tabindex="0" role="button"${attr('aria-label', node.label ?? node.ticket ?? node.action)}`
+      : node.ticket !== undefined
+        ? // Reachable from the keyboard by the arrows, not by Tab: a wheel of 2,747
+          // tab stops is no route at all. Tab reaches the groups; arrows the tickets.
+          ` tabindex="-1" role="img"${attr('aria-label', node.label ?? node.ticket)}`
+        : '');
   const title = node.label ? `<title>${escapeXml(node.label)}</title>` : '';
   return title ? `<${node.tag}${geometry}${extra}>${title}</${node.tag}>` : `<${node.tag}${geometry}${extra}/>`;
 }

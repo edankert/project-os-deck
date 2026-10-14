@@ -25,6 +25,17 @@ const model = (name) => JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtu
 const ctx = plainContext('abcd1234', 'features');
 const TICKET_ID = /^[A-Z]+-\d+/;
 
+/** What a ticket is joined to, worked out here from the links rather than with the module's own rule. */
+function linkedTo(m, id) {
+  const out = new Set();
+  for (const other of m.tickets[id].links) if (m.tickets[other] !== undefined && other !== id) out.add(other);
+  for (const t of Object.values(m.tickets)) if (t.id !== id && t.links.includes(id)) out.add(t.id);
+  return out;
+}
+
+/** Where a mark stands, as a string: two marks with the same one cover each other. */
+const placeOf = (n) => JSON.stringify([n.tag, n.attrs]);
+
 /** How many times each id is drawn as a mark. */
 function drawn(scene) {
   const out = new Map();
@@ -63,7 +74,8 @@ for (const name of WORKSPACES) {
       for (const id of p.tickets) assert.equal(counts.get(id), 1, `${p.id}: ${id} drawn ${counts.get(id) ?? 0} times`);
       holdsTheLook(scene);
       // The front band is exactly what needs a person.
-      const front = p.tickets.filter((id) => bandOf(m.tickets[id].state) === 0).sort();
+      // Computed here from the states, not with the module's own band rule.
+      const front = p.tickets.filter((id) => ['failed', 'owed'].includes(m.tickets[id].state)).sort();
       const listedFront = scene.list.filter((r) => r.group === 'Needs you').map((r) => r.id).sort();
       assert.deepEqual(listedFront, front, p.id);
       // One segment per exit criterion.
@@ -82,7 +94,8 @@ for (const name of WORKSPACES) {
       holdsTheLook(scene);
       const counts = drawn(scene);
       assert.equal(counts.get(t.id), 1);
-      for (const n of neighboursOf(m, t.id)) assert.equal(counts.get(n.id), 1, `${t.id}: neighbour ${n.id}`);
+      for (const id of linkedTo(m, t.id)) assert.equal(counts.get(id), 1, `${t.id}: neighbour ${id}`);
+      assert.equal(counts.size, linkedTo(m, t.id).size + 1, `${t.id}: draws exactly itself and what it is joined to`);
       // Its status is a stop on the track, or a branch off it.
       const stops = LIFECYCLE[t.kind];
       const texts = [...walkScene(scene.nodes)].filter((n) => n.kind === 'text').map((n) => n.text);
@@ -107,5 +120,48 @@ for (const name of WORKSPACES) {
       assert.equal([...walkScene(after.nodes)].filter((n) => n.kind === 'mark' && n.action === `rephase:${first}`).length, 0);
       assert.equal(drawn(after).size, counts.size, 'accepting moves tickets; it draws none more and none fewer');
     }
+  });
+}
+
+for (const name of WORKSPACES) {
+  test(`${name}: no two neighbours of a ticket share a place, even for the most linked tickets`, () => {
+    const m = model(name);
+    const busiest = Object.values(m.tickets).sort((a, b) => linkedTo(m, b.id).size - linkedTo(m, a.id).size).slice(0, 25);
+    for (const t of busiest) {
+      const scene = ticketScene(m, t.id, ctx);
+      const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined && n.ticket !== t.id);
+      const places = new Set(marks.map(placeOf));
+      assert.equal(places.size, marks.length, `${t.id}: ${marks.length} neighbours on ${places.size} places`);
+      for (const n of marks) {
+        const y = Number(n.attrs.cy ?? String(n.attrs.points).split(/[ ,]/)[1]);
+        assert.ok(y > 340 && y < 990, `${t.id}: ${n.ticket} at y ${y} runs into the track or off the screen`);
+      }
+    }
+  });
+
+  test(`${name}: accepting a re-phase group moves its tickets into the sector, and only them`, () => {
+    const m = model(name);
+    const groups = new Map();
+    for (const t of unplaced(m)) if (t.suggestion !== undefined) groups.set(t.suggestion.phase, [...(groups.get(t.suggestion.phase) ?? []), t.id]);
+    if (groups.size === 0) return;
+    const [phase, members] = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)[0];
+    const placesIn = (scene) => new Map([...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined).map((n) => [n.ticket, placeOf(n)]));
+    const before = placesIn(rephaseScene(m, ctx));
+    const after = placesIn(rephaseScene(m, ctx, new Set([phase])));
+    for (const id of members) assert.notEqual(after.get(id), before.get(id), `${id} did not move into ${phase}`);
+    for (const [id, place] of before) if (!members.includes(id)) assert.equal(after.get(id), place, `${id} moved although its group was not accepted`);
+  });
+
+  test(`${name}: every ticket on the wheel can take keyboard focus, and what needs a person glows`, () => {
+    const m = model(name);
+    const scene = wheelScene(m, ctx);
+    const svg = sceneToSvg(scene);
+    const marks = svg.match(/<[a-z]+ [^>]*data-ticket="[^"]+"[^>]*>/g) ?? [];
+    assert.equal(marks.length, Object.keys(m.tickets).length);
+    for (const tag of marks) assert.match(tag, /tabindex="-?[01]"/, `not focusable: ${tag.slice(0, 80)}`);
+    const glowing = new Set();
+    const walk = (nodes, lit) => { for (const n of nodes) { if (n.kind === 'group') walk(n.children, lit || String(n.cls ?? '').includes('glow')); else if (n.kind === 'mark' && n.ticket !== undefined && (lit || n.glow)) glowing.add(n.ticket); } };
+    walk(scene.nodes, false);
+    for (const t of Object.values(m.tickets)) if (['failed', 'owed'].includes(t.state)) assert.ok(glowing.has(t.id), `${t.id} needs a person and does not glow`);
   });
 }

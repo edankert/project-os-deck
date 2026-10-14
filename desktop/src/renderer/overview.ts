@@ -174,15 +174,34 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
   };
 }
 
-/** The workspace's model, from Deck's host, kept until the index changes it. */
+/** How long Deck waits for an index that is still being built before it says so. */
+const BUILDING_WAIT_MS = 30000;
+
+/**
+ * The workspace's model, from Deck's host, kept for a few seconds.
+ *
+ * While the index is still being built the host answers `{ building: true }`
+ * and no model. That answer is never kept: Deck asks again every half second,
+ * and says what it is waiting for, until the model arrives or the wait runs out
+ * (FEAT-0027's review, round one).
+ */
 export async function modelFor(workspaceId: string, fresh = false): Promise<OverviewModel> {
   const cached = models.get(workspaceId);
   if (!fresh && cached !== undefined && Date.now() - cached.at < 5000) return cached.model;
-  const response = await fetch(`/deck/overview/${encodeURIComponent(workspaceId)}`);
-  if (!response.ok) throw new Error(`the overview could not be read (${response.status})`);
-  const model = (await response.json()) as OverviewModel;
-  models.set(workspaceId, { model, at: Date.now() });
-  return model;
+  const started = Date.now();
+  for (;;) {
+    const response = await fetch(`/deck/overview/${encodeURIComponent(workspaceId)}`);
+    if (!response.ok) throw new Error(`the overview could not be read (${response.status})`);
+    const body = (await response.json()) as Partial<OverviewModel> & { building?: boolean };
+    if (body.building !== true && Array.isArray(body.phases) && body.tickets !== undefined) {
+      const model = body as OverviewModel;
+      models.set(workspaceId, { model, at: Date.now() });
+      return model;
+    }
+    if (Date.now() - started > BUILDING_WAIT_MS) throw new Error('the notes are still being read; the overview will show when they are');
+    api?.say('reading the notes for the overview…');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 }
 
 function memoryFor(workspaceId: string): Map<string, unknown> {
@@ -415,6 +434,29 @@ function hideCallout(): void {
 async function onKey(event: KeyboardEvent): Promise<void> {
   if (current === null) return;
   const element = event.target as Element | null;
+  // The keyboard reaches every ticket: arrows step from a focused group into its
+  // ticket marks and along them, and Enter opens the ticket under focus.
+  if (element !== null && stage?.contains(element) && ['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
+    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+    const isTicket = element.hasAttribute('data-ticket') && element.getAttribute('tabindex') === '-1';
+    const scope = isTicket ? element.closest('[data-key]') ?? stage : element;
+    const marks = Array.from(scope.querySelectorAll<SVGElement>('[data-ticket][tabindex="-1"]'));
+    if (marks.length > 0) {
+      event.preventDefault();
+      const at = isTicket ? marks.indexOf(element as SVGElement) : -1;
+      const next = marks[(at + step + marks.length) % marks.length] ?? marks[0]!;
+      next.focus();
+    }
+    return;
+  }
+  if ((event.key === 'Enter' || event.key === ' ') && element !== null && stage?.contains(element) && element.getAttribute('data-target') === null && element.getAttribute('data-action') === null && element.hasAttribute('data-ticket')) {
+    const row = current.scene.list.find((r) => r.id === element.getAttribute('data-ticket') && r.target !== undefined);
+    if (row?.target !== undefined) {
+      event.preventDefault();
+      await go(row.target);
+      return;
+    }
+  }
   if ((event.key === 'Enter' || event.key === ' ') && element !== null && stage?.contains(element)) {
     const action = element.getAttribute('data-action');
     const target = element.getAttribute('data-target');

@@ -273,10 +273,11 @@ function tray(model: OverviewModel, phases: Phase[], x: number, y: number, w: nu
     const children: SceneNode[] = [
       { kind: 'mark', tag: 'rect', attrs: { x, y: top, width: w, height: h, rx: 10 }, cls: 'ov-glass', markId: `phase-${phase.id}`, label: phaseLabel(phase) },
     ];
+    const lit: MarkNode[] = [];
     ids.forEach((id, i) => {
       const t = model.tickets[id];
       if (t === undefined) return;
-      children.push({
+      (needsPerson(t) ? lit : children).push({
         kind: 'mark',
         tag: 'rect',
         attrs: { x: x + pad + (i % cols) * pitch, y: top + pad + Math.floor(i / cols) * pitch, width: pitch - 2, height: pitch - 2, rx: 1.5 },
@@ -286,6 +287,8 @@ function tray(model: OverviewModel, phases: Phase[], x: number, y: number, w: nu
         label: ticketLabel(t),
       });
     });
+    // What needs a person glows in the tray too, as everywhere else on the wheel.
+    if (lit.length > 0) children.push({ kind: 'group', cls: 'glow', children: lit });
     out.push({
       kind: 'group',
       key: `tray-${phase.id}`,

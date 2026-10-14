@@ -15,7 +15,7 @@ import { KIND_WORD, STATE_WORD, type Kind, type OverviewModel, type Ticket } fro
 import { needsPerson, ticketLabel } from './overview-wheel.js';
 import { gateFromModel, gateNodes } from './overview-flows.js';
 
-export const TICKET_SCREEN = { width: 1440, height: 1000, cx: 720, cy: 580 } as const;
+export const TICKET_SCREEN = { width: 1440, height: 1000, cx: 720, cy: 650 } as const;
 
 /** The statuses each kind passes through on its way to finished (tools/instructions/STATUSES.md). */
 export const LIFECYCLE: Readonly<Record<Kind, readonly string[]>> = {
@@ -86,6 +86,43 @@ function track(t: Ticket): SceneNode[] {
   return nodes;
 }
 
+/**
+ * Where each of `count` neighbours stands: wide elliptical rings round the ticket,
+ * below its track and gate, each filled to its perimeter at the glyph pitch before
+ * the next begins. The pitch shrinks until every neighbour fits, so no two share a
+ * place (FEAT-0028's review: 202 neighbours had 116 places).
+ */
+export function ringPlaces(count: number, cx: number, cy: number): Array<{ x: number; y: number; size: number }> {
+  const innerY = 150;
+  const outerY = 300;
+  const wide = 2.1;
+  const perimeter = (a: number, b: number): number => Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
+  for (let pitch = 44; pitch >= 6; pitch -= 2) {
+    const step = Math.max(pitch * 0.8, 9);
+    const rings: Array<{ ry: number; capacity: number }> = [];
+    let room = 0;
+    for (let ry = innerY; ry <= outerY && room < count; ry += step) {
+      const capacity = Math.max(1, Math.floor(perimeter(ry * wide, ry) / pitch));
+      rings.push({ ry, capacity });
+      room += capacity;
+    }
+    if (room < count && pitch > 6) continue;
+    const out: Array<{ x: number; y: number; size: number }> = [];
+    let left = count;
+    for (const [index, ring] of rings.entries()) {
+      const here = Math.min(ring.capacity, left);
+      for (let k = 0; k < here; k++) {
+        const angle = ((k + (index % 2) * 0.5) * TAU) / here;
+        out.push({ x: cx + ring.ry * wide * Math.sin(angle), y: cy - ring.ry * Math.cos(angle), size: Math.min(15, pitch * 0.36) });
+      }
+      left -= here;
+      if (left === 0) break;
+    }
+    return out;
+  }
+  return [];
+}
+
 /** Where a ticket of this kind is accepted, if anywhere: S5, S6 or S7. */
 export function flowFor(t: Ticket): { parts: AddressParts; label: string } | null {
   if (t.id.startsWith('DES-')) return { parts: { flow: 'design', note: t.id }, label: `Open ${t.id}'s plates to accept or decline it` };
@@ -115,20 +152,17 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   nodes.push(...frame(TICKET_SCREEN.width, TICKET_SCREEN.height), ...bezel(cx, cy, 104, 72));
 
 
-  // The neighbourhood: one ring, or two when it is crowded.
+  // The neighbourhood: rings outward from 200, each holding only as many glyphs as
+  // fit round it, so no two share a place. A crowded ticket draws smaller glyphs
+  // rather than stacking them (FEAT-0028's review: 202 neighbours had 116 places).
   const near = neighboursOf(model, t.id);
-  const perRing = 28;
+  const places = ringPlaces(near.length, cx, cy);
   const wires: SceneNode[] = [];
   const glyphs: SceneNode[] = [];
   const lit: MarkNode[] = [];
   near.forEach((n, i) => {
-    const ring = Math.floor(i / perRing);
-    const inRing = Math.min(perRing, near.length - ring * perRing);
-    const angle = ((i % perRing) + (ring % 2) * 0.5) * (TAU / inRing);
-    const radius = 200 + ring * 90;
-    const [x, y] = polar(cx, cy, Math.min(radius, 380), angle);
+    const { x, y, size } = places[i]!;
     wires.push({ kind: 'mark', tag: 'line', attrs: { x1: cx, y1: cy, x2: x, y2: y }, cls: 'ov-wire ov-faint', state: n.state });
-    const size = near.length > perRing ? 11 : 15;
     const shape = glyph(n.kind, x, y, size);
     const mark: MarkNode = { kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: n.id, state: n.state, label: ticketLabel(n), target: ctx.address({ page: 'ticket', note: n.id }) };
     (needsPerson(n) ? lit : glyphs).push(mark);
@@ -137,7 +171,7 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   nodes.push(...wires, ...glyphs);
   if (lit.length > 0) nodes.push({ kind: 'group', cls: 'glow', children: lit });
   if (near.length === 0) {
-    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy, r: 200, 'stroke-dasharray': '3 9' }, cls: 'ov-wire ov-faint', label: 'Nothing links to it, and it links to nothing' });
+    nodes.push({ kind: 'mark', tag: 'ellipse', attrs: { cx, cy, rx: 150 * 2.1, ry: 150, 'stroke-dasharray': '3 9' }, cls: 'ov-wire ov-faint', label: 'Nothing links to it, and it links to nothing' });
   }
 
   // The ticket itself, large, in the middle.
