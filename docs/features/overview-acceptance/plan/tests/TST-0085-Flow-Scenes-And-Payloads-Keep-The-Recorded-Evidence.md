@@ -20,7 +20,7 @@ tasks:
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 artifacts: []
-adequacy: ''
+adequacy: "The checks distinguish unknown evidence, every result word, incomplete printed steps, cross-platform keys and malformed reads. Recorded payloads reproduce the six scene fixtures."
 mutation_score: ''
 reviewed_by: ''
 review_date: ''
@@ -50,7 +50,7 @@ The flow pictures preserve the evidence and obey PHASE-0005’s screen rules.
 
 ## Evidence
 
-Not run yet. The executable check holds no verdict in its note status.
+2026-10-14: `node --test desktop/tests/overview-flows.test.mjs` passed 11 tests, failed none and skipped none after `npm --prefix desktop run build`. Every S5–S7 fixture passes the scene contract, including every release-test section with More expanded. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

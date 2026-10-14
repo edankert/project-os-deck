@@ -1,0 +1,12 @@
+{
+  "release": null,
+  "platforms": [
+    {
+      "id": "desktop",
+      "sections": [],
+      "error": ""
+    }
+  ],
+  "step": "desktop",
+  "canWrite": true
+}

@@ -1,0 +1,44 @@
+{
+  "id": "DES-0006",
+  "title": "Look and feel: three directions drawn on Workouts, the cockpit and rider selection, kept for a possible future design change",
+  "status": "proposed",
+  "canWrite": true,
+  "plates": [
+    {
+      "href": "your-trainer-screen-workout-selection-iphone-1.jpg",
+      "label": "Workouts as built on Android"
+    },
+    {
+      "href": "your-trainer-screen-cockpit-iphone-2.jpg",
+      "label": "The cockpit as built on Android, before START"
+    },
+    {
+      "href": "your-trainer-screen-rider-selection-iphone-3.jpg",
+      "label": "Rider selection as built on Android"
+    },
+    {
+      "href": "your-trainer-des-0006-a-instrument-4.jpg",
+      "label": "Direction A, Instrument: Workouts, the cockpit mid-ride and rider selection"
+    },
+    {
+      "href": "your-trainer-des-0006-b-soft-depth-5.jpg",
+      "label": "Direction B, Soft depth: Workouts, the cockpit mid-ride and rider selection"
+    },
+    {
+      "href": "your-trainer-des-0006-c-poster-6.jpg",
+      "label": "Direction C, Poster: Workouts, the cockpit mid-ride and rider selection"
+    }
+  ],
+  "revisions": [
+    {
+      "label": "2026-10-11 — stub created with FEAT-0135."
+    },
+    {
+      "label": "2026-10-11 — parked. Edwin chose not to pick a direction yet; his words are in the decision record. Status proposed , phase PHASE-999."
+    },
+    {
+      "label": "2026-10-11 — three directions drawn and described. The pictures are in __attachments__/ and no HTML page is kept, because pictures carry everything here ( tools/skills/design-authoring/SKILL.md )."
+    }
+  ],
+  "comments": []
+}

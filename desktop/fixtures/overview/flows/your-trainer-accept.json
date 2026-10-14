@@ -1,0 +1,94 @@
+{
+  "id": "FEAT-0130",
+  "title": "The Equipment Hub lists the devices as rows grouped by bike and rider, and the top bar colours only a device that needs the rider",
+  "status": "doing",
+  "canWrite": true,
+  "lamps": [
+    {
+      "key": "requirements",
+      "label": "Requirements",
+      "known": true,
+      "total": 30,
+      "done": 0,
+      "missing": [
+        "REQ-0224: All four icons are drawn on every screen that carries the top bar, first run included, and tapping them opens the Equipment Hub. Symbols: Android `EquipmentIndicators` loses `if (!equipment.anyBound) return` (`EquipmentIndicators.kt:66`); iOS `EquipmentIndicatorsButton` loses `if equipment.anyBound` (`HubChrome.swift:112`).",
+        "REQ-0224: *(Amended 2026-09-30, see Amendments.)* Each icon follows the state table in DES-0002 § 2: connected in the bar's text colour, connecting in the app accent, set up but not connected in grey, not set up in a fainter grey, couldn't connect in red with a filled dot. Symbols: Android `linkTint` (`EquipmentIndicators.kt:124`); iOS `EquipmentLabels.tint` (`HubChrome.swift:189`) and `SlotIndicatorGlyph` (`HubChrome.swift:135`).",
+        "REQ-0224: No icon is green or amber, and no icon carries a hollow dot. Android `linkTint` no longer returns `TrainerGreen` or `ResAmber`; iOS `SlotIndicatorGlyph` draws its dot for `.error` only.",
+        "REQ-0224: *(Amended 2026-09-30, see Amendments.)* A not-set-up icon is legible against the bar at the same size as the others. Today Android draws it at 22 % alpha and iOS at 35 % opacity, which is close to invisible. The new value meets 3:1 contrast against the bar background in light and dark themes, measured and recorded.",
+        "REQ-0224: A slot that takes its data from another device is drawn in that device's state: power and cadence with no device of their own light and grey with the trainer.",
+        "REQ-0224: The trainer, power and cadence icons sit in one shaded group, and heart rate stands apart from it.",
+        "REQ-0224: The accessibility label still reads all four states, including \"not set up\".",
+        "REQ-0225: The Hub is a list. A \"YOUR BIKE\" card holds the Smart Trainer row with Power and Cadence as indented child rows joined by a connector line. A \"YOU\" card holds Heart Rate. Symbols: Android `EquipmentList` and `EquipmentRow` in `ui/equipment/`, replacing the `EquipmentGrid` call at `EquipmentHub.kt:146`; iOS `EquipmentHubView` with `EquipmentRowView`, replacing `EquipmentSlotRow`'s card layout.",
+        "REQ-0225: The YOUR BIKE caption reads \"The trainer is all you need to ride. It also measures power and cadence. Change those only to use power pedals or a cadence sensor instead.\" The YOU caption reads \"Needed for HR-Zone rides only.\"",
+        "REQ-0225: A LIVE READINGS strip shows power, cadence and heart rate below the cards, and shows a dash for a reading with no source. It appears on phones and tablets alike (Edwin, 2026-09-28), because ADR-0017 keeps content the same at every width.",
+        "REQ-0225: *(Amended 2026-09-30, see Amendments.)* Each row shows the device's name and state in scheme A: a connected device's icon tile is lit in the app accent and its status text is plain secondary grey; connecting is the accent with a spinner; set up but disconnected is grey; a failure is red text on a red-tinted tile; not set up is a dashed tile reading \"Not set up\". A child row with no device of its own reads \"From the trainer\" or \"From the power source\".",
+        "REQ-0225: A failed or disconnected row carries a Reconnect button on the row itself, an empty row carries a Connect button, and a connecting row shows a spinner. Symbols: the `trailing` slot of `EquipmentRow` and `EquipmentRowView`.",
+        "REQ-0225: A data-only trainer is not drawn as a fault: its row carries the hand mark and \"Resistance by hand\" in neutral colour, with no amber.",
+        "REQ-0225: While a ride is running, the Hub opens as a sheet with no chevrons. Only Reconnect and cadence's Change source work; adding, changing or forgetting a device is not offered. Opening it never pauses the timer or stops the trainer. Symbols: Android `ReconnectOnlyHub` (`EquipmentHub.kt:249`), iOS `ReconnectOnlyHub` (`EquipmentHubView.swift:323`), both redrawn as the grouped list.",
+        "REQ-0225: Android's four large tiles are gone: `EquipmentGrid`, `EquipmentSlot`, `SlotOverflow` and `SlotInfoDialog` are deleted from `EquipmentStatus.kt`, or kept only where another screen still calls them.",
+        "REQ-0226: An empty row opens a picker sheet titled for its slot (for example \"Choose a heart-rate monitor\"), listing nearby devices eligible for that slot, each with its name, its kind and three signal bars, with Cancel. Symbols: Android `DevicePickerSheet`, presenting today's `ScannerModal` list in a `ModalBottomSheet`; iOS `DevicePickerSheet`, replacing `ScannerSheet`'s presentation from the Hub.",
+        "REQ-0226: A device already used in another slot is listed greyed, reads \"In use as Smart Trainer\" (or the slot's name), and cannot be chosen.",
+        "REQ-0226: Choosing a device closes the sheet, and the row shows \"Connecting…\" with a spinner.",
+        "REQ-0226: A set-up row opens a details sheet showing the slot's name, the device's name and its state. Symbols: Android `DeviceDetailsSheet`; iOS `DeviceDetailsSheet`.",
+        "REQ-0226: The details sheet shows three rows. Resistance: for a data-only trainer the hand mark and \"Set by hand: this bike does not let the app change it\"; for a trainer the app drives, a plain \"Set by the app\". Sends: what the device reports, for example \"Power, cadence, speed\". Signal: three bars, with the strength in their accessibility label only (REQ-0227). Resistance appears for the trainer only.",
+        "REQ-0226: The details sheet offers Change device, Run the compatibility test (trainer only) and Forget this <device>. Forget asks once before it removes the device. Run the compatibility test opens the existing check (Android `Routes.COMPATIBILITY_CHECK`, iOS `CompatibilityCheckView`).",
+        "REQ-0226: When the device is not connected, a Reconnect button leads the actions and the Signal row is left out.",
+        "REQ-0226: No long-press, no ⋮ or ellipsis menu and no Device info dialog remain on the Hub on either platform. Grep: Android `SlotOverflow`, `SlotInfoDialog`, `showMenuOnLongPress`, `combinedClickable` in `EquipmentStatus.kt`; iOS `ellipsis.circle` and `overflowActions` in `EquipmentSlotRow.swift`.",
+        "REQ-0226: A device that cannot fill a slot is refused with the shipped wording, through the existing `EquipmentBinder` on Android and the device-mismatch alert on iOS.",
+        "REQ-0227: The picker shows three bars per device and no dBm text. Today Android prints `\"${device.rssi} dBm\"` (`ScannerModal.kt:125`) and iOS prints `\"\\(device.rssi) dBm\"` (`ScannerSheet.swift:44`).",
+        "REQ-0227: The bars follow one threshold table on both platforms: 3 bars (Strong) at −65 dBm or stronger, 2 bars (Fair) below −65 down to −80, 1 bar (Weak) below −80. Symbols: Android `signalBarsFor(rssi)`, iOS `SignalStrength.bars(rssi:)`, each with a unit test at −65, −66, −80 and −81.",
+        "REQ-0227: A device with no reading shows no bars rather than one. iOS reports 0 for a peripheral it retrieved rather than discovered (`BluetoothService.swift:548`, `:644`) and 127 when the value is unavailable; both mean \"no reading\".",
+        "REQ-0227: The details sheet reads the connected device's signal and shows the same bars, with no word beside them. Neither app reads it today: Android gains a `BluetoothGatt.readRemoteRssi()` call in `BluetoothManager`, iOS a `CBPeripheral.readRSSI()` call and `peripheral(_:didReadRSSI:error:)` in `BluetoothService`.",
+        "REQ-0227: The details sheet reads the signal only while it is open, and never while a ride is running. The details sheet is not reachable during a running ride (REQ-0225), and the read must not delay or fail a trainer control write.",
+        "REQ-0227: The bars carry no visible word, and a screen reader reads the strength: the bars' accessibility label is \"Strong signal\", \"Fair signal\" or \"Weak signal\", and \"No signal reading\" when there is none. Edwin, 2026-09-28, approving REQ-0227: 'The bars should not carry a visible label as well but yes accessibility should be considered for this.'"
+      ]
+    },
+    {
+      "key": "tasks",
+      "label": "Tasks",
+      "known": true,
+      "total": 10,
+      "done": 3,
+      "missing": [
+        "TASK-0986: doing",
+        "TASK-0987: doing",
+        "TASK-0988: doing",
+        "TASK-0989: doing",
+        "TASK-0990: doing",
+        "TASK-0991: doing",
+        "TASK-0992: doing"
+      ]
+    },
+    {
+      "key": "automated",
+      "label": "Automated",
+      "known": false,
+      "total": 1,
+      "done": 0,
+      "missing": [
+        "TST-0561: command result is not exposed by the sidecar"
+      ]
+    },
+    {
+      "key": "acceptance",
+      "label": "Acceptance",
+      "known": false,
+      "total": 0,
+      "done": 0,
+      "missing": [
+        "no acceptance checks name this feature"
+      ]
+    },
+    {
+      "key": "reviews",
+      "label": "Reviews",
+      "known": true,
+      "total": 2,
+      "done": 1,
+      "missing": [
+        "independent review: approved, 1 reviewers recorded"
+      ]
+    }
+  ],
+  "acceptanceRequested": false
+}

@@ -1,0 +1,8 @@
+{
+  "recorded": "2026-10-14",
+  "cockpit_head": "032a6f85a8d8f3a85192683c8abb17266af2febc",
+  "your_trainer_head": "c38475f8862520eca61d64383ac946163e1d5bd9",
+  "deck_head": "c84de57c75b77737038cdfb178401abded2006fc",
+  "method": "Read-only Python builders used by cockpit GET endpoints; render metadata and link HTML omitted. CLI payloads also recorded from release-test.py --release REL-0017 --platform <p> --json.",
+  "feature_exception": "Your Trainer has no feature at review; FEAT-0130 retains doing."
+}

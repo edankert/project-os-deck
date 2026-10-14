@@ -1,0 +1,152 @@
+[
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-wheel.png",
+    "file": "deck-DES-0004-yt-wheel-1.jpg",
+    "bytes": 113597
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-deck-wheel.png",
+    "file": "deck-DES-0004-deck-wheel-2.jpg",
+    "bytes": 97334
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-shelf.png",
+    "file": "deck-DES-0004-yt-shelf-3.jpg",
+    "bytes": 24919
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-tray.png",
+    "file": "deck-DES-0004-yt-tray-4.jpg",
+    "bytes": 18238
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-rephase.png",
+    "file": "deck-DES-0004-yt-rephase-5.jpg",
+    "bytes": 13372
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-webs.png",
+    "file": "deck-DES-0004-yt-webs-6.jpg",
+    "bytes": 60071
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-glass-overview.png",
+    "file": "deck-DES-0004-yt-glass-overview-7.jpg",
+    "bytes": 77232
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-yt-glass-phase.png",
+    "file": "deck-DES-0004-yt-glass-phase-8.jpg",
+    "bytes": 84831
+  },
+  {
+    "workspace": "deck",
+    "source": "designs/__attachments__/DES-0004-deck-glass-phase.png",
+    "file": "deck-DES-0004-deck-glass-phase-9.jpg",
+    "bytes": 112362
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "features/ios-iphone-form-factor/evidence/screens-android/screen-workout-selection-iphone.png",
+    "file": "your-trainer-screen-workout-selection-iphone-1.jpg",
+    "bytes": 52332
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "features/ios-iphone-form-factor/evidence/screens-android/screen-cockpit-iphone.png",
+    "file": "your-trainer-screen-cockpit-iphone-2.jpg",
+    "bytes": 36873
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "features/ios-iphone-form-factor/evidence/screens-android/screen-rider-selection-iphone.png",
+    "file": "your-trainer-screen-rider-selection-iphone-3.jpg",
+    "bytes": 48050
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "designs/__attachments__/des-0006-a-instrument.png",
+    "file": "your-trainer-des-0006-a-instrument-4.jpg",
+    "bytes": 101463
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "designs/__attachments__/des-0006-b-soft-depth.png",
+    "file": "your-trainer-des-0006-b-soft-depth-5.jpg",
+    "bytes": 94719
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "designs/__attachments__/des-0006-c-poster.png",
+    "file": "your-trainer-des-0006-c-poster-6.jpg",
+    "bytes": 108583
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/v2.1.8/developer.png",
+    "file": "your-trainer-developer-7.jpg",
+    "bytes": 64319
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/developer.png",
+    "file": "your-trainer-developer-8.jpg",
+    "bytes": 93502
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/v2.1.8/workout-selection.png",
+    "file": "your-trainer-workout-selection-9.jpg",
+    "bytes": 64523
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/workout-selection.png",
+    "file": "your-trainer-workout-selection-10.jpg",
+    "bytes": 65205
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/cockpit-dataonly.png",
+    "file": "your-trainer-cockpit-dataonly-11.jpg",
+    "bytes": 27725
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/history-pedals.png",
+    "file": "your-trainer-history-pedals-12.jpg",
+    "bytes": 38386
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/cockpit-route-pacer.png",
+    "file": "your-trainer-cockpit-route-pacer-13.jpg",
+    "bytes": 41110
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/cockpit-hrzone-dataonly.png",
+    "file": "your-trainer-cockpit-hrzone-dataonly-14.jpg",
+    "bytes": 38781
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/v2.1.8/profile-preferences.png",
+    "file": "your-trainer-profile-preferences-15.jpg",
+    "bytes": 60673
+  },
+  {
+    "workspace": "your-trainer",
+    "source": "tests/acceptance/gallery/candidate/profile-preferences.png",
+    "file": "your-trainer-profile-preferences-16.jpg",
+    "bytes": 66337
+  }
+]

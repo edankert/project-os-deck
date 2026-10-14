@@ -1,0 +1,50 @@
+{
+  "id": "DES-0004",
+  "title": "The phase overview: every ticket as a wedge in its phase's sector, finished phases on a shelf, the backlog in a tray, and the same overview as a Glass field",
+  "status": "proposed",
+  "canWrite": true,
+  "plates": [
+    {
+      "href": "deck-DES-0004-yt-wheel-1.jpg",
+      "label": "your-trainer"
+    },
+    {
+      "href": "deck-DES-0004-deck-wheel-2.jpg",
+      "label": "Deck"
+    },
+    {
+      "href": "deck-DES-0004-yt-shelf-3.jpg",
+      "label": "The shelf: sixteen finished phases as discs, violet badges on the ones with acceptance tests owed again"
+    },
+    {
+      "href": "deck-DES-0004-yt-tray-4.jpg",
+      "label": "The backlog tray: PHASE-999"
+    },
+    {
+      "href": "deck-DES-0004-yt-rephase-5.jpg",
+      "label": "968 tickets with no phase: 572 suggested from links, 74 from dates, 322 left for a person"
+    },
+    {
+      "href": "deck-DES-0004-yt-webs-6.jpg",
+      "label": "Small webs, one per phase still to finish, then the backlog and the no-phase tickets"
+    },
+    {
+      "href": "deck-DES-0004-yt-glass-overview-7.jpg",
+      "label": "Glass facing PHASE-021: compass across the top, closed tickets as tiles at the horizon, open tickets in the middle band, failed and owed-again tests as large cards in front, exit criteria card front left"
+    },
+    {
+      "href": "deck-DES-0004-yt-glass-phase-8.jpg",
+      "label": "PHASE-021 as a Glass desk: the phase note with its exit criteria, a Features collection as cards, a Tests collection as a table, and TST-0656 opened with six neighbours"
+    },
+    {
+      "href": "deck-DES-0004-deck-glass-phase-9.jpg",
+      "label": "Glass"
+    }
+  ],
+  "revisions": [
+    {
+      "label": "2026-10-08 — written after four rounds in one session, each published to claude.ai (the two URLs in source: ). Round one drew nine unrelated overviews; Edwin kept RINGS and STARS because they tie items to a phase. Round two added ticket types, project-wide tickets and drill-down. Round three drew one wedge per ticket, ordered the rings from fewer to more, made decisions and risks project-wide, removed exit criteria as a ring, and turned the stars into webs. Round four, recorded here, moved finished phases to a shelf, drew the backlog as a tray, added re-phase suggestions and the \"owed again\" state, and drew the overview and a phase page as Glass."
+    }
+  ],
+  "comments": []
+}
