@@ -15,6 +15,7 @@ import http from 'node:http';
 import path from 'node:path';
 import type { Capabilities, DeckState, Workspace } from '../shared/types.js';
 import type { IndexSnapshot } from './note-index.js';
+import type { OverviewReply } from './overview-service.js';
 import { servedState } from '../shared/served-state.js';
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
@@ -189,6 +190,8 @@ export interface HostOptions {
    * assuming the forwarding tests cover it (TASK-0040).
    */
   indexFor?: (workspaceId: string) => IndexSnapshot | null;
+  /** The revision-cached overview, on the desktop and served hosts (FEAT-0026). */
+  overviewFor?: (workspaceId: string) => OverviewReply | null;
   /**
    * The store's state, for `/deck/state` and `/deck/events` (TASK-0057).
    *
@@ -217,6 +220,7 @@ export const SIDECAR_PREFIX = '/deck/sidecar/';
 /** How often an idle event stream says it is still there, so nothing between closes it. */
 export const EVENTS_HEARTBEAT_MS = 20_000;
 export const RECORDS_PREFIX = '/deck/records/';
+export const OVERVIEW_PREFIX = '/deck/overview/';
 
 export class DeckHost {
   private readonly options: HostOptions;
@@ -314,6 +318,13 @@ export class DeckHost {
     }
     if (pathname === '/deck/events') {
       this.events(res, method);
+      return;
+    }
+    if (pathname.startsWith(OVERVIEW_PREFIX)) {
+      const id = pathname.slice(OVERVIEW_PREFIX.length);
+      const answer = /^[a-z0-9]{4,64}$/.test(id) ? this.options.overviewFor?.(id) ?? null : null;
+      if (answer === null) plain(res, 404, 'Deck has no overview for that workspace');
+      else json(res, 200, answer);
       return;
     }
     if (this.options.extraReads !== undefined) {

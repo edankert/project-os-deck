@@ -42,20 +42,21 @@ surfaceKinds.register({ id: 'orbit', label: 'The link graph' });
  * A page: a whole screen that is not a view of notes — the acceptance checks,
  * the release page, the publication board.
  *
- * Empty, deliberately. Deck draws no page today; PHASE-0004 adopts them from
- * the cockpit a register row at a time, and each one registers itself here
- * when it is built.
+ * PHASE-0005 registers its four overview pages at the shared scene boundary.
  */
 export const pageKinds = new Vocabulary('page');
+pageKinds.register({ id: 'wheel', label: 'The phase overview' });
+pageKinds.register({ id: 'phase', label: 'A phase' });
+pageKinds.register({ id: 'ticket', label: 'A ticket' });
+pageKinds.register({ id: 'rephase', label: 'Tickets with no phase' });
 
 /**
  * A flow: an ordered list of steps, each with a done-state read from the
  * record and a verb from the registry.
  *
- * Empty, deliberately, and it will stay empty for a while. Edwin said on
- * 2026-09-08 that he does not yet know what flows should look like and wants
- * them considered now and fleshed out over time. So the seam is reserved and
- * nothing is built: the concept is in `docs/ARCHITECTURE.md`, the cursor slot
- * is in the store, and this is where a flow will say its own name.
+ * PHASE-0005 registers the three acceptance flows named in its two-agent brief.
  */
 export const flowKinds = new Vocabulary('flow');
+flowKinds.register({ id: 'design', label: 'Design acceptance' });
+flowKinds.register({ id: 'test-run', label: 'An acceptance test run' });
+flowKinds.register({ id: 'accept', label: 'Ticket acceptance' });

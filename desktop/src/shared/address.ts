@@ -32,11 +32,12 @@ const DESK_RE = /^[^\u0000-\u001f\u007f]{1,64}$/;
 /**
  * A step's own name inside a flow.
  *
- * Not a vocabulary: which steps a flow has is the flow's business, and no flow
- * is built yet. What the grammar can still say is the SHAPE of a step name and
+ * Not a vocabulary: which steps a flow has is the flow's business.
+ * PHASE-0005 uses a dotted section name, such as android.3.
+ * What the grammar can still say is the SHAPE of a step name and
  * that a step outside a flow names nothing at all.
  */
-const STEP_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const STEP_RE = /^(?=.{1,64}$)[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*$/;
 
 /**
  * The order keys are written in, which is also the set the parser accepts.
