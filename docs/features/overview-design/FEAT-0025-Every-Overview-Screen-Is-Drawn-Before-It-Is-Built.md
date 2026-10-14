@@ -56,7 +56,7 @@ This feature is a design, so it has no automated test. Its verification is Edwin
 
 ## Where this stands
 
-2026-10-14: defined, not started. Waits on Edwin moving PHASE-0005 to `active`. The owner creates the task notes from [the plan](plan/PLAN.md) before writing code, taking each id as the brief says.
+2026-10-14: defined, not started. PHASE-0005 is `active` since 2026-10-14, so the lane can start. The owner creates the task notes from [the plan](plan/PLAN.md) before writing code, taking each id as the brief says.
 
 ## Questions between the lanes
 

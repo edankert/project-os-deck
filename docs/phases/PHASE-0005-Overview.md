@@ -3,7 +3,7 @@ type: "[[phase]]"
 id: PHASE-0005
 aliases: ["PHASE-0005"]
 title: "Overview — Deck opens on a wheel of the project's phases, and every screen behind it shows progress as a picture, including the screens where a design, an acceptance test and a ticket are accepted"
-status: planned
+status: active
 order: 5
 owner: user:edwin
 created: 2026-10-14
@@ -92,6 +92,6 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 
 ## Notes
 
-- **Order.** `order: 5` only because the field cannot repeat. Edwin set Glass aside on 2026-10-08 to get the overview right first (DES-0004), so this phase is meant to be worked next. Moving it in [PHASES.md](../PHASES.md) is his call.
+- **Order.** `order: 5` only because the field cannot repeat. Edwin set Glass aside on 2026-10-08 to get the overview right first (DES-0004), so this phase is worked next. He set it `active` on 2026-10-14. Moving it in [PHASES.md](../PHASES.md) is his call.
 - **Open questions carried from DES-0004.** How a backlog phase is marked (an id ending in 999, or `kind: backlog`); whether an open risk is amber; whether accepting a re-phase suggestion should write. The design lane proposes an answer to each in DES-0005, and Edwin decides when he accepts it.
 - **Depends on PHASE-0001** for the store, the addresses, the view provider and Deck's index. It does not depend on PHASE-0002's unfinished work.

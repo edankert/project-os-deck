@@ -44,7 +44,7 @@ Either lane may be handed to the other agent. Edwin does that by changing the fe
 
 ## The order, and the three gates
 
-1. **Gate A — Edwin starts the phase.** He moves PHASE-0005 to `active`. Until then the lanes do nothing.
+1. **Gate A — Edwin starts the phase.** He moves PHASE-0005 to `active`. Until then the lanes do nothing. Passed on 2026-10-14.
 2. **Both lanes start at once.** Claude makes DES-0005's prototype and plates. Codex builds the overview model with its fixtures, and the checks every screen is held to.
 3. **Gate B — Edwin accepts DES-0005.** This is the design acceptance flow, done in the cockpit for now, because S5 does not exist yet. A decline sends Claude back to step 2 with his reason; Codex's lane is not blocked by it.
 4. **Both lanes build.** Claude builds S1, then S2 to S4, against the model's fixtures. Codex builds S5 to S7, drawn as DES-0005 says, with the sidecar reads and writes they need.
