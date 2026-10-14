@@ -10,7 +10,7 @@
  */
 import { backControl, bezel, frame, heading, words } from './overview-chrome.js';
 import { glyph, polar, TAU } from './overview-geometry.js';
-import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import type { AddressParts, ListRow, MarkNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
 import { KIND_WORD, STATE_WORD, type Kind, type OverviewModel, type Ticket } from './overview-types.js';
 import { needsPerson, ticketLabel } from './overview-wheel.js';
 
@@ -85,6 +85,14 @@ function track(t: Ticket): SceneNode[] {
   return nodes;
 }
 
+/** Where a ticket of this kind is accepted, if anywhere: S5, S6 or S7. */
+export function flowFor(t: Ticket): { parts: AddressParts; label: string } | null {
+  if (t.id.startsWith('DES-')) return { parts: { flow: 'design', note: t.id }, label: `Open ${t.id}'s plates to accept or decline it` };
+  if (t.kind === 'feat') return { parts: { flow: 'accept', note: t.id }, label: `Open ${t.id}'s gate to accept it` };
+  if (t.kind === 'test') return { parts: { flow: 'test-run' }, label: 'Open the release test' };
+  return null;
+}
+
 export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenContext): Scene {
   const t = model.tickets[ticketId];
   if (t === undefined) throw new Error(`the overview has no ticket ${ticketId}`);
@@ -125,9 +133,20 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   }
 
   // The ticket itself, large, in the middle.
+  // Pressing it opens where this kind of ticket is accepted: a design's plates,
+  // a feature's gate, the release test for a test. Other kinds open nothing more.
   const self = glyph(t.kind, cx, cy, 54);
-  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy, r: 84 }, cls: 'ov-glass' });
-  nodes.push({ kind: 'mark', tag: self.tag, attrs: self.attrs, ticket: t.id, state: t.state, glow: true, label: ticketLabel(t) });
+  const flow = flowFor(t);
+  const centre: SceneNode[] = [
+    { kind: 'mark', tag: 'circle', attrs: { cx, cy, r: 84 }, cls: 'ov-glass' },
+    { kind: 'mark', tag: self.tag, attrs: self.attrs, ticket: t.id, state: t.state, glow: true, label: ticketLabel(t) },
+  ];
+  if (flow === null) nodes.push(...centre);
+  else {
+    const target = ctx.address(flow.parts);
+    nodes.push({ kind: 'group', key: `open-${t.id}`, target, label: flow.label, children: centre });
+    list.push({ id: `flow-of-${t.id}`, label: flow.label, group: 'Go to', target });
+  }
 
   // Its phase, as a small sector the person can follow.
   if (t.phase !== null) {

@@ -245,7 +245,7 @@ function disc(model: OverviewModel, phase: Phase, x: number, y: number, size: nu
   const owed = ids.filter((id) => model.tickets[id]?.state === 'owed').length;
   if (owed > 0) {
     const badgeId = `owed-${phase.id}`;
-    children.push({ kind: 'mark', tag: 'circle', attrs: { cx: x + r1 * 0.85, cy: y - r1 * 0.85, r: 10 }, state: 'owed', glow: true, markId: badgeId, count: owed, label: `${owed} acceptance tests owed again` });
+    children.push({ kind: 'mark', tag: 'circle', attrs: { cx: x + r1 * 0.85, cy: y - r1 * 0.85, r: 10 }, state: 'owed', glow: true, markId: badgeId, count: owed, label: `${owed} acceptance tests owed again: open the release test`, target: ctx.address({ flow: 'test-run' }) });
     children.push({ kind: 'text', x: x + r1 * 0.85, y: y - r1 * 0.85 + 4, text: String(owed), rest: true, role: 'number', markRef: badgeId, size: 11, anchor: 'middle' });
   }
   children.push({ kind: 'text', x, y: y + r1 + 18, text: phase.number, rest: true, role: 'id', size: 10, anchor: 'middle', cls: 'ov-dim' });
