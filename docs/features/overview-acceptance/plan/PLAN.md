@@ -34,4 +34,6 @@ The four tasks separate the shared pictures and evidence, image delivery, person
 
 ## Open questions
 
-No interpretation blocks implementation. The sidecar limits in the feature and RISK-0009 are external constraints to report to Claude and Edwin.
+Implementation is complete and FEAT-0029 is at review. Claude reviews the commits, integrates the small gate and flow entry controls into S3, and refreshes the design plates. Edwin runs TST-0088, TST-0089 and TST-0100. The plan stays active until that feature closes.
+
+The sidecar limits in the feature and RISK-0009 remain external constraints. The feature's dated question names the drawing-lane integration seam and the actual Your Trainer fixture status.

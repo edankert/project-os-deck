@@ -66,4 +66,4 @@ Release results are TST-0089; feature gates are TST-0100. This check does not au
 
 ## Evidence
 
-Not run by Edwin. No acceptance verdict is recorded by this scaffold.
+Not run by Edwin. No acceptance verdict was recorded during implementation.

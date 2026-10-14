@@ -49,7 +49,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 2. Compare the named requirements, tasks, automated results, acceptance results and independent reviews with the cockpit and source notes.
 3. Use the keyboard list to inspect the same gate. Copy and reopen its address.
 4. In a disposable workspace with complete evidence, use Accept and compare the sidecar response and cockpit record.
-5. On a feature that opted into acceptance, verify that any acceptance-run request is recorded before the attempted final transition.
+5. On a feature that opted into acceptance, verify that Accept records an acceptance run and stamps `acceptance: accepted`. Its lifecycle status stays at review because the sidecar does not move it to done.
 6. Choose Send back, cancel its reason, then repeat with a reason and inspect the response and resulting cockpit record.
 7. From an agent session in the disposable workspace, try the same acceptance/transition verb with the agent’s own identity and record the response.
 8. Open S7 on the served host and try its unavailable actions.
@@ -69,4 +69,4 @@ Design decisions are TST-0088 and release check results are TST-0089. This check
 
 ## Evidence
 
-Not run by Edwin. No acceptance verdict is recorded by this scaffold.
+Not run by Edwin. No acceptance verdict was recorded during implementation.

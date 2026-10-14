@@ -63,9 +63,9 @@ counters:
 focus:
   phase: PHASE-0005
   feature: FEAT-0029
-  task: TASK-0123
+  task: ""
   issue: ""
-  note: "2026-10-14: Codex builds FEAT-0029, the design, release-test and feature acceptance flows, on lane/codex. TASK-0120 starts with pure scenes and recorded evidence. Claude coordinates the merge and reviews; Edwin alone gives acceptance verdicts. No windows or sibling repository writes are authorised."
+  note: "2026-10-14: FEAT-0029 is at review on lane/codex. TASK-0120 to TASK-0123 are complete; 718 desktop tests pass with no failures or skips. Claude reviews, integrates S3's small gate and merges. Edwin runs TST-0088, TST-0089 and TST-0100. RISK-0009 records the sidecar's missing feature transitions and unverified agent guards. No windows, real verdict writes, pushes or merges occurred."
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
@@ -73,7 +73,7 @@ items:
     FEAT-0029:
       file: docs/features/overview-acceptance/FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence.md
       title: 'Designs, acceptance tests and tickets are accepted from a picture of their evidence: S5, S6 and S7, writing through the cockpit''s sidecar'
-      status: doing
+      status: review
       owner: system:codex
       phase: PHASE-0005
       requirements: []
@@ -359,7 +359,7 @@ items:
     TASK-0123:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin.md
       title: Verify the flows and hand them to Edwin
-      status: doing
+      status: done
       owner: system:codex
       phase: PHASE-0005
       parent: FEAT-0029
@@ -2607,7 +2607,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 130
-    tasks_done: 103
+    tasks_done: 104
     tests_total: 66
     tests_passing: 8
     tests_failing: 0

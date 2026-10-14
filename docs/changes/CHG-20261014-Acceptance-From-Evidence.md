@@ -7,7 +7,7 @@ owner: system:codex
 created: 2026-10-14
 updated: 2026-10-14
 source: []
-commit: ""
+commit: "a50ffcb"
 pr: ""
 impacts: []
 # The platforms this change altered, such as [android] or [android, ios]. A release test lists
@@ -26,9 +26,11 @@ related: ["[[RISK-0009-Acceptance-Flows-Depend-On-Changing-Sidecar-Payloads-And-
 
 ## Summary
 
-This note tracks FEAT-0029’s implementation of S5, S6 and S7. A person sees design plates, release-test captures and the feature’s five evidence lamps before acting. The shared scenes and six fixtures are implemented in 602e9bb. The guarded image route is in 9ad200d and passes 4 HTTP tests. The renderer flows and shell verbs pass 15 focused tests; `npm test` passes 718 tests with no failures or skips.
+A person sees design plates, release-test captures and the feature's five evidence lamps before acting. S5 to S7 are implemented in FEAT-0029 and await Claude's review and Edwin's acceptance. Shared scenes and six fixtures are in `602e9bb`, the guarded image route is in `9ad200d`, and the registered flows and shell verbs are in `a50ffcb`.
 
-The flows read the existing sidecar through Deck’s host. Their writes leave through the shell’s main process. The image route `/deck/file/<workspaceId>/<docs-relative path>` permits GET and HEAD for allowed images under the workspace’s docs root.
+The flows read the existing sidecar through Deck's host. Their writes leave through the shell's main process. `decide` accepts a proposed design, `mark-check` records a test note after all its printed steps have results, and `acceptance-run` stamps an opted-in feature. The existing `transition` verb carries design declines and feature send-back reasons. The configured actor must be a `user:` identity; renderer-supplied identities are ignored.
+
+The image route `/deck/file/<workspaceId>/<docs-relative path>` permits GET and HEAD for png, jpg, jpeg, gif, webp and svg images under the resolved docs root. It rejects traversal and escaping symlinks. SVG responses carry a restrictive sandbox policy. The HTTP host forwards no writes.
 
 ## Impact
 
@@ -59,6 +61,9 @@ Your Trainer has no feature at review in its current 135 feature notes. Its fixt
 
 ## Follow-ups
 
-- [ ] Record implementation evidence, exact endpoint mapping, fixture/image totals and test counts.
-- [ ] Date the precisely adopted capability rows in the adoption register.
-- [ ] Hand Claude the feature at review and leave Edwin’s three acceptance verdicts unrecorded.
+- [x] Record implementation evidence and exact endpoint mapping. On 2026-10-14, `npm test` in `desktop/` passed 718 tests, with no failures or skips; 30 tests cover the three new suites.
+- [x] Keep six flow fixtures, nine recorded payloads and 25 image copies. Images total 1,604,537 bytes and are at most 900 pixels wide.
+- [x] Date the six precisely adopted capability rows in the adoption register, and amend the already-adopted acceptance read row.
+- [x] Hand Claude the feature at review and leave Edwin's three acceptance verdicts unrecorded.
+- [ ] Claude integrates the small S3 gate and flow entry controls, regenerates S5–S7 plates and reviews the feature.
+- [ ] Edwin runs TST-0088, TST-0089 and TST-0100, including the agent-session refusal steps.

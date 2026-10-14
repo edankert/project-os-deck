@@ -27,7 +27,7 @@ related:
 
 ## Description
 
-A changed sidecar payload could show a false pass or light a feature lamp without supporting evidence. S5 to S7 depend on the design note and images, `/api/cockpit/release-test?platform=<p>&release=<REL>`, `/api/cockpit/acceptance` and `/api/cockpit/obligations`. The release-test response includes the template’s `release-test.py --json` output and current results. These are external contracts owned by project-os-cockpit and the project-os template.
+A changed sidecar payload could show a false pass or light a feature lamp without supporting evidence. S5 to S7 depend on the design note's `/api/render` HTML and image paths, `/api/cockpit/release-test?platform=<p>&release=<REL>`, schema 4 of `/api/cockpit/acceptance?platform=all`, `/api/notes/acceptance?id=<FEAT>` and `/api/cockpit/obligations`. The release-test response includes the template's `release-test.py --json` output and current results. These are external contracts owned by project-os-cockpit and the project-os template.
 
 The write contracts also have limits found by reading the cockpit source on 2026-10-14. `/api/notes/decide` accepts `id`, `reviewer`, `accept` and `mtime`, with no reason field. Design transitions can carry a reason. The human transition table does not offer a feature’s `review` to `done` or `doing` transition. An acceptance run stamps an opted-in feature but does not itself change status. The decision writer checks for a nonblank reviewer; the release ledger records `by` and `method`. These findings do not prove a universal agent refusal. Deck must not claim that the sidecar enforces a guard that was not observed.
 
@@ -39,6 +39,12 @@ The write contracts also have limits found by reading the cockpit source on 2026
 - TASK-0123 keeps the adopted capability scope explicit and records the test counts. Edwin’s three acceptance tests include the agent-session refusal steps and fail if the sidecar accepts those verdicts.
 
 The real sidecar owns new transitions, reason fields and agent guards. This run does not edit either sibling repository.
+
+## Evidence and remaining exposure
+
+2026-10-14: TASK-0120 to TASK-0123 implemented the mitigations. Nine recorded payloads and their source commits are under `desktop/fixtures/overview/flows/raw/`. The three focused suites pass 30 tests; the full desktop suite passes 718 with no failures or skips. Unknown or malformed evidence cannot make the gate ready. Shell writes require a configured `user:` identity and ignore identity fields supplied by the renderer.
+
+The risk stays open. Recorded payload tests detect drift only when refreshed, and Deck cannot repair the sidecar's feature transition table or establish its person-only guard. Edwin's three acceptance walks and Claude's review are still pending.
 
 ## Triggers
 
