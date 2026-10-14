@@ -44,7 +44,7 @@ The real sidecar owns new transitions, reason fields and agent guards. This run 
 
 ## Evidence and remaining exposure
 
-2026-10-14: TASK-0120 to TASK-0123 implemented the mitigations. Nine recorded payloads and their source commits are under `desktop/fixtures/overview/flows/raw/`. The three focused suites pass 30 tests; the full desktop suite passes 718 with no failures or skips. Unknown or malformed evidence cannot make the gate ready. Shell writes require a configured `user:` identity and ignore identity fields supplied by the renderer.
+2026-10-14: TASK-0120 to TASK-0123 implemented the mitigations. Nine recorded payloads and their source commits are under `desktop/fixtures/overview/flows/raw/`. After TASK-0143’s repairs, the three flow suites contribute 39 tests; the full desktop suite passes 745 with no failures or skips. Unknown or malformed evidence cannot make the gate ready. Shell writes require a configured `user:` identity and ignore identity fields supplied by the renderer.
 
 The risk stays open. Recorded payload tests detect drift only when refreshed, and Deck cannot repair the sidecar’s feature transition table or its missing guards on direct agent writes. Edwin decides whether FEAT-0029’s narrowed criteria are acceptable. His three acceptance walks and Claude’s round-two review remain pending.
 

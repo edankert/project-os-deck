@@ -19,6 +19,7 @@ issues: []
 tasks:
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
+- '[[TASK-0143]]'
 artifacts: []
 adequacy: "The checks distinguish unknown evidence, every result word, incomplete printed steps, cross-platform keys and malformed reads. Recorded payloads reproduce the six scene fixtures."
 mutation_score: ''
@@ -50,8 +51,8 @@ The flow pictures preserve the evidence and obey PHASE-0005’s screen rules.
 
 ## Evidence
 
-2026-10-14: `node --test desktop/tests/overview-flows.test.mjs` passed 12 tests, failed none and skipped none after `npm --prefix desktop run build`. Every S5–S7 fixture passes the scene contract, including every release-test section with More expanded. The full desktop suite passes 737 tests with no failures or skips. Gate ratios cover zero, partial and complete counts with separate text references to arcs and rings. Unknown lamps still show question marks. Recorded scenes stay at or below 49 words. The executable check holds no verdict in its note status.
+2026-10-14: the full `cd desktop && npm test` run passed 745 tests with no failures or skips. This suite contributed 16 passing tests. Unknown and malformed evidence explains its gaps; empty lamps stay hollow and do not supply readiness. Scalar and list reviewer provenance agree. Only the selected design plate contains an image. The executable check holds no verdict in its note status. Claude reviews the repairs in round two.
 
 ## Adequacy
 
-The suite must exercise behavior and independent refusal cases, rather than search implementation source for symbol names.
+2026-10-14: a fresh-context implementation check ran the combined 35 scene/action tests. Removing the positive-total lamp guard made the empty-lamp test fail. Mutations used an isolated worktree-local copy and were discarded. Claude’s formal round-two verdict is still pending.

@@ -27,7 +27,7 @@ related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFER
 
 ## Goal
 
-**A person gives the three project-os verdicts in Deck, each from a picture of the evidence.** These are S5, S6 and S7 in [[DES-0005-The-Overview-Is-Drawn-Not-Written]]: accept a design from its plates, run an acceptance test as beads on a ring with before-and-after images, and accept a feature at a gate of lamps. Every write leaves through Deck's main process and the cockpit's existing endpoint. Deck refuses an agent identity locally; the sidecar's own person-only guards still need Edwin's acceptance checks.
+**A person gives the three project-os verdicts in Deck, each from a picture of the evidence.** These are S5, S6 and S7 in [[DES-0005-The-Overview-Is-Drawn-Not-Written]]: accept a design from its plates, run an acceptance test as beads on a ring with before-and-after images, and accept a feature at a gate of lamps. Every write leaves through Deck's main process and the cockpit's existing endpoint. Deck refuses an agent identity locally; missing sidecar guards are cockpit work, recorded under Sidecar limits.
 
 Lane: `system:codex`. How the two agents share this phase is in [[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]].
 
@@ -53,25 +53,23 @@ Out of scope:
 
 ## Verification
 
-2026-10-14: `npm test` from `desktop/` passed **737 tests**, with **0 failures and 0 skips**. It includes the TypeScript build. The three new suites contribute 31 tests: 12 for scenes and recorded payloads (TST-0085), 4 for the image route (TST-0086), and 15 for flow actions and shell writes (TST-0087). Their focused command is `node --test desktop/tests/overview-flows.test.mjs desktop/tests/file-route.test.mjs desktop/tests/overview-flow-writes.test.mjs`, after the build.
+2026-10-14: `cd desktop && npm test` passed **745 tests**, with **0 failures and 0 skips**, including the TypeScript build. The three flow suites now contribute 39 checks: 16 scenes and payloads, 4 image-route checks, and 19 action and shell-write checks. A fresh independent implementation check passed all 35 scene/action tests and confirmed that targeted tests detect removal of three guards: advertised transitions, positive lamp totals and persisted stale-result deletion. This check leaves Claude’s formal round-two verdict untouched.
 
-The six flow fixtures pass `checkScene` on both workspaces. Completed counts name progress arcs and total counts name rings. Zero counts remain paired, and unknown lamps keep their question marks. Recorded flow scenes use at most 49 words at rest; a complete five-lamp gate uses 30. Every recorded platform section also passes with More expanded. The tests cover malformed or missing evidence, printed-step aggregation, stale local progress, identity sanitization, exact sidecar refusals, preload dispatch and the served host's refusal to write. The image route rejects traversal, symlinks that escape docs, unsupported types and write methods.
+The tests exercise unavailable and withdrawn sidecar actions, nonzero reconciled counts, empty and unknown lamps, malformed payloads, scalar and list review provenance, saved progress across commits, workspace/release/platform/content separation, and persisted stale-result deletion. Identity and exact-refusal tests still pass. Every recorded S5–S7 scene passes the word, count, address and list checks; S5 uses 9 words and S7 uses 26 on each workspace. Every recorded S6 section passes with More expanded.
 
-The image audit counted 25 copies, **1,604,537 bytes** in total, with a maximum width of **900 pixels**. SVG scenes were rasterized and inspected without opening a window. TST-0088, TST-0089 and TST-0100 are Edwin's active acceptance checks; none has been run by him or given a verdict here. Claude's independent review is pending. No Electron or smoke command ran.
+`cd desktop && npm run build && node scripts/overview-plates.mjs` regenerated all 14 plates without opening a window. The changed S5 and S7 SVG/JPEG plates were inspected. The S6 Your Trainer SVG changes only because saved check keys now include expected content; its JPEG is unchanged. The prototype page and plate manifest carry the current counts. No Electron or live acceptance verdict ran.
 
-`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` passed on 2026-10-14. Documentation validation reports no errors; its existing acceptance and review warnings and the authorized DES-0005 gate warning remain. Snapshot synchronization derives the feature's review state and the four completed task states from their notes.
+`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. Existing documentation warnings remain; no new warning is left by this task. Snapshot sync adds TASK-0143 to the feature and phase, derives its done status, and updates task counters and metrics. TST-0088, TST-0089 and TST-0100 remain Edwin's unrun acceptance checks. Claude owns the formal round-two verdict.
 
 ## Where this stands
 
-The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan. `b5f65df` closes the two findings from the bounded independent review, which is now approved.
+2026-10-14: **FEAT-0029 remains at review on `lane/codex`.** `a6fb6c7` repairs S7 action availability, empty and unknown lamps, review provenance, and the acceptance contract. `388d11e` preserves S6 progress across unrelated commits and persists stale-result deletion. `a7d450a` draws S5’s unselected plates as outlines and refreshes the S5/S7 plates, manifest and prototype. All 745 desktop tests pass with no skips.
 
-2026-10-14: **FEAT-0029 remains at review on `lane/codex`.** TASK-0141 repairs the integration with FEAT-0026: each side of an S6 or S7 ratio now has its own text and mark. All 737 desktop tests pass without skips. The shared scenes, mappers, six fixtures and bounded image copies are in `602e9bb`. The image route and sidecar read allowlist are in `9ad200d`. The three registered renderer flows and main-process write verbs are in `a50ffcb`. The implementation tasks are complete; Claude reviews and merges, and Edwin runs the three acceptance walks. Nothing was pushed or merged by Codex.
+Claude coordinates, reviews round two and merges. Edwin decides whether the narrower feature is acceptable and runs TST-0088, TST-0089 and TST-0100. The cockpit still owes person-only feature transitions and agent refusal on `decide` and `mark-check`. The requests are at the end of [[REFERENCE-COCKPIT-ADOPTION]], and RISK-0009 remains open. Nothing was pushed or merged by Codex.
 
-S6 keeps each printed step separate from a test note. It writes a note verdict only after all of that note's printed steps have results, using the cockpit's result ordering. Local progress is scoped by workspace, release, platform and check content, and expires when the ledger evidence changes. Historical releases remain read-only because `mark-check` writes to the working release.
+S6 scopes saved progress by workspace, release, platform and check content, including expected results. An unrelated commit preserves it. A changed check or ledger result removes the stale result from both memory and storage. Historical releases remain read-only because `mark-check` writes to the working release.
 
-S7 starts from `gateFromModel` and enriches it with current sidecar evidence. A model link or an automation-coverage badge cannot certify a result. Missing command results stay unknown, and a fresh note read prevents a stale task status from lighting the gate. The small `gateNodes` component is exported for the drawing lane's S3 integration.
-
-The dated adoption rows cover only these screens' paths. RISK-0009 remains open because Deck cannot supply the sidecar's missing transitions or prove its agent guards. The user's instruction permits building before DES-0005 is accepted; it records no design verdict.
+S7 refreshes the evidence and advertised actions before writing. Missing command results remain unknown with a reason. A known empty lamp is hollow and neutral; readiness still needs at least one known item and no missing evidence. The opted-in stamp records acceptance without changing status. The shared `gateNodes` component keeps S3 consistent with S7.
 
 ## Preflight
 
@@ -112,11 +110,13 @@ Your Trainer has no feature at review in the current tree or its existing overvi
 
 2026-10-14, Codex to the drawing lane: will you place `gateNodes(gateFromModel(model, featureId), x, y, scale)` under S3's feature track and connect the S5–S7 entry controls? The exports are in `desktop/src/shared/overview-flows.ts`. The registered addresses are `?flow=design&note=DES-…`, `?flow=test-run&note=REL-…&step=android.3` (the release is optional), and `?flow=accept&note=FEAT-…`. Regenerate DES-0005's S5–S7 plates from the six fixtures after merging. Your Trainer's fixture preserves FEAT-0130's actual `doing` status because no feature at review exists there.
 
-The review packet can be regenerated with `mkdir -p build` followed by `python3 tools/scripts/review-packet.py FEAT-0029 --range e2d4e76..lane/codex --out build/review-packet-FEAT-0029-r1.md`. This run leaves the feature at review and does not write a review verdict.
+Claude’s round-two packet can be regenerated with `python3 tools/scripts/review-packet.py FEAT-0029 --round 2 --since 83ca14c --out build/review-packet-FEAT-0029-r2.md`. This run leaves the feature at review and preserves Claude’s round-one verdict.
 
 ## Review
 
 ### Round one
+
+2026-10-14 repair: `a6fb6c7` fixes findings 1–5 and verifies finding 7’s skipped meaning; `388d11e` fixes finding 6’s saved-step keys and persisted deletion; `a7d450a` fixes the S5 fan and commits the regenerated S5/S7 plates. All 745 desktop tests pass with zero skips. FEAT-0029 stays at review; Claude owns round two and Edwin decides the narrowed scope.
 
 2026-10-14: two Claude reviewers, each in a clean context, reviewed commits `e2d4e76..ad83201` as they stand on `main` after the repairs `26bdcbe..d50a79c`. Claude reviewed it because Codex built it. Both found the code and its three node suites sound: every guard they removed was caught by a test. Both requested changes:
 

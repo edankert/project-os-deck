@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0143
 title: "Make the acceptance flows honest about their evidence"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -19,12 +19,12 @@ tests: ["[[TST-0085]]", "[[TST-0087]]"]
 
 ## Definition of Done
 
-- [ ] S7 reads advertised actions before offering or sending feature transitions. The opted-in stamp says that status does not change.
-- [ ] FEAT-0029 states Deck's actual identity guard and the narrower S7 scope, preserves the old criteria and assigns the scope decision to Edwin.
-- [ ] Missing command results and every unknown lamp have an explanation. Known empty lamps are hollow; at least one known item is required for readiness.
-- [ ] Reviews accept both string and list provenance. S6 results survive unrelated commits, separate workspaces, releases, platforms and check content, and persist stale-result deletion.
-- [ ] Acceptance-run totals match the cockpit's skipped meaning. S5 keeps other plates behind the selected plate as outlines.
-- [ ] Focused checks, the full desktop suite and documentation validation pass. Updated S5 and S7 plates are committed; Claude receives round two with FEAT-0029 still at review.
+- [x] S7 reads advertised actions before offering or sending feature transitions. The opted-in stamp says that status does not change.
+- [x] FEAT-0029 states Deck's actual identity guard and the narrower S7 scope, preserves the old criteria and assigns the scope decision to Edwin.
+- [x] Missing command results and every unknown lamp have an explanation. Known empty lamps are hollow; at least one known item is required for readiness.
+- [x] Reviews accept both string and list provenance. S6 results survive unrelated commits, separate workspaces, releases, platforms and check content, and persist stale-result deletion.
+- [x] Acceptance-run totals match the cockpit's skipped meaning. S5 keeps other plates behind the selected plate as outlines.
+- [x] Focused checks, the full desktop suite and documentation validation pass. Updated S5 and S7 plates are committed; Claude receives round two with FEAT-0029 still at review.
 
 ## Preflight
 
@@ -38,4 +38,6 @@ A known zero-item lamp is neutral and hollow, labelled “nothing to check”. I
 
 ## Evidence
 
-Pending implementation and verification. No Electron, push, merge or sibling-repository write is authorized.
+2026-10-14: `a6fb6c7` repairs the S7 actions, lamps and criteria; `388d11e` repairs saved S6 progress; `a7d450a` repairs S5 and commits the regenerated plates. `cd desktop && npm test` passed 745 tests with zero failures and zero skips. The headless plate command regenerated all 14 plates, and the changed S5/S7 SVG/JPEGs were inspected. Documentation validation and whitespace checks pass. Integration and Claude’s formal round-two review remain pending. No Electron, push, merge or sibling-repository write ran.
+
+An independent implementation check in a fresh context passed all 35 focused scene/action tests. Removing the transition guard, the positive lamp total guard, or persisted stale-result deletion was detected by a targeted test. The check left Claude’s formal round-two verdict untouched and confirmed the documented external limits.

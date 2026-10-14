@@ -113,7 +113,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.agents` | not yet | |
 | `api.read.validation` | not yet | |
 | `api.read.state` | not yet | needs a Deck address grammar first |
-| `api.write.notes` | adopted | 2026-10-14: adopted for the existing transition/tick channel and S5–S7's `decide`, `mark-check` and `acceptance-run` verbs only. Identity comes from the shell's store; all requests leave through main-process `write-client.ts`. The HTTP host forwards no write. Unused note verbs remain unadopted. Person-only sidecar refusals and real verdicts still require TST-0088, TST-0089 and TST-0100. |
+| `api.write.notes` | adopted | 2026-10-14: adopted for the existing transition/tick channel and S5–S7's `decide`, `mark-check` and `acceptance-run` verbs only. Identity comes from the shell's store; all requests leave through main-process `write-client.ts`. The HTTP host forwards no write. Unused note verbs remain unadopted. TST-0088, TST-0089 and TST-0100 check Deck’s local person-only guard and real verdicts. Missing agent guards on `decide` and `mark-check` are requested below. |
 | ~~`api.write.design`~~ | **retired upstream 2026-09-12** | `/api/design/capture`, `comment`, `offer-review`, `verdict` and `/api/notes/choose-variant` are gone from the shared sidecar. **Deck calls none of them** — checked by grep over `desktop/src` on the day they went — so this is a narrowing of the API Deck shares, not a break. A design's Accept and Decline moved to `api.write.note`, which Deck tracks under `shell.reader.actuators` |
 | `api.write.agents` | not yet | |
 | `api.write.inbox` | not yet | |

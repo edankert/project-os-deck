@@ -19,6 +19,7 @@ issues: []
 tasks:
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
+- '[[TASK-0143]]'
 artifacts: []
 adequacy: "Tests execute the built renderer definitions, Host bridge and preload with a stub Electron import. Fake sidecars inspect request bodies and refusal text. They distinguish local steps from ledger results, each result word, stale reads, cancellation and served controls."
 mutation_score: ''
@@ -51,8 +52,8 @@ A person’s flow controls use the shell write boundary and show the sidecar’s
 
 ## Evidence
 
-2026-10-14: `node --test desktop/tests/overview-flow-writes.test.mjs` passed 15 tests, failed none and skipped none after the TypeScript build. The full desktop suite passed 718 tests. The executable check holds no verdict in its note status.
+2026-10-14: the full `cd desktop && npm test` run passed 745 tests with no failures or skips. This suite contributed 19 passing tests. Advertised transitions are checked again before writes; unsupported actions stay unavailable. Acceptance stamps send reconciled counts as skipped and leave status alone. Saved steps survive changed commits and stay separate by workspace, release, platform and content. Dropped stale results are removed from storage and cannot reappear on reload. The executable check holds no verdict in its note status. Claude reviews the repairs in round two.
 
 ## Adequacy
 
-The suite must exercise behavior and independent refusal cases, rather than search implementation source for symbol names.
+2026-10-14: a fresh-context implementation check ran the combined 35 scene/action tests. Removing the action-time transition guard or persisted stale-result deletion made the corresponding test fail. Mutations used an isolated worktree-local copy and were discarded. Claude’s formal round-two verdict is still pending.
