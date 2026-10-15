@@ -174,6 +174,45 @@ for (const name of WORKSPACES) {
     const glowing = new Set();
     const walk = (nodes, lit) => { for (const n of nodes) { if (n.kind === 'group') walk(n.children, lit || String(n.cls ?? '').includes('glow')); else if (n.kind === 'mark' && n.ticket !== undefined && (lit || n.glow)) glowing.add(n.ticket); } };
     walk(scene.nodes, false);
-    for (const t of Object.values(m.tickets)) if (['failed', 'owed'].includes(t.state)) assert.ok(glowing.has(t.id), `${t.id} needs a person and does not glow`);
+    // What glows is the cockpit's "needs you" (TASK-0144, TASK-0145), not DES-0004's failed or owed.
+    for (const t of Object.values(m.tickets)) if (t.needsYou === true) assert.ok(glowing.has(t.id), `${t.id} needs a person and does not glow`);
   });
 }
+
+// TASK-0146 — back and forward retrace the screens a person visited, as a
+// browser's history does. The trail is pure, so it is checked here with no window.
+const trailModule = load('shared/overview-trail.js');
+
+test('back and forward retrace the visited screens, and opening a screen after going back drops what was ahead', () => {
+  const { emptyTrail, opened, stepped, current, canGoBack, canGoForward, TRAIL_LIMIT } = trailModule;
+  const wheel = ctx.address({ page: 'wheel' });
+  const phase = ctx.address({ page: 'phase', note: 'PHASE-0002' });
+  const ticket = ctx.address({ page: 'ticket', note: 'FEAT-0024' });
+  const other = ctx.address({ page: 'ticket', note: 'TASK-0104' });
+  let t = emptyTrail();
+  assert.equal(current(t), null);
+  assert.equal(canGoBack(t), false);
+  assert.equal(canGoForward(t), false);
+  t = opened(opened(opened(t, wheel), phase), ticket);
+  assert.equal(current(t), ticket);
+  assert.deepEqual([canGoBack(t), canGoForward(t)], [true, false]);
+  // Opening the screen already shown adds nothing.
+  assert.equal(opened(t, ticket), t);
+  t = stepped(stepped(t, -1), -1);
+  assert.equal(current(t), wheel);
+  assert.deepEqual([canGoBack(t), canGoForward(t)], [false, true]);
+  // Nowhere further back: unchanged.
+  assert.equal(stepped(t, -1), t);
+  t = stepped(t, 1);
+  assert.equal(current(t), phase);
+  assert.deepEqual([canGoBack(t), canGoForward(t)], [true, true]);
+  // A new screen after going back drops the ticket that was ahead.
+  t = opened(t, other);
+  assert.deepEqual(t.entries, [wheel, phase, other]);
+  assert.deepEqual([canGoBack(t), canGoForward(t)], [true, false]);
+  // The trail forgets its oldest screens past the limit, and still points at the newest.
+  let long = emptyTrail();
+  for (let i = 0; i < TRAIL_LIMIT + 5; i += 1) long = opened(long, ctx.address({ page: 'ticket', note: `TASK-${i}` }));
+  assert.equal(long.entries.length, TRAIL_LIMIT);
+  assert.equal(current(long), ctx.address({ page: 'ticket', note: `TASK-${TRAIL_LIMIT + 4}` }));
+});

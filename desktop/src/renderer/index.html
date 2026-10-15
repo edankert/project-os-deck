@@ -23,6 +23,11 @@
       <!-- The name is the way home: it opens the overview, the wheel of phases (PHASE-0005), and
            closes it again. A button in the bar would widen it and wrap the view switcher. -->
       <button type="button" class="brand overview-toggle" id="overview-toggle" title="The overview: every phase as a wheel (press again for the field)">Deck</button>
+      <!-- Back and forward through the overview's screens (TASK-0146). Shown only while the overview is. -->
+      <span class="ov-history" id="ov-history" hidden>
+        <button type="button" id="ov-back" title="Back (⌘[)" aria-label="Back to the previous overview screen" disabled>←</button>
+        <button type="button" id="ov-forward" title="Forward (⌘])" aria-label="Forward to the next overview screen" disabled>→</button>
+      </span>
       <nav class="switcher" id="switcher" role="tablist" aria-label="Views"></nav>
       <!-- Which surface draws the view. A toggle beside the views, never a view called Glass (TASK-0033). -->
       <div class="surface-toggle" id="surface-toggle" role="radiogroup" aria-label="Surface"></div>

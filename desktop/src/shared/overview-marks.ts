@@ -63,6 +63,12 @@ export function markWords(t: Pick<Ticket, 'id' | 'title' | 'status' | 'type' | '
   return `${t.id} ${t.title} (${t.status || '—'})${marks.length > 0 ? ` — ${marks.join(', ')}` : ''}`;
 }
 
+/** A ticket as a line of a list: its type, title, status and marks, in the cockpit's words. */
+export function rowWords(t: Pick<Ticket, 'type' | 'title' | 'status' | 'fill' | 'needsYou'>): string {
+  const marks = [t.fill === 'open' || t.fill === 'delivered' ? null : FILL_WORD[t.fill], t.needsYou ? 'needs you' : null].filter(Boolean);
+  return `${t.title} — ${TYPE_WORD[t.type]}, ${t.status || '—'}${marks.length > 0 ? `, ${marks.join(', ')}` : ''}`;
+}
+
 /**
  * The colour and fill of a wedge or a glyph that draws one ticket.
  *
@@ -146,6 +152,7 @@ export function marksCss(): string {
     `.ov .sq-cut { fill: none; stroke: ${FIELD}; }`,
     '.ov .sq-strike { stroke: currentColor; }',
     `.ov .sq-dot { fill: ${NEEDS_YOU}; stroke: ${FIELD}; }`,
+    `.ov .ov-badge { fill: ${NEEDS_YOU}; }`,
     // In progress pulses, as the cockpit's does; still, it keeps an outline so it is not
     // mistaken for "complete, not proven" by anyone who asked for less motion.
     '@keyframes ov-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }',

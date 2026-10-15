@@ -14,6 +14,7 @@
  */
 import { bezel, frame } from './overview-chrome.js';
 import { annularSector, arc, polar, shortName, TAU } from './overview-geometry.js';
+import { markWords, paintOf, rowWords } from './overview-marks.js';
 import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext, TextNode } from './overview-scene.js';
 import {
   CORE_KINDS,
@@ -47,11 +48,12 @@ export const WHEEL = {
 
 const INITIAL: Record<Kind, string> = { req: 'Req', feat: 'Feat', task: 'Task', test: 'Test', iss: 'Iss', dec: 'Dec', risk: 'Risk' };
 
-/** What needs a person glows: a failure, and a pass that was withdrawn. */
-export const needsPerson = (t: Ticket): boolean => t.state === 'failed' || t.state === 'owed';
+/** What needs a person glows: the cockpit's "needs you" (its sidecar's `_needs_human`, TASK-0144). */
+export const needsPerson = (t: Ticket): boolean => t.needsYou;
 
+/** What a ticket's mark says when pointed at, in the cockpit's words (TASK-0145). */
 export function ticketLabel(t: Ticket): string {
-  return `${t.id} · ${t.status} · ${t.title}`;
+  return markWords(t);
 }
 
 export function closedOf(model: OverviewModel, phase: Phase): { closed: number; live: number } {
@@ -73,6 +75,7 @@ export function phaseLabel(phase: Phase): string {
 /** The wedges of one ring of one sector, closed first, as the model orders them. */
 function ringWedges(
   model: OverviewModel,
+  ctx: ScreenContext,
   ids: string[],
   r0: number,
   r1: number,
@@ -96,7 +99,7 @@ function ringWedges(
       tag: 'path',
       attrs: { d: annularSector(WHEEL.cx, WHEEL.cy, r0, r1, start + gap / 2, start + width - gap / 2) },
       ticket: id,
-      state: t.state,
+      ...paintOf(t, ctx),
       label: ticketLabel(t),
     };
     (needsPerson(t) ? lit : plain).push(mark);
@@ -121,7 +124,7 @@ function sectorNodes(model: OverviewModel, phase: Phase, a0: number, a1: number,
   PHASE_KINDS.forEach((kind, k) => {
     const [r0, r1] = ringBand(k, PHASE_KINDS.length, WHEEL.ringInner, WHEEL.ringOuter, WHEEL.ringGap);
     children.push({ kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, r0, r1, a0, a1) }, cls: 'ov-track' });
-    const wedges = ringWedges(model, idsOfKind(model, phase.tickets, kind), r0, r1, a0, a1, WHEEL.maxShare);
+    const wedges = ringWedges(model, ctx, idsOfKind(model, phase.tickets, kind), r0, r1, a0, a1, WHEEL.maxShare);
     children.push(...wedges.plain);
     lit.push(...wedges.lit);
   });
@@ -199,7 +202,7 @@ function coreNodes(model: OverviewModel, ctx: ScreenContext): SceneNode {
   CORE_KINDS.forEach((kind, k) => {
     const [r0, r1] = ringBand(k, CORE_KINDS.length, WHEEL.coreInner, WHEEL.coreOuter, 2);
     children.push({ kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, r0, r1, 0, TAU) }, cls: 'ov-track' });
-    const wedges = ringWedges(model, idsOfKind(model, model.core.tickets, kind), r0, r1, 0, TAU, 0.1);
+    const wedges = ringWedges(model, ctx, idsOfKind(model, model.core.tickets, kind), r0, r1, 0, TAU, 0.1);
     children.push(...wedges.plain);
     lit.push(...wedges.lit);
   });
@@ -233,7 +236,7 @@ function disc(model: OverviewModel, phase: Phase, x: number, y: number, size: nu
       tag: 'path',
       attrs: { d: annularSector(x, y, r0, r1, i * width, (i + 1) * width) },
       ticket: id,
-      state: t.state,
+      ...paintOf(t, ctx),
       label: ticketLabel(t),
     };
     (needsPerson(t) ? lit : children).push(mark);
@@ -245,7 +248,10 @@ function disc(model: OverviewModel, phase: Phase, x: number, y: number, size: nu
   const owed = ids.filter((id) => model.tickets[id]?.state === 'owed').length;
   if (owed > 0) {
     const badgeId = `owed-${phase.id}`;
-    children.push({ kind: 'mark', tag: 'circle', attrs: { cx: x + r1 * 0.85, cy: y - r1 * 0.85, r: 10 }, state: 'owed', glow: true, markId: badgeId, count: owed, label: `${owed} acceptance tests owed again: open the release test`, target: ctx.address({ flow: 'test-run' }) });
+    // The badge counts acceptance tests whose pass the release ledger withdrew. In the
+    // cockpit's colouring it is the "needs you" red; in DES-0004's, the owed violet.
+    const badge = ctx.colouring === 'state' ? { state: 'owed' as const } : { cls: 'ov-badge' };
+    children.push({ kind: 'mark', tag: 'circle', attrs: { cx: x + r1 * 0.85, cy: y - r1 * 0.85, r: 10 }, ...badge, glow: true, markId: badgeId, count: owed, label: `${owed} acceptance tests to run again: their pass was withdrawn. Open the release test`, target: ctx.address({ flow: 'test-run' }) });
     children.push({ kind: 'text', x: x + r1 * 0.85, y: y - r1 * 0.85 + 4, text: String(owed), rest: true, role: 'number', markRef: badgeId, size: 11, anchor: 'middle' });
   }
   children.push({ kind: 'text', x, y: y + r1 + 18, text: phase.number, rest: true, role: 'id', size: 10, anchor: 'middle', cls: 'ov-dim' });
@@ -253,7 +259,7 @@ function disc(model: OverviewModel, phase: Phase, x: number, y: number, size: nu
     kind: 'group',
     key: `disc-${phase.id}`,
     target: ctx.address({ page: 'phase', note: phase.id }),
-    label: `${phaseLabel(phase)} · ${phase.status} · ${ids.length} tickets${owed > 0 ? ` · ${owed} owed again` : ''}`,
+    label: `${phaseLabel(phase)} · ${phase.status} · ${ids.length} tickets${owed > 0 ? ` · ${owed} acceptance tests to run again` : ''}`,
     children,
   };
 }
@@ -282,7 +288,7 @@ function tray(model: OverviewModel, phases: Phase[], x: number, y: number, w: nu
         tag: 'rect',
         attrs: { x: x + pad + (i % cols) * pitch, y: top + pad + Math.floor(i / cols) * pitch, width: pitch - 2, height: pitch - 2, rx: 1.5 },
         ticket: id,
-        state: t.state,
+        ...paintOf(t, ctx),
         cls: t.state === 'closed' || t.state === 'dropped' ? 'ov-faint' : undefined,
         label: ticketLabel(t),
       });
@@ -346,7 +352,7 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext): Scene {
     for (const id of ids) {
       const t = model.tickets[id];
       if (t === undefined) continue;
-      list.push({ id, label: `${t.title} — ${STATE_WORD[t.state]} (${KIND_WORD[t.kind]})`, group: groupOf(phase), state: t.state, target: ctx.address({ page: 'ticket', note: id }) });
+      list.push({ id, label: rowWords(t), group: groupOf(phase), state: t.state, target: ctx.address({ page: 'ticket', note: id }) });
     }
   };
   for (const phase of [...model.phases, ...model.shelf, ...model.backlog]) place(phase.tickets, phase);

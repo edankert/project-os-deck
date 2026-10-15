@@ -21,6 +21,7 @@
  */
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
+import { canGoBack, canGoForward, current as trailNow, emptyTrail, opened, stepped, type Trail } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { DeckAddress } from '../shared/types.js';
 
@@ -76,6 +77,48 @@ let current: { address: DeckAddress; scene: Scene; definition: ScreenDefinition 
 const models = new Map<string, { model: OverviewModel; at: number }>();
 const memories = new Map<string, Map<string, unknown>>();
 let drawing = 0;
+/** The screens visited in this window, for back and forward (TASK-0146). */
+let trail: Trail = emptyTrail();
+/** True while back or forward is drawing a screen, so the draw does not add to the trail. */
+let travelling = false;
+let historyBar: HTMLElement | null = null;
+/**
+ * How tickets are coloured: the cockpit's type colours with its fills (Edwin,
+ * 2026-10-15), or DES-0004's state colours, for comparing the two on the wheel
+ * (TASK-0145). Remembered in this browser only; it is a viewing preference.
+ */
+let colouring: 'type' | 'state' = readColouring();
+let colouringToggle: HTMLButtonElement | null = null;
+
+function readColouring(): 'type' | 'state' {
+  try {
+    return localStorage.getItem('deck.overview.colouring') === 'state' ? 'state' : 'type';
+  } catch {
+    return 'type';
+  }
+}
+
+async function switchColouring(): Promise<void> {
+  colouring = colouring === 'type' ? 'state' : 'type';
+  try {
+    localStorage.setItem('deck.overview.colouring', colouring);
+  } catch {
+    // A page that cannot store it still switches for this session.
+  }
+  drawColouringToggle();
+  if (current !== null) await showOverview(current.address);
+}
+
+function drawColouringToggle(): void {
+  if (colouringToggle === null) return;
+  const byType = colouring === 'type';
+  colouringToggle.setAttribute('aria-pressed', String(!byType));
+  colouringToggle.title = byType
+    ? 'Coloured by ticket type, as in the cockpit. Press for the state colours (C)'
+    : 'Coloured by state. Press for the cockpit\'s type colours (C)';
+}
+let backButton: HTMLButtonElement | null = null;
+let forwardButton: HTMLButtonElement | null = null;
 
 const reducedMotion = (): boolean =>
   (globalThis as { __deckReducedMotion?: boolean }).__deckReducedMotion === true ||
@@ -103,8 +146,27 @@ export function initOverview(host: OverviewHostApi): void {
   listToggle.setAttribute('aria-label', 'This screen as a list');
   listToggle.textContent = '☰';
   listToggle.addEventListener('click', () => toggleList());
-  area.append(stage, callout, listPanel, listToggle);
+  colouringToggle = document.createElement('button');
+  colouringToggle.type = 'button';
+  colouringToggle.className = 'ov-list-toggle ov-colouring-toggle';
+  colouringToggle.setAttribute('aria-label', 'Colour tickets by type or by state');
+  colouringToggle.textContent = '◐';
+  colouringToggle.addEventListener('click', () => void switchColouring());
+  drawColouringToggle();
+  area.append(stage, callout, listPanel, listToggle, colouringToggle);
 
+  historyBar = document.getElementById('ov-history');
+  backButton = document.getElementById('ov-back') as HTMLButtonElement | null;
+  forwardButton = document.getElementById('ov-forward') as HTMLButtonElement | null;
+  backButton?.addEventListener('click', () => void travel(-1));
+  forwardButton?.addEventListener('click', () => void travel(1));
+  // The mouse's own back and forward buttons, over the overview.
+  area.addEventListener('mouseup', (event) => {
+    if (event.button === 3 || event.button === 4) {
+      event.preventDefault();
+      void travel(event.button === 3 ? -1 : 1);
+    }
+  });
   stage.addEventListener('click', (event) => void onClick(event));
   window.addEventListener('resize', () => place());
   stage.addEventListener('pointerover', (event) => onPoint(event));
@@ -120,7 +182,7 @@ export function initOverview(host: OverviewHostApi): void {
     'keydown',
     (event) => {
       if (!isOverviewShown()) return;
-      if (event.key === 'Escape' || event.key === 'l' || event.key === 'L' || event.key === 'h' || event.key === 'H') {
+      if (event.key === 'Escape' || event.key === 'l' || event.key === 'L' || event.key === 'h' || event.key === 'H' || event.key === 'c' || event.key === 'C') {
         const element = event.target as Element | null;
         const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
         if (!typing) event.stopPropagation();
@@ -132,6 +194,8 @@ export function initOverview(host: OverviewHostApi): void {
   // For the window run (TST-0093): what is drawn, and a way to follow an address as a click would.
   (globalThis as { __deckOverview?: unknown }).__deckOverview = {
     current: () => current?.scene ?? null,
+    trail: () => ({ ...trail }),
+    travel: (direction: -1 | 1) => travel(direction),
     screens: () => ({ pages: [...pages.keys()], flows: [...flows.keys()] }),
     go: (raw: string) => go(raw),
   };
@@ -145,6 +209,7 @@ export function hideOverview(): void {
   if (area === null) return;
   area.hidden = true;
   document.body.dataset['overviewScreen'] = '';
+  if (historyBar !== null) historyBar.hidden = true;
   current = null;
   hideCallout();
 }
@@ -163,6 +228,7 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
   return {
     workspaceId,
     viewId,
+    colouring,
     address: (parts: AddressParts) =>
       formatAddress(
         addressFor(workspaceId, viewId, {
@@ -244,7 +310,42 @@ export async function showOverview(address: DeckAddress): Promise<void> {
   place();
   area.hidden = false;
   document.body.dataset['overviewScreen'] = scene.screen;
+  if (!travelling) trail = opened(trail, scene.address);
+  drawHistory();
   document.title = `Deck — ${scene.title}`;
+}
+
+function drawHistory(): void {
+  if (historyBar === null || backButton === null || forwardButton === null) return;
+  historyBar.hidden = false;
+  backButton.disabled = !canGoBack(trail);
+  forwardButton.disabled = !canGoForward(trail);
+}
+
+/**
+ * One step back or forward through the screens visited. A screen of the same
+ * workspace is drawn here; one of another workspace goes through Deck's own
+ * address handling, which switches the workspace first.
+ */
+export async function travel(direction: -1 | 1): Promise<void> {
+  if (api === null || !isOverviewShown()) return;
+  const next = stepped(trail, direction);
+  const raw = trailNow(next);
+  if (next === trail || raw === null) return;
+  const { parseAddress } = await import('../shared/address.js');
+  const address = parseAddress(raw);
+  travelling = true;
+  try {
+    hideCallout();
+    if (address.workspaceId === api.workspaceId()) await showOverview(address);
+    else await api.leaveTo(raw);
+    trail = next;
+  } catch (err) {
+    api.say(err instanceof Error ? err.message : String(err), true);
+  } finally {
+    travelling = false;
+    drawHistory();
+  }
 }
 
 /** Under the header and beside the rail, measured, because the layer is fixed to the window. */
@@ -484,6 +585,11 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     }
     return;
   }
+  if (event.metaKey && (event.key === '[' || event.key === ']')) {
+    event.preventDefault();
+    await travel(event.key === '[' ? -1 : 1);
+    return;
+  }
   if (event.key === 'Escape' && !(element instanceof HTMLInputElement)) {
     if (listPanel !== null && !listPanel.hidden) {
       toggleList(false);
@@ -502,5 +608,9 @@ async function onKey(event: KeyboardEvent): Promise<void> {
   if (event.key === 'l' || event.key === 'L') {
     event.preventDefault();
     toggleList();
+  }
+  if ((event.key === 'c' || event.key === 'C') && !event.metaKey && !event.ctrlKey) {
+    event.preventDefault();
+    await switchColouring();
   }
 }
