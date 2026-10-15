@@ -14,7 +14,7 @@ entrypoint: "desktop/tests/overview-model.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-model"
 covers: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 issues: []
-tasks: ["[[TASK-0144]]", "[[TASK-0115-Build-One-Overview-From-The-Notes]]"]
+tasks: ["[[TASK-0144]]", "[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0153]]"]
 artifacts: []
 adequacy: "Each branch has inputs that distinguish it from the next placement rule or a different state. Count invariants catch a ticket omitted from or repeated in a place."
 mutation_score: ""

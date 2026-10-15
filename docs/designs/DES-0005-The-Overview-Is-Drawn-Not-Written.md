@@ -133,6 +133,18 @@ Deck's feature at its gate, as five labelled chips: each names its check, gives 
 
 your-trainer's FEAT-0130 at its gate. **30 words at rest.**
 
+### What the gate's five parts count
+
+A feature's gate has five parts, and each one counts a different kind of evidence. These meanings appear in the callout when a person points at a part; they are not written on the screen at rest (Edwin, 2026-10-15: no extra text on the gate).
+
+- **Requirements**: the acceptance criteria of the requirements the feature implements, ticked with evidence.
+- **Tasks**: the feature's tasks, done.
+- **Reviews**: the independent reviews the feature needs (normally two), approved and recorded.
+- **Automated tests**: tests with a command, with a result recorded.
+- **Acceptance tests**: manual checks a person runs, with a pass in the release ledger.
+
+A part Deck cannot read is drawn as "not reported". A part with nothing in it is drawn as "nothing to check". Neither is drawn as needing anyone.
+
 ## Answers proposed to DES-0004's open questions
 
 1. **A backlog phase** is marked with `kind: backlog` in its note. When the note says nothing, an id ending in 999 is read as backlog, so your-trainer's PHASE-999 works today.
@@ -147,6 +159,7 @@ your-trainer's FEAT-0130 at its gate. **30 words at rest.**
 - Whether the shelf's owed-again badge should open the release test, as it does now, or the finished phase.
 - Which colouring the overview opens in. It opens in the cockpit's type colours, which Edwin asked to try; ◐ or C switches to the state colours, and Deck remembers the choice on that machine. Both wheels are drawn above.
 - Whether two greens are acceptable. The cockpit's colours for tasks and for tests are both green, so on the wheel their two rings are told apart by place more than by colour.
+- Whether to build the Level 2 wheel, where height is time, into Deck. It would bring WebGL into Deck; it is drawn as a design page first ([[TASK-0157]]).
 - Whether an acceptance test that failed in the release ledger should need you. The cockpit's rule reads only the note's status, so your-trainer's TST-0656, which failed on Android, carries no red dot, and PHASE-021 shows nobody needed. DES-0004 counted it. Following the cockpit was the point of this revision, so a change belongs in the cockpit's rule.
 
 ## Verification
@@ -189,6 +202,26 @@ your-trainer's FEAT-0130 at its gate. **30 words at rest.**
 
   Claude builds 1 (the marks), 2, 3, 4 (S3) and 5; Codex builds 1 (the model's fill and flag) and 4 (S7's chips, and S5 and S6 in the new marks). Each lane's work is reviewed by the other model.
 - 2026-10-15 — **redrawn.** Every screen draws tickets in the cockpit's type colours and fills, and the wheel is also drawn in the state colours. S2 lists its tickets as rows on a tilted plane; S3 shows the ticket's text and its neighbours as rows, and the feature gate as labelled chips; S7 has the same chips. The plates were redrawn on both workspaces, and four pictures from a real Deck window were added for S2 and S3, where the rows stand in depth. Claude built the marks, the screens S1 to S4, back and forward and the plates; Codex ported the cockpit's rules into the model and built the chips and the marks of S5 to S7.
+- 2026-10-15 — **second revision, after Edwin ran the overview again.** He asked five things and approved a plan for them the same day. Status stays `proposed`; the plates are redrawn when the screens change ([[TASK-0161]]).
+
+  Edwin's words, first message, verbatim:
+
+  > I actually like the re-phasing better than the normal wheel ... suggest how to make the main wheel more like the re-phasing wheel or suggest another solution which is also really cool. Also can we make the wheels (and the other lists/trapeziums) a little more 3d, and allow to move them using the middle mouse button and zoom in / out? If we use 3d we could maybe capture even more information, suggest options? Also the accept / send back option for a feature should show the feature text and I am not sure what these tasks/requirements/reviews/automated tests and acceptance tests buckets are supposed to be. Also when selecting an item which needs you, the user needs to be told what he needs to do???
+
+  Approving the plan, verbatim:
+
+  > go ahead with all the recommendations as suggested but do not add the extra text for the feature boxes instead redesign the feature boxes (boxes look wrong in the current design) also when focussing on the feature (when the accept and send back options show) we need the feature text to be shown on that page.
+
+  The plan he approved:
+
+  1. **The wheel becomes a constellation (S1).** It takes the re-phase screen's layout for every ticket. Each phase is a segment of the outer ring. Its tickets fan inward from the segment as separate particles in the cockpit's marks: done near the ring, open further in, needs-you glowing at the front. A numbered bubble outside each segment counts what needs you in that phase. The middle stays the no-phase cloud with its button into re-phasing. Pointing at a ticket draws wires to the tickets it links to. The shelf, the tray, the Release test button and both colourings stay ([[TASK-0155]]).
+  2. **Level 1 3D.** The wheel, S2's plane and the ring screens (S4, S6) stand on a tilted plane, drawn with CSS 3D. The middle button and a drag turns it, Shift with the middle button pans it, the scroll wheel zooms, and a double-click resets it. Under reduced motion nothing moves except by the person's own drag. Text stays crisp and the scene checks keep working ([[TASK-0156]]).
+  3. **Level 2 3D, as a plate to judge.** A real 3D wheel (WebGL, three.js) where height is time: each phase a column of tickets stacked by creation date, like tree rings. It is drawn as a design page with pictures, for Edwin to judge before anything WebGL enters Deck. Nothing is added to `desktop/` ([[TASK-0157]]).
+  4. **The gate is redrawn as an arch, with no extra text.** Edwin declined subtitles under the boxes and said the boxes look wrong. The gate becomes an arch of five segments over the feature. Each segment fills with its done share in a colour, has its count at the segment and its word along the arch. A part Deck cannot read stays visibly "not reported". The same component is drawn small on S3. What each part counts goes into the callout on that segment, and into this note under S7 ([[TASK-0154]], [[TASK-0159]]).
+  5. **S7 shows the feature's text** on the same page as Accept and Send back, in the note panel S3 uses ([[TASK-0159]]).
+  6. **A ticket that needs you says what to do.** The model carries why and what to do, ported from the cockpit's `_needs_human` reasons: triage, "Decide: take it into the backlog, or decline it", with the sidecar's own verbs as buttons; review, "Review it, then accept it or send it back", opening S7 for a feature and S5 for a design; a ready test, "Run this test: it has never been run", opening S6 at that test; failing or reopened, "It failed: fix it, or run it again"; waiting on an unfinished `depends:`, "Waiting on <ID>: finish that first", opening that ticket. It is shown as a banner at the top of S3, as a short reason in S2's needs-you rows, and in callouts ([[TASK-0153]], [[TASK-0158]], [[TASK-0160]]).
+
+  Claude builds 1, 2, 3, 4 (the arch, and S3's use of it) and 6's banner, rows and callouts. Codex builds 6's model reason, 5 with S7's switch to the arch, and 6's buttons that write. Each lane's work is reviewed by the other model, in two rounds at most.
 
 ## Review
 

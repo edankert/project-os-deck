@@ -8,10 +8,10 @@ order: 5
 owner: user:edwin
 created: 2026-10-14
 updated: 2026-10-15
-goal: "Deck opens on the circular overview, a wheel with one sector per unfinished phase and one wedge per ticket. Every screen reached from it, including accepting a design, running an acceptance test and accepting a feature, shows status and progress as diagrams and images rather than lists of text."
+goal: "Deck opens on the circular overview, a wheel with one segment of its ring per unfinished phase and one particle per ticket (a wedge per ticket until the second revision of 2026-10-15). Every screen reached from it, including accepting a design, running an acceptance test and accepting a feature, shows status and progress as diagrams and images rather than lists of text."
 features: ["[[FEAT-0025]]", "[[FEAT-0026]]", "[[FEAT-0027]]", "[[FEAT-0028]]", "[[FEAT-0029]]"]
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0141]]", "[[TASK-0142]]", "[[TASK-0143]]", "[[TASK-0144]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0149]]", "[[TASK-0150]]", "[[TASK-0151]]", "[[TASK-0152]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0141]]", "[[TASK-0142]]", "[[TASK-0143]]", "[[TASK-0144]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0149]]", "[[TASK-0150]]", "[[TASK-0151]]", "[[TASK-0152]]", "[[TASK-0153]]", "[[TASK-0154]]", "[[TASK-0155]]", "[[TASK-0156]]", "[[TASK-0157]]", "[[TASK-0158]]", "[[TASK-0159]]", "[[TASK-0160]]", "[[TASK-0161]]"]
 issues: []
 depends: ["[[PHASE-0001-Deck]]"]
 related: ["[[DES-0004-The-Phase-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
@@ -22,7 +22,7 @@ tags: [phase, overview, glass, acceptance]
 
 ## Goal
 
-**Deck opens on one picture of the whole project: a wheel with a sector for each phase still to finish, and a wedge for every ticket in it.** From the wheel you open a phase, then a ticket, and from a ticket you accept it. Each of those screens shows where things stand with shapes, rings, colours and images. Text appears when you point at something, not before.
+**Deck opens on one picture of the whole project: a wheel with a segment of its ring for each phase still to finish, and a particle for every ticket in it.** From the wheel you open a phase, then a ticket, and from a ticket you accept it. Each of those screens shows where things stand with shapes, rings, colours and images. Text appears when you point at something, not before.
 
 This phase replaces the Glass screens Edwin rejected on 2026-10-14 as "too text heavy" and not like Minority Report. Those screens were cards with titles on them (DES-0004, plates 6 and 7). Here the same tickets are drawn as marks, the way DES-0004's wheel already draws them.
 
@@ -34,13 +34,13 @@ There are seven screens. [[DES-0005-The-Overview-Is-Drawn-Not-Written]] draws ea
 
 | # | Screen | What it answers at a glance | The main picture |
 | --- | --- | --- | --- |
-| S1 | **Wheel** (the overview) | How far is each phase, and where is the trouble? | DES-0004's RINGS wheel: a sector per unfinished phase, a ring per ticket type, a wedge per ticket coloured by state. Finished phases orbit below as discs on a shelf; the backlog is an arc tray; tickets with no phase sit in the core. |
+| S1 | **Wheel** (the overview) | How far is each phase, and where is the trouble? A constellation, laid out like S4: a segment of the outer ring per unfinished phase, its tickets fanned inward as particles (done near the ring, open further in, needs-you glowing at the front), a bubble counting what needs you per phase, wires to linked tickets on pointing. Finished phases orbit below as discs on a shelf; the backlog is an arc tray; tickets with no phase sit in the core, which opens S4 (revised 2026-10-15, second revision; until then DES-0004's RINGS wheel of sectors and wedges). |
 | S2 | **Phase** | What does this phase still owe, and what kind of work is it? | The phase's web (one corner per ticket type, defined against closed), its exit criteria as a segmented ring, and its tickets as cockpit rows on a plane tilted in depth: needs you in front, open and in progress in the middle, closed folded at the back (revised 2026-10-15; until then a field of glyphs in depth bands). |
-| S3 | **Ticket** | Where is this ticket in its life, and what is it joined to? | The ticket's id, title and lifecycle track, its full text, its linked tickets as cockpit rows split into "links to" and "linked from", and for a feature its gate as labelled chips (revised 2026-10-15; until then a radial graph of neighbours). |
+| S3 | **Ticket** | Where is this ticket in its life, and what is it joined to? | The ticket's id, title and lifecycle track, its full text, its linked tickets as cockpit rows split into "links to" and "linked from", for a feature its gate as a small arch, and for a ticket that needs you a banner saying what to do (revised 2026-10-15; until then a radial graph of neighbours). |
 | S4 | **Re-phase** | Which tickets have no phase, and where would they go? | Tickets as particles in the core, with a line to the sector each is suggested for. Accepting a group moves its particles. |
 | S5 | **Design acceptance** | What does this design propose, and has it been reviewed? | The design's plates as large images, a strip of its revisions, review comments as pins on the plate they name. Accept and Decline as two large controls. |
 | S6 | **Acceptance test** | How far is this release's test, per platform, and what changed on screen? | One ring per platform, an arc per section, a bead per check coloured by result. A check opens as a before-and-after image pair with one Pass and one Fail control. |
-| S7 | **Ticket acceptance** | Is this feature ready to accept? | A gate of five labelled chips (lamps until 2026-10-15): requirements met, tasks done, automated tests passing, acceptance tests passed, independent reviews recorded. The feature can be accepted only when every lamp is lit, or sent back with a reason. |
+| S7 | **Ticket acceptance** | Is this feature ready to accept? The feature's text beside a gate drawn as an arch of five segments (lamps, then labelled chips, until the second revision of 2026-10-15): requirements met, tasks done, independent reviews recorded, automated tests passing, acceptance tests passed. The feature can be accepted only when every segment is full, or sent back with a reason. |
 
 ## The look
 
@@ -52,6 +52,8 @@ These rules apply to every screen. Each one is a check a reviewer can run.
 4. **The Glass look.** A dark field with depth. Lines and marks glow. Panels are translucent without blur (the DES-0002 review measured blur as the cost). Moving between screens animates the same marks to their new places, and honours reduced motion.
 5. **Every screen has an address**, and a list twin. The address restores the screen. The list twin shows the same marks as rows for the keyboard and a screen reader, because a picture cannot be the only way in.
 6. **Real data at real size.** Every screen is checked on Deck (4 phases, 333 tickets) and your-trainer (27 phases, 2,646 tickets). A screen that only works on the small one is not done.
+7. **The pictures stand in depth and the person can move them** (from 2026-10-15, second revision). The wheel, S2's list of tickets and the ring screens S4 and S6 stand on a plane tilted away, drawn with CSS 3D on the existing SVG and HTML. The middle mouse button and a drag turns the plane, Shift with the middle button pans it, the scroll wheel zooms toward the pointer, and a double-click resets it. Under reduced motion nothing moves except by the person's own drag. Text stays crisp at every zoom, a press lands on the mark under the pointer, and checks 1, 2 and 5 hold unchanged because only the camera moves. A real 3D scene (WebGL) is not part of Deck; it is drawn as a design plate first ([[TASK-0157]]).
+8. **A ticket that needs you says what to do** (from 2026-10-15, second revision). The red dot is never the only signal: the callout, S2's row and S3's banner say why, in the cockpit's terms, and offer the one action that answers it.
 
 ## The three acceptance flows
 
@@ -97,6 +99,28 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 - **Depends on PHASE-0001** for the store, the addresses, the view provider and Deck's index. It does not depend on PHASE-0002's unfinished work.
 
 ## Where this stands
+
+**2026-10-15, second revision: the phase is being reworked again after Edwin ran the overview a second time.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. He approved six recommendations, recorded in DES-0005's revision of 2026-10-15 (second). All five features moved from `review` back to `doing`. The look gains rules 7 and 8.
+
+Nine tasks carry it, in the same two lanes. Each lane's work is reviewed by the other model, in two rounds at most.
+
+| Task | Lane | Feature | Waits on |
+| --- | --- | --- | --- |
+| [[TASK-0153]] Every ticket that needs you says why, what to do and where | Codex | FEAT-0026 | nothing; first (contract proposal to agree first) |
+| [[TASK-0154]] The feature's gate is an arch of five segments, one component for S3 and S7 | Claude | FEAT-0028 | nothing; first (Codex agrees to the module move first) |
+| [[TASK-0155]] The wheel becomes a constellation | Claude | FEAT-0027 | nothing |
+| [[TASK-0156]] The overview stands in 3D, and turns, pans and zooms | Claude | FEAT-0027 | TASK-0155 |
+| [[TASK-0157]] A 3D wheel where height is time, drawn as a plate to judge | Claude | FEAT-0025 | nothing |
+| [[TASK-0158]] A phase and a ticket say what you need to do | Claude | FEAT-0028 | TASK-0153 |
+| [[TASK-0159]] S7 shows the feature's text, and its gate as the arch | Codex | FEAT-0029 | TASK-0154 |
+| [[TASK-0160]] An issue at triage is decided from its ticket screen | Codex | FEAT-0029 | TASK-0153, TASK-0158 |
+| [[TASK-0161]] DES-0005's plates redrawn for the second revision | Claude | FEAT-0025 | all of the above |
+
+No new test note. The node suites TST-0080, TST-0082, TST-0085, TST-0087, TST-0090 and TST-0094 and the window run TST-0093 take the new checks; Edwin's TST-0091, TST-0092 and TST-0100 have new steps. The exit criterion on reaching every screen in two clicks is run again once the constellation replaces the wedges.
+
+Risk scan for the second revision: no trigger applies, so no risk note is added. The one to judge was three.js. It is loaded from cdnjs at a pinned version by one design page under `docs/designs/` ([[TASK-0157]]); it is not added to `desktop/package.json`, no Deck code imports it, and the page's captured pictures keep the plate readable without the network. CSS 3D in TASK-0156 adds no library, no environment variable, no new path and no long-running step. If Edwin decides to build the Level 2 wheel into Deck, that is a new dependency and gets a risk note then.
+
+What follows is the state before the second revision.
 
 **2026-10-15: the phase is being reworked after Edwin ran the overview.** He liked much of it and asked for five changes: the cockpit's ticket colours and status marks everywhere, S2's tickets as cockpit rows on a tilted plane, S3 showing the ticket's text and linked tickets, labelled chips instead of the round gate lamps, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. All five features moved from `review` back to `doing`.
 

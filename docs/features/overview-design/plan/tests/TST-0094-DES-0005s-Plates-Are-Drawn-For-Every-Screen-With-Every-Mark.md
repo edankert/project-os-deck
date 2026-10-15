@@ -15,7 +15,7 @@ entrypoint: "desktop/tests/overview-plates.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-plates"
 covers: ["[[FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built]]"]
 issues: []
-tasks: ["[[TASK-0130-Draw-DES-0005s-Plates-From-The-Screen-Code]]"]
+tasks: ["[[TASK-0130-Draw-DES-0005s-Plates-From-The-Screen-Code]]", "[[TASK-0157]]", "[[TASK-0161]]"]
 artifacts: []
 adequacy: ""
 mutation_score: ""

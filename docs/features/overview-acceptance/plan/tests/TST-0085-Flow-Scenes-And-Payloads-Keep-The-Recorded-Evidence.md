@@ -22,6 +22,8 @@ tasks:
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 - '[[TASK-0143]]'
 - '[[TASK-0149]]'
+- '[[TASK-0154]]'
+- '[[TASK-0159]]'
 artifacts: []
 adequacy: "The checks distinguish unknown evidence, every result word, incomplete printed steps, cross-platform keys and malformed reads. Recorded payloads reproduce the six scene fixtures."
 mutation_score: ''

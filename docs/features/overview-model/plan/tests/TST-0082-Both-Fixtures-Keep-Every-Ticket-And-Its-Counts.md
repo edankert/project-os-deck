@@ -14,7 +14,7 @@ entrypoint: "desktop/tests/overview-fixtures.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-fixtures"
 covers: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 issues: []
-tasks: ["[[TASK-0144]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]"]
+tasks: ["[[TASK-0144]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0153]]"]
 artifacts: []
 adequacy: "The expected totals come from the recorded source build and comparison. Deleting, duplicating or moving a fixture ticket must break a count or placement assertion."
 mutation_score: ""

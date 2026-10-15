@@ -15,7 +15,7 @@ entrypoint: "desktop/tests/overview-screens.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-screens"
 covers: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]", "[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]"]
 issues: []
-tasks: ["[[TASK-0125-The-Overview-Contracts-And-The-Wheel-As-A-Scene]]", "[[TASK-0127-A-Phase-Opens-As-Its-Web-Its-Exit-Ring-And-Its-Depth-Field]]", "[[TASK-0128-A-Ticket-Opens-As-Its-Lifecycle-And-Its-Neighbours]]", "[[TASK-0129-Unplaced-Tickets-Drift-Toward-Their-Suggested-Phase]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]"]
+tasks: ["[[TASK-0125-The-Overview-Contracts-And-The-Wheel-As-A-Scene]]", "[[TASK-0127-A-Phase-Opens-As-Its-Web-Its-Exit-Ring-And-Its-Depth-Field]]", "[[TASK-0128-A-Ticket-Opens-As-Its-Lifecycle-And-Its-Neighbours]]", "[[TASK-0129-Unplaced-Tickets-Drift-Toward-Their-Suggested-Phase]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0154]]", "[[TASK-0155]]", "[[TASK-0156]]", "[[TASK-0158]]"]
 artifacts: []
 adequacy: ""
 mutation_score: ""

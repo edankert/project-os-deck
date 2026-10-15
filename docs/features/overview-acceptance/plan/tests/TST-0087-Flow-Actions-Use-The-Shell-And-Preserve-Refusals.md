@@ -21,6 +21,7 @@ tasks:
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 - '[[TASK-0143]]'
+- '[[TASK-0160]]'
 artifacts: []
 adequacy: "Tests execute the built renderer definitions, Host bridge and preload with a stub Electron import. Fake sidecars inspect request bodies and refusal text. They distinguish local steps from ledger results, each result word, stale reads, cancellation and served controls."
 mutation_score: ''

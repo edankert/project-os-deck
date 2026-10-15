@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0026
 aliases: ["FEAT-0026"]
 title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -11,7 +11,7 @@ updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Every overview screen reads one model of the workspace's tickets, so no two screens can disagree, and every screen is checked automatically against the look's rules on two real workspaces."
 requirements: []
-tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]", "[[TASK-0144]]"]
+tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]", "[[TASK-0144]]", "[[TASK-0153-Every-Ticket-That-Needs-You-Says-Why-And-What-To-Do]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -71,6 +71,10 @@ Deck’s 384-ticket fixture was replayed from `git archive 96955cc8afecc56b8ac36
 `bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. The validator reports existing advisory warnings. No CI or human acceptance verdict is claimed.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-15 (second revision), because Edwin ran the overview again and approved six changes.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. The approved plan is DES-0005's revision of 2026-10-15 (second). The move from `review` back to `doing` is the same one the first revision made, because new work is added inside the feature. The paragraphs below it describe the state before this revision.
+
+New work: [[TASK-0153]] (Codex) makes the model say why a ticket needs you, what to do and where to do it, ported from the cockpit's `_needs_human`. It is a contract change to `Ticket`, proposed below under "Questions between the lanes" for both lanes to agree. It can start at once; TASK-0158 and TASK-0160 wait on it.
 
 2026-10-15: **TASK-0151 fixes the round-one review findings on TASK-0144 and TASK-0149 on `lane/codex-r2`.** Panel count tests now cover both HTML rows and SVG strips. Gate evidence no longer repeats ticket drawings. The full desktop suite passes 769 tests; the Review section records each finding, its fix and the supplied verdicts.
 
@@ -230,6 +234,8 @@ The risk scan found no new external dependency, environment setting, storage lay
 2026-10-15, proposed by the drawing lane for [[TASK-0147]]: **the word check in `overview-checks.ts` exempts a scene's ticket list.** S2's rows carry an id, a title and a status word each, which is the point of them, so they cannot count toward the 60 words at rest. Everything else on the screen still does. The proposal is that the scene marks the rows as a list, the check skips text inside it, and TST-0083 shows a scene with too many words outside the list still fails. Agreed by: Codex (agreed, 2026-10-15), Claude (proposer). The scene marks the rows as a `panel` node (`desktop/src/shared/overview-scene.ts`); the check skips text inside a panel, and every ticket a panel row holds must also be in `scene.list`.
 
 2026-10-15, Codex: both proposals are agreed as written, including Claude's amendments. `open` makes the no-state fill explicit, and `type` preserves the decision/design colour distinction without changing the wheel's kind groups. Panels carry exempt row or note text; their ticket rows still owe a list twin. TASK-0144 ports the cockpit rules into Deck's index builder, with a direct Python stats comparison on both workspaces. No sidecar is needed at runtime.
+
+2026-10-15, proposed at planning for [[TASK-0153]], for both lanes to agree before either codes against it: **one optional field on `Ticket`, `needs`, present exactly when `needsYou` is true.** Its starting shape: `needs?: { reason: 'triage' | 'review' | 'ready' | 'failed' | 'waiting'; say: string; action: { address: string } | { verbs: true }; waitingOn?: string }`. `say` is the sentence the screens show; `action` is where the person acts, or `verbs: true` when the sidecar's own decide verbs are the action (TASK-0160). Claude's TASK-0158 reads it on S2 and S3 and in every callout. Agreed by: Codex (pending), Claude (2026-10-15, with one amendment). The amendment: the model is built without a workspace's address or view, so `action` carries the parts of an address, not an address: `action: { parts: { page?: string; flow?: string; note?: string; step?: string } } | { verbs: true }`, and each screen writes the address through its own `ScreenContext`, which also keeps the colouring.
 
 ### Round two of the 2026-10-15 revision
 

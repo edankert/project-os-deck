@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0027
 aliases: ["FEAT-0027"]
 title: "Deck opens on the wheel of phases: the circular overview, with finished phases on a shelf, the backlog in a tray and tickets with no phase in the core"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -11,7 +11,7 @@ updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person opening Deck sees, in one picture, how far each unfinished phase has got and where the failed, owed-again and open tickets are, and reaches any phase from it in one click."
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0131]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0152]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0131]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0152]]", "[[TASK-0155]]", "[[TASK-0156]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -58,6 +58,10 @@ Out of scope:
 - The window run, TST-0093, 2026-10-14: passed on Deck (374 tickets) and your-trainer (2,747) after `99eeeab`; its first run found two defects, fixed there.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-15 (second revision), because Edwin ran the overview again and approved six changes.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. The approved plan is DES-0005's revision of 2026-10-15 (second). The move from `review` back to `doing` is the same one the first revision made, because new work is added inside the feature. The paragraphs below it describe the state before this revision.
+
+New work: [[TASK-0155]] (Claude) turns the wheel into a constellation laid out like the re-phase screen; it can start at once. [[TASK-0156]] (Claude) stands the wheel, S2's plane and the ring screens S4 and S6 on a tilted 3D plane that turns, pans and zooms with the mouse; it waits on TASK-0155.
 
 **Back to `doing` on 2026-10-15, because Edwin ran the overview and asked for changes.** He liked much of it, and asked for the cockpit's ticket colours and status marks on every screen, tickets drawn as cockpit rows, more of a ticket on its own screen, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. The move is from `review` back to `doing`, which STATUSES.md does not list as a typical transition; it is used because new work is added inside the feature, as FEAT-0005 and FEAT-0006 were reopened before. The review rounds below are for the build of 2026-10-14. The new tasks get their own review by the other model before the feature goes back to `review`.
 

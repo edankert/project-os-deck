@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0029
 aliases: ["FEAT-0029"]
 title: "Designs, acceptance tests and tickets are accepted from a picture of their evidence: S5, S6 and S7, writing through the cockpit's sidecar"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -11,7 +11,7 @@ updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person accepts a design from its plates, records an acceptance test result from a before-and-after picture, and accepts a feature from a gate that shows what is missing, each in Deck and each written through the cockpit's sidecar."
 requirements: []
-tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]", "[[TASK-0149]]", "[[TASK-0151]]"]
+tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]", "[[TASK-0149]]", "[[TASK-0151]]", "[[TASK-0159]]", "[[TASK-0160]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -61,6 +61,10 @@ Both recorded acceptance fixtures reproduce from raw payloads with each item's c
 `bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. No Electron window, new raster inspection or human verdict is claimed. Claude owns official plate regeneration and the window run; TST-0088, TST-0089 and TST-0100 remain Edwin's unrun acceptance checks.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-15 (second revision), because Edwin ran the overview again and approved six changes.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. The approved plan is DES-0005's revision of 2026-10-15 (second). The move from `review` back to `doing` is the same one the first revision made, because new work is added inside the feature. The paragraphs below it describe the state before this revision.
+
+New work: [[TASK-0159]] (Codex) shows the feature's text on S7 beside Accept and Send back, and draws the gate as the arch; it waits on TASK-0154. [[TASK-0160]] (Codex) puts the sidecar's decide verbs for an issue at triage into S3's banner, writing through the sidecar's guards; it waits on TASK-0153 and TASK-0158. S6's rings also get TASK-0156's camera.
 
 2026-10-15: **TASK-0151 fixes all seven findings from the round-one review of TASK-0144 and TASK-0149.** Reviewer A's verdict is `approve`; reviewer B's is `changes-requested`. Both are transcribed under Review. The full desktop suite passes 769 tests.
 
@@ -114,6 +118,8 @@ Your Trainer has no feature at review in the current tree or its existing overvi
 Append both returned `nodes` and `rows`. Chip item marks never set `ticket`; they set `markId: gate-<feature>-<key>-item-<n>` and retain the source id in their label. The rows are only `gate-<key>` evidence rows. Remove S3's `delete node.ticket` workaround and its filter on gate rows. The old `gateNodes` wrapper was already removed in the merged drawing lane.
 
 Both acceptance fixtures were remapped from their recorded raw payloads. Regenerate official plates after integrating S3. Claude verifies the fixes to the blocking round-one findings; the author's tests are not a new reviewer verdict.
+
+2026-10-15, proposed at planning, for Codex to agree before the code moves: **(1) the gate's drawing moves out of `desktop/src/shared/overview-flows.ts` into the drawing lane's `desktop/src/shared/overview-gate.ts`** ([[TASK-0154]]). `gateChips` is replaced by the arch; `featureGate`, `gateFromModel` and `AcceptData` stay in `overview-flows.ts` and keep Codex's lane. S7 switches to the arch in [[TASK-0159]]. **(2) S6's rings get the shared 3D camera** ([[TASK-0156]]): the camera wraps S6's container and changes nothing S6 draws. Agreed by: Codex (pending), Claude (proposer).
 
 ## Review
 

@@ -1,7 +1,7 @@
 ---
 type: '[[test]]'
 id: TST-0100
-title: Accept a feature from its five chips
+title: Accept a feature from its gate, with its text on the same page
 status: active
 owner: user:edwin
 created: '2026-10-14'
@@ -20,6 +20,8 @@ tasks:
 - '[[TASK-0149]]'
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
+- '[[TASK-0154]]'
+- '[[TASK-0159]]'
 artifacts: []
 adequacy: ''
 mutation_score: ''
@@ -34,7 +36,7 @@ area: overview
 after: []
 ---
 
-# Accept a feature from its five chips
+# Accept a feature from its gate, with its text on the same page
 
 ## Purpose
 
@@ -46,7 +48,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 
 ## Steps
 
-1. Open `?flow=accept&note=FEAT-0024` in Deck. Inspect Requirements, Tasks, Reviews, Automated tests and Acceptance tests. Point at each incomplete or unreported chip.
+1. Open `?flow=accept&note=FEAT-0024` in Deck. Read the feature's text in the panel beside the buttons. Inspect the arch's five segments: Requirements, Tasks, Reviews, Automated tests and Acceptance tests. Point at each incomplete or unreported segment and read what it counts.
 2. Compare the named requirements, tasks, automated results, acceptance results and independent reviews with the cockpit and source notes.
 3. Use the keyboard list to inspect the same gate. Copy and reopen its address.
 4. In a disposable workspace with complete evidence, use Accept and compare the sidecar response and cockpit record.
@@ -57,6 +59,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 
 ## Expect
 
+- (Second revision, 2026-10-15.) The feature's full text is on the same page as Accept and Send back and scrolls. The gate is an arch of five segments, each filled by its done share, with its count and a mark beside it; the five meanings are in the callouts, not on the arch at rest. Where the points below say "chip", read "segment".
 - Every known nonempty chip shows done / total with a separate mark for each count and one square per item. Evidence squares use the item’s type colour and fill only when that item is complete. A requirement with three satisfied criteria among eight shows three filled purple squares, regardless of its lifecycle status. Labels name the criterion, task, reviewer or test result; the list twin contains five evidence rows. Known empty chips are hollow and say “nothing to check”; empty requirements and tasks explain that no items are recorded. Unknown or unreadable evidence says “not reported” as neutral hollow squares without any needs-you dot or fill claim. Its hover explains why.
 - Accept needs at least one known item and every nonempty chip complete. Empty chips supply no evidence. Each unknown or incomplete chip names its missing evidence on hover or focus.
 - A supported person transition is reflected in the cockpit. Unsupported transitions stay unavailable with a hover saying the cockpit does not yet move a feature out of review. The opted-in stamp says on screen that it records acceptance without changing status.
