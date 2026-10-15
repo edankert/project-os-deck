@@ -1,7 +1,9 @@
 // TST-0080: DES-0004's rules, exercised through the public builder.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load } from './helpers.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { desktopRoot, load } from './helpers.mjs';
 const { buildOverview, parseExitCriteria } = load('shared/overview-model.js');
 const { recordFrom } = load('shared/records.js');
 
@@ -305,4 +307,52 @@ print(json.dumps({'items': items, 'today': datetime.date.today().isoformat(), 'd
   t.diagnostic(`${workspace}: ${Object.keys(reference.items).length} items compared; ${mismatches.length} mismatches; ${outside.length} outside stats (${[...new Set(outside.map((ticket) => ticket.type))].join(', ')}), still governed by the port`);
   assert.ok(Object.keys(reference.items).length > 0, 'stats must actually report items');
   assert.deepEqual(mismatches, [], mismatches.join('\n'));
+});
+
+// TASK-0153 — a ticket that needs you says why, what to do and where, in the cockpit's order.
+test('every ticket that needs you carries why, what to do and where to do it; no other ticket does', () => {
+  const dependent = (id, depends) => note(id, 'task', 'doing', { depends });
+  const records = [
+    note('ISS-0001', 'issue', 'triage'),
+    note('FEAT-0001', 'feature', 'review'),
+    note('DES-0001', 'design', 'review'),
+    note('REQ-0001', 'requirement', 'review'),
+    note('TST-0001', 'test', 'ready'),
+    note('TST-0002', 'test', 'failing'),
+    note('ISS-0002', 'issue', 'reopened'),
+    note('TASK-0002', 'task', 'doing'),
+    dependent('TASK-0001', ['TASK-0002']),
+    // Two reasons at once: review comes before an unfinished dependency, as in the cockpit.
+    note('FEAT-0002', 'feature', 'review', { depends: ['TASK-0002'] }),
+    note('TASK-0003', 'task', 'done'),
+  ];
+  const m = run(records);
+  const needs = (id) => m.tickets[id].needs;
+  assert.deepEqual(needs('ISS-0001'), { reason: 'triage', say: 'Decide: take it into the backlog, or decline it', action: { verbs: true } });
+  assert.deepEqual(needs('FEAT-0001').action, { parts: { flow: 'accept', note: 'FEAT-0001' } });
+  assert.deepEqual(needs('DES-0001').action, { parts: { flow: 'design', note: 'DES-0001' } });
+  assert.deepEqual(needs('REQ-0001').action, { parts: { page: 'ticket', note: 'REQ-0001' } });
+  assert.equal(needs('FEAT-0001').say, 'Review it, then accept it or send it back');
+  assert.deepEqual([needs('TST-0001').reason, needs('TST-0001').say, needs('TST-0001').action], ['ready', 'Run this test: it has never been run', { parts: { flow: 'test-run' } }]);
+  assert.deepEqual([needs('TST-0002').reason, needs('TST-0002').action], ['failed', { parts: { flow: 'test-run' } }]);
+  assert.deepEqual([needs('ISS-0002').reason, needs('ISS-0002').action], ['failed', { parts: { page: 'ticket', note: 'ISS-0002' } }]);
+  assert.deepEqual(needs('TASK-0001'), { reason: 'waiting', say: 'Waiting on TASK-0002: finish that first', action: { parts: { page: 'ticket', note: 'TASK-0002' } }, waitingOn: 'TASK-0002' });
+  assert.equal(needs('FEAT-0002').reason, 'review', 'review comes before waiting');
+  for (const t of Object.values(m.tickets)) assert.equal(t.needs !== undefined, t.needsYou, `${t.id}: needs exactly when needsYou`);
+});
+
+test('on both fixtures, every ticket that needs you says why, and a waiting ticket names an unfinished blocker', () => {
+  for (const name of ['deck', 'your-trainer']) {
+    const m = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', `${name}.json`), 'utf-8'));
+    for (const t of Object.values(m.tickets)) {
+      assert.equal(t.needs !== undefined, t.needsYou === true, `${name} ${t.id}: needs exactly when needsYou`);
+      if (t.needs?.reason !== 'waiting') continue;
+      const on = t.needs.waitingOn;
+      assert.ok(typeof on === 'string' && on !== '', `${name} ${t.id}: names what it waits on`);
+      if (m.tickets[on] !== undefined) {
+        assert.ok(!['delivered', 'dropped', 'unproven'].includes(m.tickets[on].fill), `${name} ${t.id}: ${on} is not finished`);
+        assert.deepEqual(t.needs.action, { parts: { page: 'ticket', note: on } });
+      } else assert.deepEqual(t.needs.action, { parts: { note: on } }, `${name} ${t.id}: a blocker the overview does not draw opens as a note`);
+    }
+  }
 });

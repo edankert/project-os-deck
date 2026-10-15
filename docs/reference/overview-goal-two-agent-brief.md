@@ -144,3 +144,7 @@ Edwin starts each lane with one prompt. These are the prompts.
 **Codex (GPT-6 Astra):**
 
 > You are the data-and-flows lane of PHASE-0005. Read docs/reference/overview-goal-two-agent-brief.md and follow its read order. Work in a worktree on branch lane/codex. Start FEAT-0026: write the two overview fixtures first and push them, then build the overview model from Deck's index and the screen checks, with node tests. Do not open windows without asking me.
+
+## Codex stopped, 2026-10-15
+
+2026-10-15, later: **Edwin: "codex is no longer working, only use claude from now on."** Codex now signs in with a ChatGPT account, which does not offer GPT-6 Astra, so it cannot run. Claude takes over every Codex task (TASK-0153, TASK-0159, TASK-0160 move to `system:claude`), the proposals between the lanes are decided by Claude, and two independent Claude reviewers, each in a clean context, replace Codex's cross-model review.

@@ -2,9 +2,9 @@
 type: "[[task]]"
 id: TASK-0153
 title: "Every ticket that needs you says why, what to do and where to do it, in the overview model"
-status: backlog
+status: done
 phase: "[[PHASE-0005-Overview]]"
-owner: system:codex
+owner: system:claude
 created: 2026-10-15
 updated: 2026-10-15
 source: ["Edwin 2026-10-15: 'Also when selecting an item which needs you, the user needs to be told what he needs to do???'", "Edwin 2026-10-15, approving: 'go ahead with all the recommendations as suggested'", "[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
@@ -32,18 +32,22 @@ The reasons are the cockpit's own, from `_needs_human` in `../project-os-cockpit
 | A `depends:` entry is unfinished | "Waiting on <ID>: finish that first" | The ticket it waits on |
 
 ## Definition of Done
-- [ ] A contract change to `Ticket` in `desktop/src/shared/overview-types.ts` is proposed under FEAT-0026's "Questions between the lanes" and agreed by both lanes before either codes against it. The proposal to start from: `needs?: { reason: 'triage' | 'review' | 'ready' | 'failed' | 'waiting'; say: string; action: { address: string } | { verbs: true }; waitingOn?: string }`, present exactly when `needsYou` is true.
-- [ ] The rule that sets `needsYou` also sets `needs`, so the two can never disagree. When several branches fire, the order is the cockpit's: triage or review, then failed, then ready, then waiting.
-- [ ] Every ticket with `needsYou: true` on both fixtures has a `needs` entry, and no other ticket has one. TST-0080 checks one ticket of each reason; TST-0082 checks the counts on both fixtures.
-- [ ] A "waiting" reason names the first unfinished ticket in `depends:`. A "review" reason on a feature points at S7, on a design at S5.
-- [ ] The words are fixed strings in one place, so S2, S3 and the callouts cannot drift apart.
-- [ ] `cd desktop && npm test` passes. Claude reviews the change, in two rounds at most.
+- [x] A contract change to `Ticket` in `desktop/src/shared/overview-types.ts` is proposed under FEAT-0026's "Questions between the lanes" and agreed by both lanes before either codes against it. The proposal to start from: `needs?: { reason: 'triage' | 'review' | 'ready' | 'failed' | 'waiting'; say: string; action: { address: string } | { verbs: true }; waitingOn?: string }`, present exactly when `needsYou` is true.
+- [x] The rule that sets `needsYou` also sets `needs`, so the two can never disagree. When several branches fire, the order is the cockpit's: triage or review, then failed, then ready, then waiting.
+- [x] Every ticket with `needsYou: true` on both fixtures has a `needs` entry, and no other ticket has one. TST-0080 checks one ticket of each reason; TST-0082 checks the counts on both fixtures.
+- [x] A "waiting" reason names the first unfinished ticket in `depends:`. A "review" reason on a feature points at S7, on a design at S5.
+- [x] The words are fixed strings in one place, so S2, S3 and the callouts cannot drift apart.
+- [x] `cd desktop && npm test` passes. Claude reviews the change, in two rounds at most.
 
 ## Steps
-- [ ] Write the proposal under FEAT-0026's "Questions between the lanes" and wait for Claude's answer.
-- [ ] Extend `cockpitMarks` to return the reason beside the flag.
-- [ ] Add the five sentences and their target addresses.
-- [ ] Rebuild both fixtures and extend TST-0080 and TST-0082.
+- [x] Write the proposal under FEAT-0026's "Questions between the lanes" and wait for Claude's answer.
+- [x] Extend `cockpitMarks` to return the reason beside the flag.
+- [x] Add the five sentences and their target addresses.
+- [x] Rebuild both fixtures and extend TST-0080 and TST-0082.
+
+## Verification
+
+Built by Claude after Codex stopped running (Edwin, 2026-10-15: "only use claude from now on"). `Ticket.needs` is in `desktop/src/shared/overview-types.ts`; `desktop/src/shared/overview-status.ts` computes it beside the cockpit's own needs-you rule, in the cockpit's order (triage and review, then the blocked band, then a test never run, then an unfinished `depends:`), and `overview-model.ts` sends a wait on a note the overview does not draw to that note in the view. Both fixtures were recaptured: Deck from a clean checkout of `65c6397` (`dirty: false`, 395 tickets, 12 that need you: 5 review, 6 waiting, 1 ready); your-trainer from its working tree (`dirty: true`, 2,747 tickets, 75 that need you: 61 waiting, 9 ready, 5 triage). The model suite (TST-0080) tests every reason, the order when two apply, that `needs` is present exactly when `needsYou` is, and on both fixtures that a waiting ticket names an unfinished blocker; parity with the live cockpit is still exact (367 and 2,706 items, no mismatch). 785 tests pass.
 
 ## Notes
 

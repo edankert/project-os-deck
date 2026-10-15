@@ -160,6 +160,11 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
       phase: null, placedBy: kind === 'dec' || kind === 'risk' ? 'project-wide' : 'none', links: [...links].sort() };
     ticketNotes.set(r.id, r);
   }
+  // A ticket waiting on a note the overview does not draw (archived, or not a ticket
+  // type) is sent to that note in the view, not to a ticket screen that cannot open.
+  for (const t of Object.values(model.tickets)) {
+    if (t.needs?.waitingOn !== undefined && model.tickets[t.needs.waitingOn] === undefined) t.needs.action = { parts: { note: t.needs.waitingOn } };
+  }
   const members = new Map<string, string>();
   for (const phase of phaseNotes) for (const field of MEMBERS) for (const member of references(phase.frontmatter[field])) {
     if (!members.has(member.id)) members.set(member.id, phase.id);

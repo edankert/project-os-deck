@@ -4,7 +4,7 @@ id: TASK-0159
 title: "S7 shows the feature's text on the same page as Accept and Send back, and draws its gate as the arch"
 status: backlog
 phase: "[[PHASE-0005-Overview]]"
-owner: system:codex
+owner: system:claude
 created: 2026-10-15
 updated: 2026-10-15
 source: ["Edwin 2026-10-15: 'Also the accept / send back option for a feature should show the feature text'", "Edwin 2026-10-15, approving: 'when focussing on the feature (when the accept and send back options show) we need the feature text to be shown on that page.'", "[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]"]

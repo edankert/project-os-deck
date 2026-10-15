@@ -2,7 +2,7 @@
   "workspace": "Your Trainer",
   "head": "c38475f8862520eca61d64383ac946163e1d5bd9",
   "dirty": true,
-  "generated": "2026-10-15T18:38:49.514Z",
+  "generated": "2026-10-15T20:57:40.299Z",
   "phases": [
     {
       "id": "PHASE-015",
@@ -25919,6 +25919,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0986: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0986"
+          }
+        },
+        "waitingOn": "TASK-0986"
+      },
       "status": "doing",
       "title": "On Android, a row opens the device picker or the device's details as a bottom sheet, and the long-press, the ⋮ menu and Device info are removed",
       "phase": "PHASE-025",
@@ -26020,6 +26031,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0991: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0991"
+          }
+        },
+        "waitingOn": "TASK-0991"
+      },
       "status": "doing",
       "title": "The details sheet reads a connected device's signal strength, on both platforms",
       "phase": "PHASE-025",
@@ -26225,6 +26247,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1014: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1014"
+          }
+        },
+        "waitingOn": "TASK-1014"
+      },
       "status": "doing",
       "title": "The acceptance checks, the parity matrix, the glossary and both screen galleries describe the slashed icons and the cockpit's bottom bar",
       "phase": "PHASE-025",
@@ -29592,6 +29625,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0966: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0966"
+          }
+        },
+        "waitingOn": "TASK-0966"
+      },
       "status": "backlog",
       "title": "The uploaded ride carries which workout it was, which mode drove it, the route physics version, the loop count and its real lap boundaries",
       "phase": "PHASE-026",
@@ -29615,6 +29659,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0966: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0966"
+          }
+        },
+        "waitingOn": "TASK-0966"
+      },
       "status": "backlog",
       "title": "A FIT reader that turns a downloaded ride back into a session and its per-second metrics, on both platforms",
       "phase": "PHASE-026",
@@ -29637,6 +29692,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0966: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0966"
+          }
+        },
+        "waitingOn": "TASK-0966"
+      },
       "status": "backlog",
       "title": "The other tablet reads the rider's intervals.icu activities and rebuilds the rides it does not have, once each, and leaves deleted rides deleted",
       "phase": "PHASE-026",
@@ -29666,6 +29732,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0966: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0966"
+          }
+        },
+        "waitingOn": "TASK-0966"
+      },
       "status": "backlog",
       "title": "Weight, FTP, LTHR, max HR and resting HR follow the rider's intervals.icu athlete profile on both tablets, with no sync button to tap",
       "phase": "PHASE-026",
@@ -29689,6 +29766,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0969: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0969"
+          }
+        },
+        "waitingOn": "TASK-0969"
+      },
       "status": "backlog",
       "title": "Decide when the read runs, give the rider somewhere to see it and switch it off, and add the parity-matrix rows",
       "phase": "PHASE-026",
@@ -29712,6 +29800,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0971: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0971"
+          }
+        },
+        "waitingOn": "TASK-0971"
+      },
       "status": "backlog",
       "title": "Write the acceptance checks for the two-tablet test, which is the only way this feature can be proved",
       "phase": "PHASE-026",
@@ -29732,6 +29831,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0966: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0966"
+          }
+        },
+        "waitingOn": "TASK-0966"
+      },
       "status": "backlog",
       "title": "A rider can send their profile edits to intervals.icu, as a separate option they turn on, off until they do",
       "phase": "PHASE-026",
@@ -30340,6 +30450,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "The app looks and moves as the design system says, on a tablet and a phone",
       "phase": "PHASE-999",
@@ -32694,6 +32813,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1073: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1073"
+          }
+        },
+        "waitingOn": "TASK-1073"
+      },
       "status": "backlog",
       "title": "On Android, every screen takes its colours, type, corners and card style from the skin, today's look is the only skin, and a test fails on a new fixed colour",
       "phase": "PHASE-999",
@@ -32716,6 +32846,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1073: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1073"
+          }
+        },
+        "waitingOn": "TASK-1073"
+      },
       "status": "backlog",
       "title": "On iOS, every screen takes its colours, type, corners and card style from the skin, today's look is the only skin, and a test fails on a new fixed colour",
       "phase": "PHASE-999",
@@ -32739,6 +32880,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1073: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1073"
+          }
+        },
+        "waitingOn": "TASK-1073"
+      },
       "status": "backlog",
       "title": "On Android, the Instrument skin exists and a rider picks a skin in Settings under Appearance",
       "phase": "PHASE-999",
@@ -32764,6 +32916,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1073: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1073"
+          }
+        },
+        "waitingOn": "TASK-1073"
+      },
       "status": "backlog",
       "title": "On iOS, the Instrument skin exists and a rider picks a skin in Settings under Appearance",
       "phase": "PHASE-999",
@@ -32788,6 +32951,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1076: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1076"
+          }
+        },
+        "waitingOn": "TASK-1076"
+      },
       "status": "backlog",
       "title": "On Android, the reference pictures, the fit tests and the gallery run for every skin",
       "phase": "PHASE-999",
@@ -32809,6 +32983,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1077: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1077"
+          }
+        },
+        "waitingOn": "TASK-1077"
+      },
       "status": "backlog",
       "title": "On iOS, the layout tests and the gallery run for every skin",
       "phase": "PHASE-999",
@@ -32829,6 +33014,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1076: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1076"
+          }
+        },
+        "waitingOn": "TASK-1076"
+      },
       "status": "backlog",
       "title": "The acceptance checks, parity rows, glossary and release paperwork for skins",
       "phase": "PHASE-999",
@@ -33119,6 +33315,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1057: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1057"
+          }
+        },
+        "waitingOn": "TASK-1057"
+      },
       "status": "backlog",
       "title": "The checks, the parity matrix, both galleries and the change note describe the accepted transitions and small changes",
       "phase": "PHASE-025",
@@ -33261,6 +33468,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1081: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1081"
+          }
+        },
+        "waitingOn": "TASK-1081"
+      },
       "status": "doing",
       "title": "On Android, the celebration shows what the ride changed on the rider's card: rides and hours count up, and each rating that rose shows its gain",
       "phase": "PHASE-025",
@@ -33285,6 +33503,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "The accepted transitions and small changes show on a phone and a tablet, and cut under reduced motion",
       "phase": "PHASE-025",
@@ -37304,6 +37531,13 @@
       "type": "issue",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "triage",
+        "say": "Decide: take it into the backlog, or decline it",
+        "action": {
+          "verbs": true
+        }
+      },
       "status": "triage",
       "title": "On iOS, a ride whose Strava upload was interrupted is never uploaded again",
       "phase": null,
@@ -37708,6 +37942,13 @@
       "type": "issue",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "triage",
+        "say": "Decide: take it into the backlog, or decline it",
+        "action": {
+          "verbs": true
+        }
+      },
       "status": "triage",
       "title": "The positioning copy says phones are not the primary form factor, and most riders are on a phone",
       "phase": null,
@@ -37743,6 +37984,13 @@
       "type": "issue",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "triage",
+        "say": "Decide: take it into the backlog, or decline it",
+        "action": {
+          "verbs": true
+        }
+      },
       "status": "triage",
       "title": "The cockpit animates mid-ride, which the design system says it should not",
       "phase": null,
@@ -38058,6 +38306,13 @@
       "type": "issue",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "triage",
+        "say": "Decide: take it into the backlog, or decline it",
+        "action": {
+          "verbs": true
+        }
+      },
       "status": "triage",
       "title": "Live notes restate the network rule in their own words, so changing the rule means editing dozens of notes",
       "phase": null,
@@ -38249,6 +38504,13 @@
       "type": "issue",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "triage",
+        "say": "Decide: take it into the backlog, or decline it",
+        "action": {
+          "verbs": true
+        }
+      },
       "status": "triage",
       "title": "An Android rider card switches to a different arrangement when it is taller than 350 dp, a size line the width guard does not see",
       "phase": null,
@@ -41044,6 +41306,17 @@
       "type": "requirement",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on REQ-0135: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "REQ-0135"
+          }
+        },
+        "waitingOn": "REQ-0135"
+      },
       "status": "draft",
       "title": "HR-Zone Sensitivity — per-rider persistence + tuning UI",
       "phase": "PHASE-999",
@@ -43612,6 +43885,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0255: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0255"
+          }
+        },
+        "waitingOn": "TASK-0255"
+      },
       "status": "backlog",
       "title": "Icon picker UI on profile settings page",
       "phase": null,
@@ -43628,6 +43912,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0255: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0255"
+          }
+        },
+        "waitingOn": "TASK-0255"
+      },
       "status": "backlog",
       "title": "Integrate selected icon into RiderCard",
       "phase": null,
@@ -43667,6 +43962,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0259: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0259"
+          }
+        },
+        "waitingOn": "TASK-0259"
+      },
       "status": "backlog",
       "title": "Zone boundary editor UI on profile settings page",
       "phase": null,
@@ -43687,6 +43993,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0259: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0259"
+          }
+        },
+        "waitingOn": "TASK-0259"
+      },
       "status": "backlog",
       "title": "Real-time HR zone label on active workout screen",
       "phase": null,
@@ -43739,6 +44056,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0289: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0289"
+          }
+        },
+        "waitingOn": "TASK-0289"
+      },
       "status": "backlog",
       "title": "Zone timer cockpit display",
       "phase": "PHASE-999",
@@ -43756,6 +44084,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0289: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0289"
+          }
+        },
+        "waitingOn": "TASK-0289"
+      },
       "status": "backlog",
       "title": "Zone time summary in session save",
       "phase": "PHASE-999",
@@ -43773,6 +44112,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0289: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0289"
+          }
+        },
+        "waitingOn": "TASK-0289"
+      },
       "status": "backlog",
       "title": "Zone segment metric accumulation in WorkoutViewModel",
       "phase": "PHASE-999",
@@ -43790,6 +44140,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0292: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0292"
+          }
+        },
+        "waitingOn": "TASK-0292"
+      },
       "status": "backlog",
       "title": "Zone segment averages cockpit display",
       "phase": "PHASE-999",
@@ -43994,6 +44355,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0335: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0335"
+          }
+        },
+        "waitingOn": "TASK-0335"
+      },
       "status": "backlog",
       "title": "Predictive HR-Zone controller (option C)",
       "phase": "PHASE-999",
@@ -44030,6 +44402,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0365: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0365"
+          }
+        },
+        "waitingOn": "TASK-0365"
+      },
       "status": "backlog",
       "title": "Rider settings UI — HR-Zone tracking sensitivity selectors + reset",
       "phase": "PHASE-999",
@@ -44049,6 +44432,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0365: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0365"
+          }
+        },
+        "waitingOn": "TASK-0365"
+      },
       "status": "backlog",
       "title": "Persist HR-Zone tracking sensitivity on rider profile + backup/restore",
       "phase": "PHASE-999",
@@ -44088,6 +44482,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on REQ-0151: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "REQ-0151"
+          }
+        },
+        "waitingOn": "REQ-0151"
+      },
       "status": "backlog",
       "title": "App-wide button-layout standardisation pass",
       "phase": null,
@@ -44129,6 +44534,16 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on CHG-20260503g: finish that first",
+        "action": {
+          "parts": {
+            "note": "CHG-20260503g"
+          }
+        },
+        "waitingOn": "CHG-20260503g"
+      },
       "status": "backlog",
       "title": "Per-rider trainer-feel multiplier — Profile → Preferences slider for trainer-variance compensation",
       "phase": null,
@@ -44151,6 +44566,16 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on CHG-20260503g: finish that first",
+        "action": {
+          "parts": {
+            "note": "CHG-20260503g"
+          }
+        },
+        "waitingOn": "CHG-20260503g"
+      },
       "status": "backlog",
       "title": "Per-rider Trainer Difficulty preference (slope scaling) — Profile → Preferences slider",
       "phase": null,
@@ -44417,6 +44842,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0542: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0542"
+          }
+        },
+        "waitingOn": "TASK-0542"
+      },
       "status": "backlog",
       "title": "Pre-fill URL length fallback — GitHub URL parameters are practically capped around 8 KB; when a diagnostic export exceeds the safe URL length, the bug-report deep-link (TASK-0542) falls back to copy-to-clipboard with a toast: 'Diagnostic copied. Paste it into the bug-report Issue.' Opens the GitHub URL without the diagnostic param",
       "phase": "PHASE-016",
@@ -44433,6 +44869,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on FEAT-0134: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "FEAT-0134"
+          }
+        },
+        "waitingOn": "FEAT-0134"
+      },
       "status": "doing",
       "title": "Rider-card bitmap rendering — render the existing RiderCard composable at CardSize.Full into an off-screen Canvas → Bitmap → PNG, write to app cache; reuses the Compose-to-bitmap pipeline from TASK-0538 (FEAT-0076 share card)",
       "phase": "PHASE-016",
@@ -44452,6 +44899,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0545: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0545"
+          }
+        },
+        "waitingOn": "TASK-0545"
+      },
       "status": "doing",
       "title": "Rider-card share affordance — add 'Share my card' button to UserProfileScreen; tapping triggers the bitmap render (TASK-0545) and opens Android share intent with the PNG + caption (TASK-0547) attached",
       "phase": "PHASE-016",
@@ -44529,6 +44987,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0549: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0549"
+          }
+        },
+        "waitingOn": "TASK-0549"
+      },
       "status": "backlog",
       "title": "Bundled velodrome workout pack - 6-9 race disciplines as ROUTE-type WorkoutPrograms layered on the 250 m loop",
       "phase": "PHASE-018",
@@ -44546,6 +45015,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0549: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0549"
+          }
+        },
+        "waitingOn": "TASK-0549"
+      },
       "status": "backlog",
       "title": "Velodrome track-overhead mini-map - top-down banked-oval Composable showing rider + ghost position dots",
       "phase": "PHASE-018",
@@ -44564,6 +45044,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0549: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0549"
+          }
+        },
+        "waitingOn": "TASK-0549"
+      },
       "status": "backlog",
       "title": "Race-role-aware ghost behaviour - per-discipline ghost roles (Keirin derny->opponent, Pursuit chase-on-opposite-straight)",
       "phase": "PHASE-018",
@@ -44582,6 +45073,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0549: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0549"
+          }
+        },
+        "waitingOn": "TASK-0549"
+      },
       "status": "backlog",
       "title": "Velodrome multi-ghost lap-split strip - cockpit text row showing PB / household-best / world-record deltas at each lap boundary",
       "phase": "PHASE-018",
@@ -44599,6 +45101,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0549: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0549"
+          }
+        },
+        "waitingOn": "TASK-0549"
+      },
       "status": "backlog",
       "title": "Hero-pace synthetic ghosts - bundled position arrays for famous track times (UCI Hour Record, pursuit world record, etc.) as race-able ghosts",
       "phase": "PHASE-018",
@@ -44616,6 +45129,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0550: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0550"
+          }
+        },
+        "waitingOn": "TASK-0550"
+      },
       "status": "backlog",
       "title": "Migrate bundled velodrome pack from APK to downloadable pack - publish via FEAT-0081 pipeline, drop the JSON files from assets/workouts/, auto-install for riders who previously had them bundled",
       "phase": "PHASE-018",
@@ -44655,6 +45179,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0568: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0568"
+          }
+        },
+        "waitingOn": "TASK-0568"
+      },
       "status": "backlog",
       "title": "Tactical pattern library - Steady / Attack / Sit-up / Counter / Steady-then-attack / Hill-attack as small composable behaviours the partner cycles through",
       "phase": "PHASE-999",
@@ -44672,6 +45207,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0569: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0569"
+          }
+        },
+        "waitingOn": "TASK-0569"
+      },
       "status": "backlog",
       "title": "Pace Partner profile strategies - Pacer / Rabbit / Cat-and-mouse / Breakaway implementations that pick patterns + intensities",
       "phase": "PHASE-999",
@@ -44691,6 +45237,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0568: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0568"
+          }
+        },
+        "waitingOn": "TASK-0568"
+      },
       "status": "backlog",
       "title": "Adaptive feedback loop - GhostPositionGenerator reads rider's live power + position and feeds them into the active profile strategy at ~1 Hz",
       "phase": "PHASE-999",
@@ -44709,6 +45266,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0570: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0570"
+          }
+        },
+        "waitingOn": "TASK-0570"
+      },
       "status": "backlog",
       "title": "Pace Partner picker UI - ride-start affordance to choose None / Pacer / Rabbit / Cat-and-mouse / Breakaway; persisted per rider",
       "phase": "PHASE-999",
@@ -44727,6 +45295,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0568: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0568"
+          }
+        },
+        "waitingOn": "TASK-0568"
+      },
       "status": "backlog",
       "title": "Pace Partner visual differentiation - distinct icon (mechanical pacer / motorbike silhouette), reserved colour family, 'Partner - <Profile>' label across all ghost-rendering surfaces",
       "phase": "PHASE-999",
@@ -44745,6 +45324,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0570: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0570"
+          }
+        },
+        "waitingOn": "TASK-0570"
+      },
       "status": "backlog",
       "title": "Pace Partner integration with Route mode - wire picker -> generator -> ghost rendering for v1 ship-target",
       "phase": "PHASE-999",
@@ -44764,6 +45354,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0571: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0571"
+          }
+        },
+        "waitingOn": "TASK-0571"
+      },
       "status": "backlog",
       "title": "Pace Partner gap-resolution surfaces - numeric gap label + fixed-scale duel view + drafting-zone band, layered to make on-wheel / bridging / dropped states perceivable independent of terrain-graph zoom",
       "phase": "PHASE-999",
@@ -44838,6 +45439,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0581: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0581"
+          }
+        },
+        "waitingOn": "TASK-0581"
+      },
       "status": "backlog",
       "title": "AI Coach multi-week plan generation - emit a sequence of dated workouts onto a local calendar from prompts like 'generate a 4-week threshold block'",
       "phase": "PHASE-999",
@@ -44856,6 +45468,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0581: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0581"
+          }
+        },
+        "waitingOn": "TASK-0581"
+      },
       "status": "backlog",
       "title": "RPE + feel + freeform-note capture on post-ride summary - stored locally, pushed to intervals.icu's feel field when connected, fed into next AI Coach run",
       "phase": "PHASE-999",
@@ -44873,6 +45496,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0581: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0581"
+          }
+        },
+        "waitingOn": "TASK-0581"
+      },
       "status": "backlog",
       "title": "AI Coach analyst mode - distinct prompt template that reviews recent training rather than prescribes new training",
       "phase": "PHASE-999",
@@ -44930,6 +45564,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0582: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0582"
+          }
+        },
+        "waitingOn": "TASK-0582"
+      },
       "status": "backlog",
       "title": "Push AI-Coach-generated plan TO intervals.icu calendar - complements TASK-0579's read-side pull; bidirectional plan visibility",
       "phase": null,
@@ -44995,6 +45640,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0592: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0592"
+          }
+        },
+        "waitingOn": "TASK-0592"
+      },
       "status": "doing",
       "title": "Migrate connection-setup reads (DIS + FTMS feature reads) to FEAT-0085 reliability layer — BluetoothManager.kt:281-311 (DIS strings: manufacturer / model / firmware) and BluetoothManager.kt:331-450 (FTMS feature + power-range reads); currently uses fire-and-forget subscribe with no timeout, can hang the handshake on a trainer that advertises 0x180A but doesn't respond to reads; closes out FEAT-0085 by removing the old fire-and-forget BluetoothManager methods and renaming the Safely-suffixed methods in place; pairs naturally with FEAT-0072 workstream J (indication-to-notification fallback) since both touch the connection-setup path",
       "phase": "PHASE-019",
@@ -45109,6 +45765,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0643: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0643"
+          }
+        },
+        "waitingOn": "TASK-0643"
+      },
       "status": "backlog",
       "title": "RideWithGPS Phase 1A — route library + GPX install. Extend `RideWithGpsApi` with `listRoutes` + `exportRouteGpx` (Streaming). `RideWithGpsRepository.listRoutes(userId)` + `downloadRoute(userId, route)` mirroring `StravaRoutesRepository`. New `RideWithGpsLibrary` Composable suite (sealed UI state + sticky header + row). Wired into Workouts → Route tab below the Strava Routes + Segments sections. Pro/Family gated. Install pipeline reuses `RouteGpxImporter` → `programId = \"ridewithgps-<routeId>\"` dedup.",
       "phase": "PHASE-999",
@@ -45127,6 +45794,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0643: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0643"
+          }
+        },
+        "waitingOn": "TASK-0643"
+      },
       "status": "backlog",
       "title": "RideWithGPS Phase 1A — Profile → Connected → RideWithGPS row. SettingsRow + Material Switch tinted with the RWGPS brand colour. ON → opens OAuth via Chrome custom tab; OFF → calls `viewModel.unlinkRideWithGps()`. FREE tier shows Upgrade button instead of switch. Mirror of the intervals.icu + Strava connection rows.",
       "phase": "PHASE-999",
@@ -45146,6 +45824,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0643: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0643"
+          }
+        },
+        "waitingOn": "TASK-0643"
+      },
       "status": "backlog",
       "title": "RideWithGPS Phase 1B — auto-upload completed FITs to RWGPS on session save. Per-session status tracking on `WorkoutSession` (`ridewithgpsUploadStatus` + `ridewithgpsActivityId`), Room migration MIGRATION_34_35, DAO helpers, MainActivity LaunchedEffect, History row chip (third chip alongside Strava + intervals.icu), retry-from-history flow, Pro-tier gated.",
       "phase": "PHASE-999",
@@ -45164,6 +45853,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0644: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0644"
+          }
+        },
+        "waitingOn": "TASK-0644"
+      },
       "status": "backlog",
       "title": "RideWithGPS Phase 2 — public-route search / explore. Surface RWGPS's public-route index inside YT for discovery (not just the rider's curated library). UX shape TBD; likely a search field + map / region picker as a distinct surface from the personal-library section. Deferred until Phase 1 lands and we have usage signal.",
       "phase": "PHASE-999",
@@ -46149,6 +46849,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1081: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1081"
+          }
+        },
+        "waitingOn": "TASK-1081"
+      },
       "status": "doing",
       "title": "On iOS, the rider card's six ratings come from what the rider did on the bike in their saved rides, and nothing they typed",
       "phase": "PHASE-025",
@@ -46192,6 +46903,17 @@
       "type": "task",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-1084: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-1084"
+          }
+        },
+        "waitingOn": "TASK-1084"
+      },
       "status": "backlog",
       "title": "On iOS, the Route cockpit's inset has a corner grip that resizes it with one finger",
       "phase": "PHASE-025",
@@ -58051,6 +58773,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "Device Backup Export / Import Round-Trip",
       "phase": null,
@@ -58066,6 +58797,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "Per-Rider Export / Import Round-Trip",
       "phase": null,
@@ -58081,6 +58821,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "AI Workout Coach — HR-Zone editor generates HR-Zone (not Power) intervals",
       "phase": null,
@@ -58127,6 +58876,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "Android BLE hardening acceptance (FEAT-0085 / TASK-0592 / TASK-0593 / TASK-0766 / TASK-0768 / ISS-0256 / ISS-0329 / ISS-0337)",
       "phase": null,
@@ -58158,6 +58916,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "iOS BLE hardening acceptance (TASK-0765 / TASK-0766 / ISS-0256 — CoreBluetooth)",
       "phase": null,
@@ -58185,6 +58952,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "Android edge-to-edge inset acceptance — every input/scroll screen clears the status bar, navigation bar, and keyboard (ISS-0338 sweep)",
       "phase": null,
@@ -58312,6 +59088,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "The rider card's ratings follow the rider's rides, and a typed FTP changes none of them",
       "phase": null,

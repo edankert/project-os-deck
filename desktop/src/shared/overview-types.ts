@@ -79,6 +79,24 @@ export const FILL_WORD: Readonly<Record<Fill, string>> = {
   deferred: 'parked',
 };
 
+/** Why a ticket needs a person: the cockpit's `_needs_human` reasons. */
+export type NeedReason = 'triage' | 'review' | 'failed' | 'ready' | 'waiting';
+
+/**
+ * What a ticket that needs you asks of you (Edwin, 2026-10-15: "the user needs to be
+ * told what he needs to do"). `say` is the sentence the screens show. `action` is
+ * where the person acts, as the parts of an overview address (the model does not
+ * know the workspace's address; each screen writes it), or `verbs` when the
+ * sidecar's own decide verbs are the action (triage, TASK-0160).
+ */
+export interface Needs {
+  reason: NeedReason;
+  say: string;
+  action: { parts: { page?: string; flow?: string; note?: string; step?: string } } | { verbs: true };
+  /** The first unfinished ticket a waiting ticket depends on. */
+  waitingOn?: string;
+}
+
 export interface Ticket {
   /** "FEAT-0024". */
   id: string;
@@ -91,6 +109,8 @@ export interface Ticket {
   fill: Fill;
   /** The cockpit's dot: a person's action is outstanding (`_needs_human`). */
   needsYou: boolean;
+  /** When `needsYou` is true: why, what to do, and where (TASK-0153). Absent otherwise. */
+  needs?: Needs;
   /** The note's own status word, for the callout. */
   status: string;
   title: string;

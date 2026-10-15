@@ -3,7 +3,7 @@
  * overview-model.test.mjs compares this port with the real Python stats builder.
  */
 import type { NoteRecord } from './records.js';
-import type { Fill, NoteType, Ticket } from './overview-types.js';
+import type { Fill, Needs, NoteType, Ticket } from './overview-types.js';
 
 const DONE: Readonly<Record<string, readonly string[]>> = {
   feature: ['done', 'released', 'merged', 'verified', 'complete', 'superseded', 'cancelled'],
@@ -55,7 +55,25 @@ function isUnproven(record: NoteRecord, today: string, days: number): boolean {
  * Do not use the graph's broader path/heading resolver here: parity includes
  * which references the cockpit considers a dependency, not only its status.
  */
-export function cockpitMarks(records: readonly NoteRecord[], today: string, days = 90): (record: NoteRecord, type: NoteType) => Pick<Ticket, 'type' | 'fill' | 'needsYou'> {
+/**
+ * Why a ticket needs you and what to do about it (TASK-0153), in the order the
+ * cockpit's `_needs_human` checks its reasons: a decision (triage, review) first,
+ * then the blocked band, then a test never run, then an unfinished dependency.
+ */
+function needsOf(record: NoteRecord, type: NoteType, status: string, isTest: boolean, blocker: NoteRecord | undefined): Needs {
+  const id = record.id;
+  if (status === 'triage') return { reason: 'triage', say: 'Decide: take it into the backlog, or decline it', action: { verbs: true } };
+  if (status === 'review') {
+    const parts = type === 'feature' ? { flow: 'accept', note: id } : type === 'design' ? { flow: 'design', note: id } : { page: 'ticket', note: id };
+    return { reason: 'review', say: 'Review it, then accept it or send it back', action: { parts } };
+  }
+  if (BLOCKED.has(status)) return { reason: 'failed', say: 'It failed: fix it, or run it again', action: { parts: isTest ? { flow: 'test-run' } : { page: 'ticket', note: id } } };
+  if (isTest && status === 'ready') return { reason: 'ready', say: 'Run this test: it has never been run', action: { parts: { flow: 'test-run' } } };
+  const on = blocker?.id ?? '';
+  return { reason: 'waiting', say: `Waiting on ${on}: finish that first`, action: { parts: { page: 'ticket', note: on } }, waitingOn: on };
+}
+
+export function cockpitMarks(records: readonly NoteRecord[], today: string, days = 90): (record: NoteRecord, type: NoteType) => Pick<Ticket, 'type' | 'fill' | 'needsYou' | 'needs'> {
   const tables = [new Map<string, NoteRecord>(), new Map<string, NoteRecord>(), new Map<string, NoteRecord>(), new Map<string, NoteRecord>()];
   for (const r of records) {
     const keys = [[typeof r.frontmatter['id'] === 'string' ? r.id : ''], r.aliases, [r.fileName], [r.title ?? '']];
@@ -77,11 +95,19 @@ export function cockpitMarks(records: readonly NoteRecord[], today: string, days
     else if (isDone(record)) fill = isUnproven(record, today, days) ? 'unproven' : 'delivered';
     else if (DOING.has(status)) fill = 'doing';
     const depends = record.frontmatter['depends'];
+    // The first unfinished blocker, as the cockpit walks `depends:` (its own order).
+    let blockedBy: NoteRecord | undefined;
     const unresolved = !isDone(record) && status !== 'deferred' && Array.isArray(depends) && depends.some((entry) => {
       const blocker = typeof entry === 'string' ? dependency(entry) : undefined;
-      return blocker !== undefined && !isDone(blocker);
+      if (blocker !== undefined && !isDone(blocker)) {
+        blockedBy = blocker;
+        return true;
+      }
+      return false;
     });
-    const needsYou = ['triage', 'review'].includes(status) || BLOCKED.has(status) || (record.types[0] === 'test' && status === 'ready') || unresolved;
-    return { type, fill, needsYou };
+    const isTest = record.types[0] === 'test';
+    const needsYou = ['triage', 'review'].includes(status) || BLOCKED.has(status) || (isTest && status === 'ready') || unresolved;
+    if (!needsYou) return { type, fill, needsYou };
+    return { type, fill, needsYou, needs: needsOf(record, type, status, isTest, unresolved ? blockedBy : undefined) };
   };
 }

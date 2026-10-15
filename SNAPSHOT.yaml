@@ -305,7 +305,7 @@ items:
   tasks:
     TASK-0153:
       file: docs/features/overview-model/plan/tasks/TASK-0153-Every-Ticket-That-Needs-You-Says-Why-And-What-To-Do.md
-      status: backlog
+      status: done
       parent: FEAT-0026
       phase: "[[PHASE-0005]]"
     TASK-0154:
@@ -2559,7 +2559,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 152
-    tasks_done: 124
+    tasks_done: 125
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

@@ -1,8 +1,8 @@
 {
   "workspace": "project-os-deck",
-  "head": "96955cc8afecc56b8ac36d19e55e6b354d71cfd0",
+  "head": "65c6397cf5152cc27c745557eced7ddc51cdc449",
   "dirty": false,
-  "generated": "2026-10-15T18:38:49.181Z",
+  "generated": "2026-10-15T20:57:39.949Z",
   "phases": [
     {
       "id": "PHASE-0001",
@@ -837,11 +837,11 @@
           "dropped": 0
         },
         "task": {
-          "closed": 19,
-          "progress": 3,
+          "closed": 28,
+          "progress": 4,
           "failed": 0,
           "owed": 0,
-          "open": 4,
+          "open": 5,
           "dropped": 1
         },
         "test": {
@@ -893,6 +893,17 @@
         "TASK-0148",
         "TASK-0149",
         "TASK-0150",
+        "TASK-0151",
+        "TASK-0152",
+        "TASK-0154",
+        "TASK-0155",
+        "TASK-0156",
+        "TASK-0157",
+        "TASK-0153",
+        "TASK-0158",
+        "TASK-0159",
+        "TASK-0160",
+        "TASK-0161",
         "TASK-0119",
         "TST-0080",
         "TST-0081",
@@ -1321,6 +1332,16 @@
         "TASK-0148",
         "TASK-0149",
         "TASK-0150",
+        "TASK-0152",
+        "TASK-0153",
+        "TASK-0154",
+        "TASK-0155",
+        "TASK-0156",
+        "TASK-0157",
+        "TASK-0158",
+        "TASK-0159",
+        "TASK-0160",
+        "TASK-0161",
         "TST-0093"
       ]
     },
@@ -2086,6 +2107,16 @@
       "type": "feature",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "review",
+        "say": "Review it, then accept it or send it back",
+        "action": {
+          "parts": {
+            "flow": "accept",
+            "note": "FEAT-0018"
+          }
+        }
+      },
       "status": "review",
       "title": "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward",
       "phase": "PHASE-0002",
@@ -2892,6 +2923,16 @@
       "type": "feature",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "review",
+        "say": "Review it, then accept it or send it back",
+        "action": {
+          "parts": {
+            "flow": "accept",
+            "note": "FEAT-0024"
+          }
+        }
+      },
       "status": "review",
       "title": "Evidence stands beside the claim it supports",
       "phase": "PHASE-0002",
@@ -3303,6 +3344,16 @@
       "type": "feature",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "review",
+        "say": "Review it, then accept it or send it back",
+        "action": {
+          "parts": {
+            "flow": "accept",
+            "note": "FEAT-0017"
+          }
+        }
+      },
       "status": "review",
       "title": "An opened note stands in the middle of its neighbours: in Glass and in the orbit a lifted note moves to the middle of the field, and the notes it is joined to gather on a ring around it",
       "phase": "PHASE-0002",
@@ -3942,6 +3993,17 @@
       "type": "task",
       "fill": "doing",
       "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0109: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0109"
+          }
+        },
+        "waitingOn": "TASK-0109"
+      },
       "status": "doing",
       "title": "Walk scenes and handoff at real scale",
       "phase": "PHASE-0002",
@@ -4011,6 +4073,16 @@
       "type": "feature",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "review",
+        "say": "Review it, then accept it or send it back",
+        "action": {
+          "parts": {
+            "flow": "accept",
+            "note": "FEAT-0016"
+          }
+        }
+      },
       "status": "review",
       "title": "The mouse wheel zooms Glass and the orbit toward the pointer, and three keys do the same from the keyboard",
       "phase": "PHASE-0002",
@@ -4529,6 +4601,15 @@
       "type": "test",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "ready",
+        "say": "Run this test: it has never been run",
+        "action": {
+          "parts": {
+            "flow": "test-run"
+          }
+        }
+      },
       "status": "ready",
       "title": "The native Glass evaluation is reproducible",
       "phase": "PHASE-0002",
@@ -4805,9 +4886,12 @@
         "TASK-0122",
         "TASK-0123",
         "TASK-0143",
-        "TASK-0145",
-        "TASK-0148",
-        "TASK-0149"
+        "TASK-0149",
+        "TASK-0151",
+        "TASK-0154",
+        "TASK-0156",
+        "TASK-0159",
+        "TASK-0160"
       ]
     },
     "TASK-0120": {
@@ -4917,11 +5001,11 @@
     "TASK-0149": {
       "id": "TASK-0149",
       "kind": "task",
-      "state": "open",
+      "state": "closed",
       "type": "task",
-      "fill": "open",
-      "needsYou": true,
-      "status": "backlog",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
       "title": "The feature gate shows five labelled chips of cockpit marks, and the design and release-test screens use the same marks",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -4938,6 +5022,100 @@
         "TST-0088",
         "TST-0089",
         "TST-0100"
+      ]
+    },
+    "TASK-0151": {
+      "id": "TASK-0151",
+      "kind": "task",
+      "state": "closed",
+      "type": "task",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
+      "title": "Gate squares show the evidence they count",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "FEAT-0026",
+        "FEAT-0029",
+        "PHASE-0005",
+        "RISK-0009",
+        "TASK-0144",
+        "TASK-0149",
+        "TST-0083",
+        "TST-0085",
+        "TST-0087"
+      ]
+    },
+    "TASK-0159": {
+      "id": "TASK-0159",
+      "kind": "task",
+      "state": "open",
+      "type": "task",
+      "fill": "open",
+      "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0154: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0154"
+          }
+        },
+        "waitingOn": "TASK-0154"
+      },
+      "status": "backlog",
+      "title": "S7 shows the feature's text on the same page as Accept and Send back, and draws its gate as the arch",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0029",
+        "PHASE-0005",
+        "TASK-0148",
+        "TASK-0149",
+        "TASK-0154",
+        "TASK-0161",
+        "TST-0085",
+        "TST-0093",
+        "TST-0100"
+      ]
+    },
+    "TASK-0160": {
+      "id": "TASK-0160",
+      "kind": "task",
+      "state": "open",
+      "type": "task",
+      "fill": "open",
+      "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0153: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0153"
+          }
+        },
+        "waitingOn": "TASK-0153"
+      },
+      "status": "backlog",
+      "title": "An issue at triage is decided from its ticket screen, with the sidecar's own verbs as buttons, through the sidecar's guards",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "ADR-0003",
+        "DES-0005",
+        "FEAT-0029",
+        "PHASE-0005",
+        "RISK-0009",
+        "TASK-0122",
+        "TASK-0153",
+        "TASK-0158",
+        "TASK-0161",
+        "TST-0087",
+        "TST-0092"
       ]
     },
     "TST-0085": {
@@ -4957,7 +5135,11 @@
         "PHASE-0005",
         "TASK-0120",
         "TASK-0123",
-        "TASK-0143"
+        "TASK-0143",
+        "TASK-0149",
+        "TASK-0151",
+        "TASK-0154",
+        "TASK-0159"
       ]
     },
     "TST-0086": {
@@ -4996,7 +5178,9 @@
         "PHASE-0005",
         "TASK-0122",
         "TASK-0123",
-        "TASK-0143"
+        "TASK-0143",
+        "TASK-0151",
+        "TASK-0160"
       ]
     },
     "FEAT-0025": {
@@ -5017,6 +5201,8 @@
         "REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF",
         "TASK-0130",
         "TASK-0150",
+        "TASK-0157",
+        "TASK-0161",
         "TST-0094"
       ]
     },
@@ -5041,11 +5227,11 @@
     "TASK-0150": {
       "id": "TASK-0150",
       "kind": "task",
-      "state": "open",
+      "state": "closed",
       "type": "task",
-      "fill": "open",
-      "needsYou": true,
-      "status": "backlog",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
       "title": "DES-0005's plates are redrawn in the cockpit's colours and marks on both workspaces, with the wheel in both colourings",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5059,6 +5245,65 @@
         "TASK-0147",
         "TASK-0148",
         "TASK-0149",
+        "TST-0094"
+      ]
+    },
+    "TASK-0157": {
+      "id": "TASK-0157",
+      "kind": "task",
+      "state": "progress",
+      "type": "task",
+      "fill": "doing",
+      "needsYou": false,
+      "status": "doing",
+      "title": "A real 3D wheel where height is time, drawn as a design plate for Edwin to judge before any WebGL enters Deck",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0025",
+        "PHASE-0005",
+        "TASK-0155",
+        "TASK-0156",
+        "TASK-0161",
+        "TST-0094"
+      ]
+    },
+    "TASK-0161": {
+      "id": "TASK-0161",
+      "kind": "task",
+      "state": "open",
+      "type": "task",
+      "fill": "open",
+      "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0153: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0153"
+          }
+        },
+        "waitingOn": "TASK-0153"
+      },
+      "status": "backlog",
+      "title": "DES-0005's plates are redrawn for the constellation, the 3D plane, the arch gate, S7's text and the needs-you banners",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0025",
+        "PHASE-0005",
+        "TASK-0150",
+        "TASK-0153",
+        "TASK-0154",
+        "TASK-0155",
+        "TASK-0156",
+        "TASK-0157",
+        "TASK-0158",
+        "TASK-0159",
+        "TASK-0160",
         "TST-0094"
       ]
     },
@@ -5078,6 +5323,8 @@
         "FEAT-0025",
         "PHASE-0005",
         "TASK-0130",
+        "TASK-0157",
+        "TASK-0161",
         "TST-0090"
       ]
     },
@@ -5107,7 +5354,9 @@
         "TASK-0141",
         "TASK-0142",
         "TASK-0144",
-        "TASK-0147"
+        "TASK-0147",
+        "TASK-0151",
+        "TASK-0153"
       ]
     },
     "TASK-0115": {
@@ -5277,11 +5526,11 @@
     "TASK-0144": {
       "id": "TASK-0144",
       "kind": "task",
-      "state": "progress",
+      "state": "closed",
       "type": "task",
-      "fill": "doing",
+      "fill": "delivered",
       "needsYou": false,
-      "status": "doing",
+      "status": "done",
       "title": "Every ticket carries the cockpit's fill and its needs-you flag",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5294,6 +5543,32 @@
         "TASK-0147",
         "TASK-0148",
         "TASK-0149",
+        "TST-0080",
+        "TST-0081",
+        "TST-0082",
+        "TST-0083"
+      ]
+    },
+    "TASK-0153": {
+      "id": "TASK-0153",
+      "kind": "task",
+      "state": "open",
+      "type": "task",
+      "fill": "open",
+      "needsYou": false,
+      "status": "backlog",
+      "title": "Every ticket that needs you says why, what to do and where to do it, in the overview model",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0026",
+        "PHASE-0005",
+        "REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF",
+        "TASK-0144",
+        "TASK-0158",
+        "TASK-0160",
+        "TASK-0161",
         "TST-0080",
         "TST-0082"
       ]
@@ -5313,7 +5588,8 @@
         "FEAT-0026",
         "PHASE-0005",
         "TASK-0115",
-        "TASK-0144"
+        "TASK-0144",
+        "TASK-0153"
       ]
     },
     "TST-0081": {
@@ -5330,7 +5606,8 @@
       "links": [
         "FEAT-0026",
         "PHASE-0005",
-        "TASK-0116"
+        "TASK-0116",
+        "TASK-0144"
       ]
     },
     "TST-0082": {
@@ -5348,7 +5625,8 @@
         "FEAT-0026",
         "PHASE-0005",
         "TASK-0117",
-        "TASK-0144"
+        "TASK-0144",
+        "TASK-0153"
       ]
     },
     "TST-0083": {
@@ -5366,7 +5644,8 @@
         "FEAT-0026",
         "PHASE-0005",
         "TASK-0118",
-        "TASK-0144"
+        "TASK-0144",
+        "TASK-0151"
       ]
     },
     "TST-0084": {
@@ -5407,6 +5686,8 @@
         "TASK-0129",
         "TASK-0147",
         "TASK-0148",
+        "TASK-0154",
+        "TASK-0158",
         "TST-0092"
       ]
     },
@@ -5470,11 +5751,11 @@
     "TASK-0147": {
       "id": "TASK-0147",
       "kind": "task",
-      "state": "open",
+      "state": "closed",
       "type": "task",
-      "fill": "open",
-      "needsYou": true,
-      "status": "backlog",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
       "title": "A phase lists its tickets as cockpit rows on a tilted plane, needs-you in front and closed folded at the back",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5493,11 +5774,11 @@
     "TASK-0148": {
       "id": "TASK-0148",
       "kind": "task",
-      "state": "open",
+      "state": "closed",
       "type": "task",
-      "fill": "open",
-      "needsYou": true,
-      "status": "backlog",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
       "title": "A ticket opens with its id, title and full text, its linked tickets as cockpit rows, and its gate as five labelled chips",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5510,6 +5791,67 @@
         "TASK-0147",
         "TASK-0149",
         "TASK-0150",
+        "TST-0090",
+        "TST-0092",
+        "TST-0093"
+      ]
+    },
+    "TASK-0154": {
+      "id": "TASK-0154",
+      "kind": "task",
+      "state": "progress",
+      "type": "task",
+      "fill": "doing",
+      "needsYou": false,
+      "status": "doing",
+      "title": "The feature's gate is an arch of five segments over the feature, drawn by one component that S3 and S7 both use",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0028",
+        "FEAT-0029",
+        "PHASE-0005",
+        "TASK-0149",
+        "TASK-0151",
+        "TASK-0159",
+        "TASK-0161",
+        "TST-0085",
+        "TST-0090",
+        "TST-0100"
+      ]
+    },
+    "TASK-0158": {
+      "id": "TASK-0158",
+      "kind": "task",
+      "state": "open",
+      "type": "task",
+      "fill": "open",
+      "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0153: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0153"
+          }
+        },
+        "waitingOn": "TASK-0153"
+      },
+      "status": "backlog",
+      "title": "A phase and a ticket tell the person what they need to do: a banner on S3, a short reason in S2's needs-you rows, and the reason in every callout",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0028",
+        "PHASE-0005",
+        "TASK-0147",
+        "TASK-0148",
+        "TASK-0153",
+        "TASK-0160",
+        "TASK-0161",
         "TST-0090",
         "TST-0092",
         "TST-0093"
@@ -5538,7 +5880,11 @@
         "TASK-0145",
         "TASK-0146",
         "TASK-0147",
-        "TASK-0148"
+        "TASK-0148",
+        "TASK-0154",
+        "TASK-0155",
+        "TASK-0156",
+        "TASK-0158"
       ]
     },
     "FEAT-0027": {
@@ -5562,6 +5908,9 @@
         "TASK-0131",
         "TASK-0145",
         "TASK-0146",
+        "TASK-0152",
+        "TASK-0155",
+        "TASK-0156",
         "TST-0091"
       ]
     },
@@ -5627,11 +5976,11 @@
     "TASK-0145": {
       "id": "TASK-0145",
       "kind": "task",
-      "state": "progress",
+      "state": "closed",
       "type": "task",
-      "fill": "doing",
-      "needsYou": true,
-      "status": "doing",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
       "title": "Every overview screen marks a ticket in the cockpit's type colour and state fill, and the wheel can be drawn either way",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5654,11 +6003,11 @@
     "TASK-0146": {
       "id": "TASK-0146",
       "kind": "task",
-      "state": "progress",
+      "state": "closed",
       "type": "task",
-      "fill": "doing",
+      "fill": "delivered",
       "needsYou": false,
-      "status": "doing",
+      "status": "done",
       "title": "Back and forward retrace the overview screens a person has visited",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5669,6 +6018,91 @@
         "TST-0005",
         "TST-0090",
         "TST-0091",
+        "TST-0093"
+      ]
+    },
+    "TASK-0152": {
+      "id": "TASK-0152",
+      "kind": "task",
+      "state": "closed",
+      "type": "task",
+      "fill": "delivered",
+      "needsYou": false,
+      "status": "done",
+      "title": "The wheel shows its way into re-phasing and the release test, as labelled buttons",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0027",
+        "FEAT-0029",
+        "PHASE-0005",
+        "TASK-0129",
+        "TST-0090",
+        "TST-0091",
+        "TST-0093"
+      ]
+    },
+    "TASK-0155": {
+      "id": "TASK-0155",
+      "kind": "task",
+      "state": "progress",
+      "type": "task",
+      "fill": "doing",
+      "needsYou": false,
+      "status": "doing",
+      "title": "The wheel becomes a constellation: each phase a segment of the ring, its tickets fanned inward as particles, a bubble counting what needs you",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0027",
+        "PHASE-0005",
+        "TASK-0129",
+        "TASK-0145",
+        "TASK-0152",
+        "TASK-0156",
+        "TASK-0161",
+        "TST-0090",
+        "TST-0091",
+        "TST-0093"
+      ]
+    },
+    "TASK-0156": {
+      "id": "TASK-0156",
+      "kind": "task",
+      "state": "progress",
+      "type": "task",
+      "fill": "doing",
+      "needsYou": true,
+      "needs": {
+        "reason": "waiting",
+        "say": "Waiting on TASK-0155: finish that first",
+        "action": {
+          "parts": {
+            "page": "ticket",
+            "note": "TASK-0155"
+          }
+        },
+        "waitingOn": "TASK-0155"
+      },
+      "status": "doing",
+      "title": "The wheel, the phase plane and the ring screens stand on a tilted plane in 3D, and a person turns, pans and zooms them with the mouse",
+      "phase": "PHASE-0005",
+      "placedBy": "own",
+      "links": [
+        "DES-0005",
+        "FEAT-0016",
+        "FEAT-0027",
+        "FEAT-0028",
+        "FEAT-0029",
+        "PHASE-0005",
+        "TASK-0147",
+        "TASK-0155",
+        "TASK-0161",
+        "TST-0090",
+        "TST-0091",
+        "TST-0092",
         "TST-0093"
       ]
     },
@@ -6300,6 +6734,16 @@
       "type": "feature",
       "fill": "open",
       "needsYou": true,
+      "needs": {
+        "reason": "review",
+        "say": "Review it, then accept it or send it back",
+        "action": {
+          "parts": {
+            "flow": "accept",
+            "note": "FEAT-0015"
+          }
+        }
+      },
       "status": "review",
       "title": "Each view keeps its own desk, a note can be kept on every view, and one button hides every held note in a window",
       "phase": "PHASE-0002",
@@ -9542,7 +9986,8 @@
         "FEAT-0029",
         "PHASE-0005",
         "TASK-0120",
-        "TASK-0122"
+        "TASK-0122",
+        "TASK-0149"
       ]
     },
     "TST-0089": {
@@ -9561,7 +10006,8 @@
         "FEAT-0029",
         "PHASE-0005",
         "TASK-0120",
-        "TASK-0122"
+        "TASK-0122",
+        "TASK-0149"
       ]
     },
     "TST-0091": {
@@ -9583,6 +10029,8 @@
         "TASK-0126",
         "TASK-0145",
         "TASK-0146",
+        "TASK-0155",
+        "TASK-0156",
         "TST-0090"
       ]
     },
@@ -9600,12 +10048,17 @@
       "links": [
         "DES-0005",
         "FEAT-0028",
+        "FEAT-0029",
         "PHASE-0005",
         "TASK-0127",
         "TASK-0128",
         "TASK-0129",
         "TASK-0147",
         "TASK-0148",
+        "TASK-0154",
+        "TASK-0156",
+        "TASK-0158",
+        "TASK-0160",
         "TST-0091"
       ]
     },
@@ -9617,7 +10070,7 @@
       "fill": "doing",
       "needsYou": false,
       "status": "active",
-      "title": "Accept a feature from its five lamps",
+      "title": "Accept a feature from its gate, with its text on the same page",
       "phase": "PHASE-0005",
       "placedBy": "own",
       "links": [
@@ -9625,7 +10078,10 @@
         "FEAT-0029",
         "PHASE-0005",
         "TASK-0120",
-        "TASK-0122"
+        "TASK-0122",
+        "TASK-0149",
+        "TASK-0154",
+        "TASK-0159"
       ]
     },
     "TST-0036": {
@@ -9904,6 +10360,10 @@
         "TASK-0145",
         "TASK-0146",
         "TASK-0148",
+        "TASK-0155",
+        "TASK-0156",
+        "TASK-0158",
+        "TASK-0159",
         "TST-0090"
       ]
     }

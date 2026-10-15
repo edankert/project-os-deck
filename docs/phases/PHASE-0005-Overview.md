@@ -148,3 +148,5 @@ What follows is the state at the end of the first build, on 2026-10-14; the thre
 
 **What the cockpit owes Deck** is filed as [[project-os-cockpit#ISS-0323]] (person-only feature transitions), [[project-os-cockpit#ISS-0324]] (agent refusal on `decide` and `mark-check`) and [[project-os-cockpit#ISS-0325]] (a guarded write that sets `phase:`). When the first two land, FEAT-0029's narrowed criteria can be restored.
 
+2026-10-15, later: **Edwin: "codex is no longer working, only use claude from now on."** Codex now signs in with a ChatGPT account, which does not offer GPT-6 Astra, so it cannot run. Claude takes over every Codex task (TASK-0153, TASK-0159, TASK-0160 move to `system:claude`), the proposals between the lanes are decided by Claude, and two independent Claude reviewers, each in a clean context, replace Codex's cross-model review.
+

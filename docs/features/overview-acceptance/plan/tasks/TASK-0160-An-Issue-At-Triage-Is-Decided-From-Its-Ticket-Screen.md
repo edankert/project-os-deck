@@ -4,7 +4,7 @@ id: TASK-0160
 title: "An issue at triage is decided from its ticket screen, with the sidecar's own verbs as buttons, through the sidecar's guards"
 status: backlog
 phase: "[[PHASE-0005-Overview]]"
-owner: system:codex
+owner: system:claude
 created: 2026-10-15
 updated: 2026-10-15
 source: ["Edwin 2026-10-15: 'Also when selecting an item which needs you, the user needs to be told what he needs to do???'", "Edwin 2026-10-15, approving: 'go ahead with all the recommendations as suggested'", "[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]"]
