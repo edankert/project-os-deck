@@ -320,7 +320,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0156:
       file: docs/features/overview-wheel/plan/tasks/TASK-0156-The-Overview-Stands-In-3D-And-Turns-Pans-And-Zooms.md
-      status: backlog
+      status: doing
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0157:

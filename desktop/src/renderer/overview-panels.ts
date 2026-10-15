@@ -175,7 +175,8 @@ export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced
   // meet); the layer is given the same scale and offset, so a panel stands
   // exactly where the scene put it.
   const place = (): void => {
-    const box = stage.getBoundingClientRect();
+    // The layout size, not the drawn one: the camera may have turned or zoomed the board.
+    const box = { width: stage.clientWidth, height: stage.clientHeight };
     const k = Math.min(box.width / scene.width, box.height / scene.height);
     const ox = (box.width - scene.width * k) / 2;
     const oy = (box.height - scene.height * k) / 2;

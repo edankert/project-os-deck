@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0156
 title: "The wheel, the phase plane and the ring screens stand on a tilted plane in 3D, and a person turns, pans and zooms them with the mouse"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

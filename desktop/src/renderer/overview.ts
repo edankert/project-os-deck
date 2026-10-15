@@ -22,6 +22,7 @@
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
+import { cameraTransform, defaultCamera, panned, turned, wheelFactor, zoomed, type Camera } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { DeckAddress } from '../shared/types.js';
@@ -93,6 +94,83 @@ let travelIntent: TravelIntent | null = null;
 let historyBar: HTMLElement | null = null;
 /** The current screen's panels, built as HTML over the picture (TASK-0147). */
 let panels: PanelLayer | null = null;
+/** What the camera turns, pans and zooms: the picture and its panels together (TASK-0156). */
+let board: HTMLElement | null = null;
+/** Each screen's camera, kept for the session, so coming back to the wheel finds it as it was left. */
+const cameras = new Map<string, Camera>();
+/** A middle-button drag in progress. */
+let dragging: { x: number; y: number; pan: boolean } | null = null;
+
+function cameraNow(): Camera | null {
+  if (current === null) return null;
+  return cameras.get(current.scene.screen) ?? defaultCamera(current.scene.screen);
+}
+
+function setCamera(camera: Camera): void {
+  if (current === null || board === null) return;
+  cameras.set(current.scene.screen, camera);
+  board.style.transform = cameraTransform(camera);
+}
+
+/** Back to how the screen stands before anyone moves it. */
+function resetCamera(): void {
+  if (current !== null) setCamera(defaultCamera(current.scene.screen));
+}
+
+function wireCamera(target: HTMLElement): void {
+  // The middle button turns, with Shift it pans; the browser's own middle-button
+  // scrolling and link opening are stopped, so the press belongs to the overview.
+  target.addEventListener('mousedown', (event) => {
+    if (event.button === 1) event.preventDefault();
+  });
+  target.addEventListener('auxclick', (event) => {
+    if (event.button === 1) event.preventDefault();
+  });
+  target.addEventListener('pointerdown', (event) => {
+    if (event.button !== 1 || current === null) return;
+    event.preventDefault();
+    dragging = { x: event.clientX, y: event.clientY, pan: event.shiftKey };
+    target.setPointerCapture(event.pointerId);
+  });
+  target.addEventListener('pointermove', (event) => {
+    if (dragging === null) return;
+    const camera = cameraNow();
+    if (camera === null) return;
+    const dx = event.clientX - dragging.x;
+    const dy = event.clientY - dragging.y;
+    dragging = { ...dragging, x: event.clientX, y: event.clientY };
+    setCamera(dragging.pan || event.shiftKey ? panned(camera, dx, dy) : turned(camera, dx, dy));
+  });
+  const end = (event: PointerEvent): void => {
+    if (dragging === null) return;
+    dragging = null;
+    if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+  };
+  target.addEventListener('pointerup', end);
+  target.addEventListener('pointercancel', end);
+  // The scroll wheel, or a pinch (which arrives with ctrl), zooms toward the pointer. It
+  // is the overview's: it must not reach Glass's own zoom underneath (FEAT-0016).
+  target.addEventListener(
+    'wheel',
+    (event) => {
+      const camera = cameraNow();
+      if (camera === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const box = target.getBoundingClientRect();
+      const px = event.clientX - box.left - box.width / 2;
+      const py = event.clientY - box.top - box.height / 2;
+      const factor = event.ctrlKey ? wheelFactor(event.deltaY * 4) : wheelFactor(event.deltaY);
+      setCamera(zoomed(camera, factor, px, py));
+    },
+    { passive: false },
+  );
+  target.addEventListener('dblclick', (event) => {
+    const element = event.target as Element | null;
+    if (element?.closest('[data-target], [data-ticket], [data-action], button, .ov-panel') != null) return;
+    resetCamera();
+  });
+}
 /**
  * How tickets are coloured: the cockpit's type colours with its fills (Edwin,
  * 2026-10-15), or DES-0004's state colours, for comparing the two on the wheel
@@ -188,6 +266,7 @@ export function initOverview(host: OverviewHostApi): void {
   // The stage changes size without the window doing so (the rail folds, the status line
   // grows): the panels laid over the picture follow it.
   if (typeof ResizeObserver === 'function') new ResizeObserver(() => panels?.place()).observe(stage);
+  wireCamera(stage);
   stage.addEventListener('click', (event) => void onClick(event));
   window.addEventListener('resize', () => place());
   stage.addEventListener('pointerover', (event) => onPoint(event));
@@ -203,7 +282,7 @@ export function initOverview(host: OverviewHostApi): void {
     'keydown',
     (event) => {
       if (!isOverviewShown()) return;
-      if (event.key === 'Escape' || event.key === 'l' || event.key === 'L' || event.key === 'h' || event.key === 'H' || event.key === 'c' || event.key === 'C') {
+      if (['Escape', 'l', 'L', 'h', 'H', 'c', 'C', '+', '=', '-', '0'].includes(event.key)) {
         const element = event.target as Element | null;
         const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
         if (!typing) event.stopPropagation();
@@ -216,6 +295,7 @@ export function initOverview(host: OverviewHostApi): void {
   (globalThis as { __deckOverview?: unknown }).__deckOverview = {
     current: () => current?.scene ?? null,
     trail: () => ({ ...trail }),
+    camera: () => cameraNow(),
     travel: (direction: -1 | 1) => travel(direction),
     screens: () => ({ pages: [...pages.keys()], flows: [...flows.keys()] }),
     go: (raw: string) => go(raw),
@@ -414,12 +494,14 @@ export async function refreshOverview(): Promise<void> {
 function paint(scene: Scene, workspaceId: string): void {
   if (stage === null) return;
   const before = positions();
-  stage.innerHTML = sceneToSvg(scene, { panels: 'html' });
+  stage.innerHTML = `<div class="ov-board">${sceneToSvg(scene, { panels: 'html' })}</div>`;
+  board = stage.querySelector<HTMLElement>('.ov-board');
   centres = centresOf(scene);
   const svg = stage.querySelector('svg');
   svg?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const host = api;
-  panels = buildPanels(scene, stage, {
+  if (board !== null) board.style.transform = cameraTransform(cameras.get(scene.screen) ?? defaultCamera(scene.screen));
+  panels = buildPanels(scene, board ?? stage, {
     reduced: reducedMotion(),
     loader: host?.noteHtml === undefined ? null : (id) => host.noteHtml!(workspaceId, id),
     follow: (rel) => followNoteLink(workspaceId, rel),
@@ -732,6 +814,14 @@ async function onKey(event: KeyboardEvent): Promise<void> {
   if (event.key === 'l' || event.key === 'L') {
     event.preventDefault();
     toggleList();
+  }
+  // + and − zoom, 0 puts the camera back (TASK-0156): for a trackpad with no middle button.
+  if ((event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0') && !event.metaKey && !event.ctrlKey) {
+    const camera = cameraNow();
+    if (camera === null) return;
+    event.preventDefault();
+    if (event.key === '0') resetCamera();
+    else setCamera(zoomed(camera, event.key === '-' ? 1 / 1.25 : 1.25));
   }
   if ((event.key === 'c' || event.key === 'C') && !event.metaKey && !event.ctrlKey) {
     event.preventDefault();

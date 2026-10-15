@@ -120,6 +120,40 @@ module.exports = async (d) => {
   assert.equal(keyBack, trailBefore.entries[trailBefore.at - 1], '⌘[ goes back');
   assert.equal(keyForward, trailBefore.entries[trailBefore.at], '⌘] goes forward');
 
+  // The camera (TASK-0156): the wheel leans back; the middle button turns it, Shift pans,
+  // the scroll wheel zooms, 0 puts it back, and a ticket can still be pressed on the tilt.
+  {
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+    await settle();
+    const centre = await js(`(() => { const r = document.querySelector('#overview-area .ov-stage').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+    const cam = () => js('window.__deckOverview.camera()');
+    const start = await cam();
+    assert.ok(start.tilt > 0, 'the wheel opens leaning back');
+    await d.pointer(win, d.drag(centre, { x: centre.x + 120, y: centre.y - 60 }, 8, 16, { button: 'middle' }));
+    const turnedTo = await cam();
+    assert.ok(turnedTo.spin > 10 && turnedTo.tilt > start.tilt, `a middle-button drag turns and tilts the wheel (${JSON.stringify(turnedTo)})`);
+    await d.pointer(win, d.drag(centre, { x: centre.x + 40, y: centre.y + 30 }, 6, 16, { button: 'middle', shift: true }));
+    const pannedTo = await cam();
+    assert.ok(pannedTo.panX > 20 && pannedTo.panY > 10, `Shift with the middle button pans (${JSON.stringify(pannedTo)})`);
+    d.wheel(win, centre.x, centre.y, -300);
+    await d.delay(300);
+    const zoomedTo = await cam();
+    assert.ok(zoomedTo.zoom > 1.2, `the scroll wheel zooms in (${JSON.stringify(zoomedTo)})`);
+    await d.shot(win, 'wheel-turned');
+    d.press(win, '0');
+    await d.delay(300);
+    const reset = await cam();
+    assert.deepEqual([reset.spin, reset.panX, reset.panY, reset.zoom, reset.tilt], [0, 0, 0, 1, start.tilt], '0 puts the camera back');
+    // A press on a particle of the tilted wheel still opens its ticket.
+    const particle = await js(`(() => { const e = document.querySelector('#overview-area [data-key^="sector-"] [data-ticket]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: e.getAttribute('data-ticket') }; })()`);
+    assert.ok(particle !== null, 'the wheel draws particles');
+    await d.pointer(win, d.click(particle));
+    for (let i = 0; i < 40 && (await js('document.body.dataset.overviewScreen')) !== 'ticket'; i += 1) await d.delay(250);
+    const opened = await js('window.__deckOverview.current().address');
+    d.log('the camera', { start, turnedTo, pannedTo, zoomedTo, reset, pressed: particle.id, opened });
+    assert.ok(opened.includes(`note=${encodeURIComponent(particle.id)}`), `a press on ${particle.id} on the tilted wheel opens it, not ${opened}`);
+  }
+
   // The wheel's two labelled ways in open re-phasing and the release test (TASK-0152).
   for (const [key, screen] of [['rephase-button', 'rephase'], ['release-test', 'test-run']]) {
     await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);

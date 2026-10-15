@@ -446,3 +446,30 @@ for (const name of WORKSPACES) {
     }
   });
 }
+
+// TASK-0156 — the camera: ring screens lean back, text screens start flat; the middle
+// button turns and pans, the wheel zooms toward the pointer, and 0 puts it back.
+test('the overview camera turns, pans and zooms within its limits, and keeps the pointed spot under the pointer', () => {
+  const cam = load('shared/overview-camera.js');
+  const wheel = cam.defaultCamera('wheel');
+  assert.ok(wheel.tilt > 0, 'the wheel leans back');
+  assert.equal(cam.defaultCamera('ticket').tilt, 0, 'a ticket starts flat');
+  assert.equal(cam.defaultCamera('accept').tilt, 0, 'a feature gate starts flat');
+  const t = cam.turned(wheel, 100, -40);
+  assert.equal(t.spin, 30);
+  assert.equal(t.tilt, wheel.tilt + 10);
+  assert.equal(cam.turned(wheel, 0, -10000).tilt, cam.TILT.max, 'tilt stops at its limit');
+  assert.equal(cam.turned(wheel, 0, 10000).tilt, cam.TILT.min);
+  const p = cam.panned(wheel, 12, -7);
+  assert.deepEqual([p.panX, p.panY], [12, -7]);
+  // Zooming toward a point keeps that point where it was: (point - pan) scales with the zoom.
+  const z = cam.zoomed(wheel, 2, 100, 50);
+  assert.equal(z.zoom, 2);
+  assert.deepEqual([z.panX, z.panY], [-100, -50]);
+  assert.equal(cam.zoomed(wheel, 1000).zoom, cam.ZOOM.max);
+  assert.equal(cam.zoomed(wheel, 0.0001).zoom, cam.ZOOM.min);
+  assert.ok(cam.wheelFactor(100) < 1 && cam.wheelFactor(-100) > 1, 'a turn toward the person zooms out');
+  assert.match(cam.cameraTransform(t), /^translate\(0px, 0px\) rotateX\(36deg\) rotateZ\(30deg\) scale\(1\)$/);
+  assert.ok(cam.isDefault(cam.defaultCamera('wheel'), 'wheel'));
+  assert.ok(!cam.isDefault(t, 'wheel'));
+});

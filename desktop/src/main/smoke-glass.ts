@@ -46,7 +46,7 @@ export interface GlassSmokeContext {
   notesWithAnUntickedCriterion(): string[];
 }
 
-type Step = { type: 'down' | 'move' | 'up'; x: number; y: number; wait?: number; alt?: boolean };
+type Step = { type: 'down' | 'move' | 'up'; x: number; y: number; wait?: number; alt?: boolean; /** The middle button turns and pans the overview (TASK-0156). */ button?: 'left' | 'middle'; shift?: boolean };
 
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -68,25 +68,29 @@ function once(win: BrowserWindow, event: string): Promise<void> {
  * cause hard to see.
  */
 const buttonDown = new WeakMap<BrowserWindow, boolean>();
+const buttonHeld = new WeakMap<BrowserWindow, 'left' | 'middle'>();
 
 export async function pointer(win: BrowserWindow, steps: Step[]): Promise<void> {
   // Remembered per window across calls: a drag sent in two calls is one drag,
   // and a move sent without the button between them is a release.
   let down = buttonDown.get(win) === true;
+  let held = buttonHeld.get(win) ?? 'left';
   for (const step of steps) {
-    const modifiers: Array<'alt' | 'leftButtonDown'> = step.alt === true ? ['alt'] : [];
+    const modifiers: Array<'alt' | 'shift' | 'leftButtonDown' | 'middleButtonDown'> = [...(step.alt === true ? ['alt' as const] : []), ...(step.shift === true ? ['shift' as const] : [])];
     const x = Math.round(step.x);
     const y = Math.round(step.y);
     if (step.type === 'down') {
       down = true;
-      win.webContents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1, modifiers: [...modifiers, 'leftButtonDown'] });
+      held = step.button ?? 'left';
+      win.webContents.sendInputEvent({ type: 'mouseDown', x, y, button: held, clickCount: 1, modifiers: [...modifiers, held === 'middle' ? 'middleButtonDown' : 'leftButtonDown'] });
     } else if (step.type === 'up') {
       down = false;
-      win.webContents.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1, modifiers });
+      win.webContents.sendInputEvent({ type: 'mouseUp', x, y, button: held, clickCount: 1, modifiers });
     } else {
-      win.webContents.sendInputEvent({ type: 'mouseMove', x, y, modifiers: down ? [...modifiers, 'leftButtonDown'] : modifiers });
+      win.webContents.sendInputEvent({ type: 'mouseMove', x, y, modifiers: down ? [...modifiers, held === 'middle' ? 'middleButtonDown' : 'leftButtonDown'] : modifiers });
     }
     buttonDown.set(win, down);
+    buttonHeld.set(win, held);
     await delay(step.wait ?? 16);
   }
 }
@@ -100,12 +104,12 @@ export function click(at: { x: number; y: number }, alt = false): Step[] {
 }
 
 /** A drag from one point to another in `count` moves. */
-export function drag(from: { x: number; y: number }, to: { x: number; y: number }, count = 10, wait = 16): Step[] {
-  const steps: Step[] = [{ type: 'move', ...from }, { type: 'down', ...from }];
+export function drag(from: { x: number; y: number }, to: { x: number; y: number }, count = 10, wait = 16, how: { button?: 'left' | 'middle'; shift?: boolean } = {}): Step[] {
+  const steps: Step[] = [{ type: 'move', ...from, ...how }, { type: 'down', ...from, ...how }];
   for (let i = 1; i <= count; i += 1) {
-    steps.push({ type: 'move', x: from.x + ((to.x - from.x) * i) / count, y: from.y + ((to.y - from.y) * i) / count, wait });
+    steps.push({ type: 'move', x: from.x + ((to.x - from.x) * i) / count, y: from.y + ((to.y - from.y) * i) / count, wait, ...how });
   }
-  steps.push({ type: 'up', ...to, wait: 60 });
+  steps.push({ type: 'up', ...to, wait: 60, ...how });
   return steps;
 }
 
