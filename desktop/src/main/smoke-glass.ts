@@ -2289,7 +2289,8 @@ async function recordFocus(kit: Kit): Promise<void> {
         if (await js<boolean>(`/the link graph: \\d+ notes/.test(__t.text('#front-label'))`)) break;
         await delay(250);
       }
-      await delay(1000);
+      // Long enough for the cards to finish settling, so the dot chosen below stays clear.
+      await delay(2500);
       const dotsBefore = await js<Array<{ id: string; x: number; y: number }>>(`window.__deckGlass.dots.map((d) => ({ id: d.id, x: d.x, y: d.y }))`);
       const yawBefore = await js<number>(`__t.yaw()`);
       // A dot with links, so there is something to seat: the drawn dot with
@@ -2302,9 +2303,16 @@ async function recordFocus(kit: Kit): Promise<void> {
         // Clear of every card, and of every other dot: in a crowded orbit a press at
         // one dot's place can land on a neighbour drawn over it, and the check would
         // then judge the neighbour's neighbourhood (seen when the corpus passed 460 notes).
+        // Cards still settle after the orbit is drawn, so a dot right beside one can be
+        // under it by the time of the press (CI saw ISS-0008 open instead): keep 32 px
+        // clear of every card, not only clear of the point.
+        const cards = [...document.querySelectorAll('.field-card, .pane')].map((c) => c.getBoundingClientRect());
         const clear = g.dots.filter((d) => {
-          const hit = document.elementFromPoint(f.left + d.x, f.top + d.y);
+          const x = f.left + d.x;
+          const y = f.top + d.y;
+          const hit = document.elementFromPoint(x, y);
           if (!hit || hit.closest('.field-card, .pane, .compass, .field-bar, .sector-label, .field-say')) return false;
+          if (cards.some((r) => x > r.left - 32 && x < r.right + 32 && y > r.top - 32 && y < r.bottom + 32)) return false;
           return g.dots.every((o) => o === d || Math.hypot(o.x - d.x, o.y - d.y) > (o.r || 4) + (d.r || 4) + 6);
         });
         clear.sort((a, b) => (degree.get(b.id) || 0) - (degree.get(a.id) || 0));
