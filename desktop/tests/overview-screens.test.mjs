@@ -380,3 +380,36 @@ for (const name of WORKSPACES) {
     assert.ok(WHEEL.coreInner > 42, 'the core rings leave room for the button');
   });
 }
+
+// TASK-0154 — the gate is an arch of five segments in a fixed order; each fills with
+// its done share; a part Deck cannot read is dashed, unfilled and says "not reported".
+test('the gate arch draws five segments that fill with their evidence and say when they are not reported', () => {
+  const { gateArch, GATE_ORDER, GATE_MEANING } = load('shared/overview-gate.js');
+  const gate = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', 'flows', 'deck-accept.json'), 'utf-8'));
+  for (const small of [false, true]) {
+    const { nodes, rows } = gateArch(gate, 700, 500, small ? 92 : 220, { small });
+    const groups = nodes.filter((n) => n.kind === 'group');
+    assert.deepEqual(groups.map((g) => g.key), GATE_ORDER.map((k) => `gate-${gate.id}-${k}`), 'five segments, in order');
+    assert.deepEqual(rows.map((r) => r.id), GATE_ORDER.map((k) => `gate-${k}`), 'five evidence rows');
+    for (const key of GATE_ORDER) {
+      const lamp = gate.lamps.find((l) => l.key === key);
+      const group = groups.find((g) => g.key === `gate-${gate.id}-${key}`);
+      const marks = [...walkScene(group.children)].filter((n) => n.kind === 'mark');
+      const texts = [...walkScene(group.children)].filter((n) => n.kind === 'text').map((n) => n.text);
+      assert.ok(group.label.includes(GATE_MEANING[key]), `${key}: the callout says what it counts`);
+      assert.ok(!marks.some((m) => m.ticket !== undefined || String(m.cls ?? '').includes('sq-dot')), `${key}: no ticket identity and no needs-you dot`);
+      if (lamp.known && lamp.total > 0) {
+        const cells = marks.filter((m) => String(m.markId ?? '').includes('-item-'));
+        if (lamp.total <= 40) {
+          assert.equal(cells.length, lamp.total, `${key}: one cell per item`);
+          assert.equal(cells.filter((c) => c.attrs.fill !== 'none').length, lamp.done, `${key}: the filled cells are its done count`);
+        }
+        assert.equal(marks.find((m) => m.markId === `gate-${gate.id}-${key}-done`).count, lamp.done);
+        assert.ok(texts.includes(String(lamp.done)) && texts.includes(String(lamp.total)), `${key}: its count is shown`);
+      } else {
+        assert.ok(marks.every((m) => m.attrs.fill === undefined || m.attrs.fill === 'none'), `${key}: nothing is filled`);
+        assert.ok(texts.includes(lamp.known ? 'nothing to check' : 'not reported'), `${key}: it says why there is no count`);
+      }
+    }
+  }
+});

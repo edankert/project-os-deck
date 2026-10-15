@@ -310,7 +310,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0154:
       file: docs/features/overview-phase/plan/tasks/TASK-0154-The-Feature-Gate-Is-An-Arch-Of-Five-Segments.md
-      status: backlog
+      status: doing
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0155:

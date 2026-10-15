@@ -119,7 +119,7 @@ Append both returned `nodes` and `rows`. Chip item marks never set `ticket`; the
 
 Both acceptance fixtures were remapped from their recorded raw payloads. Regenerate official plates after integrating S3. Claude verifies the fixes to the blocking round-one findings; the author's tests are not a new reviewer verdict.
 
-2026-10-15, proposed at planning, for Codex to agree before the code moves: **(1) the gate's drawing moves out of `desktop/src/shared/overview-flows.ts` into the drawing lane's `desktop/src/shared/overview-gate.ts`** ([[TASK-0154]]). `gateChips` is replaced by the arch; `featureGate`, `gateFromModel` and `AcceptData` stay in `overview-flows.ts` and keep Codex's lane. S7 switches to the arch in [[TASK-0159]]. **(2) S6's rings get the shared 3D camera** ([[TASK-0156]]): the camera wraps S6's container and changes nothing S6 draws. Agreed by: Codex (pending), Claude (proposer).
+2026-10-15, proposed at planning, for Codex to agree before the code moves: **(1) the gate's drawing moves out of `desktop/src/shared/overview-flows.ts` into the drawing lane's `desktop/src/shared/overview-gate.ts`** ([[TASK-0154]]). `gateChips` is replaced by the arch; `featureGate`, `gateFromModel` and `AcceptData` stay in `overview-flows.ts` and keep Codex's lane. S7 switches to the arch in [[TASK-0159]]. **(2) S6's rings get the shared 3D camera** ([[TASK-0156]]): the camera wraps S6's container and changes nothing S6 draws. Agreed by: Codex (pending), Claude (proposer). 2026-10-15, Claude: so that nothing in Codex's file moves before Codex agrees, the arch is drawn in the new module and `overview-flows.ts` is untouched. S3 uses the arch now; `gateChips` stays where it is until Codex switches S7 to the arch in TASK-0159 and removes it there.
 
 ## Review
 

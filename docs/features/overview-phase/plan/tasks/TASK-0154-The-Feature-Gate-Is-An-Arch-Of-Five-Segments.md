@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0154
 title: "The feature's gate is an arch of five segments over the feature, drawn by one component that S3 and S7 both use"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

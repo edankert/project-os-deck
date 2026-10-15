@@ -18,7 +18,8 @@ import { panelRow, rowOrder } from './overview-phase.js';
 import { type Kind, type OverviewModel, type Ticket } from './overview-types.js';
 import { ticketLabel } from './overview-wheel.js';
 import { checkScene } from './overview-checks.js';
-import { gateChips, gateFromModel, type AcceptData } from './overview-flows.js';
+import { gateFromModel, type AcceptData } from './overview-flows.js';
+import { gateArch } from './overview-gate.js';
 
 export const TICKET_SCREEN = { width: 1440, height: 1000 } as const;
 
@@ -184,19 +185,18 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
 
   nodes.push(...track(t));
 
-  // A feature shows its gate beside its track: the five checks before it is accepted,
-  // as labelled chips (TASK-0149). Pressing it opens S7. The tickets in a chip are
-  // the evidence for each check, not the tickets themselves, which the links list.
+  // A feature shows its gate beside its track: the arch of the five checks before it
+  // is accepted (TASK-0154), filled from the evidence S7 reads. Pressing it opens S7.
   let top: number = TICKET_LAYOUT.text.y;
   if (t.kind === 'feat') {
-    const { x, y, w } = TICKET_LAYOUT.gate;
-    const gate = gateChips(extras.gate ?? gateFromModel(model, t.id), x, y, w, { compact: true });
+    const { x, w } = TICKET_LAYOUT.gate;
+    const r = 92;
+    const cy = 222;
+    const gate = gateArch(extras.gate ?? gateFromModel(model, t.id), x + w / 2, cy, r, { small: true });
     nodes.push({ kind: 'group', key: `gate-${t.id}`, target: ctx.address({ flow: 'accept', note: t.id }), label: `${t.id}'s gate: open it to accept the feature`, children: gate.nodes });
     list.push(...gate.rows);
-    // A gate with many items grows down; the panels start below it.
-    for (const node of walkScene(gate.nodes)) {
-      if (node.kind === 'mark' && node.tag === 'rect' && typeof node.attrs['height'] === 'number') top = Math.max(top, Number(node.attrs['y']) + Number(node.attrs['height']) + 18);
-    }
+    // The arch's feet reach below its centre; the panels start under them.
+    top = Math.max(top, cy + 34);
   }
   const below = (box: { x: number; y: number; w: number; h: number }): { x: number; y: number; w: number; h: number } => ({ ...box, y: top, h: box.h - (top - box.y) });
 
