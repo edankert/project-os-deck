@@ -55,15 +55,15 @@ The rules are in [[PHASE-0005-Overview]], "The look". Four of them are checked b
 
 ![S1 Wheel on your-trainer](__attachments__/DES-0005/wheel-your-trainer.jpg)
 
-your-trainer, in the cockpit's colours. One sector per phase still to finish, in the order the phase notes declare; one ring per ticket kind; one wedge per ticket, done first. Done work is filled and open work hollow, so a sector's unfinished part reads as outlines. The green arc outside a sector is how much of it is closed, and the segments beyond it are its exit criteria. The core holds decisions, designs, risks and the tickets with no phase. Finished phases are discs on the shelf, each with a red badge counting its acceptance tests to run again (32 in PHASE-010); pressing a badge opens the release test. The backlog is the tray. **37 words at rest.**
+your-trainer, in the cockpit's colours. One sector per phase still to finish, in the order the phase notes declare; one ring per ticket kind; one wedge per ticket, done first. Done work is filled and open work hollow, so a sector's unfinished part reads as outlines. The green arc outside a sector is how much of it is closed, and the segments beyond it are its exit criteria. The core holds decisions, designs, risks and the tickets with no phase. The middle of the wheel is a button: the number of tickets with no phase, which opens re-phasing (S4). A "Release test" button under the workspace's name opens S6, on every workspace, including one with no finished phase. Finished phases are discs on the shelf, each with a red badge counting its acceptance tests to run again (32 in PHASE-010); pressing a badge opens the release test. The backlog is the tray. **42 words at rest.**
 
 ![S1 Wheel on your-trainer, in the state colours](__attachments__/DES-0005/wheel-state-your-trainer.jpg)
 
-The same wheel in DES-0004's state colours, as first built, for comparison. **37 words at rest.**
+The same wheel in DES-0004's state colours, as first built, for comparison. **42 words at rest.**
 
 ![S1 Wheel on Deck](__attachments__/DES-0005/wheel-deck.jpg)
 
-Deck, on the same rules. Deck and Glass are mostly filled, Overview is in progress, and Parity and Vault are empty tracks with only exit criteria. **11 words at rest.** The state-coloured version is `wheel-state-deck.jpg`.
+Deck, on the same rules. Deck and Glass are mostly filled, Overview is in progress, and Parity and Vault are empty tracks with only exit criteria. **16 words at rest.** The state-coloured version is `wheel-state-deck.jpg`.
 
 ### S2 Phase
 
@@ -193,3 +193,4 @@ your-trainer's FEAT-0130 at its gate. **30 words at rest.**
 ## Review
 
 <Comments land here, each naming what it is about in its own words. Verdicts go in the frontmatter, transcribed from a review that actually happened — never anticipated.>
+- 2026-10-15 — **the ways into S4 and S6 are labelled.** Edwin could not open re-phasing or the release test from the wheel: the middle was empty, the core's rings open their own tickets, and S6 was reachable only from a finished phase's badge, which Deck does not have. The middle is now a button with the count of tickets that have no phase, and a "Release test" button sits under the name ([[TASK-0152]]).

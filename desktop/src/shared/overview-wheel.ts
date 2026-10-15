@@ -33,7 +33,7 @@ export const WHEEL = {
   cx: 720,
   cy: 440,
   /** The core: project-wide tickets and tickets with no phase. */
-  coreInner: 30,
+  coreInner: 50,
   coreOuter: 122,
   /** The phase rings. */
   ringInner: 142,
@@ -306,6 +306,52 @@ function tray(model: OverviewModel, phases: Phase[], x: number, y: number, w: nu
   return out;
 }
 
+/**
+ * The two ways in that the wheel says out loud (TASK-0152). The middle of the wheel
+ * is a button for re-phasing, with the number of tickets that have no phase; the
+ * core's rings are covered by ticket wedges, which open their tickets, so the core
+ * itself could not be the way in. And a "Release test" button under the name, because
+ * the shelf's badges exist only for finished phases that owe tests again.
+ */
+function waysIn(model: OverviewModel, ctx: ScreenContext): { nodes: SceneNode[]; rows: ListRow[] } {
+  const { cx, cy } = WHEEL;
+  const unplaced = model.core.tickets.filter((id) => model.tickets[id] !== undefined && model.tickets[id]!.placedBy !== 'project-wide').length;
+  const rephase = ctx.address({ page: 'rephase' });
+  const rephaseLabel = `${unplaced} ticket${unplaced === 1 ? '' : 's'} with no phase: open re-phasing to place them`;
+  const release = ctx.address({ flow: 'test-run' });
+  const releaseLabel = 'The release test: every acceptance check, on every platform';
+  const nodes: SceneNode[] = [
+    {
+      kind: 'group',
+      key: 'rephase-button',
+      target: rephase,
+      label: rephaseLabel,
+      children: [
+        { kind: 'mark', tag: 'circle', attrs: { cx, cy, r: 42 }, cls: 'ov-control', markId: 'rephase-button', count: unplaced, label: rephaseLabel },
+        { kind: 'text', x: cx, y: cy + 3, text: String(unplaced), rest: true, role: 'number', markRef: 'rephase-button', size: 19, anchor: 'middle' },
+        { kind: 'text', x: cx, y: cy + 19, text: 'no phase', rest: true, role: 'label', size: 10, anchor: 'middle', cls: 'ov-dim' },
+      ],
+    },
+    {
+      kind: 'group',
+      key: 'release-test',
+      target: release,
+      label: releaseLabel,
+      children: [
+        { kind: 'mark', tag: 'rect', attrs: { x: 34, y: 78, width: 150, height: 32, rx: 16 }, cls: 'ov-control', markId: 'release-test', label: releaseLabel },
+        { kind: 'mark', tag: 'circle', attrs: { cx: 54, cy: 94, r: 9 }, cls: 'ov-wire' },
+        { kind: 'mark', tag: 'circle', attrs: { cx: 54, cy: 94, r: 5 }, cls: 'ov-wire' },
+        { kind: 'text', x: 72, y: 99, text: 'Release test', rest: true, role: 'control', size: 13 },
+      ],
+    },
+  ];
+  const rows: ListRow[] = [
+    { id: 'rephase-button', label: rephaseLabel, group: 'Go to', target: rephase },
+    { id: 'release-test', label: releaseLabel, group: 'Go to', target: release },
+  ];
+  return { nodes, rows };
+}
+
 export function wheelScene(model: OverviewModel, ctx: ScreenContext): Scene {
   const nodes: SceneNode[] = [];
   const list: ListRow[] = [];
@@ -316,6 +362,9 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext): Scene {
   nodes.push(...frame(WHEEL.width, WHEEL.height), ...bezel(WHEEL.cx, WHEEL.cy, WHEEL.ringOuter + 40));
   nodes.push({ kind: 'text', x: 40, y: 56, text: model.workspace, rest: true, role: 'name', size: 22, cls: 'ov-title' });
   nodes.push(coreNodes(model, ctx));
+  const ways = waysIn(model, ctx);
+  nodes.push(...ways.nodes);
+  list.push(...ways.rows);
 
   model.phases.forEach((phase, i) => {
     const a0 = WHEEL.topGap / 2 + i * (sector + WHEEL.sectorGap);

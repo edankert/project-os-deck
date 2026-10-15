@@ -120,6 +120,19 @@ module.exports = async (d) => {
   assert.equal(keyBack, trailBefore.entries[trailBefore.at - 1], '⌘[ goes back');
   assert.equal(keyForward, trailBefore.entries[trailBefore.at], '⌘] goes forward');
 
+  // The wheel's two labelled ways in open re-phasing and the release test (TASK-0152).
+  for (const [key, screen] of [['rephase-button', 'rephase'], ['release-test', 'test-run']]) {
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+    await settle();
+    const at = await js(`(() => { const e = document.querySelector('#overview-area [data-key="${key}"]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+    assert.ok(at !== null, `the wheel draws its ${key} button`);
+    await d.pointer(win, d.click(at));
+    for (let i = 0; i < 60 && (await js('document.body.dataset.overviewScreen')) !== screen; i += 1) await d.delay(250);
+    const now = await js('document.body.dataset.overviewScreen');
+    d.log(`pressed ${key}`, { at, now });
+    assert.equal(now, screen, `the ${key} button opens ${screen}`);
+  }
+
   // A click on a sector opens its phase, Escape returns, L opens the twin.
   await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
   await settle();

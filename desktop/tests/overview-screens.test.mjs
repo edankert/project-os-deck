@@ -17,6 +17,7 @@ const { wheelScene } = load('shared/overview-wheel.js');
 const { phaseScene, bandOf } = load('shared/overview-phase.js');
 const { ticketScene, neighboursOf, LIFECYCLE } = load('shared/overview-ticket.js');
 const { rephaseScene, unplaced } = load('shared/overview-rephase.js');
+const unplacedTickets = unplaced;
 const { checkScene } = load('shared/overview-checks.js');
 const { pageKinds } = load('shared/vocabularies.js');
 
@@ -355,5 +356,27 @@ for (const name of WORKSPACES) {
     // In the state colouring the wheel takes DES-0004's state instead.
     const state = plainContext('abcd1234', 'features', 'state');
     for (const n of walkScene(wheelScene(m, state).nodes)) if (n.kind === 'mark' && n.ticket !== undefined) assert.equal(n.state, m.tickets[n.ticket].state);
+  });
+}
+
+// TASK-0152 — the wheel says where re-phasing and the release test are: a button in the
+// middle with the number of tickets that have no phase, and a "Release test" button.
+for (const name of WORKSPACES) {
+  test(`${name}: the wheel has labelled buttons into re-phasing and the release test`, () => {
+    const m = model(name);
+    const scene = wheelScene(m, ctx);
+    const group = (key) => scene.nodes.find((n) => n.kind === 'group' && n.key === key);
+    const rephase = group('rephase-button');
+    const release = group('release-test');
+    assert.equal(rephase?.target, ctx.address({ page: 'rephase' }));
+    assert.equal(release?.target, ctx.address({ flow: 'test-run' }));
+    const unplaced = unplacedTickets(m).length;
+    const count = [...walkScene(rephase.children)].find((n) => n.kind === 'text' && n.role === 'number');
+    assert.equal(count.text, String(unplaced), 'the middle says how many tickets have no phase');
+    assert.ok([...walkScene(release.children)].some((n) => n.kind === 'text' && n.text === 'Release test'));
+    for (const id of ['rephase-button', 'release-test']) assert.ok(scene.list.some((r) => r.id === id && r.target !== undefined), `${id} is in the list twin`);
+    // Nothing else is drawn in the middle: the core's rings start outside the button.
+    const { WHEEL } = load('shared/overview-wheel.js');
+    assert.ok(WHEEL.coreInner > 42, 'the core rings leave room for the button');
   });
 }
