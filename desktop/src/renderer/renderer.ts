@@ -595,6 +595,14 @@ async function boot(): Promise<void> {
     write: (verb, request) => host.write(verb as Parameters<Host['write']>[0], request),
     ask: (label) => askText(label),
     read: (workspaceId, sidecarPath) => host.read(workspaceId, sidecarPath),
+    // The ticket screen's text: the same HTML the reader shows, from the sidecar (TASK-0148).
+    noteHtml: async (workspaceId, noteId) => {
+      const response = await fetch(`/deck/records/${encodeURIComponent(workspaceId)}?id=${encodeURIComponent(noteId)}`);
+      if (!response.ok) throw new Error(`Deck's own index answered ${response.status}`);
+      const record = ((await response.json()) as { records?: NoteRecord[] }).records?.[0];
+      if (record === undefined) throw new Error(`Deck's index has no note ${noteId}`);
+      return (await clientFor(workspaceId).note(record.relPath)).html;
+    },
     leaveTo: async (raw) => {
       await applyAddress(raw);
     },

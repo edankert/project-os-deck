@@ -21,6 +21,7 @@
  */
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
+import { buildPanels, type PanelLayer } from './overview-panels.js';
 import { canGoBack, canGoForward, current as trailNow, emptyTrail, opened, stepped, type Trail } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { DeckAddress } from '../shared/types.js';
@@ -56,6 +57,8 @@ export interface OverviewHostApi {
   write(verb: string, request: Record<string, unknown>): Promise<{ ok: boolean; error?: string }>;
   ask(label: string): Promise<string | null>;
   read(workspaceId: string, sidecarPath: string): Promise<unknown>;
+  /** A note's rendered text, as the reader shows it, for S3's text panel (TASK-0148). */
+  noteHtml?(workspaceId: string, noteId: string): Promise<string>;
   /** Leave the overview for an ordinary address (no page, no flow). */
   leaveTo(address: string): Promise<void>;
 }
@@ -82,6 +85,8 @@ let trail: Trail = emptyTrail();
 /** True while back or forward is drawing a screen, so the draw does not add to the trail. */
 let travelling = false;
 let historyBar: HTMLElement | null = null;
+/** The current screen's panels, built as HTML over the picture (TASK-0147). */
+let panels: PanelLayer | null = null;
 /**
  * How tickets are coloured: the cockpit's type colours with its fills (Edwin,
  * 2026-10-15), or DES-0004's state colours, for comparing the two on the wheel
@@ -305,7 +310,7 @@ export async function showOverview(address: DeckAddress): Promise<void> {
   const scene = await definition.scene(input);
   // A slower draw that a newer one overtook is dropped, not painted over it.
   if (ticket !== drawing) return;
-  paint(scene);
+  paint(scene, address.workspaceId);
   current = { address, scene, definition };
   place();
   area.hidden = false;
@@ -361,6 +366,7 @@ function place(): void {
   const status = document.getElementById('status');
   const statusTop = status === null ? window.innerHeight : status.getBoundingClientRect().top;
   area.style.bottom = `${Math.max(0, Math.round(window.innerHeight - statusTop))}px`;
+  panels?.place();
 }
 
 /** Draw the current screen again, from a model read afresh. */
@@ -370,12 +376,17 @@ export async function refreshOverview(): Promise<void> {
   await showOverview(current.address);
 }
 
-function paint(scene: Scene): void {
+function paint(scene: Scene, workspaceId: string): void {
   if (stage === null) return;
   const before = positions();
-  stage.innerHTML = sceneToSvg(scene);
+  stage.innerHTML = sceneToSvg(scene, { panels: 'html' });
   const svg = stage.querySelector('svg');
   svg?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  const host = api;
+  panels = buildPanels(scene, stage, {
+    reduced: reducedMotion(),
+    loader: host?.noteHtml === undefined ? null : (id) => host.noteHtml!(workspaceId, id),
+  });
   animateFrom(before);
   drawList(scene);
 }
@@ -558,7 +569,8 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
     const isTicket = element.hasAttribute('data-ticket') && element.getAttribute('tabindex') === '-1';
     const scope = isTicket ? element.closest('[data-key]') ?? stage : element;
-    const marks = Array.from(scope.querySelectorAll<SVGElement>('[data-ticket][tabindex="-1"]'));
+    // A row in a folded section is not on screen, so the arrows pass over it.
+    const marks = Array.from(scope.querySelectorAll<SVGElement>('[data-ticket][tabindex="-1"]')).filter((m) => !(m instanceof HTMLElement) || m.offsetParent !== null);
     if (marks.length > 0) {
       event.preventDefault();
       const at = isTicket ? marks.indexOf(element as SVGElement) : -1;

@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0147
 title: "A phase lists its tickets as cockpit rows on a tilted plane, needs-you in front and closed folded at the back"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

@@ -13,7 +13,8 @@
 import { backControl, bezel, frame, heading } from './overview-chrome.js';
 import { annularSector, arc, glyph, polar, TAU } from './overview-geometry.js';
 import type { ListRow, SceneNode, Scene, ScreenContext } from './overview-scene.js';
-import { allPhases, KIND_WORD, STATE_WORD, type OverviewModel, type Phase, type Ticket } from './overview-types.js';
+import { allPhases, type OverviewModel, type Phase, type Ticket } from './overview-types.js';
+import { paintOf, rowWords } from './overview-marks.js';
 import { phaseLabel, ticketLabel } from './overview-wheel.js';
 
 export const REPHASE_SCREEN = { width: 1440, height: 1000, cx: 720, cy: 540, ringR: 360 } as const;
@@ -97,8 +98,8 @@ export function rephaseScene(model: OverviewModel, ctx: ScreenContext, accepted:
         [x, y] = polar(cx, cy, outer - row * radial, a);
       }
       const shape = glyph(t.kind, x, y, done ? 2.6 : 4.2);
-      children.push({ kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, state: t.state, label: ticketLabel(t) });
-      list.push({ id: t.id, label: `${t.title} — ${STATE_WORD[t.state]} (${KIND_WORD[t.kind]}), suggested for ${phaseId} from ${t.suggestion!.by}`, group: `Suggested for ${phaseId}`, state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
+      children.push({ kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, ...paintOf(t, ctx), label: ticketLabel(t) });
+      list.push({ id: t.id, label: `${rowWords(t)}; suggested for ${phaseId} from its ${t.suggestion!.by}`, group: `Suggested for ${phaseId}`, state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
     });
     if (!done) {
       const [wx0, wy0] = polar(cx, cy, 130, mid);
@@ -131,8 +132,8 @@ export function rephaseScene(model: OverviewModel, ctx: ScreenContext, accepted:
     const r = 120 * Math.sqrt((i + 0.5) / Math.max(1, nowhere.length));
     const [x, y] = polar(cx, cy, r, i * golden);
     const shape = glyph(t.kind, x, y, 3.2);
-    cloud.push({ kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, state: t.state, cls: 'ov-faint', label: `${ticketLabel(t)} · no phase fits` });
-    list.push({ id: t.id, label: `${t.title} — ${STATE_WORD[t.state]} (${KIND_WORD[t.kind]}), no phase fits`, group: 'Left for a person', state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
+    cloud.push({ kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, ...paintOf(t, ctx), cls: 'ov-faint', label: `${ticketLabel(t)} · no phase fits` });
+    list.push({ id: t.id, label: `${rowWords(t)}; no phase fits`, group: 'Left for a person', state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
   });
   nodes.push({ kind: 'group', key: 'nowhere', cls: 'ov-pulse', label: `${nowhere.length} tickets no phase fits`, children: cloud });
 

@@ -1,21 +1,33 @@
 /**
- * S3, a ticket: where it is in its life, and what it is joined to (PHASE-0005,
- * FEAT-0028).
+ * S3, a ticket: what it is, what it says, where it is in its life, and what it
+ * is joined to (PHASE-0005, FEAT-0028; TASK-0148).
  *
- * Across the top, the statuses the ticket's kind passes through, as stops on
- * a track; the ticket's own stop is lit. A status off the track (cancelled,
- * superseded, failing) is a stop that branches below it. In the middle, the
- * ticket as a large glyph; around it, every note it links to or that links to
- * it, as glyphs coloured by state on wires coloured the same way.
+ * Edwin, 2026-10-15: "Selecting an item I think should show them with more
+ * details ... should show the item id and title, maybe some text or all of the
+ * text even and should show the other items id and title as well". So the
+ * screen shows the ticket's square, id and title at the top with the stages it
+ * passes through; its full text on the left, as the reader shows it; and every
+ * ticket it links to or that links to it on the right, as the cockpit's rows.
+ * A feature also shows its gate: the five checks that must pass before it is
+ * accepted, as labelled chips.
  */
-import { backControl, bezel, frame, heading, words } from './overview-chrome.js';
-import { glyph, polar, TAU } from './overview-geometry.js';
-import type { AddressParts, ListRow, MarkNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
-import { KIND_WORD, STATE_WORD, type Kind, type OverviewModel, type Ticket } from './overview-types.js';
-import { needsPerson, ticketLabel } from './overview-wheel.js';
+import { backControl, frame, heading, words } from './overview-chrome.js';
+import { cockpitSquare, rowWords } from './overview-marks.js';
+import type { AddressParts, ListRow, PanelNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import { panelRow, rowOrder } from './overview-phase.js';
+import { type Kind, type OverviewModel, type Ticket } from './overview-types.js';
+import { ticketLabel } from './overview-wheel.js';
 import { gateFromModel, gateNodes } from './overview-flows.js';
 
-export const TICKET_SCREEN = { width: 1440, height: 1000, cx: 720, cy: 650 } as const;
+export const TICKET_SCREEN = { width: 1440, height: 1000 } as const;
+
+/** Where the text and the linked tickets stand. */
+export const TICKET_LAYOUT = {
+  text: { x: 40, y: 220, w: 800, h: 750 },
+  links: { x: 870, y: 220, w: 540, h: 750 },
+  track: { x0: 230, x1: 760, y: 150 },
+  gate: { x: 830, y: 100, w: 580 },
+} as const;
 
 /** The statuses each kind passes through on its way to finished (tools/instructions/STATUSES.md). */
 export const LIFECYCLE: Readonly<Record<Kind, readonly string[]>> = {
@@ -30,37 +42,45 @@ export const LIFECYCLE: Readonly<Record<Kind, readonly string[]>> = {
 
 /** The tickets this one links to, and the tickets that link to it, each once. */
 export function neighboursOf(model: OverviewModel, id: string): Ticket[] {
+  const { to, from } = joinedTo(model, id);
+  return [...to, ...from];
+}
+
+/**
+ * What a ticket is joined to, split by direction: the tickets it links to, and
+ * the ones that link to it and are not already among those. Each in the order
+ * the cockpit lists tickets.
+ */
+export function joinedTo(model: OverviewModel, id: string): { to: Ticket[]; from: Ticket[] } {
   const self = model.tickets[id];
-  const seen = new Set<string>();
-  const out: Ticket[] = [];
+  const seen = new Set<string>([id]);
+  const to: Ticket[] = [];
   for (const other of self?.links ?? []) {
     const t = model.tickets[other];
-    if (t !== undefined && other !== id && !seen.has(other)) {
+    if (t !== undefined && !seen.has(other)) {
       seen.add(other);
-      out.push(t);
+      to.push(t);
     }
   }
+  const from: Ticket[] = [];
   for (const t of Object.values(model.tickets)) {
-    if (t.id !== id && !seen.has(t.id) && t.links.includes(id)) {
+    if (!seen.has(t.id) && t.links.includes(id)) {
       seen.add(t.id);
-      out.push(t);
+      from.push(t);
     }
   }
-  const order: Kind[] = ['req', 'feat', 'task', 'test', 'iss', 'dec', 'risk'];
-  return out.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.id.localeCompare(b.id));
+  return { to: to.sort(rowOrder), from: from.sort(rowOrder) };
 }
 
 function track(t: Ticket): SceneNode[] {
   const stops = LIFECYCLE[t.kind];
   const nodes: SceneNode[] = [];
-  const x0 = 380;
-  const x1 = 1060;
-  const y = 190;
+  const { x0, x1, y } = TICKET_LAYOUT.track;
   const at = stops.indexOf(t.status);
   const step = (x1 - x0) / Math.max(1, stops.length - 1);
   nodes.push({ kind: 'mark', tag: 'line', attrs: { x1: x0, y1: y, x2: x1, y2: y, 'stroke-width': 2 }, cls: 'ov-wire' });
   if (at > 0) {
-    nodes.push({ kind: 'mark', tag: 'line', attrs: { x1: x0, y1: y, x2: x0 + at * step, y2: y, 'stroke-width': 3 }, cls: 'ov-wire', state: t.state });
+    nodes.push({ kind: 'mark', tag: 'line', attrs: { x1: x0, y1: y, x2: x0 + at * step, y2: y, 'stroke-width': 3 }, cls: 'ov-wire', type: t.type, fill: 'delivered' });
   }
   stops.forEach((status, i) => {
     const x = x0 + i * step;
@@ -69,58 +89,21 @@ function track(t: Ticket): SceneNode[] {
     nodes.push({
       kind: 'mark',
       tag: 'circle',
-      attrs: { cx: x, cy: y, r: here ? 13 : 8 },
-      state: here || past ? t.state : undefined,
+      attrs: { cx: x, cy: y, r: here ? 12 : 7 },
+      ...(here || past ? { type: t.type, fill: here ? t.fill : 'delivered' } : {}),
       cls: here ? 'glow' : past ? 'ov-faint' : 'ov-glass',
       label: here ? `Now: ${status}` : past ? `Passed: ${status}` : `Ahead: ${status}`,
     });
-    nodes.push({ kind: 'text', x, y: y + 32, text: status, rest: true, role: 'label', size: here ? 14 : 12, anchor: 'middle', cls: here ? 'ov-title' : 'ov-dim' });
+    nodes.push({ kind: 'text', x, y: y + 30, text: status, rest: true, role: 'label', size: here ? 14 : 12, anchor: 'middle', cls: here ? 'ov-title' : 'ov-dim' });
   });
   if (at < 0) {
     // Off the track: a branch from the last stop it could have left from.
     const x = x0 + step * 0.5;
-    nodes.push({ kind: 'mark', tag: 'path', attrs: { d: `M${x0} ${y} Q${x} ${y} ${x} ${y + 60}`, 'stroke-width': 2 }, cls: 'ov-wire', state: t.state });
-    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: x, cy: y + 66, r: 12 }, state: t.state, cls: 'glow', label: `Now: ${t.status}` });
-    nodes.push({ kind: 'text', x: x + 22, y: y + 71, text: t.status, rest: true, role: 'label', size: 14, cls: 'ov-title' });
+    nodes.push({ kind: 'mark', tag: 'path', attrs: { d: `M${x0} ${y} Q${x} ${y} ${x} ${y + 34}`, 'stroke-width': 2 }, cls: 'ov-wire', type: t.type, fill: t.fill });
+    nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: x, cy: y + 40, r: 10 }, type: t.type, fill: t.fill, cls: 'glow', label: `Now: ${t.status}` });
+    nodes.push({ kind: 'text', x: x + 20, y: y + 45, text: t.status, rest: true, role: 'label', size: 14, cls: 'ov-title' });
   }
   return nodes;
-}
-
-/**
- * Where each of `count` neighbours stands: wide elliptical rings round the ticket,
- * below its track and gate, each filled to its perimeter at the glyph pitch before
- * the next begins. The pitch shrinks until every neighbour fits, so no two share a
- * place (FEAT-0028's review: 202 neighbours had 116 places).
- */
-export function ringPlaces(count: number, cx: number, cy: number): Array<{ x: number; y: number; size: number }> {
-  const innerY = 150;
-  const outerY = 300;
-  const wide = 2.1;
-  const perimeter = (a: number, b: number): number => Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
-  for (let pitch = 44; pitch >= 6; pitch -= 2) {
-    const step = Math.max(pitch * 0.8, 9);
-    const rings: Array<{ ry: number; capacity: number }> = [];
-    let room = 0;
-    for (let ry = innerY; ry <= outerY && room < count; ry += step) {
-      const capacity = Math.max(1, Math.floor(perimeter(ry * wide, ry) / pitch));
-      rings.push({ ry, capacity });
-      room += capacity;
-    }
-    if (room < count && pitch > 6) continue;
-    const out: Array<{ x: number; y: number; size: number }> = [];
-    let left = count;
-    for (const [index, ring] of rings.entries()) {
-      const here = Math.min(ring.capacity, left);
-      for (let k = 0; k < here; k++) {
-        const angle = ((k + (index % 2) * 0.5) * TAU) / here;
-        out.push({ x: cx + ring.ry * wide * Math.sin(angle), y: cy - ring.ry * Math.cos(angle), size: Math.min(15, pitch * 0.36) });
-      }
-      left -= here;
-      if (left === 0) break;
-    }
-    return out;
-  }
-  return [];
 }
 
 /** Where a ticket of this kind is accepted, if anywhere: S5, S6 or S7. */
@@ -131,66 +114,68 @@ export function flowFor(t: Ticket): { parts: AddressParts; label: string } | nul
   return null;
 }
 
-export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenContext): Scene {
+export interface TicketExtras {
+  /** The note's Markdown body, for a plate; Deck reads the rendered text itself. */
+  text?: string;
+}
+
+export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenContext, extras: TicketExtras = {}): Scene {
   const t = model.tickets[ticketId];
   if (t === undefined) throw new Error(`the overview has no ticket ${ticketId}`);
-  const { cx, cy } = TICKET_SCREEN;
   const back = t.phase !== null
     ? backControl(ctx, { page: 'phase', note: t.phase }, `Back to ${t.phase}`)
     : backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
-  const nodes: SceneNode[] = [back.node, ...heading(t.id, words(t.title, 7))];
-  const list: ListRow[] = [back.row, { id: t.id, label: `${t.title} — ${STATE_WORD[t.state]} (${KIND_WORD[t.kind]}, ${t.status})`, group: 'This ticket', state: t.state }];
+  const nodes: SceneNode[] = [back.node, ...heading(t.id, words(t.title, 14), 128)];
+  const list: ListRow[] = [back.row, { id: t.id, label: rowWords(t), group: 'This ticket', state: t.state }];
+  nodes.push(...frame(TICKET_SCREEN.width, TICKET_SCREEN.height));
+
+  // The ticket itself, as the cockpit marks it, beside its name. Pressing it opens
+  // where this kind of ticket is accepted: a design's plates, a feature's gate, the
+  // release test for a test.
+  const flow = flowFor(t);
+  const self = cockpitSquare(t, 104, 62, 26, { label: flow?.label ?? ticketLabel(t), key: `ticket-${t.id}` });
+  if (flow !== null) {
+    const target = ctx.address(flow.parts);
+    nodes.push({ ...self, target });
+    list.push({ id: `flow-of-${t.id}`, label: flow.label, group: 'Go to', target });
+  } else nodes.push(self);
 
   nodes.push(...track(t));
 
-  // A feature carries its gate small, under its track: five lamps of beads, the
-  // words on hover. What the model alone knows; S7 adds what the sidecar records.
+  // A feature shows its gate beside its track: the five checks before it is accepted.
   if (t.kind === 'feat') {
-    const gate = gateNodes(gateFromModel(model, t.id), 528, 300, 0.4).filter((n) => n.kind !== 'text');
+    const { x, y, w } = TICKET_LAYOUT.gate;
+    const gate = gateNodes(gateFromModel(model, t.id), x + 40, y + 50, w / 1100).filter((n) => n.kind !== 'text');
     nodes.push({ kind: 'group', key: `gate-${t.id}`, target: ctx.address({ flow: 'accept', note: t.id }), label: `${t.id}'s gate: open it to accept the feature`, children: gate });
   }
-  nodes.push(...frame(TICKET_SCREEN.width, TICKET_SCREEN.height), ...bezel(cx, cy, 104, 72));
 
+  // Its text, as the reader shows it.
+  nodes.push({ kind: 'panel', key: `text-${t.id}`, ...TICKET_LAYOUT.text, label: `${t.id}'s text`, body: { kind: 'note', id: t.id, title: t.title, text: extras.text ?? '' } });
 
-  // The neighbourhood: rings outward from 200, each holding only as many glyphs as
-  // fit round it, so no two share a place. A crowded ticket draws smaller glyphs
-  // rather than stacking them (FEAT-0028's review: 202 neighbours had 116 places).
-  const near = neighboursOf(model, t.id);
-  const places = ringPlaces(near.length, cx, cy);
-  const wires: SceneNode[] = [];
-  const glyphs: SceneNode[] = [];
-  const lit: MarkNode[] = [];
-  near.forEach((n, i) => {
-    const { x, y, size } = places[i]!;
-    wires.push({ kind: 'mark', tag: 'line', attrs: { x1: cx, y1: cy, x2: x, y2: y }, cls: 'ov-wire ov-faint', state: n.state });
-    const shape = glyph(n.kind, x, y, size);
-    const mark: MarkNode = { kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: n.id, state: n.state, label: ticketLabel(n), target: ctx.address({ page: 'ticket', note: n.id }) };
-    (needsPerson(n) ? lit : glyphs).push(mark);
-    list.push({ id: n.id, label: `${n.title} — ${STATE_WORD[n.state]} (${KIND_WORD[n.kind]})`, group: 'Joined to it', state: n.state, target: ctx.address({ page: 'ticket', note: n.id }) });
-  });
-  nodes.push(...wires, ...glyphs);
-  if (lit.length > 0) nodes.push({ kind: 'group', cls: 'glow', children: lit });
-  if (near.length === 0) {
-    nodes.push({ kind: 'mark', tag: 'ellipse', attrs: { cx, cy, rx: 150 * 2.1, ry: 150, 'stroke-dasharray': '3 9' }, cls: 'ov-wire ov-faint', label: 'Nothing links to it, and it links to nothing' });
+  // What it is joined to, as the cockpit lists tickets.
+  const { to, from } = joinedTo(model, t.id);
+  const links: PanelNode = {
+    kind: 'panel',
+    key: `links-${t.id}`,
+    ...TICKET_LAYOUT.links,
+    label: `What ${t.id} is joined to`,
+    body: {
+      kind: 'rows',
+      sections: [
+        { key: 'to', title: 'Links to', rows: to.map((n) => panelRow(n, ctx)) },
+        { key: 'from', title: 'Linked from', rows: from.map((n) => panelRow(n, ctx)) },
+      ],
+    },
+  };
+  nodes.push(links);
+  for (const [group, tickets] of [['Links to', to], ['Linked from', from]] as const) {
+    for (const n of tickets) list.push({ id: n.id, label: rowWords(n), group, state: n.state, target: ctx.address({ page: 'ticket', note: n.id }) });
+  }
+  if (to.length + from.length === 0) {
+    nodes.push({ kind: 'mark', tag: 'rect', attrs: { x: TICKET_LAYOUT.links.x, y: TICKET_LAYOUT.links.y, width: TICKET_LAYOUT.links.w, height: 60, rx: 10, 'stroke-dasharray': '3 9' }, cls: 'ov-wire ov-faint', label: 'Nothing links to it, and it links to nothing' });
   }
 
-  // The ticket itself, large, in the middle.
-  // Pressing it opens where this kind of ticket is accepted: a design's plates,
-  // a feature's gate, the release test for a test. Other kinds open nothing more.
-  const self = glyph(t.kind, cx, cy, 54);
-  const flow = flowFor(t);
-  const centre: SceneNode[] = [
-    { kind: 'mark', tag: 'circle', attrs: { cx, cy, r: 84 }, cls: 'ov-glass' },
-    { kind: 'mark', tag: self.tag, attrs: self.attrs, ticket: t.id, state: t.state, glow: true, label: ticketLabel(t) },
-  ];
-  if (flow === null) nodes.push(...centre);
-  else {
-    const target = ctx.address(flow.parts);
-    nodes.push({ kind: 'group', key: `open-${t.id}`, target, label: flow.label, children: centre });
-    list.push({ id: `flow-of-${t.id}`, label: flow.label, group: 'Go to', target });
-  }
-
-  // Its phase, as a small sector the person can follow.
+  // Its phase, to follow from the list.
   if (t.phase !== null) {
     list.push({ id: `phase-of-${t.id}`, label: `In ${t.phase}`, group: 'Go to', target: ctx.address({ page: 'phase', note: t.phase }) });
   }

@@ -348,7 +348,7 @@ export class DeckHost {
       }
     }
     if (pathname.startsWith(RECORDS_PREFIX)) {
-      this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), url.searchParams.get('type'), res);
+      this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), url.searchParams.get('type'), res, url.searchParams.get('id'));
       return;
     }
     if (rawPathname.startsWith(SIDECAR_PREFIX)) {
@@ -454,7 +454,7 @@ export class DeckHost {
    * layer down: a read during a long start-up was read as a death and the
    * thing being read was torn down.
    */
-  private records(workspaceId: string, rel: string | null, type: string | null, res: http.ServerResponse): void {
+  private records(workspaceId: string, rel: string | null, type: string | null, res: http.ServerResponse, id: string | null = null): void {
     if (workspaceId === '' || workspaceId.includes('/')) {
       plain(res, 404, 'that request names no workspace');
       return;
@@ -499,7 +499,9 @@ export class DeckHost {
       // `?type=` asks for the notes of one type: evidence reads every test
       // note's frontmatter (FEAT-0024), and a workspace's tests are a fiftieth
       // of its notes.
-      records: (rel === null ? records : one(rel)).filter((record) => type === null || record.types.includes(type)),
+      // `?id=` asks for one note by its id: the overview's ticket screen knows a
+      // ticket by id and needs its path to ask the sidecar for its text (TASK-0148).
+      records: (rel === null ? records : one(rel)).filter((record) => (type === null || record.types.includes(type)) && (id === null || record.id === id)),
       problems: index.problems,
     });
   }

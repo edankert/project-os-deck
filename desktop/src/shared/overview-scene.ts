@@ -15,8 +15,8 @@
  * FEAT-0026's "Questions between the lanes" first.
  */
 import type { Fill, NoteType, State } from './overview-types.js';
-import { marksCss } from './overview-marks.js';
-import { panelSvgNodes } from './overview-panel.js';
+import { FIELD, marksCss, NEEDS_YOU } from './overview-marks.js';
+import { panelCss, panelSvgNodes } from './overview-panel.js';
 
 /** The seven screens of DES-0005. */
 export type ScreenKind = 'wheel' | 'phase' | 'ticket' | 'rephase' | 'design' | 'test-run' | 'accept';
@@ -201,6 +201,7 @@ export const OVERVIEW_CSS = `
 .ov .ov-title { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 ${STATES.map((s) => `.ov .st-${s} { fill: ${PALETTE[s]}; }`).join('\n')}
 ${marksCss()}
+${panelCss(FIELD, NEEDS_YOU)}
 .ov .ov-track { fill: hsla(210, 60%, 50%, 0.07); stroke: hsla(195, 80%, 60%, 0.16); stroke-width: 1; }
 .ov .ov-glass { fill: hsla(205, 60%, 40%, 0.14); stroke: hsla(190, 90%, 65%, 0.5); stroke-width: 1; }
 .ov .ov-faint { opacity: 0.35; }
@@ -267,7 +268,7 @@ function textSvg(node: TextNode): string {
   );
 }
 
-function nodeSvg(node: SceneNode): string {
+function nodeSvg(node: SceneNode, flatPanels = true): string {
   switch (node.kind) {
     case 'mark':
       return markSvg(node);
@@ -280,14 +281,16 @@ function nodeSvg(node: SceneNode): string {
         ` preserveAspectRatio="xMidYMid meet"><title>${escapeXml(node.label)}</title></image>`
       );
     case 'panel':
-      return `<g class="ov-panel-flat"${attr('data-panel', node.key)}>${panelSvgNodes(node).map(nodeSvg).join('')}</g>`;
+      // In Deck the panel is built as HTML over the picture; only its place is kept here.
+      if (!flatPanels) return `<g class="ov-panel-flat"${attr('data-panel', node.key)}/>`;
+      return `<g class="ov-panel-flat"${attr('data-panel', node.key)}>${panelSvgNodes(node).map((n) => nodeSvg(n)).join('')}</g>`;
     case 'group': {
       const focusable = node.target !== undefined;
       return (
         `<g${attr('transform', node.transform)}${attr('class', node.cls)}${attr('data-key', node.key)}` +
         `${attr('data-target', node.target)}${attr('data-label', node.label)}` +
         `${focusable ? ` tabindex="0" role="button"${attr('aria-label', node.label)}` : ''}>` +
-        `${node.children.map(nodeSvg).join('')}</g>`
+        `${node.children.map((n) => nodeSvg(n, flatPanels)).join('')}</g>`
       );
     }
   }
@@ -313,7 +316,8 @@ export const OVERVIEW_DEFS =
  * prototype page; the renderer passes false and carries `OVERVIEW_CSS` in its
  * own stylesheet.
  */
-export function sceneToSvg(scene: Scene, options: { standalone?: boolean } = {}): string {
+export function sceneToSvg(scene: Scene, options: { standalone?: boolean; /** `html`: leave panels for the renderer to build. */ panels?: 'flat' | 'html' } = {}): string {
+  const flat = options.panels !== 'html';
   const style = options.standalone ? `<style>${OVERVIEW_CSS}</style>` : '';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" class="ov ov-${scene.screen}" viewBox="0 0 ${scene.width} ${scene.height}"` +
@@ -322,7 +326,7 @@ export function sceneToSvg(scene: Scene, options: { standalone?: boolean } = {})
     OVERVIEW_DEFS +
     `<rect width="${scene.width}" height="${scene.height}" fill="url(#ov-field)"/>` +
     `<rect width="${scene.width}" height="${scene.height}" fill="url(#ov-grid)"/>` +
-    scene.nodes.map(nodeSvg).join('') +
+    scene.nodes.map((n) => nodeSvg(n, flat)).join('') +
     '</svg>'
   );
 }

@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0148
 title: "A ticket opens with its id, title and full text, its linked tickets as cockpit rows, and its gate as five labelled chips"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

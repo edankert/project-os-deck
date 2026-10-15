@@ -11,30 +11,54 @@
  * what is closed far back as dust. A glyph's shape is its kind.
  */
 import { backControl, bezel, frame, heading } from './overview-chrome.js';
-import { arc, glyph, gridFit, plainName, polar, polygon, TAU } from './overview-geometry.js';
-import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import { arc, plainName, polar, polygon, TAU } from './overview-geometry.js';
+import { rowWords } from './overview-marks.js';
+import type { ListRow, PanelNode, PanelRow, Scene, SceneNode, ScreenContext } from './overview-scene.js';
 import {
   allPhases,
   KIND_WORD,
   PHASE_KINDS,
-  STATE_WORD,
+  type Fill,
   type Kind,
+  type NoteType,
   type OverviewModel,
   type Phase,
   type State,
   type Ticket,
 } from './overview-types.js';
-import { closedOf, needsPerson, phaseLabel, ticketLabel } from './overview-wheel.js';
+import { closedOf, phaseLabel } from './overview-wheel.js';
 
 export const PHASE_SCREEN = { width: 1440, height: 1000, webX: 380, webY: 520, webR: 230 } as const;
 
 const INITIAL: Record<string, string> = { req: 'Req', feat: 'Feat', task: 'Task', test: 'Test', iss: 'Iss' };
 
-/** Which band a ticket stands in: 0 front, 1 middle, 2 far. */
-export function bandOf(state: State): 0 | 1 | 2 {
-  if (state === 'failed' || state === 'owed') return 0;
-  if (state === 'progress' || state === 'open') return 1;
-  return 2;
+/**
+ * Which section of the ticket list a ticket stands in: 0 needs you, at the
+ * front; 1 in progress and open; 2 closed, folded at the back (TASK-0147).
+ * The cockpit's flags decide it, so a ticket the cockpit dots is in front here.
+ */
+export function sectionOf(t: Pick<Ticket, 'fill' | 'needsYou'>): 0 | 1 | 2 {
+  if (t.needsYou) return 0;
+  if (t.fill === 'delivered' || t.fill === 'dropped') return 2;
+  return 1;
+}
+
+/** @deprecated The depth field's bands became the list's sections; kept for callers that ask by ticket. */
+export const bandOf = sectionOf;
+
+export const SECTION_TITLE = ['Needs you', 'In progress and open', 'Closed'] as const;
+
+/** The order rows stand in within a section: by type as the cockpit lists them, then how far along, then id. */
+const TYPE_ORDER: readonly NoteType[] = ['feature', 'requirement', 'task', 'test', 'issue', 'risk', 'adr', 'design'];
+const FILL_ORDER: readonly Fill[] = ['doing', 'unproven', 'open', 'deferred', 'delivered', 'dropped'];
+
+export function rowOrder(a: Ticket, b: Ticket): number {
+  return TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type) || FILL_ORDER.indexOf(a.fill) - FILL_ORDER.indexOf(b.fill) || a.id.localeCompare(b.id, 'en', { numeric: true });
+}
+
+/** A ticket as a panel row, the way the cockpit lists it. */
+export function panelRow(t: Ticket, ctx: ScreenContext): PanelRow {
+  return { id: t.id, type: t.type, fill: t.fill, needsYou: t.needsYou, title: t.title, status: t.status, target: ctx.address({ page: 'ticket', note: t.id }) };
 }
 
 function kindCounts(model: OverviewModel, phase: Phase): Record<string, { live: number; closed: number }> {
@@ -124,44 +148,41 @@ function exitRing(phase: Phase): { nodes: SceneNode[]; rows: ListRow[] } {
   return { nodes, rows };
 }
 
-/** The depth field: three bands, each a perspective strip, nearer is larger. */
-function field(model: OverviewModel, phase: Phase, ctx: ScreenContext): { nodes: SceneNode[]; rows: ListRow[] } {
-  const bands: Ticket[][] = [[], [], []];
+/**
+ * The phase's tickets as cockpit rows on a plane tilted away (TASK-0147).
+ *
+ * Edwin, 2026-10-15: "the right hand pane should really show the tickets as
+ * tickets", in the cockpit's list, and "it would be nice if they could be
+ * displayed more 3d". What needs you stands at the front, full size; what is
+ * in progress or open behind it; what is closed at the back, folded to a strip
+ * of marks with its count until it is pressed open. Deck builds the rows as
+ * HTML and tilts them in real depth; a plate draws them flat.
+ */
+export const TICKET_PANEL = { x: 740, y: 96, w: 670, h: 870 } as const;
+
+function ticketPanel(model: OverviewModel, phase: Phase, ctx: ScreenContext): { node: PanelNode; rows: ListRow[] } {
+  const sections: Ticket[][] = [[], [], []];
   for (const id of phase.tickets) {
     const t = model.tickets[id];
-    if (t !== undefined) bands[bandOf(t.state)]!.push(t);
+    if (t !== undefined) sections[sectionOf(t)]!.push(t);
   }
-  // Far to near, so the near band is drawn on top.
-  const geometry = [
-    { x: 760, y: 640, w: 640, h: 300, size: 15, max: 40 }, // front
-    { x: 800, y: 330, w: 560, h: 280, size: 9, max: 26 }, // middle
-    { x: 860, y: 150, w: 440, h: 150, size: 3.2, max: 10 }, // far
-  ];
-  const nodes: SceneNode[] = [];
   const rows: ListRow[] = [];
-  // The floor: three lines receding toward a vanishing point.
-  nodes.push({ kind: 'mark', tag: 'polygon', attrs: { points: '760,950 1400,950 1300,140 860,140' }, cls: 'ov-track' });
-  for (const yLine of [620, 315]) {
-    nodes.push({ kind: 'mark', tag: 'line', attrs: { x1: 760 + (950 - yLine) * 0.124, y1: yLine, x2: 1400 - (950 - yLine) * 0.124, y2: yLine }, cls: 'ov-wire ov-faint' });
-  }
-  for (const b of [2, 1, 0] as const) {
-    const g = geometry[b]!;
-    const tickets = bands[b]!;
-    const { points, pitch } = gridFit(tickets.length, g.x, g.y, g.w, g.h, g.max, 4);
-    const size = Math.min(g.size, pitch * 0.42);
-    const plain: SceneNode[] = [];
-    const lit: MarkNode[] = [];
-    tickets.forEach((t, i) => {
-      const [x, y] = points[i]!;
-      const shape = glyph(t.kind, x, y, size);
-      const mark: MarkNode = { kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, state: t.state, label: ticketLabel(t), cls: b === 2 ? 'ov-faint' : undefined };
-      (needsPerson(t) || (b === 0) ? lit : plain).push(mark);
-      rows.push({ id: t.id, label: `${t.title} — ${STATE_WORD[t.state]} (${KIND_WORD[t.kind]})`, group: ['Needs you', 'In progress and open', 'Closed'][b]!, state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
-    });
-    nodes.push(...plain);
-    if (lit.length > 0) nodes.push({ kind: 'group', cls: 'glow', children: lit });
-  }
-  return { nodes, rows };
+  const node: PanelNode = {
+    kind: 'panel',
+    key: `tickets-${phase.id}`,
+    ...TICKET_PANEL,
+    label: `${phase.id}'s tickets: what needs you in front, closed work folded at the back`,
+    body: {
+      kind: 'rows',
+      tilt: true,
+      sections: sections.map((tickets, i) => {
+        const sorted = [...tickets].sort(rowOrder);
+        for (const t of sorted) rows.push({ id: t.id, label: rowWords(t), group: SECTION_TITLE[i]!, state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
+        return { key: ['needs-you', 'open', 'closed'][i]!, title: SECTION_TITLE[i]!, rows: sorted.map((t) => panelRow(t, ctx)), folded: i === 2 };
+      }),
+    },
+  };
+  return { node, rows };
 }
 
 export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenContext): Scene {
@@ -188,13 +209,8 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
   nodes.push(...webNodes(model, phase));
   const exit = exitRing(phase);
   nodes.push(...exit.nodes);
-  const f = field(model, phase, ctx);
-  nodes.push(...f.nodes);
-
-  // Each band's word, at its left edge.
-  nodes.push({ kind: 'text', x: 1410, y: 955, text: 'Needs you', rest: true, role: 'label', size: 12, anchor: 'end', cls: 'ov-dim ov-title' });
-  nodes.push({ kind: 'text', x: 1370, y: 640, text: 'Open', rest: true, role: 'label', size: 11, anchor: 'end', cls: 'ov-dim ov-title' });
-  nodes.push({ kind: 'text', x: 1300, y: 132, text: 'Closed', rest: true, role: 'label', size: 10, anchor: 'end', cls: 'ov-dim ov-title' });
+  const f = ticketPanel(model, phase, ctx);
+  nodes.push(f.node);
 
   const list: ListRow[] = [back.row, { id: phase.id, label: `${phaseLabel(phase)} — ${closed} of ${live} closed, ${phase.status}`, group: 'This phase' }, ...exit.rows, ...f.rows];
   // The phase's own id is drawn by the lamp's neighbour: a mark carrying it keeps the twin exact.

@@ -153,7 +153,11 @@ function notePanel(panel: PanelNode & { body: { kind: 'note' } }): SceneNode[] {
   const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
   let top = y + 30;
   let blank = false;
-  for (const raw of plainLines(panel.body.text)) {
+  const lines = plainLines(panel.body.text);
+  // The note's own heading repeats the title the screen already shows.
+  const first = lines.findIndex((l) => l.trim() !== '');
+  if (first >= 0 && lines[first]!.trim() === panel.body.title.trim()) lines.splice(first, 1);
+  for (const raw of lines) {
     if (raw.trim() === '') {
       if (!blank) top += lineHeight * 0.5;
       blank = true;
@@ -175,4 +179,56 @@ function notePanel(panel: PanelNode & { body: { kind: 'note' } }): SceneNode[] {
 /** A panel's flat drawing, as scene nodes for `sceneToSvg`. Not part of `scene.nodes`, so never counted. */
 export function panelSvgNodes(panel: PanelNode): SceneNode[] {
   return panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }) : notePanel(panel as PanelNode & { body: { kind: 'note' } });
+}
+
+/**
+ * The styles of a panel built as HTML in Deck, for `OVERVIEW_CSS`. The square
+ * is the cockpit's `.ov-phase-sq` (its `renderer.css`, DES-0004), with the same
+ * fills; its colour comes from the `ty-*` classes the marks share.
+ */
+export function panelCss(field: string, needsYou: string): string {
+  return `
+.ov-panels { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
+.ov-panel { position: absolute; pointer-events: auto; box-sizing: border-box; font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; color: hsl(195 60% 90%); }
+.ov-panel-rows.is-tilted { perspective: 1500px; perspective-origin: 50% 0%; }
+.ov-plane { height: 100%; box-sizing: border-box; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 18px 20px;
+  background: linear-gradient(180deg, hsla(205, 60%, 30%, 0.05), hsla(205, 60%, 30%, 0.16)); border: 1px solid hsla(190, 90%, 65%, 0.22); border-radius: 12px;
+  scrollbar-width: thin; scrollbar-color: hsla(190, 90%, 65%, 0.3) transparent; }
+.ov-panel-rows.is-tilted .ov-plane { flex-direction: column-reverse; transform: rotateX(22deg); transform-origin: 50% 100%; transition: transform 240ms ease-out;
+  box-shadow: 0 30px 60px -20px hsla(190, 90%, 50%, 0.18), inset 0 -1px 0 hsla(190, 90%, 65%, 0.4); }
+.ov-sec { display: flex; flex-direction: column; gap: 4px; border-radius: 8px; outline: none; }
+.ov-sec:focus-visible { box-shadow: 0 0 0 1px hsla(190, 90%, 65%, 0.7); }
+.ov-sec-head { all: unset; display: flex; align-items: baseline; gap: 8px; cursor: pointer; padding: 2px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(205 25% 62%); }
+.ov-sec-head:hover, .ov-sec-head:focus-visible { color: hsl(190 90% 75%); }
+.ov-sec-count { font-family: "SF Mono", Menlo, monospace; font-weight: 600; color: hsl(195 60% 85%); }
+.ov-sec[data-section="needs-you"] .ov-sec-title { color: ${needsYou}; }
+.ov-strip { display: none; flex-wrap: wrap; gap: 3px; padding: 4px; }
+.ov-sec.is-folded .ov-strip { display: flex; }
+.ov-sec.is-folded .ov-rows { display: none; }
+.ov-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.ov-row { display: grid; grid-template-columns: 14px 78px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+  background: hsla(205, 60%, 40%, 0.12); border: 1px solid hsla(190, 90%, 65%, 0.1); outline: none; }
+.ov-sec[data-section="needs-you"] .ov-row { background: hsla(205, 60%, 40%, 0.2); border-color: hsla(5, 50%, 65%, 0.35); padding: 7px 10px; font-size: 14px; }
+.ov-row:hover, .ov-row:focus { background: hsla(190, 90%, 55%, 0.18); border-color: hsla(190, 90%, 65%, 0.6); }
+.ov-row-id { font: 12px "SF Mono", Menlo, monospace; color: hsl(205 25% 66%); letter-spacing: 0.02em; }
+.ov-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-row-status { font-size: 11px; color: hsl(205 25% 62%); }
+.ov-sq { display: inline-block; position: relative; width: 11px; height: 11px; box-sizing: border-box; border-radius: 2px; border: 1.5px solid currentColor; background: transparent; flex: none; }
+.ov-sq.ov-sq-small { width: 8px; height: 8px; border-width: 1.2px; border-radius: 1.5px; }
+.ov-sq[data-fill="delivered"] { background: currentColor; }
+.ov-sq[data-fill="dropped"] { background: linear-gradient(to top right, currentColor calc(50% - 1px), transparent calc(50% - 1px), transparent calc(50% + 1px), currentColor calc(50% + 1px)); }
+.ov-sq[data-fill="deferred"] { background: linear-gradient(to top right, transparent calc(50% - 0.9px), currentColor calc(50% - 0.9px), currentColor calc(50% + 0.9px), transparent calc(50% + 0.9px)); }
+.ov-sq[data-fill="unproven"], .ov-sq[data-fill="doing"] { background: currentColor; box-shadow: inset 0 0 0 1.5px ${field}; }
+.ov-sq[data-attn]::after { content: ''; position: absolute; top: -3.5px; right: -3.5px; width: 5px; height: 5px; border-radius: 50%; background: ${needsYou}; border: 1px solid ${field}; }
+@media (prefers-reduced-motion: no-preference) { .ov-sq[data-fill="doing"] { animation: ov-blink 1.6s ease-in-out infinite; } }
+@media (prefers-reduced-motion: reduce) { .ov-sq[data-fill="doing"] { outline: 1.5px solid currentColor; outline-offset: 1.5px; } .ov-panel-rows.is-tilted .ov-plane { transition: none; } }
+.ov-panel-note { overflow-y: auto; padding: 20px 26px; background: hsla(210, 50%, 9%, 0.82); border: 1px solid hsla(190, 90%, 65%, 0.25); border-radius: 12px;
+  scrollbar-width: thin; scrollbar-color: hsla(190, 90%, 65%, 0.3) transparent; }
+.ov-note { font-size: 14px; line-height: 1.55; color: hsl(195 30% 88%); }
+.ov-note h1 { font-size: 19px; margin: 0 0 10px; } .ov-note h2 { font-size: 15px; margin: 18px 0 6px; color: hsl(190 90% 75%); } .ov-note h3 { font-size: 14px; margin: 14px 0 4px; }
+.ov-note a { color: hsl(190 90% 70%); } .ov-note code { font: 12px "SF Mono", Menlo, monospace; background: hsla(205, 60%, 40%, 0.2); padding: 1px 4px; border-radius: 4px; }
+.ov-note table { border-collapse: collapse; font-size: 12.5px; } .ov-note td, .ov-note th { border: 1px solid hsla(190, 90%, 65%, 0.2); padding: 3px 6px; }
+.ov-note pre { overflow-x: auto; background: hsla(205, 60%, 20%, 0.4); padding: 8px; border-radius: 6px; }
+.ov-note-wait { color: hsl(205 25% 62%); font-style: italic; }
+`;
 }

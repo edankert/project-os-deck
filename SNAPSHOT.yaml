@@ -304,12 +304,12 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0147:
       file: docs/features/overview-phase/plan/tasks/TASK-0147-A-Phase-Lists-Its-Tickets-As-Cockpit-Rows-On-A-Tilted-Plane.md
-      status: backlog
+      status: doing
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0148:
       file: docs/features/overview-phase/plan/tasks/TASK-0148-A-Ticket-Opens-With-Its-Text-And-Its-Linked-Tickets-As-Rows.md
-      status: backlog
+      status: doing
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0149:

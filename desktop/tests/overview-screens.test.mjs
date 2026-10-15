@@ -36,11 +36,22 @@ function linkedTo(m, id) {
 /** Where a mark stands, as a string: two marks with the same one cover each other. */
 const placeOf = (n) => JSON.stringify([n.tag, n.attrs]);
 
-/** How many times each id is drawn as a mark. */
+/** How many times each id is drawn: as a mark, or as a row of a panel (TASK-0147, TASK-0148). */
 function drawn(scene) {
   const out = new Map();
+  const add = (id) => out.set(id, (out.get(id) ?? 0) + 1);
   for (const node of walkScene(scene.nodes)) {
-    if (node.kind === 'mark' && node.ticket !== undefined) out.set(node.ticket, (out.get(node.ticket) ?? 0) + 1);
+    if (node.kind === 'mark' && node.ticket !== undefined) add(node.ticket);
+    if (node.kind === 'panel' && node.body.kind === 'rows') for (const section of node.body.sections) for (const row of section.rows) add(row.id);
+  }
+  return out;
+}
+
+/** The rows of a scene's panels, by section key. */
+function panelSections(scene) {
+  const out = new Map();
+  for (const node of walkScene(scene.nodes)) {
+    if (node.kind === 'panel' && node.body.kind === 'rows') for (const section of node.body.sections) out.set(section.key, section.rows.map((r) => r.id));
   }
   return out;
 }
@@ -66,18 +77,24 @@ for (const name of WORKSPACES) {
     assert.equal(scene.address, 'deck://abcd1234/features?page=wheel');
   });
 
-  test(`${name}: every phase opens as its web, its exit ring and its depth field`, () => {
+  test(`${name}: every phase opens as its web, its exit ring and its tickets as cockpit rows`, () => {
     const m = model(name);
     for (const p of [...m.phases, ...m.shelf, ...m.backlog]) {
       const scene = phaseScene(m, p.id, ctx);
       const counts = drawn(scene);
       for (const id of p.tickets) assert.equal(counts.get(id), 1, `${p.id}: ${id} drawn ${counts.get(id) ?? 0} times`);
       holdsTheLook(scene);
-      // The front band is exactly what needs a person.
-      // Computed here from the states, not with the module's own band rule.
-      const front = p.tickets.filter((id) => ['failed', 'owed'].includes(m.tickets[id].state)).sort();
-      const listedFront = scene.list.filter((r) => r.group === 'Needs you').map((r) => r.id).sort();
-      assert.deepEqual(listedFront, front, p.id);
+      // The front section is exactly what the cockpit dots; the back is what it fills, folded.
+      // Computed here from the flags, not with the module's own section rule.
+      const front = p.tickets.filter((id) => m.tickets[id].needsYou === true).sort();
+      const back = p.tickets.filter((id) => m.tickets[id].needsYou !== true && ['delivered', 'dropped'].includes(m.tickets[id].fill)).sort();
+      const sections = panelSections(scene);
+      assert.deepEqual([...(sections.get('needs-you') ?? [])].sort(), front, p.id);
+      assert.deepEqual([...(sections.get('closed') ?? [])].sort(), back, p.id);
+      assert.deepEqual(scene.list.filter((r) => r.group === 'Needs you').map((r) => r.id).sort(), front, p.id);
+      const panel = [...walkScene(scene.nodes)].find((n) => n.kind === 'panel');
+      assert.equal(panel.body.tilt, true, `${p.id}: the rows stand on a tilted plane`);
+      assert.equal(panel.body.sections.find((s) => s.key === 'closed').folded, true, `${p.id}: closed work starts folded`);
       // One segment per exit criterion.
       const segments = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && String(n.markId ?? '').startsWith(`exit-${p.id}-`));
       assert.equal(segments.length, p.exit.items.length, p.id);
@@ -96,6 +113,13 @@ for (const name of WORKSPACES) {
       assert.equal(counts.get(t.id), 1);
       for (const id of linkedTo(m, t.id)) assert.equal(counts.get(id), 1, `${t.id}: neighbour ${id}`);
       assert.equal(counts.size, linkedTo(m, t.id).size + 1, `${t.id}: draws exactly itself and what it is joined to`);
+      // Its text has a panel of its own, and the joined tickets are rows split by direction.
+      const panels = [...walkScene(scene.nodes)].filter((n) => n.kind === 'panel');
+      assert.ok(panels.some((n) => n.body.kind === 'note' && n.body.id === t.id), `${t.id}: no text panel`);
+      const sections = panelSections(scene);
+      const to = new Set(m.tickets[t.id].links.filter((o) => o !== t.id && m.tickets[o] !== undefined));
+      assert.deepEqual(new Set(sections.get('to')), to, `${t.id}: links to`);
+      for (const id of sections.get('from') ?? []) assert.ok(m.tickets[id].links.includes(t.id) && !to.has(id), `${t.id}: ${id} is not linked from`);
       // Its status is a stop on the track, or a branch off it.
       const stops = LIFECYCLE[t.kind];
       const texts = [...walkScene(scene.nodes)].filter((n) => n.kind === 'text').map((n) => n.text);
@@ -124,7 +148,7 @@ for (const name of WORKSPACES) {
 }
 
 for (const name of WORKSPACES) {
-  test(`${name}: no two neighbours of a ticket share a place, even for the most linked tickets`, () => {
+  test(`${name}: the most linked tickets list every neighbour once, as a row with its id, title and status`, () => {
     const m = model(name);
     // Each ticket's degree, worked out once: sorting by linkedTo() directly scans the
     // whole corpus per comparison and took 17 seconds on your-trainer.
@@ -133,12 +157,13 @@ for (const name of WORKSPACES) {
     const busiest = Object.values(m.tickets).sort((a, b) => degree.get(b.id).size - degree.get(a.id).size).slice(0, 25);
     for (const t of busiest) {
       const scene = ticketScene(m, t.id, ctx);
-      const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined && n.ticket !== t.id);
-      const places = new Set(marks.map(placeOf));
-      assert.equal(places.size, marks.length, `${t.id}: ${marks.length} neighbours on ${places.size} places`);
-      for (const n of marks) {
-        const y = Number(n.attrs.cy ?? String(n.attrs.points).split(/[ ,]/)[1]);
-        assert.ok(y > 340 && y < 990, `${t.id}: ${n.ticket} at y ${y} runs into the track or off the screen`);
+      const rows = [...walkScene(scene.nodes)].filter((n) => n.kind === 'panel' && n.body.kind === 'rows').flatMap((n) => n.body.sections.flatMap((s) => s.rows));
+      assert.equal(new Set(rows.map((r) => r.id)).size, rows.length, `${t.id}: a neighbour is listed twice`);
+      assert.deepEqual(new Set(rows.map((r) => r.id)), degree.get(t.id), `${t.id}: the rows are not exactly its neighbours`);
+      for (const r of rows) {
+        const n = m.tickets[r.id];
+        assert.deepEqual([r.title, r.status], [n.title, n.status], `${t.id}: ${r.id}'s row`);
+        assert.ok(r.target.includes(`note=${encodeURIComponent(r.id)}`), `${t.id}: ${r.id}'s row opens nothing`);
       }
     }
   });
