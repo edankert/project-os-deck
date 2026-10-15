@@ -43,6 +43,14 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         assert.ok((plate.sections ?? []).length > 0, `${plate.svg}: the manifest names its sections`);
       }
     }
+    // The wheel is drawn in both colourings on both workspaces, for Edwin to compare (TASK-0145, TASK-0150).
+    for (const ws of ['deck', 'your-trainer']) {
+      const typed = fs.readFileSync(path.join(out, plates.find((p) => p.ws === ws && p.key === 'wheel').svg), 'utf-8');
+      const stated = fs.readFileSync(path.join(out, plates.find((p) => p.ws === ws && p.key === 'wheel-state').svg), 'utf-8');
+      assert.match(typed, / class="ty-[a-z]+ fl-[a-z]+/, `${ws}: the wheel in the cockpit's colours`);
+      assert.match(stated, / class="st-[a-z]+/, `${ws}: the wheel in the state colours`);
+      assert.doesNotMatch(stated, / class="ty-[a-z]+ fl-[a-z]+[^"]*" data-ticket=/, `${ws}: the state wheel paints no ticket by type`);
+    }
     const page = fs.readFileSync(path.join(out, 'page.html'), 'utf-8');
     assert.match(page, /DES-0005/);
     // The page has back and forward, as Deck does (TASK-0146), and its script runs.

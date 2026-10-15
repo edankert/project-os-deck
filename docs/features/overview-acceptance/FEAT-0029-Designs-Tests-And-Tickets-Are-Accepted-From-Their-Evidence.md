@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0029
 aliases: ["FEAT-0029"]
 title: "Designs, acceptance tests and tickets are accepted from a picture of their evidence: S5, S6 and S7, writing through the cockpit's sidecar"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -69,6 +69,8 @@ Known item squares show their own evidence completion in the item's type colour.
 The renderer exports `featureGate(input: ScreenInput, featureId = input.address.note): Promise<AcceptData>`. S7 uses it; Claude's S3 must await it and pass its result to `gateChips`. Sidecar failures return the neutral `gateFromModel` fallback with a reason. S3 can append both `nodes` and `rows` directly and remove its `delete node.ticket` loop and row filter.
 
 The feature stays `doing` for Claude's verification and Edwin's acceptance. Claude owns S3 integration, official plates, the batched window run, merge and push. Codex commits on `lane/codex-r2` and does not push. The existing sidecar limits and narrowed acceptance criteria remain unresolved by a human verdict.
+
+2026-10-15, later: the revision is built, tested and reviewed across models in two rounds. Every task of the revision is done (TASK-0144 to TASK-0151). The node suites pass (777 tests) and the window run TST-0093 passed on both workspaces. The feature goes back to `review`: what is left is Edwin's acceptance tests and his decisions on DES-0005.
 
 ## Preflight
 

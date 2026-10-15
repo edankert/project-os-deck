@@ -25,7 +25,8 @@ module.exports = async (d) => {
   const model = await (await fetch(`${d.origin}/deck/overview/${ws}`)).json();
   d.log('model', { tickets: Object.keys(model.tickets).length, phases: model.phases.length, shelf: model.shelf.length, backlog: model.backlog.length, core: model.core.tickets.length });
 
-  const phase = model.phases[0]?.id ?? model.shelf[0]?.id;
+  // The phase with the most tickets: where rows are most likely to spill off the plane (TASK-0147).
+  const phase = [...model.phases, ...model.shelf].sort((a, b) => b.tickets.length - a.tickets.length)[0]?.id;
   const linked = Object.values(model.tickets).sort((a, b) => b.links.length - a.links.length)[0];
   const design = Object.values(model.tickets).find((t) => t.id.startsWith('DES-') && t.status === 'proposed') ?? Object.values(model.tickets).find((t) => t.id.startsWith('DES-'));
   const feature = Object.values(model.tickets).find((t) => t.kind === 'feat' && t.status === 'review') ?? Object.values(model.tickets).find((t) => t.kind === 'feat');

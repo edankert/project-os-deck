@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0025
 aliases: ["FEAT-0025"]
 title: "Every overview screen is drawn before it is built: DES-0005's prototype and one plate per screen, from real tickets"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -63,6 +63,8 @@ Out of scope:
 New work: [[TASK-0150]] (Claude) redraws every plate once the screens have changed, with the wheel in both colourings, and revises DES-0005, which stays `proposed`. It waits on every other task of the run.
 
 2026-10-14: built and at review. Codex reviews it, as the agent that did not build it. Edwin's verdict on DES-0005 is the acceptance, given through the cockpit's Accept or Decline on the note, or in Deck's S5 once FEAT-0029 is accepted.
+
+2026-10-15, later: the revision is built, tested and reviewed across models in two rounds. Every task of the revision is done (TASK-0144 to TASK-0151). The node suites pass (777 tests) and the window run TST-0093 passed on both workspaces. The feature goes back to `review`: what is left is Edwin's acceptance tests and his decisions on DES-0005.
 
 ## Review
 

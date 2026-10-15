@@ -25,7 +25,7 @@ export const STATE_WORD: Readonly<Record<State, string>> = {
   closed: 'closed',
   progress: 'in progress',
   failed: 'failed',
-  owed: 'owed again',
+  owed: 'to run again',
   open: 'open',
   dropped: 'dropped',
 };

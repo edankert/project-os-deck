@@ -341,3 +341,19 @@ for (const name of WORKSPACES) {
     }
   });
 }
+
+// TASK-0145 — every ticket mark on the wheel carries its ticket's cockpit type, fill and dot.
+for (const name of WORKSPACES) {
+  test(`${name}: every ticket mark on the wheel and in a phase's rows has its ticket's type, fill and needs-you flag`, () => {
+    const m = model(name);
+    const check = (t, mark, where) => assert.deepEqual([mark.type, mark.fill, mark.needsYou], [t.type, t.fill, t.needsYou], `${where}: ${t.id}`);
+    for (const n of walkScene(wheelScene(m, ctx).nodes)) if (n.kind === 'mark' && n.ticket !== undefined) check(m.tickets[n.ticket], n, 'wheel');
+    const phase = m.phases[0] ?? m.shelf[0];
+    for (const n of walkScene(phaseScene(m, phase.id, ctx).nodes)) {
+      if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) check(m.tickets[r.id], r, phase.id);
+    }
+    // In the state colouring the wheel takes DES-0004's state instead.
+    const state = plainContext('abcd1234', 'features', 'state');
+    for (const n of walkScene(wheelScene(m, state).nodes)) if (n.kind === 'mark' && n.ticket !== undefined) assert.equal(n.state, m.tickets[n.ticket].state);
+  });
+}

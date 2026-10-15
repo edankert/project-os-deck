@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0028
 aliases: ["FEAT-0028"]
 title: "A phase and a ticket open as pictures: the phase's web, exit-criteria ring and depth field; a ticket's lifecycle track and neighbourhood; re-phasing as moving particles"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -64,6 +64,8 @@ Out of scope:
 New work: [[TASK-0147]] (Claude) turns S2's right-hand pane into cockpit rows on a tilted plane. [[TASK-0148]] (Claude) makes S3 show the ticket's text and its linked tickets as rows, with the gate as labelled chips. Both wait on TASK-0144 and TASK-0145; TASK-0148 also waits on Codex's chips in TASK-0149.
 
 2026-10-14: built and at review. TASK-0127, TASK-0128 and TASK-0129 are done; TASK-0129's cockpit issue is cut from this run and written in the adoption table instead. Codex reviews it, as the agent that did not build it. Edwin's acceptance test is [[TST-0092-A-Phase-A-Ticket-And-Re-Phasing-Read-As-Pictures]], not yet run.
+
+2026-10-15, later: the revision is built, tested and reviewed across models in two rounds. Every task of the revision is done (TASK-0144 to TASK-0151). The node suites pass (777 tests) and the window run TST-0093 passed on both workspaces. The feature goes back to `review`: what is left is Edwin's acceptance tests and his decisions on DES-0005.
 
 ## Review
 

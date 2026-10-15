@@ -64,18 +64,18 @@ focus:
   phase: "PHASE-0005"
   feature: "FEAT-0029"
   task: ""
-  note: "2026-10-15: TASK-0151 fixes all seven round-one findings on TASK-0144 and TASK-0149. Both features record reviewer A approve and reviewer B changes-requested. All 769 desktop tests pass. Claude should await featureGate(input, featureId) in S3, pass the result to gateChips, remove ticket stripping and the row filter, verify the fixes and regenerate plates. Gate items are evidence marks with markId and labels, never ticket. Codex commits on lane/codex-r2 without pushing or opening Electron."
+  note: "2026-10-15: the overview revision Edwin asked for after running Deck is built by Claude and Codex (GPT-6 Astra), tested (777 node tests; the window run TST-0093 on Deck and your-trainer) and reviewed across models in two rounds; FEAT-0025 to FEAT-0029 are at review. Every screen draws tickets in the cockpit's colours and marks, S2 lists tickets as cockpit rows on a tilted plane, S3 shows a ticket's text and linked tickets, the gate is five labelled chips, and the overview has back and forward. Left for Edwin: run TST-0091, TST-0092, TST-0088, TST-0089 and TST-0100; accept or decline DES-0005 and answer its questions (which colouring opens, two greens, whether a test that failed in the ledger should need you). TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0029:
-      status: doing
+      status: review
       file: "docs/features/overview-acceptance/FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence.md"
       owner: system:codex
     FEAT-0026:
-      status: doing
+      status: review
       title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
       owner: system:codex
       file: "docs/features/overview-model/FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place.md"
@@ -303,22 +303,22 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0145:
       file: docs/features/overview-wheel/plan/tasks/TASK-0145-Every-Screen-Marks-A-Ticket-In-The-Cockpits-Colour-And-Fill.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0146:
       file: docs/features/overview-wheel/plan/tasks/TASK-0146-Back-And-Forward-Retrace-The-Overview-Screens.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0147:
       file: docs/features/overview-phase/plan/tasks/TASK-0147-A-Phase-Lists-Its-Tickets-As-Cockpit-Rows-On-A-Tilted-Plane.md
-      status: doing
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0148:
       file: docs/features/overview-phase/plan/tasks/TASK-0148-A-Ticket-Opens-With-Its-Text-And-Its-Linked-Tickets-As-Rows.md
-      status: doing
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0149:
@@ -328,7 +328,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0150:
       file: docs/features/overview-design/plan/tasks/TASK-0150-Redraw-DES-0005s-Plates-In-The-Cockpits-Colours-And-Marks.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0142:
@@ -2497,7 +2497,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 142
-    tasks_done: 118
+    tasks_done: 123
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

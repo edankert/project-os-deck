@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0148
 title: "A ticket opens with its id, title and full text, its linked tickets as cockpit rows, and its gate as five labelled chips"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -22,17 +22,21 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 **S3 shows the ticket itself: its id and title at the top, the note's full text, and every ticket it is linked to as a cockpit row.** Today S3 is a lifecycle track, a ring of neighbour glyphs and five small round lamps. Edwin asked for more detail, and asked what the round "solar systems" were.
 
 ## Definition of Done
-- [ ] The top shows the ticket's mark, id, title and its lifecycle track.
-- [ ] The note's full text is in a scrolling panel, using Glass's note reader rather than a new renderer.
-- [ ] Linked tickets are rows like TASK-0147's, grouped by type, in two lists: "links to" and "linked from". A press on a row opens that ticket (and adds a history entry, TASK-0146).
-- [ ] The radial star of neighbours shrinks to a small header picture or goes; whichever is chosen is recorded here with the reason.
-- [ ] The five round gate lamps become five labelled chips, "Requirements 0 / 8" and so on, each with a row of cockpit marks: the same chips as S7's (TASK-0149).
-- [ ] TST-0090 checks, on both fixtures, that the rows are exactly the model's links split by direction, and that the full text is the note's. `cd desktop && npm test` passes.
+- [x] The top shows the ticket's mark, id, title and its lifecycle track.
+- [x] The note's full text is in a scrolling panel, using Glass's note reader rather than a new renderer.
+- [x] Linked tickets are rows like TASK-0147's, grouped by type, in two lists: "links to" and "linked from". A press on a row opens that ticket (and adds a history entry, TASK-0146).
+- [x] The radial star of neighbours shrinks to a small header picture or goes; whichever is chosen is recorded here with the reason.
+- [x] The five round gate lamps become five labelled chips, "Requirements 0 / 8" and so on, each with a row of cockpit marks: the same chips as S7's (TASK-0149).
+- [x] TST-0090 checks, on both fixtures, that the rows are exactly the model's links split by direction, and that the full text is the note's. `cd desktop && npm test` passes.
 
 ## Steps
-- [ ] Rebuild `desktop/src/shared/overview-ticket.ts` around the header, the text panel and the two row lists.
-- [ ] Reuse the chip component from TASK-0149 for the gate.
-- [ ] Rewrite TST-0092's step 2 for the new screen (done at planning; check it still matches when built).
+- [x] Rebuild `desktop/src/shared/overview-ticket.ts` around the header, the text panel and the two row lists.
+- [x] Reuse the chip component from TASK-0149 for the gate.
+- [x] Rewrite TST-0092's step 2 for the new screen (done at planning; check it still matches when built).
+
+## Verification
+
+S3 shows the ticket's square, id and whole title (wrapped, within the sixty-word rule, checked over all 3,131 tickets), its stages track, its full text as the reader renders it (the sidecar's HTML, found through the records route's new `?id=`), and its neighbours as cockpit rows in "Links to" and "Linked from"; a press on a row opens that ticket and adds a history entry, and a link inside the text opens the note it names. **The radial star of neighbours went** rather than shrinking: the rows carry every neighbour's id, title and status, which is what Edwin asked for, and a small star beside the gate and the track would have crowded the header for no new information. A feature's gate is Codex's five labelled chips, loaded through `featureGate` as S7 does. TST-0090 checks the rows against the model's links by direction and the gate counts; TST-0093 checked on both workspaces that the text arrives. Edwin's TST-0092 is not yet run.
 
 ## Notes
 

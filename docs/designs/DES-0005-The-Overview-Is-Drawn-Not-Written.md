@@ -69,7 +69,7 @@ Deck, on the same rules. Deck and Glass are mostly filled, Overview is in progre
 
 ![S2 Phase on Deck, in Deck](__attachments__/DES-0005/window-phase-deck.jpg)
 
-In Deck: Deck's PHASE-0001. Left, the web: amber is what the phase defines and green what it has closed, kind by kind, on one scale for every phase, inside the ring of its exit criteria. Right, the phase's tickets as the cockpit lists them, on a plane tilted away: the nearest rows full size, the ones further back smaller. What needs you stands in front; in progress and open behind it; closed work at the back, folded to a strip of marks with its count until it is pressed open.
+In Deck: Deck's PHASE-0002 Glass, its largest phase. Left, the web: amber is what the phase defines and green what it has closed, kind by kind, on one scale for every phase, inside the ring of its exit criteria. Right, the phase's tickets as the cockpit lists them, on a plane tilted away: the nearest rows full size, the ones further back smaller. What needs you stands in front; in progress and open behind it; closed work at the back, folded to a strip of marks with its count until it is pressed open.
 
 ![S2 Phase on Deck](__attachments__/DES-0005/phase-deck.jpg)
 
@@ -83,7 +83,7 @@ your-trainer's PHASE-021: none needs you by the cockpit's rule, 13 are in progre
 
 ![S3 Ticket on Deck, in Deck](__attachments__/DES-0005/window-ticket-deck.jpg)
 
-In Deck: Deck's TST-0045. At the top, the ticket's square, id and whole title (over up to three lines; a title longer than forty words ends in "…", and the whole of it is in the square's callout), and the stages its kind passes through with its own stop lit. Left, its whole text, as the reader shows it, scrolling. Right, every ticket it links to and every ticket that links to it, as the cockpit's rows; pressing a row opens that ticket here.
+In Deck: Deck's TST-0045. At the top, the ticket's square, id and whole title (over up to four lines, smaller as it grows; it gets the words the rest of the screen leaves under sixty, so a very long title ends in "…", and the whole of it is in the square's callout), and the stages its kind passes through with its own stop lit. Left, its whole text, as the reader shows it, scrolling. Right, every ticket it links to and every ticket that links to it, as the cockpit's rows; pressing a row opens that ticket here.
 
 ![S3 Ticket on Deck](__attachments__/DES-0005/ticket-deck.jpg)
 

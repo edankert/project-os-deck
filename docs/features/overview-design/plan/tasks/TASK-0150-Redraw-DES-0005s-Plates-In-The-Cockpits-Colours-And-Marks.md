@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0150
 title: "DES-0005's plates are redrawn in the cockpit's colours and marks on both workspaces, with the wheel in both colourings"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -22,15 +22,19 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 **Every plate in DES-0005 is drawn again from the changed screen code, on Deck and on your-trainer, so Edwin judges the design from what Deck now draws.** The wheel gets two plates per workspace, one per colouring, so he can choose.
 
 ## Definition of Done
-- [ ] `node desktop/scripts/overview-plates.mjs` regenerates all plates after TASK-0145 to TASK-0149 land; the wheel is drawn in the state colouring and in the type colouring on both workspaces.
-- [ ] Every caption in DES-0005 is rewritten for what the new plate shows, in the cockpit's words, with its words-at-rest count.
-- [ ] DES-0005's revision entry for 2026-10-15 says the plates were redrawn, and its status stays `proposed`.
-- [ ] TST-0094 passes on the new plates, and checks the two wheel colourings are both present.
-- [ ] The interactive page `DES-0005-the-overview.html` is regenerated and its back and forward work as in Deck.
+- [x] `node desktop/scripts/overview-plates.mjs` regenerates all plates after TASK-0145 to TASK-0149 land; the wheel is drawn in the state colouring and in the type colouring on both workspaces.
+- [x] Every caption in DES-0005 is rewritten for what the new plate shows, in the cockpit's words, with its words-at-rest count.
+- [x] DES-0005's revision entry for 2026-10-15 says the plates were redrawn, and its status stays `proposed`.
+- [x] TST-0094 passes on the new plates, and checks the two wheel colourings are both present.
+- [x] The interactive page `DES-0005-the-overview.html` is regenerated and its back and forward work as in Deck.
 
 ## Steps
-- [ ] Add the second wheel colouring to the plate script.
-- [ ] Regenerate, look at every plate, rewrite the captions.
+- [x] Add the second wheel colouring to the plate script.
+- [x] Regenerate, look at every plate, rewrite the captions.
+
+## Verification
+
+The plates were redrawn on 2026-10-15 from the screen code, on both workspaces, the wheel in both colourings, with six pictures from a real Deck window. Every caption in DES-0005 is rewritten with its words at rest; DES-0005 stays `proposed` and its revision says the plates were redrawn. TST-0094 checks every plate, both wheel colourings, that each panel section survives on a flat plate, and that the page's back and forward work.
 
 ## Notes
 

@@ -218,7 +218,7 @@ function coreNodes(model: OverviewModel, ctx: ScreenContext): SceneNode {
   };
 }
 
-/** One finished phase as a disc: a ring of its tickets by state, and a badge for the acceptance tests owed again. */
+/** One finished phase as a disc: a ring of its tickets by state, and a badge for the acceptance tests to run again. */
 function disc(model: OverviewModel, phase: Phase, x: number, y: number, size: number, ctx: ScreenContext): SceneNode {
   const r1 = Math.min(26, size * 0.38);
   const r0 = r1 * 0.5;

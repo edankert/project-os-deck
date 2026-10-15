@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0026
 aliases: ["FEAT-0026"]
 title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
@@ -75,6 +75,8 @@ Deck’s 384-ticket fixture was replayed from `git archive 96955cc8afecc56b8ac36
 2026-10-15: **TASK-0151 fixes the round-one review findings on TASK-0144 and TASK-0149 on `lane/codex-r2`.** Panel count tests now cover both HTML rows and SVG strips. Gate evidence no longer repeats ticket drawings. The full desktop suite passes 769 tests; the Review section records each finding, its fix and the supplied verdicts.
 
 The feature stays `doing`. Claude verifies the repairs, connects S3 to `featureGate`, removes its ticket-stripping workaround and redraws the official plates. Edwin's acceptance remains pending. The model fixtures are unchanged; Your Trainer still records `dirty: true`. Codex commits locally without pushing or opening Electron.
+
+2026-10-15, later: the revision is built, tested and reviewed across models in two rounds. Every task of the revision is done (TASK-0144 to TASK-0151). The node suites pass (777 tests) and the window run TST-0093 passed on both workspaces. The feature goes back to `review`: what is left is Edwin's acceptance tests and his decisions on DES-0005.
 
 ## Review
 

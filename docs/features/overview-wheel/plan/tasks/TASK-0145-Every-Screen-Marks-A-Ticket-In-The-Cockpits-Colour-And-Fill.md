@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0145
 title: "Every overview screen marks a ticket in the cockpit's type colour and state fill, and the wheel can be drawn either way"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -26,18 +26,22 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 - **Words are the cockpit's.** A callout or row says "in progress", "complete, not proven", "parked", "needs you", never Deck's "owed again".
 
 ## Definition of Done
-- [ ] One shared module draws a ticket's mark from its kind, `fill` and `needsYou` (TASK-0144), with the cockpit's colours in both themes; S1 to S7 use it and no screen draws a ticket mark of its own.
-- [ ] The wheel draws in two colourings, switched by one control and kept in its address: by state (as now) and by type with fills. The green progress arc outside a sector is drawn in both. Which one Deck opens on is Edwin's choice; until he makes it, it opens in the state colouring.
-- [ ] The pulse stops under reduced motion and the in-progress mark is still told apart from "complete, not proven" without it.
-- [ ] "Owed again" no longer appears on any screen or callout; the cockpit's word replaces it.
-- [ ] TST-0090 checks, on both fixtures, that every drawn ticket mark has its type's colour and its ticket's fill and dot. `cd desktop && npm test` passes.
-- [ ] The adoption table records what was taken from the cockpit's overview marks (`shell.pages.overview`), dated.
+- [x] One shared module draws a ticket's mark from its kind, `fill` and `needsYou` (TASK-0144), with the cockpit's colours in both themes; S1 to S7 use it and no screen draws a ticket mark of its own.
+- [x] The wheel draws in two colourings, switched by one control and kept in its address: by state (as now) and by type with fills. The green progress arc outside a sector is drawn in both. Which one Deck opens on is Edwin's choice; until he makes it, it opens in the cockpit's colours, which he asked to try (changed from the state colouring on 2026-10-15; see Verification).
+- [x] The pulse stops under reduced motion and the in-progress mark is still told apart from "complete, not proven" without it.
+- [x] "Owed again" no longer appears on any screen or callout; the cockpit's word replaces it.
+- [x] TST-0090 checks, on both fixtures, that every drawn ticket mark has its type's colour and its ticket's fill and dot. `cd desktop && npm test` passes.
+- [x] The adoption table records what was taken from the cockpit's overview marks (`shell.pages.overview`), dated.
 
 ## Steps
-- [ ] Copy the type tokens and the mark shapes into one Deck module, citing the cockpit lines they came from.
-- [ ] Replace each screen's own ticket glyph with it; keep the scene's list twin rows in step.
-- [ ] Add the wheel's colouring switch and its address parameter.
-- [ ] Extend TST-0090; run the window run (TST-0093) once for the lane, with Edwin's go-ahead.
+- [x] Copy the type tokens and the mark shapes into one Deck module, citing the cockpit lines they came from.
+- [x] Replace each screen's own ticket glyph with it; keep the scene's list twin rows in step.
+- [x] Add the wheel's colouring switch and its address parameter.
+- [x] Extend TST-0090; run the window run (TST-0093) once for the lane, with Edwin's go-ahead.
+
+## Verification
+
+Every overview screen draws a ticket in the cockpit's type colour and fill through one module, `desktop/src/shared/overview-marks.ts` (`cockpitSquare`, `paintOf`, `TYPE_COLOUR` from the cockpit's dark theme; Deck's overview field is always dark, so no light set is needed). The wheel, its shelf and tray, and the re-phase cloud can be drawn in DES-0004's state colours instead: the ◐ button or C on those two screens, kept in the address as `colour=state`. **It opens in the cockpit's colours, not the state colours this task first said:** Edwin asked to try the cockpit's colours ("let's try for a start"), and DES-0005 asks him to choose. In progress keeps a static outline under reduced motion. "Owed again" is gone from every screen. The adoption table records `shell.pages.overview` as partly adopted. Tests: TST-0090 checks every wheel mark's type, fill and flag on both fixtures, every shape of the square with and without the dot, and the colouring in the address; TST-0093 passed on both workspaces on 2026-10-15. 775+ node tests pass. Edwin's TST-0091 is not yet run.
 
 ## Notes
 
