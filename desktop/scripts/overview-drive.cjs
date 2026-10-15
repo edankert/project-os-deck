@@ -97,21 +97,24 @@ module.exports = async (d) => {
   // Back and forward retrace the screens just visited (TASK-0146): the buttons, then ⌘[ and ⌘].
   const trailBefore = await js('window.__deckOverview.trail()');
   const shownAt = async () => js('window.__deckOverview.current().address');
+  // A press is not awaited the way an address is, and a heavy screen (your-trainer's release
+  // test draws 1,388 beads after a sidecar read) takes longer than settle's pause: wait for it.
+  const arrives = async (address) => {
+    for (let i = 0; i < 60 && (await shownAt()) !== address; i += 1) await d.delay(250);
+    await d.delay(300);
+    return shownAt();
+  };
   assert.equal(await shownAt(), trailBefore.entries[trailBefore.at], 'the trail points at the screen shown');
   await js("document.getElementById('ov-back').click()");
-  await settle();
-  assert.equal(await shownAt(), trailBefore.entries[trailBefore.at - 1], '← shows the screen before');
+  assert.equal(await arrives(trailBefore.entries[trailBefore.at - 1]), trailBefore.entries[trailBefore.at - 1], '← shows the screen before');
   const enabled = await js("({ back: !document.getElementById('ov-back').disabled, forward: !document.getElementById('ov-forward').disabled, shown: !document.getElementById('ov-history').hidden })");
   assert.deepEqual(enabled, { back: true, forward: true, shown: true }, 'after one step back both buttons are live');
   await js("document.getElementById('ov-forward').click()");
-  await settle();
-  assert.equal(await shownAt(), trailBefore.entries[trailBefore.at], '→ returns to the screen after');
+  assert.equal(await arrives(trailBefore.entries[trailBefore.at]), trailBefore.entries[trailBefore.at], '→ returns to the screen after');
   d.press(win, '[', ['meta']);
-  await settle();
-  const keyBack = await shownAt();
+  const keyBack = await arrives(trailBefore.entries[trailBefore.at - 1]);
   d.press(win, ']', ['meta']);
-  await settle();
-  const keyForward = await shownAt();
+  const keyForward = await arrives(trailBefore.entries[trailBefore.at]);
   d.log('back and forward', { from: trailBefore.entries[trailBefore.at], keyBack, keyForward });
   assert.equal(keyBack, trailBefore.entries[trailBefore.at - 1], '⌘[ goes back');
   assert.equal(keyForward, trailBefore.entries[trailBefore.at], '⌘] goes forward');
