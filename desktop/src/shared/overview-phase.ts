@@ -6,9 +6,9 @@
  * amber and the closed count in green, on one square-root scale shared by
  * every phase of the workspace, so a bigger phase draws a bigger web. Around
  * it, the exit criteria as a ring of segments, lit when ticked. Right, the
- * phase's tickets as glyphs in a field with depth: what needs a person in
- * front, large and glowing; what is in progress or open in the middle;
- * what is closed far back as dust. A glyph's shape is its kind.
+ * phase's tickets as the cockpit lists them, on a plane tilted away: what
+ * needs you in front, what is in progress or open behind it, and what is
+ * closed at the back, folded to a strip of marks (TASK-0147).
  */
 import { backControl, bezel, frame, heading } from './overview-chrome.js';
 import { arc, plainName, polar, polygon, TAU } from './overview-geometry.js';
