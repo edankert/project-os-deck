@@ -45,9 +45,32 @@ const flowFixture = (name) => {
 
 /** Which phase and which ticket each workspace's plates show: the ones with the most to say. */
 const CHOICES = {
-  deck: { label: 'Deck', phase: 'PHASE-0002', ticket: 'FEAT-0024' },
-  'your-trainer': { label: 'your-trainer', phase: 'PHASE-021', ticket: 'TST-0656' },
+  deck: { label: 'Deck', phase: 'PHASE-0002', ticket: 'FEAT-0024', root: path.join(desktop, '..') },
+  'your-trainer': { label: 'your-trainer', phase: 'PHASE-021', ticket: 'TST-0656', root: path.resolve(option('--your-trainer', path.join(desktop, '..', '..', 'your-trainer'))) },
 };
+
+/**
+ * A note's Markdown body, for S3's text panel (TASK-0148): found by its id in the
+ * workspace's docs, without its frontmatter. Deck shows the sidecar's rendered text;
+ * a plate has no sidecar, so it draws these lines flat. Empty when the file is absent.
+ */
+function noteText(root, id) {
+  const docs = path.join(root, 'docs');
+  if (!fs.existsSync(docs)) return '';
+  const stack = [docs];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name !== 'archive' && !entry.name.startsWith('.')) stack.push(path.join(dir, entry.name));
+      else if (entry.isFile() && entry.name.startsWith(`${id}-`) && entry.name.endsWith('.md')) {
+        const text = fs.readFileSync(path.join(dir, entry.name), 'utf-8');
+        const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text);
+        return m ? text.slice(m[0].length) : text;
+      }
+    }
+  }
+  return '';
+}
 
 /** Words at rest, counted the way FEAT-0026's check counts them when it is built, else the plain way. */
 function wordsAtRest(scene) {
@@ -77,8 +100,10 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   const ctx = plainContext('abcd1234', 'features');
   const screens = [
     ['wheel', 'S1 Wheel', () => wheelScene(model, ctx)],
+    // The same wheel in DES-0004's state colours, for Edwin to compare (TASK-0145).
+    ['wheel-state', 'S1 Wheel, state colours', () => wheelScene(model, plainContext('abcd1234', 'features', 'state'))],
     ['phase', 'S2 Phase', () => phaseScene(model, choice.phase, ctx)],
-    ['ticket', 'S3 Ticket', () => ticketScene(model, choice.ticket, ctx)],
+    ['ticket', 'S3 Ticket', () => ticketScene(model, choice.ticket, ctx, { text: noteText(choice.root, choice.ticket) })],
     ['rephase', 'S4 Re-phase', () => rephaseScene(model, ctx)],
   ];
   // S5 to S7 are FEAT-0029's, drawn from recorded sidecar payloads.
@@ -110,9 +135,10 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
         }
       }
     }
-    const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.ticket !== undefined).length;
+    // A ticket is drawn by a mark, or by a row of a panel (TASK-0147, TASK-0148).
+    const marks = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'mark' && node.ticket !== undefined ? 1 : node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
     plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, rows: scene.list.length, address: scene.address, ...(key === 'ticket' ? { ticket: choice.ticket } : {}) });
-    console.log(`${base}: ${wordsAtRest(scene)} words at rest, ${marks} ticket marks, ${scene.list.length} list rows${png ? '' : ' (no PNG: rsvg-convert is not installed)'}`);
+    console.log(`${base}: ${wordsAtRest(scene)} words at rest, ${marks} tickets drawn, ${scene.list.length} list rows${png ? '' : ' (no PNG: rsvg-convert is not installed)'}`);
   }
 }
 fs.writeFileSync(path.join(out, 'plates.json'), `${JSON.stringify(plates, null, 2)}\n`);
@@ -150,7 +176,7 @@ let ws = 'deck', screen = 'wheel';
 function show() {
   const p = plates.find((x) => x.ws === ws && x.key === screen) || plates.find((x) => x.ws === ws);
   document.getElementById('plate').data = '${rel}/' + p.svg;
-  document.getElementById('caption').textContent = p.title + ' on ' + p.label + ': ' + p.words + ' words at rest, ' + p.marks + ' ticket marks, ' + p.rows + ' rows in the list twin. Address: ' + p.address;
+  document.getElementById('caption').textContent = p.title + ' on ' + p.label + ': ' + p.words + ' words at rest, ' + p.marks + ' tickets drawn, ' + p.rows + ' rows in the list twin. Address: ' + p.address;
   for (const b of document.querySelectorAll('#ws button')) b.setAttribute('aria-pressed', String(b.dataset.ws === ws));
   for (const b of document.querySelectorAll('#screen button')) b.setAttribute('aria-pressed', String(b.dataset.screen === screen));
 }
