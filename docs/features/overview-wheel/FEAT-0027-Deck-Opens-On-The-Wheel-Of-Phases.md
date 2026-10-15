@@ -11,7 +11,7 @@ updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person opening Deck sees, in one picture, how far each unfinished phase has got and where the failed, owed-again and open tickets are, and reaches any phase from it in one click."
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0131]]", "[[TASK-0145]]", "[[TASK-0146]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0131]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0152]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
