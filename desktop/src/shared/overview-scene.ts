@@ -205,6 +205,7 @@ ${panelCss(FIELD, NEEDS_YOU)}
 .ov .ov-track { fill: hsla(210, 60%, 50%, 0.07); stroke: hsla(195, 80%, 60%, 0.16); stroke-width: 1; }
 .ov .ov-glass { fill: hsla(205, 60%, 40%, 0.14); stroke: hsla(190, 90%, 65%, 0.5); stroke-width: 1; }
 .ov .ov-faint { opacity: 0.35; }
+.ov .ov-links line { stroke: hsla(190, 90%, 72%, 0.55); stroke-width: 1; pointer-events: none; }
 .ov .ov-row { fill: hsla(205, 60%, 40%, 0.1); stroke: hsla(190, 90%, 65%, 0.12); stroke-width: 1; }
 .ov .ov-ghost { opacity: 0.12; }
 .ov .ov-hit { fill: transparent; stroke: none; }

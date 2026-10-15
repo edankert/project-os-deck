@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0155
 title: "The wheel becomes a constellation: each phase a segment of the ring, its tickets fanned inward as particles, a bubble counting what needs you"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

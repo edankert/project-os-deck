@@ -13,7 +13,7 @@
  * the two shelf captions; everything else is on hover.
  */
 import { bezel, frame } from './overview-chrome.js';
-import { annularSector, arc, polar, shortName, TAU } from './overview-geometry.js';
+import { annularSector, arc, glyph, polar, shortName, TAU } from './overview-geometry.js';
 import { markWords, paintOf, rowWords } from './overview-marks.js';
 import type { ListRow, MarkNode, Scene, SceneNode, ScreenContext, TextNode } from './overview-scene.js';
 import {
@@ -116,19 +116,70 @@ function ringBand(index: number, count: number, inner: number, outer: number, ga
   return [inner + index * width + gap / 2, inner + (index + 1) * width - gap / 2];
 }
 
+/**
+ * Where each of a fan's particles stands: rows across the sector from its ring
+ * inward, as re-phasing packs its clusters (TASK-0155). The pitch shrinks until
+ * every particle fits between the ring and the core, so no two share a place.
+ */
+export function fanPlaces(count: number, cx: number, cy: number, rIn: number, rOut: number, a0: number, a1: number): Array<{ x: number; y: number; size: number }> {
+  if (count === 0) return [];
+  const width = (a1 - a0) * 0.9;
+  const mid = (a0 + a1) / 2;
+  const area = 0.5 * width * (rOut * rOut - rIn * rIn);
+  for (let pitch = Math.min(18, Math.max(3, Math.sqrt(area / count) * 0.92)); pitch >= 2.5; pitch -= 0.25) {
+    const out: Array<{ x: number; y: number; size: number }> = [];
+    for (let r = rOut - pitch / 2; r >= rIn && out.length < count; r -= pitch) {
+      const cols = Math.max(1, Math.floor((width * r) / pitch));
+      const here = Math.min(cols, count - out.length);
+      for (let k = 0; k < here; k += 1) {
+        // A short row is centred on the sector's bearing, as re-phasing's clusters are.
+        const a = mid + (here > 1 ? (k / (here - 1) - 0.5) * width * (here / cols) : 0);
+        const [x, y] = polar(cx, cy, r, a);
+        out.push({ x, y, size: Math.min(6, pitch * 0.36) });
+      }
+    }
+    if (out.length === count) return out;
+  }
+  return [];
+}
+
+/** How far into the fan a ticket stands: done work at the ring, open work in front of it, what needs you in front of all. */
+function depthOf(t: Ticket): number {
+  if (t.needsYou) return 2;
+  return t.fill === 'delivered' || t.fill === 'dropped' ? 0 : 1;
+}
+
+const KIND_ORDER: readonly Kind[] = ['feat', 'req', 'task', 'test', 'iss', 'dec', 'risk'];
+
 function sectorNodes(model: OverviewModel, phase: Phase, a0: number, a1: number, ctx: ScreenContext): SceneNode[] {
   const nodes: SceneNode[] = [];
   const { cx, cy } = WHEEL;
   const children: SceneNode[] = [];
   const lit: MarkNode[] = [];
-  PHASE_KINDS.forEach((kind, k) => {
-    const [r0, r1] = ringBand(k, PHASE_KINDS.length, WHEEL.ringInner, WHEEL.ringOuter, WHEEL.ringGap);
-    children.push({ kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, r0, r1, a0, a1) }, cls: 'ov-track' });
-    const wedges = ringWedges(model, ctx, idsOfKind(model, phase.tickets, kind), r0, r1, a0, a1, WHEEL.maxShare);
-    children.push(...wedges.plain);
-    lit.push(...wedges.lit);
+  // The phase's segment of the ring, which the fan hangs from.
+  children.push({ kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, WHEEL.ringOuter - 4, WHEEL.ringOuter + 8, a0, a1) }, cls: 'ov-track' });
+  const tickets = phase.tickets.map((id) => model.tickets[id]).filter((t): t is Ticket => t !== undefined);
+  tickets.sort((a, b) => depthOf(a) - depthOf(b) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.id.localeCompare(b.id, 'en', { numeric: true }));
+  const places = fanPlaces(tickets.length, cx, cy, WHEEL.coreOuter + 16, WHEEL.ringOuter - 10, a0, a1);
+  tickets.forEach((t, i) => {
+    const place = places[i];
+    if (place === undefined) return;
+    const front = needsPerson(t);
+    const shape = glyph(t.kind, place.x, place.y, front ? place.size * 1.35 : place.size);
+    const mark: MarkNode = { kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, ...paintOf(t, ctx), label: ticketLabel(t) };
+    (front ? lit : children).push(mark);
   });
   if (lit.length > 0) children.push({ kind: 'group', cls: 'glow', children: lit });
+
+  // What needs you here, counted on the ring itself.
+  const waiting = tickets.filter(needsPerson).length;
+  if (waiting > 0) {
+    const [bx, by] = polar(cx, cy, WHEEL.ringOuter + 2, (a0 + a1) / 2);
+    const badgeId = `needs-${phase.id}`;
+    const paint = ctx.colouring === 'state' ? { state: 'failed' as const } : { cls: 'ov-badge' };
+    children.push({ kind: 'mark', tag: 'circle', attrs: { cx: bx, cy: by, r: 12 }, ...paint, glow: true, markId: badgeId, count: waiting, label: `${waiting} ticket${waiting === 1 ? '' : 's'} in ${phase.id} need${waiting === 1 ? 's' : ''} you` });
+    children.push({ kind: 'text', x: bx, y: by + 4, text: String(waiting), rest: true, role: 'number', markRef: badgeId, size: 11, anchor: 'middle' });
+  }
 
   // Progress: the closed share of what the phase defines, drawn outside it.
   const { closed, live } = closedOf(model, phase);
@@ -195,24 +246,33 @@ function sectorNodes(model: OverviewModel, phase: Phase, a0: number, a1: number,
   return nodes;
 }
 
+/**
+ * The core: decisions, designs, risks and the tickets with no phase, as a slow cloud
+ * round the no-phase button, the way re-phasing draws what no phase fits.
+ */
 function coreNodes(model: OverviewModel, ctx: ScreenContext): SceneNode {
   const children: SceneNode[] = [];
   const lit: MarkNode[] = [];
   const { cx, cy } = WHEEL;
-  CORE_KINDS.forEach((kind, k) => {
-    const [r0, r1] = ringBand(k, CORE_KINDS.length, WHEEL.coreInner, WHEEL.coreOuter, 2);
-    children.push({ kind: 'mark', tag: 'path', attrs: { d: annularSector(cx, cy, r0, r1, 0, TAU) }, cls: 'ov-track' });
-    const wedges = ringWedges(model, ctx, idsOfKind(model, model.core.tickets, kind), r0, r1, 0, TAU, 0.1);
-    children.push(...wedges.plain);
-    lit.push(...wedges.lit);
+  const tickets = model.core.tickets.map((id) => model.tickets[id]).filter((t): t is Ticket => t !== undefined);
+  const inner = 50;
+  const outer = WHEEL.coreOuter;
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const size = Math.max(1.6, Math.min(5, Math.sqrt((Math.PI * (outer * outer - inner * inner)) / Math.max(1, tickets.length)) * 0.3));
+  tickets.forEach((t, i) => {
+    // Evenly over the ring between the button and the fans: equal area per ticket.
+    const r = Math.sqrt(inner * inner + ((i + 0.5) / tickets.length) * (outer * outer - inner * inner));
+    const [x, y] = polar(cx, cy, r, i * golden);
+    const shape = glyph(t.kind, x, y, size);
+    const mark: MarkNode = { kind: 'mark', tag: shape.tag, attrs: shape.attrs, ticket: t.id, ...paintOf(t, ctx), label: ticketLabel(t) };
+    (needsPerson(t) ? lit : children).push(mark);
   });
   if (lit.length > 0) children.push({ kind: 'group', cls: 'glow', children: lit });
   const suggested = model.core.tickets.filter((id) => model.tickets[id]?.suggestion !== undefined).length;
   return {
     kind: 'group',
     key: 'core',
-    cls: 'ov-core',
-    target: ctx.address({ page: 'rephase' }),
+    cls: 'ov-core ov-pulse',
     label: `Project-wide and unplaced: ${model.core.tickets.length} tickets, ${suggested} with a suggested phase`,
     children,
   };
@@ -369,13 +429,6 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext): Scene {
   model.phases.forEach((phase, i) => {
     const a0 = WHEEL.topGap / 2 + i * (sector + WHEEL.sectorGap);
     nodes.push(...sectorNodes(model, phase, a0, a0 + sector, ctx));
-  });
-
-  // Ring initials, in the gap at twelve o'clock.
-  PHASE_KINDS.forEach((kind, k) => {
-    const [r0, r1] = ringBand(k, PHASE_KINDS.length, WHEEL.ringInner, WHEEL.ringOuter, WHEEL.ringGap);
-    const [x, y] = polar(WHEEL.cx, WHEEL.cy, (r0 + r1) / 2, 0);
-    nodes.push({ kind: 'text', x, y: y + 4, text: INITIAL[kind], rest: true, role: 'label', size: 11, anchor: 'middle', cls: 'ov-dim' });
   });
 
   // The shelf: finished phases, in order, under the wheel.

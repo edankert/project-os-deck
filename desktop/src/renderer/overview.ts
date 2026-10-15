@@ -20,7 +20,7 @@
  * the shell sends them through `write-client.ts` (ADR-0003).
  */
 import { addressFor, formatAddress } from '../shared/address.js';
-import { sceneToSvg, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
+import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
@@ -192,7 +192,7 @@ export function initOverview(host: OverviewHostApi): void {
   window.addEventListener('resize', () => place());
   stage.addEventListener('pointerover', (event) => onPoint(event));
   stage.addEventListener('pointermove', (event) => moveCallout(event));
-  stage.addEventListener('pointerleave', () => hideCallout());
+  stage.addEventListener('pointerleave', () => { hideCallout(); drawWires(null); });
   stage.addEventListener('focusin', (event) => onFocus(event));
   stage.addEventListener('focusout', () => hideCallout());
   // On the document, not the layer: after a click on the picture the keyboard is on the
@@ -415,6 +415,7 @@ function paint(scene: Scene, workspaceId: string): void {
   if (stage === null) return;
   const before = positions();
   stage.innerHTML = sceneToSvg(scene, { panels: 'html' });
+  centres = centresOf(scene);
   const svg = stage.querySelector('svg');
   svg?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const host = api;
@@ -577,7 +578,58 @@ function labelOf(element: Element | null): string | null {
   return labelled?.getAttribute('data-label') ?? null;
 }
 
+/** Where each ticket's mark stands in the current scene, by its own geometry, for the wires. */
+let centres: Map<string, [number, number]> = new Map();
+
+function centresOf(scene: Scene): Map<string, [number, number]> {
+  const out = new Map<string, [number, number]>();
+  for (const node of walkScene(scene.nodes)) {
+    if (node.kind !== 'mark' || node.ticket === undefined || out.has(node.ticket)) continue;
+    if (node.attrs['cx'] !== undefined) out.set(node.ticket, [Number(node.attrs['cx']), Number(node.attrs['cy'])]);
+    else if (node.attrs['points'] !== undefined) {
+      const xy = String(node.attrs['points']).split(/[ ,]/).map(Number);
+      const xs = xy.filter((_, i) => i % 2 === 0);
+      const ys = xy.filter((_, i) => i % 2 === 1);
+      out.set(node.ticket, [xs.reduce((a, b) => a + b, 0) / xs.length, ys.reduce((a, b) => a + b, 0) / ys.length]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Pointing at a ticket on the wheel draws a wire to every ticket it links to and every
+ * ticket that links to it, where those are on screen (TASK-0155). From the scene's own
+ * coordinates, so the wires stay right when the picture is turned in 3D.
+ */
+function drawWires(element: Element | null): void {
+  const svg = stage?.querySelector('svg');
+  svg?.querySelector('.ov-links')?.remove();
+  if (svg === null || svg === undefined || current === null || current.scene.screen !== 'wheel' || element === null) return;
+  const id = element.closest('[data-ticket]')?.getAttribute('data-ticket');
+  const model = models.get(current.address.workspaceId)?.model;
+  if (id === null || id === undefined || model === undefined || model.tickets[id] === undefined) return;
+  const from = centres.get(id);
+  if (from === undefined) return;
+  const linked = new Set(model.tickets[id]!.links);
+  for (const other of Object.values(model.tickets)) if (other.links.includes(id)) linked.add(other.id);
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('class', 'ov-links');
+  for (const other of linked) {
+    const to = centres.get(other);
+    if (to === undefined || other === id) continue;
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', String(from[0]));
+    line.setAttribute('y1', String(from[1]));
+    line.setAttribute('x2', String(to[0]));
+    line.setAttribute('y2', String(to[1]));
+    g.appendChild(line);
+  }
+  svg.appendChild(g);
+}
+
 function onPoint(event: PointerEvent): void {
+  drawWires(event.target as Element | null);
   const label = labelOf(event.target as Element | null);
   if (label === null) {
     hideCallout();
@@ -588,6 +640,7 @@ function onPoint(event: PointerEvent): void {
 
 function onFocus(event: FocusEvent): void {
   const element = event.target as Element | null;
+  drawWires(element);
   const label = labelOf(element);
   if (label === null || element === null) return;
   const box = element.getBoundingClientRect();

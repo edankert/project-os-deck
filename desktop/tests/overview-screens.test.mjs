@@ -413,3 +413,36 @@ test('the gate arch draws five segments that fill with their evidence and say wh
     }
   }
 });
+
+// TASK-0155 — the wheel is a constellation: every ticket of an unfinished phase is one
+// particle in its phase's fan, done work at the ring, what needs you in front, no two
+// on one place, and a needs-you count on each segment.
+for (const name of WORKSPACES) {
+  test(`${name}: the wheel draws each phase as a fan of particles, done at the ring and needs-you in front`, () => {
+    const m = model(name);
+    const scene = wheelScene(m, ctx);
+    const { WHEEL } = load('shared/overview-wheel.js');
+    const distance = (n) => {
+      if (n.attrs.cx !== undefined) return Math.hypot(Number(n.attrs.cx) - WHEEL.cx, Number(n.attrs.cy) - WHEEL.cy);
+      const xy = String(n.attrs.points).split(/[ ,]/).map(Number);
+      const xs = xy.filter((_, i) => i % 2 === 0), ys = xy.filter((_, i) => i % 2 === 1);
+      return Math.hypot(xs.reduce((a, b) => a + b, 0) / xs.length - WHEEL.cx, ys.reduce((a, b) => a + b, 0) / ys.length - WHEEL.cy);
+    };
+    for (const phase of m.phases) {
+      const sector = scene.nodes.find((n) => n.kind === 'group' && n.key === `sector-${phase.id}`);
+      assert.ok(sector !== undefined, `${phase.id} is drawn`);
+      const marks = [...walkScene(sector.children)].filter((n) => n.kind === 'mark' && n.ticket !== undefined);
+      assert.equal(marks.length, phase.tickets.length, `${phase.id}: one particle per ticket`);
+      const places = new Set(marks.map((n) => JSON.stringify(n.attrs)));
+      assert.equal(places.size, marks.length, `${phase.id}: no two particles on one place`);
+      const r = (pred) => marks.filter((n) => pred(m.tickets[n.ticket])).map(distance);
+      const front = r((t) => t.needsYou), done = r((t) => !t.needsYou && ['delivered', 'dropped'].includes(t.fill)), open = r((t) => !t.needsYou && !['delivered', 'dropped'].includes(t.fill));
+      if (front.length && open.length) assert.ok(Math.max(...front) <= Math.min(...open) + 4, `${phase.id}: what needs you stands in front of open work`);
+      if (open.length && done.length) assert.ok(Math.max(...open) <= Math.min(...done) + 4, `${phase.id}: open work stands in front of done work`);
+      const waiting = phase.tickets.filter((id) => m.tickets[id].needsYou).length;
+      const badge = [...walkScene(sector.children)].find((n) => n.kind === 'mark' && n.markId === `needs-${phase.id}`);
+      if (waiting === 0) assert.equal(badge, undefined, `${phase.id}: no badge when nothing needs you`);
+      else assert.equal(badge?.count, waiting, `${phase.id}: the badge counts what needs you`);
+    }
+  });
+}

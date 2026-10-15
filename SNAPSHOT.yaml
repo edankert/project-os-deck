@@ -315,7 +315,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0155:
       file: docs/features/overview-wheel/plan/tasks/TASK-0155-The-Wheel-Becomes-A-Constellation-Of-Tickets.md
-      status: backlog
+      status: doing
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0156:
