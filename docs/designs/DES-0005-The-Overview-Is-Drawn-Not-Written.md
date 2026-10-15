@@ -45,7 +45,8 @@ The rules are in [[PHASE-0005-Overview]], "The look". Four of them are checked b
 - **The fill is the state, as in the cockpit's overview.** Filled is done. Hollow is not started. Inverted and pulsing is in progress. Inverted and still is "complete, not proven". Solid with a slit is "resolved, nothing delivered". Hollow with a strike is "parked". A red dot on the corner is "needs you", whatever the type. On a wedge of the wheel, which is not a square, the same states are drawn as a full, hollow, half or dashed wedge, and "needs you" as a red outline that glows. The fill and the dot are worked out by the cockpit's own rules, ported into Deck and checked against the cockpit's answers: no ticket differs on either workspace ([[TASK-0144]]).
 - **The state colours are still there to compare.** On the wheel and the re-phase screen, the ◐ button beside the list button, or the C key, redraws the wheel, its shelf and tray, and the re-phase cloud in DES-0004's state colours: closed green, in progress blue, failed red, owed violet, open amber, dropped grey. Lists of tickets, a ticket's own square and the gate keep the cockpit's marks in both. The colouring is part of the screen's address (`colour=state`), so a copied address shows the same picture; Deck remembers the last choice only for opening the wheel.
 - **Shape is kind on the wheel and in the re-phase cloud.** Requirements are diamonds, features hexagons, tasks circles, tests squares, issues triangles, decisions and designs pentagons, risks octagons. In a list every ticket is the cockpit's square.
-- **The instrument.** A dark field with a faint grid, corner brackets, a ticked bezel, and a scan ring that turns once a minute on the wheel. A list of tickets stands on a plane tilted away in real depth and leans a little toward the pointer. Moving between screens animates every ticket that is on both. Nothing moves for a person who asked for less motion.
+- **Needs you says what to do.** A ticket that needs you carries the cockpit's reason and one sentence: "Decide: take it into the backlog, or decline it" at triage, "Review it, then accept it or send it back" at review, "Run this test: it has never been run" for a test never run, "It failed: fix it, or run it again", or "Waiting on TASK-0002: finish that first". S3 shows it as a red banner with a button to where you act, S2 under the ticket's row, and every callout at its end.
+- **The instrument, in 3D.** A dark field with a faint grid, corner brackets and a ticked bezel. Every screen stands on a plane the camera looks at: the wheel, re-phasing and the release test lean back, a phase leans a little, and a ticket, a design and a feature's gate start flat because they hold text to read. Drag with the middle button to turn and tilt, add Shift to pan, scroll or pinch to zoom toward the pointer, and double-click on empty space or press 0 to put it back; + and − zoom too. A list of tickets also stands on its own plane tilted away and leans toward the pointer. Moving between screens animates every ticket that is on both. Nothing moves for a person who asked for less motion, except by their own hand.
 - **Words appear on demand.** Pointing at a mark or a row shows its callout in the cockpit's words, for example "FEAT-0024 Evidence stands beside the claim it supports (review) — needs you". L opens the list twin: the same screen as rows, for the keyboard and a screen reader.
 - **Back and forward.** ← and → beside the Deck name, ⌘[ and ⌘], and the mouse's own buttons retrace the screens visited, as a browser does. Escape still goes up a level, from a ticket to its phase and from a phase to the wheel.
 
@@ -55,7 +56,7 @@ The rules are in [[PHASE-0005-Overview]], "The look". Four of them are checked b
 
 ![S1 Wheel on your-trainer](__attachments__/DES-0005/wheel-your-trainer.jpg)
 
-your-trainer, in the cockpit's colours. One sector per phase still to finish, in the order the phase notes declare; one ring per ticket kind; one wedge per ticket, done first. Done work is filled and open work hollow, so a sector's unfinished part reads as outlines. The green arc outside a sector is how much of it is closed, and the segments beyond it are its exit criteria. The core holds decisions, designs, risks and the tickets with no phase. The middle of the wheel is a button: the number of tickets with no phase, which opens re-phasing (S4). A "Release test" button under the workspace's name opens S6, on every workspace, including one with no finished phase. Finished phases are discs on the shelf, each with a red badge counting its acceptance tests to run again (32 in PHASE-010); pressing a badge opens the release test. The backlog is the tray. **42 words at rest.**
+your-trainer, in the cockpit's colours: **the constellation.** Each phase still to finish is a segment of the outer ring, in the order the phase notes declare, and its tickets fan inward from it as particles, the way re-phasing draws its clusters (Edwin liked that screen best). Done work stands at the ring, open work in front of it, and what needs you glows at the front; the red count on each segment is how many need you there. Pointing at a ticket draws a wire to every ticket it links to. The green arc outside a segment is how much of the phase is closed, and the short segments beyond it are its exit criteria. In the middle, the project-wide tickets and those with no phase circle the button into re-phasing, which says how many have no phase; "Release test" under the name opens S6. Finished phases are discs on the shelf, each with a red badge counting its acceptance tests to run again; the backlog is the tray. **42 words at rest.**
 
 ![S1 Wheel on your-trainer, in the state colours](__attachments__/DES-0005/wheel-state-your-trainer.jpg)
 
@@ -63,7 +64,11 @@ The same wheel in DES-0004's state colours, as first built, for comparison. **42
 
 ![S1 Wheel on Deck](__attachments__/DES-0005/wheel-deck.jpg)
 
-Deck, on the same rules. Deck and Glass are mostly filled, Overview is in progress, and Parity and Vault are empty tracks with only exit criteria. **16 words at rest.** The state-coloured version is `wheel-state-deck.jpg`.
+Deck, on the same rules: Deck and Glass are mostly done, with Glass's seven tickets that need you glowing at the front of its fan, Overview is in progress, and Parity and Vault are nearly empty. **13 words at rest.** The state-coloured version is `wheel-state-deck.jpg`.
+
+![S1 Wheel on Deck, turned in Deck](__attachments__/DES-0005/window-wheel-turned-deck.jpg)
+
+In Deck, turned with the middle button, tilted further and zoomed: the same wheel standing in depth.
 
 ### S2 Phase
 
@@ -87,7 +92,7 @@ In Deck: Deck's TST-0045. At the top, the ticket's square, id and whole title (o
 
 ![S3 Ticket on Deck](__attachments__/DES-0005/ticket-deck.jpg)
 
-The plate: Deck's FEAT-0024, at review, which the cockpit marks as needing you. Beside its stages is its gate: five labelled chips for the checks before a feature is accepted, requirements, tasks, reviews, automated tests and acceptance tests. Each shows the same evidence S7 reads from the sidecar: its count, and a square per item, filled when that item counts as done. A check Deck cannot read says "not reported" and draws no verdict. Pressing the gate opens S7. It links to 18 tickets and one links to it. **32 words at rest**, besides the text and the rows.
+The plate: Deck's FEAT-0024, at review, which the cockpit marks as needing you; the red banner under its stages says "Review it, then accept it or send it back", and its button opens S7. Beside its stages is its gate, drawn small as the arch of the five checks before a feature is accepted (below, under S7). It links to 18 tickets and one links to it. **44 words at rest**, besides the text and the rows.
 
 ![S3 Ticket on your-trainer](__attachments__/DES-0005/ticket-your-trainer.jpg)
 
@@ -127,7 +132,11 @@ Deck has no release yet, so the rings are empty and the screen says so. **8 word
 
 ![S7 Ticket acceptance on Deck](__attachments__/DES-0005/accept-deck.jpg)
 
-Deck's feature at its gate, as five labelled chips: each names its check, gives its count as done of total with a bar, and draws a cockpit square per item. A chip whose result the sidecar does not report says "not reported"; one with nothing in it says "nothing to check". Neither is drawn as needing anyone. Accept and Send back are unavailable because the cockpit advertises neither feature transition, and pointing at them says so. **30 words at rest.**
+**S7 shows the feature's own text beside its gate,** so the person reads what they are accepting (Edwin, 2026-10-15). The text is on the left, as the reader renders it. On the right, the gate is an arch over the feature: requirements, tasks, reviews, automated tests and acceptance tests, left to right. Each part is a gauge of cells, one per item, filled when that item counts as done, with its count outside the arch and its name beyond it; past forty items a part fills as one band. A part Deck cannot read is dashed and empty and says "not reported"; one with nothing in it says "nothing to check"; neither is drawn as needing anyone. The keystone over the arch lights when every part is done. Accept and Send back are under the arch; they are unavailable because the cockpit advertises neither feature transition, and pointing at them says so. **30 words at rest**, besides the text.
+
+![S7 Ticket acceptance on Deck, in Deck](__attachments__/DES-0005/window-accept-with-text-deck.jpg)
+
+In Deck: FEAT-0018, with its text loaded from the sidecar.
 
 ![S7 Ticket acceptance on your-trainer](__attachments__/DES-0005/accept-your-trainer.jpg)
 
@@ -149,7 +158,7 @@ A part Deck cannot read is drawn as "not reported". A part with nothing in it is
 
 **This is a design to look at, not something Deck draws.** It answers Edwin's question of 2026-10-15, whether 3D could carry more information. Each phase is a column standing on the ring, and its tickets rise up the column by the date their note was created, like the rings of a tree. So the picture says when the work happened as well as where it stands. A ticket is its type's colour, solid when it is done or under way and a wire frame when it is not started. What needs you is larger, glows red, and sends a beam up the full height, so it can be found from any angle. The column in the middle holds the tickets with no phase. Faint rings up the height mark the months.
 
-The page is [DES-0005-time-columns.html](DES-0005-time-columns.html). It turns, pans and zooms with the mouse, switches between the two workspaces, and names a ticket when you point at it. It draws every ticket of both fixtures: 384 on Deck and 2,747 on your-trainer, of which 13 and 45 have no `created:` date and sit just under the ring. It is written by `desktop/scripts/overview-plates.mjs` from the same fixtures as every other plate, and loads three.js 0.160.0 from cdnjs; nothing in Deck uses it.
+The page is [DES-0005-time-columns.html](DES-0005-time-columns.html). It turns, pans and zooms with the mouse, switches between the two workspaces, and names a ticket when you point at it. It draws every ticket of both fixtures: 395 on Deck and 2,747 on your-trainer, of which 13 and 45 have no `created:` date and sit just under the ring. It is written by `desktop/scripts/overview-plates.mjs` from the same fixtures as every other plate, and loads three.js 0.160.0 from cdnjs; nothing in Deck uses it.
 
 ![Height is time, your-trainer, angle 1](__attachments__/DES-0005/time-your-trainer-angle-1.jpg)
 

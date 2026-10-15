@@ -7,11 +7,11 @@
     "svg": "wheel-deck.svg",
     "png": "wheel-deck.jpg",
     "words": 13,
-    "marks": 384,
-    "tickets": 384,
+    "marks": 395,
+    "tickets": 395,
     "panelRows": 0,
     "sections": [],
-    "rows": 391,
+    "rows": 402,
     "address": "deck://abcd1234/features?page=wheel"
   },
   {
@@ -22,11 +22,11 @@
     "svg": "wheel-state-deck.svg",
     "png": "wheel-state-deck.jpg",
     "words": 13,
-    "marks": 384,
-    "tickets": 384,
+    "marks": 395,
+    "tickets": 395,
     "panelRows": 0,
     "sections": [],
-    "rows": 391,
+    "rows": 402,
     "address": "deck://abcd1234/features?page=wheel&colour=state"
   },
   {
@@ -239,7 +239,7 @@
     "label": "Deck",
     "svg": "ticket-deck.svg",
     "png": "ticket-deck.jpg",
-    "words": 32,
+    "words": 44,
     "marks": 20,
     "tickets": 20,
     "panelRows": 19,
@@ -274,7 +274,7 @@
         ]
       }
     ],
-    "rows": 28,
+    "rows": 30,
     "address": "deck://abcd1234/features?note=FEAT-0024&page=ticket",
     "ticket": "FEAT-0024"
   },

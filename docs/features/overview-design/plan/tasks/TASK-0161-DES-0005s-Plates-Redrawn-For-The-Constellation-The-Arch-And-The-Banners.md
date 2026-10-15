@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0161
 title: "DES-0005's plates are redrawn for the constellation, the 3D plane, the arch gate, S7's text and the needs-you banners"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -22,15 +22,19 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 **Once the screens have changed, every DES-0005 plate is drawn again from the screen code, so the design and the build still match.** This is the same step TASK-0150 took after the first revision.
 
 ## Definition of Done
-- [ ] `node desktop/scripts/overview-plates.mjs` redraws every plate on Deck and your-trainer: the constellation in both colourings, S2 and S3 with the needs-you reasons and the banner, the arch on S3 and S7, and S7 with the feature's text.
-- [ ] New pictures from a real Deck window show the tilted plane at rest and after a turn and a zoom, on S1 and S2.
-- [ ] Each plate's caption gives its word count at rest, as the check counts it.
-- [ ] DES-0005's screen texts (S1, S3, S7) and "The look" describe what is now built; its status stays `proposed`.
-- [ ] TST-0094 passes. Codex reviews the plates against the screens, in two rounds at most.
+- [x] `node desktop/scripts/overview-plates.mjs` redraws every plate on Deck and your-trainer: the constellation in both colourings, S2 and S3 with the needs-you reasons and the banner, the arch on S3 and S7, and S7 with the feature's text.
+- [x] New pictures from a real Deck window show the tilted plane at rest and after a turn and a zoom, on S1 and S2.
+- [x] Each plate's caption gives its word count at rest, as the check counts it.
+- [x] DES-0005's screen texts (S1, S3, S7) and "The look" describe what is now built; its status stays `proposed`.
+- [x] TST-0094 passes. Codex reviews the plates against the screens, in two rounds at most.
 
 ## Steps
-- [ ] Run the plates script; take the window pictures in the batched window run, with Edwin's go-ahead.
-- [ ] Update DES-0005's captions and screen texts.
+- [x] Run the plates script; take the window pictures in the batched window run, with Edwin's go-ahead.
+- [x] Update DES-0005's captions and screen texts.
+
+## Verification
+
+Redrawn on 2026-10-15 by `node desktop/scripts/overview-plates.mjs` from the recaptured fixtures (Deck `65c6397`, 395 tickets; your-trainer, 2,747), with the window run's pictures (`window-*.jpg`: the wheel at rest and turned, S2, S3, and S7 with its text) on both workspaces and the 3D page's six pictures. DES-0005's look, S1, S3 and S7 captions are rewritten for the constellation, the 3D camera, the needs-you sentence, the arch and S7's text, with the plates' word counts (Deck 13 and your-trainer 42 on the wheel; 44 and 27 on S3; 30 on S7). TST-0094 passes on the new plates.
 
 ## Notes
 

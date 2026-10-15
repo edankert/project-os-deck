@@ -120,6 +120,35 @@ module.exports = async (d) => {
   assert.equal(keyBack, trailBefore.entries[trailBefore.at - 1], '⌘[ goes back');
   assert.equal(keyForward, trailBefore.entries[trailBefore.at], '⌘] goes forward');
 
+  // What needs you says what to do (TASK-0158): a ticket that needs you opens with its
+  // banner and a button; and S7 shows the feature's text beside its gate (TASK-0159).
+  {
+    const needing = Object.values(model.tickets).find((t) => t.needs !== undefined && 'parts' in t.needs.action);
+    if (needing !== undefined) {
+      await js(`window.__deckOverview.go(${JSON.stringify(`${base}?note=${encodeURIComponent(needing.id)}&page=ticket`)})`);
+      await settle();
+      const banner = await js(`(() => { const b = document.querySelector('#overview-area [data-mark="needs"]'); const go = document.querySelector('#overview-area [data-key="needs-go"]'); return { banner: b !== null, label: b ? b.getAttribute('data-label') : null, go: go ? go.getAttribute('data-target') : null }; })()`);
+      d.log('the needs-you banner', { id: needing.id, ...banner });
+      assert.ok(banner.banner && banner.label.includes(needing.needs.say), `${needing.id}: the banner says "${needing.needs.say}"`);
+      assert.ok(banner.go !== null, `${needing.id}: the banner has a button to where you act`);
+    }
+    if (feature !== undefined) {
+      await js(`window.__deckOverview.go(${JSON.stringify(`${base}?note=${encodeURIComponent(feature.id)}&flow=accept`)})`);
+      await settle();
+      let text = '';
+      for (let i = 0; i < 40; i += 1) {
+        text = await js(`(document.querySelector('#overview-area .ov-note') || {}).textContent || ''`);
+        if (text !== '' && !text.startsWith('reading the note')) break;
+        await d.delay(250);
+      }
+      const arch = await js(`document.querySelectorAll('#overview-area [data-key^="gate-${feature.id}-"]').length`);
+      d.log('the feature gate', { id: feature.id, text: text.length, arch });
+      assert.ok(text.length > 40 && !text.startsWith("the note's text could not"), `S7 shows ${feature.id}'s text`);
+      assert.equal(arch, 5, 'S7 draws the gate as the arch of five parts');
+      await d.shot(win, 'accept-with-text');
+    }
+  }
+
   // The camera (TASK-0156): the wheel leans back; the middle button turns it, Shift pans,
   // the scroll wheel zooms, 0 puts it back, and a ticket can still be pressed on the tilt.
   {

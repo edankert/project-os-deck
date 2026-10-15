@@ -345,7 +345,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0161:
       file: docs/features/overview-design/plan/tasks/TASK-0161-DES-0005s-Plates-Redrawn-For-The-Constellation-The-Arch-And-The-Banners.md
-      status: backlog
+      status: doing
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0152:
