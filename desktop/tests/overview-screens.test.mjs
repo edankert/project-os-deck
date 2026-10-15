@@ -473,3 +473,46 @@ test('the overview camera turns, pans and zooms within its limits, and keeps the
   assert.ok(cam.isDefault(cam.defaultCamera('wheel'), 'wheel'));
   assert.ok(!cam.isDefault(t, 'wheel'));
 });
+
+// TASK-0158, TASK-0160 — a ticket that needs you says what to do, on S3 as a banner with a
+// button to where you act (or the sidecar's own verbs at triage), and on S2 under its row.
+test('S3 tells you what a ticket needs, with a button to where you act or the sidecar verbs at triage', () => {
+  const yt = model('your-trainer');
+  const deck = model('deck');
+  const verbs = [{ verb: 'Accept', to: 'open', confirm: false, disabled: false, reason: '' }, { verb: 'Defer', to: 'deferred', confirm: false, disabled: false, reason: '' }, { verb: 'Decline', to: 'declined', confirm: true, disabled: false, reason: '' }];
+  const pick = (m, reason) => Object.values(m.tickets).find((t) => t.needs?.reason === reason);
+  const texts = (scene) => [...walkScene(scene.nodes)].filter((n) => n.kind === 'text').map((n) => n.text);
+  const triage = pick(yt, 'triage');
+  let scene = ticketScene(yt, triage.id, ctx, { verbs, canWrite: true });
+  assert.ok(texts(scene).includes(triage.needs.say), 'the banner says what to do');
+  const actions = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.action?.startsWith('needs:')).map((n) => n.action);
+  assert.deepEqual([...actions].sort(), ['needs:declined', 'needs:deferred', 'needs:open']);
+  assert.deepEqual(scene.list.filter((r) => r.action?.startsWith('needs:')).map((r) => r.action).sort(), [...actions].sort());
+  holdsTheLook(scene);
+  // On a page that cannot write, the verbs are shown off and do nothing.
+  scene = ticketScene(yt, triage.id, ctx, { verbs, canWrite: false });
+  assert.equal([...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.action !== undefined).length, 0);
+  for (const [m, reason] of [[deck, 'review'], [deck, 'waiting'], [deck, 'ready'], [yt, 'waiting']]) {
+    const t = pick(m, reason);
+    const s3 = ticketScene(m, t.id, ctx);
+    const go = s3.nodes.find((n) => n.kind === 'group' && n.key === 'needs-go');
+    assert.equal(go?.target, ctx.address(t.needs.action.parts), `${t.id} (${reason}): the button goes where the person acts`);
+    assert.ok(texts(s3).includes(t.needs.say));
+    holdsTheLook(s3);
+  }
+  // A ticket that needs nothing has no banner.
+  const calm = Object.values(deck.tickets).find((t) => !t.needsYou && t.kind === 'task');
+  assert.ok(!ticketScene(deck, calm.id, ctx).nodes.some((n) => n.kind === 'mark' && n.markId === 'needs'));
+});
+
+test('S2 says under each needs-you row what to do, and the callouts say it too', () => {
+  const m = model('deck');
+  const { markWords } = load('shared/overview-marks.js');
+  for (const p of m.phases) {
+    const panel = [...walkScene(phaseScene(m, p.id, ctx).nodes)].find((n) => n.kind === 'panel');
+    for (const row of panel.body.sections.find((s) => s.key === 'needs-you')?.rows ?? []) {
+      assert.equal(row.note, m.tickets[row.id].needs.say, `${row.id}: what to do is under its title`);
+      assert.ok(markWords(m.tickets[row.id]).endsWith(`: ${m.tickets[row.id].needs.say}`), `${row.id}: its callout says what to do`);
+    }
+  }
+});

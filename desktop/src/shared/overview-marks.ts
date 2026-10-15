@@ -58,15 +58,17 @@ export const NEEDS_YOU = 'hsl(5 50% 65%)';
 export const FIELD = 'hsl(214 55% 7%)';
 
 /** What a ticket's mark says when pointed at, in the cockpit's words. */
-export function markWords(t: Pick<Ticket, 'id' | 'title' | 'status' | 'type' | 'fill' | 'needsYou'>): string {
+export function markWords(t: Pick<Ticket, 'id' | 'title' | 'status' | 'type' | 'fill' | 'needsYou'> & { needs?: Ticket['needs']; note?: string }): string {
   const marks = [t.fill === 'open' || t.fill === 'delivered' ? null : FILL_WORD[t.fill], t.needsYou ? 'needs you' : null].filter(Boolean);
-  return `${t.id} ${t.title} (${t.status || '—'})${marks.length > 0 ? ` — ${marks.join(', ')}` : ''}`;
+  // What needs you also says what to do (TASK-0158).
+  const todo = t.needs?.say ?? t.note;
+  return `${t.id} ${t.title} (${t.status || '—'})${marks.length > 0 ? ` — ${marks.join(', ')}` : ''}${t.needsYou && todo ? `: ${todo}` : ''}`;
 }
 
 /** A ticket as a line of a list: its type, title, status and marks, in the cockpit's words. */
-export function rowWords(t: Pick<Ticket, 'type' | 'title' | 'status' | 'fill' | 'needsYou'>): string {
+export function rowWords(t: Pick<Ticket, 'type' | 'title' | 'status' | 'fill' | 'needsYou'> & { needs?: Ticket['needs'] }): string {
   const marks = [t.fill === 'open' || t.fill === 'delivered' ? null : FILL_WORD[t.fill], t.needsYou ? 'needs you' : null].filter(Boolean);
-  return `${t.title} — ${TYPE_WORD[t.type]}, ${t.status || '—'}${marks.length > 0 ? `, ${marks.join(', ')}` : ''}`;
+  return `${t.title} — ${TYPE_WORD[t.type]}, ${t.status || '—'}${marks.length > 0 ? `, ${marks.join(', ')}` : ''}${t.needs ? `: ${t.needs.say}` : ''}`;
 }
 
 /**

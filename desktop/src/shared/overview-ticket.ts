@@ -152,11 +152,76 @@ function titleNodes(title: string, maxWords: number): SceneNode[] {
   return lines.map((line, i) => ({ kind: 'text', x: 128, y: 70 + i * (size + 3), text: line, rest: true, role: 'name', size, cls: 'ov-title' }) as SceneNode);
 }
 
+/** One of the sidecar's verbs for a ticket, as `/api/notes/actions` names it. */
+export interface TriageVerb {
+  verb: string;
+  to: string;
+  confirm: boolean;
+  disabled: boolean;
+  reason: string;
+}
+
+/** The words on the button that takes a person to where they act. */
+function actWord(t: Ticket): string {
+  const needs = t.needs!;
+  if (needs.reason === 'review') return t.kind === 'feat' ? 'Open its gate' : t.id.startsWith('DES-') ? 'Open its plates' : 'Review it';
+  if (needs.reason === 'ready') return 'Run it';
+  if (needs.reason === 'failed') return t.kind === 'test' ? 'Run it again' : 'Open it';
+  return `Open ${needs.waitingOn ?? ''}`.trim();
+}
+
+/**
+ * What a ticket that needs you asks of you, as a banner under its stages
+ * (TASK-0158): the sentence, and a button to where you act, or for a ticket at
+ * triage the sidecar's own verbs (TASK-0160).
+ */
+function banner(t: Ticket, ctx: ScreenContext, extras: TicketExtras): { nodes: SceneNode[]; rows: ListRow[] } {
+  const needs = t.needs!;
+  const x = 40;
+  const y = 196;
+  const w = 800;
+  const h = 34;
+  const nodes: SceneNode[] = [
+    { kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 8 }, cls: 'ov-banner', markId: 'needs', label: `${t.id} needs you: ${needs.say}` },
+    { kind: 'mark', tag: 'circle', attrs: { cx: x + 18, cy: y + h / 2, r: 5 }, cls: 'ov-badge' },
+    { kind: 'text', x: x + 32, y: y + h / 2 + 5, text: needs.say, rest: true, role: 'label', size: 14, cls: 'ov-banner-text' },
+  ];
+  const rows: ListRow[] = [{ id: 'needs', label: `${t.id} needs you: ${needs.say}`, group: 'Needs you' }];
+  const buttons: Array<{ key: string; word: string; target?: string; action?: string; enabled: boolean; label: string }> = [];
+  if ('parts' in needs.action) {
+    buttons.push({ key: 'needs-go', word: actWord(t), target: ctx.address(needs.action.parts), enabled: true, label: `${actWord(t)}: ${needs.say}` });
+  } else {
+    for (const v of extras.verbs ?? []) {
+      const enabled = extras.canWrite === true && !v.disabled;
+      buttons.push({ key: `needs-${v.to}`, word: v.verb, action: `needs:${v.to}`, enabled, label: enabled ? `${v.verb}: move ${t.id} to ${v.to}` : `${v.verb} is unavailable: ${extras.canWrite === true ? v.reason || 'the sidecar refused it' : 'this host does not write'}` });
+    }
+  }
+  let right = x + w - 8;
+  for (const b of [...buttons].reverse()) {
+    const bw = Math.max(64, b.word.length * 8 + 24);
+    right -= bw;
+    const children: SceneNode[] = [
+      { kind: 'mark', tag: 'rect', attrs: { x: right, y: y + 5, width: bw, height: h - 10, rx: 12 }, cls: b.enabled ? 'ov-control' : 'ov-control ov-off', markId: b.key, label: b.label },
+      { kind: 'text', x: right + bw / 2, y: y + h / 2 + 4, text: b.word, rest: true, role: 'control', size: 12, anchor: 'middle' },
+      // A transparent surface over the word, as S7's buttons have, so a press on the letters acts too.
+      { kind: 'mark', tag: 'rect', attrs: { x: right, y: y + 5, width: bw, height: h - 10, rx: 12 }, cls: b.enabled ? 'ov-hit' : 'ov-hit ov-off', label: b.label, ...(b.action !== undefined && b.enabled ? { action: b.action } : {}) },
+    ];
+    nodes.push(b.target !== undefined ? { kind: 'group', key: b.key, target: b.target, label: b.label, children } : { kind: 'group', key: b.key, label: b.label, children });
+    rows.push({ id: b.key, label: b.label, group: 'Needs you', ...(b.target !== undefined ? { target: b.target } : {}), ...(b.action !== undefined && b.enabled ? { action: b.action } : {}) });
+    right -= 8;
+  }
+  return { nodes, rows };
+}
+
 export interface TicketExtras {
   /** The note's Markdown body, for a plate; Deck reads the rendered text itself. */
   text?: string;
   /** A feature's gate as S7 reads it from the sidecar; without it, what the model knows. */
   gate?: AcceptData;
+  /** For a ticket at triage: the sidecar's own decide verbs, read live (TASK-0160). */
+  verbs?: TriageVerb[];
+  /** Whether this window may write: false on the served page. */
+  canWrite?: boolean;
 }
 
 export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenContext, extras: TicketExtras = {}): Scene {
@@ -197,6 +262,13 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
     list.push(...gate.rows);
     // The arch's feet reach below its centre; the panels start under them.
     top = Math.max(top, cy + 34);
+  }
+  // What it needs from you, under its stages, before its text.
+  if (t.needs !== undefined) {
+    const b = banner(t, ctx, extras);
+    nodes.push(...b.nodes);
+    list.push(...b.rows);
+    top = Math.max(top, 240);
   }
   const below = (box: { x: number; y: number; w: number; h: number }): { x: number; y: number; w: number; h: number } => ({ ...box, y: top, h: box.h - (top - box.y) });
 

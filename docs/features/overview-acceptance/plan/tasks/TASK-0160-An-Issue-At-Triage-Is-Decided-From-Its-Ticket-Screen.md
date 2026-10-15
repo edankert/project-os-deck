@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0160
 title: "An issue at triage is decided from its ticket screen, with the sidecar's own verbs as buttons, through the sidecar's guards"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

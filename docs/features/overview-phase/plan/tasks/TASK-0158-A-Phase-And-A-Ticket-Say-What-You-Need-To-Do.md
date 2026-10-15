@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0158
 title: "A phase and a ticket tell the person what they need to do: a banner on S3, a short reason in S2's needs-you rows, and the reason in every callout"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

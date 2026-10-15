@@ -2,6 +2,7 @@
 import { backControl, heading, words } from './overview-chrome.js';
 import { annularSector, arc, polar, TAU } from './overview-geometry.js';
 import type { ListRow, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import { gateArch } from './overview-gate.js';
 import { cockpitSquare, markWords, TYPE_COLOUR, FIELD, NEEDS_YOU } from './overview-marks.js';
 import { cockpitMarks } from './overview-status.js';
 import { resultMark, RESULT_MARK } from './overview-results.js';
@@ -384,66 +385,21 @@ export function testRunScene(model: OverviewModel, data: TestRunData, ctx: Scree
   return scene;
 }
 
-/** Five chips in one row; compact fits beneath S3's track. Each gate item is
- * retained, even when several criteria belong to the same requirement ticket.
- * Squares draw evidence, never tickets; their labels retain the ticket id.
- * Unknown evidence has neutral outlines and no fill claim or attention dot.
- */
-export function gateChips(data: AcceptData, x: number, y: number, width: number, options: { compact?: boolean } = {}): { nodes: SceneNode[]; rows: ListRow[] } {
-  const nodes: SceneNode[] = [], rows: ListRow[] = [];
-  const gap = options.compact ? 8 : 16, chipWidth = (width - gap * 4) / 5;
-  const size = options.compact ? 7 : 11, pitch = size + 5, padding = options.compact ? 8 : 14;
-  const columns = Math.max(1, Math.floor((chipWidth - 2 * padding) / pitch));
-  GATES.forEach(([key, word], i) => {
-    const lamp = data.lamps.find(l => l.key === key);
-    if (!lamp) return;
-    const left = x + i * (chipWidth + gap), markId = `gate-${data.id}-${key}`;
-    const label = lampLabel({ ...lamp, label: word }), empty = lampEmpty(lamp);
-    const total = Math.max(0, lamp.total), rowCount = Math.ceil(total / columns);
-    const top = options.compact ? 76 : 88, height = top + Math.max(1, rowCount) * pitch + padding;
-    const children: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x: left, y, width: chipWidth, height, rx: 9, fill: FIELD, stroke: PALETTE.dim, 'stroke-width': 1, tabindex: 0, role: 'img' }, label }];
-    // Two short lines keep the compact chip legible without hiding its label.
-    const labels = options.compact && word.includes(' ') ? word.split(' ') : [word];
-    labels.forEach((text, line) => children.push({ kind: 'text', x: left + padding, y: y + 20 + line * 12, text, role: 'label', rest: true, size: options.compact ? 10 : 16 }));
-    const baseline = y + 49, inner = Math.max(1, chipWidth - 2 * padding);
-    if (empty || !lamp.known) {
-      children.push({ kind: 'text', x: left + padding, y: baseline, text: empty ? 'nothing to check' : 'not reported', role: 'label', rest: true, size: options.compact ? 9 : 13, cls: 'ov-dim' });
-    } else {
-      children.push({ kind: 'text', x: left + padding, y: baseline, text: String(lamp.done), role: 'number', markRef: `${markId}-done`, rest: true, size: options.compact ? 12 : 19 });
-      children.push({ kind: 'text', x: left + chipWidth / 2, y: baseline, text: '/', role: 'label', rest: true, anchor: 'middle', size: options.compact ? 12 : 19 });
-      children.push({ kind: 'text', x: left + chipWidth - padding, y: baseline, text: String(lamp.total), role: 'number', markRef: `${markId}-total`, rest: true, anchor: 'end', size: options.compact ? 12 : 19 });
-      children.push({ kind: 'mark', tag: 'rect', attrs: { x: left + padding, y: baseline + 10, width: inner, height: 4, fill: 'none', stroke: PALETTE.dim }, markId: `${markId}-total`, count: lamp.total, label });
-      children.push({ kind: 'mark', tag: 'rect', attrs: { x: left + padding, y: baseline + 10, width: Math.max(1, inner * lamp.done / Math.max(1, lamp.total)), height: 4, fill: lamp.done ? PALETTE.ink : 'none', stroke: PALETTE.ink }, markId: `${markId}-done`, count: lamp.done, label });
-    }
-    for (let j = 0; j < total; j++) {
-      const item = lamp.items?.[j], ticket = item?.ticket;
-      const px = left + padding + size / 2 + (j % columns) * pitch, py = y + top + Math.floor(j / columns) * pitch;
-      const complete = lamp.known && item?.complete === true;
-      const verdict = !lamp.known ? 'not reported' : item?.result ? `${RESULT_MARK[item.result].word} ${RESULT_MARK[item.result].glyph}` : complete ? 'complete' : 'incomplete';
-      const itemLabel = item ? `${item.id}: ${item.label} · ${verdict}` : `${word}: item ${j + 1}, identity not reported`;
-      const type = ticket?.type ?? (key === 'requirements' ? 'requirement' : key === 'tasks' ? 'task' : key === 'automated' || key === 'acceptance' ? 'test' : undefined);
-      const colour = lamp.known && type ? TYPE_COLOUR[type] : PALETTE.dim;
-      children.push({ kind: 'group', key: `${markId}-item-${j}`, children: [{ kind: 'mark', tag: 'rect', markId: `${markId}-item-${j}`, attrs: { x: px - size / 2, y: py - size / 2, width: size, height: size, rx: 1, fill: complete ? colour : 'none', stroke: colour }, label: itemLabel }] });
-    }
-    nodes.push({ kind: 'group', key: markId, children });
-    rows.push({ id: `gate-${key}`, label, group: 'Evidence' });
-  });
-  return { nodes, rows };
-}
-
-export function acceptScene(model: OverviewModel, data: AcceptData, ctx: ScreenContext): Scene {
+export function acceptScene(model: OverviewModel, data: AcceptData, ctx: ScreenContext, extras: { text?: string } = {}): Scene {
   const scene = base('accept', data.id, data.title, ctx, { note: data.id }), { nodes, list } = scene;
+  nodes.push({ kind: 'panel', key: `text-${data.id}`, x: 40, y: 120, w: 560, h: 850, label: `${data.id}'s text`, body: { kind: 'note', id: data.id, title: data.title, text: extras.text ?? '' } });
   const ticket = flowTicket(model, data.id, data.title, data.status, 'feature');
   const target = ctx.address({ page: 'ticket', note: data.id });
-  nodes.push(cockpitSquare(ticket, 720, 267, 64, { label: markWords(ticket), target }));
+  const cx = 1010, cy = 540;
+  nodes.push(cockpitSquare(ticket, cx, cy - 70, 56, { label: markWords(ticket), target }));
   list.push({ id: data.id, label: markWords(ticket), group: 'Feature', target });
-  const gate = gateChips(data, 120, 410, 1200);
+  const gate = gateArch(data, cx, cy, 200);
   nodes.push(...gate.nodes); list.push(...gate.rows);
   const canAccept = data.acceptanceRequested || data.transitions?.includes('done');
   const canSendBack = data.transitions?.includes('doing');
   const why = !data.canWrite ? 'this host does not write' : data.status !== 'review' ? 'this feature is not at review' : 'the feature still has missing evidence';
-  control(nodes, list, 'accept:accept', 'Accept', 480, 820, data.canWrite && data.status === 'review' && gateReady(data) && !!canAccept, 'ov-go', 200, canAccept ? why : FEATURE_TRANSITION_UNAVAILABLE);
-  control(nodes, list, 'accept:back', 'Send back', 760, 820, data.canWrite && data.status === 'review' && !!canSendBack, 'ov-stop', 200, canSendBack ? why : FEATURE_TRANSITION_UNAVAILABLE);
-  if (data.acceptanceRequested) nodes.push({ kind: 'text', x: 720, y: 930, text: 'Records acceptance without changing status', role: 'label', rest: true, anchor: 'middle', size: 17 });
+  control(nodes, list, 'accept:accept', 'Accept', cx - 220, cy + 110, data.canWrite && data.status === 'review' && gateReady(data) && !!canAccept, 'ov-go', 200, canAccept ? why : FEATURE_TRANSITION_UNAVAILABLE);
+  control(nodes, list, 'accept:back', 'Send back', cx + 20, cy + 110, data.canWrite && data.status === 'review' && !!canSendBack, 'ov-stop', 200, canSendBack ? why : FEATURE_TRANSITION_UNAVAILABLE);
+  if (data.acceptanceRequested) nodes.push({ kind: 'text', x: cx, y: cy + 230, text: 'Records acceptance without changing status', role: 'label', rest: true, anchor: 'middle', size: 17 });
   return scene;
 }

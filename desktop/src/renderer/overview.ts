@@ -72,6 +72,11 @@ export function registerScreen(kind: 'page' | 'flow', id: string, definition: Sc
   (kind === 'page' ? pages : flows).set(id, definition);
 }
 
+/** What a page or a flow registered: for the node tests, which drive a screen's actions with no window. */
+export function registeredScreen(kind: 'page' | 'flow', id: string): ScreenDefinition | undefined {
+  return (kind === 'page' ? pages : flows).get(id);
+}
+
 let api: OverviewHostApi | null = null;
 let area: HTMLElement | null = null;
 let stage: HTMLElement | null = null;
@@ -627,7 +632,11 @@ async function act(action: string): Promise<void> {
   try {
     const input = inputFor(await modelFor(address.workspaceId), address);
     const redraw = await definition.onAction(action, input);
-    if (redraw) await showOverview(address);
+    // A write changes the notes: the screen is drawn again from a model read afresh.
+    if (redraw) {
+      models.delete(address.workspaceId);
+      await showOverview(address, { replace: true });
+    }
   } catch (err) {
     api.say(err instanceof Error ? err.message : String(err), true);
   }

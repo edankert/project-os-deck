@@ -58,7 +58,7 @@ export function rowOrder(a: Ticket, b: Ticket): number {
 
 /** A ticket as a panel row, the way the cockpit lists it. */
 export function panelRow(t: Ticket, ctx: ScreenContext): PanelRow {
-  return { id: t.id, type: t.type, fill: t.fill, needsYou: t.needsYou, title: t.title, status: t.status, target: ctx.address({ page: 'ticket', note: t.id }) };
+  return { id: t.id, type: t.type, fill: t.fill, needsYou: t.needsYou, title: t.title, status: t.status, target: ctx.address({ page: 'ticket', note: t.id }), ...(t.needs ? { note: t.needs.say } : {}) };
 }
 
 function kindCounts(model: OverviewModel, phase: Phase): Record<string, { live: number; closed: number }> {

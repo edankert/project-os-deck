@@ -118,7 +118,8 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
       ['accept', 'S7 Ticket acceptance', 'acceptScene'],
     ]) {
       const data = flowFixture(`${ws}-${key}.json`);
-      if (data !== null && typeof flows[fn] === 'function') screens.push([key, title, () => flows[fn](model, data, ctx)]);
+      // S7 shows the feature's text beside its gate (TASK-0159); a plate reads it from the note.
+      if (data !== null && typeof flows[fn] === 'function') screens.push([key, title, () => (key === 'accept' ? flows[fn](model, data, ctx, { text: noteText(choice.root, data.id) }) : flows[fn](model, data, ctx))]);
     }
   }
   for (const [key, title, make] of screens) {

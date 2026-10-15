@@ -59,6 +59,8 @@ function rowElement(row: PanelRow): HTMLElement {
   li.setAttribute('role', 'button');
   li.setAttribute('aria-label', markWords(row));
   li.append(square(row), el('span', 'ov-row-id', row.id), el('span', 'ov-row-title', row.title), el('span', 'ov-row-status', row.status || '—'));
+  // What needs you says what to do, under its title (TASK-0158).
+  if (row.note !== undefined) li.append(el('span', 'ov-row-note', row.note));
   return li;
 }
 

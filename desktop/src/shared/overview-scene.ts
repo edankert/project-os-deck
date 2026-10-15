@@ -107,6 +107,8 @@ export interface PanelRow {
   title: string;
   status: string;
   target?: string;
+  /** For a ticket that needs you: what to do, shown under its title (TASK-0158). */
+  note?: string;
 }
 
 export interface PanelSection {
@@ -205,6 +207,8 @@ ${panelCss(FIELD, NEEDS_YOU)}
 .ov .ov-track { fill: hsla(210, 60%, 50%, 0.07); stroke: hsla(195, 80%, 60%, 0.16); stroke-width: 1; }
 .ov .ov-glass { fill: hsla(205, 60%, 40%, 0.14); stroke: hsla(190, 90%, 65%, 0.5); stroke-width: 1; }
 .ov .ov-faint { opacity: 0.35; }
+.ov .ov-banner { fill: hsla(5, 50%, 40%, 0.16); stroke: hsla(5, 50%, 65%, 0.7); stroke-width: 1; }
+.ov text.ov-banner-text { fill: hsl(5 60% 82%); font-weight: 600; }
 .ov .ov-links line { stroke: hsla(190, 90%, 72%, 0.55); stroke-width: 1; pointer-events: none; }
 .ov .ov-row { fill: hsla(205, 60%, 40%, 0.1); stroke: hsla(190, 90%, 65%, 0.12); stroke-width: 1; }
 .ov .ov-ghost { opacity: 0.12; }

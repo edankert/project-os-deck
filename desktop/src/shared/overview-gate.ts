@@ -19,6 +19,7 @@
  */
 import { annularSector, arc, polar } from './overview-geometry.js';
 import { TYPE_COLOUR } from './overview-marks.js';
+import { RESULT_MARK } from './overview-results.js';
 import type { ListRow, SceneNode } from './overview-scene.js';
 import { gateReady, lampEmpty, type AcceptData, type GateKey, type GateLamp } from './overview-flows.js';
 
@@ -113,7 +114,8 @@ export function gateArch(data: AcceptData, cx: number, cy: number, r: number, op
             tag: 'path',
             attrs: { d: annularSector(cx, cy, r + 2, r + thick - 2, c0, c0 + cell), fill: complete ? colour : 'none', 'fill-opacity': complete ? 0.9 : 0, stroke: colour, 'stroke-width': 0.8, 'stroke-opacity': complete ? 0.9 : 0.35 },
             markId: `${markId}-item-${j}`,
-            label: item !== undefined ? `${GATE_WORD[key]}: ${item.label}${complete ? ' (done)' : ' (not yet)'}` : label,
+            // A check's own result, in the cockpit release page's words and glyph, where there is one.
+            label: item !== undefined ? `${GATE_WORD[key]}: ${item.label.includes(item.id) ? '' : `${item.id} `}${item.label} · ${item.result !== undefined ? `${RESULT_MARK[item.result].word} ${RESULT_MARK[item.result].glyph}` : complete ? 'done' : 'not yet'}` : label,
           });
         }
       } else {

@@ -330,17 +330,17 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0158:
       file: docs/features/overview-phase/plan/tasks/TASK-0158-A-Phase-And-A-Ticket-Say-What-You-Need-To-Do.md
-      status: backlog
+      status: doing
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0159:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0159-S7-Shows-The-Features-Text-And-Its-Gate-As-The-Arch.md
-      status: backlog
+      status: doing
       parent: FEAT-0029
       phase: "[[PHASE-0005]]"
     TASK-0160:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0160-An-Issue-At-Triage-Is-Decided-From-Its-Ticket-Screen.md
-      status: backlog
+      status: doing
       parent: FEAT-0029
       phase: "[[PHASE-0005]]"
     TASK-0161:

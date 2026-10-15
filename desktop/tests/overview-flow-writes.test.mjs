@@ -127,7 +127,7 @@ test('S3 can load the same live gate as S7 without changing its address or writi
  assert.deepEqual(await featureGate(i,'FEAT-9999'),expected);
  assert.deepEqual(i.address,before);assert.deepEqual(seen,[]);
  const scene=await acceptFlow.scene({...i,address:addressFor('abcd1234','features',{flow:'accept',note:'FEAT-9999'})});
- const gate=load('shared/overview-flows.js').gateChips(expected,120,410,1200);
+ const gate=load('shared/overview-gate.js').gateArch(expected,1010,540,200);
  assert.deepEqual(scene.list.filter(r=>r.group==='Evidence'),gate.rows);
  assert.ok(expected.lamps.some(l=>l.known&&l.done>0));
 });
@@ -239,4 +239,40 @@ test('S6 persists stale ledger-result deletion and cannot resurrect it on reload
  await testRunFlow.scene(i);assert.deepEqual(JSON.parse([...saved.values()][0]),{});
  const reloaded=runInput().i;
  assert.match((await testRunFlow.scene(reloaded)).list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts').label,/— \[ \] To-do/);
+});
+
+// TASK-0160 — a ticket at triage is decided from S3 with the sidecar's own verbs, read live,
+// through the shell's write path, with the note's modification time as the guard.
+test('a triage ticket is decided from its ticket screen with the sidecar verbs, read again before writing', async () => {
+  await import(pathToFileURL(path.join(desktopRoot, 'dist/web/renderer/overview-pages.js')));
+  const { registeredScreen } = await import(pathToFileURL(path.join(desktopRoot, 'dist/web/renderer/overview.js')));
+  const page = registeredScreen('page', 'ticket');
+  const m = structuredClone(model);
+  m.tickets['ISS-9001'] = { id: 'ISS-9001', title: 'A new issue', kind: 'iss', type: 'issue', status: 'triage', state: 'open', fill: 'open', needsYou: true, needs: { reason: 'triage', say: 'Decide: take it into the backlog, or decline it', action: { verbs: true } }, phase: null, placedBy: 'none', links: [] };
+  let offered = [{ verb: 'Accept', to: 'open', confirm: false, disabled: false, reason: '', endpoint: '' }, { verb: 'Defer', to: 'deferred', confirm: false, disabled: false, reason: '', endpoint: '' }, { verb: 'Decline', to: 'declined', confirm: true, disabled: false, reason: '', endpoint: '' }];
+  const seen = [];
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ records: [{ id: 'ISS-9001', mtimeMs: 12_000 }] }) });
+  try {
+    let answer = 'not ours to fix';
+    const i = { model: m, address: addressFor('abcd1234', 'features', { page: 'ticket', note: 'ISS-9001' }), ctx: plainContext('abcd1234', 'features'), memory: new Map(), canWrite: true,
+      read: async (at) => { if (at.startsWith('/api/notes/actions')) return { actions: offered }; throw new Error(at); },
+      write: async (verb, request) => { seen.push([verb, request]); return { ok: true }; }, ask: async () => answer };
+    const scene = await page.scene(i);
+    assert.deepEqual([...walkScene(scene.nodes)].filter((n) => n.action?.startsWith('needs:')).map((n) => n.action).sort(), ['needs:declined', 'needs:deferred', 'needs:open']);
+    assert.equal(await page.onAction('needs:open', i), true);
+    assert.deepEqual(seen.pop(), ['transition', { id: 'ISS-9001', to: 'open', mtime: 12 }]);
+    assert.equal(await page.onAction('needs:declined', i), true);
+    assert.deepEqual(seen.pop(), ['transition', { id: 'ISS-9001', to: 'declined', note: 'not ours to fix', mtime: 12 }]);
+    answer = null;
+    assert.equal(await page.onAction('needs:declined', i), false, 'declining without a reason writes nothing');
+    offered = offered.filter((v) => v.to !== 'deferred');
+    await assert.rejects(page.onAction('needs:deferred', i), /no longer offers/);
+    i.canWrite = false;
+    await assert.rejects(page.onAction('needs:open', i), /does not write/);
+    assert.equal(seen.length, 0);
+    assert.equal(await page.onAction('rephase:PHASE-0001', i), false, "other actions are not the ticket page's");
+  } finally {
+    globalThis.fetch = savedFetch;
+  }
 });

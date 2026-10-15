@@ -219,6 +219,7 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-row-id { font: 12px "SF Mono", Menlo, monospace; color: hsl(205 25% 66%); letter-spacing: 0.02em; }
 .ov-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-row-status { font-size: 11px; color: hsl(205 25% 62%); }
+.ov-row-note { grid-column: 3 / 5; font-size: 12px; color: ${needsYou}; margin-top: -2px; }
 .ov-sq { display: inline-block; position: relative; width: 11px; height: 11px; box-sizing: border-box; border-radius: 2px; border: 1.5px solid currentColor; background: transparent; flex: none; }
 .ov-sq.ov-sq-small { width: 8px; height: 8px; border-width: 1.2px; border-radius: 1.5px; }
 .ov-sq[data-fill="delivered"] { background: currentColor; }

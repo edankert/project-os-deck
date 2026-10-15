@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0159
 title: "S7 shows the feature's text on the same page as Accept and Send back, and draws its gate as the arch"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

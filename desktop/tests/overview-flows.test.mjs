@@ -60,7 +60,7 @@ test('only five known complete lamps enable Accept; global zero badges cannot su
  const raw=json('flows/raw/deck-accept.json'),a=F.acceptFromPayloads(m,'FEAT-0024',{...raw,criteria:{},acceptance:{schema_version:999},obligations:{views:{},total:0}},true);
  for(const k of ['requirements','automated','acceptance'])assert.equal(a.lamps.find(l=>l.key===k).known,false);
 });
-test('gate chip ratios give completed and total counts their own bars, including zero',()=>{
+test('the gate arch gives completed and total counts their own marks, including zero',()=>{
  const m=json('deck.json'),base=F.gateFromModel(m,'FEAT-0024');
  for(const [done,total] of [[0,0],[0,3],[2,3],[3,3]]) {
   const data={...base,lamps:base.lamps.map(l=>({...l,known:true,done,total,missing:[]}))};
@@ -72,7 +72,7 @@ test('gate chip ratios give completed and total counts their own bars, including
    assert.deepEqual(counts.map(n=>Number(n.text)),[done,total]);
    const marks=counts.map(n=>nodes.find(m=>m.kind==='mark'&&m.markId===n.markRef));
    assert.deepEqual(marks.map(m=>m.count),[done,total]);
-   assert.deepEqual(marks.map(m=>m.tag),['rect','rect']);
+   assert.deepEqual(marks.map(m=>m.tag),['path','path']);
   }
  }
  const unknown=[...walkScene(F.acceptScene(m,base,ctx).nodes)];
@@ -92,7 +92,7 @@ test('empty lamps are hollow and neutral, with at least one real item needed to 
  d.lamps=d.lamps.map(l=>({...l,known:true,total:0,done:0,missing:[]}));
  assert.equal(F.gateReady(d),false);assert.ok(d.lamps.every(l=>!F.lampComplete(l)));
  let scene=F.acceptScene(m,d,ctx),nodes=[...walkScene(scene.nodes)];look(scene);
- assert.equal(nodes.filter(n=>n.attrs?.role==='img'&&n.tag==='rect'&&n.attrs.stroke&&!n.glow).length,5);
+ assert.equal(nodes.filter(n=>n.attrs?.role==='img'&&n.tag==='path'&&n.attrs.stroke&&!n.glow).length,5);
  assert.equal(nodes.filter(n=>n.text==='nothing to check').length,5);
  assert.ok(scene.list.filter(r=>r.group==='Evidence').every(r=>r.label.includes('nothing to check')));
  d.lamps[4]={...d.lamps[4],total:1,done:1};assert.equal(F.gateReady(d),true);
@@ -110,7 +110,10 @@ test('every unknown lamp explains missing evidence, including malformed tiers an
  for(const payload of fixtures){
   const d=F.acceptFromPayloads(m,'FEAT-0024',payload);assert.equal(F.gateReady(d),false);
   for(const l of d.lamps.filter(l=>!l.known))assert.ok(l.missing.some(s=>s.trim()),l.key);
-  for(const row of F.acceptScene(m,d,ctx).list.filter(r=>r.group==='Evidence'))assert.ok(row.label.split(' · ')[1]||row.label.includes('nothing to check'),row.label);
+  for(const row of F.acceptScene(m,d,ctx).list.filter(r=>r.group==='Evidence')){
+   const lamp=d.lamps.find(l=>'gate-'+l.key===row.id);
+   assert.ok(row.label.includes('nothing to check')||(lamp.known&&lamp.missing.length===0)||lamp.missing.slice(0,3).some(s=>row.label.includes(s.trim())),row.label);
+  }
  }
  const d=F.acceptFromPayloads(m,'FEAT-0024',fixtures[3]);assert.match(d.lamps.find(l=>l.key==='automated').missing.join(' '),/TST-1111: command result is not exposed/);
 });
@@ -137,42 +140,40 @@ test('S5 fans outlines behind one selected image and keeps every plate selectabl
  }
 });
 
-for (const ws of ['deck', 'your-trainer']) test(`${ws}: gate chips label every category and show evidence squares matching their counts in both sizes`, () => {
- const model=json(`${ws}.json`),data=json(`flows/${ws}-accept.json`);
+for (const ws of ['deck', 'your-trainer']) test(`${ws}: the gate arch names every part and shows evidence cells matching their counts in both sizes`, () => {
+ const data=json(`flows/${ws}-accept.json`);
+ const G=load('shared/overview-gate.js');
  const labels=['Requirements','Tasks','Reviews','Automated tests','Acceptance tests'];
- for(const compact of [false,true]) {
-  const gate=F.gateChips(data,100,200,compact?900:1200,{compact});
+ for(const small of [false,true]) {
+  const gate=G.gateArch(data,700,500,small?92:200,{small});
+  const parts=gate.nodes.filter(n=>n.kind==='group');
   const scene={screen:'accept',address:ctx.address({flow:'accept',note:data.id}),width:1440,height:1000,title:'Gate',nodes:gate.nodes,list:gate.rows};look(scene);
-  assert.deepEqual(gate.nodes.map(n=>n.children.filter(c=>c.kind==='text'&&c.y<235).map(c=>c.text).join(' ')),labels);
+  assert.deepEqual(parts.map(n=>n.children.find(c=>c.kind==='text'&&c.cls==='ov-title').text),labels);
+  assert.deepEqual(gate.rows.map(r=>r.id),G.GATE_ORDER.map(k=>`gate-${k}`));
   for(const lamp of data.lamps) {
-   const chip=gate.nodes.find(n=>n.key===`gate-${data.id}-${lamp.key}`),nodes=[...walkScene([chip])];
+   const part=parts.find(n=>n.key===`gate-${data.id}-${lamp.key}`),nodes=[...walkScene([part])];
    assert.equal(lamp.items.length,lamp.total,`${lamp.key} preserves item identities`);
-   const squares=chip.children.filter(n=>n.kind==='group'&&n.key?.includes('-item-'));
-   assert.equal(squares.length,lamp.total,`${lamp.key} squares`);
-   let filled=0;
-   for(const [i,item] of lamp.items.entries()) {
-    const marks=[...walkScene([squares[i]])].filter(n=>n.kind==='mark');
-    assert.equal(marks.length,1,'evidence has no lifecycle cut, pulse or needs-you dot');
-    const mark=marks[0],solid=mark.attrs.fill!=='none';
-    assert.equal(solid,lamp.known&&item.complete===true);
-    filled+=Number(solid);
-    assert.equal(mark.ticket,undefined);
-    assert.match(mark.markId,new RegExp(`^gate-${data.id}-${lamp.key}-item-${i}$`));
-    assert.ok(mark.label.includes(item.id),'identity remains in the callout');
-    const {TYPE_COLOUR}=load('shared/overview-marks.js');
-    if(lamp.known&&item.ticket)assert.equal(mark.attrs.stroke,TYPE_COLOUR[item.ticket.type]);
-    if(!lamp.known)assert.equal(mark.attrs.stroke,load('shared/overview-scene.js').PALETTE.dim);
+   const cells=nodes.filter(n=>n.kind==='mark'&&String(n.markId??'').includes('-item-'));
+   if(lamp.known&&lamp.total>0&&lamp.total<=40) {
+    assert.equal(cells.length,lamp.total,`${lamp.key} cells`);
+    for(const [i,item] of lamp.items.entries()) {
+     const cell=cells[i],solid=cell.attrs.fill!=='none';
+     assert.equal(solid,item.complete===true);
+     assert.equal(cell.ticket,undefined);
+     assert.match(cell.markId,new RegExp(`^gate-${data.id}-${lamp.key}-item-${i}$`));
+     assert.ok(cell.label.includes(item.id),'identity remains in the callout');
+     assert.equal(cell.attrs.stroke,G.GATE_COLOUR[lamp.key]);
+    }
+    assert.equal(cells.filter(c=>c.attrs.fill!=='none').length,lamp.done,`${lamp.key}: count and cells agree`);
    }
-   assert.equal(filled,lamp.known?lamp.done:0,`${lamp.key}: count and squares agree`);
-   assert.deepEqual(gate.rows.map(r=>r.id),data.lamps.map(l=>`gate-${l.key}`));
    const counts=nodes.filter(n=>n.kind==='text'&&n.role==='number');
    if(lamp.known&&lamp.total>0)assert.deepEqual(counts.map(n=>Number(n.text)),[lamp.done,lamp.total]);
    else assert.equal(counts.length,0,'unknown evidence never prints a false completed count');
    if(!lamp.known) {
     assert.ok(nodes.some(n=>n.text==='not reported'));
-    assert.ok(nodes.every(n=>n.state!=='owed'));
-    const frame=chip.children[0];assert.equal(frame.glow,undefined);assert.equal(frame.needsYou,undefined);
-    assert.match(gate.rows.find(r=>r.id===`gate-${lamp.key}`).label,/not reported.*· .+/);
+    assert.equal(cells.length,0,'a part Deck cannot read draws no cells: no claim either way');
+    assert.ok(nodes.every(n=>n.state!=='owed'&&!n.glow&&!n.needsYou));
+    assert.match(gate.rows.find(r=>r.id===`gate-${lamp.key}`).label,/not reported/);
    }
   }
  }
@@ -198,7 +199,7 @@ test('criteria, tasks, reviews and test results draw their own evidence, indepen
  p.acceptance.view.tiers[0].areas[0].items[9].mark='fail';
  const data=F.acceptFromPayloads(model,'FEAT-0024',p);
  for(const compact of [true,false]) {
-  const gate=F.gateChips(data,0,0,1200,{compact});
+  const gate=load('shared/overview-gate.js').gateArch(data,700,500,compact?92:200,{small:compact});
   for(const lamp of data.lamps) {
    const marks=[...walkScene(gate.nodes)].filter(n=>n.markId?.startsWith(`gate-${data.id}-${lamp.key}-item-`));
    assert.equal(marks.length,lamp.total);
@@ -207,7 +208,7 @@ test('criteria, tasks, reviews and test results draw their own evidence, indepen
    assert.ok(marks.every(m=>m.ticket===undefined&&m.needsYou===undefined));
    if(lamp.key==='requirements') {
     assert.deepEqual(marks.map(m=>m.attrs.fill!=='none'),states.map(s=>s==='ticked'));
-    assert.ok(marks.every(m=>m.attrs.stroke===load('shared/overview-marks.js').TYPE_COLOUR.requirement));
+    assert.ok(marks.every(m=>m.attrs.stroke===load('shared/overview-gate.js').GATE_COLOUR.requirements));
     assert.equal(lamp.done,3);assert.equal(lamp.total,8);
    }
    if(lamp.key==='tasks')assert.deepEqual(marks.map(m=>m.attrs.fill!=='none'),[false,true,false,false]);
@@ -218,11 +219,10 @@ test('criteria, tasks, reviews and test results draw their own evidence, indepen
    }
   }
   // Unknown evidence overrides complete items and ticket attention alike.
-  const unknown=F.gateChips({...data,lamps:data.lamps.map(l=>({...l,known:false}))},0,0,1200,{compact});
+  const unknown=load('shared/overview-gate.js').gateArch({...data,lamps:data.lamps.map(l=>({...l,known:false}))},700,500,compact?92:200,{small:compact});
   const items=[...walkScene(unknown.nodes)].filter(n=>n.markId?.includes('-item-'));
-  assert.ok(items.length>0);
-  assert.ok(items.every(m=>m.attrs.fill==='none'&&m.attrs.stroke===load('shared/overview-scene.js').PALETTE.dim&&m.ticket===undefined));
-  assert.ok([...walkScene(unknown.nodes)].every(n=>!n.needsYou&&n.cls!=='sq-dot'&&n.tag!=='circle'));
+  assert.equal(items.length,0,'a part Deck cannot read draws no cells, whatever its items and their tickets say');
+  assert.ok([...walkScene(unknown.nodes)].every(n=>!n.needsYou&&n.cls!=='sq-dot'&&(n.kind!=='mark'||n.attrs.fill===undefined||n.attrs.fill==='none')));
  }
  p.note.frontmatter.review_verdict='changes-requested';
  const rejected=F.acceptFromPayloads(model,'FEAT-0024',p).lamps.find(l=>l.key==='reviews');
