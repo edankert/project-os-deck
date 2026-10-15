@@ -87,11 +87,11 @@ In Deck: Deck's TST-0045. At the top, the ticket's square, id and whole title (o
 
 ![S3 Ticket on Deck](__attachments__/DES-0005/ticket-deck.jpg)
 
-The plate: Deck's FEAT-0024, at review, which the cockpit marks as needing you. Beside its stages is its gate: five labelled chips for the checks before a feature is accepted, requirements, tasks, reviews, automated tests and acceptance tests. Each shows the same evidence S7 reads from the sidecar: its count, and a square per item, filled when that item counts as done. A check Deck cannot read says "not reported" and draws no verdict. Pressing the gate opens S7. It links to 18 tickets and one links to it. **29 words at rest**, besides the text and the rows.
+The plate: Deck's FEAT-0024, at review, which the cockpit marks as needing you. Beside its stages is its gate: five labelled chips for the checks before a feature is accepted, requirements, tasks, reviews, automated tests and acceptance tests. Each shows the same evidence S7 reads from the sidecar: its count, and a square per item, filled when that item counts as done. A check Deck cannot read says "not reported" and draws no verdict. Pressing the gate opens S7. It links to 18 tickets and one links to it. **32 words at rest**, besides the text and the rows.
 
 ![S3 Ticket on your-trainer](__attachments__/DES-0005/ticket-your-trainer.jpg)
 
-your-trainer's TST-0656, the acceptance test that failed in PHASE-021's release; pressing its square opens the release test. It links to 10 tickets and 3 link to it. **18 words at rest**, besides the text and the rows.
+your-trainer's TST-0656, the acceptance test that failed in PHASE-021's release; pressing its square opens the release test. It links to 10 tickets and 3 link to it. **27 words at rest**, besides the text and the rows.
 
 ### S4 Re-phase
 
