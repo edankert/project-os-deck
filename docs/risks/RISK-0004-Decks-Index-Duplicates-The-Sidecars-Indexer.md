@@ -6,7 +6,7 @@ title: "Deck's index and the sidecar's index read the same notes and can disagre
 status: closed
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-10-15
 source: ["[[ADR-0004-A-View-Is-A-Description]]", "[[REFERENCE-ARCHITECTURE-REVIEW-BEFORE-GLASS]]"]
 phase: "[[PHASE-0001-Deck]]"
 likelihood: high
@@ -71,3 +71,7 @@ The result is pinned by `desktop/fixtures/sidecar-types.json`, recorded by `tool
 **The triggers stand unchanged**, and two of them fired during the work that closed this: the fixture failed and the first question was which side was right (it was Deck's, twice), and the reader was found to be losing keys on fourteen notes. That is the mitigation doing its job rather than an argument against it.
 
 **What would reopen it.** Any of the triggers above. The likeliest is [[PHASE-0003-Vault]] opening, where a vault's type rules are the vault's and both indexers meet them for the first time.
+
+## Overview marks, 2026-10-15
+
+TASK-0144 also mirrors the cockpit's square and attention rules. Its overview-model suite imports the sibling cockpit's actual `Index` and `stats_payload`, then compares every reported item's fill and attention against Deck on both workspaces. The port includes the snapshot's staleness threshold and local verification date. The comparison is read-only and says explicitly when the sibling checkout is absent. This extends the mitigation; it adds no runtime sidecar dependency.

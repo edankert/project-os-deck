@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildOverview } from '../shared/overview-model.js';
+import { cockpitStalenessDays } from '../shared/overview-status.js';
 import { readAcceptanceLedger } from './overview-ledger.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { Workspace } from '../shared/types.js';
@@ -33,8 +34,17 @@ export interface OverviewIo {
   dirty?: (root: string) => boolean | undefined;
 }
 
+/** Same local calendar and snapshot setting as the Python cockpit. */
+export function overviewVerification(root: string, generated: string, readFile = (file: string) => fs.readFileSync(file, 'utf8')): { today: string; stalenessDays: number } {
+  const now = new Date(generated);
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  let snapshot = '';
+  try { snapshot = readFile(path.join(root, 'SNAPSHOT.yaml')); } catch { /* A plain vault uses the cockpit default. */ }
+  return { today, stalenessDays: cockpitStalenessDays(snapshot) };
+}
+
 export class OverviewService {
-  private readonly cached = new Map<string, { revision: number; ledgerRevision: string; docsRoot: string; root: string; name: string; reply: OverviewReply }>();
+  private readonly cached = new Map<string, { revision: number; ledgerRevision: string; verification: string; docsRoot: string; root: string; name: string; reply: OverviewReply }>();
   constructor(private readonly io: OverviewIo = {
     readFile: (file) => fs.readFileSync(file, 'utf8'), head: repositoryHead, dirty: repositoryDirty, now: () => new Date().toISOString(),
   }) {}
@@ -48,18 +58,21 @@ export class OverviewService {
       return { workspaceId: workspace.id, revision: snapshot.revision, building: true };
     }
     const ledger = readAcceptanceLedger(snapshot.docsRoot);
+    const generated = this.io.now();
+    const settings = overviewVerification(workspace.root, generated, this.io.readFile);
+    const verification = JSON.stringify(settings);
     const known = this.cached.get(workspace.id);
-    if (known?.revision === snapshot.revision && known.ledgerRevision === ledger.revision && known.docsRoot === snapshot.docsRoot && known.root === workspace.root && known.name === workspace.name) return known.reply;
+    if (known?.revision === snapshot.revision && known.ledgerRevision === ledger.revision && known.verification === verification && known.docsRoot === snapshot.docsRoot && known.root === workspace.root && known.name === workspace.name) return known.reply;
     const model = buildOverview(snapshot.records, {
       workspace: workspace.name, head: this.io.head(workspace.root), dirty: this.io.dirty?.(workspace.root),
-      acceptanceResults: ledger.results, generated: this.io.now(),
+      acceptanceResults: ledger.results, generated, ...settings,
       readBody: (rel) => {
         try { return this.io.readFile(path.join(snapshot.docsRoot, rel)); }
         catch { return ''; } // A file removed after indexing gets no body until the next revision.
       },
     });
     const reply: OverviewReply = { ...model, workspaceId: workspace.id, revision: snapshot.revision, building: false };
-    this.cached.set(workspace.id, { revision: snapshot.revision, ledgerRevision: ledger.revision, docsRoot: snapshot.docsRoot, root: workspace.root, name: workspace.name, reply });
+    this.cached.set(workspace.id, { revision: snapshot.revision, ledgerRevision: ledger.revision, verification, docsRoot: snapshot.docsRoot, root: workspace.root, name: workspace.name, reply });
     return reply;
   }
 }

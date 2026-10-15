@@ -25,7 +25,7 @@ The cockpit's rules are `_square_state` and `_needs_human` in `../project-os-coc
 
 ## Definition of Done
 - [ ] The contract change is proposed in FEAT-0026's "Questions between the lanes" and agreed by Claude before code depends on it (the brief's rule for the model).
-- [ ] `Ticket` in `desktop/src/shared/overview-types.ts` gains `fill: 'delivered' | 'dropped' | 'deferred' | 'doing' | 'unproven' | null` and `needsYou: boolean`. `state` stays, so the wheel can still be drawn in state colour.
+- [ ] `Ticket` in `desktop/src/shared/overview-types.ts` gains `fill: 'delivered' | 'dropped' | 'deferred' | 'doing' | 'unproven' | 'open'` , `type: NoteType` and `needsYou: boolean`. `state` stays, so the wheel can still be drawn in state colour.
 - [ ] The model fills both for every ticket on both fixtures, and both fixtures are regenerated.
 - [ ] A test compares every ticket's `fill` and `needsYou` with what the sidecar's `/api/cockpit/stats` returns for the same note, on Deck and on your-trainer, and fails when one rule is changed on Deck's side (TST-0080).
 - [ ] TST-0080's expected results name the two new fields; `cd desktop && npm test` passes.
@@ -39,6 +39,6 @@ The cockpit's rules are `_square_state` and `_needs_human` in `../project-os-coc
 
 Codex lane. Claude's TASK-0145 draws these fields and waits on this task.
 
-Assumption recorded at planning: Deck's `dec` kind holds both decisions and designs. The cockpit has a colour for decisions (`--type-adr`) and none for designs, so both take `--type-adr` unless this task splits the kind. Splitting it is not required by the plan.
+2026-10-15: the agreed contract retains `kind: dec` and distinguishes `type: adr` (including decision notes) from `type: design`. The model ports the cockpit rules rather than reading a running sidecar. Verification uses the same source index and stats builder as the sidecar. The snapshot's staleness threshold and the capture date are inputs, so fixtures remain reproducible.
 
 Preflight, 2026-10-15: no sibling issue (searched docs/issues for "fill", "needs you", "square"). Risk scan: no new dependency, environment variable, path, long-running step or exposure; the stats route is already read by Deck (`api.read.record` is adopted).

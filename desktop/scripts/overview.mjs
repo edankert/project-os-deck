@@ -13,7 +13,7 @@ if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
 } else {
   try {
     const { docsRootFor, walkNotes } = require('../dist/main/note-index.js');
-    const { repositoryHead, repositoryDirty } = require('../dist/main/overview-service.js');
+    const { repositoryHead, repositoryDirty, overviewVerification } = require('../dist/main/overview-service.js');
     const { describeWorkspace } = require('../dist/main/workspaces.js');
     const { readAcceptanceLedger } = require('../dist/main/overview-ledger.js');
     const { buildOverview } = require('../dist/shared/overview-model.js');
@@ -22,8 +22,10 @@ if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
     const docsRoot = docsRootFor(root);
     const { records, problems } = walkNotes(docsRoot);
     if (problems.length) throw new Error(`Cannot build a complete overview: ${problems.map((p) => `${p.relPath}: ${p.reason}`).join('; ')}`);
+    const generated = new Date().toISOString();
     const model = buildOverview(records, { workspace: describeWorkspace(root)?.name ?? path.basename(root),
-      head: repositoryHead(root), dirty: repositoryDirty(root), acceptanceResults: readAcceptanceLedger(docsRoot).results, generated: new Date().toISOString(),
+      head: repositoryHead(root), dirty: repositoryDirty(root), acceptanceResults: readAcceptanceLedger(docsRoot).results, generated,
+      ...overviewVerification(root, generated),
       readBody: (rel) => fs.readFileSync(path.join(docsRoot, rel), 'utf8') });
     if (args[1] === '--json') console.log(JSON.stringify(model, null, 2));
     else {
