@@ -52,7 +52,8 @@ module.exports = async (d) => {
     await settle();
     const seen = await js(`(() => {
       const scene = window.__deckOverview.current();
-      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); } return out; };
+      // A ticket is drawn by a mark, or by a row of a panel built as HTML (TASK-0147, TASK-0148).
+      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); else if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) out.push(r.id); } return out; };
       return { screen: scene.screen, address: scene.address, sceneMarks: walk(scene.nodes, []).length,
         domMarks: document.querySelectorAll('#overview-area [data-ticket]').length,
         rows: scene.list.length, shown: !document.getElementById('overview-area').hidden, overview: document.body.dataset.overviewScreen };
@@ -60,10 +61,60 @@ module.exports = async (d) => {
     assert.equal(seen.shown, true, `${screen}: the overview layer is shown`);
     assert.equal(seen.screen, screen, `${screen}: the scene drawn is the one asked for`);
     assert.equal(seen.domMarks, seen.sceneMarks, `${screen}: every mark in the scene is in the window`);
+    if (screen === 'phase') {
+      // The tickets stand on a tilted plane, what needs you in front, closed work folded (TASK-0147).
+      const plane = await js(`(() => {
+        const p = document.querySelector('#overview-area .ov-panel-rows.is-tilted .ov-plane');
+        if (!p) return null;
+        const closed = p.querySelector('.ov-sec[data-section="closed"]');
+        const rows = [...p.querySelectorAll('.ov-row')].filter((r) => r.offsetParent !== null);
+        const box = p.getBoundingClientRect();
+        return { transform: getComputedStyle(p).transform, closedFolded: closed ? closed.classList.contains('is-folded') : null,
+          visibleRows: rows.length, insidePlane: rows.every((r) => { const b = r.getBoundingClientRect(); return b.left >= box.left - 2 && b.right <= box.right + 2; }) };
+      })()`);
+      d.log('the phase plane', plane);
+      assert.ok(plane !== null, 'S2 builds its tickets as a tilted panel');
+      assert.notEqual(plane.transform, 'none', 'S2: the plane is tilted in 3D');
+      assert.ok(plane.closedFolded !== false, 'S2: closed work starts folded');
+      assert.ok(plane.insidePlane, 'S2: no row stands outside the plane');
+    }
+    if (screen === 'ticket') {
+      // The ticket's text arrives from the sidecar, as the reader shows it (TASK-0148).
+      let text = '';
+      for (let i = 0; i < 40; i += 1) {
+        text = await js(`(document.querySelector('#overview-area .ov-note') || {}).textContent || ''`);
+        if (text !== '' && !text.startsWith('reading the note')) break;
+        await d.delay(250);
+      }
+      d.log('the ticket text', { length: text.length, start: text.slice(0, 80) });
+      assert.ok(text.length > 40 && !text.startsWith('reading the note') && !text.startsWith("the note's text could not"), `S3: the ticket's text is shown, not "${text.slice(0, 60)}"`);
+    }
     await d.shot(win, `${screen}`);
     d.log(`opened ${screen}`, seen);
     results.push(seen);
   }
+
+  // Back and forward retrace the screens just visited (TASK-0146): the buttons, then ⌘[ and ⌘].
+  const trailBefore = await js('window.__deckOverview.trail()');
+  const shownAt = async () => js('window.__deckOverview.current().address');
+  assert.equal(await shownAt(), trailBefore.entries[trailBefore.at], 'the trail points at the screen shown');
+  await js("document.getElementById('ov-back').click()");
+  await settle();
+  assert.equal(await shownAt(), trailBefore.entries[trailBefore.at - 1], '← shows the screen before');
+  const enabled = await js("({ back: !document.getElementById('ov-back').disabled, forward: !document.getElementById('ov-forward').disabled, shown: !document.getElementById('ov-history').hidden })");
+  assert.deepEqual(enabled, { back: true, forward: true, shown: true }, 'after one step back both buttons are live');
+  await js("document.getElementById('ov-forward').click()");
+  await settle();
+  assert.equal(await shownAt(), trailBefore.entries[trailBefore.at], '→ returns to the screen after');
+  d.press(win, '[', ['meta']);
+  await settle();
+  const keyBack = await shownAt();
+  d.press(win, ']', ['meta']);
+  await settle();
+  const keyForward = await shownAt();
+  d.log('back and forward', { from: trailBefore.entries[trailBefore.at], keyBack, keyForward });
+  assert.equal(keyBack, trailBefore.entries[trailBefore.at - 1], '⌘[ goes back');
+  assert.equal(keyForward, trailBefore.entries[trailBefore.at], '⌘] goes forward');
 
   // A click on a sector opens its phase, Escape returns, L opens the twin.
   await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);

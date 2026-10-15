@@ -109,7 +109,7 @@ export function drag(from: { x: number; y: number }, to: { x: number; y: number 
   return steps;
 }
 
-export function press(win: BrowserWindow, key: string, modifiers: Array<'alt' | 'shift'> = []): void {
+export function press(win: BrowserWindow, key: string, modifiers: Array<'alt' | 'shift' | 'meta'> = []): void {
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: key, modifiers });
   // A button is pressed by the key's character, not by the key: Enter needs its `\r`.
   if (key.length === 1) win.webContents.sendInputEvent({ type: 'char', keyCode: key, modifiers });
