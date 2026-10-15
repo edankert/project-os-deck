@@ -17,6 +17,7 @@ import { walkScene, type AddressParts, type ListRow, type PanelNode, type Scene,
 import { panelRow, rowOrder } from './overview-phase.js';
 import { type Kind, type OverviewModel, type Ticket } from './overview-types.js';
 import { ticketLabel } from './overview-wheel.js';
+import { checkScene } from './overview-checks.js';
 import { gateChips, gateFromModel, type AcceptData } from './overview-flows.js';
 
 export const TICKET_SCREEN = { width: 1440, height: 1000 } as const;
@@ -114,13 +115,15 @@ export function flowFor(t: Ticket): { parts: AddressParts; label: string } | nul
   return null;
 }
 
-/** A title in lines that fit across the screen beside the ticket's square: three at most. */
-export function titleLines(title: string): string[] {
-  // Forty words at most, so a title alone cannot break the look's sixty; a longer one
-  // ends in "…", and the whole of it is in the square's callout and the list twin.
+/**
+ * A title in lines that fit across the screen beside the ticket's square: four at
+ * most, smaller as they grow. At most `maxWords` words; a longer title ends in "…",
+ * and the whole of it is in the square's callout and the list twin.
+ */
+export function titleLines(title: string, maxWords = 40): string[] {
   const all = title.split(/\s+/).filter(Boolean);
-  const words = all.length > 40 ? [...all.slice(0, 40), '…'] : all;
-  for (const width of [74, 92, 112]) {
+  const words = all.length > maxWords ? [...all.slice(0, maxWords), '…'] : all;
+  const fit = (width: number): string[] => {
     const lines: string[] = [];
     let line = '';
     for (const word of words) {
@@ -130,10 +133,22 @@ export function titleLines(title: string): string[] {
       } else line = line === '' ? word : `${line} ${word}`;
     }
     if (line !== '') lines.push(line);
-    if (lines.length <= (width === 74 ? 1 : width === 92 ? 2 : 3)) return lines;
-    if (width === 112) return [...lines.slice(0, 2), `${lines.slice(2).join(' ').slice(0, 108).trimEnd()}…`];
+    return lines;
+  };
+  for (const [width, most] of [[74, 1], [92, 2], [112, 3], [122, 4]] as const) {
+    const lines = fit(width);
+    if (lines.length <= most) return lines;
   }
-  return [title];
+  // Past four lines of the narrowest type: fewer words, never a word cut in half.
+  return titleLines(title, Math.max(1, Math.min(maxWords, words.length) - 6));
+}
+
+const TITLE_SIZE = [22, 19, 16, 15] as const;
+
+function titleNodes(title: string, maxWords: number): SceneNode[] {
+  const lines = titleLines(title, maxWords);
+  const size = TITLE_SIZE[lines.length - 1] ?? 15;
+  return lines.map((line, i) => ({ kind: 'text', x: 128, y: 70 + i * (size + 3), text: line, rest: true, role: 'name', size, cls: 'ov-title' }) as SceneNode);
 }
 
 export interface TicketExtras {
@@ -149,11 +164,10 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   const back = t.phase !== null
     ? backControl(ctx, { page: 'phase', note: t.phase }, `Back to ${t.phase}`)
     : backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
-  // The whole title, as Edwin asked: wrapped over up to three lines, smaller as it grows.
-  const lines = titleLines(t.title);
-  const size = lines.length === 1 ? 22 : lines.length === 2 ? 19 : 16;
-  const nodes: SceneNode[] = [back.node, { kind: 'text', x: 128, y: 46, text: t.id, rest: true, role: 'id', size: 13, cls: 'ov-dim' }];
-  lines.forEach((line, i) => nodes.push({ kind: 'text', x: 128, y: 70 + i * (size + 4), text: line, rest: true, role: 'name', size, cls: 'ov-title' }));
+  // The whole title, as Edwin asked, wrapped and smaller as it grows. It gets the words
+  // the rest of the screen leaves under the look's sixty (measured at the end).
+  const title: SceneNode = { kind: 'group', key: `title-${t.id}`, children: titleNodes(t.title, 40) };
+  const nodes: SceneNode[] = [back.node, { kind: 'text', x: 128, y: 46, text: t.id, rest: true, role: 'id', size: 13, cls: 'ov-dim' }, title];
   const list: ListRow[] = [back.row, { id: t.id, label: rowWords(t), group: 'This ticket', state: t.state }];
   nodes.push(...frame(TICKET_SCREEN.width, TICKET_SCREEN.height));
 
@@ -217,7 +231,7 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
     list.push({ id: `phase-of-${t.id}`, label: `In ${t.phase}`, group: 'Go to', target: ctx.address({ page: 'phase', note: t.phase }) });
   }
 
-  return {
+  const scene: Scene = {
     screen: 'ticket',
     address: ctx.address({ page: 'ticket', note: t.id }),
     width: TICKET_SCREEN.width,
@@ -226,4 +240,12 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
     nodes,
     list,
   };
+  // A long title on a feature with a full gate could pass sixty words at rest (Codex's
+  // review, round two): give the title only what the rest leaves, counted by the check itself.
+  for (let budget = 40; budget > 1; budget -= 2) {
+    const words = /(\d+) words?/.exec(checkScene(scene).find((r) => r.rule === 'words')?.detail ?? '');
+    if (words === null || Number(words[1]) <= 60) break;
+    title.children = titleNodes(t.title, Math.max(1, budget - (Number(words[1]) - 60)));
+  }
+  return scene;
 }

@@ -95,6 +95,10 @@ None yet. Write a question here, dated, and land it on `main`; the other agent a
 - **S3 cut the title short** (P2). Fixed: the whole title over up to three lines, forty words at most, the rest in the callout.
 - **S3's gate showed five "not reported" chips** (P2). Fixed: S3 loads the same evidence as S7 through Codex's `featureGate`; a test checks the counts.
 
+### Round two of the 2026-10-15 revision
+
+2026-10-15: Codex reviewed Claude's fixes at `416cda5`. Verdict: **changes-requested**. Eight of the ten round-one findings were fixed; the title and colouring findings were partly fixed, and Codex found two new ones: back across workspaces lost its place, because switching workspace drew that workspace's wheel and recorded it as a visit (P1), and forty title words could push a feature's screen past sixty words at rest (P2). Claude fixed all four: an address that names an overview screen no longer draws the wheel first; S3 gives its title only the words the rest of the screen leaves, counted by the check itself, with no character cut-off; the colouring switch is shown, and C acts, only on the wheel and the re-phase screen, the two it changes. Codex's own reproducers now pass against main (three entries and forward live after back across workspaces; no S3 scene over sixty words and no title under forty words cut, across all 3,131 tickets), and the title sweep is a test. Two rounds is this run's limit, so no third review was asked for; Edwin's acceptance tests are the next check.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

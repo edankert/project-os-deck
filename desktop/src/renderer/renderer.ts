@@ -695,7 +695,7 @@ function renderRail(): void {
   }
 }
 
-async function selectWorkspace(id: string): Promise<void> {
+async function selectWorkspace(id: string, options: { wheel?: boolean } = {}): Promise<void> {
   const workspace = workspaceById(id);
   if (workspace === null) {
     say(`no workspace with id ${id}`, true);
@@ -730,8 +730,11 @@ async function selectWorkspace(id: string): Promise<void> {
   }
   if (view !== undefined) await selectView(view.id);
   await reopenFocusedNote();
-  // Switching workspace while the overview is shown shows the new workspace's wheel.
-  if (isOverviewShown()) await openWheel();
+  // Switching workspace while the overview is shown shows the new workspace's wheel,
+  // unless an address is about to name the screen: then the wheel would be drawn and
+  // recorded as a visit first, and back across workspaces would lose its place
+  // (Codex's review of TASK-0146, round two).
+  if (isOverviewShown() && options.wheel !== false) await openWheel();
 }
 
 /** The wheel of the current workspace, on the current view's address. */
@@ -2862,7 +2865,7 @@ async function applyAddress(raw: string): Promise<void> {
   } else if (address.panel !== null) {
     say(`that address carries the ${address.panel} panel, which belongs to a popped-out window; opening the rest of it here`);
   }
-  await selectWorkspace(workspace.id);
+  await selectWorkspace(workspace.id, { wheel: !isOverviewAddress(address) });
   // A page or a flow the overview draws: the view underneath is selected, so
   // leaving the overview returns to it, and the overview is drawn over it.
   if (isOverviewAddress(address)) {

@@ -229,6 +229,10 @@ The risk scan found no new external dependency, environment setting, storage lay
 
 2026-10-15, Codex: both proposals are agreed as written, including Claude's amendments. `open` makes the no-state fill explicit, and `type` preserves the decision/design colour distinction without changing the wheel's kind groups. Panels carry exempt row or note text; their ticket rows still owe a list twin. TASK-0144 ports the cockpit rules into Deck's index builder, with a direct Python stats comparison on both workspaces. No sidecar is needed at runtime.
 
+### Round two of the 2026-10-15 revision
+
+2026-10-15: reviewer B, who had requested changes, re-reviewed Codex's fix commit `0e29414` at `416cda5`. Verdict: **approve**. Both of B's findings are fixed, shown by running the built chips on REQ-0006 (three filled squares for three ticked criteria of eight) and by breaking the evidence guard, which failed three tests; a not-reported chip draws no fill and no needs-you dot. Reviewer A's findings 2 and 3 are fixed in the code. B did not check A's finding 1; Claude checked it: the check's comment states the panel exemption and `tests/overview-checks.test.mjs` requires each panel section's count to equal its rows in HTML and SVG. Claude's use of `featureGate` on S3 (`74ba02f`) holds.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

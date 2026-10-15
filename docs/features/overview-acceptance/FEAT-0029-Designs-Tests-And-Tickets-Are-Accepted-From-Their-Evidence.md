@@ -151,6 +151,10 @@ Claude adds one from the plates: **S5's fanned plates** are drawn nearly as opaq
 
 2026-10-14: two Claude reviewers, round two, on the fixes `a6fb6c7..4a5baa0`. Both found all eight findings fixed, each with a guard broken and a named test failing: S7 offers Accept and Send back only when the sidecar lists them, an unknown lamp always says why, an empty lamp is hollow and supplies no evidence, the Reviews lamp reads strings and lists, saved S6 results survive commits, `skipped` matches the cockpit's meaning, and S5's other plates are outlines. Both found the two criteria narrowed because of the cockpit stated honestly. Both approved. Whether the narrowed feature is acceptable is Edwin's decision.
 
+### Round two of the 2026-10-15 revision
+
+2026-10-15: reviewer B, who had requested changes, re-reviewed Codex's fix commit `0e29414` at `416cda5`. Verdict: **approve**. Both of B's findings are fixed, shown by running the built chips on REQ-0006 (three filled squares for three ticked criteria of eight) and by breaking the evidence guard, which failed three tests; a not-reported chip draws no fill and no needs-you dot. Reviewer A's findings 2 and 3 are fixed in the code. B did not check A's finding 1; Claude checked it: the check's comment states the panel exemption and `tests/overview-checks.test.mjs` requires each panel section's count to equal its rows in HTML and SVG. Claude's use of `featureGate` on S3 (`74ba02f`) holds.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

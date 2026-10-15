@@ -326,3 +326,18 @@ test('a feature on S3 shows its gate with the evidence counts S7 reads, and draw
   const counts = drawn(scene);
   for (const [id, n] of counts) assert.equal(n, 1, `${id} is drawn ${n} times`);
 });
+
+// TASK-0148 — every real ticket's screen holds the look, whatever its title (Codex's review,
+// round two: forty title words on a feature with a full gate made 62 words at rest).
+for (const name of WORKSPACES) {
+  test(`${name}: every ticket's screen stays within sixty words, and no title under forty words is cut`, () => {
+    const m = model(name);
+    const { titleLines } = load('shared/overview-ticket.js');
+    for (const t of Object.values(m.tickets)) {
+      const words = checkScene(ticketScene(m, t.id, ctx)).find((r) => r.rule === 'words');
+      assert.ok(words.ok, `${t.id}: ${words.detail}`);
+      const title = t.title.trim().replace(/\s+/g, ' ');
+      if (title.split(' ').length <= 40) assert.equal(titleLines(title).join(' '), title, `${t.id}: its title is cut`);
+    }
+  });
+}

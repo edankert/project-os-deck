@@ -94,6 +94,10 @@ None yet. Write a question here, dated, and land it on `main`; the other agent a
 - **An in-progress square looked like "complete, not proven" under reduced motion** (P2). Fixed: the square keeps the cockpit's static outline. A test checks every fill's shapes and the needs-you dot on each, which no test checked before.
 - **The colouring was not in the address** (P2), as this feature's task requires. Fixed: `colour=state` is part of the address grammar; every overview address keeps its colouring. DES-0005 now says the switch reaches the wheel, its shelf and tray, and the re-phase cloud, and that lists keep the cockpit's marks.
 
+### Round two of the 2026-10-15 revision
+
+2026-10-15: Codex reviewed Claude's fixes at `416cda5`. Verdict: **changes-requested**. Eight of the ten round-one findings were fixed; the title and colouring findings were partly fixed, and Codex found two new ones: back across workspaces lost its place, because switching workspace drew that workspace's wheel and recorded it as a visit (P1), and forty title words could push a feature's screen past sixty words at rest (P2). Claude fixed all four: an address that names an overview screen no longer draws the wheel first; S3 gives its title only the words the rest of the screen leaves, counted by the check itself, with no character cut-off; the colouring switch is shown, and C acts, only on the wheel and the re-phase screen, the two it changes. Codex's own reproducers now pass against main (three entries and forward live after back across workspaces; no S3 scene over sixty words and no title under forty words cut, across all 3,131 tickets), and the title sweep is a test. Two rounds is this run's limit, so no third review was asked for; Edwin's acceptance tests are the next check.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

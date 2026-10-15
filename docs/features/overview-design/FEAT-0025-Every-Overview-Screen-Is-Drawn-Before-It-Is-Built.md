@@ -87,6 +87,10 @@ None yet. Write a question here, dated, and land it on `main`; the other agent a
 - **The S2 plate said it drew 172 tickets while drawing 34, and lost the closed strip** (P2). Fixed: a flat panel keeps room for every section, the manifest counts what the SVG draws, and the plate test requires each section to draw at least one ticket.
 - **The design page had no back and forward** (P2). Fixed: it has both, with ⌘[ and ⌘], and the test runs the page's script.
 
+### Round two of the 2026-10-15 revision
+
+2026-10-15: Codex reviewed Claude's fixes at `416cda5`. Verdict: **changes-requested**. Eight of the ten round-one findings were fixed; the title and colouring findings were partly fixed, and Codex found two new ones: back across workspaces lost its place, because switching workspace drew that workspace's wheel and recorded it as a visit (P1), and forty title words could push a feature's screen past sixty words at rest (P2). Claude fixed all four: an address that names an overview screen no longer draws the wheel first; S3 gives its title only the words the rest of the screen leaves, counted by the check itself, with no character cut-off; the colouring switch is shown, and C acts, only on the wheel and the re-phase screen, the two it changes. Codex's own reproducers now pass against main (three entries and forward live after back across workspaces; no S3 scene over sixty words and no title under forty words cut, across all 3,131 tickets), and the title sweep is a test. Two rounds is this run's limit, so no third review was asked for; Edwin's acceptance tests are the next check.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

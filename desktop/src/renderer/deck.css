@@ -1552,6 +1552,7 @@ body.pinned .overview-area { left: 0; }
 }
 .ov-list[hidden] { display: none; }
 .ov-colouring-toggle { right: 56px; }
+.ov-colouring-toggle[hidden] { display: none; }
 .ov-colouring-toggle[aria-pressed="true"] { background: hsla(275, 78%, 60%, 0.25); }
 .ov-list h2 { font-size: 14px; margin: 0 0 8px; }
 .ov-list h3 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(205 25% 62%); margin: 14px 0 4px; }

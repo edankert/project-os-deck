@@ -109,7 +109,11 @@ function readColouring(): 'type' | 'state' {
   }
 }
 
+/** The screens the colouring changes: the rest draw tickets as the cockpit's rows and squares in both. */
+const COLOURED_SCREENS = new Set(['wheel', 'rephase']);
+
 async function switchColouring(): Promise<void> {
+  if (current === null || !COLOURED_SCREENS.has(current.scene.screen)) return;
   colouring = colouring === 'type' ? 'state' : 'type';
   try {
     localStorage.setItem('deck.overview.colouring', colouring);
@@ -125,9 +129,11 @@ function drawColouringToggle(): void {
   if (colouringToggle === null) return;
   const byType = colouring === 'type';
   colouringToggle.setAttribute('aria-pressed', String(!byType));
+  // Shown only where it changes the picture (Codex's review, round two).
+  colouringToggle.hidden = current === null || !COLOURED_SCREENS.has(current.scene.screen);
   colouringToggle.title = byType
-    ? 'Coloured by ticket type, as in the cockpit. Press for the state colours (C)'
-    : 'Coloured by state. Press for the cockpit\'s type colours (C)';
+    ? 'Tickets coloured by type, as in the cockpit. Press for the state colours (C)'
+    : 'Tickets coloured by state. Press for the cockpit\'s type colours (C)';
 }
 let backButton: HTMLButtonElement | null = null;
 let forwardButton: HTMLButtonElement | null = null;
@@ -341,6 +347,7 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   area.hidden = false;
   place();
   document.body.dataset['overviewScreen'] = scene.screen;
+  drawColouringToggle();
   trail = afterDraw(trail, scene.address, travelIntent, options.replace === true);
   travelIntent = null;
   drawHistory();
