@@ -200,6 +200,9 @@ for (const name of WORKSPACES) {
     const walk = (nodes, lit) => { for (const n of nodes) { if (n.kind === 'group') walk(n.children, lit || String(n.cls ?? '').includes('glow')); else if (n.kind === 'mark' && n.ticket !== undefined && (lit || n.glow)) glowing.add(n.ticket); } };
     walk(scene.nodes, false);
     // What glows is the cockpit's "needs you" (TASK-0144, TASK-0145), not DES-0004's failed or owed.
+    // Every ticket carries the flag, so this cannot pass on a fixture that lacks it.
+    for (const t of Object.values(m.tickets)) assert.equal(typeof t.needsYou, 'boolean', `${t.id} has no needs-you flag`);
+    assert.ok(Object.values(m.tickets).some((t) => t.needsYou), `${name}: some ticket needs a person`);
     for (const t of Object.values(m.tickets)) if (t.needsYou === true) assert.ok(glowing.has(t.id), `${t.id} needs a person and does not glow`);
   });
 }

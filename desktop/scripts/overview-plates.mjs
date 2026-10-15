@@ -137,7 +137,8 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     }
     // A ticket is drawn by a mark, or by a row of a panel (TASK-0147, TASK-0148).
     const marks = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'mark' && node.ticket !== undefined ? 1 : node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
-    plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, rows: scene.list.length, address: scene.address, ...(key === 'ticket' ? { ticket: choice.ticket } : {}) });
+    const panelRows = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
+    plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, panelRows, rows: scene.list.length, address: scene.address, ...(key === 'ticket' ? { ticket: choice.ticket } : {}) });
     console.log(`${base}: ${wordsAtRest(scene)} words at rest, ${marks} tickets drawn, ${scene.list.length} list rows${png ? '' : ' (no PNG: rsvg-convert is not installed)'}`);
   }
 }

@@ -8,7 +8,7 @@
  * same rows and the same marks, with the tilt drawn as rows that shrink and
  * narrow toward the back.
  */
-import { cockpitSquare } from './overview-marks.js';
+import { cockpitSquare, markWords } from './overview-marks.js';
 import type { PanelNode, PanelRow, SceneNode } from './overview-scene.js';
 
 /** How much smaller and narrower the back of a tilted plane is than its front. */
@@ -32,7 +32,7 @@ function rowNodes(row: PanelRow, x: number, y: number, w: number, s: number): Sc
   const titleChars = Math.floor((w - size - idWidth - statusWidth - 24 * s) / (titleSize * 0.52));
   return [
     { kind: 'mark', tag: 'rect', attrs: { x, y: y - ROW * s * 0.5, width: w, height: ROW * s - 3 * s, rx: 5 * s }, cls: 'ov-row' },
-    cockpitSquare(row, x + 12 * s + size / 2, y + (ROW * s) / 2 - ROW * s * 0.5 - 1.5 * s, size, { ticket: false }),
+    cockpitSquare(row, x + 12 * s + size / 2, y + (ROW * s) / 2 - ROW * s * 0.5 - 1.5 * s, size, { label: markWords(row), target: row.target }),
     { kind: 'text', x: x + 22 * s + size, y: y + idSize * 0.35, text: row.id, rest: true, role: 'id', size: idSize, cls: 'ov-dim' },
     { kind: 'text', x: x + 22 * s + size + idWidth, y: y + titleSize * 0.35, text: clip(row.title, titleChars), rest: true, role: 'name', size: titleSize },
     { kind: 'text', x: x + w - 10 * s, y: y + statusSize * 0.35, text: row.status, rest: true, role: 'label', size: statusSize, anchor: 'end', cls: 'ov-dim' },
@@ -85,7 +85,7 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
           section.rows.slice(0, lines * perLine).forEach((row, i) => {
             const cx = left + 6 + (i % perLine) * strip * 1.6 * s;
             const cy = top + 6 + Math.floor(i / perLine) * strip * 1.7 * s;
-            nodes.push(cockpitSquare(row, cx, cy, strip * s, { ticket: false }));
+            nodes.push(cockpitSquare(row, cx, cy, strip * s, { label: markWords(row), target: row.target }));
           });
           return nodes;
         },

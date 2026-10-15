@@ -13,11 +13,11 @@
  */
 import { backControl, frame, heading, words } from './overview-chrome.js';
 import { cockpitSquare, rowWords } from './overview-marks.js';
-import type { AddressParts, ListRow, PanelNode, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import { walkScene, type AddressParts, type ListRow, type PanelNode, type Scene, type SceneNode, type ScreenContext } from './overview-scene.js';
 import { panelRow, rowOrder } from './overview-phase.js';
 import { type Kind, type OverviewModel, type Ticket } from './overview-types.js';
 import { ticketLabel } from './overview-wheel.js';
-import { gateFromModel, gateNodes } from './overview-flows.js';
+import { gateChips, gateFromModel } from './overview-flows.js';
 
 export const TICKET_SCREEN = { width: 1440, height: 1000 } as const;
 
@@ -142,22 +142,32 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
 
   nodes.push(...track(t));
 
-  // A feature shows its gate beside its track: the five checks before it is accepted.
+  // A feature shows its gate beside its track: the five checks before it is accepted,
+  // as labelled chips (TASK-0149). Pressing it opens S7. The tickets in a chip are
+  // listed on the right already, so the chip's squares echo them without their ids.
+  let top: number = TICKET_LAYOUT.text.y;
   if (t.kind === 'feat') {
     const { x, y, w } = TICKET_LAYOUT.gate;
-    const gate = gateNodes(gateFromModel(model, t.id), x + 40, y + 50, w / 1100).filter((n) => n.kind !== 'text');
-    nodes.push({ kind: 'group', key: `gate-${t.id}`, target: ctx.address({ flow: 'accept', note: t.id }), label: `${t.id}'s gate: open it to accept the feature`, children: gate });
+    const gate = gateChips(gateFromModel(model, t.id), x, y, w, { compact: true });
+    for (const node of walkScene(gate.nodes)) if (node.kind === 'mark') delete node.ticket;
+    nodes.push({ kind: 'group', key: `gate-${t.id}`, target: ctx.address({ flow: 'accept', note: t.id }), label: `${t.id}'s gate: open it to accept the feature`, children: gate.nodes });
+    for (const row of gate.rows) if (row.id.startsWith('gate-')) list.push(row);
+    // A gate with many items grows down; the panels start below it.
+    for (const node of walkScene(gate.nodes)) {
+      if (node.kind === 'mark' && node.tag === 'rect' && typeof node.attrs['height'] === 'number') top = Math.max(top, Number(node.attrs['y']) + Number(node.attrs['height']) + 18);
+    }
   }
+  const below = (box: { x: number; y: number; w: number; h: number }): { x: number; y: number; w: number; h: number } => ({ ...box, y: top, h: box.h - (top - box.y) });
 
   // Its text, as the reader shows it.
-  nodes.push({ kind: 'panel', key: `text-${t.id}`, ...TICKET_LAYOUT.text, label: `${t.id}'s text`, body: { kind: 'note', id: t.id, title: t.title, text: extras.text ?? '' } });
+  nodes.push({ kind: 'panel', key: `text-${t.id}`, ...below(TICKET_LAYOUT.text), label: `${t.id}'s text`, body: { kind: 'note', id: t.id, title: t.title, text: extras.text ?? '' } });
 
   // What it is joined to, as the cockpit lists tickets.
   const { to, from } = joinedTo(model, t.id);
   const links: PanelNode = {
     kind: 'panel',
     key: `links-${t.id}`,
-    ...TICKET_LAYOUT.links,
+    ...below(TICKET_LAYOUT.links),
     label: `What ${t.id} is joined to`,
     body: {
       kind: 'rows',

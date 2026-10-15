@@ -424,17 +424,6 @@ export function gateChips(data: AcceptData, x: number, y: number, width: number,
   return { nodes, rows };
 }
 
-/** Compatibility for the drawing lane's pre-TASK-0148 S3. New callers take
- * gateChips' nodes AND rows. Remove this wrapper when that screen is merged.
- */
-export function gateNodes(data: AcceptData, x: number, y: number, scale: number): SceneNode[] {
-  const { nodes } = gateChips(data, x - 90 * scale, y - 50 * scale, 1140 * scale, { compact: true });
-  // Old S3 already gives each neighbour a ticket identity in its radial graph.
-  // These small echoes retain the square but do not duplicate that identity.
-  for (const node of walkScene(nodes)) if (node.kind === 'mark') delete node.ticket;
-  return nodes;
-}
-
 export function acceptScene(model: OverviewModel, data: AcceptData, ctx: ScreenContext): Scene {
   const scene = base('accept', data.id, data.title, ctx, { note: data.id }), { nodes, list } = scene;
   const ticket = flowTicket(model, data.id, data.title, data.status, 'feature');

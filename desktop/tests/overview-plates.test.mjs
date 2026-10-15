@@ -23,7 +23,9 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         assert.ok(plate !== undefined, `no ${screen} plate for ${ws}`);
         const svg = fs.readFileSync(path.join(out, plate.svg), 'utf-8');
         const drawn = (svg.match(/ data-ticket="/g) ?? []).length;
-        assert.equal(drawn, plate.marks, `${plate.svg}: ${drawn} ticket marks in the SVG, ${plate.marks} in the scene`);
+        // A panel drawn flat may run out of room and say "more in Deck"; every other mark is drawn.
+        if (plate.panelRows === 0) assert.equal(drawn, plate.marks, `${plate.svg}: ${drawn} ticket marks in the SVG, ${plate.marks} in the scene`);
+        else assert.ok(drawn >= plate.marks - plate.panelRows && drawn <= plate.marks, `${plate.svg}: ${drawn} ticket marks in the SVG, ${plate.marks - plate.panelRows} to ${plate.marks} expected`);
         assert.ok(plate.words <= 60, `${plate.svg}: ${plate.words} words at rest`);
       }
     }
