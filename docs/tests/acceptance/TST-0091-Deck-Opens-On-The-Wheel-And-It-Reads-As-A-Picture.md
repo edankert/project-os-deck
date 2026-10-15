@@ -6,7 +6,7 @@ title: "Deck opens on the wheel of phases, the state of every phase is read from
 status: active
 owner: user:edwin
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[TASK-0126-Deck-Opens-On-The-Wheel]]"]
 phase: "[[PHASE-0005-Overview]]"
 scope: system
@@ -16,7 +16,7 @@ command: ""
 last_verified: ""
 covers: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]"]
 issues: []
-tasks: ["[[TASK-0125-The-Overview-Contracts-And-The-Wheel-As-A-Scene]]", "[[TASK-0126-Deck-Opens-On-The-Wheel]]"]
+tasks: ["[[TASK-0125-The-Overview-Contracts-And-The-Wheel-As-A-Scene]]", "[[TASK-0126-Deck-Opens-On-The-Wheel]]", "[[TASK-0145]]", "[[TASK-0146]]"]
 artifacts: []
 adequacy: ""
 mutation_score: ""
@@ -46,6 +46,8 @@ Start Deck with `npm start` in `desktop/` on a build that includes TASK-0126. Ha
 6. Press Copy address on the wheel and on a phase, then Open address with each.
 7. Press the Deck name at the left of the header to leave the overview, and press it again to come back.
 8. Turn on reduced motion and move between the wheel and a phase.
+9. Switch the wheel between its two colourings, by state and by ticket type. Open the cockpit beside Deck on the same workspace and compare three tickets: one done, one in progress and one the cockpit marks as needing you.
+10. Open a phase, then a ticket, then a linked ticket. Press ← three times, then → once. Do the same with ⌘[ and ⌘], and with the mouse's back and forward buttons. Then press Escape on a ticket.
 
 ## Expect
 
@@ -55,4 +57,7 @@ Start Deck with `npm start` in `desktop/` on a build that includes TASK-0126. Ha
 - Every step can be done with the keyboard, and the list holds the same phases and tickets as the picture.
 - A copied address reopens the same screen.
 - With reduced motion, screens change without animation and nothing glows in a pulse.
+- A ticket has the same colour and the same mark in Deck as in the cockpit: colour for its type, fill for its state, a corner dot when it needs you. No screen says "owed again".
+- ← goes back through the screens in the order they were visited and → returns; each button is disabled when there is nowhere to go. Escape goes up one level, ticket to phase, not back.
+- **Edwin's choice, recorded with the verdict:** which colouring the wheel should open in.
 - **Edwin's judgement, recorded with the verdict:** does it read as a picture, and does it look like the instrument he asked for?

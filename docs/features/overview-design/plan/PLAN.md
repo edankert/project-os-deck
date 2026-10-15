@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0025: Every overview screen is drawn before it is built"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built]]"]
 implements: ["[[FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built]]"]
 related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
@@ -21,6 +21,7 @@ Each step below becomes one task note when the owner starts it. A step that turn
 3. Draw S2, S3 and S4.
 4. Draw S5, S6 and S7 with real images.
 5. Capture the plates, measure the words, write the captions and the answers to the open questions, and move DES-0005 to `proposed`.
+5. 2026-10-15: redraw every plate after Edwin's feedback, with the wheel in both colourings ([[TASK-0150]]).
 
 ## Dependencies
 

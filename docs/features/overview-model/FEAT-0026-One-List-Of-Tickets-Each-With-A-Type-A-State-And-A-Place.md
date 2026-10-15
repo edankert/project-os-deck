@@ -3,15 +3,15 @@ type: "[[feature]]"
 id: FEAT-0026
 aliases: ["FEAT-0026"]
 title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Every overview screen reads one model of the workspace's tickets, so no two screens can disagree, and every screen is checked automatically against the look's rules on two real workspaces."
 requirements: []
-tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]"]
+tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]", "[[TASK-0144]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -72,6 +72,10 @@ The resolved results were also compared with `tools/scripts/release-test.py` aga
 `bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. The validator reports existing advisory warnings. No CI run or human acceptance verdict is claimed.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-15, because Edwin ran the overview and asked for changes.** He liked much of it, and asked for the cockpit's ticket colours and status marks on every screen, tickets drawn as cockpit rows, more of a ticket on its own screen, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. The move is from `review` back to `doing`, which STATUSES.md does not list as a typical transition; it is used because new work is added inside the feature, as FEAT-0005 and FEAT-0006 were reopened before. The review rounds below are for the build of 2026-10-14. The new tasks get their own review by the other model before the feature goes back to `review`.
+
+New work: [[TASK-0144]] (Codex) gives every ticket the cockpit's fill and needs-you flag, computed by the sidecar's own rules. It changes the model's contract, so it is proposed under Questions between the lanes below. It is the first task of the run: TASK-0145, TASK-0147, TASK-0148 and TASK-0149 wait on it.
 
 The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan. `b5f65df` adds the independently requested numeric cases and deterministic scan regression.
 
@@ -207,6 +211,10 @@ The risk scan found no new external dependency, environment setting, storage lay
 ## Questions between the lanes
 
 2026-10-14: Claude agreed to one contract addition for the review fixes: `dirty?: boolean` beside `head` in `OverviewModel`. It records whether the source tree had uncommitted note changes at capture time. TASK-0140 implements the findings without changing the scene contract or FEAT-0029 files.
+
+2026-10-15, proposed at planning for both lanes to agree before either codes against it: **two fields on `Ticket`** for [[TASK-0144]]. `fill: 'delivered' | 'dropped' | 'deferred' | 'doing' | 'unproven' | null` is how the cockpit fills the ticket's square (`_square_state`). `needsYou: boolean` is whether the cockpit puts its "needs you" dot on it (`_needs_human`). `state` stays as it is, because the wheel keeps a state colouring. Agreed by: Codex (pending), Claude (2026-10-15, with two amendments). The amendments: `fill` writes the cockpit's "no state" as `'open'` rather than `null`, so every ticket has a word for its fill (`FILL_WORD`); and a third field, `type: NoteType`, carries the cockpit's type word (`requirement`, `feature`, `task`, `test`, `issue`, `adr`, `design`, `risk`). The colour comes from `type`, not `kind`, because `kind: 'dec'` holds both decisions and designs and the cockpit colours them differently (`--type-adr` and `--type-reference`). The contract is written in `desktop/src/shared/overview-types.ts`.
+
+2026-10-15, proposed by the drawing lane for [[TASK-0147]]: **the word check in `overview-checks.ts` exempts a scene's ticket list.** S2's rows carry an id, a title and a status word each, which is the point of them, so they cannot count toward the 60 words at rest. Everything else on the screen still does. The proposal is that the scene marks the rows as a list, the check skips text inside it, and TST-0083 shows a scene with too many words outside the list still fails. Agreed by: Codex (pending), Claude (proposer). The scene marks the rows as a `panel` node (`desktop/src/shared/overview-scene.ts`); the check skips text inside a panel, and every ticket a panel row holds must also be in `scene.list`.
 
 ## Links
 

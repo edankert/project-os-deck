@@ -3,15 +3,15 @@ type: "[[feature]]"
 id: FEAT-0029
 aliases: ["FEAT-0029"]
 title: "Designs, acceptance tests and tickets are accepted from a picture of their evidence: S5, S6 and S7, writing through the cockpit's sidecar"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person accepts a design from its plates, records an acceptance test result from a before-and-after picture, and accepts a feature from a gate that shows what is missing, each in Deck and each written through the cockpit's sidecar."
 requirements: []
-tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]"]
+tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]", "[[TASK-0149]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -63,6 +63,10 @@ The tests exercise unavailable and withdrawn sidecar actions, nonzero reconciled
 
 ## Where this stands
 
+**Back to `doing` on 2026-10-15, because Edwin ran the overview and asked for changes.** He liked much of it, and asked for the cockpit's ticket colours and status marks on every screen, tickets drawn as cockpit rows, more of a ticket on its own screen, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. The move is from `review` back to `doing`, which STATUSES.md does not list as a typical transition; it is used because new work is added inside the feature, as FEAT-0005 and FEAT-0006 were reopened before. The review rounds below are for the build of 2026-10-14. The new tasks get their own review by the other model before the feature goes back to `review`.
+
+New work: [[TASK-0149]] (Codex) turns S7's five lamps into labelled chips of cockpit marks, which S3 reuses, and moves S5 and S6 to the same marks and words. It waits on TASK-0144 and on Claude's mark module in TASK-0145. Edwin's open decisions on this feature's narrowed criteria are unchanged.
+
 2026-10-14: **FEAT-0029 remains at review on `lane/codex`.** `a6fb6c7` repairs S7 action availability, empty and unknown lamps, review provenance, and the acceptance contract. `388d11e` preserves S6 progress across unrelated commits and persists stale-result deletion. `a7d450a` draws S5’s unselected plates as outlines and refreshes the S5/S7 plates, manifest and prototype. All 745 desktop tests pass with no skips.
 
 Claude coordinates, reviews round two and merges. Edwin decides whether the narrower feature is acceptable and runs TST-0088, TST-0089 and TST-0100. The cockpit still owes person-only feature transitions and agent refusal on `decide` and `mark-check`. The requests are at the end of [[REFERENCE-COCKPIT-ADOPTION]], and RISK-0009 remains open. Nothing was pushed or merged by Codex.
@@ -111,6 +115,8 @@ Your Trainer has no feature at review in the current tree or its existing overvi
 2026-10-14, Codex to the drawing lane: will you place `gateNodes(gateFromModel(model, featureId), x, y, scale)` under S3's feature track and connect the S5–S7 entry controls? The exports are in `desktop/src/shared/overview-flows.ts`. The registered addresses are `?flow=design&note=DES-…`, `?flow=test-run&note=REL-…&step=android.3` (the release is optional), and `?flow=accept&note=FEAT-…`. Regenerate DES-0005's S5–S7 plates from the six fixtures after merging. Your Trainer's fixture preserves FEAT-0130's actual `doing` status because no feature at review exists there.
 
 Claude’s round-two packet can be regenerated with `python3 tools/scripts/review-packet.py FEAT-0029 --round 2 --since 83ca14c --out build/review-packet-FEAT-0029-r2.md`. This run leaves the feature at review and preserves Claude’s round-one verdict.
+
+2026-10-15, written at planning for both lanes: **the gate's chip is written once, in this feature, and S3 uses it.** [[TASK-0149]] replaces `gateNodes` with five labelled chips ("Requirements 0 / 8" and a row of cockpit marks). Claude's [[TASK-0148]] places the same chips on S3 in place of the small lamps. The marks inside a chip come from Claude's shared module in [[TASK-0145]], so TASK-0149 starts after it.
 
 ## Review
 

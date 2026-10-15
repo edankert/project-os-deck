@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0028: A phase and a ticket open as pictures"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]"]
 implements: ["[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]"]
 related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
@@ -20,6 +20,7 @@ Each step below becomes one task note when the owner starts it. A step that turn
 2. S3, with the lifecycle tracks for every ticket type.
 3. S4, and the issue filed in the cockpit.
 4. Run the screen checks on the live model; write the acceptance test notes.
+5. 2026-10-15: S2's tickets as cockpit rows on a tilted plane ([[TASK-0147]]); S3 with the ticket's text, linked tickets as rows and the gate as chips ([[TASK-0148]]).
 
 ## Dependencies
 

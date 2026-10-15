@@ -6,7 +6,7 @@ title: "Every overview screen opens from its address in a real Deck window on De
 status: passing
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[TASK-0131-Run-The-Overview-Screens-In-A-Window-Once]]"]
 phase: "[[PHASE-0005-Overview]]"
 scope: system
@@ -16,7 +16,7 @@ command: ""
 last_verified: 2026-10-14
 covers: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]", "[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]", "[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]"]
 issues: []
-tasks: ["[[TASK-0131-Run-The-Overview-Screens-In-A-Window-Once]]"]
+tasks: ["[[TASK-0131-Run-The-Overview-Screens-In-A-Window-Once]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0148]]"]
 artifacts: []
 adequacy: ""
 mutation_score: ""
@@ -46,6 +46,7 @@ From `desktop/`, after `npm run build`:
 - A click on the wheel opens a phase or a ticket, Escape goes back one screen, and L opens the list twin with as many rows as the scene's list.
 - The served page follows the Mac's view rather than opening on the wheel; pressing its Deck name opens the wheel, which draws its tickets and offers no enabled control.
 - The workspace's `git status` is the same before and after.
+- Added 2026-10-15, not yet run: after a phase, a ticket and a linked ticket are opened, back returns through them in order and forward returns once; the wheel opens in each of its two colourings from its address.
 
 ## Results
 

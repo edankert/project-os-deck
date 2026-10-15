@@ -1,10 +1,10 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0027: Deck opens on the wheel of phases"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]"]
 implements: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]"]
 related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
@@ -22,6 +22,7 @@ Each step below becomes one task note when the owner starts it. A step that turn
 4. Add hover, focus, the list twin and the transition into a phase.
 5. Switch to the live model when FEAT-0026 lands, and run the screen checks on both workspaces.
 6. Write the acceptance test note for Edwin.
+7. 2026-10-15: the cockpit's colours and marks on every screen, and the wheel in two colourings ([[TASK-0145]]); back and forward ([[TASK-0146]]).
 
 ## Dependencies
 

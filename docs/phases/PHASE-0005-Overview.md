@@ -7,11 +7,11 @@ status: active
 order: 5
 owner: user:edwin
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 goal: "Deck opens on the circular overview, a wheel with one sector per unfinished phase and one wedge per ticket. Every screen reached from it, including accepting a design, running an acceptance test and accepting a feature, shows status and progress as diagrams and images rather than lists of text."
 features: ["[[FEAT-0025]]", "[[FEAT-0026]]", "[[FEAT-0027]]", "[[FEAT-0028]]", "[[FEAT-0029]]"]
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0141]]", "[[TASK-0142]]", "[[TASK-0143]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0141]]", "[[TASK-0142]]", "[[TASK-0143]]", "[[TASK-0144]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0149]]", "[[TASK-0150]]"]
 issues: []
 depends: ["[[PHASE-0001-Deck]]"]
 related: ["[[DES-0004-The-Phase-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
@@ -35,20 +35,20 @@ There are seven screens. [[DES-0005-The-Overview-Is-Drawn-Not-Written]] draws ea
 | # | Screen | What it answers at a glance | The main picture |
 | --- | --- | --- | --- |
 | S1 | **Wheel** (the overview) | How far is each phase, and where is the trouble? | DES-0004's RINGS wheel: a sector per unfinished phase, a ring per ticket type, a wedge per ticket coloured by state. Finished phases orbit below as discs on a shelf; the backlog is an arc tray; tickets with no phase sit in the core. |
-| S2 | **Phase** | What does this phase still owe, and what kind of work is it? | The phase's web (one corner per ticket type, defined against closed), its exit criteria as a segmented ring, and its open tickets as a field of glyphs in depth bands: failed and owed-again in front, open in the middle, closed far back. |
-| S3 | **Ticket** | Where is this ticket in its life, and what is it joined to? | A lifecycle track with the ticket's position on it, and its neighbours as a radial graph coloured by state. |
+| S2 | **Phase** | What does this phase still owe, and what kind of work is it? | The phase's web (one corner per ticket type, defined against closed), its exit criteria as a segmented ring, and its tickets as cockpit rows on a plane tilted in depth: needs you in front, open and in progress in the middle, closed folded at the back (revised 2026-10-15; until then a field of glyphs in depth bands). |
+| S3 | **Ticket** | Where is this ticket in its life, and what is it joined to? | The ticket's id, title and lifecycle track, its full text, its linked tickets as cockpit rows split into "links to" and "linked from", and for a feature its gate as labelled chips (revised 2026-10-15; until then a radial graph of neighbours). |
 | S4 | **Re-phase** | Which tickets have no phase, and where would they go? | Tickets as particles in the core, with a line to the sector each is suggested for. Accepting a group moves its particles. |
 | S5 | **Design acceptance** | What does this design propose, and has it been reviewed? | The design's plates as large images, a strip of its revisions, review comments as pins on the plate they name. Accept and Decline as two large controls. |
 | S6 | **Acceptance test** | How far is this release's test, per platform, and what changed on screen? | One ring per platform, an arc per section, a bead per check coloured by result. A check opens as a before-and-after image pair with one Pass and one Fail control. |
-| S7 | **Ticket acceptance** | Is this feature ready to accept? | A gate of lamps: requirements met, tasks done, automated tests passing, acceptance tests passed, independent reviews recorded. The feature can be accepted only when every lamp is lit, or sent back with a reason. |
+| S7 | **Ticket acceptance** | Is this feature ready to accept? | A gate of five labelled chips (lamps until 2026-10-15): requirements met, tasks done, automated tests passing, acceptance tests passed, independent reviews recorded. The feature can be accepted only when every lamp is lit, or sent back with a reason. |
 
 ## The look
 
 These rules apply to every screen. Each one is a check a reviewer can run.
 
-1. **A picture before words.** At rest, with nothing pointed at, a screen shows at most 60 visible words, not counting ticket ids. Titles, status words and explanations appear on hover, on keyboard focus or in the callout of a selected mark.
+1. **A picture before words.** At rest, with nothing pointed at, a screen shows at most 60 visible words, not counting ticket ids. Titles, status words and explanations appear on hover, on keyboard focus or in the callout of a selected mark. **A list of tickets drawn as rows is exempt** (from 2026-10-15): S2's tickets and S3's linked tickets are rows with an id, a title and a status word each, as in the cockpit, and their words do not count. Everything else on the screen still does.
 2. **Every number is also a mark.** A count on screen sits next to, or inside, a drawing of the same count: a ring, a bar, a set of beads. A number alone is a defect.
-3. **State is colour and place, never only a word.** The states and their colours are DES-0004's: closed, in progress, failed, owed again, open, dropped. What needs a person stands in front or glows; what is finished recedes.
+3. **Colour is the ticket's type; how its mark is filled is its state** (from 2026-10-15, replacing "colour is state"). The colours are the cockpit's `--type-*` colours. The fills are the cockpit's marks: filled is done, hollow is not started, inverted and pulsing is in progress, inverted and still is "complete, not proven", solid with a slit is "resolved, nothing delivered", hollow with a strike is "parked", and a corner dot is "needs you". The fill and the dot follow the cockpit's sidecar rules, and the words are the cockpit's. What needs a person stands in front; what is finished recedes. The wheel alone is also drawn in state colour (DES-0004's closed, in progress, failed, open, dropped), and Edwin chooses which one it opens in.
 4. **The Glass look.** A dark field with depth. Lines and marks glow. Panels are translucent without blur (the DES-0002 review measured blur as the cost). Moving between screens animates the same marks to their new places, and honours reduced motion.
 5. **Every screen has an address**, and a list twin. The address restores the screen. The list twin shows the same marks as rows for the keyboard and a screen reader, because a picture cannot be the only way in.
 6. **Real data at real size.** Every screen is checked on Deck (4 phases, 333 tickets) and your-trainer (27 phases, 2,646 tickets). A screen that only works on the small one is not done.
@@ -97,6 +97,24 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 - **Depends on PHASE-0001** for the store, the addresses, the view provider and Deck's index. It does not depend on PHASE-0002's unfinished work.
 
 ## Where this stands
+
+**2026-10-15: the phase is being reworked after Edwin ran the overview.** He liked much of it and asked for five changes: the cockpit's ticket colours and status marks everywhere, S2's tickets as cockpit rows on a tilted plane, S3 showing the ticket's text and linked tickets, labelled chips instead of the round gate lamps, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. All five features moved from `review` back to `doing`.
+
+Seven tasks carry it, in two lanes as before:
+
+| Task | Lane | Feature | Waits on |
+| --- | --- | --- | --- |
+| [[TASK-0144]] Every ticket carries the cockpit's fill and needs-you flag | Codex | FEAT-0026 | nothing; first |
+| [[TASK-0145]] Every screen marks a ticket in the cockpit's colour and fill; the wheel both ways | Claude | FEAT-0027 | TASK-0144 |
+| [[TASK-0146]] Back and forward retrace the overview screens | Claude | FEAT-0027 | nothing |
+| [[TASK-0147]] A phase lists its tickets as cockpit rows on a tilted plane | Claude | FEAT-0028 | TASK-0144, TASK-0145 |
+| [[TASK-0148]] A ticket opens with its text and linked tickets as rows, and chips | Claude | FEAT-0028 | TASK-0144, TASK-0145, TASK-0149 |
+| [[TASK-0149]] The feature gate shows labelled chips; S5 and S6 in the new marks | Codex | FEAT-0029 | TASK-0144, TASK-0145 |
+| [[TASK-0150]] DES-0005's plates redrawn, the wheel in both colourings | Claude | FEAT-0025 | all of the above |
+
+No new test note: the node suites `overview-model` (TST-0080), `overview-checks` (TST-0083), `overview-flows` (TST-0085) and `overview-screens` (TST-0090) and the window run TST-0093 hold the new checks, including back and forward. Edwin's TST-0091 and TST-0092 are rewritten for the new screens. The four exit criteria ticked on 2026-10-14 stay ticked; they are run again before the features return to `review`.
+
+What follows is the state at the end of the first build, on 2026-10-14; the three decisions in it are still Edwin's.
 
 2026-10-14, end of the build run: every feature is built, tested and reviewed twice by the other agent, and at `review`. The full suite passes (752 tests on the last run), and the window run passes on Deck and your-trainer. Four of the seven exit criteria are ticked with evidence. The three left are Edwin's:
 

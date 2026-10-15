@@ -3,15 +3,15 @@ type: "[[feature]]"
 id: FEAT-0028
 aliases: ["FEAT-0028"]
 title: "A phase and a ticket open as pictures: the phase's web, exit-criteria ring and depth field; a ticket's lifecycle track and neighbourhood; re-phasing as moving particles"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "From the wheel a person opens a phase and sees what it still owes and what kind of work it is, opens a ticket and sees where it is in its life and what it is joined to, and sees where the tickets with no phase would go, all without reading a list."
 requirements: []
-tasks: ["[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]"]
+tasks: ["[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0147]]", "[[TASK-0148]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -58,6 +58,10 @@ Out of scope:
 - The window run, TST-0093, 2026-10-14: S2, S3 and S4 opened in a real window on both workspaces.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-15, because Edwin ran the overview and asked for changes.** He liked much of it, and asked for the cockpit's ticket colours and status marks on every screen, tickets drawn as cockpit rows, more of a ticket on its own screen, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. The move is from `review` back to `doing`, which STATUSES.md does not list as a typical transition; it is used because new work is added inside the feature, as FEAT-0005 and FEAT-0006 were reopened before. The review rounds below are for the build of 2026-10-14. The new tasks get their own review by the other model before the feature goes back to `review`.
+
+New work: [[TASK-0147]] (Claude) turns S2's right-hand pane into cockpit rows on a tilted plane. [[TASK-0148]] (Claude) makes S3 show the ticket's text and its linked tickets as rows, with the gate as labelled chips. Both wait on TASK-0144 and TASK-0145; TASK-0148 also waits on Codex's chips in TASK-0149.
 
 2026-10-14: built and at review. TASK-0127, TASK-0128 and TASK-0129 are done; TASK-0129's cockpit issue is cut from this run and written in the adoption table instead. Codex reviews it, as the agent that did not build it. Edwin's acceptance test is [[TST-0092-A-Phase-A-Ticket-And-Re-Phasing-Read-As-Pictures]], not yet run.
 
