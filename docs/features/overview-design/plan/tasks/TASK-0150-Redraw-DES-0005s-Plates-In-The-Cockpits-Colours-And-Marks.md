@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0150
 title: "DES-0005's plates are redrawn in the cockpit's colours and marks on both workspaces, with the wheel in both colourings"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
