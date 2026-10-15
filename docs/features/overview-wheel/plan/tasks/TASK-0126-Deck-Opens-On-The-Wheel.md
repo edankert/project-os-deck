@@ -27,6 +27,8 @@ The wheel becomes a page in Deck. An address with no page opens it, a sector ope
 - [x] The served host shows the wheel read-only.
 
 ## Notes
+2026-10-15: CI's Glass smoke run (TST-0045) failed after the overview landed, and was green again at `7f53640`. Three causes were the overview's and are fixed in `d850e85` and `6e9fed6`: a header button that wrapped the view switcher, a `position` on `.body` that moved what Glass places against, and a served page that opened on the wheel instead of following the Mac. A fourth was the smoke run's own: with 40 more notes in the corpus, its orbit check pressed a dot that a card or another dot stood over; `90cd432` and `7f53640` make it pick a dot well clear.
+
 2026-10-14: built in `eab145d`, `a472bdf` and `99eeeab`. TST-0093's window run passed on Deck and your-trainer: Deck opens on the wheel, every mark drawn, keyboard and list twin working, the served page read-only.
 
 Drawing lane (Claude), PHASE-0005.

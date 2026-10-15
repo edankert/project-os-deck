@@ -34,6 +34,8 @@ related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Writt
 - **The look's palette** is written once in `overview-scene.ts`. The build writes it to `overview.css`, because the page's policy allows no inline style, and DES-0005's plates use the same module.
 - **The checks:** [[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-Look]] holds every screen to the look on Deck and your-trainer in node. [[TST-0093-Every-Overview-Screen-Opens-From-Its-Address-In-A-Real-Window]] opened every screen in a real window on both on 2026-10-14. [[TST-0091-Deck-Opens-On-The-Wheel-And-It-Reads-As-A-Picture]] and [[TST-0092-A-Phase-A-Ticket-And-Re-Phasing-Read-As-Pictures]] are Edwin's and have not been run.
 
+- **The Glass smoke run** (TST-0045) passes again in CI at `7f53640`. Its orbit check now picks a dot well clear of cards and other dots, because the larger corpus put its first choice under a card.
+
 ## Acceptance checks reopened
 
 - [[TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It]] — Deck no longer opens in Glass; it opens on the wheel, and pressing the Deck name leads to Glass.

@@ -44,7 +44,7 @@ From `desktop/`, after `npm run build`:
 
 - Each of S1 to S7 opens from its address, and the number of ticket marks in the window equals the number in its scene.
 - A click on the wheel opens a phase or a ticket, Escape goes back one screen, and L opens the list twin with as many rows as the scene's list.
-- The served page opens on the wheel, draws its tickets, and offers no enabled control.
+- The served page follows the Mac's view rather than opening on the wheel; pressing its Deck name opens the wheel, which draws its tickets and offers no enabled control.
 - The workspace's `git status` is the same before and after.
 
 ## Results
