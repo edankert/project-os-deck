@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0144
 title: "Every ticket carries the cockpit's fill and its needs-you flag"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-15

@@ -53,6 +53,23 @@ function stateFor(record: NoteRecord, kind: Kind, options: OverviewOptions): Sta
   return 'open';
 }
 
+/**
+ * INTERIM, until TASK-0144 (Codex) replaces both with the cockpit's own rules:
+ * the type from the note's type, and a fill and needs-you flag read off
+ * DES-0004's state. Added by the drawing lane on 2026-10-15 so the screens
+ * build against the agreed contract while the data lane ports `_square_state`
+ * and `_needs_human`.
+ */
+function interimType(record: NoteRecord, kind: Kind): Ticket['type'] {
+  if (kind !== 'dec') return ({ req: 'requirement', feat: 'feature', task: 'task', test: 'test', iss: 'issue', risk: 'risk' } as const)[kind];
+  return record.types.includes('design') ? 'design' : 'adr';
+}
+
+function interimMarks(state: State): Pick<Ticket, 'fill' | 'needsYou'> {
+  const fill = ({ closed: 'delivered', progress: 'doing', owed: 'unproven', dropped: 'dropped', failed: 'open', open: 'open' } as const)[state];
+  return { fill, needsYou: state === 'failed' || state === 'owed' };
+}
+
 /** Only the Exit Criteria section counts; fenced examples are not criteria. */
 export function parseExitCriteria(text: string): Phase['exit'] {
   const lines = parseFrontmatter(text).body.split(/\r?\n/);
@@ -148,7 +165,8 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
       const note = resolve(link.target);
       if (note && note.id !== r.id) links.add(note.id);
     }
-    model.tickets[r.id] = { id: r.id, kind, state: stateFor(r, kind, options), status: r.status ?? '', title: r.title ?? r.id,
+    const state = stateFor(r, kind, options);
+    model.tickets[r.id] = { id: r.id, kind, type: interimType(r, kind), state, ...interimMarks(state), status: r.status ?? '', title: r.title ?? r.id,
       phase: null, placedBy: kind === 'dec' || kind === 'risk' ? 'project-wide' : 'none', links: [...links].sort() };
     ticketNotes.set(r.id, r);
   }

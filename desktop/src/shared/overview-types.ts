@@ -54,11 +54,43 @@ export const KIND_WORD: Readonly<Record<Kind, string>> = {
 
 export type Counts = Record<Kind, Record<State, number>>;
 
+/**
+ * The note's type as the cockpit names it. It picks the colour every screen
+ * draws the ticket in, the same colour the cockpit uses (Edwin, 2026-10-15).
+ * `kind: 'dec'` splits here into `adr` and `design`, because the cockpit
+ * colours decisions and designs differently.
+ */
+export type NoteType = 'requirement' | 'feature' | 'task' | 'test' | 'issue' | 'adr' | 'design' | 'risk';
+
+/**
+ * How full a ticket's mark is drawn: the cockpit's DES-0004 marks, computed by
+ * its sidecar's `_square_state` (project-os-cockpit `cockpit.py`). `open` is
+ * the cockpit's "no state": defined and not started.
+ */
+export type Fill = 'open' | 'doing' | 'delivered' | 'unproven' | 'dropped' | 'deferred';
+
+/** The cockpit's own words for each fill, for callouts and rows. */
+export const FILL_WORD: Readonly<Record<Fill, string>> = {
+  open: 'not started',
+  doing: 'in progress',
+  delivered: 'done',
+  unproven: 'complete, not proven',
+  dropped: 'resolved, nothing delivered',
+  deferred: 'parked',
+};
+
 export interface Ticket {
   /** "FEAT-0024". */
   id: string;
   kind: Kind;
+  /** The cockpit's type word, which picks the colour (FEAT-0026, TASK-0144). */
+  type: NoteType;
+  /** DES-0004's six states: the counts and the wheel's state colouring read them. */
   state: State;
+  /** The cockpit's fill (`_square_state`). */
+  fill: Fill;
+  /** The cockpit's dot: a person's action is outstanding (`_needs_human`). */
+  needsYou: boolean;
   /** The note's own status word, for the callout. */
   status: string;
   title: string;

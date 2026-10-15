@@ -289,17 +289,17 @@ items:
   tasks:
     TASK-0144:
       file: docs/features/overview-model/plan/tasks/TASK-0144-Every-Ticket-Carries-The-Cockpits-Fill-And-Needs-You-Flag.md
-      status: backlog
+      status: doing
       parent: FEAT-0026
       phase: "[[PHASE-0005]]"
     TASK-0145:
       file: docs/features/overview-wheel/plan/tasks/TASK-0145-Every-Screen-Marks-A-Ticket-In-The-Cockpits-Colour-And-Fill.md
-      status: backlog
+      status: doing
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0146:
       file: docs/features/overview-wheel/plan/tasks/TASK-0146-Back-And-Forward-Retrace-The-Overview-Screens.md
-      status: backlog
+      status: doing
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0147:

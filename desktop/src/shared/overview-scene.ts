@@ -14,7 +14,9 @@
  * `overview-types.ts`. The drawing lane owns it; a change is agreed in
  * FEAT-0026's "Questions between the lanes" first.
  */
-import type { State } from './overview-types.js';
+import type { Fill, NoteType, State } from './overview-types.js';
+import { marksCss } from './overview-marks.js';
+import { panelSvgNodes } from './overview-panel.js';
 
 /** The seven screens of DES-0005. */
 export type ScreenKind = 'wheel' | 'phase' | 'ticket' | 'rephase' | 'design' | 'test-run' | 'accept';
@@ -29,8 +31,14 @@ export interface MarkNode {
   attrs: Record<string, string | number>;
   /** The ticket this mark draws, when it draws one. The list twin must hold it. */
   ticket?: string;
-  /** Colours the mark by state. */
+  /** Colours the mark by DES-0004's state: the wheel's state colouring. */
   state?: State;
+  /** Colours the mark by the cockpit's type (TASK-0145). Drawn in place of `state` when set. */
+  type?: NoteType;
+  /** Fills the mark the way the cockpit fills its square. Goes with `type`. */
+  fill?: Fill;
+  /** The cockpit's "needs you": the mark is outlined in the dot's red. */
+  needsYou?: boolean;
   /** Extra classes, from `OVERVIEW_CSS`. */
   cls?: string;
   /** Needs a person: the mark glows. */
@@ -90,7 +98,48 @@ export interface GroupNode {
   target?: string;
 }
 
-export type SceneNode = MarkNode | TextNode | ImageNode | GroupNode;
+/** One ticket as a row, the way the cockpit lists it: mark, id, title, status. */
+export interface PanelRow {
+  id: string;
+  type: NoteType;
+  fill: Fill;
+  needsYou: boolean;
+  title: string;
+  status: string;
+  target?: string;
+}
+
+export interface PanelSection {
+  key: string;
+  title: string;
+  rows: PanelRow[];
+  /** Drawn as a strip of marks with a count, opened by a press. */
+  folded?: boolean;
+}
+
+/**
+ * Something a screen shows as HTML in Deck: tickets as rows, or a note's text
+ * (TASK-0147, TASK-0148). It holds data, never markup. Deck builds the rows over
+ * the picture, at the scene's coordinates; a plate draws a flat version as SVG.
+ *
+ * Its words are not counted toward a screen's words at rest: rows that carry a
+ * title each are the point of a list (FEAT-0026, "Questions between the lanes").
+ * Every ticket a panel lists must also be in `scene.list`.
+ */
+export interface PanelNode {
+  kind: 'panel';
+  key: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+  body:
+    | { kind: 'rows'; sections: PanelSection[]; /** Rows stand on a plane tilted away, nearest at the bottom. */ tilt?: boolean }
+    | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string };
+}
+
+export type SceneNode = MarkNode | TextNode | ImageNode | GroupNode | PanelNode;
 
 /** One row of the list twin: the same thing a mark draws, as a row a keyboard and a screen reader can reach. */
 export interface ListRow {
@@ -151,9 +200,11 @@ export const OVERVIEW_CSS = `
 .ov .ov-num { font-family: "SF Mono", Menlo, monospace; font-weight: 600; }
 .ov .ov-title { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 ${STATES.map((s) => `.ov .st-${s} { fill: ${PALETTE[s]}; }`).join('\n')}
+${marksCss()}
 .ov .ov-track { fill: hsla(210, 60%, 50%, 0.07); stroke: hsla(195, 80%, 60%, 0.16); stroke-width: 1; }
 .ov .ov-glass { fill: hsla(205, 60%, 40%, 0.14); stroke: hsla(190, 90%, 65%, 0.5); stroke-width: 1; }
 .ov .ov-faint { opacity: 0.35; }
+.ov .ov-row { fill: hsla(205, 60%, 40%, 0.1); stroke: hsla(190, 90%, 65%, 0.12); stroke-width: 1; }
 .ov .ov-ghost { opacity: 0.12; }
 .ov .ov-hit { fill: transparent; stroke: none; }
 .ov .ov-hover { display: none; }
@@ -182,7 +233,8 @@ function attr(name: string, value: string | number | undefined): string {
 }
 
 function markSvg(node: MarkNode): string {
-  const classes = [node.state ? `st-${node.state}` : '', node.cls ?? '', node.glow ? 'glow' : ''].filter(Boolean).join(' ');
+  const paint = node.type !== undefined ? `ty-${node.type} fl-${node.fill ?? 'open'}${node.needsYou ? ' ov-needs' : ''}` : node.state ? `st-${node.state}` : '';
+  const classes = [paint, node.cls ?? '', node.glow ? 'glow' : ''].filter(Boolean).join(' ');
   const geometry = Object.entries(node.attrs)
     .map(([k, v]) => attr(k, v))
     .join('');
@@ -227,6 +279,8 @@ function nodeSvg(node: SceneNode): string {
         `${attr('width', round(node.w))}${attr('height', round(node.h))}${attr('class', node.cls)}` +
         ` preserveAspectRatio="xMidYMid meet"><title>${escapeXml(node.label)}</title></image>`
       );
+    case 'panel':
+      return `<g class="ov-panel-flat"${attr('data-panel', node.key)}>${panelSvgNodes(node).map(nodeSvg).join('')}</g>`;
     case 'group': {
       const focusable = node.target !== undefined;
       return (
@@ -277,6 +331,11 @@ export function sceneToSvg(scene: Scene, options: { standalone?: boolean } = {})
 export interface ScreenContext {
   workspaceId: string;
   viewId: string;
+  /**
+   * How a ticket is coloured: by the cockpit's type, with its fill for the state
+   * (the default, Edwin 2026-10-15), or by DES-0004's state colours, as first built.
+   */
+  colouring?: 'type' | 'state';
   /** The address of another screen, written by the address grammar. */
   address(parts: AddressParts): string;
 }
@@ -294,10 +353,11 @@ export interface AddressParts {
  * registered the page kinds. The key order is the grammar's (`note` before
  * `page`), so a scene's address round-trips through `parseAddress`.
  */
-export function plainContext(workspaceId: string, viewId: string): ScreenContext {
+export function plainContext(workspaceId: string, viewId: string, colouring: 'type' | 'state' = 'type'): ScreenContext {
   return {
     workspaceId,
     viewId,
+    colouring,
     address(parts) {
       const query: string[] = [];
       for (const key of ['note', 'page', 'flow', 'step'] as const) {

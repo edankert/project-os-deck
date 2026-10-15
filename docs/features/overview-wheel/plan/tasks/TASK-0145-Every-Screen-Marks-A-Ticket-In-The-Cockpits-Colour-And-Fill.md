@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0145
 title: "Every overview screen marks a ticket in the cockpit's type colour and state fill, and the wheel can be drawn either way"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15

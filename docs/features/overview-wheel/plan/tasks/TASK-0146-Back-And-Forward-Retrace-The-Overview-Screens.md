@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0146
 title: "Back and forward retrace the overview screens a person has visited"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
