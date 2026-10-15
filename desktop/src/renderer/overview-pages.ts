@@ -8,6 +8,7 @@ import { phaseScene } from '../shared/overview-phase.js';
 import { rephaseScene } from '../shared/overview-rephase.js';
 import { ticketScene } from '../shared/overview-ticket.js';
 import { wheelScene } from '../shared/overview-wheel.js';
+import { featureGate } from './overview-flows.js';
 import { registerScreen } from './overview.js';
 
 /** S4's accepted groups, kept for the session only: accepting writes nothing. */
@@ -23,9 +24,13 @@ registerScreen('page', 'phase', {
 });
 
 registerScreen('page', 'ticket', {
-  scene: ({ model, ctx, address }) => {
+  scene: async (input) => {
+    const { model, ctx, address } = input;
     if (address.note === null) throw new Error('a ticket screen names its ticket: ?page=ticket&note=…');
-    return ticketScene(model, address.note, ctx);
+    // A feature shows the same gate S7 does, from the sidecar's evidence; without the
+    // sidecar, what the model knows, marked "not reported" (TASK-0148, TASK-0149).
+    const gate = model.tickets[address.note]?.kind === 'feat' ? await featureGate(input, address.note) : undefined;
+    return ticketScene(model, address.note, ctx, { gate });
   },
 });
 

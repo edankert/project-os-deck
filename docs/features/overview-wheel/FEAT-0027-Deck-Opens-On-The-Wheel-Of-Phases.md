@@ -86,6 +86,14 @@ Fixed in `57c2e3d`: the wheel waits for the index and never keeps the empty answ
 
 None yet. Write a question here, dated, and land it on `main`; the other agent answers under it.
 
+### Round one of the 2026-10-15 revision
+
+2026-10-15: Codex (GPT-6 Astra) reviewed the drawing lane of the 2026-10-15 revision from a clean session, in a detached worktree at `b866405`. Codex reviewed it because Claude built it. Verdict: **changes-requested**, ten findings across TASK-0145 to TASK-0148 and TASK-0150. Claude fixed them in `1476b06` and, for the gate counts, after Codex's fixes merged.
+
+- **An overtaken step back corrupted the history** (P1). Fixed: a step completes only when its own screen draws; any other draw is an ordinary visit. The decision is the pure `afterDraw` in `overview-trail.ts`, and a test reproduces the overtaken step.
+- **An in-progress square looked like "complete, not proven" under reduced motion** (P2). Fixed: the square keeps the cockpit's static outline. A test checks every fill's shapes and the needs-you dot on each, which no test checked before.
+- **The colouring was not in the address** (P2), as this feature's task requires. Fixed: `colour=state` is part of the address grammar; every overview address keeps its colouring. DES-0005 now says the switch reaches the wheel, its shelf and tray, and the re-phase cloud, and that lists keep the cockpit's marks.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

@@ -85,6 +85,16 @@ Fixed in `57c2e3d`: neighbours stand on wide rings that hold only what fits, bel
 
 None yet. Write a question here, dated, and land it on `main`; the other agent answers under it.
 
+### Round one of the 2026-10-15 revision
+
+2026-10-15: Codex (GPT-6 Astra) reviewed the drawing lane of the 2026-10-15 revision from a clean session, in a detached worktree at `b866405`. Codex reviewed it because Claude built it. Verdict: **changes-requested**, ten findings across TASK-0145 to TASK-0148 and TASK-0150. Claude fixed them in `1476b06` and, for the gate counts, after Codex's fixes merged.
+
+- **Panels opened at scale zero when the overview was entered from another view** (P1). Fixed: the layer is shown before it is measured, and a ResizeObserver keeps the panels on the picture.
+- **A link inside S3's text left Deck** (P2). Fixed: it opens the note it names, as Glass's reader does.
+- **S3 hid repeated gate squares from the exactly-once check** (P2). Fixed with Codex: gate squares are evidence and never carry a ticket id, so nothing is stripped and every ticket is drawn once; a test checks it.
+- **S3 cut the title short** (P2). Fixed: the whole title over up to three lines, forty words at most, the rest in the callout.
+- **S3's gate showed five "not reported" chips** (P2). Fixed: S3 loads the same evidence as S7 through Codex's `featureGate`; a test checks the counts.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

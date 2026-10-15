@@ -80,6 +80,13 @@ Fixed in `57c2e3d`: both captions, the Revisions line, the scope rewritten to wh
 
 None yet. Write a question here, dated, and land it on `main`; the other agent answers under it.
 
+### Round one of the 2026-10-15 revision
+
+2026-10-15: Codex (GPT-6 Astra) reviewed the drawing lane of the 2026-10-15 revision from a clean session, in a detached worktree at `b866405`. Codex reviewed it because Claude built it. Verdict: **changes-requested**, ten findings across TASK-0145 to TASK-0148 and TASK-0150. Claude fixed them in `1476b06` and, for the gate counts, after Codex's fixes merged.
+
+- **The S2 plate said it drew 172 tickets while drawing 34, and lost the closed strip** (P2). Fixed: a flat panel keeps room for every section, the manifest counts what the SVG draws, and the plate test requires each section to draw at least one ticket.
+- **The design page had no back and forward** (P2). Fixed: it has both, with ⌘[ and ⌘], and the test runs the page's script.
+
 ## Links
 
 - Phase: [[PHASE-0005-Overview]]

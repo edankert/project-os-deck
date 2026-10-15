@@ -103,7 +103,11 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     // The same wheel in DES-0004's state colours, for Edwin to compare (TASK-0145).
     ['wheel-state', 'S1 Wheel, state colours', () => wheelScene(model, plainContext('abcd1234', 'features', 'state'))],
     ['phase', 'S2 Phase', () => phaseScene(model, choice.phase, ctx)],
-    ['ticket', 'S3 Ticket', () => ticketScene(model, choice.ticket, ctx, { text: noteText(choice.root, choice.ticket) })],
+    // S3 shows a feature's gate from the same recorded sidecar evidence as S7, when that is the feature recorded.
+    ['ticket', 'S3 Ticket', () => {
+      const accept = flowFixture(`${ws}-accept.json`);
+      return ticketScene(model, choice.ticket, ctx, { text: noteText(choice.root, choice.ticket), ...(accept?.id === choice.ticket ? { gate: accept } : {}) });
+    }],
     ['rephase', 'S4 Re-phase', () => rephaseScene(model, ctx)],
   ];
   // S5 to S7 are FEAT-0029's, drawn from recorded sidecar payloads.

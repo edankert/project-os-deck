@@ -308,3 +308,21 @@ test('an overview address keeps its colouring, and the grammar refuses a colouri
   assert.throws(() => parseAddress('deck://abcd1234/features?note=FEAT-0024&colour=state'), /needs a "page" or a "flow"/);
   assert.throws(() => parseAddress('deck://abcd1234/features?page=wheel&colour=type'), /not a colouring/);
 });
+
+// TASK-0148 — S3 shows a feature's gate with the counts S7 reads from the sidecar, not five
+// "not reported" chips (Codex's review), and its squares are evidence, not ticket drawings.
+test('a feature on S3 shows its gate with the evidence counts S7 reads, and draws each ticket once', () => {
+  const m = model('deck');
+  const gate = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', 'flows', 'deck-accept.json'), 'utf-8'));
+  const scene = ticketScene(m, gate.id, ctx, { gate });
+  const group = scene.nodes.find((n) => n.kind === 'group' && n.key === `gate-${gate.id}`);
+  assert.ok(group !== undefined, 'the gate is drawn');
+  const numbers = [...walkScene(group.children)].filter((n) => n.kind === 'text' && n.role === 'number');
+  const known = gate.lamps.filter((l) => l.known && l.total > 0).length;
+  assert.equal(numbers.length, known * 2, 'each chip with known evidence shows done and total');
+  assert.ok(numbers.length > 0, 'the recorded evidence has counts');
+  assert.ok(![...walkScene(group.children)].some((n) => n.kind === 'mark' && n.ticket !== undefined), 'gate squares carry no ticket identity');
+  holdsTheLook(scene);
+  const counts = drawn(scene);
+  for (const [id, n] of counts) assert.equal(n, 1, `${id} is drawn ${n} times`);
+});
