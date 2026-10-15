@@ -55,7 +55,7 @@ counters:
   REQ: 6
   RISK: 9
   REL: 0
-  TASK: 150
+  TASK: 151
   TST: 100
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
@@ -64,7 +64,7 @@ focus:
   phase: "PHASE-0005"
   feature: "FEAT-0029"
   task: ""
-  note: "2026-10-15: Codex finished TASK-0144 and TASK-0149 on lane/codex-r2. Both contract proposals are agreed. The cockpit port and both fixtures are committed; direct stats parity matches 356 Deck and 2706 Your Trainer items. All 764 desktop tests pass. Claude should consume both nodes and rows from gateChips in S3, remove the old gateNodes caller and wrapper together, review the revision, regenerate the official plates and batch the window run. Claude merges and pushes; Codex did neither. Your Trainer stays dirty: true."
+  note: "2026-10-15: TASK-0151 fixes all seven round-one findings on TASK-0144 and TASK-0149. Both features record reviewer A approve and reviewer B changes-requested. All 769 desktop tests pass. Claude should await featureGate(input, featureId) in S3, pass the result to gateChips, remove ticket stripping and the row filter, verify the fixes and regenerate plates. Gate items are evidence marks with markId and labels, never ticket. Codex commits on lane/codex-r2 without pushing or opening Electron."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -291,6 +291,11 @@ items:
       tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
   tasks:
+    TASK-0151:
+      file: docs/features/overview-acceptance/plan/tasks/TASK-0151-Gate-Squares-Show-The-Evidence-They-Count.md
+      status: done
+      parent: FEAT-0029
+      phase: "[[PHASE-0005]]"
     TASK-0144:
       file: docs/features/overview-model/plan/tasks/TASK-0144-Every-Ticket-Carries-The-Cockpits-Fill-And-Needs-You-Flag.md
       status: done
@@ -2491,8 +2496,8 @@ metrics:
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 141
-    tasks_done: 117
+    tasks_total: 142
+    tasks_done: 118
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

@@ -11,7 +11,8 @@
       "items": [
         {
           "id": "REQ-0224",
-          "label": "All four icons are drawn on every screen that carries the top bar, first run included, and tapping them opens the Equipment Hub. Symbols: Android `EquipmentIndicators` loses `if (!equipment.anyBound) return` (`EquipmentIndicators.kt:66`); iOS `EquipmentIndicatorsButton` loses `if equipment.anyBound` (`HubChrome.swift:112`).",
+          "label": "All four icons are drawn on every screen that carries the top bar, first run included, and tapping them opens the Equipment Hub. Symbols: Android `EquipmentIndicators` loses `if (!equipment.anyBound) return` (`EquipmentIndicators.kt:66`); iOS `EquipmentIndicatorsButton` loses `if equipment.anyBound` (`HubChrome.swift:112`). (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -23,7 +24,8 @@
         },
         {
           "id": "REQ-0224",
-          "label": "*(Amended 2026-09-30, see Amendments.)* Each icon follows the state table in DES-0002 § 2: connected in the bar's text colour, connecting in the app accent, set up but not connected in grey, not set up in a fainter grey, couldn't connect in red with a filled dot. Symbols: Android `linkTint` (`EquipmentIndicators.kt:124`); iOS `EquipmentLabels.tint` (`HubChrome.swift:189`) and `SlotIndicatorGlyph` (`HubChrome.swift:135`).",
+          "label": "*(Amended 2026-09-30, see Amendments.)* Each icon follows the state table in DES-0002 § 2: connected in the bar's text colour, connecting in the app accent, set up but not connected in grey, not set up in a fainter grey, couldn't connect in red with a filled dot. Symbols: Android `linkTint` (`EquipmentIndicators.kt:124`); iOS `EquipmentLabels.tint` (`HubChrome.swift:189`) and `SlotIndicatorGlyph` (`HubChrome.swift:135`). (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -35,7 +37,8 @@
         },
         {
           "id": "REQ-0224",
-          "label": "No icon is green or amber, and no icon carries a hollow dot. Android `linkTint` no longer returns `TrainerGreen` or `ResAmber`; iOS `SlotIndicatorGlyph` draws its dot for `.error` only.",
+          "label": "No icon is green or amber, and no icon carries a hollow dot. Android `linkTint` no longer returns `TrainerGreen` or `ResAmber`; iOS `SlotIndicatorGlyph` draws its dot for `.error` only. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -47,7 +50,8 @@
         },
         {
           "id": "REQ-0224",
-          "label": "*(Amended 2026-09-30, see Amendments.)* A not-set-up icon is legible against the bar at the same size as the others. Today Android draws it at 22 % alpha and iOS at 35 % opacity, which is close to invisible. The new value meets 3:1 contrast against the bar background in light and dark themes, measured and recorded.",
+          "label": "*(Amended 2026-09-30, see Amendments.)* A not-set-up icon is legible against the bar at the same size as the others. Today Android draws it at 22 % alpha and iOS at 35 % opacity, which is close to invisible. The new value meets 3:1 contrast against the bar background in light and dark themes, measured and recorded. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -59,7 +63,8 @@
         },
         {
           "id": "REQ-0224",
-          "label": "A slot that takes its data from another device is drawn in that device's state: power and cadence with no device of their own light and grey with the trainer.",
+          "label": "A slot that takes its data from another device is drawn in that device's state: power and cadence with no device of their own light and grey with the trainer. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -71,7 +76,8 @@
         },
         {
           "id": "REQ-0224",
-          "label": "The trainer, power and cadence icons sit in one shaded group, and heart rate stands apart from it.",
+          "label": "The trainer, power and cadence icons sit in one shaded group, and heart rate stands apart from it. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -83,7 +89,8 @@
         },
         {
           "id": "REQ-0224",
-          "label": "The accessibility label still reads all four states, including \"not set up\".",
+          "label": "The accessibility label still reads all four states, including \"not set up\". (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0224",
             "title": "The top bar draws all four equipment icons on every screen, first run included, and only a device that failed to connect is drawn in colour",
@@ -95,7 +102,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "The Hub is a list. A \"YOUR BIKE\" card holds the Smart Trainer row with Power and Cadence as indented child rows joined by a connector line. A \"YOU\" card holds Heart Rate. Symbols: Android `EquipmentList` and `EquipmentRow` in `ui/equipment/`, replacing the `EquipmentGrid` call at `EquipmentHub.kt:146`; iOS `EquipmentHubView` with `EquipmentRowView`, replacing `EquipmentSlotRow`'s card layout.",
+          "label": "The Hub is a list. A \"YOUR BIKE\" card holds the Smart Trainer row with Power and Cadence as indented child rows joined by a connector line. A \"YOU\" card holds Heart Rate. Symbols: Android `EquipmentList` and `EquipmentRow` in `ui/equipment/`, replacing the `EquipmentGrid` call at `EquipmentHub.kt:146`; iOS `EquipmentHubView` with `EquipmentRowView`, replacing `EquipmentSlotRow`'s card layout. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -107,7 +115,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "The YOUR BIKE caption reads \"The trainer is all you need to ride. It also measures power and cadence. Change those only to use power pedals or a cadence sensor instead.\" The YOU caption reads \"Needed for HR-Zone rides only.\"",
+          "label": "The YOUR BIKE caption reads \"The trainer is all you need to ride. It also measures power and cadence. Change those only to use power pedals or a cadence sensor instead.\" The YOU caption reads \"Needed for HR-Zone rides only.\" (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -119,7 +128,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "A LIVE READINGS strip shows power, cadence and heart rate below the cards, and shows a dash for a reading with no source. It appears on phones and tablets alike (Edwin, 2026-09-28), because ADR-0017 keeps content the same at every width.",
+          "label": "A LIVE READINGS strip shows power, cadence and heart rate below the cards, and shows a dash for a reading with no source. It appears on phones and tablets alike (Edwin, 2026-09-28), because ADR-0017 keeps content the same at every width. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -131,7 +141,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "*(Amended 2026-09-30, see Amendments.)* Each row shows the device's name and state in scheme A: a connected device's icon tile is lit in the app accent and its status text is plain secondary grey; connecting is the accent with a spinner; set up but disconnected is grey; a failure is red text on a red-tinted tile; not set up is a dashed tile reading \"Not set up\". A child row with no device of its own reads \"From the trainer\" or \"From the power source\".",
+          "label": "*(Amended 2026-09-30, see Amendments.)* Each row shows the device's name and state in scheme A: a connected device's icon tile is lit in the app accent and its status text is plain secondary grey; connecting is the accent with a spinner; set up but disconnected is grey; a failure is red text on a red-tinted tile; not set up is a dashed tile reading \"Not set up\". A child row with no device of its own reads \"From the trainer\" or \"From the power source\". (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -143,7 +154,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "A failed or disconnected row carries a Reconnect button on the row itself, an empty row carries a Connect button, and a connecting row shows a spinner. Symbols: the `trailing` slot of `EquipmentRow` and `EquipmentRowView`.",
+          "label": "A failed or disconnected row carries a Reconnect button on the row itself, an empty row carries a Connect button, and a connecting row shows a spinner. Symbols: the `trailing` slot of `EquipmentRow` and `EquipmentRowView`. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -155,7 +167,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "A data-only trainer is not drawn as a fault: its row carries the hand mark and \"Resistance by hand\" in neutral colour, with no amber.",
+          "label": "A data-only trainer is not drawn as a fault: its row carries the hand mark and \"Resistance by hand\" in neutral colour, with no amber. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -167,7 +180,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "While a ride is running, the Hub opens as a sheet with no chevrons. Only Reconnect and cadence's Change source work; adding, changing or forgetting a device is not offered. Opening it never pauses the timer or stops the trainer. Symbols: Android `ReconnectOnlyHub` (`EquipmentHub.kt:249`), iOS `ReconnectOnlyHub` (`EquipmentHubView.swift:323`), both redrawn as the grouped list.",
+          "label": "While a ride is running, the Hub opens as a sheet with no chevrons. Only Reconnect and cadence's Change source work; adding, changing or forgetting a device is not offered. Opening it never pauses the timer or stops the trainer. Symbols: Android `ReconnectOnlyHub` (`EquipmentHub.kt:249`), iOS `ReconnectOnlyHub` (`EquipmentHubView.swift:323`), both redrawn as the grouped list. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -179,7 +193,8 @@
         },
         {
           "id": "REQ-0225",
-          "label": "Android's four large tiles are gone: `EquipmentGrid`, `EquipmentSlot`, `SlotOverflow` and `SlotInfoDialog` are deleted from `EquipmentStatus.kt`, or kept only where another screen still calls them.",
+          "label": "Android's four large tiles are gone: `EquipmentGrid`, `EquipmentSlot`, `SlotOverflow` and `SlotInfoDialog` are deleted from `EquipmentStatus.kt`, or kept only where another screen still calls them. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0225",
             "title": "The Equipment Hub is a list with one row per device, grouped into the rider's bike and the rider, and each row carries the one action its state needs",
@@ -191,7 +206,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "An empty row opens a picker sheet titled for its slot (for example \"Choose a heart-rate monitor\"), listing nearby devices eligible for that slot, each with its name, its kind and three signal bars, with Cancel. Symbols: Android `DevicePickerSheet`, presenting today's `ScannerModal` list in a `ModalBottomSheet`; iOS `DevicePickerSheet`, replacing `ScannerSheet`'s presentation from the Hub.",
+          "label": "An empty row opens a picker sheet titled for its slot (for example \"Choose a heart-rate monitor\"), listing nearby devices eligible for that slot, each with its name, its kind and three signal bars, with Cancel. Symbols: Android `DevicePickerSheet`, presenting today's `ScannerModal` list in a `ModalBottomSheet`; iOS `DevicePickerSheet`, replacing `ScannerSheet`'s presentation from the Hub. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -203,7 +219,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "A device already used in another slot is listed greyed, reads \"In use as Smart Trainer\" (or the slot's name), and cannot be chosen.",
+          "label": "A device already used in another slot is listed greyed, reads \"In use as Smart Trainer\" (or the slot's name), and cannot be chosen. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -215,7 +232,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "Choosing a device closes the sheet, and the row shows \"Connecting…\" with a spinner.",
+          "label": "Choosing a device closes the sheet, and the row shows \"Connecting…\" with a spinner. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -227,7 +245,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "A set-up row opens a details sheet showing the slot's name, the device's name and its state. Symbols: Android `DeviceDetailsSheet`; iOS `DeviceDetailsSheet`.",
+          "label": "A set-up row opens a details sheet showing the slot's name, the device's name and its state. Symbols: Android `DeviceDetailsSheet`; iOS `DeviceDetailsSheet`. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -239,7 +258,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "The details sheet shows three rows. Resistance: for a data-only trainer the hand mark and \"Set by hand: this bike does not let the app change it\"; for a trainer the app drives, a plain \"Set by the app\". Sends: what the device reports, for example \"Power, cadence, speed\". Signal: three bars, with the strength in their accessibility label only (REQ-0227). Resistance appears for the trainer only.",
+          "label": "The details sheet shows three rows. Resistance: for a data-only trainer the hand mark and \"Set by hand: this bike does not let the app change it\"; for a trainer the app drives, a plain \"Set by the app\". Sends: what the device reports, for example \"Power, cadence, speed\". Signal: three bars, with the strength in their accessibility label only (REQ-0227). Resistance appears for the trainer only. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -251,7 +271,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "The details sheet offers Change device, Run the compatibility test (trainer only) and Forget this <device>. Forget asks once before it removes the device. Run the compatibility test opens the existing check (Android `Routes.COMPATIBILITY_CHECK`, iOS `CompatibilityCheckView`).",
+          "label": "The details sheet offers Change device, Run the compatibility test (trainer only) and Forget this <device>. Forget asks once before it removes the device. Run the compatibility test opens the existing check (Android `Routes.COMPATIBILITY_CHECK`, iOS `CompatibilityCheckView`). (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -263,7 +284,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "When the device is not connected, a Reconnect button leads the actions and the Signal row is left out.",
+          "label": "When the device is not connected, a Reconnect button leads the actions and the Signal row is left out. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -275,7 +297,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "No long-press, no ⋮ or ellipsis menu and no Device info dialog remain on the Hub on either platform. Grep: Android `SlotOverflow`, `SlotInfoDialog`, `showMenuOnLongPress`, `combinedClickable` in `EquipmentStatus.kt`; iOS `ellipsis.circle` and `overflowActions` in `EquipmentSlotRow.swift`.",
+          "label": "No long-press, no ⋮ or ellipsis menu and no Device info dialog remain on the Hub on either platform. Grep: Android `SlotOverflow`, `SlotInfoDialog`, `showMenuOnLongPress`, `combinedClickable` in `EquipmentStatus.kt`; iOS `ellipsis.circle` and `overflowActions` in `EquipmentSlotRow.swift`. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -287,7 +310,8 @@
         },
         {
           "id": "REQ-0226",
-          "label": "A device that cannot fill a slot is refused with the shipped wording, through the existing `EquipmentBinder` on Android and the device-mismatch alert on iOS.",
+          "label": "A device that cannot fill a slot is refused with the shipped wording, through the existing `EquipmentBinder` on Android and the device-mismatch alert on iOS. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0226",
             "title": "Tapping an empty row opens a device picker, and tapping a set-up row opens that device's details, each as a bottom sheet that replaces the long-press, the ⋮ menu and the Device info dialog",
@@ -299,7 +323,8 @@
         },
         {
           "id": "REQ-0227",
-          "label": "The picker shows three bars per device and no dBm text. Today Android prints `\"${device.rssi} dBm\"` (`ScannerModal.kt:125`) and iOS prints `\"\\(device.rssi) dBm\"` (`ScannerSheet.swift:44`).",
+          "label": "The picker shows three bars per device and no dBm text. Today Android prints `\"${device.rssi} dBm\"` (`ScannerModal.kt:125`) and iOS prints `\"\\(device.rssi) dBm\"` (`ScannerSheet.swift:44`). (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0227",
             "title": "Signal strength is three bars with no visible word, in the device picker and in a connected device's details, and no screen prints dBm",
@@ -311,7 +336,8 @@
         },
         {
           "id": "REQ-0227",
-          "label": "The bars follow one threshold table on both platforms: 3 bars (Strong) at −65 dBm or stronger, 2 bars (Fair) below −65 down to −80, 1 bar (Weak) below −80. Symbols: Android `signalBarsFor(rssi)`, iOS `SignalStrength.bars(rssi:)`, each with a unit test at −65, −66, −80 and −81.",
+          "label": "The bars follow one threshold table on both platforms: 3 bars (Strong) at −65 dBm or stronger, 2 bars (Fair) below −65 down to −80, 1 bar (Weak) below −80. Symbols: Android `signalBarsFor(rssi)`, iOS `SignalStrength.bars(rssi:)`, each with a unit test at −65, −66, −80 and −81. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0227",
             "title": "Signal strength is three bars with no visible word, in the device picker and in a connected device's details, and no screen prints dBm",
@@ -323,7 +349,8 @@
         },
         {
           "id": "REQ-0227",
-          "label": "A device with no reading shows no bars rather than one. iOS reports 0 for a peripheral it retrieved rather than discovered (`BluetoothService.swift:548`, `:644`) and 127 when the value is unavailable; both mean \"no reading\".",
+          "label": "A device with no reading shows no bars rather than one. iOS reports 0 for a peripheral it retrieved rather than discovered (`BluetoothService.swift:548`, `:644`) and 127 when the value is unavailable; both mean \"no reading\". (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0227",
             "title": "Signal strength is three bars with no visible word, in the device picker and in a connected device's details, and no screen prints dBm",
@@ -335,7 +362,8 @@
         },
         {
           "id": "REQ-0227",
-          "label": "The details sheet reads the connected device's signal and shows the same bars, with no word beside them. Neither app reads it today: Android gains a `BluetoothGatt.readRemoteRssi()` call in `BluetoothManager`, iOS a `CBPeripheral.readRSSI()` call and `peripheral(_:didReadRSSI:error:)` in `BluetoothService`.",
+          "label": "The details sheet reads the connected device's signal and shows the same bars, with no word beside them. Neither app reads it today: Android gains a `BluetoothGatt.readRemoteRssi()` call in `BluetoothManager`, iOS a `CBPeripheral.readRSSI()` call and `peripheral(_:didReadRSSI:error:)` in `BluetoothService`. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0227",
             "title": "Signal strength is three bars with no visible word, in the device picker and in a connected device's details, and no screen prints dBm",
@@ -347,7 +375,8 @@
         },
         {
           "id": "REQ-0227",
-          "label": "The details sheet reads the signal only while it is open, and never while a ride is running. The details sheet is not reachable during a running ride (REQ-0225), and the read must not delay or fail a trainer control write.",
+          "label": "The details sheet reads the signal only while it is open, and never while a ride is running. The details sheet is not reachable during a running ride (REQ-0225), and the read must not delay or fail a trainer control write. (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0227",
             "title": "Signal strength is three bars with no visible word, in the device picker and in a connected device's details, and no screen prints dBm",
@@ -359,7 +388,8 @@
         },
         {
           "id": "REQ-0227",
-          "label": "The bars carry no visible word, and a screen reader reads the strength: the bars' accessibility label is \"Strong signal\", \"Fair signal\" or \"Weak signal\", and \"No signal reading\" when there is none. Edwin, 2026-09-28, approving REQ-0227: 'The bars should not carry a visible label as well but yes accessibility should be considered for this.'",
+          "label": "The bars carry no visible word, and a screen reader reads the strength: the bars' accessibility label is \"Strong signal\", \"Fair signal\" or \"Weak signal\", and \"No signal reading\" when there is none. Edwin, 2026-09-28, approving REQ-0227: 'The bars should not carry a visible label as well but yes accessibility should be considered for this.' (open)",
+          "complete": false,
           "ticket": {
             "id": "REQ-0227",
             "title": "Signal strength is three bars with no visible word, in the device picker and in a connected device's details, and no screen prints dBm",
@@ -413,6 +443,7 @@
         {
           "id": "TASK-0986",
           "label": "On Android, the Equipment Hub draws a grouped list of rows instead of four tiles, before a ride and during one",
+          "complete": false,
           "ticket": {
             "id": "TASK-0986",
             "title": "On Android, the Equipment Hub draws a grouped list of rows instead of four tiles, before a ride and during one",
@@ -425,6 +456,7 @@
         {
           "id": "TASK-0987",
           "label": "On Android, a row opens the device picker or the device's details as a bottom sheet, and the long-press, the ⋮ menu and Device info are removed",
+          "complete": false,
           "ticket": {
             "id": "TASK-0987",
             "title": "On Android, a row opens the device picker or the device's details as a bottom sheet, and the long-press, the ⋮ menu and Device info are removed",
@@ -437,6 +469,7 @@
         {
           "id": "TASK-0988",
           "label": "On Android, the top bar draws all four equipment icons from first run, and only a failed connection is in colour",
+          "complete": false,
           "ticket": {
             "id": "TASK-0988",
             "title": "On Android, the top bar draws all four equipment icons from first run, and only a failed connection is in colour",
@@ -449,6 +482,7 @@
         {
           "id": "TASK-0989",
           "label": "On iOS, the top bar draws all four equipment icons from first run, and only a failed connection is in colour",
+          "complete": false,
           "ticket": {
             "id": "TASK-0989",
             "title": "On iOS, the top bar draws all four equipment icons from first run, and only a failed connection is in colour",
@@ -461,6 +495,7 @@
         {
           "id": "TASK-0990",
           "label": "On iOS, the Equipment Hub groups the trainer with power and cadence, and a row opens the picker or a details sheet instead of the ellipsis menu",
+          "complete": false,
           "ticket": {
             "id": "TASK-0990",
             "title": "On iOS, the Equipment Hub groups the trainer with power and cadence, and a row opens the picker or a details sheet instead of the ellipsis menu",
@@ -473,6 +508,7 @@
         {
           "id": "TASK-0991",
           "label": "The device picker shows three signal bars instead of a dBm number, on both platforms",
+          "complete": false,
           "ticket": {
             "id": "TASK-0991",
             "title": "The device picker shows three signal bars instead of a dBm number, on both platforms",
@@ -485,6 +521,7 @@
         {
           "id": "TASK-0992",
           "label": "The details sheet reads a connected device's signal strength, on both platforms",
+          "complete": false,
           "ticket": {
             "id": "TASK-0992",
             "title": "The details sheet reads a connected device's signal strength, on both platforms",
@@ -497,6 +534,7 @@
         {
           "id": "TASK-0993",
           "label": "Every new Equipment Hub and picker string is translated into the eight Tier-1 languages, and the strings the old Hub used are removed",
+          "complete": true,
           "ticket": {
             "id": "TASK-0993",
             "title": "Every new Equipment Hub and picker string is translated into the eight Tier-1 languages, and the strings the old Hub used are removed",
@@ -509,6 +547,7 @@
         {
           "id": "TASK-0994",
           "label": "PARITY_MATRIX and both screen galleries show the new Equipment Hub, its two sheets and the top bar's four icons",
+          "complete": true,
           "ticket": {
             "id": "TASK-0994",
             "title": "PARITY_MATRIX and both screen galleries show the new Equipment Hub, its two sheets and the top bar's four icons",
@@ -521,6 +560,7 @@
         {
           "id": "TASK-0995",
           "label": "The acceptance checks that describe the old Hub, the old colours or the hidden first-run icons are rewritten and marked for re-check",
+          "complete": true,
           "ticket": {
             "id": "TASK-0995",
             "title": "The acceptance checks that describe the old Hub, the old colours or the hidden first-run icons are rewritten and marked for re-check",
@@ -550,11 +590,13 @@
       "items": [
         {
           "id": "review-0",
-          "label": "Reviewer not recorded"
+          "label": "Reviewer not recorded",
+          "complete": false
         },
         {
           "id": "review-1",
-          "label": "Reviewer not recorded"
+          "label": "Reviewer not recorded",
+          "complete": false
         }
       ],
       "total": 2,
@@ -570,7 +612,7 @@
       "items": [
         {
           "id": "TST-0561",
-          "label": "TST-0561: command result not reported",
+          "label": "command result not reported",
           "ticket": {
             "id": "TST-0561",
             "title": "`YourTrainerTopBar` — Pro-upgrade gate + four equipment indicators",

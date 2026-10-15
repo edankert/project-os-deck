@@ -5,7 +5,7 @@ title: Flow actions use the shell and preserve refusals
 status: active
 owner: system:codex
 created: '2026-10-14'
-updated: '2026-10-14'
+updated: '2026-10-15'
 source:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 phase: '[[PHASE-0005-Overview]]'
@@ -17,6 +17,7 @@ covers:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 issues: []
 tasks:
+- '[[TASK-0151]]'
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 - '[[TASK-0143]]'
@@ -45,6 +46,7 @@ A person’s flow controls use the shell write boundary and show the sidecar’s
 
 ## Expected results
 
+- S3 can call the same `featureGate` loader as S7, with an optional explicit feature id. Reads leave its address unchanged and never write. Required-read failures return unknown, unwritable model evidence and preserve the failure reason.
 - Requests preserve the configured actor, ids, platform, release, result and required reason.
 - The sidecar’s refusal reaches the caller in its own words.
 - Cancelled or disabled controls and served-host actions send no write.
@@ -52,8 +54,8 @@ A person’s flow controls use the shell write boundary and show the sidecar’s
 
 ## Evidence
 
-2026-10-14: the full `cd desktop && npm test` run passed 745 tests with no failures or skips. This suite contributed 19 passing tests. Advertised transitions are checked again before writes; unsupported actions stay unavailable. Acceptance stamps send reconciled counts as skipped and leave status alone. Saved steps survive changed commits and stay separate by workspace, release, platform and content. Dropped stale results are removed from storage and cannot reappear on reload. The executable check holds no verdict in its note status. Claude reviews the repairs in round two.
+2026-10-15: the full desktop suite passes 769 tests with no failures or skips; this suite contributes 21. The new loader tests verify S3/S7 evidence parity, optional feature id, unchanged address, no writes and safe fallback on required-read failure. Existing action tests continue to cover advertised transitions, refusals, identity guards, local step storage and acceptance stamps.
 
 ## Adequacy
 
-2026-10-14: a fresh-context implementation check ran the combined 35 scene/action tests. Removing the action-time transition guard or persisted stale-result deletion made the corresponding test fail. Mutations used an isolated worktree-local copy and were discarded. Claude’s formal round-two verdict is still pending.
+2026-10-15: replacing the shared loader's sidecar read with `gateFromModel` fails the S3/S7 evidence test. The built module was restored and all 60 focused tests passed. Existing regression tests preserve action-time transition guards and persisted stale-result deletion.

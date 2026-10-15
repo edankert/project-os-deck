@@ -17,10 +17,10 @@ acceptance_exception: ""
 acceptance: ""
 design: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
-review_date: 2026-10-14
+review_date: 2026-10-15
 review_verdict: changes-requested
-review_round: 2
-review_response: "Round two: six of round one's seven findings fixed, each shown by breaking its guard and watching a test fail. Finding 6 is fixed for Deck, whose fixture now rebuilds exactly from its commit, and not for your-trainer: that repository holds another session's uncommitted notes and ledger, which this run must not commit, so its fixture records dirty: true instead. One reviewer asked for changes on that point only and one approved. No third round; whether a dirty fixture is acceptable is Edwin's call."
+review_round: 1
+review_response: "TASK-0144 and TASK-0149 round one on f003195..f68d4ee: reviewer A approve; reviewer B changes-requested. TASK-0151 fixes all seven findings; Claude verifies the repairs. Earlier review rounds remain below."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -53,16 +53,16 @@ Out of scope:
 
 ## Verification
 
-2026-10-15: `cd desktop && npm test` passed **764 tests, with zero failures and zero skips**. No Electron process or window started.
+2026-10-15: `cd desktop && npm test` passed **769 tests, with zero failures and zero skips**. No Electron process or window started.
 
 | Suite | Passed |
 | --- | ---: |
 | overview-model | 26 |
 | overview-route | 13 |
 | overview-fixtures | 3 |
-| overview-checks | 17 |
+| overview-checks | 18 |
 | overview-screens | 14 |
-| overview-flows | 20 |
+| overview-flows | 21 |
 
 Direct Python stats parity reports zero mismatches on 356 Deck items and 2,706 Your Trainer items. The port also covers the 28 and 41 model tickets outside stats. Changing doing to open fails with 100 and 519 named mismatches. Removing the panel row twin guard fails its regression. Tests preserve the separate DES-0004 state and placement rules.
 
@@ -72,13 +72,27 @@ Deck’s 384-ticket fixture was replayed from `git archive 96955cc8afecc56b8ac36
 
 ## Where this stands
 
-2026-10-15: **TASK-0144 is done on `lane/codex-r2`.** `96955cc` ports the cockpit’s fill and needs-you rules and checks panel list twins. `619361c` rebuilds both fixtures. Both contract proposals are agreed under Questions between the lanes. The full desktop suite passes 764 tests.
+2026-10-15: **TASK-0151 fixes the round-one review findings on TASK-0144 and TASK-0149 on `lane/codex-r2`.** Panel count tests now cover both HTML rows and SVG strips. Gate evidence no longer repeats ticket drawings. The full desktop suite passes 769 tests; the Review section records each finding, its fix and the supplied verdicts.
 
-The Python stats comparison matches 356 Deck and 2,706 Your Trainer items with zero mismatches. Deck’s fixture reproduces exactly from its recorded commit and timestamp. Your Trainer remains `dirty: true` because its source tree belongs to another session.
-
-The feature stays `doing` for Claude’s review of this revision and Edwin’s acceptance. Claude owns S1–S4’s use of the fields, the merge and the push. The earlier review below remains a record of the 2026-10-14 build; no new review or human verdict is claimed.
+The feature stays `doing`. Claude verifies the repairs, connects S3 to `featureGate`, removes its ticket-stripping workaround and redraws the official plates. Edwin's acceptance remains pending. The model fixtures are unchanged; Your Trainer still records `dirty: true`. Codex commits locally without pushing or opening Electron.
 
 ## Review
+
+### TASK-0144 and TASK-0149 — round one, 2026-10-15
+
+Two Claude reviewers reviewed `f003195..f68d4ee`. Edwin supplied their findings and verdicts: **reviewer A: approve; reviewer B: changes-requested**. The combined verdict remains `changes-requested`; these are the author's fixes in [[TASK-0151]], awaiting Claude's verification, not a new approval. Earlier rounds below belong to earlier commit ranges.
+
+| Finding | Resolution and evidence |
+| --- | --- |
+| 1. B-A and A-3: criterion squares contradicted the count. | `GateItem.complete` records each criterion, task, review or test's evidence. Known squares fill only for complete evidence, in the item's type colour. A shuffled REQ-0006 example at `implemented` draws three filled purple squares among eight. Reconciled criteria retain the existing completion rule and identify themselves in the label. The flow tests cover task statuses that contradict ticket fills, missing reviewers, non-pass results and stale passes. |
+| 2. B-B: unknown chips retained needs-you dots. | Unknown items are neutral outlines without fill, type colour, lifecycle decoration or attention dots. Their labels retain identity and say “not reported”. Both sizes and both fixtures are tested. |
+| 3. Gate items duplicated tickets in S3. | Item marks never set `ticket`. Each gets `gate-<feature>-<key>-item-<n>` as `markId`; its label names the source id. `gateChips` returns only five `gate-<key>` evidence rows, never item tickets. Existing S3 exactly-once checks pass. |
+| 4. A-2: unknown results looked like Fail. | `resultMark` sets SVG opacity on both outline and glyph: 0.6 for unknown, 0.75 for the cancelled class (N/A, Excused and legacy Canceled), 1 for other results. Tests inspect attributes and serialized SVG. |
+| 5. B observation 1: legacy canceled became Excused. | Legacy `canceled` and `-` now draw Canceled `[-]`, separately from Excused `[·]`. Exact raw aliases `x X / ~ - ! F ?` are tested through release and acceptance payloads. The current sidecar's `acceptance.normalise_mark` normalizes characters before serving acceptance items; `release_test_payload` reads canonical ledger results. Compatibility handling also preserves old payloads without accepting padded character typos. |
+| 6. A-1: panel numbers were exempt without saying so. | The `overview-checks.ts` comment names both panel exemptions. A section's rows or folded strip represent its count. The new test executes HTML panel rendering and SVG panel rendering, requiring counts to equal rows and strip marks for both folded and open sections. |
+| 7. S3 could not load S7's evidence. | The renderer exports `featureGate(input: ScreenInput, featureId = input.address.note): Promise<AcceptData>`. S7 uses it for scenes and action-time refreshes. A failed sidecar read returns `gateFromModel` with its reason and no write capability. Tests cover S3/S7 parity, explicit feature id, unchanged address, no writes and failures on the four required reads. |
+
+Verification: `cd desktop && npm test` passes **769 tests, zero failures, zero skips**. Focused suites pass **60 tests**: overview-checks 18, overview-flows 21, overview-flow-writes 21. Eight deliberate regressions were caught: criterion completion forced true, unknown fill, unknown type colour, ticket identity on evidence, missing opacity, canceled mapped to excused, panel count plus one, and a loader returning only model data. Built files were restored and the 60 tests passed again. Both acceptance fixtures reproduce from their recorded raw payloads. No Electron window or human verdict was used.
 
 ### Round one
 
@@ -137,7 +151,7 @@ After `cd desktop && npm run build`, run `node desktop/scripts/overview.mjs <rep
 
 Use `formatAddress(addressFor(...))` to make scene addresses canonical. Its query order puts `note` before `page` or `flow`. The seven overview page and flow names are registered. An address must name the scene it restores, not merely round-trip. Dotted test steps such as `android.3` now round-trip. Other malformed steps remain refused.
 
-Panel row and note text is exempt from words at rest. Every ticket in a panel’s rows, including a folded section, must occur in the list twin. The list twin includes ordinary ticket IDs and the four legacy acceptance-document IDs described below. Phase IDs and aggregate mark IDs are not ticket rows. Every mark action also needs a row with that action. The fixture suite checks all IDs from both corpora through a scene, including the legacy documents.
+Panel row and note text is exempt from words at rest and inferred-number checks. Each section count is drawn by its rows or folded strip; the HTML and SVG rendering test checks their agreement. Every ticket in a panel’s rows, including a folded section, must occur in the list twin. The list twin includes ordinary ticket IDs and the four legacy acceptance-document IDs described below. Phase IDs and aggregate mark IDs are not ticket rows. Every mark action also needs a row with that action. The fixture suite checks all IDs from both corpora through a scene, including the legacy documents.
 
 ## Fixture comparison with DES-0004
 

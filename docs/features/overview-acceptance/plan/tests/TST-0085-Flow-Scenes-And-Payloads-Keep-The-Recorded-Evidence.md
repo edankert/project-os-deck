@@ -17,6 +17,7 @@ covers:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 issues: []
 tasks:
+- '[[TASK-0151]]'
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0123-Verify-The-Flows-And-Hand-Them-To-Edwin]]'
 - '[[TASK-0143]]'
@@ -43,8 +44,8 @@ The flow pictures preserve the evidence and obey PHASE-0005’s screen rules.
 - Load recorded payloads for both workspaces, including incomplete and unfamiliar shapes.
 - Map into flow data and draw S5 to S7 at rest, with an open check, with no pictures and without write capability.
 - Check each scene for words, counts, addresses and list twins; exercise gate completeness and unknown evidence.
-- Check the five chip labels, both sizes, one square per gate item and the model’s exact mark for every known ticket.
-- Check all ten result displays, their cockpit glyphs and words, and the separation between a check bead and its ticket square.
+- Check the five chip labels, both sizes, one square per gate item and each item’s own completion, independent of ticket lifecycle fill.
+- Check all eleven result displays, including legacy Canceled, their cockpit glyphs and words, and the separation between a check bead and its ticket square.
 
 ## Expected results
 
@@ -55,8 +56,8 @@ The flow pictures preserve the evidence and obey PHASE-0005’s screen rules.
 
 ## Evidence
 
-2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. This suite contributes 20 tests. The two acceptance fixtures reproduce from their raw payloads, including every item’s ticket fields. All recorded flow screens pass; Your Trainer’s S6 with More open uses at most 50 words. S5 uses 9 words and S7 30 on each workspace. The executable check holds no verdict in its note status.
+2026-10-15: the full desktop suite passes 769 tests with zero failures or skips. This suite contributes 21 tests. Both acceptance fixtures reproduce from raw payloads, including item completion and result. Every known chip's filled squares equal its completed count. Both sizes preserve neutral outlines for unknown evidence and return only five evidence rows. Legacy result aliases retain their meaning on both payload routes; result glyphs and outlines carry SVG opacity.
 
 ## Adequacy
 
-2026-10-15: removing one item square fails both fixture chip tests. Replacing Blocked’s glyph with Pass fails the result-display test. Sources were restored after the mutations. Existing tests still refuse missing count marks, empty evidence as readiness, unsupported transitions and stale saved results.
+2026-10-15: six deliberate regressions failed the new tests: forcing every criterion complete, filling unknown items, colouring unknown items by ticket type, adding ticket identity to evidence marks, removing result opacity, and mapping canceled to excused. The requirement regression uses three interleaved ticks among eight criteria on an implemented ticket. Built files were restored and all 60 focused tests passed. The fixtures' raw payloads were unchanged.
