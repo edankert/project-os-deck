@@ -194,17 +194,17 @@ test('S6 saved steps survive a changed head but separate workspace, release, pla
  const persisted=[...saved.values()][0];
  const resumed=runInput().i;resumed.model={...model,head:'an unrelated commit'};
  const first=scene=>scene.list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts');
- assert.match(first(await testRunFlow.scene(resumed)).label,/— pass/);
+ assert.match(first(await testRunFlow.scene(resumed)).label,/— \[x\] Pass/);
  const another=runInput().i;another.memory=resumed.memory;another.ctx=plainContext('bbbbbbbb','features');
- assert.match(first(await testRunFlow.scene(another)).label,/— not-run/);
+ assert.match(first(await testRunFlow.scene(another)).label,/— \[ \] To-do/);
  const otherRelease=runInput().i;otherRelease.address.note='REL-0018';const releaseRead=otherRelease.read;
  otherRelease.read=async at=>{const p=await releaseRead(at);if(p.release)p.release='REL-0018';return p;};
- assert.match(first(await testRunFlow.scene(otherRelease)).label,/— not-run/);
+ assert.match(first(await testRunFlow.scene(otherRelease)).label,/— \[ \] To-do/);
  assert.equal([...saved.values()][0],persisted,'reading another release must preserve this release');
- const ios=(await testRunFlow.scene(resumed)).list.find(r=>r.action?.startsWith('check:')&&r.group==='ios: Workouts');assert.match(ios.label,/— not-run/);
+ const ios=(await testRunFlow.scene(resumed)).list.find(r=>r.action?.startsWith('check:')&&r.group==='ios: Workouts');assert.match(ios.label,/— \[ \] To-do/);
  const changed=runInput().i,read=changed.read;
  changed.read=async at=>{const p=await read(at);if(p.sections)p.sections[0].groups[0].checks[0].expected=[{text:'See a different list'}];return p;};
- assert.match(first(await testRunFlow.scene(changed)).label,/— not-run/);
+ assert.match(first(await testRunFlow.scene(changed)).label,/— \[ \] To-do/);
  assert.deepEqual(JSON.parse([...saved.values()][0]),{},'changed content drops the old result from storage');
 });
 test('S6 persists stale ledger-result deletion and cannot resurrect it on reload',async t=>{
@@ -213,5 +213,5 @@ test('S6 persists stale ledger-result deletion and cannot resurrect it on reload
  const read=i.read;i.read=async at=>{const p=await read(at);if(p.sections)p.results={'TST-0001':{result:'fail',date:'2026-10-15'}};return p;};
  await testRunFlow.scene(i);assert.deepEqual(JSON.parse([...saved.values()][0]),{});
  const reloaded=runInput().i;
- assert.match((await testRunFlow.scene(reloaded)).list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts').label,/— not-run/);
+ assert.match((await testRunFlow.scene(reloaded)).list.find(r=>r.action?.startsWith('check:')&&r.group==='android: Workouts').label,/— \[ \] To-do/);
 });

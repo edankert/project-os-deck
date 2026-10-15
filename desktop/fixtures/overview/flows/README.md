@@ -11,3 +11,5 @@ Deck uses DES-0004, an empty desktop ring because it has no release, and FEAT-00
 `images.json` records the 25 copied sources and filenames. `sips -s format jpeg -s formatOptions 65 -Z 900` reduced each copy; their total is 1,604,537 bytes. The full source images remain in their original repositories. No source image was edited.
 
 The fixtures assert no human verdict. Unknown command results stay unknown, and a model link is not a complete evidence inventory. The pure mapper joins acceptance tier rows to `view` rows to distinguish automation coverage from a dated automated verdict.
+
+On 2026-10-15, the two acceptance fixtures were remapped from these same raw payloads against the rebuilt overview fixtures. They now carry one item per criterion, task, review or test, with the model’s ticket mark when known. Requirement totals still count criteria, so several item squares may refer to one requirement. Missing result evidence is still unknown; a ticket’s fill never certifies a gate result.

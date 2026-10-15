@@ -194,3 +194,115 @@ test('real phase frontmatter orders the wheel, shelf and backlog with id ties', 
     assert.deepEqual(model[group].map((p) => p.id), ['PHASE-0002', 'PHASE-0004', 'PHASE-0003', 'PHASE-0005']);
   }
 });
+
+// TASK-0144: ticket fills are the cockpit's status rules, independent of DES-0004 state.
+test('cockpit fills and attention cover each band, per-type completion and decision types', () => {
+  for (const [type, status, fill, needsYou = false] of [
+    ['feature', 'review', 'open', true], ['issue', 'triage', 'open', true],
+    ['task', 'blocked', 'open', true], ['test', 'failing', 'open', true], ['issue', 'reopened', 'open', true],
+    ['test', 'ready', 'open', true], ['task', 'ready', 'open'],
+    ['test', 'active', 'doing'], ['task', 'doing', 'doing'], ['feature', 'in_progress', 'doing'],
+    ['feature', 'in-progress', 'open'], ['task', 'in-review', 'open'], ['risk', 'mitigating', 'open'],
+    ['requirement', 'accepted', 'delivered'], ['feature', 'accepted', 'open'],
+    ['design', 'accepted', 'delivered'], ['decision', 'accepted', 'delivered'], ['adr', 'accepted', 'delivered'],
+    ['task', 'done', 'delivered'], ['risk', 'closed', 'delivered'], ['test', 'passing', 'delivered'],
+    ['task', 'deferred', 'deferred'], ['task', 'obsolete', 'dropped'], ['test', 'retired', 'dropped'],
+    ...['cancelled', 'superseded', 'declined', 'reverted', 'deprecated', 'abandoned', 'reconciled'].map((s) => ['task', s, 'dropped']),
+    ['task', 'unknown', 'open'], ['task', 'wont-fix', 'open'],
+  ]) {
+    const ticket = run([note('TICKET-001', type, status)]).tickets['TICKET-001'];
+    assert.deepEqual([ticket.type, ticket.fill, ticket.needsYou], [type === 'decision' ? 'adr' : type, fill, needsYou], `${type} ${status}`);
+  }
+});
+
+test('waivers and expired manual verification overlay completion, with a strict day boundary', () => {
+  const generated = '2026-10-15T12:00:00Z';
+  for (const [type, status, fields, fill] of [
+    ['task', 'done', { verification_waiver: 'Pending evidence' }, 'unproven'],
+    ['task', 'doing', { verification_waiver: 'Pending evidence' }, 'doing'],
+    ['task', 'cancelled', { verification_waiver: 'Pending evidence' }, 'dropped'],
+    ['test', 'passing', { last_verified: '2026-07-16' }, 'unproven'],
+    ['test', 'passing', { last_verified: '2026-07-17' }, 'delivered'],
+    ['test', 'passing', { last_verified: '2026-07-16', command: 'npm test' }, 'delivered'],
+    ['test', 'passing', { last_verified: '2026-07-16', command: '  ' }, 'unproven'],
+    ['task', 'done', { last_verified: '2026-07-16' }, 'delivered'],
+    ...['', 'bad', '2026-02-30', '2027-01-01'].map((date) => ['test', 'passing', { last_verified: date }, 'delivered']),
+  ]) assert.equal(run([note('ITEM', type, status, fields)], { generated }).tickets.ITEM.fill, fill, JSON.stringify([type, status, fields]));
+  const old = note('TST-0001', 'test', 'passing', { last_verified: '2026-10-13T12:00:00Z' });
+  assert.equal(run([old], { generated, stalenessDays: 1 }).tickets[old.id].fill, 'unproven');
+  assert.equal(run([old], { generated, stalenessDays: 2 }).tickets[old.id].fill, 'delivered');
+  const { cockpitStalenessDays } = load('shared/overview-status.js');
+  assert.equal(cockpitStalenessDays('verification:\n  staleness_days: 0\n'), 0);
+  assert.equal(cockpitStalenessDays('verification:\n  other: true\nnext:\n  staleness_days: 1\n'), 90);
+  assert.equal(cockpitStalenessDays(''), 90);
+});
+
+test('unresolved depends uses cockpit resolution and type-specific completion, including non-tickets', () => {
+  const blocker = { ...note('TASK-0002', 'task', 'doing'), fileName: 'blocker', aliases: ['Blocker alias'], title: 'Blocker title' };
+  const dependent = (status, depends) => note('TASK-0001', 'task', status, { depends });
+  for (const target of ['TASK-0002', '[[TASK-0002-old-slug|shown]]', '[[blocker]]', '[[Blocker alias]]', 'Blocker title']) {
+    assert.equal(run([blocker, dependent('doing', [target])]).tickets['TASK-0001'].needsYou, true, target);
+  }
+  for (const depends of ['[[TASK-0002]]', [null, 2, {}, '[[missing]]', '[[other#TASK-0002]]', '[[blocker#Heading]]']]) {
+    assert.equal(run([blocker, dependent('doing', depends)]).tickets['TASK-0001'].needsYou, false);
+  }
+  for (const status of ['done', 'cancelled', 'superseded', 'deferred']) assert.equal(run([blocker, dependent(status, ['TASK-0002'])]).tickets['TASK-0001'].needsYou, false, status);
+  // A done-but-unproven dependency still counts done in the cockpit.
+  assert.equal(run([note('TASK-0002', 'task', 'done', { verification_waiver: 'Pending' }), dependent('doing', ['TASK-0002'])]).tickets['TASK-0001'].needsYou, false);
+  for (const [type, status, needs] of [['phase', 'active', true], ['phase', 'done', false], ['test', 'active', true], ['test', 'retired', false], ['feature', 'retired', true]]) {
+    assert.equal(run([note('BLOCKER', type, status), dependent('doing', ['BLOCKER'])]).tickets['TASK-0001'].needsYou, needs, `${type} ${status}`);
+  }
+});
+
+// Read-only parity against the actual stats GET builder, without starting a server.
+// Risks, decisions and designs are absent from its slim items; the port still
+// applies the same rule to them (covered by the synthetic cases above).
+for (const workspace of ['deck', 'your-trainer']) test(`cockpit stats parity: ${workspace}`, async (t) => {
+  const fs = await import('node:fs'); const path = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const { desktopRoot } = await import('./helpers.mjs');
+  const root = path.dirname(desktopRoot);
+  const cockpit = path.resolve(root, '../project-os-cockpit');
+  const source = workspace === 'deck' ? root : path.resolve(root, '../your-trainer');
+  for (const required of [path.join(cockpit, 'src/project_os_cockpit/cockpit.py'), source]) if (!fs.existsSync(required)) {
+    const reason = `SKIPPED cockpit parity (${workspace}): missing ${required}; no comparison was made`;
+    console.warn(reason); t.skip(reason); return;
+  }
+  const python = spawnSync('python3', ['-c', `
+import datetime, json, sys
+from pathlib import Path
+from project_os_cockpit.index import Index
+from project_os_cockpit.cockpit import stats_payload, _staleness_days
+root = Path(sys.argv[1]) / 'docs'
+payload = stats_payload(Index.build(root))
+items = {}
+def visit(value):
+    if isinstance(value, dict):
+        if 'id' in value and 'state' in value and 'type' in value:
+            item = {'fill': value['state'] or 'open', 'needsYou': bool(value.get('attn', False))}
+            if value['id'] in items: assert items[value['id']] == item, value['id']
+            items[value['id']] = item
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(payload)
+print(json.dumps({'items': items, 'today': datetime.date.today().isoformat(), 'days': _staleness_days(root)}))
+`, source], { encoding: 'utf8', timeout: 25000, maxBuffer: 8 * 1024 * 1024,
+    env: { ...process.env, PYTHONPATH: path.join(cockpit, 'src'), PYTHONDONTWRITEBYTECODE: '1', PATH: `${path.join(cockpit, '.venv/bin')}${path.delimiter}${process.env.PATH}` } });
+  assert.equal(python.status, 0, `Python stats builder failed: ${python.error ?? ''}\n${python.stderr}`);
+  const reference = JSON.parse(python.stdout);
+  const { walkNotes } = load('main/note-index.js');
+  const docs = path.join(source, 'docs'); const { records, problems } = walkNotes(docs);
+  assert.deepEqual(problems, []);
+  const model = buildOverview(records, { workspace, today: reference.today, stalenessDays: reference.days,
+    readBody: (rel) => fs.readFileSync(path.join(docs, rel), 'utf8') });
+  const mismatches = [];
+  for (const [id, want] of Object.entries(reference.items)) {
+    const got = model.tickets[id];
+    if (!got || got.fill !== want.fill || got.needsYou !== want.needsYou) mismatches.push(`${id}: cockpit ${JSON.stringify(want)}; Deck ${JSON.stringify(got && { fill: got.fill, needsYou: got.needsYou })}`);
+  }
+  const outside = Object.values(model.tickets).filter((ticket) => !Object.hasOwn(reference.items, ticket.id));
+  t.diagnostic(`${workspace}: ${Object.keys(reference.items).length} items compared; ${mismatches.length} mismatches; ${outside.length} outside stats (${[...new Set(outside.map((ticket) => ticket.type))].join(', ')}), still governed by the port`);
+  assert.ok(Object.keys(reference.items).length > 0, 'stats must actually report items');
+  assert.deepEqual(mismatches, [], mismatches.join('\n'));
+});

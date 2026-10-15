@@ -5,7 +5,7 @@ title: "Screen checks refuse text and missing marks"
 status: active
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 phase: "[[PHASE-0005-Overview]]"
 scope: feature
@@ -14,7 +14,7 @@ entrypoint: "desktop/tests/overview-checks.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-checks"
 covers: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 issues: []
-tasks: ["[[TASK-0118-Check-Every-Screen-As-Data]]"]
+tasks: ["[[TASK-0144]]", "[[TASK-0118-Check-Every-Screen-As-Data]]"]
 artifacts: []
 adequacy: "Independent defective scenes exercise each refusal. Boundary cases at 60 and 61 words catch off-by-one errors; identifier cases prevent treating phase numbers as counts."
 mutation_score: ""
@@ -42,12 +42,13 @@ The test holds no verdict in its status. Its command builds the modules and runs
 ## Expected results
 
 - The good scene passes all four rules and each deliberate defect fails its own rule.
+- Panel row and note text is exempt, while 61 words outside a panel still fail. Folded panel rows and custom ticket ids still require list twins.
 - Only text shown at rest counts toward 60 words; ticket IDs do not count.
 - Count references resolve and the list twin preserves ticket IDs and actions.
 
 ## Evidence
 
-2026-10-14: the `overview-checks` suite passed 15 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 737 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
+2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. The overview-checks suite passes 17 tests. Panel text is exempt, 61 outside words fail, and every folded or visible panel row needs a twin. Removing the row twin guard fails the regression. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

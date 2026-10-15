@@ -8,6 +8,104 @@
       "key": "requirements",
       "label": "Requirements",
       "known": true,
+      "items": [
+        {
+          "id": "REQ-0006",
+          "label": "The evidence panel of a note lists every test note that names it under `covers` or `tasks`, or that it names under `tests` or `verifies`, and no other; each row shows the frontmatter key the link was written under; a note no test names reads \"no test names this note\", and nothing is inferred from its status, its feature's status or its tasks.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "A test at `level: acceptance` shows the standing verdict the ledger holds for it, with its date, who recorded it, by which method and on which platform; with no entry it reads \"not walked: no verdict is recorded\"; an invalidated verdict is said to be invalidated, with the change and the date, beside the verdict before it; the history of every verdict opens from the row.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "A manual test that is not at acceptance level shows its own status and last-verified date, labelled as coming from the test note, and is labelled stale with the rule's name when that date is more than 90 days old; a test with a `command:` reads \"run by a command; its result is not recorded anywhere Deck can read\" and shows no verdict and no date.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "A recorded verdict is never called a status and a note's status is never shown as a verdict; when the acceptance record cannot be read the panel reads \"the acceptance record could not be read\" with the reason, and no row reads \"not walked\".",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "Each evidence row names its source and its date and opens the full original, the test note as a document on the desk, at its Evidence section when it has one; an excerpt is that note's own text under its Evidence heading, and a note with no such heading reads \"this test note has no Evidence section\"; nothing is quoted from anywhere else.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "A criterion line in a note's text gets an evidence control only when that line itself carries a link to a test note; the control reads \"named on this line\" and lists only the tests the line names; a line with no such link gets no control.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "The panel is closed until a person opens it, opens and closes by pointer and by keyboard with focus returned to the control that opened it, and appears without travel under reduced motion.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "REQ-0006",
+          "label": "Nothing in the panel writes: it offers no control that records or changes a verdict, the served page shows the same panel through the same GET, Deck's host answers 405 to every method that is not GET or HEAD on the forwarded acceptance path, and `git status` in the workspace is unchanged by using the panel.",
+          "ticket": {
+            "id": "REQ-0006",
+            "title": "Evidence beside a claim names its source and says what is missing",
+            "status": "approved",
+            "type": "requirement",
+            "fill": "open",
+            "needsYou": false
+          }
+        }
+      ],
       "total": 8,
       "done": 0,
       "missing": [
@@ -25,14 +123,398 @@
       "key": "tasks",
       "label": "Tasks",
       "known": true,
+      "items": [
+        {
+          "id": "TASK-0111",
+          "label": "Work out a note's evidence without a window",
+          "ticket": {
+            "id": "TASK-0111",
+            "title": "Work out a note's evidence without a window",
+            "status": "done",
+            "type": "task",
+            "fill": "delivered",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TASK-0112",
+          "label": "Forward the acceptance record as a read",
+          "ticket": {
+            "id": "TASK-0112",
+            "title": "Forward the acceptance record as a read",
+            "status": "done",
+            "type": "task",
+            "fill": "delivered",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TASK-0113",
+          "label": "Show evidence beside the claim in the Glass document",
+          "ticket": {
+            "id": "TASK-0113",
+            "title": "Show evidence beside the claim in the Glass document",
+            "status": "done",
+            "type": "task",
+            "fill": "delivered",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TASK-0114",
+          "label": "Walk the evidence panel on two real workspaces",
+          "ticket": {
+            "id": "TASK-0114",
+            "title": "Walk the evidence panel on two real workspaces",
+            "status": "done",
+            "type": "task",
+            "fill": "delivered",
+            "needsYou": false
+          }
+        }
+      ],
       "total": 4,
       "done": 4,
       "missing": []
     },
     {
+      "key": "reviews",
+      "label": "Reviews",
+      "known": true,
+      "items": [
+        {
+          "id": "review-0",
+          "label": "model:claude-opus-5-5"
+        },
+        {
+          "id": "review-1",
+          "label": "model:claude-opus-5-5"
+        }
+      ],
+      "total": 2,
+      "done": 0,
+      "missing": [
+        "independent review: changes-requested, 2 reviewers recorded"
+      ]
+    },
+    {
       "key": "automated",
-      "label": "Automated",
+      "label": "Automated tests",
       "known": false,
+      "items": [
+        {
+          "id": "TST-0057",
+          "label": "TST-0057: command result not reported",
+          "ticket": {
+            "id": "TST-0057",
+            "title": "A measurement run writes its numbers to a file as well as printing them, so a trimmed terminal no longer costs the run",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0044",
+          "label": "TST-0044: command result not reported",
+          "ticket": {
+            "id": "TST-0044",
+            "title": "The neighbourhood is read once per note per revision and shared by the lift and the reach, what held notes share is their intersection, and a throw is recognised from pointer samples and window bounds",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0039",
+          "label": "TST-0039: command result not reported",
+          "ticket": {
+            "id": "TST-0039",
+            "title": "The served page follows the store by reading it: the state a tablet is told, the choices it keeps, and a 405 for every write to the two routes",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0043",
+          "label": "TST-0043: command result not reported",
+          "ticket": {
+            "id": "TST-0043",
+            "title": "The hands’ state is shared and never kept: pull, push and let go are store transitions the persister drops, a pane is the desk record Spread saves, and the surface is Glass unless chosen",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0078",
+          "label": "TST-0078: command result not reported",
+          "ticket": {
+            "id": "TST-0078",
+            "title": "Evidence says what is recorded and names what is not: the tests that name a note by the key they were written under, a ledger verdict or the plain statement that there is none, a manual test's own status and its staleness, and no result for a test run by a command",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0067",
+          "label": "TST-0067: command result not reported",
+          "ticket": {
+            "id": "TST-0067",
+            "title": "A collection counts exactly the notes its view returns, keeps where it stands and never its rows, announces a changed result before applying it, and comes back to the same row",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0066",
+          "label": "TST-0066: command result not reported",
+          "ticket": {
+            "id": "TST-0066",
+            "title": "A relationship between two notes is named only in the words the source wrote: the frontmatter key a link stands under, or 'link', and never a meaning Deck made up",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0070",
+          "label": "TST-0070: command result not reported",
+          "ticket": {
+            "id": "TST-0070",
+            "title": "An arrangement is a plan before it is a move: Read, Compare and Show related name what they move, never change a size, leave alone what they do not name, and can be put back except where a person has changed something since",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0007",
+          "label": "TST-0007: command result not reported",
+          "ticket": {
+            "id": "TST-0007",
+            "title": "The host serves the renderer, proxies reads, and refuses every method and path that is not one",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0034",
+          "label": "TST-0034: command result not reported",
+          "ticket": {
+            "id": "TST-0034",
+            "title": "The grammar carries surface, page, flow and step, every old address still round-trips, and the panel registry refuses a kind nobody registered",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0049",
+          "label": "TST-0049: command result not reported",
+          "ticket": {
+            "id": "TST-0049",
+            "title": "A desk for each view and a note on every view, in the store: an old state file reads unchanged, the mark moves a note between lists, and the tablet is told only about open workspaces",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0050",
+          "label": "TST-0050: command result not reported",
+          "ticket": {
+            "id": "TST-0050",
+            "title": "Zoom keeps the point under the pointer still, stays between 0.6 and 2.5 times, never loses the field off the screen, and at 1 times changes nothing",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0032",
+          "label": "TST-0032: command result not reported",
+          "ticket": {
+            "id": "TST-0032",
+            "title": "Band and face follow the description rather than the code, and the status vocabulary Deck copies still equals the cockpit's",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0075",
+          "label": "TST-0075: command result not reported",
+          "ticket": {
+            "id": "TST-0075",
+            "title": "A move is never half done: the source keeps its document until the destination has drawn the note, an unanswered or interrupted handoff is undone, and no desk ever holds a note twice",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0074",
+          "label": "TST-0074: command result not reported",
+          "ticket": {
+            "id": "TST-0074",
+            "title": "A scene keeps places and nothing derived: what it holds and never holds, a reading position found again by its heading, an old desk that still opens, a newer version left alone, and the desk before a scene put back",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0042",
+          "label": "TST-0042: command result not reported",
+          "ticket": {
+            "id": "TST-0042",
+            "title": "Nothing in the stylesheet blurs or puts a backdrop filter over the field, only near-band cards are promoted, and the containers let the pointer through",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0041",
+          "label": "TST-0041: command result not reported",
+          "ticket": {
+            "id": "TST-0041",
+            "title": "The slot geometry places every note, gives a thousand quiet tiles a stated shape, keeps an obstacle clear at any yaw, and deals nothing on a turn",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0040",
+          "label": "TST-0040: command result not reported",
+          "ticket": {
+            "id": "TST-0040",
+            "title": "The field deals every view into three bands: owed in front and never moved by a hand, the view in the middle, finished work behind, over the real payloads",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0065",
+          "label": "TST-0065: command result not reported",
+          "ticket": {
+            "id": "TST-0065",
+            "title": "A note opens at the size a person chose: its own size first, then the size last chosen on that view, then a first-use size, and a small window changes what is drawn and never what is stored",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0051",
+          "label": "TST-0051: command result not reported",
+          "ticket": {
+            "id": "TST-0051",
+            "title": "The seats round an opened note hold every neighbour at browsing size, never overlap the document or each other, keep the cards' circular order, and run on past the field's left and right edges",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0047",
+          "label": "TST-0047: command result not reported",
+          "ticket": {
+            "id": "TST-0047",
+            "title": "The orbit’s layout is solved once and kept, fills the cylinder, moves nothing already placed when a note arrives, and marks an orphan and a cluster held on by one link",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0046",
+          "label": "TST-0046: command result not reported",
+          "ticket": {
+            "id": "TST-0046",
+            "title": "The whole link graph is read from Deck’s own index: every link with its offset, resolved the way the cockpit resolves it, one node per note, and each node’s band the reader’s",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0054",
+          "label": "TST-0054: command result not reported",
+          "ticket": {
+            "id": "TST-0054",
+            "title": "Each band's shape follows how much it holds: a table of populations from forty to twenty-seven hundred, both ends clamped, no band's depth moving, and today's constants returned at the large end",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0053",
+          "label": "TST-0053: command result not reported",
+          "ticket": {
+            "id": "TST-0053",
+            "title": "Every note the view holds has a band and every band states its remainder: the four lists plus the four counts add up, the middle's remainder is placed rather than dropped, and a pushed note is never the one a capacity drops",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0055",
+          "label": "TST-0055: command result not reported",
+          "ticket": {
+            "id": "TST-0055",
+            "title": "Detail follows apparent size: the thresholds are monotonic, the unzoomed field resolves to exactly what it draws today, a zoomed mid card reaches its face line, and the promotion threshold is not above the brief one",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        },
+        {
+          "id": "TST-0033",
+          "label": "TST-0033: command result not reported",
+          "ticket": {
+            "id": "TST-0033",
+            "title": "The write channel exists in the shell and not when served, the verbs come from the sidecar, and every refusal is reported in the sidecar's own words",
+            "status": "active",
+            "type": "test",
+            "fill": "doing",
+            "needsYou": false
+          }
+        }
+      ],
       "total": 26,
       "done": 0,
       "missing": [
@@ -66,22 +548,13 @@
     },
     {
       "key": "acceptance",
-      "label": "Acceptance",
+      "label": "Acceptance tests",
       "known": false,
+      "items": [],
       "total": 0,
       "done": 0,
       "missing": [
         "no acceptance checks name this feature"
-      ]
-    },
-    {
-      "key": "reviews",
-      "label": "Reviews",
-      "known": true,
-      "total": 2,
-      "done": 0,
-      "missing": [
-        "independent review: changes-requested, 2 reviewers recorded"
       ]
     }
   ],

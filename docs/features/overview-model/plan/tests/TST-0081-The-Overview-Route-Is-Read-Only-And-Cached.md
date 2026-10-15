@@ -5,7 +5,7 @@ title: "The overview route is read-only and cached"
 status: active
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 phase: "[[PHASE-0005-Overview]]"
 scope: feature
@@ -14,7 +14,7 @@ entrypoint: "desktop/tests/overview-route.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-route"
 covers: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 issues: []
-tasks: ["[[TASK-0116-Serve-And-Print-The-Overview]]"]
+tasks: ["[[TASK-0144]]", "[[TASK-0116-Serve-And-Print-The-Overview]]"]
 artifacts: []
 adequacy: "The suite observes build calls and response data across revisions. Refused methods and missing workspaces must return their specific failures rather than a success payload."
 mutation_score: ""
@@ -39,6 +39,8 @@ The test holds no verdict in its status. Its command builds the modules and runs
 - Repeat the request at the same revision, then change notes and ledger files independently. Check sealed histories, platform gaps and malformed ledgers.
 - Try write methods and unknown workspaces; run the print command against a temporary repository.
 
+- Change the verification day and snapshot staleness threshold without changing the note index; the manual-test fill refreshes.
+
 ## Expected results
 
 - The model is returned on the served host and a changed revision refreshes it.
@@ -47,7 +49,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-14: the `overview-route` suite passed 12 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 704 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
+2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. The overview-route suite passes 13 tests. Manual verification refreshes when the local date crosses the project threshold and when SNAPSHOT.yaml changes that threshold, without requiring a note-index revision. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

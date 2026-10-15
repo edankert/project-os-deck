@@ -10,8 +10,8 @@ const { docsRootFor, walkNotes } = load('main/note-index.js');
 const { checkScene } = load('shared/overview-checks.js');
 
 const expected = {
-  deck: { dirty: false, testStates: { closed: 62, open: 18, dropped: 5, owed: 2 }, total: 361, unplaced: 1, core: 22, kinds: { req: 6, feat: 29, task: 127, test: 87, iss: 91, dec: 13, risk: 8 },
-    phases: { 'PHASE-0001': 139, 'PHASE-0002': 172, 'PHASE-0003': 0, 'PHASE-0004': 2, 'PHASE-0005': 26 }, groups: [5, 0, 0], exits: 47 },
+  deck: { dirty: false, testStates: { closed: 67, open: 21, dropped: 5, owed: 2 }, total: 384, unplaced: 1, core: 23, kinds: { req: 6, feat: 29, task: 141, test: 95, iss: 91, dec: 13, risk: 9 },
+    phases: { 'PHASE-0001': 139, 'PHASE-0002': 172, 'PHASE-0003': 0, 'PHASE-0004': 2, 'PHASE-0005': 48 }, groups: [5, 0, 0], exits: 47 },
   'your-trainer': { dirty: true, testStates: { dropped: 232, closed: 9, open: 276, owed: 180, failed: 1 }, total: 2747, unplaced: 987, core: 1028, kinds: { req: 240, feat: 135, task: 1084, test: 698, iss: 549, dec: 24, risk: 17 },
     phases: { 'PHASE-001': 60, 'PHASE-002': 39, 'PHASE-003': 102, 'PHASE-004': 51, 'PHASE-005': 36, 'PHASE-006': 29,
       'PHASE-007': 46, 'PHASE-008': 16, 'PHASE-009': 7, 'PHASE-010': 142, 'PHASE-011': 80, 'PHASE-012': 123,
@@ -53,6 +53,10 @@ for (const [name, want] of Object.entries(expected)) {
       assert.deepEqual(group.counts, counts);
     }
     for (const ticket of tickets) {
+      assert.ok(['requirement', 'feature', 'task', 'test', 'issue', 'adr', 'design', 'risk'].includes(ticket.type), ticket.id);
+      assert.ok(['open', 'doing', 'delivered', 'unproven', 'dropped', 'deferred'].includes(ticket.fill), ticket.id);
+      assert.equal(typeof ticket.needsYou, 'boolean', ticket.id);
+      assert.equal(ticket.kind === 'dec', ticket.type === 'adr' || ticket.type === 'design', ticket.id);
       if (['dec', 'risk'].includes(ticket.kind)) { assert.equal(ticket.phase, null); assert.equal(ticket.placedBy, 'project-wide'); }
       if (ticket.suggestion) { assert.equal(ticket.placedBy, 'none'); assert.ok(phases.some((p) => p.id === ticket.suggestion.phase)); }
     }

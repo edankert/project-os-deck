@@ -27,7 +27,7 @@ related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFER
 
 ## Goal
 
-**A person gives the three project-os verdicts in Deck, each from a picture of the evidence.** These are S5, S6 and S7 in [[DES-0005-The-Overview-Is-Drawn-Not-Written]]: accept a design from its plates, run an acceptance test as beads on a ring with before-and-after images, and accept a feature at a gate of lamps. Every write leaves through Deck's main process and the cockpit's existing endpoint. Deck refuses an agent identity locally; missing sidecar guards are cockpit work, recorded under Sidecar limits.
+**A person gives the three project-os verdicts in Deck, each from a picture of the evidence.** These are S5, S6 and S7 in [[DES-0005-The-Overview-Is-Drawn-Not-Written]]: accept a design from its plates, run an acceptance test as beads on a ring with before-and-after images, and accept a feature at a gate of labelled chips. Every write leaves through Deck's main process and the cockpit's existing endpoint. Deck refuses an agent identity locally; missing sidecar guards are cockpit work, recorded under Sidecar limits.
 
 Lane: `system:codex`. How the two agents share this phase is in [[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]].
 
@@ -35,7 +35,7 @@ Lane: `system:codex`. How the two agents share this phase is in [[REFERENCE-OVER
 
 - S5 Design acceptance: plates, revision strip, review pins; Accept through `/api/notes/decide`, and Decline with a reason through the sidecar's advertised `/api/notes/transition` action.
 - S6 Acceptance test: platform rings from `/api/cockpit/release-test`, check beads, before-and-after captures; results through `/api/notes/mark-check`, with a reason for every result but Pass.
-- S7 Ticket acceptance: the five-lamp gate from `/api/notes/acceptance`, `/api/cockpit/acceptance`, `/api/cockpit/obligations`, current notes and Deck's index; Accept and Send back through `/api/notes/transition` only when `/api/notes/actions` offers them, or an opted-in acceptance stamp through `/api/notes/acceptance-run` that records acceptance without changing status.
+- S7 Ticket acceptance: the five-chip gate from `/api/notes/acceptance`, `/api/cockpit/acceptance`, `/api/cockpit/obligations`, current notes and Deck's index; Accept and Send back through `/api/notes/transition` only when `/api/notes/actions` offers them, or an opted-in acceptance stamp through `/api/notes/acceptance-run` that records acceptance without changing status.
 - A gate component small enough for S3 to show (FEAT-0028).
 - Rows in [[REFERENCE-COCKPIT-ADOPTION]] moved to adopted for exactly what these screens use, and a risk note if a payload Deck now depends on can change under it.
 
@@ -48,32 +48,28 @@ Out of scope:
 
 - Edwin accepts a design in S5 and records a Pass and a Fail in S6; each verdict shows in the cockpit afterwards. In S7, Deck offers feature status changes only when the sidecar advertises them. For an opted-in feature with complete evidence, Edwin can record acceptance without changing status, and that acceptance stamp shows in the cockpit.
 - Deck never sends a verdict as an agent: its shell requires a configured `user:` identity. When the sidecar refuses a person’s request, Deck shows the refusal in the sidecar’s own words.
-- S7 enables Accept only when every nonempty lamp is known and complete, no evidence is missing, at least one known item exists, and the sidecar supports the action. Known empty lamps are hollow and say “nothing to check”; every unknown or incomplete lamp explains the gap on hover.
+- S7 enables Accept only when every nonempty chip is known and complete, no evidence is missing, at least one known item exists, and the sidecar supports the action. Known empty chips are hollow and say “nothing to check”; every unknown or incomplete chip explains the gap on hover.
 - Each screen passes FEAT-0026's screen checks; S6 is checked on your-trainer's REL-0017 and on Deck with no release.
 
 ## Verification
 
-2026-10-14: `cd desktop && npm test` passed **745 tests**, with **0 failures and 0 skips**, including the TypeScript build. The three flow suites now contribute 39 checks: 16 scenes and payloads, 4 image-route checks, and 19 action and shell-write checks. A fresh independent implementation check passed all 35 scene/action tests and confirmed that targeted tests detect removal of three guards: advertised transitions, positive lamp totals and persisted stale-result deletion. This check leaves Claude’s formal round-two verdict untouched.
+2026-10-15: `cd desktop && npm test` passed **764 tests, with zero failures and zero skips**, including the TypeScript build. The three flow suites contribute 43 checks: 20 scenes and payloads, four image-route checks, and 19 action and shell-write checks.
 
-The tests exercise unavailable and withdrawn sidecar actions, nonzero reconciled counts, empty and unknown lamps, malformed payloads, scalar and list review provenance, saved progress across commits, workspace/release/platform/content separation, and persisted stale-result deletion. Identity and exact-refusal tests still pass. Every recorded S5–S7 scene passes the word, count, address and list checks; S5 uses 9 words and S7 uses 26 on each workspace. Every recorded S6 section passes with More expanded.
+Every recorded S5–S7 scene passes the word, count, address and list checks. S5 uses 9 words at rest and S7 uses 30 on both workspaces. Every recorded S6 section passes with More expanded; Your Trainer’s maximum is 50 words. The chip tests check both sizes, exact item counts and ticket marks, separate count bars, neutral unknown framing and list twins. Removing one square fails the fixture tests. Replacing Blocked’s glyph with Pass fails the result test.
 
-`cd desktop && npm run build && node scripts/overview-plates.mjs` regenerated all 14 plates without opening a window. The changed S5 and S7 SVG/JPEG plates were inspected. The S6 Your Trainer SVG changes only because saved check keys now include expected content; its JPEG is unchanged. The prototype page and plate manifest carry the current counts. No Electron or live acceptance verdict ran.
-
-`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. Existing documentation warnings remain; no new warning is left by this task. Snapshot sync adds TASK-0143 to the feature and phase, derives its done status, and updates task counters and metrics. TST-0088, TST-0089 and TST-0100 remain Edwin's unrun acceptance checks. Claude owns the formal round-two verdict.
+Headless SVG rasters of all six flow scenes and the compact chips were inspected. No Electron or live verdict ran. `bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. TST-0088, TST-0089 and TST-0100 remain Edwin’s unrun acceptance checks. Claude owns this revision’s independent review and official plates.
 
 ## Where this stands
 
-**Back to `doing` on 2026-10-15, because Edwin ran the overview and asked for changes.** He liked much of it, and asked for the cockpit's ticket colours and status marks on every screen, tickets drawn as cockpit rows, more of a ticket on its own screen, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. The move is from `review` back to `doing`, which STATUSES.md does not list as a typical transition; it is used because new work is added inside the feature, as FEAT-0005 and FEAT-0006 were reopened before. The review rounds below are for the build of 2026-10-14. The new tasks get their own review by the other model before the feature goes back to `review`.
+2026-10-15: **TASK-0149 is done on `lane/codex-r2`.** S7 draws five labelled chips: Requirements, Tasks, Reviews, Automated tests and Acceptance tests. Every displayed count has its own bar. Each item has a square; when its ticket is in the model, the shared cockpit module draws its actual type, fill and needs-you dot.
 
-New work: [[TASK-0149]] (Codex) turns S7's five lamps into labelled chips of cockpit marks, which S3 reuses, and moves S5 and S6 to the same marks and words. It waits on TASK-0144 and on Claude's mark module in TASK-0145. Edwin's open decisions on this feature's narrowed criteria are unchanged.
+Unknown evidence says “not reported” in neutral framing and never creates a violet centre or a synthetic attention dot. A real ticket’s mark still says what that ticket needs. Known empty chips say “nothing to check”. These changes preserve the readiness and advertised-action rules. Requirement items count criteria, so several squares can refer to the same requirement; their callouts name the criterion.
 
-2026-10-14: **FEAT-0029 remains at review on `lane/codex`.** `a6fb6c7` repairs S7 action availability, empty and unknown lamps, review provenance, and the acceptance contract. `388d11e` preserves S6 progress across unrelated commits and persists stale-result deletion. `a7d450a` draws S5’s unselected plates as outlines and refreshes the S5/S7 plates, manifest and prototype. All 745 desktop tests pass with no skips.
+S5 uses the design’s cockpit square. S6 beads use the cockpit’s release-result words, glyphs and acceptance-result colours, with the open check’s ticket squares separate. Historical design captions and revision prose remain verbatim; the UI’s own status wording no longer says “owed again”.
 
-Claude coordinates, reviews round two and merges. Edwin decides whether the narrower feature is acceptable and runs TST-0088, TST-0089 and TST-0100. The cockpit still owes person-only feature transitions and agent refusal on `decide` and `mark-check`. The requests are at the end of [[REFERENCE-COCKPIT-ADOPTION]], and RISK-0009 remains open. Nothing was pushed or merged by Codex.
+Claude’s TASK-0148 should call `gateChips(data, x, y, width, { compact: true })` and append both `nodes` and `rows`. The old `gateNodes` wrapper is retained only for the current S3 caller; remove both together. The two acceptance fixtures were remapped from their recorded raw payloads with per-item identities.
 
-S6 scopes saved progress by workspace, release, platform and check content, including expected results. An unrelated commit preserves it. A changed check or ledger result removes the stale result from both memory and storage. Historical releases remain read-only because `mark-check` writes to the working release.
-
-S7 refreshes the evidence and advertised actions before writing. Missing command results remain unknown with a reason. A known empty lamp is hollow and neutral; readiness still needs at least one known item and no missing evidence. The opted-in stamp records acceptance without changing status. The shared `gateNodes` component keeps S3 consistent with S7.
+The feature stays `doing` for Claude’s review of this revision and Edwin’s acceptance. Claude owns the merge, push, redrawn official plates and batched window run. Edwin’s decision on the narrower sidecar criteria remains outstanding. No new review or human acceptance is claimed.
 
 ## Preflight
 
@@ -96,11 +92,11 @@ Both changes below narrow this feature because of the cockpit. Edwin decides whe
 - The first criterion originally said: “Edwin accepts a design in S5, records a Pass and a Fail in S6, and accepts a feature in S7; each verdict shows in the cockpit afterwards.” S7 now promises only advertised transitions and the opted-in acceptance stamp, since the cockpit cannot move a feature out of review.
 - The second criterion originally said: “The same three verbs from an agent session are refused by the sidecar, and Deck shows the refusal.” It now promises Deck's local identity refusal and the unchanged display of a sidecar refusal. The cockpit does not enforce agent refusal on `decide` or `mark-check`.
 
-### Lamp evidence and empty lamps
+### Chip evidence and empty chips
 
-Every nonempty lamp must be known and complete, and no lamp may have missing evidence. A known zero-item lamp is neutral: hollow, labelled “nothing to check”, and unable to make the gate ready by itself. Accept requires at least one known item across the five lamps. Empty requirement and task lists are known empty. Missing automated or acceptance records remain unknown because they do not establish a complete empty inventory. Review provenance accepts a list or a string containing reviewer identities; one person or two model reviewers must accompany an approved verdict, date and round.
+Every nonempty chip must be known and complete, and no chip may have missing evidence. A known zero-item chip is neutral: hollow, labelled “nothing to check”, and unable to make the gate ready by itself. Accept requires at least one known item across the five chips. Empty requirement and task lists are known empty. Missing automated or acceptance records remain unknown because they do not establish a complete empty inventory. Review provenance accepts a list or a string containing reviewer identities; one person or two model reviewers must accompany an approved verdict, date and round.
 
-Command results remain unknown. `tools/scripts/run-tests.py` prints outcomes and returns an exit code without saving a result file. `tools/scripts/hooks/pre-push` only invokes it. The CI workflows record job outcomes and logs but publish no per-test result artifact through Deck's reads. A note's status or prose about an old run cannot certify a current command result. Every unknown lamp carries a non-empty missing list; the Automated hover explains the absent command result.
+Command results remain unknown. `tools/scripts/run-tests.py` prints outcomes and returns an exit code without saving a result file. `tools/scripts/hooks/pre-push` only invokes it. The CI workflows record job outcomes and logs but publish no per-test result artifact through Deck's reads. A note's status or prose about an old run cannot certify a current command result. Every unknown chip carries a non-empty missing list; the Automated hover explains the absent command result.
 
 ### Acceptance-run totals
 
@@ -111,6 +107,8 @@ The cockpit's acceptance runner increments `skipped` after reconciling a criteri
 Your Trainer has no feature at review in the current tree or its existing overview fixture. The implementation lead checked all 135 feature notes on 2026-10-14: 72 done, 38 backlog, 11 doing, 9 superseded, 2 deferred, 2 planned and 1 cancelled. Its accept fixture therefore uses a real doing feature with its actual status. Deck’s fixture uses FEAT-0024 at review as requested. This is a source limitation, not a fabricated review state.
 
 ## Questions between the lanes
+
+2026-10-15, Codex: `gateChips(data: AcceptData, x, y, width, options?: { compact?: boolean })` now returns `{ nodes, rows }`. Use both in S3. `GateLamp.items` carries each criterion, task, reviewer or test item and its model ticket when known. The old `gateNodes` wrapper is temporary for the old radial S3, and can be removed with its caller. S5–S7 are ready for TASK-0150’s plate regeneration.
 
 2026-10-14, Codex to the drawing lane: will you place `gateNodes(gateFromModel(model, featureId), x, y, scale)` under S3's feature track and connect the S5–S7 entry controls? The exports are in `desktop/src/shared/overview-flows.ts`. The registered addresses are `?flow=design&note=DES-…`, `?flow=test-run&note=REL-…&step=android.3` (the release is optional), and `?flow=accept&note=FEAT-…`. Regenerate DES-0005's S5–S7 plates from the six fixtures after merging. Your Trainer's fixture preserves FEAT-0130's actual `doing` status because no feature at review exists there.
 

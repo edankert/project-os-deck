@@ -5,7 +5,7 @@ title: Run a release test from its captures
 status: active
 owner: user:edwin
 created: '2026-10-14'
-updated: '2026-10-14'
+updated: '2026-10-15'
 source:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 phase: '[[PHASE-0005-Overview]]'
@@ -17,6 +17,7 @@ covers:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 issues: []
 tasks:
+- '[[TASK-0149]]'
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 artifacts: []
@@ -57,6 +58,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 ## Expect
 
 - Deck says there is no release and draws empty rings. It does not invent checks.
+- Beads show check results with the cockpit’s marks and words: Pass, Fail, Partial, Question, Blocked, N/A and Excused. Unrun and invalidated checks say To-do and Needs re-run. The selected check’s test notes have separate cockpit squares.
 - Android and iOS retain their own checks and results; the section address restores its section.
 - The open check shows both captures when present, its action and expected result. Missing captures are stated plainly.
 - Printed-step progress stays local until every step citing a test note has a result. The note then receives its most serious result in the cockpit. Cancelling a reason sends no write; sidecar refusals keep their wording.

@@ -2,6 +2,7 @@
  * No filesystem, clock or ledger access lives here: callers supply the text
  * and provenance. Unknown statuses stay open rather than claiming completion.
  */
+import { cockpitMarks } from './overview-status.js';
 import { isTemplate, type NoteRecord } from './records.js';
 import { linksIn, Resolver, LINK_BEARING_FIELDS } from './graph.js';
 import { firstHeading, parseFrontmatter } from './yaml.js';
@@ -12,6 +13,10 @@ export interface OverviewOptions {
   head?: string;
   dirty?: boolean;
   generated?: string;
+  /** Calendar date used by the cockpit's manual-verification clock. */
+  today?: string;
+  /** SNAPSHOT.yaml verification.staleness_days; the cockpit defaults to 90. */
+  stalenessDays?: number;
   /** Full Markdown or body only; called once per phase or ticket. */
   readBody: (relPath: string) => string;
   /** Resolved result on every ledger platform, including not-run and withdrawals. */
@@ -51,23 +56,6 @@ function stateFor(record: NoteRecord, kind: Kind, options: OverviewOptions): Sta
   if ((kind === 'feat' && ['doing', 'review'].includes(status)) ||
       (kind === 'task' && status === 'doing') || (kind === 'risk' && status === 'mitigating')) return 'progress';
   return 'open';
-}
-
-/**
- * INTERIM, until TASK-0144 (Codex) replaces both with the cockpit's own rules:
- * the type from the note's type, and a fill and needs-you flag read off
- * DES-0004's state. Added by the drawing lane on 2026-10-15 so the screens
- * build against the agreed contract while the data lane ports `_square_state`
- * and `_needs_human`.
- */
-function interimType(record: NoteRecord, kind: Kind): Ticket['type'] {
-  if (kind !== 'dec') return ({ req: 'requirement', feat: 'feature', task: 'task', test: 'test', iss: 'issue', risk: 'risk' } as const)[kind];
-  return record.types.includes('design') ? 'design' : 'adr';
-}
-
-function interimMarks(state: State): Pick<Ticket, 'fill' | 'needsYou'> {
-  const fill = ({ closed: 'delivered', progress: 'doing', owed: 'unproven', dropped: 'dropped', failed: 'open', open: 'open' } as const)[state];
-  return { fill, needsYou: state === 'failed' || state === 'owed' };
 }
 
 /** Only the Exit Criteria section counts; fenced examples are not criteria. */
@@ -147,8 +135,10 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
     workspace: options.workspace, head: options.head ?? '', ...(options.dirty === undefined ? {} : { dirty: options.dirty }), generated: options.generated ?? '',
     phases: [], shelf: [], backlog: [], core: { tickets: [], counts: emptyCounts() }, tickets: Object.create(null) as Record<string, Ticket>,
   };
+  const marksFor = cockpitMarks(notes, options.today ?? options.generated?.slice(0, 10) ?? '', options.stalenessDays);
   const ticketNotes = new Map<string, NoteRecord>();
   for (const r of notes) {
+    const noteType = r.types.find((t) => Object.hasOwn(TYPES, t));
     const kind = r.types.map((t) => Object.hasOwn(TYPES, t) ? TYPES[t] : undefined).find((k) => k !== undefined);
     if (kind === undefined) continue;
     if (Object.hasOwn(model.tickets, r.id)) throw new Error(`Duplicate overview ticket id: ${r.id}`);
@@ -166,7 +156,7 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
       if (note && note.id !== r.id) links.add(note.id);
     }
     const state = stateFor(r, kind, options);
-    model.tickets[r.id] = { id: r.id, kind, type: interimType(r, kind), state, ...interimMarks(state), status: r.status ?? '', title: r.title ?? r.id,
+    model.tickets[r.id] = { id: r.id, kind, state, ...marksFor(r, noteType === 'decision' ? 'adr' : noteType as Ticket['type']), status: r.status ?? '', title: r.title ?? r.id,
       phase: null, placedBy: kind === 'dec' || kind === 'risk' ? 'project-wide' : 'none', links: [...links].sort() };
     ticketNotes.set(r.id, r);
   }

@@ -202,3 +202,26 @@ test('word count excludes only complete ticket or phase id tokens', () => {
   scene.nodes.push(text('COVID-19 ABC-123 FEAT-1st PHASE-2-more CHG-20261014-Title'));
   assert.match(verdict(scene, 'words').detail, /^5 words/);
 });
+
+test('panel row and note text is exempt, while prose outside a panel still counts', () => {
+  for (const body of [
+    { kind: 'rows', sections: [{ key: 'tickets', title: 'Many words '.repeat(80), rows: [{ id: 'FEAT-0001', title: 'Long title '.repeat(80), status: 'done', type: 'feature', fill: 'delivered', needsYou: false }] }] },
+    { kind: 'note', id: 'FEAT-0001', title: 'Long title '.repeat(80), text: 'Full note '.repeat(1000) },
+  ]) {
+    const scene = good();
+    scene.nodes = [{ kind: 'group', children: [{ kind: 'panel', key: 'detail', x: 0, y: 0, w: 800, h: 400, label: 'Details', body }] }, text('word '.repeat(60))];
+    assert.match(verdict(scene, 'words').detail, /^60 words/);
+    assert.equal(verdict(scene, 'words').ok, true);
+    scene.nodes.push(text('one'));
+    assert.equal(verdict(scene, 'words').ok, false, 'the exemption cannot hide outside prose');
+  }
+});
+
+test('every panel row, including folded and nonstandard ids, requires a list twin', () => {
+  const scene = good();
+  const rows = ['TASK-0001', 'custom-ticket'].map((id) => ({ id, title: id, type: 'task', fill: 'open', needsYou: false, status: 'backlog' }));
+  scene.nodes.push({ kind: 'group', children: [{ kind: 'panel', key: 'rows', x: 0, y: 0, w: 800, h: 400, label: 'Rows', body: { kind: 'rows', sections: [{ key: 'folded', title: 'Closed', folded: true, rows }] } }] });
+  assert.match(verdict(scene, 'twin').detail, /Missing rows: TASK-0001, custom-ticket/);
+  scene.list.push(...rows.map((row) => ({ id: row.id, label: row.title, group: 'Rows' })));
+  assert.equal(verdict(scene, 'twin').ok, true, 'panel rows are drawn tickets, not extra list entries');
+});

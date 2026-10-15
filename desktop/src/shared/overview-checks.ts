@@ -4,6 +4,9 @@
  * Other rest text excludes real ids, explicit "Phase 2", dates, times and versions
  * from inferred counts. Id roles must contain only identifiers or padded phase
  * numbers (at least three digits, or a leading zero). They cannot hide prose.
+ * Panel row and note text is exempt from words at rest. It is data in a
+ * PanelNode, never TextNodes; do not expand panelSvgNodes for these checks.
+ * Panel rows still owe the same list twin as ticket marks.
  * This checks declared integer counts, not the geometry of the mark.
  */
 import { formatAddress, parseAddress } from './address.js';
@@ -71,7 +74,10 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
     }
   } catch (error) { addressError = error instanceof Error ? error.message : String(error); }
   const drawn = new Set(marks.flatMap((m) => m.ticket === undefined ? [] : [m.ticket]));
-  const listed = new Set(scene.list.filter((r) => TICKET_ID.test(r.id)).map((r) => r.id));
+  for (const node of nodes) if (node.kind === 'panel' && node.body.kind === 'rows') {
+    for (const section of node.body.sections) for (const row of section.rows) drawn.add(row.id);
+  }
+  const listed = new Set(scene.list.filter((r) => TICKET_ID.test(r.id) || drawn.has(r.id)).map((r) => r.id));
   const missing = [...drawn].filter((id) => !listed.has(id));
   const extra = [...listed].filter((id) => !drawn.has(id));
   const actions = [...new Set(marks.flatMap((m) => m.action === undefined ? [] : [m.action]))];

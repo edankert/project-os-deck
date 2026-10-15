@@ -1,11 +1,11 @@
 ---
 type: '[[test]]'
 id: TST-0100
-title: Accept a feature from its five lamps
+title: Accept a feature from its five chips
 status: active
 owner: user:edwin
 created: '2026-10-14'
-updated: '2026-10-14'
+updated: '2026-10-15'
 source:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 phase: '[[PHASE-0005-Overview]]'
@@ -17,6 +17,7 @@ covers:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 issues: []
 tasks:
+- '[[TASK-0149]]'
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 artifacts: []
@@ -33,7 +34,7 @@ area: overview
 after: []
 ---
 
-# Accept a feature from its five lamps
+# Accept a feature from its five chips
 
 ## Purpose
 
@@ -45,7 +46,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 
 ## Steps
 
-1. Open `?flow=accept&note=FEAT-0024` in Deck. Inspect the five lamps and point at each unlit lamp.
+1. Open `?flow=accept&note=FEAT-0024` in Deck. Inspect Requirements, Tasks, Reviews, Automated tests and Acceptance tests. Point at each incomplete or unreported chip.
 2. Compare the named requirements, tasks, automated results, acceptance results and independent reviews with the cockpit and source notes.
 3. Use the keyboard list to inspect the same gate. Copy and reopen its address.
 4. In a disposable workspace with complete evidence, use Accept and compare the sidecar response and cockpit record.
@@ -56,8 +57,8 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 
 ## Expect
 
-- Every nonempty lamp depicts its count and lights only for complete evidence. Known empty lamps are hollow and say “nothing to check”; empty requirements and tasks explain that no items are recorded. Unknown or unreadable evidence stays unlit and is explained.
-- Accept needs at least one known item and every nonempty lamp complete. Empty lamps supply no evidence. Each unknown or incomplete lamp names its missing evidence on hover or focus.
+- Every known nonempty chip shows done / total with a separate mark for each count and one square per item. The ticket squares use the cockpit’s type colour, fill and real needs-you dot; the count bar reports gate completion. Known empty chips are hollow and say “nothing to check”; empty requirements and tasks explain that no items are recorded. Unknown or unreadable evidence says “not reported” in neutral framing, without an invented attention mark. Its hover explains why.
+- Accept needs at least one known item and every nonempty chip complete. Empty chips supply no evidence. Each unknown or incomplete chip names its missing evidence on hover or focus.
 - A supported person transition is reflected in the cockpit. Unsupported transitions stay unavailable with a hover saying the cockpit does not yet move a feature out of review. The opted-in stamp says on screen that it records acceptance without changing status.
 - Cancelling a reason sends no write. The served host records nothing.
 - Deck refuses an agent’s verdict before sending a request. A refused person request displays the sidecar’s own words. Direct sidecar agent guards remain cockpit work.

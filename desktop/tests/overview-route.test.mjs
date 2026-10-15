@@ -48,7 +48,7 @@ for (const [name, capabilities] of [['desktop', SHELL_CAPABILITIES], ['served', 
     const index = new NoteIndex({ workspaceId: workspace.id, docsRoot: path.join(root, 'docs') });
     t.after(() => index.close());
     let reads = 0, heads = 0, calls = 0;
-    const service = new OverviewService({ readFile: (f) => { reads++; return fs.readFileSync(f, 'utf8'); }, head: () => { heads++; return 'abc123'; }, now: () => '2026-10-14T12:00:00Z' });
+    const service = new OverviewService({ readFile: (f) => { if (f.endsWith('.md')) reads++; return fs.readFileSync(f, 'utf8'); }, head: () => { heads++; return 'abc123'; }, now: () => '2026-10-14T12:00:00Z' });
     const host = new DeckHost({ webRoot: path.join(desktopRoot, 'dist', 'web'), capabilities,
       listWorkspaces: () => [workspace], sidecarBaseFor: () => null,
       overviewFor: (id) => { calls++; return id === workspace.id ? service.read(index.snapshot(), workspace) : null; } });
@@ -100,7 +100,7 @@ test('removal and reopening cannot reuse a previous index at the same revision',
   const index = new NoteIndex({ workspaceId: workspace.id, docsRoot: path.join(root, 'docs') });
   t.after(() => index.close()); index.build();
   let reads = 0;
-  const service = new OverviewService({ readFile: (f) => { reads++; return fs.readFileSync(f, 'utf8'); }, head: () => '', now: () => '' });
+  const service = new OverviewService({ readFile: (f) => { if (f.endsWith('.md')) reads++; return fs.readFileSync(f, 'utf8'); }, head: () => '', now: () => '' });
   const one = service.read(index.snapshot(), workspace);
   assert.strictEqual(service.read(index.snapshot(), workspace), one);
   service.forget(workspace.id);
@@ -265,4 +265,19 @@ test('fixture provenance detects staged, unstaged and untracked notes but ignore
   assert.equal(cli.status, 0, cli.stderr);
   const model = JSON.parse(cli.stdout);
   assert.equal(model.head, git('rev-parse', 'HEAD')); assert.equal(model.dirty, true);
+});
+
+test('manual verification refreshes on a calendar day or snapshot threshold change without a note revision', (t) => {
+  const { root, workspace } = repository(t);
+  fs.writeFileSync(path.join(root, 'docs/TST-0001.md'), '---\nid: TST-0001\ntype: test\nstatus: passing\nlast_verified: 2026-07-17\n---\n# Manual check');
+  const index = new NoteIndex({ workspaceId: workspace.id, docsRoot: path.join(root, 'docs') });
+  t.after(() => index.close()); index.build();
+  let now = '2026-10-15T12:00:00Z';
+  const service = new OverviewService({ readFile: (f) => fs.readFileSync(f, 'utf8'), head: () => '', now: () => now });
+  const snapshot = index.snapshot();
+  assert.equal(service.read(snapshot, workspace).tickets['TST-0001'].fill, 'delivered');
+  now = '2026-10-16T12:00:00Z';
+  assert.equal(service.read(snapshot, workspace).tickets['TST-0001'].fill, 'unproven');
+  fs.writeFileSync(path.join(root, 'SNAPSHOT.yaml'), 'verification:\n  staleness_days: 91\n');
+  assert.equal(service.read(snapshot, workspace).tickets['TST-0001'].fill, 'delivered');
 });
