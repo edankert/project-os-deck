@@ -51,9 +51,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-15: 26 model tests pass, including 356 Deck and 2,706 Your Trainer stats items with zero mismatches. Changing doing to open failed both comparisons with 100 and 519 named mismatches.
-
-2026-10-14: the `overview-model` suite passed 21 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 704 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
+2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. The overview-model suite passes 26 tests. Direct Python stats parity compares 356 Deck and 2,706 Your Trainer items with zero mismatches. Changing doing to open produces 100 and 519 named mismatches. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

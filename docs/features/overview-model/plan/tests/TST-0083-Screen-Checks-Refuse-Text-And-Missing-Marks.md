@@ -48,9 +48,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-15: 17 scene-check tests pass. Removing the panel row twin guard fails the new regression.
-
-2026-10-14: the `overview-checks` suite passed 15 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 737 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
+2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. The overview-checks suite passes 17 tests. Panel text is exempt, 61 outside words fail, and every folded or visible panel row needs a twin. Removing the row twin guard fails the regression. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

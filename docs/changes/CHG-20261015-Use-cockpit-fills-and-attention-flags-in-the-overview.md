@@ -7,7 +7,7 @@ owner: system:codex
 created: 2026-10-15
 updated: 2026-10-15
 source: []
-commit: ""
+commit: "96955cc, 619361c"
 pr: ""
 impacts: []
 # The platforms this change altered, such as [android] or [android, ios]. A release test lists
@@ -50,3 +50,5 @@ Every overview ticket now carries the cockpit's type, fill and needs-you flag, c
 The direct Python stats comparison reports zero mismatches on 356 Deck items and 2,706 Your Trainer items. The cockpit checkout is read without starting a server or writing bytecode. A missing checkout is an explicit skipped test; a present checkout whose Python fails is a test failure.
 
 Changing the port's doing fill to open produced 100 Deck and 519 Your Trainer mismatches, each named. Removing the panel row twin check failed its regression. The original sources were restored after both checks.
+
+The final `cd desktop && npm test` run passes 764 tests with zero failures and zero skips. The Deck fixture replays exactly from its recorded clean commit and timestamp. Your Trainer’s fixture remains `dirty: true`. TASK-0144 contains the full verification record.

@@ -5,7 +5,7 @@ title: Accept a design from its plates
 status: active
 owner: user:edwin
 created: '2026-10-14'
-updated: '2026-10-14'
+updated: '2026-10-15'
 source:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 phase: '[[PHASE-0005-Overview]]'
@@ -17,6 +17,7 @@ covers:
 - '[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]'
 issues: []
 tasks:
+- '[[TASK-0149]]'
 - '[[TASK-0120-Draw-The-Acceptance-Flows-From-Recorded-Evidence]]'
 - '[[TASK-0122-Send-A-Persons-Flow-Actions-Through-The-Shell]]'
 artifacts: []
@@ -45,7 +46,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 
 ## Steps
 
-1. Open `?flow=design&note=DES-0004` in Deck and inspect the plates, revision strip, review pins and status lamp.
+1. Open `?flow=design&note=DES-0004` in Deck and inspect the plates, revision strip, review pins and cockpit status square.
 2. Open a proposed design in the disposable workspace. Use the keyboard list to reach the same controls.
 3. Choose Decline, cancel the reason, then repeat with a reason and compare the cockpit’s recorded decision.
 4. Use another proposed design, choose Accept and compare its status in the cockpit.
@@ -54,6 +55,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 
 ## Expect
 
+- The design’s square matches the cockpit’s design type colour, fill and needs-you dot. Point at it and compare its words with the cockpit.
 - Plates dominate the screen; the empty design reads “nothing to look at”.
 - Cancelling the reason changes no note. A supported decline records the reason; any endpoint refusal appears in the sidecar’s own words.
 - A valid person decision appears in the cockpit; a non-proposed design and the served host cannot write.

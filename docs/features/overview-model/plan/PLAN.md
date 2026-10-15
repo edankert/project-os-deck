@@ -4,7 +4,7 @@ title: "Plan for FEAT-0026: One list of tickets, each with a type, a state and a
 status: active
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 implements: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
@@ -13,6 +13,8 @@ related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]
 # Plan for FEAT-0026
 
 The original delivery is complete. [[TASK-0140-Fix-The-Overview-Review-Findings]] repairs the first review on `lane/codex-fix`; FEAT-0026 stays at review for Claude. After both lanes merged, TASK-0141 repairs the S6 and S7 count integration and numeric-name checks on `lane/codex`. TASK-0142 confines the module scan to application output after a full test run exposed a fixture-deletion race.
+
+2026-10-15: the cockpit-mark revision is implemented on `lane/codex-r2`, with 764 passing desktop tests. The feature’s Where this stands section records the current handoff to Claude. Earlier delivery and review steps below remain the original plan.
 
 ## Delivery sequence
 

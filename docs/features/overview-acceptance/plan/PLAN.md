@@ -4,7 +4,7 @@ title: "Plan for FEAT-0029: Designs, acceptance tests and tickets are accepted f
 status: active
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source: ["[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]"]
 implements: ["[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]"]
 related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
@@ -13,6 +13,8 @@ related: ["[[PHASE-0005-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]
 # Plan for FEAT-0029
 
 The original four tasks separate the shared pictures and evidence, image delivery, person-triggered writes, and the review handoff. TASK-0143 repairs the eight findings from round one.
+
+2026-10-15: the cockpit-mark revision is implemented on `lane/codex-r2`, with 764 passing desktop tests. The feature’s Where this stands section records the current handoff to Claude. Earlier delivery and review steps below remain the original plan.
 
 ## Delivery sequence
 
@@ -34,6 +36,6 @@ The original four tasks separate the shared pictures and evidence, image deliver
 
 ## Open questions
 
-Implementation is complete and FEAT-0029 is at review. TASK-0143 repairs round one and refreshes the design plates. Claude reviews round two and merges the commits. Edwin runs TST-0088, TST-0089 and TST-0100. The plan stays active until that feature closes.
+The new implementation is complete and FEAT-0029 stays doing for Claude’s review of this revision. TASK-0143 repairs round one and refreshes the design plates. Claude reviews round two and merges the commits. Edwin runs TST-0088, TST-0089 and TST-0100. The plan stays active until that feature closes.
 
 The sidecar limits in the feature and RISK-0009 remain external constraints. The feature's dated question names the drawing-lane integration seam and the actual Your Trainer fixture status.

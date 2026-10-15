@@ -53,33 +53,30 @@ Out of scope:
 
 ## Verification
 
-`cd desktop && npm test` passed on 2026-10-14 in this worktree: **737 tests passed, none failed, none skipped**. Temporary test files stayed under `desktop/dist/tmp`. No Electron process or window was started.
+2026-10-15: `cd desktop && npm test` passed **764 tests, with zero failures and zero skips**. No Electron process or window started.
 
-| Suite within that run | Passed | Failed | Skipped |
-| --- | ---: | ---: | ---: |
-| `overview-model` | 21 | 0 | 0 |
-| `overview-route` | 12 | 0 | 0 |
-| `overview-fixtures` | 3 | 0 | 0 |
-| `overview-checks` | 15 | 0 | 0 |
-| `overview-screens` (drawing lane) | 8 | 0 | 0 |
+| Suite | Passed |
+| --- | ---: |
+| overview-model | 26 |
+| overview-route | 13 |
+| overview-fixtures | 3 |
+| overview-checks | 17 |
+| overview-screens | 14 |
+| overview-flows | 20 |
 
-The TASK-0141 numeric-name regression failed before repair. The focused suites now pass 15 scene-check tests and 12 flow tests. Both workspaces and every recorded release-test section pass all four rules; their maximum is 49 words at rest. The complete five-lamp gate uses 30 words.
+Direct Python stats parity reports zero mismatches on 356 Deck items and 2,706 Your Trainer items. The port also covers the 28 and 41 model tickets outside stats. Changing doing to open fails with 100 and 519 named mismatches. Removing the panel row twin guard fails its regression. Tests preserve the separate DES-0004 state and placement rules.
 
-The original TASK-0140 run showed five new screen-check tests failing before its fix. The local lowercase heading-link test failed with the old resolver. Deliberately removing the feature-parent restriction, reversing the member-list tie winner and replacing phase order with id order each failed its regression. The recorded Deck ledger failed against the old service and command. The new tests cover ledger edits without a note revision, multiple platforms, sealed excuses, old `mark` fields, date ordering, malformed files and dirty note provenance. The localhost socket test runs without an EPERM or EACCES skip.
+Deck’s 384-ticket fixture was replayed from `git archive 96955cc8afecc56b8ac36d19e55e6b354d71cfd0`, with its recorded timestamp and snapshot threshold. Its serialized model matches exactly. Your Trainer’s 2,747-ticket fixture retains `dirty: true` and cannot be reconstructed from its commit alone.
 
-The resolved results were also compared with `tools/scripts/release-test.py` against both real repositories. Every surviving verdict agreed: 5 on Deck's app platform, 541 on Your Trainer's Android platform and 1 on iOS. The overview additionally retains invalidations as the owed-again state.
-
-`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. The validator reports existing advisory warnings. No CI run or human acceptance verdict is claimed.
+`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. The validator reports existing advisory warnings. No CI or human acceptance verdict is claimed.
 
 ## Where this stands
 
-**Back to `doing` on 2026-10-15, because Edwin ran the overview and asked for changes.** He liked much of it, and asked for the cockpit's ticket colours and status marks on every screen, tickets drawn as cockpit rows, more of a ticket on its own screen, and back and forward buttons. The agreed plan is DES-0005's revision of 2026-10-15. The move is from `review` back to `doing`, which STATUSES.md does not list as a typical transition; it is used because new work is added inside the feature, as FEAT-0005 and FEAT-0006 were reopened before. The review rounds below are for the build of 2026-10-14. The new tasks get their own review by the other model before the feature goes back to `review`.
+2026-10-15: **TASK-0144 is done on `lane/codex-r2`.** `96955cc` ports the cockpit’s fill and needs-you rules and checks panel list twins. `619361c` rebuilds both fixtures. Both contract proposals are agreed under Questions between the lanes. The full desktop suite passes 764 tests.
 
-2026-10-15: TASK-0144 ports the cockpit’s fill and needs-you rules and enforces panel list twins. Both contract proposals are agreed below. The focused model, route and scene-check suites pass; direct stats parity compares 356 Deck and 2,706 Your Trainer items with zero mismatches. Fixture regeneration and the full desktop run are next. Claude can build against the contract at `f003195`.
+The Python stats comparison matches 356 Deck and 2,706 Your Trainer items with zero mismatches. Deck’s fixture reproduces exactly from its recorded commit and timestamp. Your Trainer remains `dirty: true` because its source tree belongs to another session.
 
-The local repair commits are `45a907c` for flow ratios, `0eeddf7` for numeric-name checks and `26bdcbe` for the test scan. `b5f65df` adds the independently requested numeric cases and deterministic scan regression.
-
-TASK-0141 repairs the merged S6 and S7 ratio texts on `lane/codex` and rejects bare counts disguised as names. TASK-0142 prevents the built-module scan from racing temporary overview fixtures. All 737 desktop tests pass without skips. Both FEAT-0026 and FEAT-0029 remain at review; Claude owns the feature review and merge, and Edwin owns acceptance. Nothing was pushed or merged.
+The feature stays `doing` for Claude’s review of this revision and Edwin’s acceptance. Claude owns S1–S4’s use of the fields, the merge and the push. The earlier review below remains a record of the 2026-10-14 build; no new review or human verdict is claimed.
 
 ## Review
 
@@ -132,7 +129,7 @@ The reader follows `release-test.py` and the cockpit's `ledger.resolve`: sealed 
 
 `GET /deck/overview/<workspaceId>` returns the model at the top level, with `workspaceId`, `revision` and `building: false`. Before the first index build, it returns only those three fields with `building: true`. An unknown workspace returns 404. The host refuses writes with 405. Desktop and served pages use this same route. The main process caches the model by workspace, index revision and a digest of ledger filenames and contents and clears it when the workspace is removed. A body-only edit raises the existing index revision and refreshes exit criteria. A ledger edit, addition or removal refreshes results even when the note revision stays unchanged.
 
-After `cd desktop && npm run build`, run `node desktop/scripts/overview.mjs <repo-root> [--json]` from the repository root. It prints per-phase counts or the same model as JSON. It reads the repository and starts no window. The only contract addition is optional `dirty` beside `head`, agreed below.
+After `cd desktop && npm run build`, run `node desktop/scripts/overview.mjs <repo-root> [--json]` from the repository root. It prints per-phase counts or the same model as JSON. It reads the repository and starts no window. The contract also carries `type`, `fill` and `needsYou` on every ticket, agreed below. `overview-status.ts` ports the cockpit rules, using the snapshot staleness threshold and caller-supplied verification date. The host and CLI supply those inputs without a sidecar. The service cache refreshes when either input changes.
 
 ## Screen checks
 
@@ -140,22 +137,22 @@ After `cd desktop && npm run build`, run `node desktop/scripts/overview.mjs <rep
 
 Use `formatAddress(addressFor(...))` to make scene addresses canonical. Its query order puts `note` before `page` or `flow`. The seven overview page and flow names are registered. An address must name the scene it restores, not merely round-trip. Dotted test steps such as `android.3` now round-trip. Other malformed steps remain refused.
 
-The list twin includes ordinary ticket IDs and the four legacy acceptance-document IDs described below. Phase IDs and aggregate mark IDs are not ticket rows. Every mark action also needs a row with that action. The fixture suite checks all IDs from both corpora through a scene, including the legacy documents.
+Panel row and note text is exempt from words at rest. Every ticket in a panel’s rows, including a folded section, must occur in the list twin. The list twin includes ordinary ticket IDs and the four legacy acceptance-document IDs described below. Phase IDs and aggregate mark IDs are not ticket rows. Every mark action also needs a row with that action. The fixture suite checks all IDs from both corpora through a scene, including the legacy documents.
 
 ## Fixture comparison with DES-0004
 
-The fixtures are real builder output captured on 2026-10-14. Deck's `head` is `306e7bf3482930caaad83c71ee04a1b5c1ee1921`, with `dirty: false`. Your Trainer's is `c38475f8862520eca61d64383ac946163e1d5bd9`, with `dirty: true`. The flag covers Markdown notes, ledger files and `SNAPSHOT.yaml`, including staged and untracked changes. Build output does not set it. Your Trainer was read only, and Git's optional index writes were disabled.
+The fixtures are real builder output captured on 2026-10-15. Deck's `head` is `96955cc8afecc56b8ac36d19e55e6b354d71cfd0`, with `dirty: false`. Your Trainer's is `c38475f8862520eca61d64383ac946163e1d5bd9`, with `dirty: true`. The flag covers Markdown notes, ledger files and `SNAPSHOT.yaml`, including staged and untracked changes. Build output does not set it. Your Trainer was read only, and Git's optional index writes were disabled.
 
 | Workspace | DES-0004 tickets | Current tickets | No phase, excluding project-wide | Open / finished / backlog phases |
 | --- | ---: | ---: | ---: | --- |
-| Deck | 333 | 361 | 1 | 5 / 0 / 0 |
+| Deck | 333 | 384 | 1 | 5 / 0 / 0 |
 | your-trainer | 2,646 | 2,747 | 987 | 9 / 17 / 1 |
 
-Deck's core contains 22 tickets: 21 project-wide and one unplaced. Your Trainer's core contains 1,028 tickets: 41 project-wide and 987 unplaced. The captured exit criteria contain 47 boxes for Deck and 144 for Your Trainer. PHASE-019 and PHASE-999 in Your Trainer have prose exit criteria.
+Deck's core contains 23 tickets: 22 project-wide and one unplaced. Your Trainer's core contains 1,028 tickets: 41 project-wide and 987 unplaced. The captured exit criteria contain 47 boxes for Deck and 144 for Your Trainer. PHASE-019 and PHASE-999 in Your Trainer have prose exit criteria.
 
 | Acceptance tests | Closed | Failed | Owed again | Open | Retired (dropped) | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Deck | 4 | 0 | 2 | 17 | 1 | 24 |
+| Deck | 4 | 0 | 2 | 20 | 1 | 27 |
 | your-trainer | 1 | 1 | 180 | 267 | 221 | 670 |
 
 DES-0004's **257 withdrawn passes counts platforms**, not distinct checks: 91 Android and 166 iOS at historical commit `0318ab0`. Those sets overlapped in 62 checks, so they covered 195 distinct checks. The current ledgers hold 102 Android and 170 iOS withdrawals, totalling 272, or 15 more. Android gained 13 withdrawals and cleared 2; iOS gained 4. The current sets overlap in 73 checks and cover 199 distinct checks. Nineteen are now retired, leaving **180 owed-again tickets**, including 95 on the shelf. One check failed and takes the failed state. Only one active check has a surviving pass or excuse on every applicable platform, so only one is closed.
@@ -191,12 +188,12 @@ Repository growth after those historical commits accounts for the remaining tick
 | --- | ---: | ---: |
 | Requirements | 0 | 4 |
 | Features | 5 | 4 |
-| Tasks | 13 | 58 |
-| Tests | 8 | 14 |
+| Tasks | 27 | 58 |
+| Tests | 16 | 14 |
 | Issues | 0 | 12 |
 | Decisions and designs | 2 | 3 |
-| Risks | 0 | 2 |
-| Total new notes | 28 | 97 |
+| Risks | 1 | 2 |
+| Total new notes | 51 | 97 |
 
 Thus Your Trainer's total is 2,646 + 4 previously omitted test documents + 97 new notes = 2,747. Its unplaced count is 968 + 4 legacy documents + 11 new unplaced tickets + 5 existing tickets that lost placement − 1 that gained placement = 987. Twenty-two existing tickets changed placement as the notes moved on, including the work moved out of finished PHASE-020. Deck's shared tickets keep their placements. Its fifth phase and this run's notes account for the larger total.
 

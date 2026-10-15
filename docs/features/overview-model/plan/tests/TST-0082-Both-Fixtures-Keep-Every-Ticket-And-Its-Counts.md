@@ -48,7 +48,7 @@ The test holds no verdict in its status. Its command builds the modules and runs
 
 ## Evidence
 
-2026-10-14: the `overview-fixtures` suite passed 3 tests, with no failures or skips, in `cd desktop && npm test`. The full run passed all 704 tests. TASK-0140 records the first-review repairs; FEAT-0026 remains at review for Claude.
+2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. The overview-fixtures suite passes three tests. Deck has 384 tickets with dirty false; Your Trainer has 2,747 with dirty true. Every ticket carries type, fill and needsYou. Replaying Deck’s archived source at 96955cc with the captured timestamp reproduces its serialized fixture exactly. The executable check holds no verdict in its note status.
 
 ## Adequacy
 

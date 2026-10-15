@@ -62,14 +62,18 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0005"
-  feature: "FEAT-0026"
-  task: "TASK-0144"
-  issue: ""
-  note: "2026-10-15: Edwin ran the overview and asked for five changes (DES-0005, revision of 2026-10-15): the cockpit's colours and status marks everywhere, S2's tickets as cockpit rows on a tilted plane, S3 with the ticket's text and linked tickets, labelled gate chips, and back and forward. FEAT-0025 to FEAT-0029 are back at doing. Seven tasks in two lanes: Codex TASK-0144 (the model's fill and needs-you flag, first; it changes the model contract, proposed in FEAT-0026) and TASK-0149 (S7 chips, S5 and S6 marks); Claude TASK-0145 (marks and the wheel's two colourings), TASK-0146 (back and forward, can start at once), TASK-0147 (S2 rows), TASK-0148 (S3), TASK-0150 (plates, last). Each lane is reviewed by the other model. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  feature: "FEAT-0029"
+  task: ""
+  note: "2026-10-15: Codex finished TASK-0144 and TASK-0149 on lane/codex-r2. Both contract proposals are agreed. The cockpit port and both fixtures are committed; direct stats parity matches 356 Deck and 2706 Your Trainer items. All 764 desktop tests pass. Claude should consume both nodes and rows from gateChips in S3, remove the old gateNodes caller and wrapper together, review the revision, regenerate the official plates and batch the window run. Claude merges and pushes; Codex did neither. Your Trainer stays dirty: true."
+
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
+    FEAT-0029:
+      status: doing
+      file: "docs/features/overview-acceptance/FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence.md"
+      owner: system:codex
     FEAT-0026:
       status: doing
       title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
@@ -289,7 +293,7 @@ items:
   tasks:
     TASK-0144:
       file: docs/features/overview-model/plan/tasks/TASK-0144-Every-Ticket-Carries-The-Cockpits-Fill-And-Needs-You-Flag.md
-      status: doing
+      status: done
       parent: FEAT-0026
       phase: "[[PHASE-0005]]"
     TASK-0145:
@@ -314,7 +318,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0149:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0149-The-Gate-Shows-Five-Labelled-Chips-And-Every-Flow-Uses-Cockpit-Marks.md
-      status: backlog
+      status: done
       parent: FEAT-0029
       phase: "[[PHASE-0005]]"
     TASK-0150:
@@ -2365,6 +2369,14 @@ items:
   releases: {}
   workflows: {}
   changes:
+    CHG-20261015-Use-cockpit-fills-and-attention-flags-in-the-overview:
+      file: "docs/changes/CHG-20261015-Use-cockpit-fills-and-attention-flags-in-the-overview.md"
+      status: merged
+      owner: system:codex
+    CHG-20261015-Show-labelled-gate-chips-and-cockpit-result-marks:
+      file: "docs/changes/CHG-20261015-Show-labelled-gate-chips-and-cockpit-result-marks.md"
+      status: merged
+      owner: system:codex
     CHG-20261001-Glass-Interaction-Delivery-Plan:
       file: "docs/changes/CHG-20261001-Glass-Interaction-Delivery-Plan.md"
       title: "Document the endorsed Glass interaction direction and delivery sequence"
@@ -2480,7 +2492,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 141
-    tasks_done: 115
+    tasks_done: 117
     tests_total: 68
     tests_passing: 9
     tests_failing: 0
