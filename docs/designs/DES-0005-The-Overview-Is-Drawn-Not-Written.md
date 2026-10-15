@@ -145,6 +145,26 @@ A feature's gate has five parts, and each one counts a different kind of evidenc
 
 A part Deck cannot read is drawn as "not reported". A part with nothing in it is drawn as "nothing to check". Neither is drawn as needing anyone.
 
+## Level 2: height is time, a real 3D wheel to judge
+
+**This is a design to look at, not something Deck draws.** It answers Edwin's question of 2026-10-15, whether 3D could carry more information. Each phase is a column standing on the ring, and its tickets rise up the column by the date their note was created, like the rings of a tree. So the picture says when the work happened as well as where it stands. A ticket is its type's colour, solid when it is done or under way and a wire frame when it is not started. What needs you is larger, glows red, and sends a beam up the full height, so it can be found from any angle. The column in the middle holds the tickets with no phase. Faint rings up the height mark the months.
+
+The page is [DES-0005-time-columns.html](DES-0005-time-columns.html). It turns, pans and zooms with the mouse, switches between the two workspaces, and names a ticket when you point at it. It draws every ticket of both fixtures: 384 on Deck and 2,747 on your-trainer, of which 13 and 45 have no `created:` date and sit just under the ring. It is written by `desktop/scripts/overview-plates.mjs` from the same fixtures as every other plate, and loads three.js 0.160.0 from cdnjs; nothing in Deck uses it.
+
+![Height is time, your-trainer, angle 1](__attachments__/DES-0005/time-your-trainer-angle-1.jpg)
+
+your-trainer. The finished phases stand low and the open ones high, and the columns where the beams cluster are where the waiting work is.
+
+![Height is time, your-trainer, from above](__attachments__/DES-0005/time-your-trainer-above.jpg)
+
+From above it is the constellation again, so the two views agree.
+
+![Height is time, Deck, angle 2](__attachments__/DES-0005/time-deck-angle-2.jpg)
+
+Deck's history is two months long, so its columns are short. The beams over Glass are the seven tickets that need you there.
+
+**What it adds:** when work happened, which phase has stalled (a column that stopped growing), and what needs you seen from anywhere. **What it would cost in Deck:** a WebGL dependency in `desktop/` and a risk note for it; words drawn as textures, so the callouts and the list twin need a second path; the screen checks rebuilt against a 3D scene rather than SVG; and plates captured from a window instead of drawn. Pictures on this page were taken by `desktop/scripts/time-columns-capture.cjs`.
+
 ## Answers proposed to DES-0004's open questions
 
 1. **A backlog phase** is marked with `kind: backlog` in its note. When the note says nothing, an id ending in 999 is read as backlog, so your-trainer's PHASE-999 works today.
@@ -153,6 +173,8 @@ A part Deck cannot read is drawn as "not reported". A part with nothing in it is
 4. **This work owns a phase of its own**, [[PHASE-0005-Overview]], worked ahead of the rest of Glass.
 
 ## What is Edwin's to decide
+
+- Whether to build Level 2, the 3D wheel where height is time, into Deck, after looking at its page. It would replace or sit beside the constellation.
 
 - Accept or decline this design.
 - Whether S5's fanned plates should be drawn as outlines only: behind a busy plate they compete with it.

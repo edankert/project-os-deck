@@ -325,7 +325,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0157:
       file: docs/features/overview-design/plan/tasks/TASK-0157-A-3D-Wheel-Where-Height-Is-Time-Drawn-As-A-Plate-To-Judge.md
-      status: backlog
+      status: doing
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0158:

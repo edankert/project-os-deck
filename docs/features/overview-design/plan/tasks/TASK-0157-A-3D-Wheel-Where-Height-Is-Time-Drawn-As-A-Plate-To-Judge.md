@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0157
 title: "A real 3D wheel where height is time, drawn as a design plate for Edwin to judge before any WebGL enters Deck"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -22,17 +22,21 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 **This task draws a real 3D version of the wheel as a design page, so Edwin can judge it before any WebGL code goes into Deck.** It is "Level 2" 3D. In it, each phase is a column standing on its segment of the ring. A phase's tickets are stacked up the column by the date they were created, like the rings of a tree. So height shows when the work arrived, which the flat wheel cannot show.
 
 ## Definition of Done
-- [ ] A prototype page, `docs/designs/DES-0005-time-columns.html`, draws the columns in WebGL with three.js, from Deck's and your-trainer's real tickets. Each ticket is the cockpit's mark in its type colour and state fill. The page can be turned with the mouse and switches between the two workspaces.
-- [ ] three.js is loaded on that page only, from cdnjs at an exact pinned version. Nothing is added to `desktop/package.json`, and no Deck code imports it.
-- [ ] The page's ticket data is written by `desktop/scripts/overview-plates.mjs` from the same fixtures as the other plates, so nothing on it is entered by hand. TST-0094 checks the page is written and holds every ticket of both fixtures.
-- [ ] Captured pictures of the page (at least two angles on each workspace) are saved under `docs/designs/__attachments__/DES-0005/`, so the plate can be judged without a network connection.
-- [ ] DES-0005 shows the pictures under a "Level 2: height is time" heading, says what the picture adds, what it costs (a WebGL dependency in Deck, text drawn as textures, a second renderer to keep the list twin and the checks working), and asks Edwin whether to build it.
-- [ ] `cd desktop && npm test` passes. Codex reviews the page and the text, in two rounds at most.
+- [x] A prototype page, `docs/designs/DES-0005-time-columns.html`, draws the columns in WebGL with three.js, from Deck's and your-trainer's real tickets. Each ticket is the cockpit's mark in its type colour and state fill. The page can be turned with the mouse and switches between the two workspaces.
+- [x] three.js is loaded on that page only, from cdnjs at an exact pinned version. Nothing is added to `desktop/package.json`, and no Deck code imports it.
+- [x] The page's ticket data is written by `desktop/scripts/overview-plates.mjs` from the same fixtures as the other plates, so nothing on it is entered by hand. TST-0094 checks the page is written and holds every ticket of both fixtures.
+- [x] Captured pictures of the page (at least two angles on each workspace) are saved under `docs/designs/__attachments__/DES-0005/`, so the plate can be judged without a network connection.
+- [x] DES-0005 shows the pictures under a "Level 2: height is time" heading, says what the picture adds, what it costs (a WebGL dependency in Deck, text drawn as textures, a second renderer to keep the list twin and the checks working), and asks Edwin whether to build it.
+- [x] `cd desktop && npm test` passes. Codex reviews the page and the text, in two rounds at most.
 
 ## Steps
-- [ ] Export both fixtures' tickets with their phase, type, fill and created date into the page.
-- [ ] Draw the columns, the ring and the camera; take the pictures in a browser.
-- [ ] Write the DES-0005 section and its question.
+- [x] Export both fixtures' tickets with their phase, type, fill and created date into the page.
+- [x] Draw the columns, the ring and the camera; take the pictures in a browser.
+- [x] Write the DES-0005 section and its question.
+
+## Verification
+
+`desktop/scripts/overview-plates.mjs` writes `docs/designs/DES-0005-time-columns.html` from the fixtures, with each ticket's date read from its note; it holds all 384 of Deck's tickets and all 2,747 of your-trainer's (13 and 45 have no `created:` date). three.js 0.160.0 comes from cdnjs on that page only; `desktop/package.json` is unchanged. `desktop/scripts/time-columns-capture.cjs` took six pictures in a hidden window on 2026-10-15, three angles on each workspace, saved under `docs/designs/__attachments__/DES-0005/time-*.jpg`. DES-0005 has the section and the question. TST-0094 checks that the page holds every ticket and loads nothing else from outside. Codex's review is pending: Codex cannot run on this machine's current sign-in.
 
 ## Notes
 

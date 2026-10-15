@@ -13,7 +13,7 @@ import { desktopRoot } from './helpers.mjs';
 test('the plate script draws all seven screens on both workspaces, every mark included', () => {
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-plates-'));
   try {
-    const run = spawnSync(process.execPath, [path.join(desktopRoot, 'scripts', 'overview-plates.mjs'), '--out', out, '--page', path.join(out, 'page.html'), '--no-raster'], { encoding: 'utf-8' });
+    const run = spawnSync(process.execPath, [path.join(desktopRoot, 'scripts', 'overview-plates.mjs'), '--out', out, '--page', path.join(out, 'page.html'), '--time-page', path.join(out, 'DES-0005-time-columns.html'), '--no-raster'], { encoding: 'utf-8' });
     assert.equal(run.status, 0, run.stderr);
     const plates = JSON.parse(fs.readFileSync(path.join(out, 'plates.json'), 'utf-8'));
     const screens = ['wheel', 'phase', 'ticket', 'rephase', 'design', 'test-run', 'accept'];
@@ -51,6 +51,18 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       assert.match(stated, / class="st-[a-z]+/, `${ws}: the wheel in the state colours`);
       assert.doesNotMatch(stated, / class="ty-[a-z]+ fl-[a-z]+[^"]*" data-ticket=/, `${ws}: the state wheel paints no ticket by type`);
     }
+    // The Level 2 page (TASK-0157): written beside the plates, holding every ticket of both
+    // fixtures, with three.js from cdnjs at a pinned version and nothing else from outside.
+    const time = fs.readFileSync(path.join(out, 'DES-0005-time-columns.html'), 'utf-8');
+    const data = JSON.parse(/<script type="application\/json" id="data">([\s\S]*?)<\/script>/.exec(time)[1]);
+    for (const ws of ['deck', 'your-trainer']) {
+      const fixtureModel = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', `${ws}.json`), 'utf-8'));
+      const ids = [...data[ws].phases.flatMap((p) => p.tickets), ...data[ws].core].map((t) => t[0]);
+      assert.equal(new Set(ids).size, ids.length, `${ws}: no ticket twice on the time page`);
+      assert.deepEqual(new Set(ids), new Set(Object.keys(fixtureModel.tickets)), `${ws}: the time page holds every ticket`);
+    }
+    assert.match(time, /https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/\d+\.\d+\.\d+\/three\.module\.min\.js/);
+    assert.deepEqual([...time.matchAll(/https?:\/\/[^"' )]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://cdnjs.cloudflare.com/ajax/libs/three.js/')), [], 'nothing else is loaded from outside');
     const page = fs.readFileSync(path.join(out, 'page.html'), 'utf-8');
     assert.match(page, /DES-0005/);
     // The page has back and forward, as Deck does (TASK-0146), and its script runs.
