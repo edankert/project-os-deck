@@ -23,13 +23,44 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         assert.ok(plate !== undefined, `no ${screen} plate for ${ws}`);
         const svg = fs.readFileSync(path.join(out, plate.svg), 'utf-8');
         const drawn = (svg.match(/ data-ticket="/g) ?? []).length;
-        // A panel drawn flat may run out of room and say "more in Deck"; every other mark is drawn.
-        if (plate.panelRows === 0) assert.equal(drawn, plate.marks, `${plate.svg}: ${drawn} ticket marks in the SVG, ${plate.marks} in the scene`);
-        else assert.ok(drawn >= plate.marks - plate.panelRows && drawn <= plate.marks, `${plate.svg}: ${drawn} ticket marks in the SVG, ${plate.marks - plate.panelRows} to ${plate.marks} expected`);
+        // The manifest says what the plate draws. A panel drawn flat may run out of room and
+        // say "more in Deck"; every other mark is drawn.
+        assert.equal(drawn, plate.marks, `${plate.svg}: the manifest says ${plate.marks}, the SVG draws ${drawn}`);
+        if (plate.panelRows === 0) assert.equal(drawn, plate.tickets, `${plate.svg}: ${drawn} of ${plate.tickets} tickets drawn`);
+        else assert.ok(drawn >= plate.tickets - plate.panelRows && drawn <= plate.tickets, `${plate.svg}: ${drawn} of ${plate.tickets}`);
         assert.ok(plate.words <= 60, `${plate.svg}: ${plate.words} words at rest`);
       }
     }
-    assert.match(fs.readFileSync(path.join(out, 'page.html'), 'utf-8'), /DES-0005/);
+    // No section of a flat panel is lost to a long one before it: each draws at least one ticket.
+    for (const ws of ['deck', 'your-trainer']) {
+      for (const key of ['phase', 'ticket']) {
+        const plate = plates.find((p) => p.ws === ws && p.key === key);
+        const svg = fs.readFileSync(path.join(out, plate.svg), 'utf-8');
+        const ids = new Set([...svg.matchAll(/ data-ticket="([^"]+)"/g)].map((m) => m[1]));
+        for (const section of plate.sections ?? []) {
+          if (section.rows.length > 0) assert.ok(section.rows.some((id) => ids.has(id)), `${plate.svg}: the ${section.title} section draws none of its ${section.rows.length} tickets`);
+        }
+        assert.ok((plate.sections ?? []).length > 0, `${plate.svg}: the manifest names its sections`);
+      }
+    }
+    const page = fs.readFileSync(path.join(out, 'page.html'), 'utf-8');
+    assert.match(page, /DES-0005/);
+    // The page has back and forward, as Deck does (TASK-0146), and its script runs.
+    assert.match(page, /id="back"/);
+    assert.match(page, /id="forward"/);
+    const script = /<script>([\s\S]*)<\/script>/.exec(page)[1];
+    const els = {};
+    const element = (id) => (els[id] ??= { id, data: '', textContent: '', disabled: false, dataset: {}, listeners: {}, addEventListener(t, f) { this.listeners[t] = f; }, setAttribute() {} });
+    const doc = { getElementById: element, querySelectorAll: () => [], addEventListener() {} };
+    new Function('document', script)(doc);
+    assert.equal(els.back.disabled, true, 'nothing to go back to at first');
+    els.screen.listeners.click({ target: { dataset: { screen: 'phase' } } });
+    assert.equal(els.back.disabled, false, 'after opening a screen, back is live');
+    els.back.listeners.click();
+    assert.match(els.plate.data, /wheel-deck\.svg$/, 'back shows the wheel again');
+    assert.equal(els.forward.disabled, false);
+    els.forward.listeners.click();
+    assert.match(els.plate.data, /phase-deck\.svg$/, 'forward shows the phase again');
   } finally {
     fs.rmSync(out, { recursive: true, force: true });
   }

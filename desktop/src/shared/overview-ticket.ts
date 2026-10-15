@@ -11,7 +11,7 @@
  * A feature also shows its gate: the five checks that must pass before it is
  * accepted, as labelled chips.
  */
-import { backControl, frame, heading, words } from './overview-chrome.js';
+import { backControl, frame } from './overview-chrome.js';
 import { cockpitSquare, rowWords } from './overview-marks.js';
 import { walkScene, type AddressParts, type ListRow, type PanelNode, type Scene, type SceneNode, type ScreenContext } from './overview-scene.js';
 import { panelRow, rowOrder } from './overview-phase.js';
@@ -114,6 +114,28 @@ export function flowFor(t: Ticket): { parts: AddressParts; label: string } | nul
   return null;
 }
 
+/** A title in lines that fit across the screen beside the ticket's square: three at most. */
+export function titleLines(title: string): string[] {
+  // Forty words at most, so a title alone cannot break the look's sixty; a longer one
+  // ends in "…", and the whole of it is in the square's callout and the list twin.
+  const all = title.split(/\s+/).filter(Boolean);
+  const words = all.length > 40 ? [...all.slice(0, 40), '…'] : all;
+  for (const width of [74, 92, 112]) {
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+      if (line !== '' && line.length + 1 + word.length > width) {
+        lines.push(line);
+        line = word;
+      } else line = line === '' ? word : `${line} ${word}`;
+    }
+    if (line !== '') lines.push(line);
+    if (lines.length <= (width === 74 ? 1 : width === 92 ? 2 : 3)) return lines;
+    if (width === 112) return [...lines.slice(0, 2), `${lines.slice(2).join(' ').slice(0, 108).trimEnd()}…`];
+  }
+  return [title];
+}
+
 export interface TicketExtras {
   /** The note's Markdown body, for a plate; Deck reads the rendered text itself. */
   text?: string;
@@ -125,7 +147,11 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   const back = t.phase !== null
     ? backControl(ctx, { page: 'phase', note: t.phase }, `Back to ${t.phase}`)
     : backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
-  const nodes: SceneNode[] = [back.node, ...heading(t.id, words(t.title, 14), 128)];
+  // The whole title, as Edwin asked: wrapped over up to three lines, smaller as it grows.
+  const lines = titleLines(t.title);
+  const size = lines.length === 1 ? 22 : lines.length === 2 ? 19 : 16;
+  const nodes: SceneNode[] = [back.node, { kind: 'text', x: 128, y: 46, text: t.id, rest: true, role: 'id', size: 13, cls: 'ov-dim' }];
+  lines.forEach((line, i) => nodes.push({ kind: 'text', x: 128, y: 70 + i * (size + 4), text: line, rest: true, role: 'name', size, cls: 'ov-title' }));
   const list: ListRow[] = [back.row, { id: t.id, label: rowWords(t), group: 'This ticket', state: t.state }];
   nodes.push(...frame(TICKET_SCREEN.width, TICKET_SCREEN.height));
 
@@ -133,7 +159,7 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   // where this kind of ticket is accepted: a design's plates, a feature's gate, the
   // release test for a test.
   const flow = flowFor(t);
-  const self = cockpitSquare(t, 104, 62, 26, { label: flow?.label ?? ticketLabel(t), key: `ticket-${t.id}` });
+  const self = cockpitSquare(t, 104, 62, 26, { label: flow === null ? ticketLabel(t) : `${ticketLabel(t)}. ${flow.label}`, key: `ticket-${t.id}` });
   if (flow !== null) {
     const target = ctx.address(flow.parts);
     nodes.push({ ...self, target });

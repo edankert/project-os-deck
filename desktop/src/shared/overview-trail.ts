@@ -40,3 +40,24 @@ export function stepped(trail: Trail, direction: -1 | 1): Trail {
   if (at < 0 || at >= trail.entries.length) return trail;
   return { entries: trail.entries, at };
 }
+
+/** A step back or forward that has asked for its screen and not yet drawn it. */
+export interface TravelIntent {
+  address: string;
+  next: Trail;
+}
+
+/**
+ * The trail after a screen is drawn (Codex's review of TASK-0146).
+ *
+ * The draw that paints exactly the address a pending step asked for completes
+ * that step. Any other draw (a click that overtook the step, or an address
+ * typed in) is an ordinary visit, added after the screen shown, and the
+ * pending step is forgotten. `replace` swaps the shown entry for the drawn
+ * one, for the same screen redrawn in another colouring.
+ */
+export function afterDraw(trail: Trail, drawn: string, intent: TravelIntent | null, replace = false): Trail {
+  if (intent !== null && intent.address === drawn) return intent.next;
+  if (replace && trail.at >= 0) return { entries: trail.entries.map((e, i) => (i === trail.at ? drawn : e)), at: trail.at };
+  return opened(trail, drawn);
+}

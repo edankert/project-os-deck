@@ -335,6 +335,8 @@ export interface DeckAddress {
   flow: string | null;
   /** Where in that flow they are. Refused without a `flow`, which it names nothing without. */
   step: string | null;
+  /** The overview's colouring: `state` for DES-0004's state colours; absent for the cockpit's type colours (TASK-0145). */
+  colour: string | null;
 }
 
 /**

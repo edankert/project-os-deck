@@ -44,7 +44,7 @@ import { surfaceKinds } from '../shared/vocabularies.js';
 import { cardFromContext, neighboursOf } from '../shared/sidecar-client.js';
 import { joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 // The overview (PHASE-0005): a layer over the field, and the screens registered with it.
-import { hideOverview, initOverview, isOverviewAddress, isOverviewShown, overviewAddress, showOverview } from './overview.js';
+import { hideOverview, initOverview, isOverviewAddress, isOverviewShown, overviewAddress, preferredColour, showOverview } from './overview.js';
 import './overview-pages.js';
 import './overview-flows.js';
 
@@ -739,7 +739,7 @@ async function openWheel(): Promise<void> {
   const state = host.state();
   if (state.workspaceId === null || state.viewId === null) return;
   try {
-    await showOverview(addressFor(state.workspaceId, state.viewId, { page: 'wheel' }));
+    await showOverview(addressFor(state.workspaceId, state.viewId, { page: 'wheel', colour: preferredColour() }));
   } catch (err) {
     say(err instanceof Error ? err.message : String(err), true);
   }

@@ -22,7 +22,7 @@
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
-import { canGoBack, canGoForward, current as trailNow, emptyTrail, opened, stepped, type Trail } from '../shared/overview-trail.js';
+import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { DeckAddress } from '../shared/types.js';
 
@@ -82,8 +82,14 @@ const memories = new Map<string, Map<string, unknown>>();
 let drawing = 0;
 /** The screens visited in this window, for back and forward (TASK-0146). */
 let trail: Trail = emptyTrail();
-/** True while back or forward is drawing a screen, so the draw does not add to the trail. */
-let travelling = false;
+/**
+ * A step back or forward that has not yet drawn its screen: the address it asked
+ * for and the trail it will leave. The draw that paints exactly that address takes
+ * it; any other draw that paints first (a click that overtook it) clears it and is
+ * added to the trail as an ordinary visit. So the trail and the screen shown always
+ * change together, whichever draw wins (Codex's review of TASK-0146).
+ */
+let travelIntent: TravelIntent | null = null;
 let historyBar: HTMLElement | null = null;
 /** The current screen's panels, built as HTML over the picture (TASK-0147). */
 let panels: PanelLayer | null = null;
@@ -111,7 +117,8 @@ async function switchColouring(): Promise<void> {
     // A page that cannot store it still switches for this session.
   }
   drawColouringToggle();
-  if (current !== null) await showOverview(current.address);
+  // The same screen in the other colouring: it replaces the entry rather than adding one.
+  if (current !== null) await showOverview({ ...current.address, colour: colouring === 'state' ? 'state' : null }, { replace: true });
 }
 
 function drawColouringToggle(): void {
@@ -172,6 +179,9 @@ export function initOverview(host: OverviewHostApi): void {
       void travel(event.button === 3 ? -1 : 1);
     }
   });
+  // The stage changes size without the window doing so (the rail folds, the status line
+  // grows): the panels laid over the picture follow it.
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => panels?.place()).observe(stage);
   stage.addEventListener('click', (event) => void onClick(event));
   window.addEventListener('resize', () => place());
   stage.addEventListener('pointerover', (event) => onPoint(event));
@@ -234,16 +244,27 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
     workspaceId,
     viewId,
     colouring,
-    address: (parts: AddressParts) =>
-      formatAddress(
+    // Every overview address a screen writes keeps the colouring it was drawn in, so
+    // copying an address and opening it shows the same picture (TASK-0145).
+    address: (parts: AddressParts) => {
+      const page = parts.page ?? null;
+      const flow = parts.flow ?? null;
+      return formatAddress(
         addressFor(workspaceId, viewId, {
           note: parts.note ?? null,
-          page: parts.page ?? null,
-          flow: parts.flow ?? null,
+          page,
+          flow,
           step: parts.step ?? null,
+          colour: colouring === 'state' && (page !== null || flow !== null) ? 'state' : null,
         }),
-      ),
+      );
+    },
   };
+}
+
+/** The colouring Deck opens the wheel in when no address names one: the person's last choice. */
+export function preferredColour(): 'state' | null {
+  return readColouring() === 'state' ? 'state' : null;
 }
 
 /** How long Deck waits for an index that is still being built before it says so. */
@@ -300,11 +321,14 @@ function inputFor(model: OverviewModel, address: DeckAddress): ScreenInput {
 }
 
 /** Draw the screen an address names. Throws when nothing draws it. */
-export async function showOverview(address: DeckAddress): Promise<void> {
+export async function showOverview(address: DeckAddress, options: { replace?: boolean } = {}): Promise<void> {
   if (api === null || area === null || stage === null) throw new Error('the overview layer is not ready');
   const definition = address.page !== null ? pages.get(address.page) : address.flow !== null ? flows.get(address.flow) : undefined;
   if (definition === undefined) throw new Error(`nothing draws ${address.page ?? address.flow ?? 'that address'}`);
   const ticket = ++drawing;
+  // The address says how to colour the screen; it wins over the remembered preference.
+  colouring = address.colour === 'state' ? 'state' : 'type';
+  drawColouringToggle();
   const model = await modelFor(address.workspaceId);
   const input = inputFor(model, address);
   const scene = await definition.scene(input);
@@ -312,10 +336,13 @@ export async function showOverview(address: DeckAddress): Promise<void> {
   if (ticket !== drawing) return;
   paint(scene, address.workspaceId);
   current = { address, scene, definition };
-  place();
+  // Shown before it is measured: a hidden layer measures as nothing, and the panels
+  // laid over the picture would be scaled to zero (Codex's review of TASK-0147).
   area.hidden = false;
+  place();
   document.body.dataset['overviewScreen'] = scene.screen;
-  if (!travelling) trail = opened(trail, scene.address);
+  trail = afterDraw(trail, scene.address, travelIntent, options.replace === true);
+  travelIntent = null;
   drawHistory();
   document.title = `Deck — ${scene.title}`;
 }
@@ -339,16 +366,17 @@ export async function travel(direction: -1 | 1): Promise<void> {
   if (next === trail || raw === null) return;
   const { parseAddress } = await import('../shared/address.js');
   const address = parseAddress(raw);
-  travelling = true;
+  const intent = { address: raw, next };
+  travelIntent = intent;
   try {
     hideCallout();
     if (address.workspaceId === api.workspaceId()) await showOverview(address);
     else await api.leaveTo(raw);
-    trail = next;
   } catch (err) {
     api.say(err instanceof Error ? err.message : String(err), true);
   } finally {
-    travelling = false;
+    // Not drawn: refused, failed or overtaken. The trail stays where the screen is.
+    if (travelIntent === intent) travelIntent = null;
     drawHistory();
   }
 }
@@ -386,6 +414,7 @@ function paint(scene: Scene, workspaceId: string): void {
   panels = buildPanels(scene, stage, {
     reduced: reducedMotion(),
     loader: host?.noteHtml === undefined ? null : (id) => host.noteHtml!(workspaceId, id),
+    follow: (rel) => followNoteLink(workspaceId, rel),
   });
   animateFrom(before);
   drawList(scene);
@@ -463,6 +492,29 @@ function toggleList(force?: boolean): void {
   if (listPanel === null) return;
   listPanel.hidden = force === undefined ? !listPanel.hidden : !force;
   if (!listPanel.hidden) listPanel.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
+}
+
+/**
+ * A link inside a ticket's text (S3): the note it names opens as its own ticket
+ * screen when the overview knows it, and otherwise in the view, as Deck opens
+ * any note.
+ */
+async function followNoteLink(workspaceId: string, rel: string): Promise<void> {
+  if (api === null || current === null) return;
+  try {
+    const response = await fetch(`/deck/records/${encodeURIComponent(workspaceId)}?rel=${encodeURIComponent(rel)}`);
+    const record = response.ok ? ((await response.json()) as { records?: Array<{ id?: string }> }).records?.[0] : undefined;
+    const id = record?.id;
+    if (id === undefined || id === '') {
+      api.say(`that link names ${rel}, which Deck has no note for`, true);
+      return;
+    }
+    const model = await modelFor(workspaceId);
+    const ctx = contextFor(workspaceId, current.address.viewId);
+    await go(model.tickets[id] !== undefined ? ctx.address({ page: 'ticket', note: id }) : ctx.address({ note: id }));
+  } catch (err) {
+    api.say(err instanceof Error ? err.message : String(err), true);
+  }
 }
 
 /** Follow an address: another overview screen, or out of the overview. */

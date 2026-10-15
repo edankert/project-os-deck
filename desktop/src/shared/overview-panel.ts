@@ -65,8 +65,14 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
     cursor = tilt ? cursor - by : cursor + by;
     return at;
   };
-  for (const section of panel.body.sections) {
-    if (section.rows.length === 0) continue;
+  // What each later section needs at the least, its heading and its folded strip or a
+  // first row, is kept free while an earlier one draws: a long open list must not push
+  // the closed strip off the plate (Codex's review of TASK-0147).
+  const live = panel.body.sections.filter((sec) => sec.rows.length > 0);
+  const least = (sec: (typeof live)[number]): number => HEAD + (sec.folded ? Math.min(4, Math.ceil(sec.rows.length / 40)) * 7 * 1.7 + 6 : ROW) + 10;
+  const reserveAfter = live.map((_, i) => live.slice(i + 1).reduce((n, sec) => n + least(sec), 0));
+  for (const [index, section] of live.entries()) {
+    const reserve = reserveAfter[index]! * (tilt ? 1 - TILT.shrink * 0.5 : 1);
     const blocks: Array<{ height: number; draw: (top: number, s: number) => SceneNode[] }> = [];
     blocks.push({
       height: HEAD,
@@ -100,7 +106,7 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
     let drawn = 0;
     for (const block of ordered) {
       const s = scaleAt(cursor);
-      if (!room(block.height * s + HEAD * s)) break;
+      if (!room(block.height * s + HEAD * s + reserve)) break;
       const top = advance(block.height * s);
       out.push(...block.draw(top, s));
       drawn += 1;

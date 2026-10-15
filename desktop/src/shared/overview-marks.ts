@@ -109,6 +109,13 @@ export function cockpitSquare(
       label: options.label,
     },
   ];
+  if (t.fill === 'doing') {
+    // Motion is all that separates in progress from "complete, not proven", so a person
+    // who asked for less motion gets the cockpit's static outline instead (its
+    // renderer.css, `.ov-phase-sq[data-state="doing"]` under reduced motion).
+    const ring = line * 1.4;
+    children.push({ kind: 'mark', tag: 'rect', attrs: { x: x - half - ring, y: y - half - ring, width: s + 2 * ring, height: s + 2 * ring, rx: s * 0.28, 'stroke-width': line * 0.8 }, cls: `ty-${t.type} sq-ring` });
+  }
   if (t.fill === 'doing' || t.fill === 'unproven') {
     const inset = line * 1.6;
     children.push({ kind: 'mark', tag: 'rect', attrs: { x: x - half + inset, y: y - half + inset, width: s - 2 * inset, height: s - 2 * inset, rx: s * 0.1, 'stroke-width': line * 0.9 }, cls: 'sq-cut' });
@@ -157,7 +164,8 @@ export function marksCss(): string {
     // mistaken for "complete, not proven" by anyone who asked for less motion.
     '@keyframes ov-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }',
     '@media (prefers-reduced-motion: no-preference) { .ov .ov-doing, .ov .fl-doing { animation: ov-blink 1.6s ease-in-out infinite; } }',
-    '@media (prefers-reduced-motion: reduce) { .ov .fl-doing { stroke-width: 2.6; } }',
+    '.ov .sq-ring { fill: none; stroke: currentColor; display: none; }',
+    '@media (prefers-reduced-motion: reduce) { .ov .fl-doing { stroke-width: 2.6; } .ov .sq-ring { display: inline; } }',
   ].join('\n');
 }
 

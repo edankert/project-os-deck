@@ -368,6 +368,8 @@ export function plainContext(workspaceId: string, viewId: string, colouring: 'ty
         const value = parts[key];
         if (value !== undefined && value !== null) query.push(`${key}=${encodeURIComponent(value)}`);
       }
+      // The grammar's last key: the colouring, written only when it is not the default.
+      if (colouring === 'state' && (parts.page != null || parts.flow != null)) query.push('colour=state');
       return `deck://${workspaceId}/${viewId}${query.length > 0 ? `?${query.join('&')}` : ''}`;
     },
   };

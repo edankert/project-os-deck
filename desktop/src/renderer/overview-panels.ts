@@ -22,6 +22,12 @@ const unfolded = new Map<string, boolean>();
 /** Asks Deck for a note's rendered text, as the reader shows it. */
 export type NoteLoader = (noteId: string) => Promise<string>;
 
+/** Follows a link inside a note's text: the path after `/docs/`, as Glass's reader reads it. */
+export type LinkFollower = (rel: string) => Promise<void>;
+
+/** Where the sidecar's rendered links to other notes start (as in `glass.ts`). */
+const NOTE_LINK_PREFIX = '/docs/';
+
 export interface PanelLayer {
   element: HTMLElement;
   /** Lay the panels over the picture again: after a resize or a redraw. */
@@ -105,10 +111,27 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }, reduced: boole
   return box;
 }
 
-function notePanel(panel: PanelNode & { body: { kind: 'note' } }, loader: NoteLoader | null): HTMLElement {
+function notePanel(panel: PanelNode & { body: { kind: 'note' } }, loader: NoteLoader | null, follow: LinkFollower | null): HTMLElement {
   const box = el('div', 'ov-panel ov-panel-note');
   const article = el('article', 'ov-note');
   box.appendChild(article);
+  // A link to another note opens that note, as it does in Glass's reader, rather than
+  // sending the window to a path the host does not serve. A link out of the workspace
+  // is left to the window, which opens it in the person's own browser.
+  article.addEventListener('click', (event) => {
+    const link = (event.target as HTMLElement).closest('a');
+    const href = link?.getAttribute('href') ?? '';
+    if (link === null || !href.startsWith(NOTE_LINK_PREFIX)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    let rel: string;
+    try {
+      rel = decodeURIComponent(href.slice(NOTE_LINK_PREFIX.length).split('#')[0] ?? '');
+    } catch {
+      return;
+    }
+    if (follow !== null && rel !== '') void follow(rel);
+  });
   const plain = (): void => {
     article.replaceChildren();
     for (const para of panel.body.text.split(/\n\s*\n/)) if (para.trim() !== '') article.appendChild(el('p', '', para.trim()));
@@ -131,14 +154,14 @@ function notePanel(panel: PanelNode & { body: { kind: 'note' } }, loader: NoteLo
 }
 
 /** Build every panel a scene holds, over the stage's picture. Null when it holds none. */
-export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced: boolean; loader: NoteLoader | null }): PanelLayer | null {
+export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced: boolean; loader: NoteLoader | null; follow?: LinkFollower | null }): PanelLayer | null {
   const panels = [...walkScene(scene.nodes)].filter((n): n is PanelNode => n.kind === 'panel');
   if (panels.length === 0) return null;
   const layer = el('div', 'ov ov-panels');
   layer.style.width = `${scene.width}px`;
   layer.style.height = `${scene.height}px`;
   for (const panel of panels) {
-    const box = panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }, options.reduced) : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader);
+    const box = panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }, options.reduced) : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
     box.dataset['panel'] = panel.key;
     box.setAttribute('aria-label', panel.label);
     box.style.left = `${panel.x}px`;

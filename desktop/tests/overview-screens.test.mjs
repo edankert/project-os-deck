@@ -244,3 +244,67 @@ test('back and forward retrace the visited screens, and opening a screen after g
   assert.equal(long.entries.length, TRAIL_LIMIT);
   assert.equal(current(long), ctx.address({ page: 'ticket', note: `TASK-${TRAIL_LIMIT + 4}` }));
 });
+
+test('a step back that a click overtakes leaves the trail on the clicked screen, and a refused step moves nothing', () => {
+  const { emptyTrail, opened, stepped, current, afterDraw } = trailModule;
+  const wheel = ctx.address({ page: 'wheel' });
+  const phase = ctx.address({ page: 'phase', note: 'PHASE-0002' });
+  const ticket = ctx.address({ page: 'ticket', note: 'FEAT-0024' });
+  const start = opened(opened(emptyTrail(), wheel), phase);
+  // ← asks for the wheel; before it draws, a click on a ticket draws first.
+  const intent = { address: wheel, next: stepped(start, -1) };
+  let t = afterDraw(start, ticket, intent);
+  assert.equal(current(t), ticket, 'the trail is on the screen shown');
+  assert.deepEqual(t.entries, [wheel, phase, ticket]);
+  // The step's own draw arrives late and is dropped by the renderer; had it been drawn, it completes the step.
+  assert.equal(current(afterDraw(start, wheel, intent)), wheel);
+  assert.deepEqual(afterDraw(start, wheel, intent).entries, [wheel, phase], 'a completed step keeps what was ahead');
+  // A refused or failed step draws nothing: the trail is untouched.
+  assert.equal(current(start), phase);
+  // The same screen in the other colouring replaces its entry rather than adding one.
+  const recoloured = `${phase}&colour=state`;
+  t = afterDraw(start, recoloured, null, true);
+  assert.deepEqual(t.entries, [wheel, recoloured]);
+  assert.equal(t.at, 1);
+});
+
+// TASK-0145 — the cockpit's square, mark by mark: each state has its own shapes, and
+// "needs you" is a dot whatever the fill (Codex's review: removing the dot broke no test).
+test('the cockpit square draws each state with its own shapes, and the needs-you dot on any of them', () => {
+  const { cockpitSquare, marksCss } = load('shared/overview-marks.js');
+  const shapes = (fill, needsYou = false) => {
+    const g = cockpitSquare({ id: 'T-1', type: 'task', fill, needsYou }, 50, 50, 20);
+    return [...walkScene([g])].filter((n) => n.kind === 'mark').map((n) => `${n.tag}:${String(n.cls).split(' ').filter((c) => c.startsWith('sq')).join('.')}`).sort();
+  };
+  assert.deepEqual(shapes('open'), ['rect:sq']);
+  assert.deepEqual(shapes('delivered'), ['rect:sq.sq-solid']);
+  assert.deepEqual(shapes('unproven'), ['rect:sq-cut', 'rect:sq.sq-solid']);
+  assert.deepEqual(shapes('doing'), ['rect:sq-cut', 'rect:sq-ring', 'rect:sq.sq-solid']);
+  assert.deepEqual(shapes('dropped'), ['line:sq-cut', 'rect:sq.sq-solid']);
+  assert.deepEqual(shapes('deferred'), ['line:sq-strike', 'rect:sq']);
+  for (const fill of ['open', 'doing', 'delivered', 'unproven', 'dropped', 'deferred']) {
+    assert.deepEqual(shapes(fill, true), [...shapes(fill), 'circle:sq-dot'].sort(), `${fill} with needs you`);
+  }
+  // In progress pulses, and keeps a static outline for a person who asked for less motion.
+  const g = cockpitSquare({ id: 'T-1', type: 'task', fill: 'doing', needsYou: false }, 50, 50, 20);
+  assert.equal(g.cls, 'ov-doing');
+  assert.match(marksCss(), /prefers-reduced-motion: reduce\) \{.*\.sq-ring \{ display: inline; \}/);
+});
+
+// TASK-0145 — the colouring is part of the address, so a copied address shows the same picture.
+test('an overview address keeps its colouring, and the grammar refuses a colouring where it colours nothing', () => {
+  const { parseAddress, formatAddress } = load('shared/address.js');
+  const state = plainContext('abcd1234', 'features', 'state');
+  const wheel = state.address({ page: 'wheel' });
+  assert.equal(wheel, 'deck://abcd1234/features?page=wheel&colour=state');
+  assert.equal(parseAddress(wheel).colour, 'state');
+  assert.equal(formatAddress(parseAddress(wheel)), wheel, 'it round-trips through the grammar');
+  // Every address the state-coloured wheel writes keeps the colouring.
+  const scene = wheelScene(model('deck'), state);
+  assert.equal(scene.address, wheel);
+  for (const row of scene.list) if (row.target !== undefined) assert.match(row.target, /&colour=state$/, row.id);
+  // The default writes nothing, and a colouring outside the overview, or an unknown one, is refused.
+  assert.equal(ctx.address({ page: 'wheel' }), 'deck://abcd1234/features?page=wheel');
+  assert.throws(() => parseAddress('deck://abcd1234/features?note=FEAT-0024&colour=state'), /needs a "page" or a "flow"/);
+  assert.throws(() => parseAddress('deck://abcd1234/features?page=wheel&colour=type'), /not a colouring/);
+});

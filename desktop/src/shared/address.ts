@@ -3,7 +3,7 @@
  *
  *   deck://<workspaceId>/<viewId>
  *       [?desk=<name>][&note=<id>][&panel=<kind>]
- *       [&surface=<kind>][&page=<kind>][&flow=<kind>][&step=<id>]
+ *       [&surface=<kind>][&page=<kind>][&flow=<kind>][&step=<id>][&colour=state]
  *
  * Parsing REFUSES what it cannot read and never falls back to a default view.
  * The cockpit's navigator does fall back — an unknown mode silently becomes
@@ -46,7 +46,7 @@ const STEP_RE = /^(?=.{1,64}$)[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*$/;
  * refuses is an address Deck hands a person and then rejects, which is the
  * failure TASK-0017 already fixed once for desk names.
  */
-const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step'] as const;
+const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour'] as const;
 const KNOWN_KEYS = new Set<string>(QUERY_KEYS);
 
 export class AddressError extends Error {
@@ -74,6 +74,12 @@ function refusalFor(address: DeckAddress): string | null {
     // A step outside a flow names nothing. Writing one would produce an
     // address that says where a person is without saying what they are in.
     if (address.flow === null) return `"step" needs a "flow": a step outside a flow names nothing`;
+  }
+  // The overview's colouring (TASK-0145): the cockpit's type colours unless it says
+  // `state`. It colours an overview screen, so it is refused anywhere else.
+  if (address.colour !== null) {
+    if (address.colour !== 'state') return `not a colouring: "${address.colour}" (the only one an address names is "state")`;
+    if (address.page === null && address.flow === null) return `"colour" needs a "page" or a "flow": it colours an overview screen`;
   }
   return null;
 }
@@ -172,6 +178,7 @@ function emptyAddress(workspaceId: string, viewId: string): DeckAddress {
     page: null,
     flow: null,
     step: null,
+    colour: null,
   };
 }
 

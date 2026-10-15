@@ -138,8 +138,12 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     // A ticket is drawn by a mark, or by a row of a panel (TASK-0147, TASK-0148).
     const marks = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'mark' && node.ticket !== undefined ? 1 : node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
     const panelRows = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
-    plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks, panelRows, rows: scene.list.length, address: scene.address, ...(key === 'ticket' ? { ticket: choice.ticket } : {}) });
-    console.log(`${base}: ${wordsAtRest(scene)} words at rest, ${marks} tickets drawn, ${scene.list.length} list rows${png ? '' : ' (no PNG: rsvg-convert is not installed)'}`);
+    // What the plate really draws: a flat panel can run out of room, so the count is read
+    // from the SVG, beside how many the screen holds (Codex's review of TASK-0150).
+    const drawnInPlate = (svg.match(/ data-ticket="/g) ?? []).length;
+    const sections = [...walkScene(scene.nodes)].flatMap((node) => (node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.map((sec) => ({ title: sec.title, rows: sec.rows.map((r) => r.id) })) : []));
+    plates.push({ key, title, ws, label: choice.label, svg: `${base}.svg`, png, words: wordsAtRest(scene), marks: drawnInPlate, tickets: marks, panelRows, sections, rows: scene.list.length, address: scene.address, ...(key === 'ticket' ? { ticket: choice.ticket } : {}) });
+    console.log(`${base}: ${wordsAtRest(scene)} words at rest, ${drawnInPlate} of ${marks} tickets drawn, ${scene.list.length} list rows${png ? '' : ' (no PNG: rsvg-convert is not installed)'}`);
   }
 }
 fs.writeFileSync(path.join(out, 'plates.json'), `${JSON.stringify(plates, null, 2)}\n`);
@@ -159,12 +163,14 @@ h1 { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; margin: 
 .seg { display: inline-flex; border: 1px solid hsla(190,90%,65%,.5); border-radius: 999px; overflow: hidden; }
 .seg button { background: transparent; color: inherit; border: 0; padding: 6px 12px; font: inherit; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: hsla(190,90%,55%,.22); }
+.seg button:disabled { opacity: .35; cursor: default; }
 main { padding: 12px 16px 24px; }
 object { width: 100%; aspect-ratio: 1440 / 1000; display: block; border-radius: 10px; }
 p.note { color: hsl(205 25% 62%); max-width: 80ch; }
 </style></head>
 <body>
 <header><h1>DES-0005 · the overview</h1>
+<div class="seg" id="history"><button id="back" title="Back (⌘[)" aria-label="Back" disabled>←</button><button id="forward" title="Forward (⌘])" aria-label="Forward" disabled>→</button></div>
 <div class="seg" id="ws">${Object.entries(CHOICES).map(([k, c], i) => `<button data-ws="${k}" aria-pressed="${i === 0}">${c.label}</button>`).join('')}</div>
 <div class="seg" id="screen">${screens.map(([k, t], i) => `<button data-screen="${k}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>
 </header>
@@ -174,13 +180,33 @@ p.note { color: hsl(205 25% 62%); max-width: 80ch; }
 <script>
 const plates = ${JSON.stringify(plates)};
 let ws = 'deck', screen = 'wheel';
-function show() {
+// Back and forward, as in Deck (TASK-0146): opening a screen after going back drops what was ahead.
+let trail = [], at = -1;
+function visit() {
+  const here = trail[at];
+  if (here && here.ws === ws && here.screen === screen) return;
+  trail = trail.slice(0, at + 1).concat([{ ws, screen }]);
+  at = trail.length - 1;
+}
+function step(by) {
+  const next = at + by;
+  if (next < 0 || next >= trail.length) return;
+  at = next; ws = trail[at].ws; screen = trail[at].screen;
+  render();
+}
+function show() { visit(); render(); }
+function render() {
   const p = plates.find((x) => x.ws === ws && x.key === screen) || plates.find((x) => x.ws === ws);
   document.getElementById('plate').data = '${rel}/' + p.svg;
-  document.getElementById('caption').textContent = p.title + ' on ' + p.label + ': ' + p.words + ' words at rest, ' + p.marks + ' tickets drawn, ' + p.rows + ' rows in the list twin. Address: ' + p.address;
+  document.getElementById('caption').textContent = p.title + ' on ' + p.label + ': ' + p.words + ' words at rest, ' + p.marks + ' of ' + p.tickets + ' tickets drawn (Deck lists the rest), ' + p.rows + ' rows in the list twin. Address: ' + p.address;
   for (const b of document.querySelectorAll('#ws button')) b.setAttribute('aria-pressed', String(b.dataset.ws === ws));
   for (const b of document.querySelectorAll('#screen button')) b.setAttribute('aria-pressed', String(b.dataset.screen === screen));
+  document.getElementById('back').disabled = at <= 0;
+  document.getElementById('forward').disabled = at >= trail.length - 1;
 }
+document.getElementById('back').addEventListener('click', () => step(-1));
+document.getElementById('forward').addEventListener('click', () => step(1));
+document.addEventListener('keydown', (e) => { if (e.metaKey && (e.key === '[' || e.key === ']')) { e.preventDefault(); step(e.key === '[' ? -1 : 1); } });
 // A click on a mark that leads somewhere opens that screen, as it does in Deck. This needs
 // the plate's document, which a browser gives only when the page is served (the cockpit's
 // viewer serves it); opened from a file, the switches above still reach every screen.
