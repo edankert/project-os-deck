@@ -14,7 +14,7 @@ entrypoint: "desktop/tests/overview-checks.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh overview-checks"
 covers: ["[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]"]
 issues: []
-tasks: ["[[TASK-0144]]", "[[TASK-0118-Check-Every-Screen-As-Data]]"]
+tasks: ["[[TASK-0151]]", "[[TASK-0144]]", "[[TASK-0118-Check-Every-Screen-As-Data]]"]
 artifacts: []
 adequacy: "Independent defective scenes exercise each refusal. Boundary cases at 60 and 61 words catch off-by-one errors; identifier cases prevent treating phase numbers as counts."
 mutation_score: ""
@@ -42,13 +42,13 @@ The test holds no verdict in its status. Its command builds the modules and runs
 ## Expected results
 
 - The good scene passes all four rules and each deliberate defect fails its own rule.
-- Panel row and note text is exempt, while 61 words outside a panel still fail. Folded panel rows and custom ticket ids still require list twins.
+- Panel row and note text is exempt, while 61 words outside a panel still fail. Folded panel rows and custom ticket ids still require list twins. Panel text is also exempt from inferred-number checks; HTML and SVG section counts equal their rows or folded strip marks.
 - Only text shown at rest counts toward 60 words; ticket IDs do not count.
 - Count references resolve and the list twin preserves ticket IDs and actions.
 
 ## Evidence
 
-2026-10-15: `cd desktop && npm test` passes 764 tests, with zero failures and zero skips. The overview-checks suite passes 17 tests. Panel text is exempt, 61 outside words fail, and every folded or visible panel row needs a twin. Removing the row twin guard fails the regression. The executable check holds no verdict in its note status.
+2026-10-15: the full desktop suite passes 769 tests with no failures or skips. The overview-checks suite passes 18 tests. Its new regression executes both panel renderers and compares section counts with rows and folded strip marks. Changing the HTML count to rows plus one fails that regression. Built files were restored and the focused suite passed again.
 
 ## Adequacy
 

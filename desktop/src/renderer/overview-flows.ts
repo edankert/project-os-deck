@@ -1,7 +1,7 @@
 /** Acceptance controls only write after a person's action, through the shell. */
 import {
   acceptFromPayloads, acceptScene, deckImageHref, designFromPayload, designScene, gateReady, FEATURE_TRANSITION_UNAVAILABLE,
-  linkIds, noteVerdicts, RESULTS, testRunFromPayloads, testRunScene,
+  gateFromModel, linkIds, noteVerdicts, RESULTS, testRunFromPayloads, testRunScene,
   type AcceptData, type DesignFlowData, type StepMarks, type TestRunData,
 } from '../shared/overview-flows.js';
 import { registerScreen, type ScreenDefinition, type ScreenInput } from './overview.js';
@@ -145,9 +145,21 @@ export const testRunFlow: ScreenDefinition = {
   },
 };
 
-async function acceptData(input: ScreenInput): Promise<AcceptData> {
-  const id = input.address.note;
+/** Shared by S3 and S7. Unreadable evidence leaves a neutral, unwritable gate. */
+export async function featureGate(input: ScreenInput, featureId = input.address.note): Promise<AcceptData> {
+  const id = featureId;
   if (!id?.startsWith('FEAT-')) throw new Error('an acceptance flow needs its feature id');
+  try {
+    return await readFeatureGate(input, id);
+  } catch (error) {
+    const fallback = gateFromModel(input.model, id);
+    const why = `the feature evidence could not be read: ${error instanceof Error ? error.message : String(error)}`;
+    for (const lamp of fallback.lamps) lamp.missing.push(why);
+    return fallback;
+  }
+}
+
+async function readFeatureGate(input: ScreenInput, id: string): Promise<AcceptData> {
   const rendered = await note(input, id), fm = object(object(rendered)['frontmatter']);
   const scope = new Set([id, ...linkIds(fm['requirements'])]);
   const testIds = Object.values(input.model.tickets).filter(t => t.kind === 'test' && (t.links.some(l => scope.has(l)) || input.model.tickets[id]?.links.includes(t.id))).map(t => t.id);
@@ -168,11 +180,11 @@ async function acceptData(input: ScreenInput): Promise<AcceptData> {
   return acceptFromPayloads(currentModel, id, { note: rendered, criteria, acceptance, obligations, tests, actions }, input.canWrite);
 }
 export const acceptFlow: ScreenDefinition = {
-  scene: async input => acceptScene(input.model, await acceptData(input), input.ctx),
+  scene: async input => acceptScene(input.model, await featureGate(input), input.ctx),
   onAction: async (action, input) => {
     if (action !== 'accept:accept' && action !== 'accept:back') return false;
     writable(input);
-    const data = await acceptData(input);
+    const data = await featureGate(input);
     if (data.status !== 'review') throw new Error('this feature is not at review');
     const stamp = data.mtime === undefined ? {} : { mtime: data.mtime };
     if (action === 'accept:back') {

@@ -10,7 +10,7 @@ const {DeckHost}=load('main/host.js');
 const {SERVED_CAPABILITIES,SHELL_CAPABILITIES}=load('shared/capability.js');
 const {plainContext,walkScene}=load('shared/overview-scene.js');
 const {addressFor}=load('shared/address.js');
-const {designFlow,testRunFlow,acceptFlow}=await import(pathToFileURL(path.join(desktopRoot,'dist/web/renderer/overview-flows.js')));
+const {designFlow,testRunFlow,acceptFlow,featureGate}=await import(pathToFileURL(path.join(desktopRoot,'dist/web/renderer/overview-flows.js')));
 const {Host}=await import(pathToFileURL(path.join(desktopRoot,'dist/web/renderer/host-bridge.js')));
 const model=JSON.parse(fs.readFileSync(path.join(desktopRoot,'fixtures/overview/deck.json'),'utf8'));
 const actor='user:tester';
@@ -119,6 +119,31 @@ function acceptInput(requested=false,actions=[{to:'done',disabled:false},{to:'do
   throw new Error(at);
  },write:async(v,r)=>{seen.push([v,r]);return{ok:true};}});return{i,seen,payload};
 }
+test('S3 can load the same live gate as S7 without changing its address or writing',async()=>{
+ const {i,seen}=acceptInput();
+ const expected=await featureGate(i);
+ i.address=addressFor('abcd1234','features',{page:'ticket',note:'FEAT-0024'});
+ const before=structuredClone(i.address);
+ assert.deepEqual(await featureGate(i,'FEAT-9999'),expected);
+ assert.deepEqual(i.address,before);assert.deepEqual(seen,[]);
+ const scene=await acceptFlow.scene({...i,address:addressFor('abcd1234','features',{flow:'accept',note:'FEAT-9999'})});
+ const gate=load('shared/overview-flows.js').gateChips(expected,120,410,1200);
+ assert.deepEqual(scene.list.filter(r=>r.group==='Evidence'),gate.rows);
+ assert.ok(expected.lamps.some(l=>l.known&&l.done>0));
+});
+test('featureGate falls back to neutral model evidence when sidecar reads fail',async()=>{
+ for(const route of ['/api/cockpit/locate','/api/notes/acceptance','/api/cockpit/acceptance','/api/cockpit/obligations']) {
+  const {i,seen}=acceptInput(),read=i.read;
+  i.read=async at=>{if(at.startsWith(route))throw new Error('sidecar offline');return read(at);};
+  const data=await featureGate(i);
+  assert.equal(data.canWrite,false);assert.deepEqual(data.transitions,[]);
+  assert.ok(data.lamps.every(l=>!l.known&&l.missing.some(m=>m.includes('sidecar offline'))));
+  const scene=await acceptFlow.scene(i);
+  assert.ok([...walkScene(scene.nodes)].find(n=>n.action==='accept:accept').cls.includes('ov-off'));
+  await assert.rejects(acceptFlow.onAction('accept:accept',i));assert.deepEqual(seen,[]);
+ }
+ await assert.rejects(featureGate(input('accept','TASK-0001')),/feature id/);
+});
 test('S7 uses acceptance-run for an opted-in feature and transition otherwise; Send back carries a reason',async()=>{
  for(const requested of [true,false]){
   const {i,seen}=acceptInput(requested);const scene=await acceptFlow.scene(i);assert.ok(scene.list.some(r=>r.action==='accept:accept'));assert.equal(seen.length,0);

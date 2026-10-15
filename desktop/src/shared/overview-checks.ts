@@ -4,8 +4,10 @@
  * Other rest text excludes real ids, explicit "Phase 2", dates, times and versions
  * from inferred counts. Id roles must contain only identifiers or padded phase
  * numbers (at least three digits, or a leading zero). They cannot hide prose.
- * Panel row and note text is exempt from words at rest. It is data in a
- * PanelNode, never TextNodes; do not expand panelSvgNodes for these checks.
+ * Panel row and note text is exempt from both words at rest and inferred
+ * number checks. It is data in a PanelNode, never TextNodes; do not expand
+ * panelSvgNodes here. A panel section's count must equal its rows: those rows
+ * (or the folded strip) are its marks. Panel rendering tests enforce that rule.
  * Panel rows still owe the same list twin as ticket marks.
  * This checks declared integer counts, not the geometry of the mark.
  */

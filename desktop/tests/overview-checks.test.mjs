@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './helpers.mjs';
+import { standInPage, loadWeb } from './stand-in-page.mjs';
 const { checkScene } = load('shared/overview-checks.js');
 const { addressFor, formatAddress, parseAddress } = load('shared/address.js');
 
@@ -224,4 +225,27 @@ test('every panel row, including folded and nonstandard ids, requires a list twi
   assert.match(verdict(scene, 'twin').detail, /Missing rows: TASK-0001, custom-ticket/);
   scene.list.push(...rows.map((row) => ({ id: row.id, label: row.title, group: 'Rows' })));
   assert.equal(verdict(scene, 'twin').ok, true, 'panel rows are drawn tickets, not extra list entries');
+});
+
+test('panel section counts equal their rows and folded strip marks in HTML and SVG', async () => {
+  const { buildPanels } = await loadWeb('renderer/overview-panels.js');
+  const { panelSvgNodes } = load('shared/overview-panel.js');
+  const { walkScene } = load('shared/overview-scene.js');
+  const document = standInPage();
+  const descendants = (node) => [node, ...node.children.flatMap(descendants)];
+  for (const folded of [false, true]) for (const count of [1, 3, 8]) {
+    const rows = Array.from({ length: count }, (_, i) => ({ id: `TASK-800${i}`, title: 'Task', status: 'done', type: 'task', fill: 'delivered', needsYou: false }));
+    const panel = { kind: 'panel', key: 'tickets', x: 0, y: 0, w: 800, h: 800, label: 'Tickets', body: { kind: 'rows', sections: [{ key: 'closed', title: 'Closed', rows, folded }] } };
+    const scene = { ...good(), nodes: [panel], list: rows.map(r => ({ id: r.id, label: r.title, group: 'Closed' })) };
+    const layer = buildPanels(scene, document.createElement('div'), { reduced: true, loader: null });
+    const nodes = descendants(layer.element);
+    const displayed = Number(nodes.find(n => n.className === 'ov-sec-count').textContent);
+    assert.equal(displayed, count);
+    assert.equal(nodes.find(n => n.className === 'ov-rows').children.length, displayed);
+    assert.equal(nodes.find(n => n.className === 'ov-strip').children.length, displayed);
+    const svg = [...walkScene(panelSvgNodes(panel))];
+    assert.equal(svg.find(n => n.text?.startsWith('Closed')).text, `Closed · ${count}`);
+    assert.equal(svg.filter(n => n.ticket).length, displayed);
+    assert.equal(verdict(scene, 'numbers').ok, true, 'rows are the panel count marks');
+  }
 });

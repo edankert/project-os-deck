@@ -2,7 +2,7 @@
 import { backControl, heading, words } from './overview-chrome.js';
 import { annularSector, arc, polar, TAU } from './overview-geometry.js';
 import type { ListRow, Scene, SceneNode, ScreenContext } from './overview-scene.js';
-import { cockpitSquare, markWords, FIELD, NEEDS_YOU } from './overview-marks.js';
+import { cockpitSquare, markWords, TYPE_COLOUR, FIELD, NEEDS_YOU } from './overview-marks.js';
 import { cockpitMarks } from './overview-status.js';
 import { resultMark, RESULT_MARK } from './overview-results.js';
 import type { NoteRecord } from './records.js';
@@ -17,7 +17,7 @@ export interface DesignFlowData {
   comments: Array<{ text: string; answered: boolean; plate: number }>;
 }
 export const RESULTS = ['pass', 'fail', 'partial', 'question', 'blocked', 'na', 'excused'] as const;
-export type CheckResult = typeof RESULTS[number] | 'not-run' | 'rerun' | 'unknown';
+export type CheckResult = typeof RESULTS[number] | 'canceled' | 'not-run' | 'rerun' | 'unknown';
 export interface FlowCheck {
   key: string; number: number; tickets: string[]; action: string; expected: string;
   result: CheckResult; reason: string; before?: FlowImage; after?: FlowImage;
@@ -32,7 +32,12 @@ export interface TestRunData {
   canWrite: boolean; more?: boolean;
 }
 export type GateKey = 'requirements' | 'tasks' | 'automated' | 'acceptance' | 'reviews';
-export interface GateItem { id: string; label: string; ticket?: Pick<Ticket, 'id' | 'type' | 'fill' | 'needsYou' | 'title' | 'status'> }
+export interface GateItem {
+  id: string; label: string;
+  /** Evidence for this item, independent of its ticket's lifecycle state. */
+  complete?: boolean; result?: CheckResult;
+  ticket?: Pick<Ticket, 'id' | 'type' | 'fill' | 'needsYou' | 'title' | 'status'>;
+}
 export interface GateLamp {
   key: GateKey; label: string; known: boolean; done: number; total: number; missing: string[]; items?: GateItem[];
 }
@@ -100,11 +105,13 @@ export function designFromPayload(payload: unknown, imageLink: ImageLink = p => 
     ...(typeof p['mtime'] === 'number' ? { mtime: p['mtime'] } : {}) };
 }
 
-const RANK: Record<string, number> = { na: 0, pass: 1, excused: 2, partial: 3, blocked: 4, fail: 5, question: 6, rerun: 7, unknown: 8, 'not-run': 9 };
+const RANK: Record<string, number> = { na: 0, canceled: 0, pass: 1, excused: 2, partial: 3, blocked: 4, fail: 5, question: 6, rerun: 7, unknown: 8, 'not-run': 9 };
 export function resultFrom(value: unknown): CheckResult {
   const valueText = str(value);
-  const aliases: Record<string, CheckResult> = { done: 'pass', passed: 'pass', failed: 'fail', important: 'fail', incomplete: 'partial', canceled: 'excused', todo: 'not-run', 'needs-re-run': 'rerun', '': 'not-run' };
-  return (RESULTS as readonly string[]).includes(valueText) ? valueText as CheckResult : aliases[valueText] ?? (valueText === 'rerun' ? 'rerun' : 'unknown');
+  // The current acceptance route normalises characters; retain older payloads too.
+  // Match characters exactly: whitespace around an x must not certify a pass.
+  const aliases: Record<string, CheckResult> = { done: 'pass', passed: 'pass', failed: 'fail', important: 'fail', incomplete: 'partial', canceled: 'canceled', todo: 'not-run', 'not-run': 'not-run', rerun: 'rerun', 'needs-re-run': 'rerun', '': 'not-run', ' ': 'not-run', x: 'pass', X: 'pass', '/': 'partial', '~': 'partial', '-': 'canceled', '!': 'fail', F: 'fail', '?': 'question' };
+  return (RESULTS as readonly string[]).includes(valueText) ? valueText as CheckResult : Object.hasOwn(aliases, valueText) ? aliases[valueText]! : 'unknown';
 }
 export const worstResult = (values: CheckResult[]): CheckResult => values.reduce((a, b) => (RANK[b] ?? 8) > (RANK[a] ?? 8) ? b : a, values[0] ?? 'not-run');
 
@@ -164,9 +171,9 @@ export function noteVerdicts(data: TestRunData, platform: string, marks: StepMar
 }
 
 const GATES: Array<[GateKey, string]> = [['requirements', 'Requirements'], ['tasks', 'Tasks'], ['reviews', 'Reviews'], ['automated', 'Automated tests'], ['acceptance', 'Acceptance tests']];
-function gateItem(model: OverviewModel, id: string, label: string): GateItem {
+function gateItem(model: OverviewModel, id: string, label: string, complete?: boolean, result?: CheckResult): GateItem {
   const t = model.tickets[id];
-  return { id, label, ...(t ? { ticket: { id: t.id, title: t.title, status: t.status, type: t.type, fill: t.fill, needsYou: t.needsYou } } : {}) };
+  return { id, label, ...(complete === undefined ? {} : { complete }), ...(result === undefined ? {} : { result }), ...(t ? { ticket: { id: t.id, title: t.title, status: t.status, type: t.type, fill: t.fill, needsYou: t.needsYou } } : {}) };
 }
 export function gateFromModel(model: OverviewModel, featureId: string): AcceptData {
   const t = model.tickets[featureId];
@@ -202,12 +209,12 @@ export function acceptFromPayloads(model: OverviewModel, featureId: string, payl
     const items: Array<Record<string, unknown>> = requirements.flatMap(r => arr(r['criteria']).map(c => ({ ...obj(c), requirement: str(r['id']) })));
     const missing = items.filter(c => c['state'] !== 'ticked' && c['state'] !== 'reconciled').map(c => `${c.requirement}: ${str(c['text'])}`);
     const empty = requirements.filter(r => arr(r['criteria']).length === 0).map(r => `${str(r['id'])}: no criteria recorded`);
-    set('requirements', empty.length === 0, items.length - missing.length, items.length, [...missing, ...empty], items.map(c => gateItem(model, str(c['requirement']), str(c['text']))));
+    set('requirements', empty.length === 0, items.length - missing.length, items.length, [...missing, ...empty], items.map(c => gateItem(model, str(c['requirement']), `${str(c['text'])} (${str(c['state']) || 'open'})`, c['state'] === 'ticked' || c['state'] === 'reconciled')));
   }
   const taskIds = linkIds(fm['tasks']);
   if (Array.isArray(fm['tasks'])) {
     const missing = taskIds.filter(id => model.tickets[id]?.status !== 'done').map(id => `${id}: ${model.tickets[id]?.status ?? 'not in the model'}`);
-    set('tasks', taskIds.every(id => !!model.tickets[id]), taskIds.length - missing.length, taskIds.length, missing, taskIds.map(id => gateItem(model, id, model.tickets[id]?.title ?? id)));
+    set('tasks', taskIds.every(id => !!model.tickets[id]), taskIds.length - missing.length, taskIds.length, missing, taskIds.map(id => gateItem(model, id, model.tickets[id]?.title ?? id, model.tickets[id]?.status === 'done')));
   }
   const suite = obj(payload.acceptance), obligations = obj(payload.obligations);
   const scope = new Set([featureId, ...linkIds(fm['requirements']), ...taskIds]);
@@ -217,7 +224,8 @@ export function acceptFromPayloads(model: OverviewModel, featureId: string, payl
     const checks = tiers.flatMap(t => arr(t['items']).map(c => ({ ...obj(c), manual: t['manual'] }) as Record<string, unknown>)).filter(c => strings(c['refs']).some(id => scope.has(id)));
     const manual = checks.filter(c => c['manual'] === true);
     const missing = manual.filter(c => resultFrom(c['mark']) !== 'pass' || c['stale'] !== false).map(c => `${str(c['id'])}: ${str(c['name'])} (${c['stale'] ? 'stale' : str(c['mark']) || 'not run'})`);
-    set('acceptance', valid && manual.length > 0, manual.length - missing.length, manual.length, manual.length ? missing : ['no acceptance checks name this feature'], manual.map(c => gateItem(model, str(c['id']), str(c['name']))));
+    const resultItem = (c: Record<string, unknown>, recorded = true): GateItem => gateItem(model, str(c['id']), `${str(c['name'])}${c['stale'] ? ' (stale)' : ''}`, recorded && resultFrom(c['mark']) === 'pass' && c['stale'] === false, recorded ? resultFrom(c['mark']) : undefined);
+    set('acceptance', valid && manual.length > 0, manual.length - missing.length, manual.length, manual.length ? missing : ['no acceptance checks name this feature'], manual.map(c => resultItem(c)));
     // automation describes coverage, not who ran it. Only the ledger's method is evidence of an automated run.
     const auto = checks.filter(c => c['manual'] === false);
     const standings = arr(obj(suite['view'])['tiers']).flatMap(t => arr(obj(t)['areas']).flatMap(a => arr(obj(a)['items']).map(obj)));
@@ -225,7 +233,7 @@ export function acceptFromPayloads(model: OverviewModel, featureId: string, payl
     const commands = payload.tests.map(p => obj(obj(p)['frontmatter'])).filter(f => str(f['command']));
     const autoMissing = auto.filter(c => !recorded(c) || resultFrom(c['mark']) !== 'pass' || c['stale'] !== false).map(c => `${str(c['id'])}: ${recorded(c) ? str(c['mark']) : 'no recorded automated run'}`);
     const unrecorded = commands.filter(f => !auto.some(c => c['id'] === f['id'])).map(f => `${str(f['id'])}: command result is not exposed by the sidecar`);
-    set('automated', valid && unrecorded.length === 0 && auto.length > 0 && auto.every(recorded), auto.length - autoMissing.length, auto.length + unrecorded.length, [...autoMissing, ...unrecorded, ...(auto.length || unrecorded.length ? [] : ['no automated results recorded'])], [...auto.map(c => gateItem(model, str(c['id']), str(c['name']))), ...commands.filter(f => !auto.some(c => c['id'] === f['id'])).map(f => gateItem(model, str(f['id']), `${str(f['id'])}: command result not reported`))]);
+    set('automated', valid && unrecorded.length === 0 && auto.length > 0 && auto.every(recorded), auto.length - autoMissing.length, auto.length + unrecorded.length, [...autoMissing, ...unrecorded, ...(auto.length || unrecorded.length ? [] : ['no automated results recorded'])], [...auto.map(c => resultItem(c, recorded(c))), ...commands.filter(f => !auto.some(c => c['id'] === f['id'])).map(f => gateItem(model, str(f['id']), 'command result not reported'))]);
   }
   // Both scalar and list frontmatter can name several reviewers, including two of the same model.
   const reviewers = (Array.isArray(fm['reviewed_by']) ? strings(fm['reviewed_by']) : [str(fm['reviewed_by'])])
@@ -234,7 +242,7 @@ export function acceptFromPayloads(model: OverviewModel, featureId: string, payl
   const reviewTotal = human ? 1 : 2;
   const approved = fm['review_verdict'] === 'approved' && !!str(fm['review_date']) && !!String(fm['review_round'] ?? '');
   set('reviews', true, approved ? Math.min(reviewTotal, reviewers.length) : 0, reviewTotal,
-    approved && reviewers.length >= reviewTotal ? [] : [`independent review: ${str(fm['review_verdict']) || 'no verdict'}, ${reviewers.length} reviewers recorded`], Array.from({ length: reviewTotal }, (_, i) => ({ id: `review-${i}`, label: reviewers[i] ?? 'Reviewer not recorded' })));
+    approved && reviewers.length >= reviewTotal ? [] : [`independent review: ${str(fm['review_verdict']) || 'no verdict'}, ${reviewers.length} reviewers recorded`], Array.from({ length: reviewTotal }, (_, i) => ({ id: `review-${i}`, label: reviewers[i] ?? 'Reviewer not recorded', complete: approved && i < reviewers.length })));
   // This endpoint carries aggregate badges only. A malformed read cannot certify a gate.
   if (typeof obligations['total'] !== 'number' || !('views' in obligations)) data.lamps.forEach(l => { l.known = false; l.missing.push('the obligations payload could not be read'); });
   return data;
@@ -378,7 +386,8 @@ export function testRunScene(model: OverviewModel, data: TestRunData, ctx: Scree
 
 /** Five chips in one row; compact fits beneath S3's track. Each gate item is
  * retained, even when several criteria belong to the same requirement ticket.
- * Unknown evidence has neutral framing; it never fabricates an attention dot.
+ * Squares draw evidence, never tickets; their labels retain the ticket id.
+ * Unknown evidence has neutral outlines and no fill claim or attention dot.
  */
 export function gateChips(data: AcceptData, x: number, y: number, width: number, options: { compact?: boolean } = {}): { nodes: SceneNode[]; rows: ListRow[] } {
   const nodes: SceneNode[] = [], rows: ListRow[] = [];
@@ -409,14 +418,12 @@ export function gateChips(data: AcceptData, x: number, y: number, width: number,
     for (let j = 0; j < total; j++) {
       const item = lamp.items?.[j], ticket = item?.ticket;
       const px = left + padding + size / 2 + (j % columns) * pitch, py = y + top + Math.floor(j / columns) * pitch;
-      const itemLabel = item ? `${item.label}${ticket ? ` · ${markWords(ticket)}` : ''}` : `${word}: item ${j + 1}, identity not reported`;
-      if (ticket) {
-        children.push(cockpitSquare(ticket, px, py, size, { label: itemLabel, key: `${markId}-item-${j}` }));
-        if (!rows.some(row => row.id === ticket.id)) rows.push({ id: ticket.id, label: markWords(ticket), group: word });
-      } else {
-        // Reviews and missing identities are evidence items, not invented tickets.
-        children.push({ kind: 'group', key: `${markId}-item-${j}`, children: [{ kind: 'mark', tag: 'rect', attrs: { x: px - size / 2, y: py - size / 2, width: size, height: size, rx: 1, fill: lamp.known && j < lamp.done ? PALETTE.dim : 'none', stroke: PALETTE.dim }, label: itemLabel }] });
-      }
+      const complete = lamp.known && item?.complete === true;
+      const verdict = !lamp.known ? 'not reported' : item?.result ? `${RESULT_MARK[item.result].word} ${RESULT_MARK[item.result].glyph}` : complete ? 'complete' : 'incomplete';
+      const itemLabel = item ? `${item.id}: ${item.label} · ${verdict}` : `${word}: item ${j + 1}, identity not reported`;
+      const type = ticket?.type ?? (key === 'requirements' ? 'requirement' : key === 'tasks' ? 'task' : key === 'automated' || key === 'acceptance' ? 'test' : undefined);
+      const colour = lamp.known && type ? TYPE_COLOUR[type] : PALETTE.dim;
+      children.push({ kind: 'group', key: `${markId}-item-${j}`, children: [{ kind: 'mark', tag: 'rect', markId: `${markId}-item-${j}`, attrs: { x: px - size / 2, y: py - size / 2, width: size, height: size, rx: 1, fill: complete ? colour : 'none', stroke: colour }, label: itemLabel }] });
     }
     nodes.push({ kind: 'group', key: markId, children });
     rows.push({ id: `gate-${key}`, label, group: 'Evidence' });

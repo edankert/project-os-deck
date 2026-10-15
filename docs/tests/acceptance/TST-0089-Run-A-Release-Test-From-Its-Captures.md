@@ -58,7 +58,7 @@ Edwin opens the built Deck desktop with Deck and your-trainer registered. Use a 
 ## Expect
 
 - Deck says there is no release and draws empty rings. It does not invent checks.
-- Beads show check results with the cockpit’s marks and words: Pass, Fail, Partial, Question, Blocked, N/A and Excused. Unrun and invalidated checks say To-do and Needs re-run. The selected check’s test notes have separate cockpit squares.
+- Beads show check results with the cockpit’s marks and words: Pass, Fail, Partial, Question, Blocked, N/A and Excused. Unrun and invalidated checks say To-do and Needs re-run. Legacy Canceled draws `[-]`, separately from Excused `[·]`. Unrecognised results use 0.6 opacity and the cancelled class uses 0.75. The selected check’s test notes have separate cockpit squares.
 - Android and iOS retain their own checks and results; the section address restores its section.
 - The open check shows both captures when present, its action and expected result. Missing captures are stated plainly.
 - Printed-step progress stays local until every step citing a test note has a result. The note then receives its most serious result in the cockpit. Cancelling a reason sends no write; sidecar refusals keep their wording.

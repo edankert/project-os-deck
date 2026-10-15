@@ -19,7 +19,7 @@ tests: ["[[TST-0085-Flow-Scenes-And-Payloads-Keep-The-Recorded-Evidence]]", "[[T
 
 # The feature gate shows five labelled chips of cockpit marks
 
-**S7's five round lamps become five labelled chips, each saying what it counts and showing one cockpit mark per item.** A chip reads, for example, "Requirements 0 / 8", followed by eight marks in the requirement colour, filled as the cockpit fills them. S3 shows the same chips (TASK-0148), so the component is written once, here.
+**S7's five round lamps become five labelled chips, each saying what it counts and showing one cockpit mark per item.** A chip reads, for example, "Requirements 0 / 8", followed by eight marks in the requirement colour, filled from the criterion or result evidence, independently of the ticket’s lifecycle status (repaired by TASK-0151). S3 shows the same chips (TASK-0148), so the component is written once, here.
 
 S5 (a design) and S6 (a release test) change their ticket marks to the shared module from TASK-0145, and their words to the cockpit's.
 
@@ -46,10 +46,6 @@ Preflight, 2026-10-15: the model port and regenerated fixtures are committed (`9
 
 ## Verification
 
-2026-10-15: `cd desktop && npm test` passes 764 tests, with no failures or skips. The flow scene suite passes 20 tests, the screen suite 14, and the flow write suite 19. Both workspaces pass the four scene rules. S5 uses 9 words at rest and S7 uses 30; Your Trainer’s S6 uses at most 50 with More open.
+TASK-0151 repairs this task's round-one findings. `cd desktop && npm test` passes 769 tests, zero failures and zero skips. The flow suite passes 21 tests, the scene-check suite 18, and the action/loader suite 21. Evidence squares match each chip's count and unknown items are neutral outlines. Item marks never set `ticket`; list rows contain only the five evidence categories.
 
-The chip tests cover all five labels, both sizes, one square per item, separate marks for both counts, the exact model fill and attention dot, neutral unknown framing and list twins. Removing an item square fails both fixture tests. Replacing the Blocked glyph with Pass fails the result test. The original code was restored after each mutation.
-
-Headless SVG rasters of S5, S6 and S7 on both workspaces were inspected, along with the compact chips. No Electron window opened. TST-0100 now says chips; TST-0088 and TST-0089 describe the ticket and result marks. Those acceptance checks remain unrun by Edwin and have no verdict to invalidate.
-
-The new export is `gateChips(data, x, y, width, { compact: true })`, returning `nodes` and `rows`. Claude’s S3 must append both. The old `gateNodes` wrapper keeps the pre-TASK-0148 screen building and omits duplicate ticket identity from its small echoes, since that screen already draws each neighbour. Claude can remove the wrapper with that old caller. Official plates and the window run remain TASK-0150 and the drawing lane’s work.
+The renderer now exports `featureGate` for S3 and S7. Claude's S3 must await it, pass its result to `gateChips`, append both returned arrays, and remove the ticket-stripping workaround. Claude owns official plates and the window run. No new human verdict or Electron run was made. Both supplied reviewer verdicts and every finding are recorded in FEAT-0026 and FEAT-0029.

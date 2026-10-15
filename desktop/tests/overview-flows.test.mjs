@@ -137,7 +137,7 @@ test('S5 fans outlines behind one selected image and keeps every plate selectabl
  }
 });
 
-for (const ws of ['deck', 'your-trainer']) test(`${ws}: gate chips label every category and keep every item and ticket mark in both sizes`, () => {
+for (const ws of ['deck', 'your-trainer']) test(`${ws}: gate chips label every category and show evidence squares matching their counts in both sizes`, () => {
  const model=json(`${ws}.json`),data=json(`flows/${ws}-accept.json`);
  const labels=['Requirements','Tasks','Reviews','Automated tests','Acceptance tests'];
  for(const compact of [false,true]) {
@@ -149,18 +149,22 @@ for (const ws of ['deck', 'your-trainer']) test(`${ws}: gate chips label every c
    assert.equal(lamp.items.length,lamp.total,`${lamp.key} preserves item identities`);
    const squares=chip.children.filter(n=>n.kind==='group'&&n.key?.includes('-item-'));
    assert.equal(squares.length,lamp.total,`${lamp.key} squares`);
+   let filled=0;
    for(const [i,item] of lamp.items.entries()) {
-    if(!item.ticket)continue;
-    const source=model.tickets[item.id];assert.ok(source,item.id);
-    assert.deepEqual(item.ticket,{id:source.id,title:source.title,status:source.status,type:source.type,fill:source.fill,needsYou:source.needsYou});
     const marks=[...walkScene([squares[i]])].filter(n=>n.kind==='mark');
-    assert.ok(marks[0].cls.includes(`ty-${source.type}`));
-    assert.equal(marks[0].cls.includes('sq-solid'),!['open','deferred'].includes(source.fill));
-    assert.equal(marks.some(n=>n.cls==='sq-dot'),source.needsYou);
-    assert.equal(marks.some(n=>n.tag==='rect'&&n.cls==='sq-cut'),['doing','unproven'].includes(source.fill));
-    assert.equal(squares[i].cls==='ov-doing',source.fill==='doing');
-    assert.ok(gate.rows.some(r=>r.id===source.id),source.id);
+    assert.equal(marks.length,1,'evidence has no lifecycle cut, pulse or needs-you dot');
+    const mark=marks[0],solid=mark.attrs.fill!=='none';
+    assert.equal(solid,lamp.known&&item.complete===true);
+    filled+=Number(solid);
+    assert.equal(mark.ticket,undefined);
+    assert.match(mark.markId,new RegExp(`^gate-${data.id}-${lamp.key}-item-${i}$`));
+    assert.ok(mark.label.includes(item.id),'identity remains in the callout');
+    const {TYPE_COLOUR}=load('shared/overview-marks.js');
+    if(lamp.known&&item.ticket)assert.equal(mark.attrs.stroke,TYPE_COLOUR[item.ticket.type]);
+    if(!lamp.known)assert.equal(mark.attrs.stroke,load('shared/overview-scene.js').PALETTE.dim);
    }
+   assert.equal(filled,lamp.known?lamp.done:0,`${lamp.key}: count and squares agree`);
+   assert.deepEqual(gate.rows.map(r=>r.id),data.lamps.map(l=>`gate-${l.key}`));
    const counts=nodes.filter(n=>n.kind==='text'&&n.role==='number');
    if(lamp.known&&lamp.total>0)assert.deepEqual(counts.map(n=>Number(n.text)),[lamp.done,lamp.total]);
    else assert.equal(counts.length,0,'unknown evidence never prints a false completed count');
@@ -174,25 +178,79 @@ for (const ws of ['deck', 'your-trainer']) test(`${ws}: gate chips label every c
  }
 });
 
-test('chip item squares keep parked, dropped, unproven and attention distinct without certifying the gate',()=>{
- const model=json('deck.json'),data=F.gateFromModel(model,'FEAT-0024');
- const fills=['open','doing','delivered','unproven','dropped','deferred'];
- const lamp=data.lamps.find(l=>l.key==='tasks');
- lamp.known=true;lamp.total=fills.length;lamp.done=0;lamp.items=fills.map((fill,i)=>({id:`TASK-800${i}`,label:fill,ticket:{id:`TASK-800${i}`,title:'Task',type:'task',status:'backlog',fill,needsYou:i===0}}));
- const chip=F.gateChips(data,100,200,1200).nodes.find(n=>n.key.endsWith('-tasks'));
- const squares=chip.children.filter(n=>n.kind==='group');
- assert.equal(squares.length,6);
- assert.equal(squares[4].children.find(n=>n.tag==='line').cls,'sq-cut');
- assert.ok(squares[5].children.find(n=>n.tag==='line').cls.includes('sq-strike'));
- assert.equal(F.gateReady(data),false,'a delivered ticket square cannot substitute for gate evidence');
+test('criteria, tasks, reviews and test results draw their own evidence, independent of ticket fill',()=>{
+ const model=json('deck.json'),p=evidence();
+ const states=['open','ticked','open','open','ticked','open','ticked','open'];
+ model.tickets['REQ-0006']={...model.tickets['REQ-0006'],status:'implemented',fill:'delivered',needsYou:true};
+ p.criteria.requirements=[{id:'REQ-0006',criteria:states.map((state,i)=>({text:`Criterion ${i}`,state}))}];
+ const statuses=['doing','done','cancelled','backlog'];
+ p.note.frontmatter.tasks=statuses.map((status,i)=>{
+  const id=`TASK-800${i}`;model.tickets[id]={id,title:'Task',type:'task',kind:'task',links:[],status,fill:i%2?'open':'delivered',needsYou:true};return id;
+ });
+ p.note.frontmatter.reviewed_by=['model:a'];
+ for(const manual of [false,true]) {
+  const items=['fail','pass','blocked','na','excused','partial','question','rerun','new-result','pass'].map((mark,i)=>({id:`TST-${manual?9:8}00${i}`,name:'Check',refs:['FEAT-0024'],mark,stale:i===9}));
+  p.acceptance.tiers.push({manual,items});
+  if(!manual)p.acceptance.view.tiers.push({areas:[{items:items.map(c=>({...c,stale:false,verdict_method:'automated',verdict_date:'2026-10-15'}))}]});
+ }
+ // Mark the last automated item stale in both representations, leaving a known failed item instead.
+ p.acceptance.tiers[0].items[9].stale=false;p.acceptance.tiers[0].items[9].mark='fail';
+ p.acceptance.view.tiers[0].areas[0].items[9].mark='fail';
+ const data=F.acceptFromPayloads(model,'FEAT-0024',p);
+ for(const compact of [true,false]) {
+  const gate=F.gateChips(data,0,0,1200,{compact});
+  for(const lamp of data.lamps) {
+   const marks=[...walkScene(gate.nodes)].filter(n=>n.markId?.startsWith(`gate-${data.id}-${lamp.key}-item-`));
+   assert.equal(marks.length,lamp.total);
+   assert.equal(marks.filter(m=>m.attrs.fill!=='none').length,lamp.done,lamp.key);
+   assert.equal(lamp.known,true,lamp.key);
+   assert.ok(marks.every(m=>m.ticket===undefined&&m.needsYou===undefined));
+   if(lamp.key==='requirements') {
+    assert.deepEqual(marks.map(m=>m.attrs.fill!=='none'),states.map(s=>s==='ticked'));
+    assert.ok(marks.every(m=>m.attrs.stroke===load('shared/overview-marks.js').TYPE_COLOUR.requirement));
+    assert.equal(lamp.done,3);assert.equal(lamp.total,8);
+   }
+   if(lamp.key==='tasks')assert.deepEqual(marks.map(m=>m.attrs.fill!=='none'),[false,true,false,false]);
+   if(lamp.key==='reviews')assert.deepEqual(marks.map(m=>m.attrs.fill!=='none'),[true,false]);
+   if(lamp.key==='acceptance') {
+    assert.equal(lamp.done,1);assert.match(marks[0].label,/Fail \[!\]/);
+    assert.match(marks[9].label,/stale.*Pass/);assert.equal(marks[9].attrs.fill,'none');
+   }
+  }
+  // Unknown evidence overrides complete items and ticket attention alike.
+  const unknown=F.gateChips({...data,lamps:data.lamps.map(l=>({...l,known:false}))},0,0,1200,{compact});
+  const items=[...walkScene(unknown.nodes)].filter(n=>n.markId?.includes('-item-'));
+  assert.ok(items.length>0);
+  assert.ok(items.every(m=>m.attrs.fill==='none'&&m.attrs.stroke===load('shared/overview-scene.js').PALETTE.dim&&m.ticket===undefined));
+  assert.ok([...walkScene(unknown.nodes)].every(n=>!n.needsYou&&n.cls!=='sq-dot'&&n.tag!=='circle'));
+ }
+ p.note.frontmatter.review_verdict='changes-requested';
+ const rejected=F.acceptFromPayloads(model,'FEAT-0024',p).lamps.find(l=>l.key==='reviews');
+ assert.equal(rejected.done,0);assert.ok(rejected.items.every(i=>i.complete===false));
+ p.criteria.requirements[0].criteria[0].state='reconciled';
+ const reconciled=F.acceptFromPayloads(model,'FEAT-0024',p).lamps.find(l=>l.key==='requirements');
+ assert.equal(reconciled.done,4);assert.equal(reconciled.items[0].complete,true);
+});
+
+test('legacy and raw results retain their meaning through release and gate payloads',()=>{
+ const aliases={done:'pass',canceled:'canceled',x:'pass',X:'pass','/':'partial','~':'partial','-':'canceled','!':'fail',F:'fail','?':'question',' ':'not-run'};
+ for(const [raw,result] of Object.entries(aliases)) {
+  assert.equal(F.resultFrom(raw),result,raw);
+  const page={platform:'desktop',release:'REL-0001',sections:[{groups:[{checks:[{checks:['TST-0001']}]}]}],results:{'TST-0001':{result:raw}}};
+  assert.equal(F.testRunFromPayloads([page]).platforms[0].sections[0].checks[0].result,result);
+  const p=evidence();p.acceptance.tiers=[{manual:true,items:[{id:'TST-0001',refs:['FEAT-0024'],mark:raw,stale:false}]}];
+  const lamp=F.acceptFromPayloads(json('deck.json'),'FEAT-0024',p).lamps.find(l=>l.key==='acceptance');
+  assert.equal(lamp.items[0].result,result);assert.equal(lamp.done,Number(result==='pass'));
+ }
+ for(const raw of [' x','x ','new-result','constructor'])assert.equal(F.resultFrom(raw),'unknown');
 });
 
 test('all flow ticket marks use cockpit squares and all result beads retain the cockpit words and glyphs',()=>{
  const model=json('deck.json');
  const {RESULT_MARK}=load('shared/overview-results.js');
- const resultWords=['Pass','Fail','Partial','Question','Blocked','N/A','Excused','To-do','Needs re-run','Unrecognised result'];
- const resultGlyphs=['[x]','[!]','[/]','[?]','[■]','[–]','[·]','[ ]','[↻]','[?]'];
- const results=[...F.RESULTS,'not-run','rerun','unknown'];
+ const resultWords=['Pass','Fail','Partial','Question','Blocked','N/A','Excused','Canceled','To-do','Needs re-run','Unrecognised result'];
+ const resultGlyphs=['[x]','[!]','[/]','[?]','[■]','[–]','[·]','[-]','[ ]','[↻]','[?]'];
+ const results=[...F.RESULTS,'canceled','not-run','rerun','unknown'];
  const id=Object.keys(model.tickets).find(id=>model.tickets[id].type==='test');
  for(const [i,result] of results.entries()) {
   const check={key:'one',number:1,tickets:[id],action:'Read the screen',expected:'Shows a result',result,reason:'',preparation:false,evidence:''};
@@ -200,6 +258,10 @@ test('all flow ticket marks use cockpit squares and all result beads retain the 
   const scene=F.testRunScene(model,data,ctx),nodes=[...walkScene(scene.nodes)];look(scene);
   const bead=nodes.find(n=>n.action==='check:one');
   assert.equal(bead.ticket,undefined);assert.equal(bead.state,undefined);assert.equal(bead.fill,undefined);
+  const opacity=result==='unknown'?.6:['na','excused','canceled'].includes(result)?.75:1;
+  const resultNodes=[...walkScene(load('shared/overview-results.js').resultMark(result,0,0,5).children)].filter(n=>n.kind==='mark');
+  assert.ok(resultNodes.every(n=>n.attrs.opacity===opacity),'both outline and glyph have SVG opacity');
+  assert.ok(sceneToSvg(scene).includes(`opacity=\"${opacity}\"`));
   assert.equal(bead.attrs['data-result'],result);assert.equal(bead.attrs.stroke,RESULT_MARK[result].colour);
   assert.ok(bead.label.includes(resultWords[i])&&bead.label.includes(resultGlyphs[i]),bead.label);
   assert.ok(scene.list.some(r=>r.id===id&&r.group==='Test notes'));

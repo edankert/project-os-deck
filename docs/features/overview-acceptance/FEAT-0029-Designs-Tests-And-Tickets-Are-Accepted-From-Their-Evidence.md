@@ -11,15 +11,16 @@ updated: 2026-10-15
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person accepts a design from its plates, records an acceptance test result from a before-and-after picture, and accepts a feature from a gate that shows what is missing, each in Deck and each written through the cockpit's sidecar."
 requirements: []
-tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]", "[[TASK-0149]]"]
+tasks: ["[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0143]]", "[[TASK-0149]]", "[[TASK-0151]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
-review_date: 2026-10-14
-review_verdict: approve
-review_round: 2
+review_date: 2026-10-15
+review_verdict: changes-requested
+review_round: 1
+review_response: "TASK-0144 and TASK-0149 round one on f003195..f68d4ee: reviewer A approve; reviewer B changes-requested. TASK-0151 fixes all seven findings; Claude verifies the repairs. Earlier review rounds remain below."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -53,23 +54,21 @@ Out of scope:
 
 ## Verification
 
-2026-10-15: `cd desktop && npm test` passed **764 tests, with zero failures and zero skips**, including the TypeScript build. The three flow suites contribute 43 checks: 20 scenes and payloads, four image-route checks, and 19 action and shell-write checks.
+2026-10-15: `cd desktop && npm test` passed **769 tests, with zero failures and zero skips**, including the TypeScript build. Flow suites contribute 46 tests: 21 scenes and payloads, four image-route checks, and 21 action and loader checks. The scene-check suite contributes 18 tests.
 
-Every recorded S5–S7 scene passes the word, count, address and list checks. S5 uses 9 words at rest and S7 uses 30 on both workspaces. Every recorded S6 section passes with More expanded; Your Trainer’s maximum is 50 words. The chip tests check both sizes, exact item counts and ticket marks, separate count bars, neutral unknown framing and list twins. Removing one square fails the fixture tests. Replacing Blocked’s glyph with Pass fails the result test.
+Both recorded acceptance fixtures reproduce from raw payloads with each item's completion and result. The recorded flow scenes pass the word, number, address and list checks. Eight deliberate regressions each failed a named test; after restoring built files, all 60 focused tests passed. The Review section records the mutations.
 
-Headless SVG rasters of all six flow scenes and the compact chips were inspected. No Electron or live verdict ran. `bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. TST-0088, TST-0089 and TST-0100 remain Edwin’s unrun acceptance checks. Claude owns this revision’s independent review and official plates.
+`bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. No Electron window, new raster inspection or human verdict is claimed. Claude owns official plate regeneration and the window run; TST-0088, TST-0089 and TST-0100 remain Edwin's unrun acceptance checks.
 
 ## Where this stands
 
-2026-10-15: **TASK-0149 is done on `lane/codex-r2`.** S7 draws five labelled chips: Requirements, Tasks, Reviews, Automated tests and Acceptance tests. Every displayed count has its own bar. Each item has a square; when its ticket is in the model, the shared cockpit module draws its actual type, fill and needs-you dot.
+2026-10-15: **TASK-0151 fixes all seven findings from the round-one review of TASK-0144 and TASK-0149.** Reviewer A's verdict is `approve`; reviewer B's is `changes-requested`. Both are transcribed under Review. The full desktop suite passes 769 tests.
 
-Unknown evidence says “not reported” in neutral framing and never creates a violet centre or a synthetic attention dot. A real ticket’s mark still says what that ticket needs. Known empty chips say “nothing to check”. These changes preserve the readiness and advertised-action rules. Requirement items count criteria, so several squares can refer to the same requirement; their callouts name the criterion.
+Known item squares show their own evidence completion in the item's type colour. Unknown chips show neutral hollow squares without attention dots. Evidence marks carry a unique `markId` and a label naming the source id, never `ticket`. The list twin has five evidence rows. Result glyphs preserve legacy cancellation and carry the cockpit's opacity.
 
-S5 uses the design’s cockpit square. S6 beads use the cockpit’s release-result words, glyphs and acceptance-result colours, with the open check’s ticket squares separate. Historical design captions and revision prose remain verbatim; the UI’s own status wording no longer says “owed again”.
+The renderer exports `featureGate(input: ScreenInput, featureId = input.address.note): Promise<AcceptData>`. S7 uses it; Claude's S3 must await it and pass its result to `gateChips`. Sidecar failures return the neutral `gateFromModel` fallback with a reason. S3 can append both `nodes` and `rows` directly and remove its `delete node.ticket` loop and row filter.
 
-Claude’s TASK-0148 should call `gateChips(data, x, y, width, { compact: true })` and append both `nodes` and `rows`. The old `gateNodes` wrapper is retained only for the current S3 caller; remove both together. The two acceptance fixtures were remapped from their recorded raw payloads with per-item identities.
-
-The feature stays `doing` for Claude’s review of this revision and Edwin’s acceptance. Claude owns the merge, push, redrawn official plates and batched window run. Edwin’s decision on the narrower sidecar criteria remains outstanding. No new review or human acceptance is claimed.
+The feature stays `doing` for Claude's verification and Edwin's acceptance. Claude owns S3 integration, official plates, the batched window run, merge and push. Codex commits on `lane/codex-r2` and does not push. The existing sidecar limits and narrowed acceptance criteria remain unresolved by a human verdict.
 
 ## Preflight
 
@@ -108,15 +107,29 @@ Your Trainer has no feature at review in the current tree or its existing overvi
 
 ## Questions between the lanes
 
-2026-10-15, Codex: `gateChips(data: AcceptData, x, y, width, options?: { compact?: boolean })` now returns `{ nodes, rows }`. Use both in S3. `GateLamp.items` carries each criterion, task, reviewer or test item and its model ticket when known. The old `gateNodes` wrapper is temporary for the old radial S3, and can be removed with its caller. S5–S7 are ready for TASK-0150’s plate regeneration.
+2026-10-15, TASK-0151 handoff to Claude: import `featureGate` from `desktop/src/renderer/overview-flows.ts`. Its signature is `featureGate(input: ScreenInput, featureId = input.address.note): Promise<AcceptData>`. Await it in S3's renderer, then pass the returned data into the pure ticket scene and `gateChips(data, x, y, width, { compact: true })`. It uses the same reads as S7 and returns `gateFromModel` if required evidence cannot be read. It does not change the input address or write anything.
 
-2026-10-14, Codex to the drawing lane: will you place `gateNodes(gateFromModel(model, featureId), x, y, scale)` under S3's feature track and connect the S5–S7 entry controls? The exports are in `desktop/src/shared/overview-flows.ts`. The registered addresses are `?flow=design&note=DES-…`, `?flow=test-run&note=REL-…&step=android.3` (the release is optional), and `?flow=accept&note=FEAT-…`. Regenerate DES-0005's S5–S7 plates from the six fixtures after merging. Your Trainer's fixture preserves FEAT-0130's actual `doing` status because no feature at review exists there.
+Append both returned `nodes` and `rows`. Chip item marks never set `ticket`; they set `markId: gate-<feature>-<key>-item-<n>` and retain the source id in their label. The rows are only `gate-<key>` evidence rows. Remove S3's `delete node.ticket` workaround and its filter on gate rows. The old `gateNodes` wrapper was already removed in the merged drawing lane.
 
-Claude’s round-two packet can be regenerated with `python3 tools/scripts/review-packet.py FEAT-0029 --round 2 --since 83ca14c --out build/review-packet-FEAT-0029-r2.md`. This run leaves the feature at review and preserves Claude’s round-one verdict.
-
-2026-10-15, written at planning for both lanes: **the gate's chip is written once, in this feature, and S3 uses it.** [[TASK-0149]] replaces `gateNodes` with five labelled chips ("Requirements 0 / 8" and a row of cockpit marks). Claude's [[TASK-0148]] places the same chips on S3 in place of the small lamps. The marks inside a chip come from Claude's shared module in [[TASK-0145]], so TASK-0149 starts after it.
+Both acceptance fixtures were remapped from their recorded raw payloads. Regenerate official plates after integrating S3. Claude verifies the fixes to the blocking round-one findings; the author's tests are not a new reviewer verdict.
 
 ## Review
+
+### TASK-0144 and TASK-0149 — round one, 2026-10-15
+
+Two Claude reviewers reviewed `f003195..f68d4ee`. Edwin supplied their findings and verdicts: **reviewer A: approve; reviewer B: changes-requested**. The combined verdict remains `changes-requested`; these are the author's fixes in [[TASK-0151]], awaiting Claude's verification, not a new approval. Earlier rounds below belong to earlier commit ranges.
+
+| Finding | Resolution and evidence |
+| --- | --- |
+| 1. B-A and A-3: criterion squares contradicted the count. | `GateItem.complete` records each criterion, task, review or test's evidence. Known squares fill only for complete evidence, in the item's type colour. A shuffled REQ-0006 example at `implemented` draws three filled purple squares among eight. Reconciled criteria retain the existing completion rule and identify themselves in the label. The flow tests cover task statuses that contradict ticket fills, missing reviewers, non-pass results and stale passes. |
+| 2. B-B: unknown chips retained needs-you dots. | Unknown items are neutral outlines without fill, type colour, lifecycle decoration or attention dots. Their labels retain identity and say “not reported”. Both sizes and both fixtures are tested. |
+| 3. Gate items duplicated tickets in S3. | Item marks never set `ticket`. Each gets `gate-<feature>-<key>-item-<n>` as `markId`; its label names the source id. `gateChips` returns only five `gate-<key>` evidence rows, never item tickets. Existing S3 exactly-once checks pass. |
+| 4. A-2: unknown results looked like Fail. | `resultMark` sets SVG opacity on both outline and glyph: 0.6 for unknown, 0.75 for the cancelled class (N/A, Excused and legacy Canceled), 1 for other results. Tests inspect attributes and serialized SVG. |
+| 5. B observation 1: legacy canceled became Excused. | Legacy `canceled` and `-` now draw Canceled `[-]`, separately from Excused `[·]`. Exact raw aliases `x X / ~ - ! F ?` are tested through release and acceptance payloads. The current sidecar's `acceptance.normalise_mark` normalizes characters before serving acceptance items; `release_test_payload` reads canonical ledger results. Compatibility handling also preserves old payloads without accepting padded character typos. |
+| 6. A-1: panel numbers were exempt without saying so. | The `overview-checks.ts` comment names both panel exemptions. A section's rows or folded strip represent its count. The new test executes HTML panel rendering and SVG panel rendering, requiring counts to equal rows and strip marks for both folded and open sections. |
+| 7. S3 could not load S7's evidence. | The renderer exports `featureGate(input: ScreenInput, featureId = input.address.note): Promise<AcceptData>`. S7 uses it for scenes and action-time refreshes. A failed sidecar read returns `gateFromModel` with its reason and no write capability. Tests cover S3/S7 parity, explicit feature id, unchanged address, no writes and failures on the four required reads. |
+
+Verification: `cd desktop && npm test` passes **769 tests, zero failures, zero skips**. Focused suites pass **60 tests**: overview-checks 18, overview-flows 21, overview-flow-writes 21. Eight deliberate regressions were caught: criterion completion forced true, unknown fill, unknown type colour, ticket identity on evidence, missing opacity, canceled mapped to excused, panel count plus one, and a loader returning only model data. Built files were restored and the 60 tests passed again. Both acceptance fixtures reproduce from their recorded raw payloads. No Electron window or human verdict was used.
 
 ### Round one
 
