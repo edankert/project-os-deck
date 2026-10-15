@@ -38,10 +38,12 @@ async function designData(input: ScreenInput): Promise<DesignFlowData> {
 }
 export const designFlow: ScreenDefinition = {
   scene: async input => {
+    // The sidecar's note payload carries no modification time; Deck's index does. It is read
+    // before the design itself, so the guard is never newer than what the screen shows, and
+    // kept for a decision made here (the review of TASK-0160).
+    const drawnAt = input.address.note === null ? undefined : await noteMtime(input.ctx.workspaceId, input.address.note);
     const data = await designData(input);
-    // The sidecar's note payload carries no modification time; Deck's index does. It is
-    // kept as this screen saw it, the guard for a decision made here (review of TASK-0160).
-    input.memory.set(drawnMtimeKey(data.id), await noteMtime(input.ctx.workspaceId, data.id));
+    input.memory.set(drawnMtimeKey(data.id), data.id === input.address.note ? drawnAt : undefined);
     return designScene(input.model, data, input.ctx);
   },
   onAction: async (action, input) => {

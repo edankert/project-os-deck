@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0154
 title: "The feature's gate is an arch of five segments over the feature, drawn by one component that S3 and S7 both use"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -32,18 +32,22 @@ What each bucket means goes into the callout on its segment, and into DES-0005. 
 - **Acceptance tests**: manual checks a person runs, with a pass in the release ledger.
 
 ## Definition of Done
-- [ ] The gate's drawing moves out of `desktop/src/shared/overview-flows.ts` (`gateChips`) into a drawing-lane module, `desktop/src/shared/overview-gate.ts`. It takes the same `AcceptData` that `featureGate` and `gateFromModel` return; Codex's data functions stay in `overview-flows.ts`. Codex agrees to the move under FEAT-0029's "Questions between the lanes" before the code moves, because that file is in Codex's lane.
-- [ ] The arch has five segments in a fixed order (requirements, tasks, reviews, automated tests, acceptance tests). Each fills with its done share, carries its count and a mark for that count, and has its word along the arch.
-- [ ] "Not reported" and "nothing to check" stay distinct and visible, as TASK-0151 made them, and neither draws a needs-you dot.
-- [ ] Pointing at a segment, or focusing it, shows a callout with the bucket's meaning (the five sentences above), its count and its missing items. The list twin keeps five evidence rows.
-- [ ] S3 draws the small arch for a feature. The 60-word limit at rest holds on S3 and S7 on both workspaces.
-- [ ] TST-0090 and TST-0085 check the arch on both fixtures: five segments, the fill share matching the counts, "not reported" drawn without fill. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
+- [x] The gate's drawing moves out of `desktop/src/shared/overview-flows.ts` (`gateChips`) into a drawing-lane module, `desktop/src/shared/overview-gate.ts`. It takes the same `AcceptData` that `featureGate` and `gateFromModel` return; Codex's data functions stay in `overview-flows.ts`. Codex agrees to the move under FEAT-0029's "Questions between the lanes" before the code moves, because that file is in Codex's lane.
+- [x] The arch has five segments in a fixed order (requirements, tasks, reviews, automated tests, acceptance tests). Each fills with its done share, carries its count and a mark for that count, and has its word along the arch.
+- [x] "Not reported" and "nothing to check" stay distinct and visible, as TASK-0151 made them, and neither draws a needs-you dot.
+- [x] Pointing at a segment, or focusing it, shows a callout with the bucket's meaning (the five sentences above), its count and its missing items. The list twin keeps five evidence rows.
+- [x] S3 draws the small arch for a feature. The 60-word limit at rest holds on S3 and S7 on both workspaces.
+- [x] TST-0090 and TST-0085 check the arch on both fixtures: five segments, the fill share matching the counts, "not reported" drawn without fill. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
-- [ ] Propose the module move under FEAT-0029's "Questions between the lanes"; wait for Codex's agreement. (Codex stopped running before it could answer; the arch was drawn in its own module so Codex's file was untouched, and Claude made S7's switch in TASK-0159.)
-- [ ] Draw the arch as SVG paths from the five counts; keep the gate's existing mark ids (`gate-<feature>-<key>-…`) so the evidence checks keep holding.
-- [ ] Use it on S3; leave S7's switch to TASK-0159 (done by Claude once Codex stopped).
-- [ ] Add the five meanings to the callout text and to DES-0005.
+- [x] Propose the module move under FEAT-0029's "Questions between the lanes"; wait for Codex's agreement. (Codex stopped running before it could answer; the arch was drawn in its own module so Codex's file was untouched, and Claude made S7's switch in TASK-0159.)
+- [x] Draw the arch as SVG paths from the five counts; keep the gate's existing mark ids (`gate-<feature>-<key>-…`) so the evidence checks keep holding.
+- [x] Use it on S3; leave S7's switch to TASK-0159 (done by Claude once Codex stopped).
+- [x] Add the five meanings to the callout text and to DES-0005.
+
+## Verification
+
+The arch is `desktop/src/shared/overview-gate.ts` (`gateArch`): five parts in a fixed order, each a gauge of cells filled from its items' evidence, its count outside the arch with a mark for each number, its name beyond it, its meaning in the callout. Unknown parts are dashed, carry no cells and say "not reported"; empty ones say "nothing to check"; neither draws a needs-you mark. S3 draws it small, S7 large; `gateChips` is gone. The flows suite (TST-0085) and the screens suite (TST-0090) check it on both fixtures; the S3 sweep keeps every ticket screen within sixty words. Reviewed in two rounds by two independent Claude reviewers (FEAT-0028).
 
 ## Notes
 

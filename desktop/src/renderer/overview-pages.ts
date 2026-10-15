@@ -40,13 +40,16 @@ registerScreen('page', 'ticket', {
     const { model, ctx, address } = input;
     if (address.note === null) throw new Error('a ticket screen names its ticket: ?page=ticket&note=…');
     const t = model.tickets[address.note];
+    // The note's time first, before anything the screen shows is read: the guard can then
+    // only be older than what the person sees, never newer (the review of TASK-0160).
+    const drawnAt = t?.needs !== undefined && 'verbs' in t.needs.action ? await noteMtime(input.ctx.workspaceId, address.note) : undefined;
     // A feature shows the same gate S7 does, from the sidecar's evidence; without the
     // sidecar, what the model knows, marked "not reported" (TASK-0148, TASK-0149).
     const gate = t?.kind === 'feat' ? await featureGate(input, address.note) : undefined;
     // A ticket at triage is decided here, with the sidecar's own verbs (TASK-0160).
     const verbs = t?.needs !== undefined && 'verbs' in t.needs.action ? await verbsFor(input, address.note) : undefined;
     // The note's time as this screen shows it: a decision made here is about this text.
-    if (verbs !== undefined) input.memory.set(drawnMtimeKey(address.note), await noteMtime(input.ctx.workspaceId, address.note));
+    if (verbs !== undefined) input.memory.set(drawnMtimeKey(address.note), drawnAt);
     return ticketScene(model, address.note, ctx, { gate, verbs, canWrite: input.canWrite });
   },
   onAction: async (action, input) => {

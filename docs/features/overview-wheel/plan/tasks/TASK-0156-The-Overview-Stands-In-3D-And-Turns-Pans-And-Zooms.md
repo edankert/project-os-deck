@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0156
 title: "The wheel, the phase plane and the ring screens stand on a tilted plane in 3D, and a person turns, pans and zooms them with the mouse"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -30,20 +30,24 @@ The controls are the same on all four screens:
 - **Under reduced motion** nothing moves on its own (no lean toward the pointer, no eased transitions); the plane moves only while the person drags.
 
 ## Definition of Done
-- [ ] One shared camera module holds the tilt, turn, pan and zoom, and the four screens use it. The default tilt is shallow enough that the far edge of S2's plane stays legible on your-trainer's largest phase.
-- [ ] The four controls work on S1, S2, S4 and S6. Each is clamped (the plane cannot be turned edge-on or zoomed until it vanishes), and double-click restores the default.
-- [ ] Text stays crisp at every zoom: zoom changes the SVG's own scale rather than scaling a flattened layer.
-- [ ] Pointer hits land on the mark under the pointer after any turn, pan or zoom.
-- [ ] The scroll wheel zooms the overview when the overview is open and does not zoom Glass behind it (FEAT-0016's zoom).
-- [ ] With reduced motion on, nothing moves until the person drags.
-- [ ] The scene checks keep passing unchanged: the scene is the same data; only the camera moves.
-- [ ] TST-0090 checks the camera module's clamps and reset as data. The window run TST-0093 drags with the middle button, zooms with the wheel and double-clicks on each of the four screens, on both workspaces, and checks a press still opens the right screen afterwards. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
+- [x] One shared camera module holds the tilt, turn, pan and zoom, and the four screens use it. The default tilt is shallow enough that the far edge of S2's plane stays legible on your-trainer's largest phase.
+- [x] The four controls work on S1, S2, S4 and S6. Each is clamped (the plane cannot be turned edge-on or zoomed until it vanishes), and double-click restores the default.
+- [x] Text stays crisp at every zoom: zoom changes the SVG's own scale rather than scaling a flattened layer.
+- [x] Pointer hits land on the mark under the pointer after any turn, pan or zoom.
+- [x] The scroll wheel zooms the overview when the overview is open and does not zoom Glass behind it (FEAT-0016's zoom).
+- [x] With reduced motion on, nothing moves until the person drags.
+- [x] The scene checks keep passing unchanged: the scene is the same data; only the camera moves.
+- [x] TST-0090 checks the camera module's clamps and reset as data. The window run TST-0093 drags with the middle button, zooms with the wheel and double-clicks on each of the four screens, on both workspaces, and checks a press still opens the right screen afterwards. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
-- [ ] Write the camera module, with pure functions for the clamps and the hit transform.
-- [ ] Apply it to S1 and S4, then to S2's existing tilted plane (TASK-0147), then to S6's rings.
-- [ ] Route the scroll wheel to the overview while it is open.
-- [ ] Extend TST-0090 and the window run's script.
+- [x] Write the camera module, with pure functions for the clamps and the hit transform.
+- [x] Apply it to S1 and S4, then to S2's existing tilted plane (TASK-0147), then to S6's rings.
+- [x] Route the scroll wheel to the overview while it is open.
+- [x] Extend TST-0090 and the window run's script.
+
+## Verification
+
+`desktop/src/shared/overview-camera.ts` is the camera: the ring screens lean back, a phase a little, text screens start flat; middle-button drag turns and tilts, Shift pans, the wheel or a pinch zooms toward the pointer, double-click or 0 resets, + and − zoom. The picture and its panels move together on one board. TST-0090 tests the camera as data; the window run turned, panned, zoomed and reset the wheel on both workspaces, pressed a ticket on the tilted wheel, and turned S2. Reviewed in two rounds by two independent Claude reviewers.
 
 ## Notes
 

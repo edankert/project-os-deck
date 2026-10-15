@@ -71,23 +71,23 @@ items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: doing
+      status: review
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
-      status: doing
+      status: review
       file: "docs/features/overview-wheel/FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases.md"
       owner: system:claude
     FEAT-0028:
-      status: doing
+      status: review
       file: "docs/features/overview-phase/FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures.md"
       owner: system:claude
     FEAT-0029:
-      status: doing
+      status: review
       file: "docs/features/overview-acceptance/FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence.md"
       owner: system:codex
     FEAT-0026:
-      status: doing
+      status: review
       title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
       owner: system:codex
       file: "docs/features/overview-model/FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place.md"
@@ -310,42 +310,42 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0154:
       file: docs/features/overview-phase/plan/tasks/TASK-0154-The-Feature-Gate-Is-An-Arch-Of-Five-Segments.md
-      status: doing
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0155:
       file: docs/features/overview-wheel/plan/tasks/TASK-0155-The-Wheel-Becomes-A-Constellation-Of-Tickets.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0156:
       file: docs/features/overview-wheel/plan/tasks/TASK-0156-The-Overview-Stands-In-3D-And-Turns-Pans-And-Zooms.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0157:
       file: docs/features/overview-design/plan/tasks/TASK-0157-A-3D-Wheel-Where-Height-Is-Time-Drawn-As-A-Plate-To-Judge.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0158:
       file: docs/features/overview-phase/plan/tasks/TASK-0158-A-Phase-And-A-Ticket-Say-What-You-Need-To-Do.md
-      status: doing
+      status: done
       parent: FEAT-0028
       phase: "[[PHASE-0005]]"
     TASK-0159:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0159-S7-Shows-The-Features-Text-And-Its-Gate-As-The-Arch.md
-      status: doing
+      status: done
       parent: FEAT-0029
       phase: "[[PHASE-0005]]"
     TASK-0160:
       file: docs/features/overview-acceptance/plan/tasks/TASK-0160-An-Issue-At-Triage-Is-Decided-From-Its-Ticket-Screen.md
-      status: doing
+      status: done
       parent: FEAT-0029
       phase: "[[PHASE-0005]]"
     TASK-0161:
       file: docs/features/overview-design/plan/tasks/TASK-0161-DES-0005s-Plates-Redrawn-For-The-Constellation-The-Arch-And-The-Banners.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0152:
@@ -2559,7 +2559,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 152
-    tasks_done: 125
+    tasks_done: 133
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

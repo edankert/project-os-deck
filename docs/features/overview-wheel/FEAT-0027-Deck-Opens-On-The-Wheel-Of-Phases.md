@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0027
 aliases: ["FEAT-0027"]
 title: "Deck opens on the wheel of phases: the circular overview, with finished phases on a shelf, the backlog in a tray and tickets with no phase in the core"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -71,6 +71,8 @@ New work: [[TASK-0145]] (Claude) draws every ticket in the cockpit's type colour
 
 2026-10-15, later: the revision is built, tested and reviewed across models in two rounds. Every task of the revision is done (TASK-0144 to TASK-0151). The node suites pass (777 tests) and the window run TST-0093 passed on both workspaces. The feature goes back to `review`: what is left is Edwin's acceptance tests and his decisions on DES-0005.
 
+2026-10-15, last: the second revision is built (by Claude alone after Codex stopped), reviewed in two rounds by two independent Claude reviewers, and verified: 789 node tests pass, and the window run TST-0093 passed on Deck and your-trainer at `20c4f35`. Back at `review`; what is left is Edwin's acceptance tests and his decisions on DES-0005.
+
 ## Review
 
 ### Round one
@@ -103,6 +105,19 @@ None yet. Write a question here, dated, and land it on `main`; the other agent a
 ### Round two of the 2026-10-15 revision
 
 2026-10-15: Codex reviewed Claude's fixes at `416cda5`. Verdict: **changes-requested**. Eight of the ten round-one findings were fixed; the title and colouring findings were partly fixed, and Codex found two new ones: back across workspaces lost its place, because switching workspace drew that workspace's wheel and recorded it as a visit (P1), and forty title words could push a feature's screen past sixty words at rest (P2). Claude fixed all four: an address that names an overview screen no longer draws the wheel first; S3 gives its title only the words the rest of the screen leaves, counted by the check itself, with no character cut-off; the colouring switch is shown, and C acts, only on the wheel and the re-phase screen, the two it changes. Codex's own reproducers now pass against main (three entries and forward live after back across workspaces; no S3 scene over sixty words and no title under forty words cut, across all 3,131 tickets), and the title sweep is a test. Two rounds is this run's limit, so no third review was asked for; Edwin's acceptance tests are the next check.
+
+### Review of the second revision (2026-10-15)
+
+Codex stopped running on 2026-10-15 and Edwin asked for Claude only, so two independent Claude reviewers, each in a clean context and a separate session, reviewed the second revision (TASK-0153 to TASK-0161, range `efd0870..65e3952`) in Codex's place. Both are the same model that built the work (`model:claude-opus-5-5`); the independence is of context, not of model.
+
+**Round one.** Reviewer A: changes-requested. Reviewer B: changes-requested. Their findings, and what was done (`20c4f35`):
+- A phase with thousands of tickets drew none of them on the wheel. The fan now packs finer down to a dot and never returns nothing; tested up to 20,000 tickets in a thirtieth of the wheel.
+- The triage buttons sent the note's time read at the press, or nothing when Deck could not read it; S5's decide never sent one, because the sidecar's note payload has no time. Both now keep the time from Deck's index when the screen is drawn, send that, and refuse before asking a reason when there is none.
+- Three tests let a break through: overlapping particles, the needs order for each status reason before waiting, and a verb the sidecar now refuses. Each now fails when its guard is broken, which reviewer B confirmed.
+- The wires rebuilt the reverse links on every pointer move; they are built once per model.
+- Tasks ticked a Codex review and a Codex agreement that never happened; they now say what happened. Stale ticket counts were corrected, and the window run turns S2 for its picture.
+
+**Round two.** Reviewer B: approve; every round-one finding fixed, the record items done in this close-out. Reviewer A: changes-requested, on two small points, both fixed after the round: a comment that named the wrong row for overflow particles, and the guard's time being read after the design S5 shows rather than before (both screens now read it first, so it is never newer than what the person sees). A also saw two constellation tests fail; that was reviewer B breaking `fanPlaces` on purpose in the same tree at the same moment, and the suites pass on a clean tree (789 tests). Two rounds is this run's limit.
 
 ## Links
 

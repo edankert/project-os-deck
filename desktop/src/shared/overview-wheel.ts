@@ -144,8 +144,9 @@ export function fanPlaces(count: number, cx: number, cy: number, rIn: number, rO
     if (out.length === count) return out;
     last = out;
   }
-  // Still more than fits: the rest stand on the innermost row's places again, drawn but
-  // overlapping, so the count on the screen is never smaller than the phase's.
+  // Still more than fits: the rest stand on the last attempt's places again, from the ring
+  // inward, drawn but overlapping, so the count on the screen is never smaller than the
+  // phase's. Even 20,000 tickets in a thirtieth of the wheel fit before this is reached.
   const extra = Array.from({ length: count - last.length }, (_, i) => last[i % Math.max(1, last.length)] ?? { ...(() => { const [x, y] = polar(cx, cy, rIn, mid); return { x, y }; })(), size: 0.3 });
   return [...last, ...extra];
 }

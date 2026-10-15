@@ -49,6 +49,8 @@ The reasons are the cockpit's own, from `_needs_human` in `../project-os-cockpit
 
 Built by Claude after Codex stopped running (Edwin, 2026-10-15: "only use claude from now on"). `Ticket.needs` is in `desktop/src/shared/overview-types.ts`; `desktop/src/shared/overview-status.ts` computes it beside the cockpit's own needs-you rule, in the cockpit's order (triage and review, then the blocked band, then a test never run, then an unfinished `depends:`), and `overview-model.ts` sends a wait on a note the overview does not draw to that note in the view. Both fixtures were recaptured: Deck from a clean checkout of `65c6397` (`dirty: false`, 395 tickets, 12 that need you: 5 review, 6 waiting, 1 ready); your-trainer from its working tree (`dirty: true`, 2,747 tickets, 75 that need you: 61 waiting, 9 ready, 5 triage). The model suite (TST-0080) tests every reason, the order when two apply, that `needs` is present exactly when `needsYou` is, and on both fixtures that a waiting ticket names an unfinished blocker; parity with the live cockpit is still exact (367 and 2,706 items, no mismatch). 785 tests pass.
 
+Reviewed in two rounds by two independent Claude reviewers (FEAT-0025 to FEAT-0029, "Review of the second revision").
+
 ## Notes
 
 Codex lane. Starts at once. Claude's TASK-0158 (the banner on S3, the reasons in S2's rows and the callouts) and Codex's TASK-0160 (the triage buttons) both wait on it.

@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0157
 title: "A real 3D wheel where height is time, drawn as a design plate for Edwin to judge before any WebGL enters Deck"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-15
@@ -37,6 +37,8 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 ## Verification
 
 `desktop/scripts/overview-plates.mjs` writes `docs/designs/DES-0005-time-columns.html` from the fixtures, with each ticket's date read from its note; it holds all 395 of Deck's tickets and all 2,747 of your-trainer's (13 and 45 have no `created:` date). three.js 0.160.0 comes from cdnjs on that page only; `desktop/package.json` is unchanged. `desktop/scripts/time-columns-capture.cjs` took six pictures in a hidden window on 2026-10-15, three angles on each workspace, saved under `docs/designs/__attachments__/DES-0005/time-*.jpg`. DES-0005 has the section and the question. TST-0094 checks that the page holds every ticket and loads nothing else from outside. Reviewed instead by two independent Claude reviewers; see FEAT-0025's "Round one of the second revision".
+
+Reviewed in two rounds by two independent Claude reviewers (FEAT-0025 to FEAT-0029, "Review of the second revision").
 
 ## Notes
 
