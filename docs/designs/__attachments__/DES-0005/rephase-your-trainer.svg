@@ -34,7 +34,8 @@
 .ov .ov-badge { fill: hsl(5 50% 65%); }
 @keyframes ov-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: no-preference) { .ov .ov-doing, .ov .fl-doing { animation: ov-blink 1.6s ease-in-out infinite; } }
-@media (prefers-reduced-motion: reduce) { .ov .fl-doing { stroke-width: 2.6; } }
+.ov .sq-ring { fill: none; stroke: currentColor; display: none; }
+@media (prefers-reduced-motion: reduce) { .ov .fl-doing { stroke-width: 2.6; } .ov .sq-ring { display: inline; } }
 
 .ov-panels { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
 .ov-panel { position: absolute; pointer-events: auto; box-sizing: border-box; font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; color: hsl(195 60% 90%); }
