@@ -180,6 +180,17 @@ module.exports = async (d) => {
     for (let i = 0; i < 40 && (await js('document.body.dataset.overviewScreen')) !== 'ticket'; i += 1) await d.delay(250);
     const opened = await js('window.__deckOverview.current().address');
     d.log('the camera', { start, turnedTo, pannedTo, zoomedTo, reset, pressed: particle.id, opened });
+    // A phase turned too: its plane of rows stands on the turned board (TASK-0161's picture).
+    if (phase) {
+      await js(`window.__deckOverview.go(${JSON.stringify(`${base}?note=${encodeURIComponent(phase)}&page=phase`)})`);
+      await settle();
+      await d.pointer(win, d.drag(centre, { x: centre.x - 90, y: centre.y - 50 }, 8, 16, { button: 'middle' }));
+      d.wheel(win, centre.x, centre.y, -200);
+      await d.delay(400);
+      await d.shot(win, 'phase-turned');
+      d.press(win, '0');
+      await d.delay(200);
+    }
     assert.ok(opened.includes(`note=${encodeURIComponent(particle.id)}`), `a press on ${particle.id} on the tilted wheel opens it, not ${opened}`);
   }
 

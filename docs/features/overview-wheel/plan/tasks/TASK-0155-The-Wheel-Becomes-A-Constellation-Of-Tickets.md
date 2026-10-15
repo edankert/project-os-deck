@@ -28,13 +28,13 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 - **What stays:** the shelf of finished phases, the backlog tray, the Release test button, and both colourings (type and state).
 
 ## Definition of Done
-- [ ] S1 draws every ticket of every unfinished phase as one particle in its phase's fan, on Deck (333 tickets) and on your-trainer (2,646 tickets). The number of drawn marks equals the number of tickets in the scene.
+- [ ] S1 draws every ticket of every unfinished phase as one particle in its phase's fan, on Deck (372 tickets in its five phases) and on your-trainer (621 tickets in its nine unfinished phases). The number of drawn marks equals the number of tickets in the scene.
 - [ ] The fan's depth follows the ticket's state, with needs-you in front, as above. No two particles share a place.
 - [ ] Each segment has a needs-you bubble whose number matches its phase's count of `needsYou` tickets, drawn with its own mark.
 - [ ] Pointing at, or focusing, a particle draws its wires and shows its callout. Pressing it opens the ticket (S3); pressing the segment opens the phase (S2).
 - [ ] The no-phase button, the shelf, the tray, the Release test button and the ◐ colouring switch work as before, and both colourings draw the constellation.
 - [ ] The 60-word limit at rest holds on both workspaces, and the list twin holds every drawn ticket and control.
-- [ ] TST-0090 checks the above on both fixtures. The window run TST-0093 opens the wheel on both workspaces and presses a particle and a segment. `cd desktop && npm test` passes. Codex reviews the change, in two rounds at most.
+- [ ] TST-0090 checks the above on both fixtures. The window run TST-0093 opens the wheel on both workspaces and presses a particle and a segment. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [ ] Reuse S4's particle layout code (`desktop/src/shared/overview-rephase.ts`) for the fan, instead of writing a second one.
@@ -46,4 +46,4 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 
 Claude lane. Starts at once; it reads `needsYou`, which the model already carries. TASK-0156 puts the constellation on a tilted plane and waits on this task.
 
-Watch the frame rate on your-trainer: 2,646 particles is more than S4 draws today. If it stutters when wires are drawn, say so in Verification and draw the wires only for the pointed ticket.
+Watch the frame rate on your-trainer: the 2,747 particles of the whole wheel is more than S4 draws today. If it stutters when wires are drawn, say so in Verification and draw the wires only for the pointed ticket.

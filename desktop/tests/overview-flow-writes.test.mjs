@@ -73,17 +73,28 @@ function designRead(status='proposed') {return async at=>{
  if(at.startsWith('/api/notes/actions'))return{actions:[{verb:'Decline',to:'cancelled',disabled:false,endpoint:''}]};
  throw new Error(at);
 };}
+/** Deck's own index, faked: what `noteMtime` reads when a screen is drawn. */
+async function withRecords(mtimeMs,fn){
+ const saved=globalThis.fetch;globalThis.fetch=async()=>({ok:true,json:async()=>({records:mtimeMs===undefined?[]:[{mtimeMs}]})});
+ try{return await fn();}finally{globalThis.fetch=saved;}
+}
 test('S5 reads images from Deck and writes only on a verdict control; decline sends the reason by transition',async()=>{
  const seen=[],i=input('design','DES-0004',{read:designRead(),ask:async()=>'the main plate is unclear',write:async(v,r)=>{seen.push([v,r]);return{ok:true};}});
- const scene=await designFlow.scene(i);assert.equal(seen.length,0);
+ const scene=await withRecords(10_000,()=>designFlow.scene(i));assert.equal(seen.length,0);
  assert.match(JSON.stringify(scene),/\/deck\/file\/abcd1234\/images\/plate.png/);
- await designFlow.onAction('decide:accept',i);assert.deepEqual(seen[0],['decide',{id:'DES-0004',accept:true}]);
- await designFlow.onAction('decide:decline',i);assert.deepEqual(seen[1],['transition',{id:'DES-0004',to:'cancelled',note:'the main plate is unclear'}]);
+ // The note's time as the screen was drawn goes with the decision (the review of TASK-0160).
+ await designFlow.onAction('decide:accept',i);assert.deepEqual(seen[0],['decide',{id:'DES-0004',accept:true,mtime:10}]);
+ await designFlow.onAction('decide:decline',i);assert.deepEqual(seen[1],['transition',{id:'DES-0004',to:'cancelled',note:'the main plate is unclear',mtime:10}]);
 });
-test('S5 refuses stale status, served controls and cancelled reasons, and propagates the exact refusal',async()=>{
+test('S5 refuses stale status, served controls, cancelled reasons and an unknown note time, and propagates the exact refusal',async()=>{
  const i=input('design','DES-0004',{read:designRead('accepted')});await assert.rejects(designFlow.onAction('decide:accept',i),/only a proposed/);
  i.canWrite=false;await assert.rejects(designFlow.onAction('decide:accept',i),/does not write/);
- i.canWrite=true;i.read=designRead();assert.equal(await designFlow.onAction('decide:decline',i),false);
+ i.canWrite=true;i.read=designRead();await withRecords(10_000,()=>designFlow.scene(i));assert.equal(await designFlow.onAction('decide:decline',i),false);
+ // Drawn without a time Deck could read: the decision is refused, never sent unguarded.
+ await withRecords(undefined,()=>designFlow.scene(i));
+ i.write=async()=>{throw new Error('unexpected write');};
+ await assert.rejects(designFlow.onAction('decide:accept',i),/could not tell when DES-0004 last changed/);
+ await withRecords(10_000,()=>designFlow.scene(i));
  i.write=async()=>({ok:false,error:'note changed on disk since it was read — reload and retry'});
  await assert.rejects(designFlow.onAction('decide:accept',i),e=>e.message==='note changed on disk since it was read — reload and retry');
 });
@@ -252,7 +263,8 @@ test('a triage ticket is decided from its ticket screen with the sidecar verbs, 
   let offered = [{ verb: 'Accept', to: 'open', confirm: false, disabled: false, reason: '', endpoint: '' }, { verb: 'Defer', to: 'deferred', confirm: false, disabled: false, reason: '', endpoint: '' }, { verb: 'Decline', to: 'declined', confirm: true, disabled: false, reason: '', endpoint: '' }];
   const seen = [];
   const savedFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({ records: [{ id: 'ISS-9001', mtimeMs: 12_000 }] }) });
+  let recordMs = 12_000;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ records: recordMs === undefined ? [] : [{ id: 'ISS-9001', mtimeMs: recordMs }] }) });
   try {
     let answer = 'not ours to fix';
     const i = { model: m, address: addressFor('abcd1234', 'features', { page: 'ticket', note: 'ISS-9001' }), ctx: plainContext('abcd1234', 'features'), memory: new Map(), canWrite: true,
@@ -260,14 +272,23 @@ test('a triage ticket is decided from its ticket screen with the sidecar verbs, 
       write: async (verb, request) => { seen.push([verb, request]); return { ok: true }; }, ask: async () => answer };
     const scene = await page.scene(i);
     assert.deepEqual([...walkScene(scene.nodes)].filter((n) => n.action?.startsWith('needs:')).map((n) => n.action).sort(), ['needs:declined', 'needs:deferred', 'needs:open']);
+    // The note changes after the screen was drawn: the write still carries the drawn time,
+    // so the sidecar can refuse a decision made over text the person never saw.
+    recordMs = 99_000;
     assert.equal(await page.onAction('needs:open', i), true);
     assert.deepEqual(seen.pop(), ['transition', { id: 'ISS-9001', to: 'open', mtime: 12 }]);
     assert.equal(await page.onAction('needs:declined', i), true);
     assert.deepEqual(seen.pop(), ['transition', { id: 'ISS-9001', to: 'declined', note: 'not ours to fix', mtime: 12 }]);
     answer = null;
     assert.equal(await page.onAction('needs:declined', i), false, 'declining without a reason writes nothing');
+    offered = offered.map((v) => (v.to === 'open' ? { ...v, disabled: true, reason: 'already open' } : v));
+    await assert.rejects(page.onAction('needs:open', i), /already open/, 'a verb the sidecar now refuses is not sent');
     offered = offered.filter((v) => v.to !== 'deferred');
     await assert.rejects(page.onAction('needs:deferred', i), /no longer offers/);
+    // Drawn without a time Deck could read: nothing is written.
+    recordMs = undefined;
+    await page.scene(i);
+    await assert.rejects(page.onAction('needs:declined', i), /could not tell when ISS-9001 last changed/);
     i.canWrite = false;
     await assert.rejects(page.onAction('needs:open', i), /does not write/);
     assert.equal(seen.length, 0);

@@ -126,7 +126,10 @@ export function fanPlaces(count: number, cx: number, cy: number, rIn: number, rO
   const width = (a1 - a0) * 0.9;
   const mid = (a0 + a1) / 2;
   const area = 0.5 * width * (rOut * rOut - rIn * rIn);
-  for (let pitch = Math.min(18, Math.max(3, Math.sqrt(area / count) * 0.92)); pitch >= 2.5; pitch -= 0.25) {
+  // Finer and finer, down to a pitch where a particle is a dot: a phase with thousands of
+  // tickets still draws every one of them rather than none (the review of TASK-0155).
+  let last: Array<{ x: number; y: number; size: number }> = [];
+  for (let pitch = Math.min(18, Math.max(0.6, Math.sqrt(area / count) * 0.92)); pitch >= 0.6; pitch -= pitch > 2.5 ? 0.25 : 0.1) {
     const out: Array<{ x: number; y: number; size: number }> = [];
     for (let r = rOut - pitch / 2; r >= rIn && out.length < count; r -= pitch) {
       const cols = Math.max(1, Math.floor((width * r) / pitch));
@@ -139,8 +142,12 @@ export function fanPlaces(count: number, cx: number, cy: number, rIn: number, rO
       }
     }
     if (out.length === count) return out;
+    last = out;
   }
-  return [];
+  // Still more than fits: the rest stand on the innermost row's places again, drawn but
+  // overlapping, so the count on the screen is never smaller than the phase's.
+  const extra = Array.from({ length: count - last.length }, (_, i) => last[i % Math.max(1, last.length)] ?? { ...(() => { const [x, y] = polar(cx, cy, rIn, mid); return { x, y }; })(), size: 0.3 });
+  return [...last, ...extra];
 }
 
 /** How far into the fan a ticket stands: done work at the ring, open work in front of it, what needs you in front of all. */

@@ -27,7 +27,7 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 - [x] The page's ticket data is written by `desktop/scripts/overview-plates.mjs` from the same fixtures as the other plates, so nothing on it is entered by hand. TST-0094 checks the page is written and holds every ticket of both fixtures.
 - [x] Captured pictures of the page (at least two angles on each workspace) are saved under `docs/designs/__attachments__/DES-0005/`, so the plate can be judged without a network connection.
 - [x] DES-0005 shows the pictures under a "Level 2: height is time" heading, says what the picture adds, what it costs (a WebGL dependency in Deck, text drawn as textures, a second renderer to keep the list twin and the checks working), and asks Edwin whether to build it.
-- [x] `cd desktop && npm test` passes. Codex reviews the page and the text, in two rounds at most.
+- [x] `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [x] Export both fixtures' tickets with their phase, type, fill and created date into the page.
@@ -36,7 +36,7 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 
 ## Verification
 
-`desktop/scripts/overview-plates.mjs` writes `docs/designs/DES-0005-time-columns.html` from the fixtures, with each ticket's date read from its note; it holds all 384 of Deck's tickets and all 2,747 of your-trainer's (13 and 45 have no `created:` date). three.js 0.160.0 comes from cdnjs on that page only; `desktop/package.json` is unchanged. `desktop/scripts/time-columns-capture.cjs` took six pictures in a hidden window on 2026-10-15, three angles on each workspace, saved under `docs/designs/__attachments__/DES-0005/time-*.jpg`. DES-0005 has the section and the question. TST-0094 checks that the page holds every ticket and loads nothing else from outside. Codex's review is pending: Codex cannot run on this machine's current sign-in.
+`desktop/scripts/overview-plates.mjs` writes `docs/designs/DES-0005-time-columns.html` from the fixtures, with each ticket's date read from its note; it holds all 395 of Deck's tickets and all 2,747 of your-trainer's (13 and 45 have no `created:` date). three.js 0.160.0 comes from cdnjs on that page only; `desktop/package.json` is unchanged. `desktop/scripts/time-columns-capture.cjs` took six pictures in a hidden window on 2026-10-15, three angles on each workspace, saved under `docs/designs/__attachments__/DES-0005/time-*.jpg`. DES-0005 has the section and the question. TST-0094 checks that the page holds every ticket and loads nothing else from outside. Reviewed instead by two independent Claude reviewers; see FEAT-0025's "Round one of the second revision".
 
 ## Notes
 

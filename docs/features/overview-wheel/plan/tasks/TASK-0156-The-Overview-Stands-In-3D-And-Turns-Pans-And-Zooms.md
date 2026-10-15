@@ -37,7 +37,7 @@ The controls are the same on all four screens:
 - [ ] The scroll wheel zooms the overview when the overview is open and does not zoom Glass behind it (FEAT-0016's zoom).
 - [ ] With reduced motion on, nothing moves until the person drags.
 - [ ] The scene checks keep passing unchanged: the scene is the same data; only the camera moves.
-- [ ] TST-0090 checks the camera module's clamps and reset as data. The window run TST-0093 drags with the middle button, zooms with the wheel and double-clicks on each of the four screens, on both workspaces, and checks a press still opens the right screen afterwards. `cd desktop && npm test` passes. Codex reviews the change, in two rounds at most.
+- [ ] TST-0090 checks the camera module's clamps and reset as data. The window run TST-0093 drags with the middle button, zooms with the wheel and double-clicks on each of the four screens, on both workspaces, and checks a press still opens the right screen afterwards. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [ ] Write the camera module, with pure functions for the clamps and the hit transform.

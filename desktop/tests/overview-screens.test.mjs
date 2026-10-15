@@ -433,8 +433,21 @@ for (const name of WORKSPACES) {
       assert.ok(sector !== undefined, `${phase.id} is drawn`);
       const marks = [...walkScene(sector.children)].filter((n) => n.kind === 'mark' && n.ticket !== undefined);
       assert.equal(marks.length, phase.tickets.length, `${phase.id}: one particle per ticket`);
-      const places = new Set(marks.map((n) => JSON.stringify(n.attrs)));
-      assert.equal(places.size, marks.length, `${phase.id}: no two particles on one place`);
+      // No two particles overlap: every pair of centres stands at least a glyph apart
+      // (the review of TASK-0155 showed comparing attributes missed overlapping rows).
+      const centres = marks.map((n) => {
+        if (n.attrs.cx !== undefined) return [Number(n.attrs.cx), Number(n.attrs.cy), Number(n.attrs.r)];
+        const xy = String(n.attrs.points).split(/[ ,]/).map(Number);
+        const xs = xy.filter((_, i) => i % 2 === 0), ys = xy.filter((_, i) => i % 2 === 1);
+        const cx = xs.reduce((a, b) => a + b, 0) / xs.length, cy = ys.reduce((a, b) => a + b, 0) / ys.length;
+        return [cx, cy, Math.max(...xs.map((x, i) => Math.hypot(x - cx, ys[i] - cy)))];
+      });
+      for (let i = 0; i < centres.length; i += 1) {
+        for (let j = i + 1; j < centres.length; j += 1) {
+          const [x1, y1, r1] = centres[i], [x2, y2, r2] = centres[j];
+          assert.ok(Math.hypot(x1 - x2, y1 - y2) >= 0.9 * Math.min(r1, r2), `${phase.id}: particles ${i} and ${j} overlap`);
+        }
+      }
       const r = (pred) => marks.filter((n) => pred(m.tickets[n.ticket])).map(distance);
       const front = r((t) => t.needsYou), done = r((t) => !t.needsYou && ['delivered', 'dropped'].includes(t.fill)), open = r((t) => !t.needsYou && !['delivered', 'dropped'].includes(t.fill));
       if (front.length && open.length) assert.ok(Math.max(...front) <= Math.min(...open) + 4, `${phase.id}: what needs you stands in front of open work`);
@@ -514,5 +527,16 @@ test('S2 says under each needs-you row what to do, and the callouts say it too',
       assert.equal(row.note, m.tickets[row.id].needs.say, `${row.id}: what to do is under its title`);
       assert.ok(markWords(m.tickets[row.id]).endsWith(`: ${m.tickets[row.id].needs.say}`), `${row.id}: its callout says what to do`);
     }
+  }
+});
+
+// The review of TASK-0155: a phase busier than either fixture still draws every ticket,
+// each on its own place, rather than an empty fan.
+test('a phase with thousands of tickets still draws every one of them, each on its own place', () => {
+  const { fanPlaces, WHEEL } = load('shared/overview-wheel.js');
+  for (const [count, share] of [[1500, 1 / 30], [5000, 1 / 10], [20000, 1 / 30]]) {
+    const places = fanPlaces(count, WHEEL.cx, WHEEL.cy, WHEEL.coreOuter + 16, WHEEL.ringOuter - 10, 0, Math.PI * 2 * share);
+    assert.equal(places.length, count, `${count} tickets in ${share.toFixed(3)} of the wheel`);
+    assert.equal(new Set(places.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`)).size, count, 'no two on one place');
   }
 });

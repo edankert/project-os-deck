@@ -4,7 +4,7 @@ import {
   gateFromModel, linkIds, noteVerdicts, RESULTS, testRunFromPayloads, testRunScene,
   type AcceptData, type DesignFlowData, type StepMarks, type TestRunData,
 } from '../shared/overview-flows.js';
-import { registerScreen, type ScreenDefinition, type ScreenInput } from './overview.js';
+import { drawnMtime, drawnMtimeKey, noteMtime, registerScreen, type ScreenDefinition, type ScreenInput } from './overview.js';
 
 const object = (v: unknown): Record<string, unknown> => typeof v === 'object' && v !== null ? v as Record<string, unknown> : {};
 const text = (v: unknown): string => typeof v === 'string' ? v : '';
@@ -37,7 +37,13 @@ async function designData(input: ScreenInput): Promise<DesignFlowData> {
   return data;
 }
 export const designFlow: ScreenDefinition = {
-  scene: async input => designScene(input.model, await designData(input), input.ctx),
+  scene: async input => {
+    const data = await designData(input);
+    // The sidecar's note payload carries no modification time; Deck's index does. It is
+    // kept as this screen saw it, the guard for a decision made here (review of TASK-0160).
+    input.memory.set(drawnMtimeKey(data.id), await noteMtime(input.ctx.workspaceId, data.id));
+    return designScene(input.model, data, input.ctx);
+  },
   onAction: async (action, input) => {
     if (action.startsWith('plate:')) {
       const n = Number(action.slice(6));
@@ -48,6 +54,9 @@ export const designFlow: ScreenDefinition = {
     writable(input);
     const data = await designData(input); // A stale picture is not authority to decide.
     if (data.status !== 'proposed') throw new Error(`${data.id} is ${data.status}; only a proposed design can be decided`);
+    // The time the screen was drawn at; checked before asking why, so nobody is asked for a
+    // reason Deck will not send (the review of TASK-0160).
+    const mtime = drawnMtime(input.memory, data.id);
     if (action === 'decide:decline') {
       const why = await reason(input, 'Why are you declining this design?');
       if (why === null) return false;
@@ -55,8 +64,8 @@ export const designFlow: ScreenDefinition = {
       const actions = object(await input.read(`/api/notes/actions?id=${encodeURIComponent(data.id)}`));
       const row = (Array.isArray(actions['actions']) ? actions['actions'] : []).map(object).find(r => r['verb'] === 'Decline');
       if (!row || row['disabled'] === true || (row['endpoint'] && row['endpoint'] !== '/api/notes/transition')) throw new Error(text(row?.['reason']) || 'the sidecar offers no design decline');
-      await write(input, 'transition', { id: data.id, to: row['to'], note: why, ...(data.mtime === undefined ? {} : { mtime: data.mtime }) });
-    } else await write(input, 'decide', { id: data.id, accept: true, ...(data.mtime === undefined ? {} : { mtime: data.mtime }) });
+      await write(input, 'transition', { id: data.id, to: row['to'], note: why, mtime });
+    } else await write(input, 'decide', { id: data.id, accept: true, mtime });
     return true;
   },
 };

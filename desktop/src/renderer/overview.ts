@@ -72,6 +72,33 @@ export function registerScreen(kind: 'page' | 'flow', id: string, definition: Sc
   (kind === 'page' ? pages : flows).set(id, definition);
 }
 
+/**
+ * When a note last changed, in seconds, from Deck's own index: the guard a write sends
+ * so the sidecar refuses a note that changed after the screen was drawn (ADR-0003).
+ * Undefined when Deck cannot tell; a caller that writes then refuses rather than
+ * writing unguarded (the review of TASK-0160).
+ */
+export async function noteMtime(workspaceId: string, id: string): Promise<number | undefined> {
+  try {
+    const response = await fetch(`/deck/records/${encodeURIComponent(workspaceId)}?id=${encodeURIComponent(id)}`);
+    if (!response.ok) return undefined;
+    const ms = ((await response.json()) as { records?: Array<{ mtimeMs?: number }> }).records?.[0]?.mtimeMs;
+    return typeof ms === 'number' ? ms / 1000 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The modification time a screen saw when it was drawn, kept for its writes. */
+export const drawnMtimeKey = (id: string): string => `drawn-mtime:${id}`;
+
+/** The time kept when the screen was drawn, or a refusal: never a write without the guard. */
+export function drawnMtime(memory: Map<string, unknown>, id: string): number {
+  const mtime = memory.get(drawnMtimeKey(id));
+  if (typeof mtime !== 'number') throw new Error(`Deck could not tell when ${id} last changed, so it will not write over it; open it again`);
+  return mtime;
+}
+
 /** What a page or a flow registered: for the node tests, which drive a screen's actions with no window. */
 export function registeredScreen(kind: 'page' | 'flow', id: string): ScreenDefinition | undefined {
   return (kind === 'page' ? pages : flows).get(id);
@@ -669,6 +696,17 @@ function labelOf(element: Element | null): string | null {
   return labelled?.getAttribute('data-label') ?? null;
 }
 
+/** Which tickets link to each ticket, built once per model rather than on every pointer move. */
+let linkedFrom: { model: OverviewModel; from: Map<string, string[]> } | null = null;
+
+function linksInto(model: OverviewModel): Map<string, string[]> {
+  if (linkedFrom?.model === model) return linkedFrom.from;
+  const from = new Map<string, string[]>();
+  for (const t of Object.values(model.tickets)) for (const target of t.links) from.set(target, [...(from.get(target) ?? []), t.id]);
+  linkedFrom = { model, from };
+  return from;
+}
+
 /** Where each ticket's mark stands in the current scene, by its own geometry, for the wires. */
 let centres: Map<string, [number, number]> = new Map();
 
@@ -701,8 +739,7 @@ function drawWires(element: Element | null): void {
   if (id === null || id === undefined || model === undefined || model.tickets[id] === undefined) return;
   const from = centres.get(id);
   if (from === undefined) return;
-  const linked = new Set(model.tickets[id]!.links);
-  for (const other of Object.values(model.tickets)) if (other.links.includes(id)) linked.add(other.id);
+  const linked = new Set([...model.tickets[id]!.links, ...(linksInto(model).get(id) ?? [])]);
   const ns = 'http://www.w3.org/2000/svg';
   const g = document.createElementNS(ns, 'g');
   g.setAttribute('class', 'ov-links');

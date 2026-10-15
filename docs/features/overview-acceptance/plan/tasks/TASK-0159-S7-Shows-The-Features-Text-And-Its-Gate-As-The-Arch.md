@@ -26,7 +26,7 @@ tests: ["[[TST-0085-Flow-Scenes-And-Payloads-Keep-The-Recorded-Evidence]]", "[[T
 - [ ] S7 draws its gate with the shared arch component (`desktop/src/shared/overview-gate.ts`), from the same `featureGate` data as today. The chips are no longer drawn anywhere.
 - [ ] The arch's callouts carry the five bucket meanings, and "not reported" stays visible, as TASK-0154 draws them.
 - [ ] Accept and Send back keep their current availability and refusals: unavailable while the cockpit advertises no feature transition ([[project-os-cockpit#ISS-0323]]), with the hover saying so.
-- [ ] TST-0085 checks the panel is present with the note's text and the arch has five segments, on both fixtures. The window run TST-0093 opens S7 on both workspaces. `cd desktop && npm test` passes. Claude reviews the change, in two rounds at most.
+- [ ] TST-0085 checks the panel is present with the note's text and the arch has five segments, on both fixtures. The window run TST-0093 opens S7 on both workspaces. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [ ] Reuse S3's note panel in S7's scene; read the text the way S3 does.

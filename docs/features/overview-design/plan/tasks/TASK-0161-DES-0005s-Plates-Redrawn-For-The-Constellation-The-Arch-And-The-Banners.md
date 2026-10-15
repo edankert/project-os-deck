@@ -26,7 +26,7 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 - [x] New pictures from a real Deck window show the tilted plane at rest and after a turn and a zoom, on S1 and S2.
 - [x] Each plate's caption gives its word count at rest, as the check counts it.
 - [x] DES-0005's screen texts (S1, S3, S7) and "The look" describe what is now built; its status stays `proposed`.
-- [x] TST-0094 passes. Codex reviews the plates against the screens, in two rounds at most.
+- [x] TST-0094 passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [x] Run the plates script; take the window pictures in the batched window run, with Edwin's go-ahead.

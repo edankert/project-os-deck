@@ -32,12 +32,12 @@ The reasons are the cockpit's own, from `_needs_human` in `../project-os-cockpit
 | A `depends:` entry is unfinished | "Waiting on <ID>: finish that first" | The ticket it waits on |
 
 ## Definition of Done
-- [x] A contract change to `Ticket` in `desktop/src/shared/overview-types.ts` is proposed under FEAT-0026's "Questions between the lanes" and agreed by both lanes before either codes against it. The proposal to start from: `needs?: { reason: 'triage' | 'review' | 'ready' | 'failed' | 'waiting'; say: string; action: { address: string } | { verbs: true }; waitingOn?: string }`, present exactly when `needsYou` is true.
+- [x] A contract change to `Ticket` in `desktop/src/shared/overview-types.ts` is proposed under FEAT-0026's "Questions between the lanes" and agreed by both lanes before either codes against it. (Claude agreed with an amendment; Codex could not answer because it stopped running, and Edwin then asked for Claude only, so the contract stands as amended.) The proposal to start from: `needs?: { reason: 'triage' | 'review' | 'ready' | 'failed' | 'waiting'; say: string; action: { address: string } | { verbs: true }; waitingOn?: string }`, present exactly when `needsYou` is true.
 - [x] The rule that sets `needsYou` also sets `needs`, so the two can never disagree. When several branches fire, the order is the cockpit's: triage or review, then failed, then ready, then waiting.
 - [x] Every ticket with `needsYou: true` on both fixtures has a `needs` entry, and no other ticket has one. TST-0080 checks one ticket of each reason; TST-0082 checks the counts on both fixtures.
 - [x] A "waiting" reason names the first unfinished ticket in `depends:`. A "review" reason on a feature points at S7, on a design at S5.
 - [x] The words are fixed strings in one place, so S2, S3 and the callouts cannot drift apart.
-- [x] `cd desktop && npm test` passes. Claude reviews the change, in two rounds at most.
+- [x] `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [x] Write the proposal under FEAT-0026's "Questions between the lanes" and wait for Claude's answer.

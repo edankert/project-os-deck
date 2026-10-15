@@ -322,8 +322,12 @@ test('every ticket that needs you carries why, what to do and where to do it; no
     note('ISS-0002', 'issue', 'reopened'),
     note('TASK-0002', 'task', 'doing'),
     dependent('TASK-0001', ['TASK-0002']),
-    // Two reasons at once: review comes before an unfinished dependency, as in the cockpit.
+    // Two reasons at once: a reason the note's own status gives comes before an unfinished
+    // dependency, as in the cockpit, for every such status.
     note('FEAT-0002', 'feature', 'review', { depends: ['TASK-0002'] }),
+    note('ISS-0003', 'issue', 'triage', { depends: ['TASK-0002'] }),
+    note('TST-0003', 'test', 'failing', { depends: ['TASK-0002'] }),
+    note('TST-0004', 'test', 'ready', { depends: ['TASK-0002'] }),
     note('TASK-0003', 'task', 'done'),
   ];
   const m = run(records);
@@ -338,6 +342,9 @@ test('every ticket that needs you carries why, what to do and where to do it; no
   assert.deepEqual([needs('ISS-0002').reason, needs('ISS-0002').action], ['failed', { parts: { page: 'ticket', note: 'ISS-0002' } }]);
   assert.deepEqual(needs('TASK-0001'), { reason: 'waiting', say: 'Waiting on TASK-0002: finish that first', action: { parts: { page: 'ticket', note: 'TASK-0002' } }, waitingOn: 'TASK-0002' });
   assert.equal(needs('FEAT-0002').reason, 'review', 'review comes before waiting');
+  assert.equal(needs('ISS-0003').reason, 'triage', 'triage comes before waiting');
+  assert.equal(needs('TST-0003').reason, 'failed', 'failed comes before waiting');
+  assert.equal(needs('TST-0004').reason, 'ready', 'a test never run comes before waiting');
   for (const t of Object.values(m.tickets)) assert.equal(t.needs !== undefined, t.needsYou, `${t.id}: needs exactly when needsYou`);
 });
 

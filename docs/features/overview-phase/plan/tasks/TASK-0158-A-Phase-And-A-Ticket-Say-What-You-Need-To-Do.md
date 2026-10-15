@@ -31,7 +31,7 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 - [ ] Every callout for a ticket that needs you ends with the reason's sentence.
 - [ ] The banner's words count toward S3's 60 words at rest (it is not a list of tickets), and S3 stays within 60 on both workspaces. If a long ticket title pushes it over, the banner keeps its sentence and the title shortens.
 - [ ] The list twin carries the banner's sentence and its button.
-- [ ] TST-0090 checks one ticket of each reason on both fixtures: banner present, button address right, S2's row reason present. The window run TST-0093 opens a needs-you ticket on each workspace and presses the banner's button. `cd desktop && npm test` passes. Codex reviews the change, in two rounds at most.
+- [ ] TST-0090 checks one ticket of each reason on both fixtures: banner present, button address right, S2's row reason present. The window run TST-0093 opens a needs-you ticket on each workspace and presses the banner's button. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [ ] Read `needs` from the model in the S3 and S2 scenes.

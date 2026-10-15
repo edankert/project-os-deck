@@ -27,7 +27,7 @@ tests: ["[[TST-0087-Flow-Actions-Use-The-Shell-And-Preserve-Refusals]]", "[[TST-
 - [ ] A press sends the person's write through the shell; Deck refuses an `agent:` identity before sending; a refusal from the sidecar is shown in the sidecar's own words.
 - [ ] After a successful write, the model is read again and the banner and the dot go away.
 - [ ] The served (tablet) host shows the buttons unavailable and writes nothing.
-- [ ] TST-0087 checks the route, the agent refusal and the preserved sidecar refusal for the decide verbs. `cd desktop && npm test` passes. Claude reviews the change, in two rounds at most.
+- [ ] TST-0087 checks the route, the agent refusal and the preserved sidecar refusal for the decide verbs. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
 - [ ] Read the advertised verbs for the note from the sidecar, as S5 and S6 do.

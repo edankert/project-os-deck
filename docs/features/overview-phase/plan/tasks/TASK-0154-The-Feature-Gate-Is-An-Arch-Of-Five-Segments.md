@@ -37,12 +37,12 @@ What each bucket means goes into the callout on its segment, and into DES-0005. 
 - [ ] "Not reported" and "nothing to check" stay distinct and visible, as TASK-0151 made them, and neither draws a needs-you dot.
 - [ ] Pointing at a segment, or focusing it, shows a callout with the bucket's meaning (the five sentences above), its count and its missing items. The list twin keeps five evidence rows.
 - [ ] S3 draws the small arch for a feature. The 60-word limit at rest holds on S3 and S7 on both workspaces.
-- [ ] TST-0090 and TST-0085 check the arch on both fixtures: five segments, the fill share matching the counts, "not reported" drawn without fill. `cd desktop && npm test` passes. Codex reviews the change, in two rounds at most.
+- [ ] TST-0090 and TST-0085 check the arch on both fixtures: five segments, the fill share matching the counts, "not reported" drawn without fill. `cd desktop && npm test` passes. Two independent Claude reviewers, each in a clean context, review it in two rounds at most (Codex stopped running on 2026-10-15, and Edwin asked for Claude only).
 
 ## Steps
-- [ ] Propose the module move under FEAT-0029's "Questions between the lanes"; wait for Codex's agreement.
+- [ ] Propose the module move under FEAT-0029's "Questions between the lanes"; wait for Codex's agreement. (Codex stopped running before it could answer; the arch was drawn in its own module so Codex's file was untouched, and Claude made S7's switch in TASK-0159.)
 - [ ] Draw the arch as SVG paths from the five counts; keep the gate's existing mark ids (`gate-<feature>-<key>-…`) so the evidence checks keep holding.
-- [ ] Use it on S3; leave S7's switch to Codex (TASK-0159).
+- [ ] Use it on S3; leave S7's switch to TASK-0159 (done by Claude once Codex stopped).
 - [ ] Add the five meanings to the callout text and to DES-0005.
 
 ## Notes
