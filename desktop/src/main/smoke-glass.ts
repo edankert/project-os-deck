@@ -2299,7 +2299,14 @@ async function recordFocus(kit: Kit): Promise<void> {
         const f = document.getElementById('field').getBoundingClientRect();
         const degree = new Map();
         for (const e of g.orbit ? g.orbit.edges : []) { if (!e.target || e.target === e.source) continue; degree.set(e.source, (degree.get(e.source) || 0) + 1); degree.set(e.target, (degree.get(e.target) || 0) + 1); }
-        const clear = g.dots.filter((d) => { const hit = document.elementFromPoint(f.left + d.x, f.top + d.y); return hit && !hit.closest('.field-card, .pane, .compass, .field-bar, .sector-label, .field-say'); });
+        // Clear of every card, and of every other dot: in a crowded orbit a press at
+        // one dot's place can land on a neighbour drawn over it, and the check would
+        // then judge the neighbour's neighbourhood (seen when the corpus passed 460 notes).
+        const clear = g.dots.filter((d) => {
+          const hit = document.elementFromPoint(f.left + d.x, f.top + d.y);
+          if (!hit || hit.closest('.field-card, .pane, .compass, .field-bar, .sector-label, .field-say')) return false;
+          return g.dots.every((o) => o === d || Math.hypot(o.x - d.x, o.y - d.y) > (o.r || 4) + (d.r || 4) + 6);
+        });
         clear.sort((a, b) => (degree.get(b.id) || 0) - (degree.get(a.id) || 0));
         const d = clear[0];
         return d ? { x: Math.round(d.x), y: Math.round(d.y), id: d.id } : null;
@@ -2323,7 +2330,7 @@ async function recordFocus(kit: Kit): Promise<void> {
         const yaw6 = await js<number>(`__t.yaw()`);
         record(
           inOrbit.noteId === dot.id && orbitState.pane && orbitState.cards === 0 && !orbitState.dot && orbitState.twice.length === 0 && orbitState.seatedDots.length === 0 && orbitSeats.length > 0 && orbitSeats.length === orbitAll.size && orbitSeats.every((s) => orbitAll.has(s.id)),
-          `in the orbit a click on the dot for ${dot.id} opens it as the focused document, and it is one object there too: no card (${orbitState.cards}) and no dot (${orbitState.dot}) for it, and its ${orbitAll.size} neighbours are ${orbitSeats.length} seated cards, none of them also a dot (${orbitState.seatedDots.length}) or drawn twice (${orbitState.twice.length})${orbitSeats.some((s) => !orbitAll.has(s.id)) ? `; seated but not joined to it: ${orbitSeats.filter((s) => !orbitAll.has(s.id)).map((s) => s.id).join(', ')}` : ''}`,
+          `in the orbit a click on the dot for ${dot.id} opens it as the focused document, and it is one object there too: no card (${orbitState.cards}) and no dot (${orbitState.dot}) for it, and its ${orbitAll.size} neighbours are ${orbitSeats.length} seated cards, none of them also a dot (${orbitState.seatedDots.length}) or drawn twice (${orbitState.twice.length})${inOrbit.noteId !== dot.id ? `; the press opened ${inOrbit.noteId ?? 'nothing'} instead` : ''}${orbitSeats.some((s) => !orbitAll.has(s.id)) ? `; seated but not joined to it: ${orbitSeats.filter((s) => !orbitAll.has(s.id)).map((s) => s.id).join(', ')}` : ''}`,
         );
         await escape();
         await delay(600);
