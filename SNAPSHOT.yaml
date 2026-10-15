@@ -62,9 +62,9 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0005"
-  feature: "FEAT-0028"
-  task: "TASK-0154"
-  note: "2026-10-15, second revision, PLANNED: Edwin approved six recommendations after running the overview again (DES-0005's revision of 2026-10-15, 'second'). The wheel becomes a constellation like the re-phase screen; the wheel, S2's plane and the ring screens stand in CSS 3D and turn, pan and zoom with the mouse; a real 3D wheel where height is time is drawn as a design plate only; the feature's gate is redrawn as an arch; S7 shows the feature's text; and every ticket that needs you says what to do. Nine tasks, TASK-0153 to TASK-0161. Two start at once: Codex's TASK-0153 (the model says why a ticket needs you) and Claude's TASK-0154 (the arch gate). FEAT-0025 to FEAT-0029 are back at doing. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  feature: "FEAT-0027"
+  task: ""
+  note: "2026-10-15, last: the second overview revision is built by Claude alone (Codex stopped; Edwin: only Claude), reviewed in two rounds by two independent Claude reviewers, and verified (789 node tests; the window run TST-0093 on Deck and your-trainer). The wheel is a constellation, every screen stands in 3D with middle-button turn, Shift pan and zoom, the gate is an arch, S7 shows the feature's text, and needs-you says what to do with a button or the sidecar's triage verbs. FEAT-0025 to FEAT-0029 are at review. Left for Edwin: run TST-0091, TST-0092, TST-0088, TST-0089 and TST-0100; decide DES-0005 and its questions, including whether to build the 3D time-columns wheel into Deck. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
