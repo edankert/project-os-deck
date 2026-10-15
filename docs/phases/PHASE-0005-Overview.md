@@ -102,7 +102,7 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 
 1. **Accept or decline DES-0005**, in the cockpit or in Deck's S5.
 2. **Run the acceptance tests**: TST-0091 and TST-0092 (the drawing lane), and TST-0088, TST-0089 and TST-0100 (the three flows). They include the step where an agent tries a verdict and is refused.
-3. **Decide three narrowings**: FEAT-0029's criteria narrowed to what the cockpit's sidecar allows (it moves no feature out of review and refuses an agent only on `acceptance-run`); FEAT-0026's your-trainer fixture, captured from a working tree with another session's uncommitted notes; and TASK-0129's cockpit issue, written in the adoption table instead of filed.
+3. **Decide three narrowings**: FEAT-0029's criteria narrowed to what the cockpit's sidecar allows (it moves no feature out of review and refuses an agent only on `acceptance-run`); FEAT-0026's your-trainer fixture, captured from a working tree with another session's uncommitted notes; the three cockpit gaps are filed there at triage on 2026-10-15: [[project-os-cockpit#ISS-0323]], [[project-os-cockpit#ISS-0324]] and [[project-os-cockpit#ISS-0325]].
 
-**What the cockpit owes Deck** is listed under "Requests to the cockpit" in [[REFERENCE-COCKPIT-ADOPTION]]: a guarded write that sets `phase:`, person-only feature transitions, and agent refusal on `decide` and `mark-check`.
+**What the cockpit owes Deck** is filed as [[project-os-cockpit#ISS-0323]] (person-only feature transitions), [[project-os-cockpit#ISS-0324]] (agent refusal on `decide` and `mark-check`) and [[project-os-cockpit#ISS-0325]] (a guarded write that sets `phase:`). When the first two land, FEAT-0029's narrowed criteria can be restored.
 
