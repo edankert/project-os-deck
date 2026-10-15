@@ -1533,7 +1533,7 @@ body.pinned .overview-area { left: 0; }
 .overview-area[hidden] { display: none; }
 .ov-stage { position: absolute; inset: 0; overflow: hidden; perspective: 1800px; perspective-origin: 50% 40%; }
 /* What the camera turns, pans and zooms (TASK-0156): the picture and its panels together. */
-.ov-board { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
+.ov-board { position: absolute; inset: 0; transform-origin: 50% 50%; }
 .ov-stage svg { width: 100%; height: 100%; display: block; }
 .ov-stage svg > rect:first-of-type { display: none; }
 .ov-callout {
