@@ -43,6 +43,8 @@ The check tries six times and reports, for each try, when the press arrived: "13
 
 **2026-10-16, a second cause found, by the note itself.** On `c4f1c70`, which filed this issue and changed nothing else, the smoke run also failed fourteen keyboard and lift checks. This issue is the only issue at triage, and two of the smoke's choices depend on what is at the top of the Issues view: the keyboard check's two presses of Down landed on a group heading, and the lift checks took this issue, which has almost no neighbours. [[TASK-0170]] makes both choices independent of what is at triage. It also shows the family this issue belongs to: checks that read the live corpus break when a note is added.
 
+**2026-10-16, the corpus pinned.** At Edwin's choice the smoke run now reads its notes at a pinned commit ([[TASK-0171]]), and the checks that depended on the corpus pass. What still fails on CI (`1fd54a4`) is timing: this issue's document-growth check, and two checks that each failed on one host and passed on the other ("V on its header gives it back to Features alone" on loopback, "a surface switch each leave the focus" on the network).
+
 ## Next Actions
 
 - [ ] Triage: decide whether the check should measure the document's position when the press lands (and wait for it to be over the row) rather than time the press against the growth.
