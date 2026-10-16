@@ -3,15 +3,15 @@ type: "[[feature]]"
 id: FEAT-0026
 aliases: ["FEAT-0026"]
 title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-16
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Every overview screen reads one model of the workspace's tickets, so no two screens can disagree, and every screen is checked automatically against the look's rules on two real workspaces."
 requirements: []
-tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]", "[[TASK-0144]]", "[[TASK-0153-Every-Ticket-That-Needs-You-Says-Why-And-What-To-Do]]"]
+tasks: ["[[TASK-0115-Build-One-Overview-From-The-Notes]]", "[[TASK-0116-Serve-And-Print-The-Overview]]", "[[TASK-0117-Build-Both-Overview-Fixtures-From-Real-Notes]]", "[[TASK-0118-Check-Every-Screen-As-Data]]", "[[TASK-0119-Report-When-Localhost-Tests-Cannot-Run]]", "[[TASK-0140-Fix-The-Overview-Review-Findings]]", "[[TASK-0141-Give-Every-Flow-Count-Its-Own-Mark]]", "[[TASK-0142-Keep-Test-Fixtures-Out-Of-The-Built-Module-Scan]]", "[[TASK-0144]]", "[[TASK-0153-Every-Ticket-That-Needs-You-Says-Why-And-What-To-Do]]", "[[TASK-0165-Every-Ticket-Knows-Its-Feature-And-The-Model-Knows-The-Focus]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -71,6 +71,8 @@ Deck’s 384-ticket fixture was replayed from `git archive 96955cc8afecc56b8ac36
 `bash tools/agents/check-docs-first.sh`, `bash tools/scripts/validate-docs.sh` and `git diff --check` pass. The validator reports existing advisory warnings. No CI or human acceptance verdict is claimed.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-16, to build the towers into Deck.** Edwin liked DES-0005's towers page and asked for it to be implemented as suggested, with a different design for the exit criteria and the red caps made pressable ([[TASK-0164]] to [[TASK-0169]]).
 
 **Back to `doing` on 2026-10-15 (second revision), because Edwin ran the overview again and approved six changes.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. The approved plan is DES-0005's revision of 2026-10-15 (second). The move from `review` back to `doing` is the same one the first revision made, because new work is added inside the feature. The paragraphs below it describe the state before this revision.
 

@@ -3,15 +3,15 @@ type: "[[feature]]"
 id: FEAT-0028
 aliases: ["FEAT-0028"]
 title: "A phase and a ticket open as pictures: the phase's web, exit-criteria ring and depth field; a ticket's lifecycle track and neighbourhood; re-phasing as moving particles"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-16
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "From the wheel a person opens a phase and sees what it still owes and what kind of work it is, opens a ticket and sees where it is in its life and what it is joined to, and sees where the tickets with no phase would go, all without reading a list."
 requirements: []
-tasks: ["[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0154]]", "[[TASK-0158]]"]
+tasks: ["[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0154]]", "[[TASK-0158]]", "[[TASK-0168]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -58,6 +58,8 @@ Out of scope:
 - The window run, TST-0093, 2026-10-14: S2, S3 and S4 opened in a real window on both workspaces.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-16, to build the towers into Deck.** Edwin liked DES-0005's towers page and asked for it to be implemented as suggested, with a different design for the exit criteria and the red caps made pressable ([[TASK-0164]] to [[TASK-0169]]).
 
 **Back to `doing` on 2026-10-15 (second revision), because Edwin ran the overview again and approved six changes.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. The approved plan is DES-0005's revision of 2026-10-15 (second). The move from `review` back to `doing` is the same one the first revision made, because new work is added inside the feature. The paragraphs below it describe the state before this revision.
 

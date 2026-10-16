@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0027
 aliases: ["FEAT-0027"]
 title: "Deck opens on the wheel of phases: the circular overview, with finished phases on a shelf, the backlog in a tray and tickets with no phase in the core"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -11,7 +11,7 @@ updated: 2026-10-16
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "A person opening Deck sees, in one picture, how far each unfinished phase has got and where the failed, owed-again and open tickets are, and reaches any phase from it in one click."
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0131]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0152]]", "[[TASK-0155]]", "[[TASK-0156]]", "[[TASK-0162]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0131]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0152]]", "[[TASK-0155]]", "[[TASK-0156]]", "[[TASK-0162]]", "[[TASK-0166]]", "[[TASK-0167]]", "[[TASK-0169]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -60,6 +60,8 @@ Out of scope:
 - The window run, TST-0093, 2026-10-14: passed on Deck (374 tickets) and your-trainer (2,747) after `99eeeab`; its first run found two defects, fixed there.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-16, to build the towers into Deck.** Edwin liked DES-0005's towers page and asked for it to be implemented as suggested, with a different design for the exit criteria and the red caps made pressable ([[TASK-0164]] to [[TASK-0169]]).
 
 **Back to `doing` on 2026-10-16.** Edwin found the camera turned against the mouse now and again and was hard to bring back. [[TASK-0162]] fixes both. The towers on the ring that may replace the wheel are drawn under FEAT-0025 first ([[TASK-0163]]).
 
