@@ -32,6 +32,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The smoke run reads its notes at a pinned commit (TASK-0171,
+          # SMOKE_CORPUS in desktop/src/main/smoke-support.ts), so it needs the history.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

@@ -52,7 +52,7 @@ import {
 } from '../shared/write-client.js';
 import { navigationFor } from '../shared/origin.js';
 import { ViewRegistry, sourceOf } from '../shared/views.js';
-import { defaultWorkspacePath, focusPolicy, smokeVerdict } from './smoke-support.js';
+import { defaultWorkspacePath, focusPolicy, pinnedCorpus, SMOKE_CORPUS, smokeVerdict } from './smoke-support.js';
 
 // Read once, at start, so every window in a run is treated the same way
 // (ISS-0075). `focusApp` consults it; `runSmoke` prints it.
@@ -983,6 +983,14 @@ app.on('before-quit', (event) => {
   });
 });
 app.on('will-quit', shutdown);
+app.on('quit', () => {
+  if (smokeCorpusDir === null) return;
+  try {
+    fs.rmSync(smokeCorpusDir, { recursive: true, force: true });
+  } catch {
+    // A temporary copy left behind is not worth failing the run for.
+  }
+});
 process.once('exit', shutdown);
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
@@ -2544,8 +2552,19 @@ function notesWithAnUntickedCriterion(root: string, most = 500): string[] {
   return found;
 }
 
+/** The smoke run's pinned copy of this repository's notes, removed when Deck quits (TASK-0171). */
+let smokeCorpusDir: string | null = null;
+
 function prepareWorkspace(): PreparedWorkspace | null {
-  const wanted = argValue('--workspace') ?? defaultWorkspacePath(__dirname);
+  const named = argValue('--workspace');
+  let wanted = named ?? defaultWorkspacePath(__dirname);
+  // The smoke run reads this repository's notes at a pinned commit unless it is told to
+  // read a workspace live: a new note must not change what its checks pick (ISS-0092).
+  if (named === null && process.argv.includes('--smoke') && !process.argv.includes('--live-corpus')) {
+    smokeCorpusDir = pinnedCorpus(wanted, path.join(app.getPath('temp'), `deck-smoke-corpus-${process.pid}`));
+    console.log(JSON.stringify({ smokeCorpus: SMOKE_CORPUS.slice(0, 7), copy: smokeCorpusDir }));
+    wanted = smokeCorpusDir;
+  }
   const added = workspaces.add(wanted);
   if (!added.ok) {
     console.log(JSON.stringify({ workspaceRefused: added.reason, path: wanted }));

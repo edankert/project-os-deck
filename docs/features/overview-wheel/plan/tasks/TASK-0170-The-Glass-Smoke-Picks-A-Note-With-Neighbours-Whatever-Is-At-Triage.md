@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0170
 title: "The Glass smoke run takes a note with neighbours and a row to lift, whatever issue happens to be at triage"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: system:claude
 created: 2026-10-16
@@ -28,8 +28,10 @@ tests: []
 
 ## Definition of Done
 
-- [ ] The keyboard check presses Down until the keyboard is on a row, at most eight times.
-- [ ] The lift checks take the first front card that is not at triage, and the first of all only if every one is.
-- [ ] CI's `deck-smoke` no longer fails those checks; whatever else it fails is named.
+- [x] The keyboard check presses Down until the keyboard is on a row, at most eight times.
+- [x] The lift checks take the first front card that is not at triage, and the first of all only if every one is.
+- [x] CI's `deck-smoke` no longer fails those checks; whatever else it fails is named.
 
 ## Verification
+
+On CI at `eb3b7ed` the keyboard checks and two orbit checks no longer failed. Ten Glass checks still did, each starting from what the live corpus puts in a given place (several still on ISS-0092). Edwin chose to pin the smoke run's notes instead of hardening check by check: [[TASK-0171]]. These two choices stay, as they are robust anyway.

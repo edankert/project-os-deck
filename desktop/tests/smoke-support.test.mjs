@@ -138,3 +138,26 @@ test('a word the runner does not know is refused by name, not treated as a mode'
   assert.equal(status, 2);
   assert.match(out, /--quietly/);
 });
+
+// TASK-0171 — the smoke run reads this repository's notes at a pinned commit, so a new
+// note cannot change what its checks pick (ISS-0092).
+test('the smoke corpus is a copy at the pinned commit, and a missing commit is refused with the way to fetch it', (t) => {
+  const { pinnedCorpus, SMOKE_CORPUS } = load('main/smoke-support.js');
+  const repo = path.resolve(desktopRoot, '..');
+  const has = spawnSync('git', ['-C', repo, 'cat-file', '-e', `${SMOKE_CORPUS}^{commit}`]).status === 0;
+  if (!has) {
+    t.skip(`this clone does not have the pinned commit ${SMOKE_CORPUS.slice(0, 7)} (a shallow clone); the smoke run would refuse it the same way`);
+    return;
+  }
+  const into = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-corpus-'));
+  try {
+    pinnedCorpus(repo, into);
+    assert.equal(spawnSync('git', ['-C', into, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim(), SMOKE_CORPUS, 'the copy stands at the pin');
+    assert.ok(fs.existsSync(path.join(into, 'SNAPSHOT.yaml')), 'the copy is a project-os workspace');
+    assert.ok(!fs.readdirSync(path.join(into, 'docs', 'issues')).some((f) => f.startsWith('ISS-0092-')), 'a note filed after the pin is not in the copy');
+    assert.equal(spawnSync('git', ['-C', repo, 'status', '--porcelain', '--', 'docs'], { encoding: 'utf8' }).status, 0, 'the repository itself is left alone');
+    assert.throws(() => pinnedCorpus(repo, `${into}-missing`, '0'.repeat(40)), /does not have; fetch the history \(git fetch --unshallow\), or run it live with --live-corpus/);
+  } finally {
+    fs.rmSync(into, { recursive: true, force: true });
+  }
+});

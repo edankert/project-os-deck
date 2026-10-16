@@ -9,7 +9,37 @@
  * checks against a workspace that did not exist (ISS-0022). Both decisions
  * that let that happen live here now, and the suite drives them.
  */
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
+
+/**
+ * The commit whose notes the smoke run reads (TASK-0171). The run used to read the
+ * repository's live notes, and a note filed at triage turned fourteen Glass checks red
+ * on a commit that changed only notes (ISS-0092): each check starts from whatever note
+ * the corpus puts in a given place. `d296ebe` is the last commit whose smoke run passed
+ * before that note. Move the pin on purpose, after a smoke run passes on the new one.
+ */
+export const SMOKE_CORPUS = 'd296ebe2d256fa05c04d8bbe6f850a9b70ba560f';
+
+/**
+ * A copy of `repo` at `pin`, in `into`, for the smoke run to open as its workspace: a
+ * local clone that shares the repository's objects, checked out at the pinned commit.
+ * Its writes stay in the copy. Throws, saying how to fetch it, when the commit is not
+ * in the repository (a shallow clone).
+ */
+export function pinnedCorpus(repo: string, into: string, pin = SMOKE_CORPUS): string {
+  const git = (args: string[]): string => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    git(['-C', repo, 'cat-file', '-e', `${pin}^{commit}`]);
+  } catch {
+    throw new Error(`the smoke run's notes are pinned at ${pin.slice(0, 7)}, which this clone does not have; fetch the history (git fetch --unshallow), or run it live with --live-corpus`);
+  }
+  fs.rmSync(into, { recursive: true, force: true });
+  git(['clone', '--quiet', '--shared', '--no-checkout', repo, into]);
+  git(['-C', into, 'checkout', '--quiet', '--detach', pin]);
+  return into;
+}
 
 /**
  * The workspace the smoke run drives when `--workspace` names none.

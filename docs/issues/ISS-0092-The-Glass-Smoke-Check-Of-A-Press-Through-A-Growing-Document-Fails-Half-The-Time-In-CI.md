@@ -15,7 +15,7 @@ component: "desktop/src/main/smoke-glass.ts"
 parent: ""
 related: ["[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 tests: []
-tasks: ["[[TASK-0170]]"]
+tasks: ["[[TASK-0170]]", "[[TASK-0171]]"]
 ---
 
 # The window smoke run in CI fails about half the time on one Glass check
