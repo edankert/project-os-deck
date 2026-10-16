@@ -1101,71 +1101,13 @@ async function recordPanes(kit: Kit): Promise<void> {
   const stored = JSON.parse(kept) as Array<{ noteId: string; x: number; y: number; w?: number; h?: number }>;
   const matches = stored.every((c) => restored.some((r) => r.id === c.noteId && r.left === `${c.x}px` && r.top === `${c.y}px` && c.w !== undefined && r.width === `${c.w}px` && c.h !== undefined && r.height === `${c.h}px`));
   record(stored.length === 2 && matches, `after a reload every pane is where it was and the size it was (${restored.map((r) => `${r.id} ${r.left},${r.top} ${r.width} by ${r.height}`).join('; ')})`);
-  // Spread shows the same notes at the same positions, in the view that holds them.
+  // The panes' view, for what follows.
   await view('features');
-  await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`);
-  await delay(1200);
-  const spread = await js<Array<{ id: string; left: string; top: string }>>(`[...document.querySelectorAll('#desk .card:not([hidden])')].map((c) => ({ id: c.dataset.noteId, left: c.style.left, top: c.style.top })) `);
-  record(
-    stored.every((c) => spread.some((s) => s.id === c.noteId && s.left === `${c.x}px` && s.top === `${c.y}px`)),
-    `Spread shows the same desk at the same positions (${spread.map((s) => s.id).join(', ')})`,
-  );
-  // A click on a card lying under another brings it forward (ISS-0067):
-  // a point of it that shows, and a point of it the other card covers.
-  // The desk is scrolled to the cards first. A note opened in Glass stands
-  // beside the collection since FEAT-0020, 368 px or more into the field, and
-  // Spread's desk is narrower than that at this window's width: the cards are
-  // on the desk and past its right edge until it is scrolled.
-  const scrolled = await js<{ by: number; desk: number; cards: number[] }>(`(() => { const desk = document.getElementById('desk'); const cards = [...document.querySelectorAll('#desk .card:not([hidden])')]; const lefts = cards.map((c) => parseFloat(c.style.left) || 0); desk.scrollLeft = Math.max(0, Math.min(...lefts) - 24); desk.scrollTop = 0; return { by: desk.scrollLeft, desk: Math.round(desk.clientWidth), cards: lefts }; })()`);
-  await delay(300);
-  const buried = await js<{ id: string; x: number; y: number; cx: number; cy: number } | null>(`(() => {
-    const top = ${JSON.stringify(deskIds().at(-1) ?? '')};
-    for (const c of document.querySelectorAll('#desk .card:not([hidden])')) {
-      if (c.dataset.noteId === top) continue;
-      const r = c.getBoundingClientRect();
-      let shows = null, covered = null;
-      for (let y = r.top + 6; y < r.bottom - 4; y += 6) for (let x = r.left + 6; x < r.right - 20; x += 8) {
-        const hit = document.elementFromPoint(x, y);
-        const card = hit && hit.closest('.card');
-        if (card === c && !hit.closest('.remove')) shows = shows || { x, y };
-        else if (card !== null && card !== c) covered = covered || { x, y };
-      }
-      if (shows && covered) return { id: c.dataset.noteId, x: shows.x, y: shows.y, cx: covered.x, cy: covered.y };
-    }
-    return null;
-  })()`);
-  if (buried === null) {
-    record(false, `two cards overlap in Spread, so bringing one forward can be checked (cards at ${scrolled.cards.join(' and ')} px on a desk ${scrolled.desk} px wide, scrolled ${scrolled.by} px)`);
-  } else {
-    await pointer(win, [...click(buried), { type: 'move', ...PARK }]);
-    await delay(800);
-    const over = await js<string | null>(`(() => { const e = document.elementFromPoint(${buried.cx}, ${buried.cy}); const c = e && e.closest('.card'); return c ? c.dataset.noteId : null; })()`);
-    record(deskIds().at(-1) === buried.id && over === buried.id, `a click on a card lying under another brings it forward in Spread (${buried.id}: last on the desk ${deskIds().at(-1)}, drawn on top ${over}; the desk, ${scrolled.desk} px wide, was scrolled ${scrolled.by} px to the cards at ${scrolled.cards.join(' and ')} px)`);
-  }
-  // A card dragged in Spread is where it was dragged in Glass: one record.
-  // The card the pointer will actually grab: in Spread two cards overlap,
-  // and the one on top at a point is the one a press takes. The card
-  // NOT on top is taken, so that it ending on top says something.
-  const spreadCard = await js<{ x: number; y: number; id: string } | null>(`(() => { const top = ${JSON.stringify(deskIds().at(-1) ?? '')}; const cards = [...document.querySelectorAll('#desk .card:not([hidden])')].sort((a, b) => (a.dataset.noteId === top) - (b.dataset.noteId === top)); for (const c of cards) { const r = c.getBoundingClientRect(); for (let y = r.top + 10; y < r.bottom - 4; y += 6) { const x = r.left + 30; const hit = document.elementFromPoint(x, y); const top = hit && hit.closest('.card'); if (top === c && !hit.closest('.remove')) return { x, y, id: c.dataset.noteId }; } } return null; })()`);
-  if (spreadCard !== null) {
-    const was = deskCard(spreadCard.id);
-    // A short drag, so the document it becomes in Glass is still inside the
-    // field and is drawn at the place stored, not clamped to the edge.
-    await pointer(win, drag(spreadCard, { x: spreadCard.x + 40, y: spreadCard.y + 60 }, 8));
-    await delay(700);
-    const now = deskCard(spreadCard.id);
-    record(was !== undefined && now !== undefined && (now.x !== was.x || now.y !== was.y), `a card dragged in Spread moved in the store (${was?.x},${was?.y} to ${now?.x},${now?.y})`);
-    record(deskIds().at(-1) === spreadCard.id, `and it is on top where it was dropped (${deskIds().at(-1)} last on the desk)`);
-    await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
-    await delay(1500);
-    const pane = await js<{ left: string; top: string } | null>(`(() => { const p = document.querySelector('.pane[data-note-id="${spreadCard.id}"]'); return p ? { left: p.style.left, top: p.style.top } : null; })()`);
-    record(now !== undefined && pane !== null && pane.left === `${now.x}px` && pane.top === `${now.y}px`, `and Glass holds it as a pane at that same place (${pane?.left}, ${pane?.top})`);
-  } else {
-    record(false, 'a card in Spread could be pressed, to drag it');
-    await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
-    await delay(1500);
-  }
-  record((await js<number>(`document.querySelectorAll('.pane').length`)) === stored.length, 'and switching back shows them held in Glass');
+  // Spread's checks stood here until 2026-10-16: the same desk at the same positions,
+  // a buried card brought forward by a click, a card dragged in Spread moving in the
+  // store and in Glass, and the panes still held on switching back. On CI's network run
+  // Spread drew no card at all ("a desk 0 px wide"), and Edwin asked for the failing
+  // checks to be removed (ISS-0092, TASK-0174).
   // The corner dragged above is also the size the next note opened on this
   // view takes (ISS-0071, checked with the focus). Put back to the first-use
   // size, so the parts after this one open their notes at the size they expect.
@@ -2875,12 +2817,8 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
       marked && isEvery && body.length > 40 && !/This note is on the desk but not in this view/.test(body) && pressed === 'true' && /^\S.* · not in this view$/.test(status),
       `a click on a pane's mark keeps it on every view: on Features its pane is there with the note's body and status, and the mark is pressed (${body.length} characters, "${status}", pressed ${pressed})`,
     );
-    await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`);
-    await delay(1500);
-    const elsewhere = await js<{ card: boolean; flag: string | null; says: string }>(`(() => { const c = [...document.querySelectorAll('#desk .card:not([hidden])')].find((e) => e.dataset.noteId === ${JSON.stringify(a)}); return { card: !!c, flag: c ? c.dataset.elsewhere : null, says: c ? getComputedStyle(c, '::after').content : '' }; })()`);
-    record(elsewhere.card && elsewhere.flag === 'true' && /not in this view/.test(elsewhere.says), `in Spread on Features it is a card that says it is not in this view (${elsewhere.says})`);
-    await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
-    await delay(1500);
+    // "In Spread on Features it is a card that says it is not in this view" was checked here
+    // until 2026-10-16; removed with the other Spread checks (ISS-0092, TASK-0174).
     ctx.focusApp(win);
     await js(`document.querySelector('.pane[data-note-id="${a}"] .pane-head').focus(); true`);
     press(win, 'V');
