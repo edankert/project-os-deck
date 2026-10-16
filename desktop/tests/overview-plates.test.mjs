@@ -82,7 +82,7 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       for (const p of w.ring) {
         for (const t of p.towers) {
           assert.equal(t.f[1], 'feature', `${ws}: ${t.f[0]} stands as a tower but is a ${t.f[1]}`);
-          assert.ok(fixtureModel.tickets[t.f[0]] !== undefined && p.tickets === undefined, `${ws}: ${t.f[0]} is a ticket of the fixture`);
+          assert.ok(fixtureModel.tickets[t.f[0]] !== undefined, `${ws}: ${t.f[0]} is a ticket of the fixture`);
           assert.ok(t.floors.every((r) => r[1] !== 'feature'), `${ws}: a feature is a floor of ${t.f[0]}`);
         }
       }
@@ -90,6 +90,26 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       assert.deepEqual(w.ring.map((p) => p.id).sort(), [...fixtureModel.phases, ...fixtureModel.backlog].map((p) => p.id).sort(), `${ws}: the ring holds the unfinished phases`);
       assert.deepEqual(w.shelf.map((p) => p.id).sort(), fixtureModel.shelf.map((p) => p.id).sort(), `${ws}: the shelf holds the finished phases`);
       if (w.next !== null) assert.ok(fixtureModel.tickets[w.next] !== undefined, `${ws}: the next ticket ${w.next} is a ticket`);
+    }
+    // Which tower a ticket stands in, on Deck, whose notes are always here (review of TASK-0163).
+    const deckTowers = new Map(towerData.deck.ring.flatMap((p) => p.towers.map((t) => [t.f[0], t.floors.map((r) => r[0])])));
+    const towerOf = (id) => [...deckTowers.entries()].find(([, floors]) => floors.includes(id))?.[0] ?? null;
+    assert.ok([...deckTowers.values()].reduce((n, f) => n + f.length, 0) >= 150, 'Deck\'s towers hold their tickets, not only their features');
+    assert.equal(towerOf('TASK-0156'), 'FEAT-0027', 'a task stands in its parent feature\'s tower');
+    assert.equal(towerOf('TST-0086'), 'FEAT-0029', 'a test named by a task, in a dash list at column 0, stands in that task\'s feature');
+    assert.equal(towerOf('DES-0005'), null, 'an id inside a link\'s file name ([[TST-0094-DES-0005s-...]]) names nothing');
+    // The focus is the snapshot's at the fixture's commit, when this clone has that commit.
+    const deckModel = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', 'deck.json'), 'utf-8'));
+    const shown = spawnSync('git', ['-C', path.join(desktopRoot, '..'), 'show', `${deckModel.head}:SNAPSHOT.yaml`], { encoding: 'utf-8' });
+    const focus = towerData.deck.focus;
+    assert.ok(focus.phase !== null && focus.feature !== null, 'Deck\'s page has a focus phase and feature');
+    if (shown.status === 0) {
+      const block = /^focus:\r?\n((?:(?:[ \t].*)?\r?\n)*)/m.exec(shown.stdout)[1];
+      const pick = (key) => new RegExp(`^  ${key}:\\s*"?([A-Z]+-\\d+)`, 'm').exec(block)?.[1] ?? null;
+      assert.equal(focus.from, 'commit');
+      assert.deepEqual([focus.phase, focus.feature, focus.task], [pick('phase'), pick('feature'), pick('task')], 'Deck\'s focus is its snapshot\'s at the fixture\'s commit');
+      assert.equal(towerData.deck.notesFrom, 'commit', 'Deck\'s notes are read at the fixture\'s commit');
+      if (focus.task !== null) assert.equal(towerData.deck.next, focus.task, 'the next ticket is the focus task when the snapshot names one');
     }
     assert.match(towers, /https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/0\.160\.0\/three\.module\.min\.js/);
     assert.deepEqual([...towers.matchAll(/https?:\/\/[^"' )]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://cdnjs.cloudflare.com/ajax/libs/three.js/')), [], 'the towers page loads nothing else from outside');

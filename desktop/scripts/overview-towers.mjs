@@ -11,7 +11,9 @@
 // The tickets come from the same fixtures as every other plate. Which feature a
 // ticket belongs to is read from the notes: its `parent:` (followed through a
 // task's parent), a feature's `tests:`, `implements:`, `designs:`,
-// `requirements:` and `tasks:` lists, or the `tests:` of a task that belongs to one. Without the notes (a checkout with no
+// `requirements:` and `tasks:` lists, or the `tests:` of a task that belongs to one.
+// A ticket that several features name stands in the lowest-numbered one's tower.
+// The notes and the focus are both read at the commit the fixture was taken from. Without the notes (a checkout with no
 // your-trainer beside it) every ticket lies flat, and the page still holds them all.
 //
 // three.js 0.160.0 is loaded on that page only, from cdnjs; nothing in Deck
@@ -43,53 +45,111 @@ const CHOICES = {
   'your-trainer': { label: 'your-trainer', root: path.resolve(option('--your-trainer', path.join(desktop, '..', '..', 'your-trainer'))) },
 };
 
-const ID = /[A-Z]+-\d+/g;
 const LIST_KEYS = ['tests', 'implements', 'designs', 'requirements', 'tasks'];
 
-/** Each note's `parent:` and the ticket lists a feature names, by id. */
-function relations(root) {
-  const docs = path.join(root, 'docs');
-  const parent = new Map();
-  const named = new Map();
-  if (!fs.existsSync(docs)) return { parent, named };
-  const stack = [docs];
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== '__templates__') stack.push(path.join(dir, entry.name));
-      else if (entry.isFile() && entry.name.endsWith('.md')) {
-        const text = fs.readFileSync(path.join(dir, entry.name), 'utf-8');
-        const head = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1];
-        if (head === undefined) continue;
-        const id = /^id:\s*"?([A-Z]+-\d+)"?\s*$/m.exec(head)?.[1];
-        if (id === undefined) continue;
-        const p = /^parent:\s*"?(?:\[\[)?([A-Z]+-\d+)/m.exec(head)?.[1];
-        if (p !== undefined && !parent.has(id)) parent.set(id, p);
-        // A feature's lists, and a task's tests: a test named by a task belongs to the task's feature.
-        if (id.startsWith('FEAT-') || id.startsWith('TASK-')) {
-          const ids = [];
-          for (const key of id.startsWith('TASK-') ? ['tests'] : LIST_KEYS) {
-            // The list inline (`key: [...]`) or as the indented lines under the key.
-            const m = new RegExp(`^${key}:(.*)((?:\\r?\\n[ \\t]+-.*)*)`, 'm').exec(head);
-            if (m) ids.push(...`${m[1]}${m[2]}`.match(ID) ?? []);
-          }
-          named.set(id, ids);
-        }
-      }
-    }
-  }
-  return { parent, named };
+/**
+ * The ids a frontmatter value names. A link counts by the id it starts with, so
+ * `[[TST-0094-DES-0005s-Plates]]` names TST-0094 and not DES-0005; an id written
+ * bare (`"FEAT-0013"`) counts as itself.
+ */
+function idsIn(value) {
+  const ids = [];
+  const bare = value.replace(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g, (_, target) => {
+    const id = /^[A-Z]+-\d+/.exec(target.trim())?.[0];
+    if (id) ids.push(id);
+    return ' ';
+  });
+  for (const m of bare.matchAll(/(?<![\w-])[A-Z]+-\d+(?![\w-])/g)) ids.push(m[0]);
+  return ids;
 }
 
-/** The snapshot's focus at a commit (the fixture's), else in the working tree. */
+/**
+ * The workspace's notes as they were at a commit (the fixture's), so which feature a
+ * ticket belongs to agrees with the fixture and with the focus read at the same commit.
+ * Without that commit (a shallow clone), today's files, and the page says so.
+ */
+function notesAt(root, head, dirty) {
+  const docs = path.join(root, 'docs');
+  const today = () => {
+    const texts = [];
+    if (!fs.existsSync(docs)) return texts;
+    const stack = [docs];
+    while (stack.length > 0) {
+      const dir = stack.pop();
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== '__templates__') stack.push(path.join(dir, entry.name));
+        else if (entry.isFile() && entry.name.endsWith('.md')) texts.push(fs.readFileSync(path.join(dir, entry.name), 'utf-8'));
+      }
+    }
+    return texts;
+  };
+  if (head && spawnSync('git', ['-C', root, 'cat-file', '-e', `${head}^{commit}`]).status === 0) {
+    const listed = spawnSync('git', ['-C', root, 'ls-tree', '-r', '--name-only', head, 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 26 });
+    const files = listed.stdout.split('\n').filter((p) => p.endsWith('.md') && !p.includes('/__templates__/') && !p.split('/').some((s) => s.startsWith('.')));
+    const batch = spawnSync('git', ['-C', root, 'cat-file', '--batch'], { input: files.map((p) => `${head}:${p}`).join('\n') + '\n', maxBuffer: 1 << 28 });
+    const out = batch.stdout;
+    const texts = [];
+    let at = 0;
+    while (at < out.length) {
+      const nl = out.indexOf(10, at);
+      if (nl < 0) break;
+      const size = Number(/ (\d+)$/.exec(out.subarray(at, nl).toString('utf-8'))?.[1] ?? NaN);
+      if (!Number.isFinite(size)) break;
+      texts.push(out.subarray(nl + 1, nl + 1 + size).toString('utf-8'));
+      at = nl + 1 + size + 1;
+    }
+    // A fixture taken from a tree with uncommitted notes holds tickets the commit lacks;
+    // their notes come from today's files, after every note the commit has (relations()
+    // keeps the first it sees).
+    return { texts: dirty ? [...texts, ...today()] : texts, from: 'commit' };
+  }
+  const texts = today();
+  return { texts, from: texts.length > 0 ? 'working tree' : 'none' };
+}
+
+/** Each note's `parent:`, and the ticket lists a feature (or a task's `tests:`) names, by id. */
+function relations(root, head, dirty) {
+  const parent = new Map();
+  const named = new Map();
+  const seen = new Set();
+  const { texts, from } = notesAt(root, head, dirty);
+  for (const text of texts) {
+    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1];
+    if (fm === undefined) continue;
+    const id = /^id:\s*["']?([A-Z]+-\d+)["']?\s*$/m.exec(fm)?.[1];
+    if (id === undefined || seen.has(id)) continue;
+    seen.add(id);
+    const p = /^parent:\s*["']?(?:\[\[)?([A-Z]+-\d+)/m.exec(fm)?.[1];
+    if (p !== undefined && !parent.has(id)) parent.set(id, p);
+    // A feature's lists, and a task's tests: a test named by a task belongs to the task's feature.
+    if (id.startsWith('FEAT-') || id.startsWith('TASK-')) {
+      const ids = [];
+      for (const key of id.startsWith('TASK-') ? ['tests'] : LIST_KEYS) {
+        // The list inline (`key: [...]`) or as the dash lines under the key, indented or not.
+        const m = new RegExp(`^${key}:(.*)((?:\\r?\\n[ \\t]*-.*)*)`, 'm').exec(fm);
+        if (m) ids.push(...idsIn(`${m[1]}${m[2]}`));
+      }
+      named.set(id, ids);
+    }
+  }
+  return { parent, named, from };
+}
+
+/** The snapshot's focus at a commit (the fixture's), else in the working tree, and which it was. */
 function focusOf(root, head) {
   let text = '';
+  let from = 'none';
   const shown = head ? spawnSync('git', ['-C', root, 'show', `${head}:SNAPSHOT.yaml`], { encoding: 'utf-8' }) : null;
-  if (shown?.status === 0) text = shown.stdout;
-  else if (fs.existsSync(path.join(root, 'SNAPSHOT.yaml'))) text = fs.readFileSync(path.join(root, 'SNAPSHOT.yaml'), 'utf-8');
+  if (shown?.status === 0) {
+    text = shown.stdout;
+    from = 'commit';
+  } else if (fs.existsSync(path.join(root, 'SNAPSHOT.yaml'))) {
+    text = fs.readFileSync(path.join(root, 'SNAPSHOT.yaml'), 'utf-8');
+    from = 'working tree';
+  }
   const block = /^focus:\r?\n((?:(?:[ \t].*)?\r?\n)*)/m.exec(text)?.[1] ?? '';
   const pick = (key) => new RegExp(`^  ${key}:\\s*"?([A-Z]+-\\d+)`, 'm').exec(block)?.[1] ?? null;
-  return { phase: pick('phase'), feature: pick('feature'), task: pick('task') };
+  return { phase: pick('phase'), feature: pick('feature'), task: pick('task'), from };
 }
 
 /** A criterion's text, plain and short enough for a callout. */
@@ -111,8 +171,11 @@ const floorRank = (t) => (t.needsYou ? 6 : STATE_RANK[t.state] ?? 5);
 const towersData = {};
 for (const [ws, choice] of Object.entries(CHOICES)) {
   const model = JSON.parse(fs.readFileSync(path.join(desktop, 'fixtures', 'overview', `${ws}.json`), 'utf-8'));
-  const { parent, named } = relations(choice.root);
+  const { parent, named, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
   const focus = focusOf(choice.root, model.head);
+  // Said out loud, never quietly: a page drawn from today's notes, or from none, is not the fixture's.
+  if (notesFrom !== 'commit') console.warn(`overview-towers: ${ws}'s notes read from ${notesFrom === 'none' ? 'nowhere (no docs at ' + choice.root + ')' : 'the working tree'}, not at the fixture's commit ${String(model.head).slice(0, 7)}`);
+  if (focus.from !== 'commit') console.warn(`overview-towers: ${ws}'s focus read from ${focus.from}, not at the fixture's commit`);
   const tickets = model.tickets;
   const row = (t) => [t.id, t.type, t.fill, t.needsYou ? 1 : 0, t.status, t.title, t.needs?.say ?? '', t.state];
 
@@ -168,7 +231,8 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   }
   for (const p of phases.values()) for (const tower of p.towers.values()) tower.floors = tower.floors.sort((a, b) => floorRank(a) - floorRank(b) || a.id.localeCompare(b.id, 'en', { numeric: true })).map(row);
 
-  // The next ticket: the focus task, else the focus feature's first task at doing, then at backlog.
+  // The next ticket: the focus task, else (when the snapshot names none) the focus
+  // feature's first task at doing, then its first at backlog.
   const focusTower = towerOf(focus.feature);
   const open = (id) => id !== null && tickets[id] !== undefined && tickets[id].state !== 'closed' && tickets[id].state !== 'dropped';
   let next = open(focus.task) ? focus.task : null;
@@ -178,6 +242,8 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   }
   towersData[ws] = {
     label: choice.label,
+    head: model.head,
+    notesFrom,
     focus,
     next,
     ring: [...phases.values()].sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true })).map((p) => ({ ...p, towers: [...p.towers.values()] })),

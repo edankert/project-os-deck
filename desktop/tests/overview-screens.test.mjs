@@ -490,6 +490,10 @@ test('the overview camera turns, pans and zooms within its limits, and keeps the
   assert.ok(cam.isDefault(cam.defaultCamera('wheel'), 'wheel'));
   assert.ok(!cam.isDefault(t, 'wheel'));
   assert.ok(cam.isDefault({ ...wheel, spin: 360 }, 'wheel'), 'a whole turn is back where it started');
+  // A drag to the right makes the spin negative, so a whole turn that way must count too.
+  assert.ok(cam.isDefault({ ...wheel, spin: -360 }, 'wheel'), 'a whole turn to the right is back where it started');
+  assert.ok(cam.isDefault({ ...wheel, spin: -720.004 }, 'wheel'), 'two whole turns, give or take a rounding');
+  assert.ok(!cam.isDefault({ ...wheel, spin: -350 }, 'wheel'));
   // TASK-0162: the picture cannot be lost. Zoom runs 0.6× to 4×, and a pan stops where
   // the picture's centre would leave the window.
   assert.deepEqual([cam.ZOOM.min, cam.ZOOM.max], [0.6, 4]);
@@ -503,8 +507,8 @@ test('the overview camera turns, pans and zooms within its limits, and keeps the
   const moved = { ...cam.zoomed(t, 2), panX: 50, panY: 20 };
   assert.equal(cam.viewed(moved, 'wheel', 'above').tilt, 0);
   assert.equal(cam.viewed(moved, 'wheel', 'leaning').tilt, wheel.tilt);
-  assert.ok(cam.viewed(moved, 'ticket', 'leaning').tilt > 0, 'a text screen can lean too');
-  assert.ok(cam.viewed(moved, 'wheel', 'side').tilt > 55);
+  assert.equal(cam.viewed(moved, 'ticket', 'leaning').tilt, wheel.tilt, 'a text screen leans as the ring screens start');
+  assert.ok(cam.viewed(moved, 'wheel', 'side').tilt >= cam.TILT.max - 4, 'from the side is nearly edge on');
   const side = cam.viewed(moved, 'wheel', 'side');
   assert.deepEqual([side.panX, side.panY, side.zoom, side.spin], [0, 0, 2, -30], 'a view recentres the picture and keeps the turn and the zoom');
 });

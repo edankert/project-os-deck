@@ -145,20 +145,37 @@ function halfView(): { w: number; h: number } | undefined {
   return box.width > 0 && box.height > 0 ? { w: box.width / 2, h: box.height / 2 } : undefined;
 }
 
+let glideTimer: number | null = null;
+
 function setCamera(camera: Camera, options: { glide?: boolean } = {}): void {
   if (current === null || board === null) return;
   const held = withinView(camera, halfView());
   cameras.set(current.scene.screen, held);
   // Home and the three views glide there; a drag or a zoom follows the hand at once.
+  // A second glide within the first's time takes over its timer, so the first does not cut it short.
+  if (glideTimer !== null) window.clearTimeout(glideTimer);
+  glideTimer = null;
   if (options.glide === true && !reducedMotion()) {
     const moving = board;
     moving.style.transition = 'transform 320ms ease-out';
-    window.setTimeout(() => {
-      if (moving.style.transition !== '') moving.style.transition = '';
+    glideTimer = window.setTimeout(() => {
+      moving.style.transition = '';
+      glideTimer = null;
     }, 360);
   } else board.style.transition = '';
   board.style.transform = cameraTransform(held);
   drawCameraBar();
+}
+
+/**
+ * The Home key moves the camera only when focus is on the page itself or on the
+ * overview's picture; in the navigator's list or the list twin it keeps its own
+ * meaning, the first row.
+ */
+function homeIsTheCamera(event: KeyboardEvent): boolean {
+  const element = event.target as Element | null;
+  if (element === null || element === document.body || element === document.documentElement) return true;
+  return area !== null && area.contains(element) && element.closest('.ov-list') === null;
 }
 
 /** Back to how the screen stands before anyone moves it. */
@@ -384,6 +401,8 @@ export function initOverview(host: OverviewHostApi): void {
     'keydown',
     (event) => {
       if (!isOverviewShown()) return;
+      // Home belongs to the navigator's list and the list twin when focus is in them (review of TASK-0162).
+      if (event.key === 'Home' && !homeIsTheCamera(event)) return;
       if (['Escape', 'l', 'L', 'h', 'H', 'c', 'C', '+', '=', '-', '0', 'Home'].includes(event.key)) {
         const element = event.target as Element | null;
         const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
@@ -530,6 +549,9 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   place();
   document.body.dataset['overviewScreen'] = scene.screen;
   drawColouringToggle();
+  // After `current` is the new screen: Home is shown for the screen being opened, not the
+  // one being left (review of TASK-0162).
+  drawCameraBar();
   trail = afterDraw(trail, scene.address, travelIntent, options.replace === true);
   travelIntent = null;
   drawHistory();
@@ -603,7 +625,6 @@ function paint(scene: Scene, workspaceId: string): void {
   svg?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const host = api;
   if (board !== null) board.style.transform = cameraTransform(cameras.get(scene.screen) ?? defaultCamera(scene.screen));
-  drawCameraBar();
   panels = buildPanels(scene, board ?? stage, {
     reduced: reducedMotion(),
     loader: host?.noteHtml === undefined ? null : (id) => host.noteHtml!(workspaceId, id),
@@ -939,7 +960,7 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     toggleList();
   }
   // + and − zoom, 0 puts the camera back (TASK-0156): for a trackpad with no middle button.
-  if ((event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0' || event.key === 'Home') && !event.metaKey && !event.ctrlKey) {
+  if ((event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0' || (event.key === 'Home' && homeIsTheCamera(event))) && !event.metaKey && !event.ctrlKey) {
     const camera = cameraNow();
     if (camera === null) return;
     event.preventDefault();

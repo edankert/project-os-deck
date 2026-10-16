@@ -95,7 +95,8 @@ export const VIEW_WORD: Readonly<Record<View, string>> = { above: 'From above', 
  * person chose, and puts the picture back in the middle.
  */
 export function viewed(camera: Camera, screen: ScreenKind, view: View): Camera {
-  const tilt = view === 'above' ? 0 : view === 'side' ? 62 : Math.max(LEAN[screen] ?? 0, 22);
+  // Leaning is where the ring screens start, on every screen, as its callout says.
+  const tilt = view === 'above' ? 0 : view === 'side' ? 68 : Math.max(LEAN[screen] ?? 0, LEAN.wheel);
   return { ...camera, tilt, panX: 0, panY: 0 };
 }
 

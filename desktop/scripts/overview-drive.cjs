@@ -199,6 +199,59 @@ module.exports = async (d) => {
     assert.ok(opened.includes(`note=${encodeURIComponent(particle.id)}`), `a press on ${particle.id} on the tilted wheel opens it, not ${opened}`);
   }
 
+  // TASK-0162, after review: the three views, the Home key, Escape on a moved camera and on
+  // an unmoved one, the pan limit, and Home following the screen that is open.
+  {
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+    await settle();
+    const cam = () => js('window.__deckOverview.camera()');
+    const homeShown = () => js(`(() => { const b = document.querySelector('#overview-area .ov-camera-home'); return b !== null && !b.hidden && b.getBoundingClientRect().width > 0; })()`);
+    const press = async (selector) => {
+      const at = await js(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+      assert.ok(at !== null, `${selector} is drawn`);
+      await d.pointer(win, d.click(at));
+      await d.delay(500);
+    };
+    const start = await cam();
+    assert.ok(!(await homeShown()), 'Home is hidden on a wheel that has not moved');
+    assert.ok(await js(`(() => { const b = document.querySelector('#overview-area .ov-camera-bar'); return b !== null && !b.hidden && b.querySelectorAll('[data-view]').length === 3; })()`), 'the three views are shown on the wheel as it opens');
+    await press('#overview-area .ov-camera-bar [data-view="above"]');
+    assert.equal((await cam()).tilt, 0, 'From above lays the wheel flat');
+    await press('#overview-area .ov-camera-bar [data-view="side"]');
+    assert.ok((await cam()).tilt >= 64, `From the side is nearly edge on (${(await cam()).tilt})`);
+    assert.ok(await homeShown(), 'Home shows once a view has moved the camera');
+    d.press(win, 'Home');
+    await d.delay(500);
+    assert.deepEqual([(await cam()).tilt, (await cam()).spin], [start.tilt, 0], 'the Home key puts the camera back');
+    // The pan stops where the picture's centre would leave the stage.
+    const stageBox = await js(`(() => { const r = document.querySelector('#overview-area .ov-stage').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`);
+    const mid = { x: stageBox.x + stageBox.w / 2, y: stageBox.y + stageBox.h / 2 };
+    for (let i = 0; i < 4; i += 1) await d.pointer(win, d.drag(mid, { x: mid.x + stageBox.w * 0.45, y: mid.y + stageBox.h * 0.45 }, 6, 12, { button: 'middle', shift: true }));
+    const far = await cam();
+    assert.ok(Math.abs(far.panX) <= stageBox.w / 2 + 1 && Math.abs(far.panY) <= stageBox.h / 2 + 1, `the pan stops at the stage's edge (${JSON.stringify(far)})`);
+    // Escape on a moved camera brings it home and stays on the wheel.
+    d.press(win, 'Escape');
+    await d.delay(500);
+    assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape on a moved camera stays on the wheel');
+    assert.deepEqual([(await cam()).panX, (await cam()).panY], [0, 0], 'Escape on a moved camera brings it home');
+    // Home follows the screen: moved on the wheel, a phase opens unmoved, and back on the wheel it is moved again.
+    if (phase) {
+      await d.pointer(win, d.drag(mid, { x: mid.x + 80, y: mid.y }, 6, 12, { button: 'middle' }));
+      assert.ok(await homeShown(), 'Home shows on the moved wheel');
+      await js(`window.__deckOverview.go(${JSON.stringify(`${base}?note=${encodeURIComponent(phase)}&page=phase`)})`);
+      await settle();
+      assert.ok(!(await homeShown()), 'a phase that has not moved opens with Home hidden, though the wheel was moved');
+      // Escape on an unmoved screen still goes back.
+      d.press(win, 'Escape');
+      for (let i = 0; i < 20 && (await js('document.body.dataset.overviewScreen')) !== 'wheel'; i += 1) await d.delay(250);
+      assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape on an unmoved phase goes back to the wheel');
+      assert.ok(await homeShown(), 'back on the moved wheel, Home shows again');
+      d.press(win, '0');
+      await d.delay(400);
+    }
+    d.log('the camera views and Home', { start, far });
+  }
+
   // The wheel's two labelled ways in open re-phasing and the release test (TASK-0152).
   for (const [key, screen] of [['rephase-button', 'rephase'], ['release-test', 'test-run']]) {
     await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
