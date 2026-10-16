@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0027
 aliases: ["FEAT-0027"]
 title: "Deck opens on the wheel of phases: the circular overview, with finished phases on a shelf, the backlog in a tray and tickets with no phase in the core"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -20,7 +20,7 @@ reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra", "model:claude-opus-5-5",
 review_date: 2026-10-16
 review_verdict: changes-requested
 review_round: 2
-review_response: "Towers: round one asked for changes; findings 1 to 5 fixed in 0286df2, and round two (two Claude reviewers) agrees. Finding 6, the window run on the towers, waits for Edwin. See Review, Towers."
+review_response: "Towers: round one asked for changes; findings 1 to 5 fixed in 0286df2, and round two (two Claude reviewers) agrees; finding 6, the window run on the towers, passed on both workspaces on 2026-10-16. See Review, Towers."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -131,6 +131,8 @@ Fixed in `0286df2`: the three tests are restored and pass; in 3D the plan stays 
 ### Towers, round two
 
 2026-10-16: two independent Claude reviewers, each in its own worktree on `main` (`3eb65dc`). Both found findings 1 to 5 fixed: the plan stays focusable under the 3D view, the three cut tests are back and pass, and reversing the feature rule's order or removing a plinth's or a disc's target now fails a test (each shown by breaking it). Both keep finding 6 open: the window run TST-0093 has not run on the towers, and its `passing` is from the old screens; its note now says so. It waits for Edwin's word. 791 node tests: 789 pass and the 2 cockpit parity checks skip where the sibling cockpit cannot be found.
+
+Finding 6 closed on 2026-10-16: at Edwin's word the window run TST-0093 ran on the towers and passed on both workspaces (its fourth run).
 
 ## Questions between the lanes
 

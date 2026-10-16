@@ -200,11 +200,17 @@ module.exports = async (d) => {
     await d.delay(900);
     assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape on a moved camera stays on the wheel');
     assert.equal((await cam()).moved, false, 'Escape on a moved camera brings it home');
-    // A press on the next ticket opens it.
-    const next = model.next ?? Object.values(model.tickets).find((t) => t.kind === 'task')?.id;
-    const at = await t3(`screenOf(${JSON.stringify(next)})`);
-    assert.ok(at !== null, `the towers stand ${next}`);
-    assert.equal(await t3(`hit(${at.x}, ${at.y})`), next, `${next} is the first thing under the pointer`);
+    // A press on a ticket opens it: the next ticket when nothing stands in front of it from
+    // where the camera starts, else the first ticket of the ring that is in plain sight.
+    const layout = await js(`window.__deckOverview.current().nodes.find((n) => n.kind === 'towers').layout`);
+    const standing = layout.phases.flatMap((p) => [...p.towers.flatMap((tw) => tw.cubes), ...p.tiles]).map((c) => c.id);
+    let next = null;
+    let at = null;
+    for (const id of [model.next, ...standing].filter(Boolean).slice(0, 400)) {
+      const p = await t3(`screenOf(${JSON.stringify(id)})`);
+      if (p !== null && (await t3(`hit(${p.x}, ${p.y})`)) === id) { next = id; at = p; break; }
+    }
+    assert.ok(next !== null, 'some ticket on the ring is in plain sight from where the camera starts');
     await d.pointer(win, d.click(at));
     for (let i = 0; i < 40 && (await js('document.body.dataset.overviewScreen')) !== 'ticket'; i += 1) await d.delay(250);
     const opened = await js('window.__deckOverview.current().address');

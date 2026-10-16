@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0169
 title: "The towers are checked in a real window and drawn in DES-0005's plates, and the change is recorded"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-16
@@ -21,9 +21,11 @@ tests: ["[[TST-0093-Every-Overview-Screen-Opens-From-Its-Address-In-A-Real-Windo
 
 ## Definition of Done
 
-- [ ] The window-run driver (TST-0093) opens the wheel on both workspaces, presses a floor, a cap, a phase and the core through the 3D view, turns, zooms and resets the camera, and opens a phase and comes back. Run once Edwin says.
-- [ ] DES-0005's S1 and S2 plates are the flat plans, and its pictures of Deck's own window are retaken.
-- [ ] A change note says what replaced the constellation and the web; FEAT-0027 and FEAT-0028 say where they stand.
-- [ ] Two independent Claude reviewers review the change.
+- [x] The window-run driver (TST-0093) opens the wheel on both workspaces, presses a floor, a cap, a phase and the core through the 3D view, turns, zooms and resets the camera, and opens a phase and comes back. Run once Edwin says.
+- [x] DES-0005's S1 and S2 plates are the flat plans, and its pictures of Deck's own window are retaken.
+- [x] A change note says what replaced the constellation and the web; FEAT-0027 and FEAT-0028 say where they stand.
+- [x] Two independent Claude reviewers review the change.
 
 ## Verification
+
+The window-run driver presses through the 3D view and passed on Deck and your-trainer on 2026-10-16 (TST-0093, fourth run). DES-0005's S1 and S2 plates are the flat plans, and three pictures from the run are in it. The change note is CHG-20261016-The-Wheel-Is-Towers-On-A-Ring-In-3D. Two independent Claude reviewers reviewed it in two rounds (FEAT-0027, Review, Towers); the one point they kept open, this run, is now done. 791 node tests: 789 pass, 2 cockpit parity checks skip without the sibling cockpit.

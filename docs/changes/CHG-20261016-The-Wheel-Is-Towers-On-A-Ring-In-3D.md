@@ -13,9 +13,10 @@ impacts: []
 platforms: []
 issues: []
 features: ["[[FEAT-0025]]", "[[FEAT-0026]]", "[[FEAT-0027]]", "[[FEAT-0028]]"]
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: "2026-10-16"
+review_verdict: "changes-requested"
+review_response: "Two rounds by two independent Claude reviewers; every finding fixed, the last by the window run. See FEAT-0027, Review, Towers."
 related: ["[[TASK-0162]]", "[[TASK-0163]]", "[[TASK-0164]]", "[[TASK-0165]]", "[[TASK-0166]]", "[[TASK-0167]]", "[[TASK-0168]]", "[[TASK-0169]]", "[[RISK-0010]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"]
 ---
 
@@ -43,4 +44,4 @@ related: ["[[TASK-0162]]", "[[TASK-0163]]", "[[TASK-0164]]", "[[TASK-0165]]", "[
 
 ## Verification
 
-791 node tests pass. In a hidden window over Deck's build, on both fixtures, the 3D view drew with no page errors, named and opened the next ticket, turned with a middle-button drag the hand's way, came home, opened re-phasing from the core, and flew to a phase and back. The window run TST-0093 in Deck itself, with its new towers checks, waits for Edwin's word; so do his acceptance tests.
+791 node tests pass. In a hidden window over Deck's build, on both fixtures, the 3D view drew with no page errors, named and opened the next ticket, turned with a middle-button drag the hand's way, came home, opened re-phasing from the core, and flew to a phase and back. The window run TST-0093 passed in Deck itself on both workspaces on 2026-10-16, through the 3D view. Edwin's acceptance tests TST-0091 and TST-0092 are his to run.

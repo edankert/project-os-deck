@@ -63,8 +63,8 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0027"
-  task: "TASK-0169"
-  note: "2026-10-16, last: the towers on the ring are built into Deck (TASK-0164 to TASK-0168): each feature a tower of its tickets, the focus lit, the exit criteria a collar round each rim, red caps that open what needs you, a phase opening as its segment brought close, drawn in 3D by three.js 0.160.0 from Deck's own build (RISK-0010) with a flat plan where WebGL is missing. Reviewed in two rounds by two Claude reviewers: all findings fixed except the window run. Owed: TST-0093 on the towers (TASK-0169), which waits for Edwin's word; then TASK-0167 and TASK-0169 close and FEAT-0027 returns to review. Edwin's acceptance tests TST-0091 and TST-0092 are rewritten for the towers. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: ""
+  note: "2026-10-16, last: the towers on the ring are built into Deck and checked (TASK-0162 to TASK-0169): drawn in 3D by three.js 0.160.0 from Deck's own build (RISK-0010), the exit criteria a collar, red caps that open what needs you, a phase brought close in place of its web. Reviewed in two rounds by two Claude reviewers; the window run TST-0093 passed on both workspaces. FEAT-0025 to FEAT-0028 are at review. Left for Edwin: his acceptance tests TST-0091 and TST-0092 (rewritten for the towers), DES-0005's questions. TASK-0170 (the Glass smoke's triage-proof choices) waits on CI. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
@@ -75,7 +75,7 @@ items:
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
-      status: doing
+      status: review
       file: "docs/features/overview-wheel/FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases.md"
       owner: system:claude
     FEAT-0028:
@@ -325,7 +325,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0167:
       file: docs/features/overview-wheel/plan/tasks/TASK-0167-Deck-Draws-The-Towers-In-3D-With-Three-Js.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0168:
@@ -335,7 +335,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0169:
       file: docs/features/overview-wheel/plan/tasks/TASK-0169-The-Towers-Are-Checked-In-A-Window-And-Drawn-In-The-Plates.md
-      status: doing
+      status: done
       parent: FEAT-0027
       phase: "[[PHASE-0005]]"
     TASK-0163:
@@ -2589,7 +2589,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 161
-    tasks_done: 139
+    tasks_done: 141
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

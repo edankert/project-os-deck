@@ -56,6 +56,14 @@ The rules are in [[PHASE-0005-Overview]], "The look". Four of them are checked b
 
 **Since 2026-10-16 the wheel is the towers on the ring** (Edwin: "I like the design page, please implement as suggested"; [[TASK-0166]], [[TASK-0167]]). In Deck it is drawn in 3D by three.js, as on the towers page described under "Towers on the ring" below: each phase still to finish a raised segment, each feature a tower of its tickets, the phase in focus brightest and facing you, the feature in focus with its beam, the next ticket marked, the exit criteria as a collar round each rim, and red caps you can press. The middle of the core opens re-phasing and says how many tickets have no phase; "Release test" under the name opens S6. The plates below are the same layout drawn flat, as Deck shows it when WebGL cannot start, seen from where the 3D camera starts.
 
+![S1 in Deck, on Deck](__attachments__/DES-0005/window-towers-deck.jpg)
+
+In Deck, on 2026-10-16, taken by the window run: Deck's live notes, with FEAT-0027 in focus and TASK-0169 next.
+
+![S1 in Deck, on your-trainer](__attachments__/DES-0005/window-towers-your-trainer.jpg)
+
+The same window on your-trainer.
+
 ![S1 Wheel on your-trainer](__attachments__/DES-0005/wheel-your-trainer.jpg)
 
 your-trainer, in the cockpit's colours. Its phases' names stop at three words, the one in focus excepted, and each red count is what needs you there. **52 words at rest.**
@@ -70,7 +78,9 @@ Deck: Overview in focus at the front, with FEAT-0028's tower in focus and TASK-0
 
 ### S2 Phase
 
-**A phase opens as its segment of the ring brought close** ([[TASK-0168]]), in place of the web (Edwin: "I don't think the phase spider web works really"). In Deck the camera flies from the ring to the segment, the other phases fade to their plinths, each tower shows its feature's id at its foot, and the collar says how many exit criteria are met. The tickets are listed on the right as the cockpit lists them: what needs you first, each row saying what to do; then the feature in focus, open; then every other tower folded to a strip of its marks with its count, opened by a press; then the tickets with no feature. Pointing at a row outlines its floor. A finished phase, which has no segment, shows the ring and lists its tickets as before: what needs you, then in progress and open, then closed and folded.
+**A phase opens as its segment of the ring brought close** ([[TASK-0168]]), in place of the web (Edwin: "I don't think the phase spider web works really"). In Deck the camera flies from the ring to the segment, the other phases fade to their plinths, each tower shows its feature's id at its foot, and the collar says how many exit criteria are met. The tickets are listed on the right as the cockpit lists them (below, in Deck: Glass brought close, its seven tickets that need you first, each saying what to do): what needs you first, each row saying what to do; then the feature in focus, open; then every other tower folded to a strip of its marks with its count, opened by a press; then the tickets with no feature. Pointing at a row outlines its floor. A finished phase, which has no segment, shows the ring and lists its tickets as before: what needs you, then in progress and open, then closed and folded.
+
+![S2 in Deck, Glass brought close](__attachments__/DES-0005/window-towers-phase-deck.jpg)
 
 ![S2 Phase on Deck](__attachments__/DES-0005/phase-deck.jpg)
 
