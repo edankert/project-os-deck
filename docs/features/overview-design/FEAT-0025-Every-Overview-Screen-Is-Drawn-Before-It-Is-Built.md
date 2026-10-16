@@ -16,11 +16,11 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
-review_date: 2026-10-14
+reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra", "model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-16
 review_verdict: changes-requested
-review_round: 2
-review_response: "Round two: one Codex reviewer found six of seven findings fixed and the prototype's navigation partly fixed, because a press on a ticket did nothing. Fixed after it in d844e5e: the page follows a press on any ticket. No third round."
+review_round: 1
+review_response: "Third revision (towers on the ring), round one: two Claude reviewers requested changes; all five findings are fixed in b9e61bb. See Review, Third revision."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -87,6 +87,20 @@ Fixed in `57c2e3d`: both captions, the Revisions line, the scope rewritten to wh
 ### Round two
 
 2026-10-14: one Codex reviewer (GPT-6 Astra), round two. Fixed: both captions, the Revisions line, the scope, and both test gaps (removing three screens or every mark now fails TST-0094). Partly fixed: the prototype followed a press on a mark with an address, but not on a ticket, so the design, release-test and gate screens could not be reached from the wheel's marks. Verdict: changes requested. Fixed after it in `d844e5e`: a press on a ticket opens the screen Deck opens next for its kind. A review gate runs two rounds at most, so no third round was run; the verdict stays the reviewer's.
+
+### Third revision, round one (towers on the ring, TASK-0163)
+
+2026-10-16: two independent Claude reviewers, each in its own worktree, reviewed `4d3a67f`. Both requested changes. Held: every ticket of both fixtures is on the towers page once, the page reproduces byte for byte, and the focus matches each snapshot at the fixture's commit.
+
+1. A `tests:` list whose dash lines start at column 0 was skipped, so TST-0086 lay flat instead of standing in FEAT-0029's tower (both).
+2. Ids were read inside link file names, so `[[TST-0094-DES-0005s-...]]` made DES-0005 a floor of FEAT-0025 (one reviewer).
+3. A `parent:` written in single quotes was not read (one reviewer).
+4. The notes were read as they are today, while the focus was read at the fixture's commit, so the two could disagree; and either one falling back did so silently (both).
+5. TST-0094 still passed with every tower empty or the focus lost; one of its assertions checked a field that never exists (both).
+
+Also noted: a ticket that several features name stands in the lowest-numbered one's tower, which was not stated; and your-trainer's "next" comes from the fallback, since its snapshot names no task.
+
+Fixed in `b9e61bb`: dash lists at column 0 and single-quoted parents are read; only a link's leading id counts; the notes are read at the fixture's commit (for a fixture taken with uncommitted notes, a note the commit lacks from today's file), and a fallback is printed and recorded on the page. TST-0094 now checks that a task stands in its parent's tower, both parsing cases, and Deck's focus against its snapshot at the fixture's commit; breaking each of the four guards makes it fail. DES-0005 states the lowest-numbered rule and the fallback for "next".
 
 ## Questions between the lanes
 

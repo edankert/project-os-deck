@@ -16,10 +16,11 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra"]
-review_date: 2026-10-14
-review_verdict: approve
-review_round: 2
+reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra", "model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-16
+review_verdict: changes-requested
+review_round: 1
+review_response: "Third revision (the camera), round one: two Claude reviewers requested changes; all six findings are answered in b9e61bb, the last by the window-run driver, which waits for Edwin. See Review, Third revision."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -92,6 +93,19 @@ Fixed in `57c2e3d`: the wheel waits for the index and never keeps the empty answ
 ### Round two
 
 2026-10-14: two Codex reviewers (GPT-6 Astra), round two. Both found all four findings fixed, each shown by breaking the fix and watching a test or probe fail: the wheel waits for an index still being built, the tray glows, every one of 361 and 2,747 tickets is reached and opened by the arrow keys and Enter, and the window run asserts Escape, the served page and every screen. Both approved.
+
+### Third revision, round one (the camera, TASK-0162)
+
+2026-10-16: two independent Claude reviewers, each in its own worktree, reviewed `ff7258b`. Both requested changes. Held: a drag to the right moves the leaning plane's near edge right wherever it starts, and the pan limit and the reversed turn are caught by TST-0090.
+
+1. Home and the three views were drawn for the screen being left, not the one being opened, because `paint` drew them before `showOverview` set the new screen (one reviewer).
+2. A whole turn to the right, a negative spin, was not tested as home (one reviewer).
+3. The Home key was taken from the navigator's list and the list twin (both).
+4. Two glides started close together cut each other short (one reviewer).
+5. "Leaning" on a text screen went to 22°, not the ring screens' 26° its callout names, and "From the side" at 62° was not nearly edge on (both).
+6. Home, Escape, the views and the pan limit in the renderer are guarded by no test that ran; only the window run can check them (both).
+
+Fixed in `b9e61bb`: the camera bar is drawn after the new screen is current; TST-0090 checks negative whole turns; Home moves the camera only when focus is on the page or the overview's picture; a second glide takes over the first's timer; Leaning goes to 26° and From the side to 68°. The window-run driver now covers the views, the Home key, Escape on a moved and an unmoved camera, the pan limit and Home following the open screen; it waits for Edwin's word to run.
 
 ## Questions between the lanes
 
