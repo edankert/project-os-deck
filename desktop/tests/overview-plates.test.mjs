@@ -63,6 +63,36 @@ test('the plate script draws all seven screens on both workspaces, every mark in
     }
     assert.match(time, /https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/\d+\.\d+\.\d+\/three\.module\.min\.js/);
     assert.deepEqual([...time.matchAll(/https?:\/\/[^"' )]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://cdnjs.cloudflare.com/ajax/libs/three.js/')), [], 'nothing else is loaded from outside');
+    // The towers page (TASK-0163): written beside the plates, every ticket of both fixtures
+    // exactly once, as a tower's foot, a floor, a flat tile, a block on the shelf or a tile
+    // of the core; three.js from cdnjs at a pinned version and nothing else from outside.
+    const towers = fs.readFileSync(path.join(out, 'DES-0005-towers.html'), 'utf-8');
+    const towerData = JSON.parse(/<script type="application\/json" id="data">([\s\S]*?)<\/script>/.exec(towers)[1]);
+    for (const ws of ['deck', 'your-trainer']) {
+      const fixtureModel = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', `${ws}.json`), 'utf-8'));
+      const w = towerData[ws];
+      const ids = [
+        ...w.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]),
+        ...w.shelf.flatMap((p) => p.tickets),
+        ...w.core,
+      ].map((t) => t[0]);
+      assert.equal(new Set(ids).size, ids.length, `${ws}: no ticket twice on the towers page`);
+      assert.deepEqual(new Set(ids), new Set(Object.keys(fixtureModel.tickets)), `${ws}: the towers page holds every ticket`);
+      // A tower is a feature of that phase; its floors are never features.
+      for (const p of w.ring) {
+        for (const t of p.towers) {
+          assert.equal(t.f[1], 'feature', `${ws}: ${t.f[0]} stands as a tower but is a ${t.f[1]}`);
+          assert.ok(fixtureModel.tickets[t.f[0]] !== undefined && p.tickets === undefined, `${ws}: ${t.f[0]} is a ticket of the fixture`);
+          assert.ok(t.floors.every((r) => r[1] !== 'feature'), `${ws}: a feature is a floor of ${t.f[0]}`);
+        }
+      }
+      // The ring is the fixture's unfinished phases and its backlog; the shelf its finished ones.
+      assert.deepEqual(w.ring.map((p) => p.id).sort(), [...fixtureModel.phases, ...fixtureModel.backlog].map((p) => p.id).sort(), `${ws}: the ring holds the unfinished phases`);
+      assert.deepEqual(w.shelf.map((p) => p.id).sort(), fixtureModel.shelf.map((p) => p.id).sort(), `${ws}: the shelf holds the finished phases`);
+      if (w.next !== null) assert.ok(fixtureModel.tickets[w.next] !== undefined, `${ws}: the next ticket ${w.next} is a ticket`);
+    }
+    assert.match(towers, /https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/0\.160\.0\/three\.module\.min\.js/);
+    assert.deepEqual([...towers.matchAll(/https?:\/\/[^"' )]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://cdnjs.cloudflare.com/ajax/libs/three.js/')), [], 'the towers page loads nothing else from outside');
     const page = fs.readFileSync(path.join(out, 'page.html'), 'utf-8');
     assert.match(page, /DES-0005/);
     // The page has back and forward, as Deck does (TASK-0146), and its script runs.

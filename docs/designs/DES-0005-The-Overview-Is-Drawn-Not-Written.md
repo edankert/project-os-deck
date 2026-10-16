@@ -7,7 +7,7 @@ status: proposed
 phase: "[[PHASE-0005-Overview]]"
 owner: user:edwin
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-16
 source: ["Edwin 2026-10-14: 'I still don't like the glass solution, it is too text heavy and does not look cool or minority report like. Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 asset: "DES-0005-the-overview.html"
 implements: ["[[FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built]]", "[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]", "[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]", "[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]", "[[PHASE-0005-Overview]]"]
@@ -174,6 +174,48 @@ Deck's history is two months long, so its columns are short. The beams over Glas
 
 **What it adds:** when work happened, which phase has stalled (a column that stopped growing), and what needs you seen from anywhere. **What it would cost in Deck:** a WebGL dependency in `desktop/` and a risk note for it; words drawn as textures, so the callouts and the list twin need a second path; the screen checks rebuilt against a 3D scene rather than SVG; and plates captured from a window instead of drawn. Pictures on this page were taken by `desktop/scripts/time-columns-capture.cjs`.
 
+## Towers on the ring, the wheel in 3D grouped by phase
+
+**This is the design Edwin chose on 2026-10-16 to judge before anything is built: the wheel as towers standing on a ring.** He asked for a disc that is 3D, with its items stacked, grouped by feature inside each phase, and with the work in progress lit so it is clear what comes next. He also found the phase screen's web did not work. As with Level 2, nothing in Deck draws it yet ([[TASK-0163]]).
+
+- **Each unfinished phase is a raised segment of the ring.** Planned phases are low and dim, active ones raised and lit, and the phase in focus is highest, brightest, and marked ▶ with its name in cyan. The page opens turned so the focus phase faces you.
+- **Each feature stands as a tower in its phase.** The feature itself is the tower's foot. Each floor above holds two of its tickets: its tasks, tests, requirements and designs, done at the bottom, then in progress, then not started, and what needs you on top. A tall tower is a big feature, and a solid one is far along. Which feature a ticket belongs to comes from its note's `parent:`, followed up through a task's parent, from the feature's own lists of tests, requirements and designs, or from the `tests:` of a task that belongs to the feature.
+- **The marks are the cockpit's**: the type colour, DES-0004's fills (solid done, half filled in progress, outline not started, dashed for resolved or parked), and the red needs-you dot on a floor. A tower with something that needs you wears a red cap.
+- **Tickets with no feature lie flat at the front of their segment**, as tiles in the same marks. Finished phases stand outside the ring as solid blocks of their tickets. The core holds the tickets with no phase.
+- **What is being worked on is lit.** The feature in focus sends a beam of light up from its tower, and its tasks at `doing` pulse. The next ticket has a white outline and a "next" tag. It is the snapshot's focus task when one is named, otherwise the focus feature's first task at `doing`, then its first at `backlog`. Focus is read from each workspace's SNAPSHOT at the commit its fixture was taken from: on Deck that is PHASE-0005 and FEAT-0028, next TASK-0154; on your-trainer PHASE-025 and FEAT-0136, next TASK-1057.
+- **A phase opens as its segment brought close**, in place of the web. The camera flies to the segment, the other phases fade to their plinths, and each tower shows its feature's id at its foot. The phase's exit criteria stand over the towers as an arch of cells, filled when met. The phase's tickets are listed on the right as the cockpit lists them, grouped by tower with the focus feature first. Pressing a row outlines its floor; pressing a floor selects its row.
+- **The camera turns the way the hand moves.** A drag to the right moves the ring's near edge right, as Deck's camera now does too ([[TASK-0162]]). Shift-drag or the right button pans, the wheel zooms, and Home with three views (from above, leaning, from the side) puts it back. Escape goes from a phase back to the ring, then home.
+
+The page is [DES-0005-towers.html](DES-0005-towers.html). It holds every ticket of both fixtures exactly once: 395 on Deck in 29 towers, and 2,747 on your-trainer in 69 towers. It is written by `desktop/scripts/overview-towers.mjs`, which the plate script runs, and loads three.js 0.160.0 from cdnjs. Nothing in Deck uses it. The pictures were taken by `desktop/scripts/towers-capture.cjs`.
+
+![Towers on the ring, Deck, as the page opens](__attachments__/DES-0005/towers-deck-home.jpg)
+
+Deck as the page opens. 005 Overview faces you, raised and lit, with FEAT-0028's beam and TASK-0154 marked next. Glass and Deck are active, so they stand raised; Vault and Parity are planned, so they lie low and dark. The red tiles along Deck's rim are its issues, which belong to no feature.
+
+![Towers on the ring, Deck, Overview brought close](__attachments__/DES-0005/towers-deck-phase.jpg)
+
+005 Overview brought close: its five features as towers with their ids, its exit criteria as an arch (4 of 7 met), and its tickets listed beside it.
+
+![Towers on the ring, your-trainer, as the page opens](__attachments__/DES-0005/towers-your-trainer-home.jpg)
+
+your-trainer as the page opens, with nine unfinished phases on the ring and the finished ones as blocks outside it. The core is large because 1,028 of its 2,747 tickets have no phase.
+
+![Towers on the ring, your-trainer, from the side](__attachments__/DES-0005/towers-your-trainer-side.jpg)
+
+From the side, the heights show: the tallest towers are FEAT-0098 and FEAT-0107, the biggest features.
+
+![Towers on the ring, your-trainer, Phase 25 brought close](__attachments__/DES-0005/towers-your-trainer-phase.jpg)
+
+Phase 25 brought close: FEAT-0136, the feature in focus, glows. Thirteen of its sixteen exit criteria are met.
+
+The pictures from above are [towers-deck-above.jpg](__attachments__/DES-0005/towers-deck-above.jpg) and [towers-your-trainer-above.jpg](__attachments__/DES-0005/towers-your-trainer-above.jpg), and Deck's side view is [towers-deck-side.jpg](__attachments__/DES-0005/towers-deck-side.jpg).
+
+**What it adds over the flat wheel:** the size and progress of each feature at a glance, where in a phase the waiting work is, and what is being worked on now, from across the room. **What it would cost in Deck:** the same as Level 2. It would add three.js to `desktop/` and a risk note for it. Callouts and the list twin would need a second path, because the words are drawn as textures. The screen checks would be rebuilt against a 3D scene rather than SVG, and plates captured from a window instead of drawn. **What it leaves open:**
+- Deck's own data does not yet say which feature a ticket belongs to; the page reads it from the notes. Building it means adding the parent to Deck's overview model.
+- A ticket filed in one phase whose feature stands in another joins that feature's tower, so a phase's counts here can differ by a few from the flat wheel's (Deck's 001 Deck reads 136 tickets here and 139 on the wheel).
+- Most issues belong to no feature, so they lie flat; so do 34 of Deck's tests and 32 of your-trainer's that no feature or task names.
+- Grouping by feature, with the ring made of features, is not drawn; Edwin chose phase.
+
 ## Answers proposed to DES-0004's open questions
 
 1. **A backlog phase** is marked with `kind: backlog` in its note. When the note says nothing, an id ending in 999 is read as backlog, so your-trainer's PHASE-999 works today.
@@ -184,6 +226,7 @@ Deck's history is two months long, so its columns are short. The beams over Glas
 ## What is Edwin's to decide
 
 - Whether to build Level 2, the 3D wheel where height is time, into Deck, after looking at its page. It would replace or sit beside the constellation.
+- Whether to build the towers on the ring into Deck, after turning its page by hand. It would replace the constellation as the wheel and the web as the phase screen, and bring three.js into Deck ([[TASK-0163]]).
 
 - Accept or decline this design.
 - Whether S5's fanned plates should be drawn as outlines only: behind a busy plate they compete with it.

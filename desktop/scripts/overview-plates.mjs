@@ -431,3 +431,7 @@ renderer.setAnimationLoop(() => renderer.render(scene, camera));
 `;
 fs.writeFileSync(timePagePath, timePage);
 console.log(`wrote the time-columns page ${path.relative(process.cwd(), timePagePath)} (${Object.values(timeData).map((w) => w.phases.reduce((n, p) => n + p.tickets.length, 0) + w.core.length).join(' and ')} tickets)`);
+
+// TASK-0163 — the towers page, beside the time-columns page: the wheel as towers on a ring.
+// It reads the same arguments (--page, --towers-page, --your-trainer).
+await import('./overview-towers.mjs');
