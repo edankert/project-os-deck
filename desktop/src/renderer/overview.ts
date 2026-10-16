@@ -169,8 +169,9 @@ function setCamera(camera: Camera, options: { glide?: boolean } = {}): void {
 
 /**
  * The Home key moves the camera only when focus is on the page itself or on the
- * overview's picture; in the navigator's list or the list twin it keeps its own
- * meaning, the first row.
+ * overview's picture. In the navigator's list it goes to the first row, as the
+ * navigator's own handler does; in the list twin it is left to the browser,
+ * which scrolls the list to its top.
  */
 function homeIsTheCamera(event: KeyboardEvent): boolean {
   const element = event.target as Element | null;
