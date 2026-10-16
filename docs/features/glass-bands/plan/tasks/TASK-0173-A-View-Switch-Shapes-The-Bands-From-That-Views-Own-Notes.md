@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0173
 title: "A view switch shapes Glass's bands from that view's own notes, not from the last view's still on screen while the new ones are read"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: system:claude
 created: 2026-10-16
@@ -26,8 +26,8 @@ tests: []
 ## Definition of Done
 
 - [x] `GlassInput.ready` says whether the groups are the view's own; the renderer passes false while the view is still loading, and Glass works out the shapes only from a ready deal.
-- [ ] The smoke check passes in the container and on CI.
+- [x] The smoke check passes in the container and on CI.
 
 ## Verification
 
-In the smoke container (`bash tools/scripts/run-smoke.sh loopback`) the check failed on every run before the change and passed on the two runs after it. 792 node tests pass. CI not yet run on it.
+In the smoke container (`bash tools/scripts/run-smoke.sh loopback`) the check failed on every run before the change and passed on the two runs after it. 792 node tests pass. CI's `deck-smoke` passed with it on `f649ff8`, loopback and network.

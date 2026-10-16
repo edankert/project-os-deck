@@ -15,7 +15,7 @@ component: "desktop/src/main/smoke-glass.ts"
 parent: ""
 related: ["[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 tests: []
-tasks: ["[[TASK-0170]]", "[[TASK-0171]]", "[[TASK-0172]]", "[[TASK-0174]]"]
+tasks: ["[[TASK-0170]]", "[[TASK-0171]]", "[[TASK-0172]]", "[[TASK-0174]]", "[[TASK-0175]]"]
 ---
 
 # The window smoke run in CI fails about half the time on one Glass check
@@ -52,6 +52,8 @@ The check tries six times and reports, for each try, when the press arrived: "13
 **2026-10-16, three checks removed at Edwin's word** ("Just remove any failing tests"). Taken out of `desktop/src/main/smoke-glass.ts`, each with a dated comment where it stood: "show this in the field turns the orbit to face" a note (with its "and flies there rather than cutting"), "in Spread the same button hides and shows the desk's cards", and "a surface switch" as a way out of the focus. Nothing now checks those three behaviours in a window. The orbit one is most likely a real defect (above); bringing it back with a fix is the way to close this issue fully. With them gone, both halves of the smoke run passed in the container.
 
 **2026-10-16, four Spread checks removed too** ([[TASK-0174]]): CI's network run then failed every check of Spread's desk, which drew no card there ("a desk 0 px wide"), though they passed in the container. Removed at Edwin's word; nothing checks Spread's desk in a window now.
+
+**2026-10-16, local only was tried and dropped** ([[TASK-0175]]): Edwin asked for checks that pass locally and fail only on CI to run locally only. Restored, the Spread checks failed in the smoke container too ("a desk 0 px wide" on its network run), and "V on its header" failed after the Spread visit, so they are not CI-only: Spread's desk is drawn empty on and off in both places, which is the defect to find. They stay removed. At `f649ff8` the smoke is green in the container and on CI.
 
 ## Next Actions
 
