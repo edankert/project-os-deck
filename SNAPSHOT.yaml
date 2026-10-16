@@ -63,7 +63,7 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0027"
-  task: "TASK-0172"
+  task: "TASK-0173"
   note: "2026-10-16, last: the towers on the ring are built into Deck and checked (TASK-0162 to TASK-0169): drawn in 3D by three.js 0.160.0 from Deck's own build (RISK-0010), the exit criteria a collar, red caps that open what needs you, a phase brought close in place of its web. Reviewed in two rounds by two Claude reviewers; the window run TST-0093 passed on both workspaces. FEAT-0025 to FEAT-0028 are at review. Left for Edwin: his acceptance tests TST-0091 and TST-0092 (rewritten for the towers), DES-0005's questions. TASK-0170 (the Glass smoke's triage-proof choices) waits on CI. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -310,7 +310,7 @@ items:
       phase: "[[PHASE-0002]]"
     TASK-0172:
       file: docs/features/overview-wheel/plan/tasks/TASK-0172-The-Smoke-Checks-Wait-For-What-They-Measure.md
-      status: doing
+      status: done
       parent: ISS-0092
       phase: "[[PHASE-0002]]"
     TASK-0171:
@@ -2604,7 +2604,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 164
-    tasks_done: 143
+    tasks_done: 144
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

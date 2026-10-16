@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0172
 title: "The smoke checks that raced the machine wait for what they measure: the opening is held still over the row for the second press, and five checks look again until their state arrives"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: system:claude
 created: 2026-10-16
@@ -36,7 +36,9 @@ tests: []
 
 ## Definition of Done
 
-- [ ] `cd desktop && npm test` passes.
-- [ ] CI's `deck-smoke` passes, or what it still fails is named in ISS-0092.
+- [x] `cd desktop && npm test` passes.
+- [x] CI's `deck-smoke` passes, or what it still fails is named in ISS-0092.
 
 ## Verification
+
+The opening is held still for the second press, and `eventually` waits for the lift, the ways out of the focus, V on the header, the pinch, the orbit's flight and the quiet band's shape; the link callout is retried. Reading the smoke run in its container (`bash tools/scripts/run-smoke.sh`) found that two of the checks blamed on timing were not: the band shape was a defect in Glass, fixed in [[TASK-0173]], and the orbit never turned at all. At Edwin's word three checks that still failed were removed (ISS-0092 names them). Both halves of the smoke then passed in the container. 792 node tests pass.

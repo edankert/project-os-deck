@@ -2176,7 +2176,8 @@ async function recordFocus(kit: Kit): Promise<void> {
         if (deskIds().length !== 1) stayed.push(`× (the desk holds ${deskIds().length} notes after it)`);
       }],
       ['a view switch', async () => { await view('features'); await view('issues'); }],
-      ['a surface switch', async () => { await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`); await delay(900); await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`); await delay(1500); }],
+      // 'a surface switch' was a way out of the focus checked here until 2026-10-16; removed
+      // at Edwin's word with the other failing checks (ISS-0092, TASK-0172).
     ];
     let dragKept = 'not tried';
     for (const [name, act] of [['a drag of its header', async () => undefined] as [string, () => Promise<void>], ...ways]) {
@@ -2215,7 +2216,7 @@ async function recordFocus(kit: Kit): Promise<void> {
         if ((await focus()).noteId !== null) stayed.push('W, once back at its own size');
       }
     }
-    record(stayed.length === 0, `Hide notes, W, ×, a view switch and a surface switch each leave the focus (${stayed.join(', ') || 'all did'})`);
+    record(stayed.length === 0, `Hide notes, W, × and a view switch each leave the focus (${stayed.join(', ') || 'all did'})`);
     record(dragKept === 'kept', `and a drag of the header does not: the dragged document is still the focus with its cards round it (${dragKept})`);
 
     // ---- 4. The cards keep the order they stood in round the document ----
@@ -2850,21 +2851,9 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     await delay(800);
 
     // ---- 2. Hide notes in Spread ----
-    await js(`document.querySelector('#surface-toggle button[data-surface="spread"]').click()`);
-    await delay(1200);
-    const deskBefore = JSON.stringify(deskCardsOf(store.getState(), ws));
-    // Spread draws the held notes this view holds; a neighbour lifted from
-    // another view is counted, not drawn, so the count is read, not assumed.
-    const spreadBefore = await js<number>(`[...document.querySelectorAll('#desk .card:not([hidden])')].filter((c) => getComputedStyle(c).display !== 'none').length`);
-    await clickAt('#hide-notes');
-    await delay(500);
-    const spreadHidden = await js<{ cards: number; shown: number }>(`(() => { const cs = [...document.querySelectorAll('#desk .card:not([hidden])')]; return { cards: cs.length, shown: cs.filter((c) => getComputedStyle(c).display !== 'none').length }; })()`);
-    await clickAt('#hide-notes');
-    await delay(500);
-    const spreadShown = await js<number>(`[...document.querySelectorAll('#desk .card:not([hidden])')].filter((c) => getComputedStyle(c).display !== 'none').length`);
-    record(spreadBefore > 0 && spreadHidden.cards === spreadBefore && spreadHidden.shown === 0 && spreadShown === spreadBefore && JSON.stringify(deskCardsOf(store.getState(), ws)) === deskBefore, `in Spread the same button hides and shows the desk's cards, and the desk is unchanged (${spreadBefore} shown, ${spreadHidden.shown} while hidden, ${spreadShown} after)`);
-    await js(`document.querySelector('#surface-toggle button[data-surface="glass"]').click()`);
-    await delay(1500);
+    // Removed 2026-10-16 at Edwin's word, with the other checks that failed (ISS-0092,
+    // TASK-0172): "in Spread the same button hides and shows the desk's cards" found no
+    // card drawn in Spread on the pinned notes.
 
     // ---- 5. The mark: on every view, drawn in full where the view does not hold it ----
     const marked = await clickAt(`.pane[data-note-id="${a}"] .pane-every`);
@@ -4889,28 +4878,10 @@ async function recordOrbit(kit: Kit): Promise<void> {
     }
     const orbitReader = await js<boolean>(`__t.shown('#reader') || __t.shown('#actuators')`);
     record(orbitDoc !== null && orbitDoc.state === 'ready' && orbitDoc.chars > 0 && !orbitReader, `and it is a document that holds the note's text, with no reader column in the orbit either (${orbitDoc === null ? 'no document' : `${orbitDoc.state}, ${orbitDoc.chars} characters`}; a reader shown: ${orbitReader})`);
-    // Show this in the field: from a pane, the orbit flies to it.
-    await js(`__t.glass().faceFront()`);
-    await delay(1300);
-    const before = await js<number>(`__t.yaw()`);
-    const orbitButton = await js<{ x: number; y: number } | null>(`__t.rect('.pane[data-note-id="${dot.id}"] .pane-orbit')`);
-    if (orbitButton !== null) {
-      await pointer(win, click(orbitButton));
-      // Sampled through the flight: a cut goes straight from before to after.
-      const seen: number[] = [];
-      for (let i = 0; i < 40; i += 1) {
-        seen.push(await js<number>(`__t.yaw()`));
-        await delay(30);
-      }
-      const norm = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
-      const facing = (): Promise<{ yaw: number; theta: number | null }> => js<{ yaw: number; theta: number | null }>(`({ yaw: __t.yaw(), theta: (window.__deckGlass.model.current.slots.get(${JSON.stringify(dot.id)}) || {}).theta ?? null })`);
-      // On software GL the flight can outlast the sampling above: wait for it to land (TASK-0172).
-      await eventually(async () => { const f = await facing(); return f.theta !== null && Math.abs(norm(f.yaw - f.theta)) < 0.01; });
-      const after = await facing();
-      record(after.theta !== null && Math.abs(norm(after.yaw - after.theta)) < 0.01, `"show this in the field" turns the orbit to face ${dot.id} (yaw ${after.yaw.toFixed(3)} from ${before.toFixed(3)}, its slot at ${after.theta === null ? 'none' : after.theta.toFixed(3)})`);
-      const between = seen.filter((y) => Math.abs(norm(y - before)) > 0.002 && Math.abs(norm(y - after.yaw)) > 0.002).length;
-      record(Math.abs(norm(before - after.yaw)) < 0.01 || between > 0, `and flies there rather than cutting (${between} frames in between)`);
-    }
+    // "Show this in the field" turning the orbit to face the note was checked here until
+    // 2026-10-16. It failed in every run on the pinned notes (the orbit never turned:
+    // yaw 0.000, the note's slot at 0.119), and Edwin asked for the failing checks to be
+    // removed (ISS-0092, TASK-0172). The likely cause is recorded there.
   }
   store.dispatch({ type: 'clear-desk', scope: 'workspace' });
   await delay(600);
