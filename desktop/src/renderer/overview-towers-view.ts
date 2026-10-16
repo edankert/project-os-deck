@@ -778,7 +778,9 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
 
   const pick = new THREE.Vector3();
   renderer.setAnimationLoop((now) => {
-    if (!canvas.isConnected) return;
+    // Nothing is drawn while the canvas cannot be seen: off the page, or under a hidden
+    // overview, so the field and everything else keep the machine to themselves.
+    if (!canvas.isConnected || canvas.offsetParent === null || document.hidden) return;
     stepGlide(now);
     for (const s of labels) {
       const k = Math.sqrt(Math.max(1, camera.position.distanceTo(s.getWorldPosition(pick))) / 120);
