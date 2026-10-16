@@ -54,35 +54,31 @@ The rules are in [[PHASE-0005-Overview]], "The look". Four of them are checked b
 
 ### S1 Wheel, the overview Deck opens on
 
+**Since 2026-10-16 the wheel is the towers on the ring** (Edwin: "I like the design page, please implement as suggested"; [[TASK-0166]], [[TASK-0167]]). In Deck it is drawn in 3D by three.js, as on the towers page described under "Towers on the ring" below: each phase still to finish a raised segment, each feature a tower of its tickets, the phase in focus brightest and facing you, the feature in focus with its beam, the next ticket marked, the exit criteria as a collar round each rim, and red caps you can press. The middle of the core opens re-phasing and says how many tickets have no phase; "Release test" under the name opens S6. The plates below are the same layout drawn flat, as Deck shows it when WebGL cannot start, seen from where the 3D camera starts.
+
 ![S1 Wheel on your-trainer](__attachments__/DES-0005/wheel-your-trainer.jpg)
 
-your-trainer, in the cockpit's colours: **the constellation.** Each phase still to finish is a segment of the outer ring, in the order the phase notes declare, and its tickets fan inward from it as particles, the way re-phasing draws its clusters (Edwin liked that screen best). Done work stands at the ring, open work in front of it, and what needs you glows at the front; the red count on each segment is how many need you there. Pointing at a ticket draws a wire to every ticket it links to. The green arc outside a segment is how much of the phase is closed, and the short segments beyond it are its exit criteria. In the middle, the project-wide tickets and those with no phase circle the button into re-phasing, which says how many have no phase; "Release test" under the name opens S6. Finished phases are discs on the shelf, each with a red badge counting its acceptance tests to run again; the backlog is the tray. **42 words at rest.**
+your-trainer, in the cockpit's colours. Its phases' names stop at three words, the one in focus excepted, and each red count is what needs you there. **52 words at rest.**
 
 ![S1 Wheel on your-trainer, in the state colours](__attachments__/DES-0005/wheel-state-your-trainer.jpg)
 
-The same wheel in DES-0004's state colours, as first built, for comparison. **42 words at rest.**
+The same towers in DES-0004's state colours, for comparison. **52 words at rest.**
 
 ![S1 Wheel on Deck](__attachments__/DES-0005/wheel-deck.jpg)
 
-Deck, on the same rules: Deck and Glass are mostly done, with Glass's seven tickets that need you glowing at the front of its fan, Overview is in progress, and Parity and Vault are nearly empty. **13 words at rest.** The state-coloured version is `wheel-state-deck.jpg`.
-
-![S1 Wheel on Deck, turned in Deck](__attachments__/DES-0005/window-wheel-turned-deck.jpg)
-
-In Deck, turned with the middle button, tilted further and zoomed: the same wheel standing in depth.
+Deck: Overview in focus at the front, with FEAT-0028's tower in focus and TASK-0154 next; Deck and Glass active; Vault and Parity planned and low. **22 words at rest.** The state-coloured version is `wheel-state-deck.jpg`.
 
 ### S2 Phase
 
-![S2 Phase on Deck, in Deck](__attachments__/DES-0005/window-phase-deck.jpg)
-
-In Deck: Deck's PHASE-0002 Glass, its largest phase. Left, the web: amber is what the phase defines and green what it has closed, kind by kind, on one scale for every phase, inside the ring of its exit criteria. Right, the phase's tickets as the cockpit lists them, on a plane tilted away: the nearest rows full size, the ones further back smaller. What needs you stands in front; in progress and open behind it; closed work at the back, folded to a strip of marks with its count until it is pressed open.
+**A phase opens as its segment of the ring brought close** ([[TASK-0168]]), in place of the web (Edwin: "I don't think the phase spider web works really"). In Deck the camera flies from the ring to the segment, the other phases fade to their plinths, each tower shows its feature's id at its foot, and the collar says how many exit criteria are met. The tickets are listed on the right as the cockpit lists them: what needs you first, each row saying what to do; then the feature in focus, open; then every other tower folded to a strip of its marks with its count, opened by a press; then the tickets with no feature. Pointing at a row outlines its floor. A finished phase, which has no segment, shows the ring and lists its tickets as before: what needs you, then in progress and open, then closed and folded.
 
 ![S2 Phase on Deck](__attachments__/DES-0005/phase-deck.jpg)
 
-The plate: Deck's PHASE-0002 Glass, drawn flat. 7 tickets need you: five features at review, a task waiting on another, and a test never run, 56 are in progress or open, and 109 are closed. **6 words at rest**, besides the rows.
+The plate: Deck's PHASE-0002 Glass, its largest phase, drawn flat: 13 towers and 47 tickets with no feature, 7 of them needing you, and 5 of its 17 exit criteria met. **1 word at rest**, besides the rows.
 
 ![S2 Phase on your-trainer](__attachments__/DES-0005/phase-your-trainer.jpg)
 
-your-trainer's PHASE-021: none needs you by the cockpit's rule, 13 are in progress or open, and 159 are closed. **7 words at rest**, besides the rows.
+your-trainer's PHASE-021: 7 towers and 14 tickets with no feature; nothing needs you by the cockpit's rule, and none of its 9 exit criteria is ticked. **2 words at rest**, besides the rows.
 
 ### S3 Ticket
 
@@ -176,7 +172,7 @@ Deck's history is two months long, so its columns are short. The beams over Glas
 
 ## Towers on the ring, the wheel in 3D grouped by phase
 
-**This is the design Edwin chose on 2026-10-16 to judge before anything is built: the wheel as towers standing on a ring.** He asked for a disc that is 3D, with its items stacked, grouped by feature inside each phase, and with the work in progress lit so it is clear what comes next. He also found the phase screen's web did not work. As with Level 2, nothing in Deck draws it yet ([[TASK-0163]]).
+**This is the design Edwin chose on 2026-10-16, drawn first as a page to judge and then built into Deck the same day: the wheel as towers standing on a ring.** He asked for a disc that is 3D, with its items stacked, grouped by feature inside each phase, and with the work in progress lit so it is clear what comes next. He also found the phase screen's web did not work. The page came first ([[TASK-0163]]); after turning it, Edwin asked for it to be built as suggested, and Deck now draws it ([[TASK-0164]] to [[TASK-0168]]).
 
 - **Each unfinished phase is a raised segment of the ring.** Planned phases are low and dim, active ones raised and lit, and the phase in focus is highest, brightest, and marked ▶ with its name in cyan. The page opens turned so the focus phase faces you.
 - **Each feature stands as a tower in its phase.** The feature itself is the tower's foot. Each floor above holds two of its tickets: its tasks, tests, requirements and designs, done at the bottom, then in progress, then not started, and what needs you on top. A tall tower is a big feature, and a solid one is far along. Which feature a ticket belongs to comes from its note's `parent:`, followed up through a task's parent, from the feature's own lists of tests, requirements and designs, or from the `tests:` of a task that belongs to the feature. A ticket that several features name stands in the lowest-numbered one's tower. The notes are read as they were at the commit the fixture was taken from, like the focus; for your-trainer, whose fixture was taken with uncommitted notes, a note the commit lacks is read from today's file.
@@ -227,7 +223,7 @@ The pictures from above are [towers-deck-above.jpg](__attachments__/DES-0005/tow
 ## What is Edwin's to decide
 
 - Whether to build Level 2, the 3D wheel where height is time, into Deck, after looking at its page. It would replace or sit beside the constellation.
-- Whether to build the towers on the ring into Deck, after turning its page by hand. It would replace the constellation as the wheel and the web as the phase screen, and bring three.js into Deck ([[TASK-0163]]).
+- ~~Whether to build the towers on the ring into Deck.~~ Decided 2026-10-16: "I like the design page, please implement as suggested", with a different design for the exit criteria (the collar) and the red caps pressable. Built in [[TASK-0164]] to [[TASK-0168]]; three.js is [[RISK-0010]].
 
 - Accept or decline this design.
 - Whether S5's fanned plates should be drawn as outlines only: behind a busy plate they compete with it.

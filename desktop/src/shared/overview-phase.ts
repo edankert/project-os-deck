@@ -84,8 +84,7 @@ function towerPanel(model: OverviewModel, ring: RingPhase, ctx: ScreenContext): 
   add('needs-you', SECTION_TITLE[0], SECTION_TITLE[0], everyone.filter((t) => t.needsYou), false);
   for (const tower of towers) {
     const all = ticketsOf(tower.cubes.map((c) => c.id));
-    const done = all.filter((t) => t.state === 'closed').length;
-    add(`tower-${tower.feature}`, `${tower.feature} · ${done} of ${all.length} done${tower.focus ? ' · in focus' : ''}`, tower.feature, all.filter((t) => !t.needsYou), !tower.focus);
+    add(`tower-${tower.feature}`, `${tower.feature}${tower.focus ? ' · in focus' : ''}`, tower.feature, all.filter((t) => !t.needsYou), !tower.focus);
   }
   const tiles = ticketsOf(ring.tiles.map((c) => c.id)).filter((t) => !t.needsYou);
   add('tiles', 'No feature', 'No feature', tiles, tiles.length > 8);

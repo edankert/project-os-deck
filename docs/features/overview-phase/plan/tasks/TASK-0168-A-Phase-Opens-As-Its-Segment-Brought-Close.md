@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0168
 title: "A phase opens as its segment of the ring brought close, its towers named and its tickets listed beside it as cockpit rows, in place of the web"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-16
@@ -23,8 +23,10 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 
 ## Definition of Done
 
-- [ ] `phaseScene` returns the towers layout opened on the phase, with the rows panel grouped by tower, the exit criteria at its head, and what needs you first.
-- [ ] Going from the wheel to a phase and back moves the camera rather than redrawing a different picture; back and forward keep working.
-- [ ] TST-0090 checks the phase screen on both fixtures: every ticket of the phase in the panel once, the grouping, and the words at rest.
+- [x] `phaseScene` returns the towers layout opened on the phase, with the rows panel grouped by tower, the exit criteria at its head, and what needs you first.
+- [x] Going from the wheel to a phase and back moves the camera rather than redrawing a different picture; back and forward keep working.
+- [x] TST-0090 checks the phase screen on both fixtures: every ticket of the phase in the panel once, the grouping, and the words at rest.
 
 ## Verification
+
+`phaseScene` in `desktop/src/shared/overview-phase.ts` returns the layout opened on the phase, its segment drawn flat and fitted beside the list (the cubes there carry no ticket id: the rows are the tickets), and the list: what needs you first, the feature in focus open, every other tower folded to one line of marks (`desktop/src/shared/overview-panel.ts` now draws a folded section on one line, so a phase of a dozen towers fits a plate), then the tiles. A finished phase lists its tickets by section as before. TST-0090 checks on both fixtures, for every phase: no cube carries an id, every row once, what needs you at the top of every group and first of all, one group per tower with its calm floors, only the focus open, and across the ring every standing ticket listed on exactly one phase's screen. In a hidden window, opening PHASE-0005 and PHASE-025 moved the 3D camera to the segment and back. 788 node tests pass.

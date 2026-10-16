@@ -55,7 +55,7 @@ export interface TowersView {
     phaseAt(id: string): { x: number; y: number } | null;
     coreAt(): { x: number; y: number } | null;
     open(): string | null;
-    camera(): { radius: number; theta: number; phi: number; moved: boolean };
+    camera(): { radius: number; theta: number; phi: number; moved: boolean; reach: number; limit: number };
     hit(x: number, y: number): string | null;
   };
 }
@@ -771,7 +771,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       },
       coreAt: () => screenAt(new THREE.Vector3(0, 0.6, 0)),
       open: () => layout?.open ?? null,
-      camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved() }),
+      camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved(), reach: Math.hypot(view.target.x, view.target.z), limit: layout === null ? 0 : layout.shelfR + 10 }),
       hit: (x, y) => { const h = hitAt(x, y); return h === null ? null : h.kind === 'cube' ? h.cube.id : h.kind; },
     },
   };

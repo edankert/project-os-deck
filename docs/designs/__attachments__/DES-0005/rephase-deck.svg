@@ -104,6 +104,22 @@
 .ov .ov-wire.st-open, .ov .ov-arc.st-open { fill: none; stroke: hsl(38 96% 58%); }
 .ov .ov-wire.st-dropped, .ov .ov-arc.st-dropped { fill: none; stroke: hsl(220 12% 32%); }
 .ov .ov-control { fill: hsla(190, 90%, 55%, 0.14); stroke: hsl(190 90% 60%); stroke-width: 1.5; }
+/* The towers on the ring, drawn flat (TASK-0166): plinths by level, the exit collar, caps, the shelf. */
+.ov .ov-plinth { stroke-width: 1; }
+.ov .ov-plinth.lv-planned { fill: hsl(205 50% 9%); stroke: hsla(200, 45%, 35%, 0.6); }
+.ov .ov-plinth.lv-active { fill: hsl(202 60% 17%); stroke: hsl(195 75% 56%); }
+.ov .ov-plinth.lv-focus { fill: hsl(198 72% 27%); stroke: hsl(188 100% 81%); stroke-width: 1.6; }
+.ov .ov-exit { fill: hsl(195 60% 11%); stroke: hsla(165, 35%, 58%, 0.8); stroke-width: 0.8; }
+.ov .ov-exit.ov-exit-met { fill: hsl(165 35% 58%); stroke: hsl(165 45% 72%); }
+.ov .ov-cap { fill: hsl(5 50% 65%); stroke: none; }
+.ov .ov-shelf { fill: hsla(205, 50%, 12%, 0.7); stroke: hsla(200, 45%, 35%, 0.6); stroke-width: 1; }
+.ov .ov-core-disc { fill: hsl(205 55% 11%); stroke: none; }
+.ov text.ov-phase-name { font-weight: 600; }
+.ov text.ov-phase-name.lv-planned { fill: hsl(205 25% 55%); }
+.ov text.ov-phase-name.lv-focus { fill: hsl(188 100% 81%); font-weight: 800; }
+.ov text.ov-focus-tag { fill: hsl(190 100% 86%); font-weight: 700; }
+.ov text.ov-next-tag { fill: #fff; font-weight: 800; }
+.ov text.ov-needs-count { fill: hsl(5 50% 65%); font-weight: 700; }
 .ov .ov-control.ov-go { fill: hsla(160, 62%, 46%, 0.22); stroke: hsl(160 62% 46%); }
 .ov .ov-control.ov-stop { fill: hsla(355, 88%, 62%, 0.16); stroke: hsl(355 88% 62%); }
 .ov .ov-control.ov-off { opacity: 0.3; }

@@ -62,22 +62,25 @@ module.exports = async (d) => {
     assert.equal(seen.shown, true, `${screen}: the overview layer is shown`);
     assert.equal(seen.screen, screen, `${screen}: the scene drawn is the one asked for`);
     assert.equal(seen.domMarks, seen.sceneMarks, `${screen}: every mark in the scene is in the window`);
+    if (screen === 'wheel' || screen === 'phase') {
+      // The towers are drawn in 3D (TASK-0167): the canvas is up, the flat plan hidden.
+      const three = await js(`({ on: document.querySelector('#overview-area .ov-stage').classList.contains('ov-3d'), canvas: Boolean(document.querySelector('#overview-area canvas.ov-towers')), open: window.__deckOverview.towers()?.open() ?? null })`);
+      d.log(`${screen} in 3D`, three);
+      assert.equal(three.on, true, `${screen}: drawn in 3D`);
+      assert.equal(three.canvas, true, `${screen}: the 3D canvas is in the window`);
+      if (screen === 'phase') assert.equal(three.open, model.phases.concat(model.backlog).some((p) => p.id === phase) ? phase : null, 'S2 brings its phase close');
+    }
     if (screen === 'phase') {
-      // The tickets stand on a tilted plane, what needs you in front, closed work folded (TASK-0147).
-      const plane = await js(`(() => {
-        const p = document.querySelector('#overview-area .ov-panel-rows.is-tilted .ov-plane');
-        if (!p) return null;
-        const closed = p.querySelector('.ov-sec[data-section="closed"]');
-        const rows = [...p.querySelectorAll('.ov-row')].filter((r) => r.offsetParent !== null);
-        const box = p.getBoundingClientRect();
-        return { transform: getComputedStyle(p).transform, closedFolded: closed ? closed.classList.contains('is-folded') : null,
-          visibleRows: rows.length, insidePlane: rows.every((r) => { const b = r.getBoundingClientRect(); return b.left >= box.left - 2 && b.right <= box.right + 2; }) };
+      // What needs you first, open; the feature in focus open; the other towers folded (TASK-0168).
+      const list = await js(`(() => {
+        const secs = [...document.querySelectorAll('#overview-area .ov-sec')];
+        return secs.map((s) => ({ key: s.dataset.section, folded: s.classList.contains('is-folded') }));
       })()`);
-      d.log('the phase plane', plane);
-      assert.ok(plane !== null, 'S2 builds its tickets as a tilted panel');
-      assert.notEqual(plane.transform, 'none', 'S2: the plane is tilted in 3D');
-      assert.ok(plane.closedFolded !== false, 'S2: closed work starts folded');
-      assert.ok(plane.insidePlane, 'S2: no row stands outside the plane');
+      d.log('the phase list', list);
+      assert.ok(list.length > 0, 'S2 lists its tickets');
+      const needs = list.findIndex((s) => s.key === 'needs-you');
+      if (needs >= 0) assert.equal(needs, 0, 'S2: what needs you comes first');
+      assert.ok(list.filter((s) => String(s.key).startsWith('tower-')).every((s) => s.folded || list.indexOf(s) <= 1), 'S2: only the feature in focus is open among the towers');
     }
     if (screen === 'ticket') {
       // The ticket's text arrives from the sidecar, as the reader shows it (TASK-0148).
@@ -149,114 +152,93 @@ module.exports = async (d) => {
     }
   }
 
-  // The camera (TASK-0156): the wheel leans back; the middle button turns it, Shift pans,
-  // the scroll wheel zooms, 0 puts it back, and a ticket can still be pressed on the tilt.
-  // TASK-0162: a drag to the right turns it anticlockwise, so the near edge follows the
-  // hand, and Home shows only while the camera is moved.
+  // The camera on the towers (TASK-0156, TASK-0162, TASK-0167): a middle-button drag to the
+  // right turns the ring so its near edge follows the hand, the scroll wheel zooms, Home and
+  // the views move it, 0 and Escape bring it home, and a ticket can still be pressed.
   {
     await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
     await settle();
-    const centre = await js(`(() => { const r = document.querySelector('#overview-area .ov-stage').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
-    const cam = () => js('window.__deckOverview.camera()');
+    const t3 = (code) => js(`window.__deckOverview.towers().${code}`);
+    const cam = () => t3('camera()');
+    const homeShown = () => js(`(() => { const b = document.querySelector('#overview-area .ov-camera-home'); return b !== null && !b.hidden && b.getBoundingClientRect().width > 0; })()`);
+    const centre = await js(`(() => { const r = document.querySelector('#overview-area .ov-stage').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height }; })()`);
     const start = await cam();
-    assert.ok(start.tilt > 0, 'the wheel opens leaning back');
-    await d.pointer(win, d.drag(centre, { x: centre.x + 120, y: centre.y - 60 }, 8, 16, { button: 'middle' }));
+    assert.ok(!start.moved && !(await homeShown()), 'the wheel opens home, with Home hidden');
+    await d.pointer(win, d.drag(centre, { x: centre.x + 120, y: centre.y - 40 }, 8, 16, { button: 'middle' }));
     const turnedTo = await cam();
-    assert.ok(turnedTo.spin < -10 && turnedTo.tilt > start.tilt, `a middle-button drag to the right turns the wheel's near edge right and tilts it (${JSON.stringify(turnedTo)})`);
-    await d.pointer(win, d.drag(centre, { x: centre.x + 40, y: centre.y + 30 }, 6, 16, { button: 'middle', shift: true }));
-    const pannedTo = await cam();
-    assert.ok(pannedTo.panX > 20 && pannedTo.panY > 10, `Shift with the middle button pans (${JSON.stringify(pannedTo)})`);
+    assert.ok(turnedTo.theta > start.theta + 0.2, `a middle-button drag to the right turns the ring so its near edge goes right (${JSON.stringify(turnedTo)})`);
+    assert.ok(await homeShown(), 'Home shows once the camera has moved');
     d.wheel(win, centre.x, centre.y, -300);
     await d.delay(300);
-    const zoomedTo = await cam();
-    assert.ok(zoomedTo.zoom > 1.2, `the scroll wheel zooms in (${JSON.stringify(zoomedTo)})`);
+    assert.ok((await cam()).radius < turnedTo.radius, 'the scroll wheel zooms in');
     await d.shot(win, 'wheel-turned');
-    const homeShown = () => js(`(() => { const b = document.querySelector('#overview-area .ov-camera-home'); return b !== null && !b.hidden && b.getBoundingClientRect().width > 0; })()`);
-    assert.ok(await homeShown(), 'Home shows once the camera has moved');
     d.press(win, '0');
-    await d.delay(500);
-    const reset = await cam();
-    assert.deepEqual([reset.spin, reset.panX, reset.panY, reset.zoom, reset.tilt], [0, 0, 0, 1, start.tilt], '0 puts the camera back');
+    await d.delay(900);
+    assert.equal((await cam()).moved, false, '0 puts the camera back');
     assert.ok(!(await homeShown()), 'Home hides once the camera is back');
-    // A press on a particle of the tilted wheel still opens its ticket.
-    const particle = await js(`(() => { const e = document.querySelector('#overview-area [data-key^="sector-"] [data-ticket]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: e.getAttribute('data-ticket') }; })()`);
-    assert.ok(particle !== null, 'the wheel draws particles');
-    await d.pointer(win, d.click(particle));
-    for (let i = 0; i < 40 && (await js('document.body.dataset.overviewScreen')) !== 'ticket'; i += 1) await d.delay(250);
-    const opened = await js('window.__deckOverview.current().address');
-    d.log('the camera', { start, turnedTo, pannedTo, zoomedTo, reset, pressed: particle.id, opened });
-    // A phase turned too: its plane of rows stands on the turned board (TASK-0161's picture).
-    if (phase) {
-      await js(`window.__deckOverview.go(${JSON.stringify(`${base}?note=${encodeURIComponent(phase)}&page=phase`)})`);
-      await settle();
-      await d.pointer(win, d.drag(centre, { x: centre.x - 90, y: centre.y - 50 }, 8, 16, { button: 'middle' }));
-      d.wheel(win, centre.x, centre.y, -200);
-      await d.delay(400);
-      await d.shot(win, 'phase-turned');
-      d.press(win, '0');
-      await d.delay(200);
-    }
-    assert.ok(opened.includes(`note=${encodeURIComponent(particle.id)}`), `a press on ${particle.id} on the tilted wheel opens it, not ${opened}`);
-  }
-
-  // TASK-0162, after review: the three views, the Home key, Escape on a moved camera and on
-  // an unmoved one, the pan limit, and Home following the screen that is open.
-  {
-    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
-    await settle();
-    const cam = () => js('window.__deckOverview.camera()');
-    const homeShown = () => js(`(() => { const b = document.querySelector('#overview-area .ov-camera-home'); return b !== null && !b.hidden && b.getBoundingClientRect().width > 0; })()`);
-    const press = async (selector) => {
+    // The three views, and the Home key.
+    const pressAt = async (selector) => {
       const at = await js(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
       assert.ok(at !== null, `${selector} is drawn`);
       await d.pointer(win, d.click(at));
-      await d.delay(500);
+      await d.delay(800);
     };
-    const start = await cam();
-    assert.ok(!(await homeShown()), 'Home is hidden on a wheel that has not moved');
-    assert.ok(await js(`(() => { const b = document.querySelector('#overview-area .ov-camera-bar'); return b !== null && !b.hidden && b.querySelectorAll('[data-view]').length === 3; })()`), 'the three views are shown on the wheel as it opens');
-    await press('#overview-area .ov-camera-bar [data-view="above"]');
-    assert.equal((await cam()).tilt, 0, 'From above lays the wheel flat');
-    await press('#overview-area .ov-camera-bar [data-view="side"]');
-    assert.ok((await cam()).tilt >= 64, `From the side is nearly edge on (${(await cam()).tilt})`);
-    assert.ok(await homeShown(), 'Home shows once a view has moved the camera');
+    await pressAt('#overview-area .ov-camera-bar [data-view="above"]');
+    assert.ok((await cam()).phi < 0.1, 'From above looks straight down');
+    await pressAt('#overview-area .ov-camera-bar [data-view="side"]');
+    assert.ok((await cam()).phi > 1.3, 'From the side is nearly edge on');
+    await d.shot(win, 'wheel-side');
     d.press(win, 'Home');
-    await d.delay(500);
-    assert.deepEqual([(await cam()).tilt, (await cam()).spin], [start.tilt, 0], 'the Home key puts the camera back');
-    // The pan stops where the picture's centre would leave the stage.
-    const stageBox = await js(`(() => { const r = document.querySelector('#overview-area .ov-stage').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`);
-    const mid = { x: stageBox.x + stageBox.w / 2, y: stageBox.y + stageBox.h / 2 };
-    for (let i = 0; i < 4; i += 1) await d.pointer(win, d.drag(mid, { x: mid.x + stageBox.w * 0.45, y: mid.y + stageBox.h * 0.45 }, 6, 12, { button: 'middle', shift: true }));
+    await d.delay(900);
+    assert.equal((await cam()).moved, false, 'the Home key puts the camera back');
+    // A pan stops before the picture is lost.
+    for (let i = 0; i < 4; i += 1) await d.pointer(win, d.drag(centre, { x: centre.x + centre.w * 0.45, y: centre.y + centre.h * 0.45 }, 6, 12, { button: 'middle', shift: true }));
     const far = await cam();
-    assert.ok(Math.abs(far.panX) <= stageBox.w / 2 + 1 && Math.abs(far.panY) <= stageBox.h / 2 + 1, `the pan stops at the stage's edge (${JSON.stringify(far)})`);
+    assert.ok(far.reach <= far.limit + 0.01, `the pan stops at the ring's edge (${JSON.stringify(far)})`);
     // Escape on a moved camera brings it home and stays on the wheel.
     d.press(win, 'Escape');
-    await d.delay(500);
+    await d.delay(900);
     assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape on a moved camera stays on the wheel');
-    assert.deepEqual([(await cam()).panX, (await cam()).panY], [0, 0], 'Escape on a moved camera brings it home');
-    // Home follows the screen: moved on the wheel, a phase opens unmoved, and back on the wheel it is moved again.
-    if (phase) {
-      await d.pointer(win, d.drag(mid, { x: mid.x + 80, y: mid.y }, 6, 12, { button: 'middle' }));
-      assert.ok(await homeShown(), 'Home shows on the moved wheel');
-      await js(`window.__deckOverview.go(${JSON.stringify(`${base}?note=${encodeURIComponent(phase)}&page=phase`)})`);
-      await settle();
-      assert.ok(!(await homeShown()), 'a phase that has not moved opens with Home hidden, though the wheel was moved');
-      // Escape on an unmoved screen still goes back.
-      d.press(win, 'Escape');
-      for (let i = 0; i < 20 && (await js('document.body.dataset.overviewScreen')) !== 'wheel'; i += 1) await d.delay(250);
-      assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape on an unmoved phase goes back to the wheel');
-      assert.ok(await homeShown(), 'back on the moved wheel, Home shows again');
-      d.press(win, '0');
-      await d.delay(400);
+    assert.equal((await cam()).moved, false, 'Escape on a moved camera brings it home');
+    // A press on the next ticket opens it.
+    const next = model.next ?? Object.values(model.tickets).find((t) => t.kind === 'task')?.id;
+    const at = await t3(`screenOf(${JSON.stringify(next)})`);
+    assert.ok(at !== null, `the towers stand ${next}`);
+    assert.equal(await t3(`hit(${at.x}, ${at.y})`), next, `${next} is the first thing under the pointer`);
+    await d.pointer(win, d.click(at));
+    for (let i = 0; i < 40 && (await js('document.body.dataset.overviewScreen')) !== 'ticket'; i += 1) await d.delay(250);
+    const opened = await js('window.__deckOverview.current().address');
+    d.log('the camera', { start, turnedTo, far, pressed: next, opened });
+    assert.ok(opened.includes(`note=${encodeURIComponent(next)}`), `a press on ${next} opens it, not ${opened}`);
+  }
+
+  // A red cap opens what needs you in its tower (TASK-0164): one ticket, or the phase.
+  {
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+    await settle();
+    const layout = await js(`window.__deckOverview.current().nodes.find((n) => n.kind === 'towers').layout`);
+    let pressed = null;
+    for (const p of layout.phases) for (const tower of p.towers) {
+      if (pressed !== null || tower.cap === null) continue;
+      const at = await js(`window.__deckOverview.towers().capOf(${JSON.stringify(tower.feature)})`);
+      if (at === null || (await js(`window.__deckOverview.towers().hit(${at.x}, ${at.y})`)) !== 'cap') continue;
+      await d.pointer(win, d.click(at));
+      pressed = { feature: tower.feature, target: tower.cap.target };
     }
-    d.log('the camera views and Home', { start, far });
+    assert.ok(pressed !== null, 'some red cap can be pressed from where the wheel starts');
+    for (let i = 0; i < 40 && (await js('window.__deckOverview.current().address')) !== pressed.target; i += 1) await d.delay(250);
+    assert.equal(await js('window.__deckOverview.current().address'), pressed.target, `the cap of ${pressed.feature} opens ${pressed.target}`);
+    d.log('pressed a cap', pressed);
   }
 
   // The wheel's two labelled ways in open re-phasing and the release test (TASK-0152).
   for (const [key, screen] of [['rephase-button', 'rephase'], ['release-test', 'test-run']]) {
     await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
     await settle();
-    const at = await js(`(() => { const e = document.querySelector('#overview-area [data-key="${key}"]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+    // The core's middle is drawn by the 3D view; the release test stays a button of the scene.
+    const at = key === 'rephase-button'
+      ? await js('window.__deckOverview.towers().coreAt()')
+      : await js(`(() => { const e = document.querySelector('#overview-area [data-key="${key}"]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
     assert.ok(at !== null, `the wheel draws its ${key} button`);
     await d.pointer(win, d.click(at));
     for (let i = 0; i < 60 && (await js('document.body.dataset.overviewScreen')) !== screen; i += 1) await d.delay(250);
@@ -265,25 +247,28 @@ module.exports = async (d) => {
     assert.equal(now, screen, `the ${key} button opens ${screen}`);
   }
 
-  // A click on a sector opens its phase, Escape returns, L opens the twin.
+  // A press on a phase's plinth brings it close, Escape returns to the ring, L opens the twin.
   await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
   await settle();
-  const sector = await js(`(() => { const e = document.querySelector('#overview-area .ov-sector .ov-hit'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
-  if (sector !== null) {
-    // The hit area's centre can fall in the wheel's hollow; aim at a wedge of the sector instead.
-    const wedge = await js(`(() => { const e = document.querySelector('#overview-area .ov-sector path[data-ticket]:not(.ov-hit)'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
-    const at = wedge ?? sector;
-    await d.pointer(win, d.click(at));
+  {
+    const ring = model.phases.concat(model.backlog);
+    let target = null;
+    for (const p of ring) {
+      const at = await js(`window.__deckOverview.towers().phaseAt(${JSON.stringify(p.id)})`);
+      if (at !== null && (await js(`window.__deckOverview.towers().hit(${at.x}, ${at.y})`)) === 'phase') { target = { id: p.id, at }; break; }
+    }
+    assert.ok(target !== null, 'some phase can be pressed on its plinth');
+    await d.pointer(win, d.click(target.at));
     await settle();
     const after = await js('document.body.dataset.overviewScreen');
-    d.log('clicked the wheel', { at, now: after });
-    assert.ok(after === 'phase' || after === 'ticket', `a click on the wheel opens a phase or a ticket, not ${after}`);
-    // Escape goes back one screen: from a ticket to its phase (or the wheel), from a phase to the wheel.
+    d.log('pressed a plinth', { phase: target.id, now: after, open: await js('window.__deckOverview.towers()?.open() ?? null') });
+    assert.equal(after, 'phase', `a press on ${target.id}'s plinth opens it`);
+    assert.equal(await js('window.__deckOverview.towers().open()'), target.id, `${target.id} is brought close`);
+    await d.shot(win, 'phase-close');
     d.press(win, 'Escape');
     await settle();
-    const back = await js('document.body.dataset.overviewScreen');
-    d.log('pressed Escape', { now: back });
-    assert.ok(after === 'ticket' ? back === 'phase' || back === 'wheel' : back === 'wheel', `Escape from ${after} went to ${back}`);
+    assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape from the phase goes back to the ring');
+    assert.equal(await js('window.__deckOverview.towers().open()'), null, 'and the ring is whole again');
   }
   d.press(win, 'L');
   await d.delay(400);
@@ -309,10 +294,11 @@ module.exports = async (d) => {
     if (await d.js(served, 'Boolean(window.__deckOverview && window.__deckOverview.current())')) break;
     await d.delay(250);
   }
-  const tablet = await d.js(served, `({ screen: document.body.dataset.overviewScreen, marks: document.querySelectorAll('#overview-area [data-ticket]').length, write: document.querySelectorAll('#overview-area [data-action]:not(.ov-off)').length })`);
+  const tablet = await d.js(served, `({ screen: document.body.dataset.overviewScreen, marks: document.querySelectorAll('#overview-area [data-ticket]').length, write: document.querySelectorAll('#overview-area [data-action]:not(.ov-off)').length, drawn: document.querySelector('#overview-area .ov-stage').classList.contains('ov-3d') ? '3d' : document.querySelector('#overview-area .ov-stage').classList.contains('ov-flat') ? 'flat' : 'none' })`);
   d.log('the served page', tablet);
   assert.equal(tablet.screen, 'wheel', 'the served page opens on the wheel');
   assert.ok(tablet.marks > 0, 'the served wheel draws its tickets');
+  assert.notEqual(tablet.drawn, 'none', 'the served wheel draws the towers, in 3D or as the flat plan');
   assert.equal(tablet.write, 0, 'the served page offers no enabled control');
   await d.shot(served, 'served-wheel');
   served.close();
