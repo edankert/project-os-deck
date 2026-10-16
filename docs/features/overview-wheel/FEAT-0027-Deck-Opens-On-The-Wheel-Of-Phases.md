@@ -19,8 +19,8 @@ design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra", "model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-16
 review_verdict: changes-requested
-review_round: 1
-review_response: "Towers, round one: two Claude reviewers requested changes; findings 1 to 5 are fixed, finding 6 (the window run) waits for Edwin. See Review, Towers."
+review_round: 2
+review_response: "Towers: round one asked for changes; findings 1 to 5 fixed in 0286df2, and round two (two Claude reviewers) agrees. Finding 6, the window run on the towers, waits for Edwin. See Review, Towers."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -127,6 +127,10 @@ Fixed in `b9e61bb`: the camera bar is drawn after the new screen is current; TST
 Also noted: three.js was imported statically, so a missing `vendor/` file would stop the whole overview; the build copied the page before checking the hash; the ring grew one step past its first fit.
 
 Fixed in `0286df2`: the three tests are restored and pass; in 3D the plan stays in the page, invisible and ignoring the pointer, so Tab and the arrows reach everything, and a focused ticket's floor is outlined; TST-0090 checks that the parent chain wins over a lower-numbered feature's list, and that every plinth and shelf disc carries its phase's address and takes focus (each break now fails a test); three.js loads with the 3D view's module when first needed; the build checks the hash before copying; the ring stops at its first fit. TST-0091 and TST-0092 describe the towers. Finding 6 waits for Edwin's word. 791 node tests pass.
+
+### Towers, round two
+
+2026-10-16: two independent Claude reviewers, each in its own worktree on `main` (`3eb65dc`). Both found findings 1 to 5 fixed: the plan stays focusable under the 3D view, the three cut tests are back and pass, and reversing the feature rule's order or removing a plinth's or a disc's target now fails a test (each shown by breaking it). Both keep finding 6 open: the window run TST-0093 has not run on the towers, and its `passing` is from the old screens; its note now says so. It waits for Edwin's word. 791 node tests: 789 pass and the 2 cockpit parity checks skip where the sibling cockpit cannot be found.
 
 ## Questions between the lanes
 

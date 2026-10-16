@@ -62,16 +62,16 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0005"
-  feature: "FEAT-0026"
-  task: "TASK-0165"
-  note: "2026-10-16, last: a third design round. Edwin found the wheel flat, the turn going against the mouse, the way back hard to find and the phase web not working, and chose towers on the ring, grouped by phase, drawn in three.js first. TASK-0163 drew it: docs/designs/DES-0005-towers.html, eight pictures, and a DES-0005 section asking whether to build it into Deck. TASK-0162 fixed Deck's camera: the near edge follows the hand, Home and three views, limits. Both reviewed in two rounds by two Claude reviewers; towers approved, the camera kept open only until the window run TST-0093 passes its new camera checks, which waits for Edwin. FEAT-0025 and FEAT-0027 are at review. Left for Edwin: turn the towers page and decide whether to build it; say when the window run may go; the acceptance tests and DES-0005's other questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  feature: "FEAT-0027"
+  task: "TASK-0169"
+  note: "2026-10-16, last: the towers on the ring are built into Deck (TASK-0164 to TASK-0168): each feature a tower of its tickets, the focus lit, the exit criteria a collar round each rim, red caps that open what needs you, a phase opening as its segment brought close, drawn in 3D by three.js 0.160.0 from Deck's own build (RISK-0010) with a flat plan where WebGL is missing. Reviewed in two rounds by two Claude reviewers: all findings fixed except the window run. Owed: TST-0093 on the towers (TASK-0169), which waits for Edwin's word; then TASK-0167 and TASK-0169 close and FEAT-0027 returns to review. Edwin's acceptance tests TST-0091 and TST-0092 are rewritten for the towers. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: doing
+      status: review
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
@@ -79,7 +79,7 @@ items:
       file: "docs/features/overview-wheel/FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases.md"
       owner: system:claude
     FEAT-0028:
-      status: doing
+      status: review
       file: "docs/features/overview-phase/FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures.md"
       owner: system:claude
     FEAT-0029:
@@ -87,7 +87,7 @@ items:
       file: "docs/features/overview-acceptance/FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence.md"
       owner: system:codex
     FEAT-0026:
-      status: doing
+      status: review
       title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
       owner: system:codex
       file: "docs/features/overview-model/FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place.md"

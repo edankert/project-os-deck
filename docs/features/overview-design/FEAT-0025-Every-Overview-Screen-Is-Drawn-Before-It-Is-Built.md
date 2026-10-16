@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0025
 aliases: ["FEAT-0025"]
 title: "Every overview screen is drawn before it is built: DES-0005's prototype and one plate per screen, from real tickets"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14

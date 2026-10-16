@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0026
 aliases: ["FEAT-0026"]
 title: "One list of tickets, each with a type, a state and a place: the overview model every screen reads, and the checks every screen is held to"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:codex
 created: 2026-10-14

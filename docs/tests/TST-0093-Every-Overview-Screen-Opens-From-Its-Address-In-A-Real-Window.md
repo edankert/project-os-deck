@@ -6,7 +6,7 @@ title: "Every overview screen opens from its address in a real Deck window on De
 status: passing
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-16
 source: ["[[TASK-0131-Run-The-Overview-Screens-In-A-Window-Once]]"]
 phase: "[[PHASE-0005-Overview]]"
 scope: system
@@ -50,6 +50,9 @@ From `desktop/`, after `npm run build`:
 - Added 2026-10-15, not yet run: after a phase, a ticket and a linked ticket are opened, back returns through them in order and forward returns once; the wheel opens in each of its two colourings from its address.
 
 ## Results
+
+**2026-10-16: a run is owed.** The pass recorded above was on the constellation and the web, before the towers on the ring (TASK-0166 to TASK-0168) and the 3D view (TASK-0167). The driver now presses through the 3D view: the next ticket, a red cap, a plinth and the core; it turns, zooms, pans and resets the 3D camera and tries the three views; and it checks the phase list's grouping and the served page. None of that has run yet: window runs wait for Edwin's word.
+
 
 **2026-10-14, third run, passing on both workspaces** at commit `9db237e`, after Codex's review made the run assert where Escape lands, that the served page offers no enabled control, and that every screen is registered. Every screen's marks matched again (Deck's wheel now 377, your-trainer's 2,747; your-trainer's FEAT-0051 draws its 202 neighbours on the new rings). Escape from a ticket returned to its phase, L opened the list twin with every row, the served page showed every ticket with no enabled control, and neither workspace changed.
 
