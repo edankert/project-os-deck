@@ -47,6 +47,8 @@ The check tries six times and reports, for each try, when the press arrived: "13
 
 **2026-10-16, accepted.** Edwin: "go ahead and fix the document-growth check and other possible timing checks as suggested" ([[TASK-0172]]).
 
+**2026-10-16, what is left, read in the smoke container.** The band-shape check was a real defect, fixed ([[TASK-0173]]): a view switch drawn before the new view's notes arrived shaped the bands from the old view's notes. "Show this in the field turns the orbit to face" a note is most likely a real defect too: pressing ◎ left the orbit at yaw 0.000 while the note's slot stood at 0.119, so the turn never started; `showInOrbit` returns without flying when the note has no slot yet, and it is called right after the orbit is loaded. Not yet fixed. The same run also failed "in Spread the same button hides and shows the desk's cards (0 shown)", not seen before; not yet read.
+
 ## Next Actions
 
 - [ ] Triage: decide whether the check should measure the document's position when the press lands (and wait for it to be over the row) rather than time the press against the growth.

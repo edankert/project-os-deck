@@ -1765,6 +1765,8 @@ function drawDesk(): void {
       faces: currentView?.face ?? PLAIN_FACES,
       pending: pendingCount,
       pendingAny: pendingMoves,
+      // The groups are the last view's until this view's are read (TASK-0173).
+      ready: viewState.state !== 'loading',
     });
     // The collection says how many of its members the field has a place for,
     // and it is painted with the list, which is drawn before the field is
@@ -2664,7 +2666,7 @@ async function prepareChange(): Promise<void> {
   changeArriving = true;
   glass.forgetBodies();
   glass.forgetGraphEdges();
-  glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount, pendingAny: pendingMoves });
+  glass.update({ groups: currentGroups, view: currentView, faces: currentView?.face ?? PLAIN_FACES, pending: pendingCount, pendingAny: pendingMoves, ready: viewState.state !== 'loading' });
   let next: CardGroup[];
   try {
     const source = sourceOf(view);

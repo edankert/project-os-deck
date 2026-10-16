@@ -377,6 +377,13 @@ export interface GlassInput {
   pending: number;
   /** Whether a changed result is waiting at all: one that differs only in its order counts no note. */
   pendingAny?: boolean;
+  /**
+   * False while the view's notes are still being read: `groups` are then the last
+   * view's. The band shapes are worked out only from a view's own notes (ISS-0092,
+   * TASK-0173): a switch drawn before the new notes arrived took the old view's shape
+   * and kept it.
+   */
+  ready?: boolean;
 }
 
 interface Elements {
@@ -1108,7 +1115,7 @@ export class GlassField {
       // every other tile where it was. `input.groups` changing identity is not
       // enough — the sidecar re-sends them whenever anything changes.
       const shapeKey = `${this.workspaceId() ?? ''}|${this.input.view.id}`;
-      if (shapeKey !== this.shapeKey) {
+      if (shapeKey !== this.shapeKey && this.input.ready !== false) {
         this.shapeKey = shapeKey;
         this.model.setShapes(
           shapesFor({

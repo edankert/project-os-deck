@@ -4902,10 +4902,12 @@ async function recordOrbit(kit: Kit): Promise<void> {
         seen.push(await js<number>(`__t.yaw()`));
         await delay(30);
       }
-      await delay(800);
-      const after = await js<{ yaw: number; theta: number | null }>(`({ yaw: __t.yaw(), theta: (window.__deckGlass.model.current.slots.get(${JSON.stringify(dot.id)}) || {}).theta ?? null })`);
       const norm = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
-      record(after.theta !== null && Math.abs(norm(after.yaw - after.theta)) < 0.01, `"show this in the field" turns the orbit to face ${dot.id}`);
+      const facing = (): Promise<{ yaw: number; theta: number | null }> => js<{ yaw: number; theta: number | null }>(`({ yaw: __t.yaw(), theta: (window.__deckGlass.model.current.slots.get(${JSON.stringify(dot.id)}) || {}).theta ?? null })`);
+      // On software GL the flight can outlast the sampling above: wait for it to land (TASK-0172).
+      await eventually(async () => { const f = await facing(); return f.theta !== null && Math.abs(norm(f.yaw - f.theta)) < 0.01; });
+      const after = await facing();
+      record(after.theta !== null && Math.abs(norm(after.yaw - after.theta)) < 0.01, `"show this in the field" turns the orbit to face ${dot.id} (yaw ${after.yaw.toFixed(3)} from ${before.toFixed(3)}, its slot at ${after.theta === null ? 'none' : after.theta.toFixed(3)})`);
       const between = seen.filter((y) => Math.abs(norm(y - before)) > 0.002 && Math.abs(norm(y - after.yaw)) > 0.002).length;
       record(Math.abs(norm(before - after.yaw)) < 0.01 || between > 0, `and flies there rather than cutting (${between} frames in between)`);
     }
