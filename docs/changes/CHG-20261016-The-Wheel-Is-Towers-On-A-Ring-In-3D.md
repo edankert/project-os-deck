@@ -43,4 +43,4 @@ related: ["[[TASK-0162]]", "[[TASK-0163]]", "[[TASK-0164]]", "[[TASK-0165]]", "[
 
 ## Verification
 
-788 node tests pass. In a hidden window over Deck's build, on both fixtures, the 3D view drew with no page errors, named and opened the next ticket, turned with a middle-button drag the hand's way, came home, opened re-phasing from the core, and flew to a phase and back. The window run TST-0093 in Deck itself, with its new towers checks, waits for Edwin's word; so do his acceptance tests.
+791 node tests pass. In a hidden window over Deck's build, on both fixtures, the 3D view drew with no page errors, named and opened the next ticket, turned with a middle-button drag the hand's way, came home, opened re-phasing from the core, and flew to a phase and back. The window run TST-0093 in Deck itself, with its new towers checks, waits for Edwin's word; so do his acceptance tests.
