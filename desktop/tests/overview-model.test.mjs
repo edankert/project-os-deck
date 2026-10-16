@@ -363,3 +363,48 @@ test('on both fixtures, every ticket that needs you says why, and a waiting tick
     }
   }
 });
+
+// TASK-0165 — the feature each ticket stands in, and the snapshot's focus, read from
+// frontmatter written in every way the corpus writes it (the rule of DES-0005's towers page).
+test('every ticket knows its feature, however the frontmatter writes the link', () => {
+  const real = (id, lines) => recordFrom(`${id}.md`, `---\n${lines.join('\n')}\n---\n# ${id}\n`, 0).record;
+  const records = [
+    real('PHASE-0001', ['id: PHASE-0001', 'type: phase', 'status: active']),
+    real('FEAT-0001', ['id: FEAT-0001', 'type: feature', 'status: doing', 'phase: "[[PHASE-0001]]"', 'tests:', "- '[[TST-0001-At-Column-Zero]]'", 'implements: ["[[REQ-0001-Inline]]", "REQ-0002"]']),
+    real('FEAT-0002', ['id: FEAT-0002', 'type: feature', 'status: doing', 'phase: "[[PHASE-0001]]"', 'tests:', '  - "[[TST-0001-At-Column-Zero]]"', '  - "[[TST-0094-DES-0005s-Plates]]"']),
+    real('TASK-0001', ['id: TASK-0001', 'type: task', 'status: doing', "parent: '[[FEAT-0002-Single-Quoted]]'", 'tests: ["[[TST-0003]]"]']),
+    real('TASK-0002', ['id: TASK-0002', 'type: task', 'status: backlog', 'parent: "FEAT-0001"']),
+    real('TASK-0003', ['id: TASK-0003', 'type: task', 'status: done', 'parent: [[TASK-0001]]']),
+    real('TST-0001', ['id: TST-0001', 'type: test', 'status: active']),
+    real('TST-0003', ['id: TST-0003', 'type: test', 'status: active']),
+    real('TST-0094', ['id: TST-0094', 'type: test', 'status: active']),
+    real('DES-0005', ['id: DES-0005', 'type: design', 'status: proposed']),
+    real('REQ-0001', ['id: REQ-0001', 'type: requirement', 'status: approved']),
+    real('REQ-0002', ['id: REQ-0002', 'type: requirement', 'status: approved']),
+    real('ISS-0001', ['id: ISS-0001', 'type: issue', 'status: open']),
+  ];
+  const { snapshotFocus } = load('shared/overview-model.js');
+  const focus = snapshotFocus('version: 1\nfocus:\n  # a comment\n  phase: "PHASE-0001"\n  feature: "FEAT-0002"\n  task: ""\n  note: "x"\nitems:\n  phase: "PHASE-0009"\n');
+  assert.deepEqual(focus, { phase: 'PHASE-0001', feature: 'FEAT-0002', task: null }, 'the focus block only, an empty task as none');
+  assert.equal(snapshotFocus('version: 1\n'), undefined, 'no focus block, no focus');
+  const model = run(records, { focus });
+  const feature = (id) => model.tickets[id].feature ?? null;
+  assert.equal(feature('TASK-0001'), 'FEAT-0002', 'a parent in single quotes, with a slug');
+  assert.equal(feature('TASK-0002'), 'FEAT-0001', 'a parent written bare');
+  assert.equal(feature('TASK-0003'), 'FEAT-0002', 'up a task parent to its feature');
+  assert.equal(feature('TST-0001'), 'FEAT-0001', 'a dash list at column 0; named by two features, the lower number wins');
+  assert.equal(feature('REQ-0001'), 'FEAT-0001', 'an inline list of links');
+  assert.equal(feature('REQ-0002'), 'FEAT-0001', 'a bare id in a list');
+  assert.equal(feature('TST-0003'), 'FEAT-0002', 'a test named only by a task stands in the task\'s feature');
+  assert.equal(feature('TST-0094'), 'FEAT-0002', 'a link counts by its target');
+  assert.equal(feature('DES-0005'), null, 'an id inside a link\'s file name names nothing');
+  assert.equal(feature('ISS-0001'), null, 'a ticket no feature claims has none');
+  assert.equal(feature('FEAT-0001'), null, 'a feature stands in no tower');
+  assert.deepEqual(model.focus, { phase: 'PHASE-0001', feature: 'FEAT-0002', task: null });
+  assert.equal(model.next, 'TASK-0001', 'no focus task: the focus feature\'s first task at doing');
+  assert.equal(run(records, { focus: { phase: 'PHASE-0001', feature: 'FEAT-0001', task: null } }).next, 'TASK-0002', 'none at doing: the first at backlog');
+  assert.equal(run(records, { focus: { phase: 'PHASE-0001', feature: 'FEAT-0002', task: 'TASK-0002' } }).next, 'TASK-0002', 'an open focus task is next');
+  assert.equal(run(records, { focus: { phase: 'PHASE-0001', feature: 'FEAT-0002', task: 'TASK-0003' } }).next, 'TASK-0001', 'a done focus task is not');
+  assert.deepEqual(run(records, { focus: { phase: 'PHASE-0099', feature: 'TASK-0001', task: 'FEAT-0001' } }).focus, { phase: null, feature: null, task: null }, 'a focus part the model does not know is dropped');
+  assert.equal(run(records).focus, undefined, 'no snapshot, no focus');
+});

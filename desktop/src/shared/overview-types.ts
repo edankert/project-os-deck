@@ -121,6 +121,20 @@ export interface Ticket {
   suggestion?: { phase: string; by: 'links' | 'dates' };
   /** Ids of the notes it links to, for the ticket screen (S3). */
   links: string[];
+  /**
+   * The feature whose tower the ticket stands in (TASK-0165): its `parent:` followed
+   * up to the first feature, else the lowest-numbered feature whose lists name it,
+   * else the feature of a task whose `tests:` names it. Absent for a feature, and for
+   * a ticket no feature claims.
+   */
+  feature?: string;
+}
+
+/** What the workspace's SNAPSHOT says is being worked on (TASK-0165); each null when it names none. */
+export interface Focus {
+  phase: string | null;
+  feature: string | null;
+  task: string | null;
 }
 
 export interface ExitCriterion {
@@ -160,6 +174,13 @@ export interface OverviewModel {
   backlog: Phase[];
   /** Project-wide tickets and tickets with no phase. */
   core: { tickets: string[]; counts: Counts };
+  /** The SNAPSHOT's focus, each part kept only when the model knows it. */
+  focus?: Focus;
+  /**
+   * The ticket that is next: the focus task while it is open, else the focus
+   * feature's first task at `doing`, then its first at `backlog` or `planned`.
+   */
+  next?: string | null;
   tickets: Record<string, Ticket>;
 }
 

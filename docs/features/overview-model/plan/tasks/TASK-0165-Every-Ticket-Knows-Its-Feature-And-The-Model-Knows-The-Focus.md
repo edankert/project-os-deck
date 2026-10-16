@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0165
 title: "Every ticket in the overview model knows the feature it belongs to, and the model carries the workspace's focus and the ticket that is next"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-16
@@ -27,9 +27,11 @@ tests: ["[[TST-0090-The-Overview-Screens-Are-Drawn-From-The-Model-And-Hold-The-L
 
 ## Definition of Done
 
-- [ ] `buildOverview` sets `feature` from the records it already holds, and `OverviewService` passes the focus read from the workspace's SNAPSHOT.
-- [ ] Both fixtures are rebuilt with the new fields, and every ticket's feature agrees with the one on DES-0005's towers page for the same fixture commit, apart from differences the note names.
-- [ ] A node check covers each way a membership is written: a parent in single quotes, double quotes or bare; a dash list at column 0 or indented; an inline list; a link whose file name contains another id; a ticket that two features name; a test named only by a task.
-- [ ] `cd desktop && npm test` passes.
+- [x] `buildOverview` sets `feature` from the records it already holds, and `OverviewService` passes the focus read from the workspace's SNAPSHOT.
+- [x] Both fixtures are rebuilt with the new fields, and every ticket's feature agrees with the one on DES-0005's towers page for the same fixture commit, apart from differences the note names.
+- [x] A node check covers each way a membership is written: a parent in single quotes, double quotes or bare; a dash list at column 0 or indented; an inline list; a link whose file name contains another id; a ticket that two features name; a test named only by a task.
+- [x] `cd desktop && npm test` passes.
 
 ## Verification
+
+`buildOverview` sets `Ticket.feature` (`assignFeatures` in `desktop/src/shared/overview-model.ts`) and, given a focus, `model.focus` and `model.next`; `overviewVerification` reads the focus from the workspace's SNAPSHOT with `snapshotFocus` and passes it, so a changed focus is part of the cache key. Deck's fixture was rebuilt at `65c6397` and is identical apart from the new fields; Your Trainer's fixture had the new fields added, as `desktop/fixtures/overview/README.md` says. On both, every tower floor of DES-0005's towers page has the same feature in the model (219 and 605 floors, no difference). TST-0090's model suite has a new check of every way a membership is written, the focus block and the next ticket. `cd desktop && npm test`: 791 tests, 791 passed.

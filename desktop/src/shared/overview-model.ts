@@ -6,7 +6,7 @@ import { cockpitMarks } from './overview-status.js';
 import { isTemplate, type NoteRecord } from './records.js';
 import { linksIn, Resolver, LINK_BEARING_FIELDS } from './graph.js';
 import { firstHeading, parseFrontmatter } from './yaml.js';
-import { CORE_KINDS, PHASE_KINDS, STATE_ORDER, emptyCounts, type Kind, type State, type Phase, type OverviewModel, type Ticket } from './overview-types.js';
+import { CORE_KINDS, PHASE_KINDS, STATE_ORDER, emptyCounts, type Focus, type Kind, type State, type Phase, type OverviewModel, type Ticket } from './overview-types.js';
 
 export interface OverviewOptions {
   workspace: string;
@@ -23,7 +23,23 @@ export interface OverviewOptions {
   acceptanceResults?: Readonly<Record<string, readonly string[]>>;
   /** Without CI evidence, active/passing are status approximations, not a CI verdict. */
   ciGreen?: boolean;
+  /** The workspace's SNAPSHOT focus, from `snapshotFocus` (TASK-0165). */
+  focus?: Focus;
 }
+
+/**
+ * The `focus:` block of a SNAPSHOT.yaml: its phase, feature and task ids, each null
+ * when absent or empty. A workspace with no snapshot has no focus.
+ */
+export function snapshotFocus(text: string): Focus | undefined {
+  const block = /^focus:[ \t]*\r?\n((?:(?:[ \t].*)?\r?\n?)*)/m.exec(text)?.[1];
+  if (block === undefined) return undefined;
+  const pick = (key: string): string | null => new RegExp(`^[ \\t]+${key}:[ \\t]*["']?([A-Z]+-\\d+)`, 'm').exec(block)?.[1] ?? null;
+  return { phase: pick('phase'), feature: pick('feature'), task: pick('task') };
+}
+
+/** A feature claims the tickets its lists name; a task claims the tests it names. */
+const FEATURE_LISTS = ['tests', 'implements', 'designs', 'requirements', 'tasks'];
 
 const TYPES: Readonly<Record<string, Kind>> = {
   requirement: 'req', feature: 'feat', task: 'task', test: 'test', issue: 'iss',
@@ -225,5 +241,58 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
     (phase.kind === 'open' ? model.phases : phase.kind === 'finished' ? model.shelf : model.backlog).push(phase);
   }
   ordered(model.core.tickets, CORE_KINDS);
+  assignFeatures(model, ticketNotes, references);
+  if (options.focus !== undefined) {
+    const known = (id: string | null, kind: Kind): string | null => (id !== null && model.tickets[id]?.kind === kind ? id : null);
+    const focus: Focus = { phase: options.focus.phase !== null && phases.has(options.focus.phase) ? options.focus.phase : null, feature: known(options.focus.feature, 'feat'), task: known(options.focus.task, 'task') };
+    model.focus = focus;
+    model.next = nextTicket(model, focus);
+  }
   return model;
+}
+
+/** Numeric order of ids, so FEAT-0009 comes before FEAT-0010. */
+const byNumber = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
+
+/**
+ * Which feature's tower each ticket stands in (TASK-0165, the rule of DES-0005's
+ * towers page): up its `parent:` to the first feature; else the lowest-numbered
+ * feature whose lists name it; else the feature of a task whose `tests:` names it.
+ */
+function assignFeatures(model: OverviewModel, ticketNotes: Map<string, NoteRecord>, references: (value: unknown) => NoteRecord[]): void {
+  const parentOf = new Map<string, string>();
+  for (const [id, r] of ticketNotes) {
+    const p = references(r.frontmatter['parent'])[0];
+    if (p !== undefined && p.id !== id) parentOf.set(id, p.id);
+  }
+  const namedByFeature = new Map<string, string>();
+  const namedByTask = new Map<string, string>();
+  for (const id of [...ticketNotes.keys()].sort(byNumber)) {
+    const kind = model.tickets[id]!.kind;
+    if (kind !== 'feat' && kind !== 'task') continue;
+    const into = kind === 'feat' ? namedByFeature : namedByTask;
+    for (const key of kind === 'feat' ? FEATURE_LISTS : ['tests']) {
+      for (const named of references(ticketNotes.get(id)!.frontmatter[key])) if (named.id !== id && !into.has(named.id)) into.set(named.id, id);
+    }
+  }
+  const upToFeature = (id: string): string | undefined => {
+    let p = parentOf.get(id);
+    for (let i = 0; i < 6 && p !== undefined && model.tickets[p]?.kind !== 'feat'; i += 1) p = parentOf.get(p);
+    return p !== undefined && model.tickets[p]?.kind === 'feat' ? p : undefined;
+  };
+  for (const ticket of Object.values(model.tickets)) {
+    if (ticket.kind === 'feat') continue;
+    const task = namedByTask.get(ticket.id);
+    const feature = upToFeature(ticket.id) ?? namedByFeature.get(ticket.id) ?? (task !== undefined ? upToFeature(task) ?? namedByFeature.get(task) : undefined);
+    if (feature !== undefined) ticket.feature = feature;
+  }
+}
+
+/** The focus task while it is open; else the focus feature's first task at doing, then at backlog or planned. */
+function nextTicket(model: OverviewModel, focus: Focus): string | null {
+  const open = (id: string | null): boolean => id !== null && model.tickets[id] !== undefined && !['closed', 'dropped'].includes(model.tickets[id]!.state);
+  if (open(focus.task)) return focus.task;
+  if (focus.feature === null) return null;
+  const tasks = Object.values(model.tickets).filter((t) => t.kind === 'task' && t.feature === focus.feature).sort((a, b) => byNumber(a.id, b.id));
+  return tasks.find((t) => t.status === 'doing')?.id ?? tasks.find((t) => t.status === 'backlog' || t.status === 'planned')?.id ?? null;
 }

@@ -2,10 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { buildOverview } from '../shared/overview-model.js';
+import { buildOverview, snapshotFocus } from '../shared/overview-model.js';
 import { cockpitStalenessDays } from '../shared/overview-status.js';
 import { readAcceptanceLedger } from './overview-ledger.js';
-import type { OverviewModel } from '../shared/overview-types.js';
+import type { Focus, OverviewModel } from '../shared/overview-types.js';
 import type { Workspace } from '../shared/types.js';
 import type { IndexSnapshot } from './note-index.js';
 
@@ -34,13 +34,17 @@ export interface OverviewIo {
   dirty?: (root: string) => boolean | undefined;
 }
 
-/** Same local calendar and snapshot setting as the Python cockpit. */
-export function overviewVerification(root: string, generated: string, readFile = (file: string) => fs.readFileSync(file, 'utf8')): { today: string; stalenessDays: number } {
+/**
+ * Same local calendar and snapshot setting as the Python cockpit, and the snapshot's
+ * focus (TASK-0165). Part of the cache key, so a changed focus rebuilds the model.
+ */
+export function overviewVerification(root: string, generated: string, readFile = (file: string) => fs.readFileSync(file, 'utf8')): { today: string; stalenessDays: number; focus?: Focus } {
   const now = new Date(generated);
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   let snapshot = '';
   try { snapshot = readFile(path.join(root, 'SNAPSHOT.yaml')); } catch { /* A plain vault uses the cockpit default. */ }
-  return { today, stalenessDays: cockpitStalenessDays(snapshot) };
+  const focus = snapshotFocus(snapshot);
+  return { today, stalenessDays: cockpitStalenessDays(snapshot), ...(focus === undefined ? {} : { focus }) };
 }
 
 export class OverviewService {

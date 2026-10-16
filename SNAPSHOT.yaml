@@ -62,8 +62,8 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0005"
-  feature: "FEAT-0025"
-  task: "TASK-0164"
+  feature: "FEAT-0026"
+  task: "TASK-0165"
   note: "2026-10-16, last: a third design round. Edwin found the wheel flat, the turn going against the mouse, the way back hard to find and the phase web not working, and chose towers on the ring, grouped by phase, drawn in three.js first. TASK-0163 drew it: docs/designs/DES-0005-towers.html, eight pictures, and a DES-0005 section asking whether to build it into Deck. TASK-0162 fixed Deck's camera: the near edge follows the hand, Home and three views, limits. Both reviewed in two rounds by two Claude reviewers; towers approved, the camera kept open only until the window run TST-0093 passes its new camera checks, which waits for Edwin. FEAT-0025 and FEAT-0027 are at review. Left for Edwin: turn the towers page and decide whether to build it; say when the window run may go; the acceptance tests and DES-0005's other questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -310,7 +310,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0165:
       file: docs/features/overview-model/plan/tasks/TASK-0165-Every-Ticket-Knows-Its-Feature-And-The-Model-Knows-The-Focus.md
-      status: doing
+      status: done
       parent: FEAT-0026
       phase: "[[PHASE-0005]]"
     TASK-0166:
@@ -2584,7 +2584,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 160
-    tasks_done: 136
+    tasks_done: 137
     tests_total: 68
     tests_passing: 9
     tests_failing: 0
