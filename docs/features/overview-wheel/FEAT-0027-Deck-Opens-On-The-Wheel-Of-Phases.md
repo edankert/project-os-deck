@@ -53,11 +53,14 @@ Out of scope:
 
 ## Verification
 
+- 2026-10-16, the camera's turn and Home ([[TASK-0162]]): `cd desktop && npm test`, 789 tests, 789 passed; TST-0090's camera check covers the turn's direction, the limits, the three views and Home. The window run was not repeated: Edwin asked to stay with the design, and its driver now expects the new turn.
 - `bash tools/scripts/run-desktop-tests.sh overview-screens`, 2026-10-14: 8 tests, 8 passed (TST-0090).
 - `cd desktop && npm test`, 2026-10-14: 737 tests, 737 passed, none skipped.
 - The window run, TST-0093, 2026-10-14: passed on Deck (374 tickets) and your-trainer (2,747) after `99eeeab`; its first run found two defects, fixed there.
 
 ## Where this stands
+
+**Back to `doing` on 2026-10-16.** Edwin found the camera turned against the mouse now and again and was hard to bring back. [[TASK-0162]] fixes both. The towers on the ring that may replace the wheel are drawn under FEAT-0025 first ([[TASK-0163]]).
 
 **Back to `doing` on 2026-10-15 (second revision), because Edwin ran the overview again and approved six changes.** He prefers the re-phase screen to the wheel, asked for more depth with mouse turning and zoom, said the gate's five boxes look wrong, wants the feature's text beside Accept and Send back, and wants a ticket that needs him to say what to do. The approved plan is DES-0005's revision of 2026-10-15 (second). The move from `review` back to `doing` is the same one the first revision made, because new work is added inside the feature. The paragraphs below it describe the state before this revision.
 
