@@ -22,6 +22,8 @@
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
+import { createTowersView, type TowersView } from './overview-towers-view.js';
+import type { TowersNode } from '../shared/overview-scene.js';
 import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
@@ -133,6 +135,49 @@ const cameras = new Map<string, Camera>();
 /** A middle-button drag in progress. */
 let dragging: { x: number; y: number; pan: boolean } | null = null;
 
+/**
+ * The 3D view of the towers (TASK-0167): made once, the first time a screen carries a
+ * towers node, and handed each next layout. Null when WebGL cannot start, and the
+ * scene's flat plan is shown instead.
+ */
+let towersView: TowersView | null | undefined;
+
+/** Whether the current screen is drawn by the 3D view, so the camera and pointing are its. */
+function towersActive(): boolean {
+  return towersView !== null && towersView !== undefined && stage?.classList.contains('ov-3d') === true;
+}
+
+function towersOf(scene: Scene): TowersNode | undefined {
+  return scene.nodes.find((n): n is TowersNode => n.kind === 'towers');
+}
+
+/** The pixels at the right of the stage a phase's list covers, so the segment stands clear of it. */
+function panelCover(): number {
+  if (stage === null || current === null) return 0;
+  const panel = current.scene.nodes.find((n) => n.kind === 'panel');
+  if (panel === undefined || panel.kind !== 'panel') return 0;
+  const box = stage.getBoundingClientRect();
+  const scale = Math.min(box.width / current.scene.width, box.height / current.scene.height);
+  const left = (box.width - current.scene.width * scale) / 2 + panel.x * scale;
+  return Math.max(0, box.width - left);
+}
+
+function ensureTowersView(): TowersView | null {
+  if (towersView !== undefined) return towersView;
+  towersView = createTowersView({
+    reduced: () => reducedMotion(),
+    onHover: (label, x, y) => (label === null ? hideCallout() : showCallout(label, x, y)),
+    onPress: (target) => void go(target),
+    clearRight: () => panelCover(),
+    linksOf: (id) => {
+      const model = current === null ? undefined : models.get(current.address.workspaceId)?.model;
+      return model === undefined ? [] : [...(model.tickets[id]?.links ?? []), ...(linksInto(model).get(id) ?? [])];
+    },
+    onCamera: () => drawCameraBar(),
+  });
+  return towersView;
+}
+
 function cameraNow(): Camera | null {
   if (current === null) return null;
   return cameras.get(current.scene.screen) ?? defaultCamera(current.scene.screen);
@@ -181,11 +226,13 @@ function homeIsTheCamera(event: KeyboardEvent): boolean {
 
 /** Back to how the screen stands before anyone moves it. */
 function resetCamera(): void {
-  if (current !== null) setCamera(defaultCamera(current.scene.screen), { glide: true });
+  if (towersActive()) towersView!.home();
+  else if (current !== null) setCamera(defaultCamera(current.scene.screen), { glide: true });
 }
 
 /** Whether the current screen's camera has been moved, so Home has somewhere to go. */
 function cameraMoved(): boolean {
+  if (towersActive()) return towersView!.isMoved();
   const camera = cameraNow();
   return current !== null && camera !== null && !isDefault(camera, current.scene.screen);
 }
@@ -221,6 +268,10 @@ function buildCameraBar(): HTMLElement {
     button.title = `${VIEW_WORD[view]}: the picture seen ${view === 'above' ? 'flat, from straight above' : view === 'side' ? 'nearly edge on, so its depth shows' : 'leaning back, as the ring screens start'}`;
     button.setAttribute('aria-label', VIEW_WORD[view]);
     button.addEventListener('click', () => {
+      if (towersActive()) {
+        towersView!.view(view);
+        return;
+      }
       const camera = cameraNow();
       if (camera !== null && current !== null) setCamera(viewed(camera, current.scene.screen, view), { glide: true });
     });
@@ -246,7 +297,8 @@ function wireCamera(target: HTMLElement): void {
     if (event.button === 1) event.preventDefault();
   });
   target.addEventListener('pointerdown', (event) => {
-    if (event.button !== 1 || current === null) return;
+    // The 3D view turns its own camera from its canvas.
+    if (event.button !== 1 || current === null || towersActive()) return;
     event.preventDefault();
     dragging = { x: event.clientX, y: event.clientY, pan: event.shiftKey };
     target.setPointerCapture(event.pointerId);
@@ -276,6 +328,10 @@ function wireCamera(target: HTMLElement): void {
       if (camera === null) return;
       event.preventDefault();
       event.stopPropagation();
+      if (towersActive()) {
+        towersView!.zoom(event.ctrlKey ? wheelFactor(event.deltaY * 4) : wheelFactor(event.deltaY));
+        return;
+      }
       const box = target.getBoundingClientRect();
       const px = event.clientX - box.left - box.width / 2;
       const py = event.clientY - box.top - box.height / 2;
@@ -286,7 +342,7 @@ function wireCamera(target: HTMLElement): void {
   );
   target.addEventListener('dblclick', (event) => {
     const element = event.target as Element | null;
-    if (element?.closest('[data-target], [data-ticket], [data-action], button, .ov-panel') != null) return;
+    if (element?.closest('[data-target], [data-ticket], [data-action], button, .ov-panel, .ov-towers') != null) return;
     resetCamera();
   });
 }
@@ -385,7 +441,7 @@ export function initOverview(host: OverviewHostApi): void {
   });
   // The stage changes size without the window doing so (the rail folds, the status line
   // grows): the panels laid over the picture follow it.
-  if (typeof ResizeObserver === 'function') new ResizeObserver(() => panels?.place()).observe(stage);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => { panels?.place(); if (towersActive()) towersView!.resize(); }).observe(stage);
   wireCamera(stage);
   stage.addEventListener('click', (event) => void onClick(event));
   window.addEventListener('resize', () => place());
@@ -421,6 +477,8 @@ export function initOverview(host: OverviewHostApi): void {
     travel: (direction: -1 | 1) => travel(direction),
     screens: () => ({ pages: [...pages.keys()], flows: [...flows.keys()] }),
     go: (raw: string) => go(raw),
+    // The 3D view of the towers, for the window run to press through (TASK-0169).
+    towers: () => (towersActive() ? towersView!.probe : null),
   };
 }
 
@@ -550,6 +608,8 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   place();
   document.body.dataset['overviewScreen'] = scene.screen;
   drawColouringToggle();
+  // After `current` is the new screen and laid out: the 3D view flies to it.
+  showTowers(scene);
   // After `current` is the new screen: Home is shown for the screen being opened, not the
   // one being left (review of TASK-0162).
   drawCameraBar();
@@ -626,6 +686,16 @@ function paint(scene: Scene, workspaceId: string): void {
   svg?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const host = api;
   if (board !== null) board.style.transform = cameraTransform(cameras.get(scene.screen) ?? defaultCamera(scene.screen));
+  // The towers are drawn in 3D under the scene's controls; the flat plan stays for a
+  // window with no WebGL (TASK-0167).
+  const towers = towersOf(scene);
+  const view = towers === undefined ? null : ensureTowersView();
+  stage.classList.toggle('ov-3d', towers !== undefined && view !== null);
+  stage.classList.toggle('ov-flat', towers !== undefined && view === null);
+  if (towers !== undefined && view !== null && board !== null) {
+    board.style.transform = 'none';
+    board.prepend(view.canvas);
+  }
   panels = buildPanels(scene, board ?? stage, {
     reduced: reducedMotion(),
     loader: host?.noteHtml === undefined ? null : (id) => host.noteHtml!(workspaceId, id),
@@ -633,6 +703,14 @@ function paint(scene: Scene, workspaceId: string): void {
   });
   animateFrom(before);
   drawList(scene);
+}
+
+/** After a screen with towers is current and laid out: hand the 3D view its layout. */
+function showTowers(scene: Scene): void {
+  const towers = towersOf(scene);
+  if (towers === undefined || !towersActive()) return;
+  towersView!.resize();
+  towersView!.show(towers.layout);
 }
 
 /** Where each ticket's mark is on screen now, so the next screen can grow out of it. */
@@ -850,7 +928,12 @@ function drawWires(element: Element | null): void {
 }
 
 function onPoint(event: PointerEvent): void {
-  drawWires(event.target as Element | null);
+  // On the towers, the 3D view points for itself; a row of the phase's list outlines its floor.
+  if (towersActive()) {
+    const element = event.target as Element | null;
+    if (element?.closest('.ov-towers') != null) return;
+    towersView!.select(element?.closest('[data-ticket]')?.getAttribute('data-ticket') ?? null);
+  } else drawWires(event.target as Element | null);
   const label = labelOf(event.target as Element | null);
   if (label === null) {
     hideCallout();
@@ -966,6 +1049,7 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     if (camera === null) return;
     event.preventDefault();
     if (event.key === '0' || event.key === 'Home') resetCamera();
+    else if (towersActive()) towersView!.zoom(event.key === '-' ? 1 / 1.25 : 1.25);
     else setCamera(zoomed(camera, event.key === '-' ? 1 / 1.25 : 1.25, 0, 0, halfView()));
   }
   if ((event.key === 'c' || event.key === 'C') && !event.metaKey && !event.ctrlKey) {

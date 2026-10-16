@@ -11,7 +11,7 @@
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-47SYuv52ST9yQ76ncm8OHvWn4zem0EXrZt9l4WuC2XY='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>Deck</title>
     <link rel="stylesheet" href="./deck.css" />
@@ -227,6 +227,11 @@
     <div class="arrival" id="arrival" role="status" hidden></div>
     <div class="status" id="status" role="status"></div>
     <button type="button" class="actor" id="actor" hidden title="The name Deck writes with"></button>
+    <!-- three.js draws the overview's towers (TASK-0167). It is copied into Deck's own build at
+         vendor/, so nothing is loaded from elsewhere; this map names it, and the policy above
+         allows exactly this map by its hash. scripts/copy-assets.mjs refuses a build where the
+         two disagree. -->
+    <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
     <script type="module" src="./renderer/renderer.js"></script>
   </body>
 </html>

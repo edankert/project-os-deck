@@ -133,6 +133,10 @@ export interface TowersLayout {
   phases: RingPhase[];
   shelf: ShelfPhase[];
   core: Cube[];
+  /** The core's middle opens re-phasing, with how many tickets have no phase (TASK-0152). */
+  coreTarget: string;
+  coreLabel: string;
+  unplaced: number;
   focus: Focus | null;
   next: string | null;
   /** The phase brought close (S2), or null for the whole ring (S1). */
@@ -320,8 +324,10 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
     return cube(t, x, 0.75, z, [0.95, 0.3, 0.95], a);
   });
 
+  const unplaced = coreTickets.filter((t) => t.placedBy !== 'project-wide').length;
   return {
     workspace: model.workspace, R0, R1, collar, coreR, shelfR, phases, shelf, core,
+    coreTarget: ctx.address({ page: 'rephase' }), coreLabel: `${unplaced} ticket${unplaced === 1 ? '' : 's'} with no phase: open re-phasing to place them`, unplaced,
     focus, next: model.next ?? null, open: open !== null && ringIds.has(open) ? open : null,
     colouring: ctx.colouring === 'state' ? 'state' : 'type',
   };
