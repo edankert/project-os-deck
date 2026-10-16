@@ -3376,7 +3376,16 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     // 8. The shape does not move underneath a person; a view switch recomputes it.
     // A view switch is the other half: it is what SHOULD recompute the shapes.
     await view('features');
-    await delay(900);
+    // The new view's deal arrives when it arrives: on a slow machine the band still
+    // held the old view's shape 900 ms on, with no notes counted yet (TASK-0172). So
+    // the run waits, up to four seconds, for the quiet band to hold the shape its own
+    // count earns; a renderer that never recomputes it still fails below.
+    await eventually(async () => {
+      const b = await js<BandState>(`__t.bands()`);
+      const want = bandShapeFor('deep', b.counts.deep);
+      const have = b.shapes['deep'];
+      return have !== undefined && have.columns === want.columns && have.rows === want.rows && have.width === want.box.width && have.height === want.box.height;
+    });
     const shapeSwitched = await js<string>(`JSON.stringify(__t.bands().shapes)`);
     // This used to read `record(a !== b || true, ...)`, which passes whatever
     // the renderer does (ISS-0083). Two views can legitimately earn the same

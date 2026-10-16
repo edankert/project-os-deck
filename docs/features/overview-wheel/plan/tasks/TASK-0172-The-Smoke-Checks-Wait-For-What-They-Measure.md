@@ -31,6 +31,7 @@ tests: []
 
 - **The opening is held still over the row.** The opening is a Web Animation: as soon as the first press starts it, the run pauses it at the first moment the document lies over the row below, presses there, and lets it finish. The document is still opening at the press, so the check proves what it did: a press made during the opening goes through to the row under it.
 - **`eventually(holds, ms)`** in `desktop/src/main/smoke-glass.ts` looks again every 100 ms until the state arrives, for up to four seconds, and fails only if it never does. The lift before each way out of the focus, each way out, V on the header and its pane leaving Issues, and the pinch's zoom use it.
+- **The quiet band's shape after a view switch** is read once the band holds the shape its own count earns, waited for up to four seconds: CI's first run on these fixes (`463b339`) passed everything on the network and failed only this check on loopback, read 900 ms after the switch with no notes of the new view counted yet.
 - **The link callout** is retried up to three times, each time on a link looked up afresh, waiting up to 1.5 s for the callout.
 
 ## Definition of Done
