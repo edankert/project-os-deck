@@ -513,7 +513,11 @@ async function recordLift(kit: Kit): Promise<void> {
   // ---- TASK-0031: a real pointer reaches a front card, not a container ----
   const front = await js<Seen[]>(`__t.visibleCards('front')`);
   record(front.length > 0, `the Issues view has cards in the front band (${front.length})`);
-  const target = front[0];
+  // The checks below need a note with neighbours. An issue just filed for triage has
+  // hardly any links yet, and triage stands first in the front band (ISS-0092), so the
+  // first front card that is not at triage is taken, and the first of all only if every one is.
+  const settled = await js<string[]>(`${JSON.stringify(front.map((c) => c.id))}.filter((id) => __t.glass().entryFor(id)?.card.status !== 'triage')`);
+  const target = front.find((c) => settled.includes(c.id)) ?? front[0];
   if (target === undefined) throw new Error('no front card to lift');
   const hit = await js<string | null>(`__t.hit(${target.x}, ${target.y})`);
   record(hit === target.id, `the browser's own hit test at a front card's centre finds that card (${hit})`);
@@ -1185,10 +1189,14 @@ async function recordKeys(kit: Kit): Promise<void> {
   const rows = await js<{ first: string | null; posinset: string | null; setsize: string | null }>(`(() => { const r = document.querySelector('#nav-list .nav-row:not([hidden])'); return { first: r ? r.dataset.noteId : null, posinset: r ? r.getAttribute('aria-posinset') : null, setsize: r ? r.getAttribute('aria-setsize') : null }; })()`);
   record(rows.posinset !== null && rows.setsize !== null && Number(rows.setsize) >= Number(rows.posinset), `a navigator row says its place in the whole view (${rows.posinset} of ${rows.setsize})`);
   await js(`document.querySelector('#nav-list [tabindex="0"]').focus()`);
-  press(win, 'Down');
-  press(win, 'Down');
-  await delay(300);
-  const focusedRow = await js<string | null>(`document.activeElement && document.activeElement.dataset.noteId || null`);
+  // Down until the keyboard is on a row: how many group headings come first depends on
+  // the corpus (ISS-0092: one issue at triage put a group of one at the top of Issues).
+  let focusedRow: string | null = null;
+  for (let i = 0; i < 2 || (focusedRow === null && i < 8); i += 1) {
+    press(win, 'Down');
+    await delay(150);
+    focusedRow = await js<string | null>(`document.activeElement && document.activeElement.dataset.noteId || null`);
+  }
   const rowBefore = await active();
   press(win, 'Return');
   await delay(1500);
@@ -1367,7 +1375,8 @@ async function recordSwitch(kit: Kit): Promise<void> {
   // view changes, which Glass hears before the new view's notes arrive.
   // Without that the desk is empty for a moment, the focus is dropped, and
   // the cards round it are removed and made again for the new view.
-  const anchor = (await js<Seen[]>(`__t.visibleCards('front')`))[0];
+  // Not an issue at triage, which has hardly any neighbours yet (ISS-0092).
+  const anchor = (await js<Seen[]>(`__t.visibleCards('front').filter((c) => __t.glass().entryFor(c.id)?.card.status !== 'triage')`))[0] ?? (await js<Seen[]>(`__t.visibleCards('front')`))[0];
   if (anchor !== undefined) {
     await pointer(win, [...click(anchor), { type: 'move', ...PARK }]);
     await delay(2000);

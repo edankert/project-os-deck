@@ -15,6 +15,7 @@ component: "desktop/src/main/smoke-glass.ts"
 parent: ""
 related: ["[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 tests: []
+tasks: ["[[TASK-0170]]"]
 ---
 
 # The window smoke run in CI fails about half the time on one Glass check
@@ -39,6 +40,8 @@ The check tries six times and reports, for each try, when the press arrived: "13
 
 - Red runs on main: `707b700`, `65c6397`, `fd5120d`, `e049e7b`, `90cd432`, `6e9fed6`, `3533894`. Green: `d296ebe`, `0c6f772`, `5f8815b`, `c2050b8`, `7f53640` (`gh run list --workflow deck-smoke.yml`).
 - The failing line in the log of `707b700`'s run: "FAILED smoke lan: document: a second press met the first note's document while it was growing over the row, so that it can be shown to go through it (…)".
+
+**2026-10-16, a second cause found, by the note itself.** On `c4f1c70`, which filed this issue and changed nothing else, the smoke run also failed fourteen keyboard and lift checks. This issue is the only issue at triage, and two of the smoke's choices depend on what is at the top of the Issues view: the keyboard check's two presses of Down landed on a group heading, and the lift checks took this issue, which has almost no neighbours. [[TASK-0170]] makes both choices independent of what is at triage. It also shows the family this issue belongs to: checks that read the live corpus break when a note is added.
 
 ## Next Actions
 
