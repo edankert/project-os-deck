@@ -13,24 +13,25 @@ const src = path.join(here, '..', 'src', 'renderer');
 const out = path.join(here, '..', 'dist', 'web');
 
 await mkdir(out, { recursive: true });
-for (const file of ['index.html', 'deck.css']) {
-  await cp(path.join(src, file), path.join(out, file));
-}
 // three.js, for the overview's towers (TASK-0167, RISK-0010), copied from the pinned
 // package into Deck's own document root: the page loads code from its own origin only.
 // The page names it in an inline import map, which its content policy allows by hash;
-// a map edited without its hash would be refused by the window, so it is refused here.
+// a map edited without its hash would be refused by the window, so it is refused here,
+// before anything is copied.
 {
   const { createHash } = await import('node:crypto');
   const { readFile } = await import('node:fs/promises');
-  await mkdir(path.join(out, 'vendor'), { recursive: true });
-  await cp(path.join(here, '..', 'node_modules', 'three', 'build', 'three.module.min.js'), path.join(out, 'vendor', 'three.module.min.js'));
   const html = await readFile(path.join(src, 'index.html'), 'utf8');
   const map = /<script type="importmap">([\s\S]*?)<\/script>/.exec(html)?.[1];
   const hash = map === undefined ? null : `'sha256-${createHash('sha256').update(map).digest('base64')}'`;
   if (hash === null || !html.includes(`script-src 'self' ${hash}`)) {
     throw new Error(`copy-assets: index.html's import map and its content policy disagree; the policy needs ${hash}`);
   }
+  await mkdir(path.join(out, 'vendor'), { recursive: true });
+  await cp(path.join(here, '..', 'node_modules', 'three', 'build', 'three.module.min.js'), path.join(out, 'vendor', 'three.module.min.js'));
+}
+for (const file of ['index.html', 'deck.css']) {
+  await cp(path.join(src, file), path.join(out, file));
 }
 // The overview's palette and look are written once, in shared/overview-scene.ts,
 // for the renderer and for DES-0005's plates. The page's policy allows no inline

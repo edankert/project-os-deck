@@ -444,6 +444,104 @@ test('the gate arch draws five segments that fill with their evidence and say wh
   }
 });
 
+// TASK-0156 — the camera: ring screens lean back, text screens start flat; the middle
+// button turns and pans, the wheel zooms toward the pointer, and 0 puts it back.
+test('the overview camera turns, pans and zooms within its limits, and keeps the pointed spot under the pointer', () => {
+  const cam = load('shared/overview-camera.js');
+  const wheel = cam.defaultCamera('wheel');
+  assert.ok(wheel.tilt > 0, 'the wheel leans back');
+  assert.equal(cam.defaultCamera('ticket').tilt, 0, 'a ticket starts flat');
+  assert.equal(cam.defaultCamera('accept').tilt, 0, 'a feature gate starts flat');
+  const t = cam.turned(wheel, 100, -40);
+  // TASK-0162: a drag to the right turns the plane anticlockwise, so its near edge
+  // (the bottom of the screen, on a plane leaning back) moves right with the hand.
+  assert.equal(t.spin, -30);
+  assert.equal(t.tilt, wheel.tilt + 10);
+  const nearEdgeX = (spin) => -Math.sin((spin * Math.PI) / 180); // the plane's bottom point after rotateZ, y down
+  assert.ok(nearEdgeX(t.spin) > 0, 'the near edge goes the way the pointer went');
+  assert.equal(cam.turned(wheel, 0, -10000).tilt, cam.TILT.max, 'tilt stops at its limit');
+  assert.equal(cam.turned(wheel, 0, 10000).tilt, cam.TILT.min);
+  const p = cam.panned(wheel, 12, -7);
+  assert.deepEqual([p.panX, p.panY], [12, -7]);
+  // Zooming toward a point keeps that point where it was: (point - pan) scales with the zoom.
+  const z = cam.zoomed(wheel, 2, 100, 50);
+  assert.equal(z.zoom, 2);
+  assert.deepEqual([z.panX, z.panY], [-100, -50]);
+  assert.equal(cam.zoomed(wheel, 1000).zoom, cam.ZOOM.max);
+  assert.equal(cam.zoomed(wheel, 0.0001).zoom, cam.ZOOM.min);
+  assert.ok(cam.wheelFactor(100) < 1 && cam.wheelFactor(-100) > 1, 'a turn toward the person zooms out');
+  assert.match(cam.cameraTransform(t), /^translate\(0px, 0px\) rotateX\(36deg\) rotateZ\(-30deg\) scale\(1\)$/);
+  assert.ok(cam.isDefault(cam.defaultCamera('wheel'), 'wheel'));
+  assert.ok(!cam.isDefault(t, 'wheel'));
+  assert.ok(cam.isDefault({ ...wheel, spin: 360 }, 'wheel'), 'a whole turn is back where it started');
+  // A drag to the right makes the spin negative, so a whole turn that way must count too.
+  assert.ok(cam.isDefault({ ...wheel, spin: -360 }, 'wheel'), 'a whole turn to the right is back where it started');
+  assert.ok(cam.isDefault({ ...wheel, spin: -720.004 }, 'wheel'), 'two whole turns, give or take a rounding');
+  assert.ok(!cam.isDefault({ ...wheel, spin: -350 }, 'wheel'));
+  // Just inside two whole turns to the right: home only if the spin is wrapped into 0..360 (review round two).
+  assert.ok(cam.isDefault({ ...wheel, spin: -719.996 }, 'wheel'), 'a spin just short of two whole turns to the right is home');
+  // TASK-0162: the picture cannot be lost. Zoom runs 0.6× to 4×, and a pan stops where
+  // the picture's centre would leave the window.
+  assert.deepEqual([cam.ZOOM.min, cam.ZOOM.max], [0.6, 4]);
+  const half = { w: 400, h: 300 };
+  const far = cam.panned(wheel, 5000, -5000, half);
+  assert.deepEqual([far.panX, far.panY], [400, -300]);
+  const pinched = cam.zoomed(wheel, 4, 10000, 10000, half);
+  assert.ok(Math.abs(pinched.panX) <= 400 && Math.abs(pinched.panY) <= 300, 'zooming toward a far point keeps the centre in the window');
+  // The three views: flat, leaning as the ring screens start, and nearly edge on.
+  assert.deepEqual(cam.VIEWS, ['above', 'leaning', 'side']);
+  const moved = { ...cam.zoomed(t, 2), panX: 50, panY: 20 };
+  assert.equal(cam.viewed(moved, 'wheel', 'above').tilt, 0);
+  assert.equal(cam.viewed(moved, 'wheel', 'leaning').tilt, wheel.tilt);
+  assert.equal(cam.viewed(moved, 'ticket', 'leaning').tilt, wheel.tilt, 'a text screen leans as the ring screens start');
+  assert.ok(cam.viewed(moved, 'wheel', 'side').tilt >= cam.TILT.max - 4, 'from the side is nearly edge on');
+  const side = cam.viewed(moved, 'wheel', 'side');
+  assert.deepEqual([side.panX, side.panY, side.zoom, side.spin], [0, 0, 2, -30], 'a view recentres the picture and keeps the turn and the zoom');
+});
+
+// TASK-0158, TASK-0160 — a ticket that needs you says what to do, on S3 as a banner with a
+// button to where you act (or the sidecar's own verbs at triage), and on S2 under its row.
+test('S3 tells you what a ticket needs, with a button to where you act or the sidecar verbs at triage', () => {
+  const yt = model('your-trainer');
+  const deck = model('deck');
+  const verbs = [{ verb: 'Accept', to: 'open', confirm: false, disabled: false, reason: '' }, { verb: 'Defer', to: 'deferred', confirm: false, disabled: false, reason: '' }, { verb: 'Decline', to: 'declined', confirm: true, disabled: false, reason: '' }];
+  const pick = (m, reason) => Object.values(m.tickets).find((t) => t.needs?.reason === reason);
+  const texts = (scene) => [...walkScene(scene.nodes)].filter((n) => n.kind === 'text').map((n) => n.text);
+  const triage = pick(yt, 'triage');
+  let scene = ticketScene(yt, triage.id, ctx, { verbs, canWrite: true });
+  assert.ok(texts(scene).includes(triage.needs.say), 'the banner says what to do');
+  const actions = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.action?.startsWith('needs:')).map((n) => n.action);
+  assert.deepEqual([...actions].sort(), ['needs:declined', 'needs:deferred', 'needs:open']);
+  assert.deepEqual(scene.list.filter((r) => r.action?.startsWith('needs:')).map((r) => r.action).sort(), [...actions].sort());
+  holdsTheLook(scene);
+  // On a page that cannot write, the verbs are shown off and do nothing.
+  scene = ticketScene(yt, triage.id, ctx, { verbs, canWrite: false });
+  assert.equal([...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.action !== undefined).length, 0);
+  for (const [m, reason] of [[deck, 'review'], [deck, 'waiting'], [deck, 'ready'], [yt, 'waiting']]) {
+    const t = pick(m, reason);
+    const s3 = ticketScene(m, t.id, ctx);
+    const go = s3.nodes.find((n) => n.kind === 'group' && n.key === 'needs-go');
+    assert.equal(go?.target, ctx.address(t.needs.action.parts), `${t.id} (${reason}): the button goes where the person acts`);
+    assert.ok(texts(s3).includes(t.needs.say));
+    holdsTheLook(s3);
+  }
+  // A ticket that needs nothing has no banner.
+  const calm = Object.values(deck.tickets).find((t) => !t.needsYou && t.kind === 'task');
+  assert.ok(!ticketScene(deck, calm.id, ctx).nodes.some((n) => n.kind === 'mark' && n.markId === 'needs'));
+});
+
+test('S2 says under each needs-you row what to do, and the callouts say it too', () => {
+  const m = model('deck');
+  const { markWords } = load('shared/overview-marks.js');
+  for (const p of m.phases) {
+    const panel = [...walkScene(phaseScene(m, p.id, ctx).nodes)].find((n) => n.kind === 'panel');
+    for (const row of panel.body.sections.find((s) => s.key === 'needs-you')?.rows ?? []) {
+      assert.equal(row.note, m.tickets[row.id].needs.say, `${row.id}: what to do is under its title`);
+      assert.ok(markWords(m.tickets[row.id]).endsWith(`: ${m.tickets[row.id].needs.say}`), `${row.id}: its callout says what to do`);
+    }
+  }
+});
+
 // TASK-0166 — the wheel is towers on a ring, laid out by one pure function of the model.
 // Each rule is worked out here from the model's own fields, not with the module's code.
 const { towersLayout } = load('shared/overview-towers.js');
@@ -493,6 +591,13 @@ for (const name of WORKSPACES) {
         assert.ok(t.feature === undefined || !ringIds.has(m.tickets[t.feature]?.phase), `${c.id} has a tower it should stand in`);
       }
     }
+    // Every plinth and every shelf disc opens its phase, by pointer and by keyboard (review of TASK-0167).
+    for (const p of [...layout.phases, ...layout.shelf]) {
+      const mark = [...walkScene(scene.nodes)].find((n) => n.kind === 'mark' && n.markId === `phase-${p.id}`);
+      assert.equal(mark?.target, ctx.address({ page: 'phase', note: p.id }), `${p.id}'s plinth or disc opens its phase`);
+      assert.match(sceneToSvg(scene), new RegExp(`data-mark="phase-${p.id}"[^>]*tabindex="0"`), `${p.id} can take keyboard focus`);
+    }
+    assert.equal(layout.coreTarget, ctx.address({ page: 'rephase' }), 'the core opens re-phasing');
     assert.equal(layout.next, m.next ?? null, 'the next ticket is the model\'s');
     if (m.next) assert.ok([...walkScene(scene.nodes)].some((n) => n.kind === 'text' && n.text === `next ${m.next}`), 'the next ticket is marked');
     assert.ok([...walkScene(scene.nodes)].some((n) => n.kind === 'text' && n.text === 'in focus') === p_hasFocusTower(layout), 'the feature in focus is named');

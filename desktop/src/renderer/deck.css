@@ -1561,7 +1561,10 @@ body.pinned .overview-area { left: 0; }
 .ov-towers { position: absolute; inset: 0; display: block; z-index: 0; }
 .ov-stage.ov-3d svg { position: relative; z-index: 1; pointer-events: none; }
 .ov-stage.ov-3d svg [data-target], .ov-stage.ov-3d svg [data-action] { pointer-events: auto; }
-.ov-stage.ov-3d svg [data-key="plan"], .ov-stage.ov-3d svg [data-key="rephase-button"], .ov-stage.ov-3d svg [data-key="ring-small"] { display: none; }
+/* The flat plan stays in the page, invisible, so Tab and the arrows still reach every phase,
+   disc, cap and ticket (review of TASK-0167); the pointer goes through it to the 3D view. */
+.ov-stage.ov-3d svg [data-key="plan"], .ov-stage.ov-3d svg [data-key="rephase-button"], .ov-stage.ov-3d svg [data-key="ring-small"] { opacity: 0; }
+.ov-stage.ov-3d svg [data-key="plan"], .ov-stage.ov-3d svg [data-key="plan"] *, .ov-stage.ov-3d svg [data-key="rephase-button"], .ov-stage.ov-3d svg [data-key="rephase-button"] *, .ov-stage.ov-3d svg [data-key="ring-small"] * { pointer-events: none !important; }
 .ov-stage.ov-3d svg > rect { display: none; }
 .ov-stage.ov-3d .ov-panels { z-index: 2; }
 .ov-stage.ov-flat::after { content: "3D needs WebGL, which this window cannot start: this is the flat plan"; position: absolute; left: 16px; bottom: 12px; font: 12px -apple-system, sans-serif; color: hsl(205 25% 62%); }

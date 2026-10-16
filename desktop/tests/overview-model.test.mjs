@@ -370,11 +370,13 @@ test('every ticket knows its feature, however the frontmatter writes the link', 
   const real = (id, lines) => recordFrom(`${id}.md`, `---\n${lines.join('\n')}\n---\n# ${id}\n`, 0).record;
   const records = [
     real('PHASE-0001', ['id: PHASE-0001', 'type: phase', 'status: active']),
-    real('FEAT-0001', ['id: FEAT-0001', 'type: feature', 'status: doing', 'phase: "[[PHASE-0001]]"', 'tests:', "- '[[TST-0001-At-Column-Zero]]'", 'implements: ["[[REQ-0001-Inline]]", "REQ-0002"]']),
+    real('FEAT-0001', ['id: FEAT-0001', 'type: feature', 'status: doing', 'phase: "[[PHASE-0001]]"', 'tests:', "- '[[TST-0001-At-Column-Zero]]'", 'implements: ["[[REQ-0001-Inline]]", "REQ-0002"]', 'tasks: ["[[TASK-0004]]"]']),
     real('FEAT-0002', ['id: FEAT-0002', 'type: feature', 'status: doing', 'phase: "[[PHASE-0001]]"', 'tests:', '  - "[[TST-0001-At-Column-Zero]]"', '  - "[[TST-0094-DES-0005s-Plates]]"']),
     real('TASK-0001', ['id: TASK-0001', 'type: task', 'status: doing', "parent: '[[FEAT-0002-Single-Quoted]]'", 'tests: ["[[TST-0003]]"]']),
     real('TASK-0002', ['id: TASK-0002', 'type: task', 'status: backlog', 'parent: "FEAT-0001"']),
     real('TASK-0003', ['id: TASK-0003', 'type: task', 'status: done', 'parent: [[TASK-0001]]']),
+    // Named by FEAT-0001's list, but its parent is FEAT-0002: the parent wins (review of TASK-0165).
+    real('TASK-0004', ['id: TASK-0004', 'type: task', 'status: backlog', 'parent: "[[FEAT-0002]]"']),
     real('TST-0001', ['id: TST-0001', 'type: test', 'status: active']),
     real('TST-0003', ['id: TST-0003', 'type: test', 'status: active']),
     real('TST-0094', ['id: TST-0094', 'type: test', 'status: active']),
@@ -392,6 +394,7 @@ test('every ticket knows its feature, however the frontmatter writes the link', 
   assert.equal(feature('TASK-0001'), 'FEAT-0002', 'a parent in single quotes, with a slug');
   assert.equal(feature('TASK-0002'), 'FEAT-0001', 'a parent written bare');
   assert.equal(feature('TASK-0003'), 'FEAT-0002', 'up a task parent to its feature');
+  assert.equal(feature('TASK-0004'), 'FEAT-0002', 'the parent chain wins over a lower-numbered feature\'s list');
   assert.equal(feature('TST-0001'), 'FEAT-0001', 'a dash list at column 0; named by two features, the lower number wins');
   assert.equal(feature('REQ-0001'), 'FEAT-0001', 'an inline list of links');
   assert.equal(feature('REQ-0002'), 'FEAT-0001', 'a bare id in a list');

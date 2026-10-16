@@ -22,7 +22,7 @@
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
-import { createTowersView, type TowersView } from './overview-towers-view.js';
+import type { TowersView } from './overview-towers-view.js';
 import type { TowersNode } from '../shared/overview-scene.js';
 import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
@@ -162,9 +162,32 @@ function panelCover(): number {
   return Math.max(0, box.width - left);
 }
 
+/**
+ * The 3D view's module, loaded the first time a screen needs it: three.js comes with it,
+ * so a page that cannot load three.js still draws everything else, and the towers flat.
+ */
+let towersLoading: Promise<void> | null = null;
+
 function ensureTowersView(): TowersView | null {
   if (towersView !== undefined) return towersView;
-  towersView = createTowersView({
+  if (towersLoading === null) {
+    towersLoading = import('./overview-towers-view.js').then(
+      (module) => { makeTowersView(module.createTowersView); },
+      () => { towersView = null; },
+    ).then(() => {
+      // Draw the screen again now the view is there (or is known not to be).
+      if (current !== null && towersOf(current.scene) !== undefined) {
+        paint(current.scene, current.address.workspaceId);
+        showTowers(current.scene);
+        drawCameraBar();
+      }
+    });
+  }
+  return null;
+}
+
+function makeTowersView(create: typeof import('./overview-towers-view.js').createTowersView): void {
+  towersView = create({
     reduced: () => reducedMotion(),
     onHover: (label, x, y) => (label === null ? hideCallout() : showCallout(label, x, y)),
     onPress: (target) => void go(target),
@@ -175,7 +198,6 @@ function ensureTowersView(): TowersView | null {
     },
     onCamera: () => drawCameraBar(),
   });
-  return towersView;
 }
 
 function cameraNow(): Camera | null {
@@ -691,7 +713,8 @@ function paint(scene: Scene, workspaceId: string): void {
   const towers = towersOf(scene);
   const view = towers === undefined ? null : ensureTowersView();
   stage.classList.toggle('ov-3d', towers !== undefined && view !== null);
-  stage.classList.toggle('ov-flat', towers !== undefined && view === null);
+  // Flat because WebGL could not start; while the module is still loading it is flat without a word.
+  stage.classList.toggle('ov-flat', towers !== undefined && view === null && towersView === null);
   if (towers !== undefined && view !== null && board !== null) {
     board.style.transform = 'none';
     board.prepend(view.canvas);
@@ -944,7 +967,9 @@ function onPoint(event: PointerEvent): void {
 
 function onFocus(event: FocusEvent): void {
   const element = event.target as Element | null;
-  drawWires(element);
+  // On the towers, the keyboard moves through the invisible flat plan; the 3D view outlines the floor.
+  if (towersActive()) towersView!.select(element?.closest('[data-ticket]')?.getAttribute('data-ticket') ?? null);
+  else drawWires(element);
   const label = labelOf(element);
   if (label === null || element === null) return;
   const box = element.getBoundingClientRect();

@@ -230,13 +230,11 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
     at += s + TOWER_SIZE.segGap;
   }
   const heights = (p: Phase): number[] => towersIn(p.id).map((t) => Math.ceil(t.floors.length / PER_FLOOR));
+  // The rim moves out, two units at a time, until every segment fits; a ring that never fits
+  // draws its crowded segments past their inner edge rather than not at all (the `force` below).
+  const fits = (r1: number): boolean => ring.every((p, i) => layoutSegment(tilesOf.get(p.id)!.length, heights(p), angles[i]![0], angles[i]![1], R0, r1, false) !== null);
   let R1 = R0 + 14;
-  let layouts = ring.map((p, i) => layoutSegment(tilesOf.get(p.id)!.length, heights(p), angles[i]![0], angles[i]![1], R0, R1, false));
-  for (; R1 < R0 + 260 && !layouts.every(Boolean); R1 += 2) {
-    layouts = ring.map((p, i) => layoutSegment(tilesOf.get(p.id)!.length, heights(p), angles[i]![0], angles[i]![1], R0, R1, false));
-  }
-  // A ring that never fits draws its crowded segments past their inner edge rather than not at all.
-  if (!layouts.every(Boolean)) layouts = ring.map((p, i) => layoutSegment(tilesOf.get(p.id)!.length, heights(p), angles[i]![0], angles[i]![1], R0, R1, true));
+  while (R1 < R0 + 260 && !fits(R1)) R1 += 2;
   const collar: [number, number] = [R1 + 0.5, R1 + 2.7];
 
   const cube = (t: Ticket, x: number, y: number, z: number, size: [number, number, number], angle: number, extra: Partial<Cube> = {}): Cube => ({
