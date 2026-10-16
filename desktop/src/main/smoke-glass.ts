@@ -2188,11 +2188,11 @@ async function recordFocus(kit: Kit): Promise<void> {
         continue;
       }
       await pointer(win, [...click(c), { type: 'move', ...PARK }]);
-      await delay(1300);
-      if ((await focus()).noteId !== c.id) {
+      if (!(await eventually(async () => (await focus()).noteId === c.id))) {
         stayed.push(`${name} (the lifted note was not the focus)`);
         continue;
       }
+      await delay(400);
       if (name === 'a drag of its header') {
         const h = await js<{ x: number; y: number } | null>(`__t.rect('.pane.focus .pane-id')`);
         if (h !== null) await pointer(win, [...drag(h, { x: h.x + 60, y: h.y + 90 }, 8), { type: 'move', ...PARK }]);
@@ -2202,7 +2202,7 @@ async function recordFocus(kit: Kit): Promise<void> {
         continue;
       }
       await act();
-      if ((await focus()).noteId !== null) stayed.push(name);
+      if (!(await eventually(async () => (await focus()).noteId === null))) stayed.push(name);
       // Undoing Hide notes, or putting a filled document back at its size, does not bring the focus back.
       if (name === 'Hide notes') {
         await js(`document.getElementById('hide-notes').click(); true`);
@@ -2500,7 +2500,8 @@ async function recordZoom(kit: Kit): Promise<void> {
       wheel(cx, cy, -8, ['control']);
       await delay(30);
     }
-    await delay(60);
+    // The zoom follows the wheel a frame or more behind it: wait for it (TASK-0172).
+    await eventually(async () => (await zoom()).scale > 1.3, 2000, 50);
     const pinched = (await zoom()).scale;
     const pageZoom = win.webContents.getZoomFactor();
     record(pinched > 1.3 && pageZoom === 1, `a pinch zooms the field to ${pinched.toFixed(2)}× and the page's own zoom stays ${pageZoom}`);
@@ -2894,10 +2895,10 @@ async function recordDesksPerView(kit: Kit): Promise<void> {
     ctx.focusApp(win);
     await js(`document.querySelector('.pane[data-note-id="${a}"] .pane-head').focus(); true`);
     press(win, 'V');
-    await delay(700);
-    const unmarked = !isOnEveryView(store.getState(), ws, a ?? '') && own('features').includes(a ?? '');
+    const unmarked = await eventually(() => !isOnEveryView(store.getState(), ws, a ?? '') && own('features').includes(a ?? ''));
     await view('issues');
-    record(unmarked && !(await js<boolean>(`!!document.querySelector('.pane[data-note-id="${a}"]')`)), `V on its header gives it back to Features alone, and it is gone from Issues (${own('features').join(', ')} on Features)`);
+    const goneFromIssues = await eventually(async () => !(await js<boolean>(`!!document.querySelector('.pane[data-note-id="${a}"]')`)));
+    record(unmarked && goneFromIssues, `V on its header gives it back to Features alone, and it is gone from Issues (${own('features').join(', ')} on Features)`);
 
     // ---- 6. Stacking across the two lists ----
     store.dispatch({ type: 'clear-desk', scope: 'workspace' });
@@ -3560,6 +3561,21 @@ function openByPath(rel: string): string {
  * a note the view does not hold says that until Deck's index has answered for
  * it; a document still saying it after six seconds is returned as missing.
  */
+/**
+ * Whether `holds` comes true within `ms`, looked at every `step` ms (ISS-0092, TASK-0172).
+ * A check that waited a fixed time failed whenever CI's machine was slower than the
+ * wait; this one waits as long as it must and no longer, and fails only if the state
+ * never arrives.
+ */
+async function eventually(holds: () => Promise<boolean> | boolean, ms = 4000, step = 100): Promise<boolean> {
+  const end = Date.now() + ms;
+  for (;;) {
+    if (await holds()) return true;
+    if (Date.now() >= end) return false;
+    await delay(step);
+  }
+}
+
 async function untilRead(js: Js, id: string, tries = 40): Promise<string> {
   let state = '';
   for (let i = 0; i < tries; i += 1) {
@@ -4072,13 +4088,15 @@ async function recordDocument(kit: Kit): Promise<void> {
     // over the row. Whether it did is read at the press, from the document's
     // own box, so a press that came too late to meet it is made again.
     //
-    // The second press is sent when the growing document has been seen over that
-    // point, not a fixed time after the first. A fixed time did not work: the
-    // document is first drawn growing one frame after it opens, and in the box
-    // that frame came anywhere from 40 to 75 ms after the first press, so a press
-    // sent 18 to 42 ms after it met a document still the size of its row in four
-    // attempts out of four on one run. From its first frame the document lies
-    // over the point for about 60 ms, until its left edge has passed it.
+    // The second press is made while the opening is held still over that point
+    // (ISS-0092, TASK-0172). Timing the press against the growth did not work on
+    // CI: the document lies over the point for about 60 ms, and each look at the
+    // page and each press sent took several milliseconds, so the press arrived
+    // after the document had moved on, or the looks missed the window altogether.
+    // The opening is a Web Animation, so the run pauses it at the first moment
+    // the document lies over the point, presses, and lets it finish. The document
+    // is still opening at the press, so the check proves what it always did: a
+    // press made during the opening goes through to the row under it.
     const pressUnder = async (pair: Pair, x: number): Promise<{ presses: Press[]; seen: boolean }> => {
       await js(`window.__deckPresses = []; true`);
       await pointer(win, [
@@ -4086,20 +4104,36 @@ async function recordDocument(kit: Kit): Promise<void> {
         { type: 'down', x: pair.a.x, y: pair.a.y, wait: 10 },
         { type: 'up', x: pair.a.x, y: pair.a.y },
       ]);
-      const over = `(() => { const p = document.querySelector('.pane.opening'); if (!p) return false; const r = p.getBoundingClientRect(); return ${x} >= r.left && ${x} <= r.right && ${pair.b.y} >= r.top && ${pair.b.y} <= r.bottom; })()`;
-      let seen = false;
-      for (let i = 0; i < 100 && !seen; i += 1) {
-        seen = await js<boolean>(over);
-        if (!seen) await delay(3);
+      // Hold the opening still where the document lies over (x, y), if it ever does.
+      const hold = `(() => {
+        const p = document.querySelector('.pane.opening');
+        const a = p && p.getAnimations ? p.getAnimations()[0] : null;
+        if (!p || !a) return null;
+        a.pause();
+        const total = Number(a.effect.getTiming().duration) || 300;
+        for (let ms = 0; ms <= total; ms += 4) {
+          a.currentTime = ms;
+          const r = p.getBoundingClientRect();
+          if (${x} >= r.left && ${x} <= r.right && ${pair.b.y} >= r.top && ${pair.b.y} <= r.bottom) return true;
+        }
+        a.play();
+        return false;
+      })()`;
+      let seen: boolean | null = null;
+      for (let i = 0; i < 200 && seen === null; i += 1) {
+        seen = await js<boolean | null>(hold);
+        if (seen === null) await delay(2);
       }
       await pointer(win, [
         { type: 'move', x, y: pair.b.y },
         { type: 'down', x, y: pair.b.y, wait: 10 },
         { type: 'up', x, y: pair.b.y, wait: 60 },
       ]);
+      // Let the opening finish where it was held.
+      await js(`(() => { const p = document.querySelector('.pane.opening'); const a = p && p.getAnimations ? p.getAnimations()[0] : null; if (a && a.playState === 'paused') a.play(); return true; })()`);
       await delay(1600);
       await pointer(win, [{ type: 'move', ...PARK }]);
-      return { presses: await js<Press[]>(`window.__deckPresses`), seen };
+      return { presses: await js<Press[]>(`window.__deckPresses`), seen: seen === true };
     };
     let through: { pair: Pair; presses: Press[] } | null = null;
     const gaps: string[] = [];
@@ -4112,7 +4146,7 @@ async function recordDocument(kit: Kit): Promise<void> {
       const second = presses[1];
       const took = second === undefined ? null : Math.round(second.at - (presses[0]?.at ?? second.at));
       // A pair low in the list is never covered: the document grows upward from there, away from the row below.
-      gaps.push(second === undefined ? 'no second press' : `${took} ms, ${second.covered ? 'under the document' : !seen ? 'the document never lay over the row' : second.opening ? 'beside the document by the time the press arrived' : 'no document growing'}`);
+      gaps.push(second === undefined ? 'no second press' : `${took} ms, ${second.covered ? 'under the document' : !seen ? 'the document never lay over the row, held or not' : second.opening ? 'beside the document, though it was held' : 'no document growing'}`);
       if (second !== undefined && second.covered) through = { pair: next, presses };
     }
     if (through === null) {
@@ -4809,8 +4843,21 @@ async function recordOrbit(kit: Kit): Promise<void> {
   } else {
     // Field coordinates are whole pixels from edgeSample; the field's own
     // offset is rounded the same way the harness rounds a pointer.
-    await pointer(win, [{ type: 'move', x: Math.round(fieldBox.left) + edge.x, y: Math.round(fieldBox.top) + edge.y, wait: 900 }]);
-    const callout = await js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#edge-callout'), text: __t.text('#edge-callout') })`);
+    // The orbit can drift a link out from under a resting pointer, so a link is looked
+    // up again and rested on, up to three times, and the callout waited for (TASK-0172).
+    let callout: { shown: boolean; text: string } = { shown: false, text: '' };
+    let link: { x: number; y: number; source: string; target: string | null } | null = edge;
+    for (let attempt = 0; attempt < 3 && link !== null; attempt += 1) {
+      await pointer(win, [{ type: 'move', x: Math.round(fieldBox.left) + link.x, y: Math.round(fieldBox.top) + link.y, wait: 300 }]);
+      const said = (): Promise<{ shown: boolean; text: string }> => js<{ shown: boolean; text: string }>(`({ shown: __t.shown('#edge-callout'), text: __t.text('#edge-callout') })`);
+      const source = link.source;
+      if (await eventually(async () => { callout = await said(); return callout.shown && callout.text.includes(source); }, 1500, 100)) {
+        edge.source = link.source;
+        edge.target = link.target;
+        break;
+      }
+      link = await js<{ x: number; y: number; source: string; target: string | null } | null>(`__t.glass().edgeSample()`);
+    }
     record(callout.shown && callout.text.includes(edge.source) && callout.text.length > edge.source.length + 8, `resting on the link ${edge.source} → ${edge.target} shows the sentence that made it ("${callout.text.slice(0, 90)}")`);
     await pointer(win, [{ type: 'move', x: fieldBox.left + 20, y: fieldBox.top + 20, wait: 200 }]);
   }
