@@ -151,6 +151,8 @@ module.exports = async (d) => {
 
   // The camera (TASK-0156): the wheel leans back; the middle button turns it, Shift pans,
   // the scroll wheel zooms, 0 puts it back, and a ticket can still be pressed on the tilt.
+  // TASK-0162: a drag to the right turns it anticlockwise, so the near edge follows the
+  // hand, and Home shows only while the camera is moved.
   {
     await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
     await settle();
@@ -160,7 +162,7 @@ module.exports = async (d) => {
     assert.ok(start.tilt > 0, 'the wheel opens leaning back');
     await d.pointer(win, d.drag(centre, { x: centre.x + 120, y: centre.y - 60 }, 8, 16, { button: 'middle' }));
     const turnedTo = await cam();
-    assert.ok(turnedTo.spin > 10 && turnedTo.tilt > start.tilt, `a middle-button drag turns and tilts the wheel (${JSON.stringify(turnedTo)})`);
+    assert.ok(turnedTo.spin < -10 && turnedTo.tilt > start.tilt, `a middle-button drag to the right turns the wheel's near edge right and tilts it (${JSON.stringify(turnedTo)})`);
     await d.pointer(win, d.drag(centre, { x: centre.x + 40, y: centre.y + 30 }, 6, 16, { button: 'middle', shift: true }));
     const pannedTo = await cam();
     assert.ok(pannedTo.panX > 20 && pannedTo.panY > 10, `Shift with the middle button pans (${JSON.stringify(pannedTo)})`);
@@ -169,10 +171,13 @@ module.exports = async (d) => {
     const zoomedTo = await cam();
     assert.ok(zoomedTo.zoom > 1.2, `the scroll wheel zooms in (${JSON.stringify(zoomedTo)})`);
     await d.shot(win, 'wheel-turned');
+    const homeShown = () => js(`(() => { const b = document.querySelector('#overview-area .ov-camera-home'); return b !== null && !b.hidden && b.getBoundingClientRect().width > 0; })()`);
+    assert.ok(await homeShown(), 'Home shows once the camera has moved');
     d.press(win, '0');
-    await d.delay(300);
+    await d.delay(500);
     const reset = await cam();
     assert.deepEqual([reset.spin, reset.panX, reset.panY, reset.zoom, reset.tilt], [0, 0, 0, 1, start.tilt], '0 puts the camera back');
+    assert.ok(!(await homeShown()), 'Home hides once the camera is back');
     // A press on a particle of the tilted wheel still opens its ticket.
     const particle = await js(`(() => { const e = document.querySelector('#overview-area [data-key^="sector-"] [data-ticket]'); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: e.getAttribute('data-ticket') }; })()`);
     assert.ok(particle !== null, 'the wheel draws particles');

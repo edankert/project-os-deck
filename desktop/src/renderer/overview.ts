@@ -22,7 +22,7 @@
 import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
-import { cameraTransform, defaultCamera, panned, turned, wheelFactor, zoomed, type Camera } from '../shared/overview-camera.js';
+import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
 import type { OverviewModel } from '../shared/overview-types.js';
 import type { DeckAddress } from '../shared/types.js';
@@ -138,15 +138,84 @@ function cameraNow(): Camera | null {
   return cameras.get(current.scene.screen) ?? defaultCamera(current.scene.screen);
 }
 
-function setCamera(camera: Camera): void {
+/** Half the stage's size: the pan stops where the picture's centre would leave it (TASK-0162). */
+function halfView(): { w: number; h: number } | undefined {
+  if (stage === null) return undefined;
+  const box = stage.getBoundingClientRect();
+  return box.width > 0 && box.height > 0 ? { w: box.width / 2, h: box.height / 2 } : undefined;
+}
+
+function setCamera(camera: Camera, options: { glide?: boolean } = {}): void {
   if (current === null || board === null) return;
-  cameras.set(current.scene.screen, camera);
-  board.style.transform = cameraTransform(camera);
+  const held = withinView(camera, halfView());
+  cameras.set(current.scene.screen, held);
+  // Home and the three views glide there; a drag or a zoom follows the hand at once.
+  if (options.glide === true && !reducedMotion()) {
+    const moving = board;
+    moving.style.transition = 'transform 320ms ease-out';
+    window.setTimeout(() => {
+      if (moving.style.transition !== '') moving.style.transition = '';
+    }, 360);
+  } else board.style.transition = '';
+  board.style.transform = cameraTransform(held);
+  drawCameraBar();
 }
 
 /** Back to how the screen stands before anyone moves it. */
 function resetCamera(): void {
-  if (current !== null) setCamera(defaultCamera(current.scene.screen));
+  if (current !== null) setCamera(defaultCamera(current.scene.screen), { glide: true });
+}
+
+/** Whether the current screen's camera has been moved, so Home has somewhere to go. */
+function cameraMoved(): boolean {
+  const camera = cameraNow();
+  return current !== null && camera !== null && !isDefault(camera, current.scene.screen);
+}
+
+/**
+ * Home and the three views (TASK-0162). Edwin, 2026-10-16: "when rotating in 3d
+ * and zooming, it is difficult to get the screen back to its original
+ * position." Home shows only once the camera has moved.
+ */
+let cameraBar: HTMLElement | null = null;
+let homeButton: HTMLButtonElement | null = null;
+const viewButtons = new Map<View, HTMLButtonElement>();
+const VIEW_GLYPH: Readonly<Record<View, string>> = { above: '◉', leaning: '◒', side: '▬' };
+
+function buildCameraBar(): HTMLElement {
+  const bar = document.createElement('div');
+  bar.className = 'ov-camera-bar';
+  bar.setAttribute('role', 'toolbar');
+  bar.setAttribute('aria-label', 'Camera');
+  homeButton = document.createElement('button');
+  homeButton.type = 'button';
+  homeButton.className = 'ov-camera-home';
+  homeButton.textContent = '⌂';
+  homeButton.title = 'Back to where this screen starts (Home, 0)';
+  homeButton.setAttribute('aria-label', 'Back to where this screen starts');
+  homeButton.addEventListener('click', () => resetCamera());
+  bar.append(homeButton);
+  for (const view of VIEWS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.view = view;
+    button.textContent = VIEW_GLYPH[view];
+    button.title = `${VIEW_WORD[view]}: the picture seen ${view === 'above' ? 'flat, from straight above' : view === 'side' ? 'nearly edge on, so its depth shows' : 'leaning back, as the ring screens start'}`;
+    button.setAttribute('aria-label', VIEW_WORD[view]);
+    button.addEventListener('click', () => {
+      const camera = cameraNow();
+      if (camera !== null && current !== null) setCamera(viewed(camera, current.scene.screen, view), { glide: true });
+    });
+    viewButtons.set(view, button);
+    bar.append(button);
+  }
+  return bar;
+}
+
+function drawCameraBar(): void {
+  if (cameraBar === null || homeButton === null) return;
+  cameraBar.hidden = current === null;
+  homeButton.hidden = !cameraMoved();
 }
 
 function wireCamera(target: HTMLElement): void {
@@ -171,7 +240,7 @@ function wireCamera(target: HTMLElement): void {
     const dx = event.clientX - dragging.x;
     const dy = event.clientY - dragging.y;
     dragging = { ...dragging, x: event.clientX, y: event.clientY };
-    setCamera(dragging.pan || event.shiftKey ? panned(camera, dx, dy) : turned(camera, dx, dy));
+    setCamera(dragging.pan || event.shiftKey ? panned(camera, dx, dy, halfView()) : turned(camera, dx, dy));
   });
   const end = (event: PointerEvent): void => {
     if (dragging === null) return;
@@ -193,7 +262,7 @@ function wireCamera(target: HTMLElement): void {
       const px = event.clientX - box.left - box.width / 2;
       const py = event.clientY - box.top - box.height / 2;
       const factor = event.ctrlKey ? wheelFactor(event.deltaY * 4) : wheelFactor(event.deltaY);
-      setCamera(zoomed(camera, factor, px, py));
+      setCamera(zoomed(camera, factor, px, py, halfView()));
     },
     { passive: false },
   );
@@ -281,7 +350,8 @@ export function initOverview(host: OverviewHostApi): void {
   colouringToggle.textContent = '◐';
   colouringToggle.addEventListener('click', () => void switchColouring());
   drawColouringToggle();
-  area.append(stage, callout, listPanel, listToggle, colouringToggle);
+  cameraBar = buildCameraBar();
+  area.append(stage, callout, listPanel, listToggle, colouringToggle, cameraBar);
 
   historyBar = document.getElementById('ov-history');
   backButton = document.getElementById('ov-back') as HTMLButtonElement | null;
@@ -314,7 +384,7 @@ export function initOverview(host: OverviewHostApi): void {
     'keydown',
     (event) => {
       if (!isOverviewShown()) return;
-      if (['Escape', 'l', 'L', 'h', 'H', 'c', 'C', '+', '=', '-', '0'].includes(event.key)) {
+      if (['Escape', 'l', 'L', 'h', 'H', 'c', 'C', '+', '=', '-', '0', 'Home'].includes(event.key)) {
         const element = event.target as Element | null;
         const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
         if (!typing) event.stopPropagation();
@@ -533,6 +603,7 @@ function paint(scene: Scene, workspaceId: string): void {
   svg?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const host = api;
   if (board !== null) board.style.transform = cameraTransform(cameras.get(scene.screen) ?? defaultCamera(scene.screen));
+  drawCameraBar();
   panels = buildPanels(scene, board ?? stage, {
     reduced: reducedMotion(),
     loader: host?.noteHtml === undefined ? null : (id) => host.noteHtml!(workspaceId, id),
@@ -847,6 +918,12 @@ async function onKey(event: KeyboardEvent): Promise<void> {
       toggleList(false);
       return;
     }
+    // A moved camera comes home first; Escape on a screen as it started goes back (TASK-0162).
+    if (cameraMoved()) {
+      event.preventDefault();
+      resetCamera();
+      return;
+    }
     const back = current.scene.list.find((row) => row.id === 'back');
     if (back?.target !== undefined) {
       event.preventDefault();
@@ -862,12 +939,12 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     toggleList();
   }
   // + and − zoom, 0 puts the camera back (TASK-0156): for a trackpad with no middle button.
-  if ((event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0') && !event.metaKey && !event.ctrlKey) {
+  if ((event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0' || event.key === 'Home') && !event.metaKey && !event.ctrlKey) {
     const camera = cameraNow();
     if (camera === null) return;
     event.preventDefault();
-    if (event.key === '0') resetCamera();
-    else setCamera(zoomed(camera, event.key === '-' ? 1 / 1.25 : 1.25));
+    if (event.key === '0' || event.key === 'Home') resetCamera();
+    else setCamera(zoomed(camera, event.key === '-' ? 1 / 1.25 : 1.25, 0, 0, halfView()));
   }
   if ((event.key === 'c' || event.key === 'C') && !event.metaKey && !event.ctrlKey) {
     event.preventDefault();

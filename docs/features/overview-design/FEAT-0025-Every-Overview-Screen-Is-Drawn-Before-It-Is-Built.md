@@ -3,15 +3,15 @@ type: "[[feature]]"
 id: FEAT-0025
 aliases: ["FEAT-0025"]
 title: "Every overview screen is drawn before it is built: DES-0005's prototype and one plate per screen, from real tickets"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-16
 source: ["Edwin 2026-10-14: 'Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 goal: "Edwin can look at all seven overview screens, drawn from Deck's and your-trainer's real tickets, and accept or decline the design before any of it is built."
 requirements: []
-tasks: ["[[TASK-0130]]", "[[TASK-0150]]", "[[TASK-0157]]", "[[TASK-0161]]"]
+tasks: ["[[TASK-0130]]", "[[TASK-0150]]", "[[TASK-0157]]", "[[TASK-0161]]", "[[TASK-0163]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""

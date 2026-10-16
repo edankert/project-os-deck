@@ -469,8 +469,12 @@ test('the overview camera turns, pans and zooms within its limits, and keeps the
   assert.equal(cam.defaultCamera('ticket').tilt, 0, 'a ticket starts flat');
   assert.equal(cam.defaultCamera('accept').tilt, 0, 'a feature gate starts flat');
   const t = cam.turned(wheel, 100, -40);
-  assert.equal(t.spin, 30);
+  // TASK-0162: a drag to the right turns the plane anticlockwise, so its near edge
+  // (the bottom of the screen, on a plane leaning back) moves right with the hand.
+  assert.equal(t.spin, -30);
   assert.equal(t.tilt, wheel.tilt + 10);
+  const nearEdgeX = (spin) => -Math.sin((spin * Math.PI) / 180); // the plane's bottom point after rotateZ, y down
+  assert.ok(nearEdgeX(t.spin) > 0, 'the near edge goes the way the pointer went');
   assert.equal(cam.turned(wheel, 0, -10000).tilt, cam.TILT.max, 'tilt stops at its limit');
   assert.equal(cam.turned(wheel, 0, 10000).tilt, cam.TILT.min);
   const p = cam.panned(wheel, 12, -7);
@@ -482,9 +486,27 @@ test('the overview camera turns, pans and zooms within its limits, and keeps the
   assert.equal(cam.zoomed(wheel, 1000).zoom, cam.ZOOM.max);
   assert.equal(cam.zoomed(wheel, 0.0001).zoom, cam.ZOOM.min);
   assert.ok(cam.wheelFactor(100) < 1 && cam.wheelFactor(-100) > 1, 'a turn toward the person zooms out');
-  assert.match(cam.cameraTransform(t), /^translate\(0px, 0px\) rotateX\(36deg\) rotateZ\(30deg\) scale\(1\)$/);
+  assert.match(cam.cameraTransform(t), /^translate\(0px, 0px\) rotateX\(36deg\) rotateZ\(-30deg\) scale\(1\)$/);
   assert.ok(cam.isDefault(cam.defaultCamera('wheel'), 'wheel'));
   assert.ok(!cam.isDefault(t, 'wheel'));
+  assert.ok(cam.isDefault({ ...wheel, spin: 360 }, 'wheel'), 'a whole turn is back where it started');
+  // TASK-0162: the picture cannot be lost. Zoom runs 0.6× to 4×, and a pan stops where
+  // the picture's centre would leave the window.
+  assert.deepEqual([cam.ZOOM.min, cam.ZOOM.max], [0.6, 4]);
+  const half = { w: 400, h: 300 };
+  const far = cam.panned(wheel, 5000, -5000, half);
+  assert.deepEqual([far.panX, far.panY], [400, -300]);
+  const pinched = cam.zoomed(wheel, 4, 10000, 10000, half);
+  assert.ok(Math.abs(pinched.panX) <= 400 && Math.abs(pinched.panY) <= 300, 'zooming toward a far point keeps the centre in the window');
+  // The three views: flat, leaning as the ring screens start, and nearly edge on.
+  assert.deepEqual(cam.VIEWS, ['above', 'leaning', 'side']);
+  const moved = { ...cam.zoomed(t, 2), panX: 50, panY: 20 };
+  assert.equal(cam.viewed(moved, 'wheel', 'above').tilt, 0);
+  assert.equal(cam.viewed(moved, 'wheel', 'leaning').tilt, wheel.tilt);
+  assert.ok(cam.viewed(moved, 'ticket', 'leaning').tilt > 0, 'a text screen can lean too');
+  assert.ok(cam.viewed(moved, 'wheel', 'side').tilt > 55);
+  const side = cam.viewed(moved, 'wheel', 'side');
+  assert.deepEqual([side.panX, side.panY, side.zoom, side.spin], [0, 0, 2, -30], 'a view recentres the picture and keeps the turn and the zoom');
 });
 
 // TASK-0158, TASK-0160 — a ticket that needs you says what to do, on S3 as a banner with a

@@ -1556,6 +1556,12 @@ body.pinned .overview-area { left: 0; }
 .ov-colouring-toggle { right: 56px; }
 .ov-colouring-toggle[hidden] { display: none; }
 .ov-colouring-toggle[aria-pressed="true"] { background: hsla(275, 78%, 60%, 0.25); }
+/* Home and the three views (TASK-0162): bottom right, out of the picture's way. */
+.ov-camera-bar { position: absolute; right: 14px; bottom: 14px; display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: hsla(210, 50%, 8%, 0.7); border: 1px solid hsla(190, 90%, 65%, 0.35); z-index: 3; }
+.ov-camera-bar[hidden], .ov-camera-bar button[hidden] { display: none; }
+.ov-camera-bar button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: transparent; color: hsl(195 60% 88%); font-size: 15px; cursor: pointer; }
+.ov-camera-bar button:hover, .ov-camera-bar button:focus-visible { background: hsla(190, 90%, 55%, 0.2); outline: none; }
+.ov-camera-bar .ov-camera-home { background: hsla(190, 90%, 55%, 0.22); box-shadow: 0 0 10px hsla(190, 90%, 55%, 0.45); }
 .ov-list h2 { font-size: 14px; margin: 0 0 8px; }
 .ov-list h3 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(205 25% 62%); margin: 14px 0 4px; }
 .ov-list ul { list-style: none; margin: 0; padding: 0; }
