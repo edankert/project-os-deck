@@ -305,7 +305,7 @@ items:
   tasks:
     TASK-0164:
       file: docs/features/overview-design/plan/tasks/TASK-0164-The-Exit-Criteria-Are-A-Band-Along-The-Phases-Rim.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0165:
@@ -2584,7 +2584,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 160
-    tasks_done: 135
+    tasks_done: 136
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

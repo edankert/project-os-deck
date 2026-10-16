@@ -165,7 +165,7 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     return f !== undefined && f !== id && tickets[f]?.type === 'feature' ? f : null;
   };
 
-  const phases = new Map(ring.map((p) => [p.id, { id: p.id, number: p.number, name: p.name, status: p.status, kind: p.kind, exit: (p.exit?.items ?? []).map((c) => [plain(c.text), c.ticked ? 1 : 0]), towers: new Map(), tiles: [] }]));
+  const phases = new Map(ring.map((p) => [p.id, { id: p.id, number: p.number, name: p.name, status: p.status, kind: p.kind, exit: (p.exit?.items ?? []).map((c) => [plain(c.text), c.ticked ? 1 : 0]), exitProse: p.exit?.prose === true, towers: new Map(), tiles: [] }]));
   const shelf = new Map(model.shelf.map((p) => [p.id, { id: p.id, number: p.number, name: p.name, tickets: [] }]));
   const core = [];
   const ids = Object.keys(tickets).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));

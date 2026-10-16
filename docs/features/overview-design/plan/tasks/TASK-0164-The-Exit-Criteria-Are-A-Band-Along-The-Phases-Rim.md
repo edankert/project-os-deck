@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0164
 title: "The exit criteria are drawn as a band of cells along each phase's rim, lit when met, and a tower's red cap can be pressed"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-16
@@ -25,9 +25,11 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 
 ## Definition of Done
 
-- [ ] The design page draws the band on every phase of the ring, its cells lit by the criteria the model ticks; pointing at a cell names its criterion; the arch is gone.
-- [ ] Pointing at a red cap lists what needs you in that tower; pressing it selects the ticket, or the first of several, and brings its phase close.
-- [ ] The pictures under `docs/designs/__attachments__/DES-0005/towers-*.jpg` are retaken, and DES-0005's "Towers on the ring" says what the band and the cap do.
-- [ ] TST-0094 passes.
+- [x] The design page draws the band on every phase of the ring, its cells lit by the criteria the model ticks; pointing at a cell names its criterion; the arch is gone.
+- [x] Pointing at a red cap lists what needs you in that tower; pressing it selects the ticket, or the first of several, and brings its phase close.
+- [x] The pictures under `docs/designs/__attachments__/DES-0005/towers-*.jpg` are retaken, and DES-0005's "Towers on the ring" says what the band and the cap do.
+- [x] TST-0094 passes.
 
 ## Verification
+
+The design page draws the collar on every phase from `p.exit` (and a dashed line for criteria written as prose, from the new `exitProse`); the arch is gone. In a hidden window on 2026-10-16, pointing at the first cell of PHASE-0005 named "exit criterion 1 of 7 · not yet met" with its text, and pointing at FEAT-0025's cap listed "TASK-0161 · Waiting on TASK-0153: finish that first"; pressing the cap brought PHASE-0005 close with TASK-0161 selected. A cap behind another tower is not reached from that angle: the press goes to the nearest thing, as it should. The eight pictures are retaken and DES-0005 describes the collar and the cap. TST-0094 passes.

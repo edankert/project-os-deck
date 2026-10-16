@@ -352,8 +352,11 @@ function build(ws) {
   if (!layouts.every(Boolean)) layouts = d.ring.map((p, i) => layoutSegment(p, angles[i][0], angles[i][1], R0, R1, true));
   const phases = [];
   const where = new Map(); // ticket id -> { phase index, position }
+  const ticketRow = new Map([...d.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]), ...d.shelf.flatMap((p) => p.tickets), ...d.core].map((r) => [r[ID], r]));
   const pickables = [];
   const plinths = [];
+  const exitPick = [];
+  const capPick = [];
   const pulses = [];
   const beams = [];
   d.ring.forEach((p, i) => {
@@ -448,7 +451,10 @@ function build(ws) {
         const cap = new THREE.Mesh(new THREE.BoxGeometry(TOWER_DEPTH + 0.3, 0.3, TOWER + 0.3), keep(new THREE.MeshBasicMaterial({ color: NEEDS_COLOUR, transparent: true, opacity: 0.95 })));
         cap.position.set(centre.x, top + 0.3, centre.z);
         cap.rotation.y = -a;
+        // The cap is pressable: it opens what needs you in this tower (TASK-0164).
+        cap.userData.cap = { phase: i, tower: k, ids: [tower.f, ...tower.floors].filter((r) => r[NEEDS]).map((r) => r[ID]) };
         content.add(cap);
+        capPick.push(cap);
       }
       if (isFocusFeature) {
         // The focus feature sends a beam of light up from its tower, and names itself.
@@ -465,37 +471,46 @@ function build(ws) {
     const drawn = drawBuckets(b, content);
     if (drawn.pick) pickables.push(drawn.pick);
     if (drawn.pulse) pulses.push(drawn.pulse.material);
-    // The exit criteria as an arch of cells over the towers, shown when the phase is brought close.
-    const arch = new THREE.Group();
+    // The exit criteria as a collar of cells just outside the segment's rim, one per
+    // criterion, lit when met (TASK-0164). It stands on the ring itself, so every phase
+    // shows at rest how close it is to closing; a fully lit collar is ready to close.
     const exits = p.exit;
+    const collarIn = R1 + 0.5;
+    const collarOut = R1 + 2.7;
     if (exits.length > 0) {
-      const Ra = Math.min(9, Math.max(5, ((a1 - a0) * R0) / 2.4));
-      const centre = polar(R0 + 1, mid).add(new THREE.Vector3(0, h + tallest + 2, 0));
-      const right = new THREE.Vector3(Math.sin(mid), 0, -Math.cos(mid)); // the screen's right, seen from outside
-      const cell = Math.min(2.2, (Math.PI * Ra) / exits.length - 0.35);
-      const archPick = [];
+      const gap = Math.min(0.02, ((a1 - a0) / exits.length) * 0.12);
+      const cell = ((a1 - a0) - gap * (exits.length + 1)) / exits.length;
       exits.forEach(([text, ticked], k) => {
-        const phi = Math.PI - (Math.PI * (k + 0.5)) / exits.length;
-        const at = centre.clone().addScaledVector(right, Ra * Math.cos(phi)).add(new THREE.Vector3(0, Ra * Math.sin(phi), 0));
-        const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -mid);
-        const m = new THREE.Matrix4().compose(at, q, new THREE.Vector3(0.4, cell, cell));
-        const mesh = new THREE.Mesh(BOX, new THREE.MeshStandardMaterial({ color: EXIT_COLOUR, transparent: true, opacity: ticked ? 0.95 : 0.12, emissive: ticked ? EXIT_COLOUR.clone().multiplyScalar(0.35) : new THREE.Color('#000'), depthWrite: !!ticked }));
-        mesh.applyMatrix4(m);
-        mesh.userData.exit = { text, ticked, k, of: exits.length };
-        arch.add(mesh);
-        const edge = new THREE.LineSegments(new THREE.EdgesGeometry(BOX), new THREE.LineBasicMaterial({ color: EXIT_COLOUR }));
-        edge.applyMatrix4(m);
-        arch.add(edge);
-        archPick.push(mesh);
+        const c0 = a0 + gap + k * (cell + gap);
+        const material = keep(ticked
+          ? new THREE.MeshStandardMaterial({ color: EXIT_COLOUR, emissive: EXIT_COLOUR.clone().multiplyScalar(0.45), roughness: 0.4, transparent: true, opacity: 1 })
+          : new THREE.MeshStandardMaterial({ color: '#0b2a33', roughness: 0.9, transparent: true, opacity: 0.9 }));
+        const mesh = slab(sectorShape(collarIn, collarOut, c0, c0 + cell), h + (ticked ? 0.45 : 0.15), material);
+        mesh.userData.exit = { text, ticked, k, of: exits.length, phase: i };
+        base.add(mesh);
+        exitPick.push(mesh);
+        if (!ticked) {
+          const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 30), keep(new THREE.LineBasicMaterial({ color: EXIT_COLOUR, transparent: true, opacity: 0.8 })));
+          edge.rotation.copy(mesh.rotation);
+          edge.position.copy(mesh.position);
+          base.add(edge);
+        }
       });
-      const met = exits.filter(([, t]) => t).length;
-      const title = label('Exit criteria · ' + met + ' of ' + exits.length + ' met', 1.9, '#bff3e6', 700);
-      title.position.copy(centre).add(new THREE.Vector3(0, Ra + 2.4, 0));
-      arch.add(title);
-      arch.userData.pick = archPick;
+    } else if (p.exitProse) {
+      // Criteria written as prose cannot be counted: the collar is a dashed line, not cells.
+      const line = arcLine((collarIn + collarOut) / 2, a0, a1, h + 0.1, keep(new THREE.LineDashedMaterial({ color: EXIT_COLOUR, dashSize: 0.8, gapSize: 0.6, transparent: true, opacity: 0.8 })));
+      line.computeLineDistances();
+      base.add(line);
     }
-    arch.visible = false;
-    group.add(arch);
+    if (exits.length > 0) {
+      // Brought close, the collar says what it counts, in front of the segment.
+      const met = exits.filter(([, ticked]) => ticked).length;
+      const at = polar(collarOut + 3.2, mid);
+      const words = label('exit criteria · ' + met + ' of ' + exits.length + ' met', 1.3, '#bff3e6', 700);
+      words.position.set(at.x, h + 0.8, at.z);
+      near.add(words);
+    }
+    const arch = new THREE.Group();
     phases.push({ p, group, base, content, tags, near, arch, materials: [...baseMaterials, ...drawn.materials], mid, a0, a1, h, tallest });
   });
 
@@ -573,7 +588,7 @@ function build(ws) {
   world.add(selection);
 
   const focusIndex = Math.max(0, d.ring.findIndex((p) => p.id === d.focus.phase));
-  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark };
+  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow };
   const placed = d.ring.reduce((m, p) => m + p.tiles.length + p.towers.reduce((x, t) => x + 1 + t.floors.length, 0), 0) + d.shelf.reduce((m, p) => m + p.tickets.length, 0) + d.core.length;
   window.__towers = { ws, tickets: placed, drawn: where.size, towers: d.ring.reduce((m, p) => m + p.towers.length, 0), R1, focus: d.focus, next: d.next };
   drawLegend();
@@ -736,7 +751,9 @@ function drawPanel(i, selectId) {
     const rows = [t.f, ...t.floors];
     const closed = rows.filter((r) => r[STATE] === 'closed').length;
     const focus = t.f[ID] === d.focus.feature;
-    html += '<h3 class="' + (focus ? 'focus' : '') + '">' + (focus ? '<span class="beam"></span>' : '') + esc(t.f[ID]) + ' · ' + closed + ' of ' + rows.length + ' done' + (focus ? ' · in focus' : '') + '</h3>' + rows.map((r) => rowHtml(r, r[ID] === d.next)).join('');
+    // What needs you first, then the floors from the bottom, so a pressed cap's tickets are at the top.
+    const listed = [...rows.filter((r) => r[NEEDS]), ...rows.filter((r) => !r[NEEDS])];
+    html += '<h3 class="' + (focus ? 'focus' : '') + '">' + (focus ? '<span class="beam"></span>' : '') + esc(t.f[ID]) + ' · ' + closed + ' of ' + rows.length + ' done' + (focus ? ' · in focus' : '') + '</h3>' + listed.map((r) => rowHtml(r, r[ID] === d.next)).join('');
   }
   if (p.tiles.length > 0) html += '<h3>No feature · ' + p.tiles.length + '</h3>' + [...p.tiles].sort((a, b) => b[NEEDS] - a[NEEDS] || (a[STATE] === 'closed') - (b[STATE] === 'closed')).map((r) => rowHtml(r, r[ID] === d.next)).join('');
   panel.innerHTML = html;
@@ -753,7 +770,7 @@ function drawLegend() {
   document.getElementById('legend').innerHTML =
     '<div>' + sq('delivered', c) + 'done</div><div>' + sq('doing', c) + 'in progress</div><div>' + sq('open', c) + 'not started</div>' +
     '<div>' + sq('dropped', c) + 'resolved, nothing delivered</div><div>' + sq('deferred', c) + 'parked</div>' +
-    '<div><span class="dot"></span>needs you · red cap: a tower asks</div><div><span class="beam"></span>the feature in focus</div>' +
+    '<div><span class="dot"></span>needs you · red cap: a tower asks (press it)</div><div><span class="sq delivered" style="color:' + MARK.exit + '"></span>exit criterion met · <span class="sq open" style="color:' + MARK.exit + '"></span>not yet, on the rim</div><div><span class="beam"></span>the feature in focus</div>' +
     '<div><span style="color:#9ff0ff;font-weight:800">▶</span> the phase in focus · <b>next</b> what is next</div>' +
     '<div style="flex-wrap:wrap;max-width:300px;margin-top:6px">' + types + '</div>';
 }
@@ -766,10 +783,11 @@ function hitAt(x, y) {
   if (state === null) return null;
   ray.setFromCamera(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1), camera);
   const open = state.open;
-  const archPick = open !== null ? state.phases[open].arch.userData.pick ?? [] : [];
   const visiblePick = state.pickables.filter((m) => m.parent.visible);
-  const hits = ray.intersectObjects([...visiblePick, ...archPick, ...state.plinths], false);
+  const caps = state.capPick.filter((m) => m.parent.visible);
+  const hits = ray.intersectObjects([...caps, ...visiblePick, ...state.exitPick, ...state.plinths], false);
   for (const h of hits) {
+    if (h.object.userData.cap) return { cap: h.object.userData.cap };
     if (h.object.userData.rows) return { ticket: h.object.userData.rows[h.instanceId] };
     if (h.object.userData.exit) return { exit: h.object.userData.exit };
     if (h.object.userData.phase !== undefined) return { phase: h.object.userData.phase };
@@ -788,7 +806,11 @@ function tipFor(hit) {
       (tower && tower[ID] !== r[ID] ? ' · in ' + esc(tower[ID]) : '') + (phase ? ' · ' + esc(phase.id) : where?.shelf !== undefined ? ' · finished phase ' + esc(d.shelf[where.shelf].id) : ' · no phase') +
       (r[ID] === d.next ? ' · <b>next</b>' : '') + '</div>' + (r[NEEDS] ? '<div class="needs">● ' + esc(r[SAY] || 'needs you') + '</div>' : '');
   }
-  if (hit.exit) return '<b>Exit criterion ' + (hit.exit.k + 1) + ' of ' + hit.exit.of + '</b> · ' + (hit.exit.ticked ? 'met' : 'not yet met') + '<div class="sub">' + esc(hit.exit.text) + '</div>';
+  if (hit.exit) return '<b>' + esc(state.phases[hit.exit.phase].p.id) + ' exit criterion ' + (hit.exit.k + 1) + ' of ' + hit.exit.of + '</b> · ' + (hit.exit.ticked ? 'met' : 'not yet met') + '<div class="sub">' + esc(hit.exit.text) + '</div>';
+  if (hit.cap) {
+    const rows = hit.cap.ids.map((id) => state.ticketRow.get(id)).filter(Boolean);
+    return '<b>' + rows.length + (rows.length === 1 ? ' ticket needs' : ' tickets need') + ' you</b> in ' + esc(state.phases[hit.cap.phase].p.towers[hit.cap.tower].f[ID]) + rows.map((r) => '<div class="needs">● ' + esc(r[ID]) + ' · ' + esc(r[SAY] || 'needs you') + '</div>').join('') + '<div class="sub">Press to ' + (rows.length === 1 ? 'open it' : 'open the first') + '.</div>';
+  }
   const p = state.phases[hit.phase].p;
   return '<b>' + esc(p.id) + ' ' + esc(p.name) + '</b> · ' + esc(p.status) + (p.id === d.focus.phase ? ' · in focus' : '') + '<div class="sub">' + p.towers.length + ' features, ' + p.tiles.length + ' tickets with no feature. Press to bring it close.</div>';
 }
@@ -807,6 +829,10 @@ canvas.addEventListener('pointerup', (e) => {
   if (!was || was.button !== 0 || Math.hypot(e.clientX - was.x0, e.clientY - was.y0) > 4) return;
   const hit = hitAt(e.clientX, e.clientY);
   if (hit === null) return;
+  if (hit.cap) {
+    openPhase(hit.cap.phase, hit.cap.ids[0]);
+    return;
+  }
   if (hit.ticket) {
     const w = hit.ticket.where;
     if (w?.phase !== undefined) {
@@ -931,6 +957,19 @@ window.__towersProbe = {
   ticketAt(id) {
     const w = state.where.get(id);
     return w ? this.screenOf(w.at.x, w.at.y, w.at.z) : null;
+  },
+  capAt(phaseId) {
+    const cap = state.capPick.find((m) => state.d.ring[m.userData.cap.phase].id === phaseId);
+    if (!cap) return null;
+    const p = cap.getWorldPosition(new THREE.Vector3());
+    return { ...this.screenOf(p.x, p.y, p.z), ids: cap.userData.cap.ids };
+  },
+  exitAt(phaseId) {
+    const cell = state.exitPick.find((m) => state.d.ring[m.userData.exit.phase].id === phaseId);
+    if (!cell) return null;
+    cell.geometry.computeBoundingBox();
+    const c = cell.geometry.boundingBox.getCenter(new THREE.Vector3()).applyMatrix4(cell.matrixWorld);
+    return this.screenOf(c.x, c.y, c.z);
   },
   open: () => (state.open === null ? null : state.d.ring[state.open].id),
   homeShown: () => !document.getElementById('home').hidden,
