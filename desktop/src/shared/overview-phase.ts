@@ -1,19 +1,20 @@
 /**
- * S2, a phase: what it still owes and what kind of work it is (PHASE-0005,
- * FEAT-0028).
+ * S2, a phase: its segment of the ring brought close (PHASE-0005, FEAT-0028).
  *
- * Left, the phase's web: one corner per ticket kind, the defined count in
- * amber and the closed count in green, on one square-root scale shared by
- * every phase of the workspace, so a bigger phase draws a bigger web. Around
- * it, the exit criteria as a ring of segments, lit when ticked. Right, the
- * phase's tickets as the cockpit lists them, on a plane tilted away: what
- * needs you in front, what is in progress or open behind it, and what is
- * closed at the back, folded to a strip of marks (TASK-0147).
+ * Since 2026-10-16 (TASK-0168) the phase opens as the towers page draws it: the
+ * camera flies from the wheel to the phase's segment, each tower shows its
+ * feature's id, the exit criteria are the collar round its rim, lit when met,
+ * and its tickets are listed on the right as the cockpit lists them, grouped by
+ * tower, the feature in focus first, what needs you at the top of each group and
+ * the flat tiles last (Edwin: "I don't think the phase spider web works"). The
+ * web is gone. A finished phase, which has no segment, shows the whole ring and
+ * lists its tickets by section, what needs you first.
  */
-import { backControl, bezel, frame, heading } from './overview-chrome.js';
-import { arc, plainName, polar, polygon, TAU } from './overview-geometry.js';
+import { backControl, frame, heading } from './overview-chrome.js';
+import { plainName } from './overview-geometry.js';
+import { towersLayout, towersPlan, type RingPhase } from './overview-towers.js';
 import { rowWords } from './overview-marks.js';
-import type { ListRow, PanelNode, PanelRow, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import type { ListRow, PanelNode, PanelRow, PanelSection, Scene, SceneNode, ScreenContext } from './overview-scene.js';
 import {
   allPhases,
   KIND_WORD,
@@ -28,9 +29,7 @@ import {
 } from './overview-types.js';
 import { closedOf, phaseLabel } from './overview-wheel.js';
 
-export const PHASE_SCREEN = { width: 1440, height: 1000, webX: 380, webY: 520, webR: 230 } as const;
-
-const INITIAL: Record<string, string> = { req: 'Req', feat: 'Feat', task: 'Task', test: 'Test', iss: 'Iss' };
+export const PHASE_SCREEN = { width: 1440, height: 1000 } as const;
 
 /**
  * Which section of the ticket list a ticket stands in: 0 needs you, at the
@@ -61,106 +60,43 @@ export function panelRow(t: Ticket, ctx: ScreenContext): PanelRow {
   return { id: t.id, type: t.type, fill: t.fill, needsYou: t.needsYou, title: t.title, status: t.status, target: ctx.address({ page: 'ticket', note: t.id }), ...(t.needs ? { note: t.needs.say } : {}) };
 }
 
-function kindCounts(model: OverviewModel, phase: Phase): Record<string, { live: number; closed: number }> {
-  const out: Record<string, { live: number; closed: number }> = {};
-  for (const kind of PHASE_KINDS) out[kind] = { live: 0, closed: 0 };
-  for (const id of phase.tickets) {
-    const t = model.tickets[id];
-    if (t === undefined || t.state === 'dropped' || out[t.kind] === undefined) continue;
-    out[t.kind]!.live += 1;
-    if (t.state === 'closed') out[t.kind]!.closed += 1;
-  }
-  return out;
-}
-
-/** The largest count of one kind in any phase, so every web shares a scale. */
-function webScale(model: OverviewModel): number {
-  let max = 1;
-  for (const phase of allPhases(model)) {
-    for (const c of Object.values(kindCounts(model, phase))) max = Math.max(max, c.live);
-  }
-  return Math.sqrt(max);
-}
-
-function webNodes(model: OverviewModel, phase: Phase): SceneNode[] {
-  const { webX: cx, webY: cy, webR: R } = PHASE_SCREEN;
-  const counts = kindCounts(model, phase);
-  const scale = webScale(model);
-  const n = PHASE_KINDS.length;
-  const nodes: SceneNode[] = [];
-  // Rings of the scale, faint, so a web's size can be read against them.
-  for (const f of [0.25, 0.5, 0.75, 1]) {
-    nodes.push({ kind: 'mark', tag: 'polygon', attrs: { points: polygon(cx, cy, R * f, n) }, cls: 'ov-track' });
-  }
-  const point = (i: number, v: number): [number, number] => polar(cx, cy, (R * Math.sqrt(v)) / scale, (i * TAU) / n);
-  const pts = (key: 'live' | 'closed'): string =>
-    PHASE_KINDS.map((k, i) => point(i, counts[k]![key]).map((v) => Math.round(v * 10) / 10).join(',')).join(' ');
-  PHASE_KINDS.forEach((kind, i) => {
-    const [x, y] = polar(cx, cy, R, (i * TAU) / n);
-    nodes.push({ kind: 'mark', tag: 'line', attrs: { x1: cx, y1: cy, x2: x, y2: y }, cls: 'ov-wire' });
-    const [lx, ly] = polar(cx, cy, R + 22, (i * TAU) / n);
-    nodes.push({ kind: 'text', x: lx, y: ly + 4, text: INITIAL[kind]!, rest: true, role: 'label', size: 12, anchor: 'middle', cls: 'ov-dim' });
-  });
-  nodes.push({ kind: 'mark', tag: 'polygon', attrs: { points: pts('live'), 'fill-opacity': 0.28, stroke: 'hsl(38 96% 58%)', 'stroke-width': 1.5 }, state: 'open', label: 'Defined, by kind' });
-  nodes.push({ kind: 'mark', tag: 'polygon', attrs: { points: pts('closed'), 'fill-opacity': 0.55, stroke: 'hsl(160 62% 46%)', 'stroke-width': 1.5 }, state: 'closed', cls: 'glow', label: 'Closed, by kind' });
-  PHASE_KINDS.forEach((kind, i) => {
-    const c = counts[kind]!;
-    const [x, y] = point(i, c.live);
-    nodes.push({
-      kind: 'mark',
-      tag: 'circle',
-      attrs: { cx: x, cy: y, r: 5 },
-      state: c.live > 0 && c.closed === c.live ? 'closed' : 'open',
-      markId: `web-${kind}`,
-      count: c.live,
-      label: `${KIND_WORD[kind]}: ${c.closed} of ${c.live} closed`,
-    });
-  });
-  return nodes;
-}
-
-function exitRing(phase: Phase): { nodes: SceneNode[]; rows: ListRow[] } {
-  const { webX: cx, webY: cy, webR: R } = PHASE_SCREEN;
-  const items = phase.exit.items;
-  const nodes: SceneNode[] = [];
-  const rows: ListRow[] = [];
-  const r = R + 52;
-  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx, cy, r: r + 9 }, cls: 'ov-wire ov-ghost' });
-  if (items.length === 0) {
-    nodes.push({ kind: 'mark', tag: 'path', attrs: { d: arc(cx, cy, r, 0, TAU), 'stroke-width': 6, 'stroke-dasharray': '2 8' }, cls: 'ov-arc ov-track', label: phase.exit.prose ? 'Exit criteria written as prose' : 'No exit criteria' });
-    return { nodes, rows };
-  }
-  const step = TAU / items.length;
-  const pad = Math.min(0.04, step * 0.15);
-  items.forEach((item, i) => {
-    const id = `exit-${phase.id}-${i + 1}`;
-    nodes.push({
-      kind: 'mark',
-      tag: 'path',
-      attrs: { d: arc(cx, cy, r, i * step + pad, (i + 1) * step - pad), 'stroke-width': 9 },
-      cls: item.ticked ? 'ov-arc glow' : 'ov-arc ov-faint',
-      state: item.ticked ? 'closed' : 'open',
-      markId: id,
-      label: `${item.ticked ? 'Met' : 'Not yet met'}: ${item.text}`,
-    });
-    rows.push({ id, label: `${item.ticked ? 'Met' : 'Not yet met'}: ${item.text}`, group: 'Exit criteria', state: item.ticked ? 'closed' : 'open' });
-  });
-  return { nodes, rows };
-}
-
 /**
- * The phase's tickets as cockpit rows on a plane tilted away (TASK-0147).
- *
- * Edwin, 2026-10-15: "the right hand pane should really show the tickets as
- * tickets", in the cockpit's list, and "it would be nice if they could be
- * displayed more 3d". What needs you stands at the front, full size; what is
- * in progress or open behind it; what is closed at the back, folded to a strip
- * of marks with its count until it is pressed open. Deck builds the rows as
- * HTML and tilts them in real depth; a plate draws them flat.
+ * The phase's tickets as cockpit rows (TASK-0147), grouped by what stands where
+ * in its segment (TASK-0168). What needs you comes first, in one open group, each
+ * row saying what to do, so a pressed cap's tickets are at the top. Then the
+ * feature in focus, open. Then every other tower, folded to a strip of its marks
+ * with its count, opened by a press; then the flat tiles, folded unless they are
+ * few. Each ticket is one row.
  */
-export const TICKET_PANEL = { x: 740, y: 96, w: 670, h: 870 } as const;
+export const TICKET_PANEL = { x: 760, y: 96, w: 650, h: 870 } as const;
 
-function ticketPanel(model: OverviewModel, phase: Phase, ctx: ScreenContext): { node: PanelNode; rows: ListRow[] } {
+function towerPanel(model: OverviewModel, ring: RingPhase, ctx: ScreenContext): { node: PanelNode; rows: ListRow[] } {
+  const rows: ListRow[] = [];
+  const ticketsOf = (ids: string[]): Ticket[] => ids.map((id) => model.tickets[id]).filter((t): t is Ticket => t !== undefined);
+  const towers = [...ring.towers].sort((a, b) => Number(b.focus) - Number(a.focus) || a.feature.localeCompare(b.feature, 'en', { numeric: true }));
+  const sections: PanelSection[] = [];
+  const add = (key: string, title: string, group: string, tickets: Ticket[], folded: boolean): void => {
+    if (tickets.length === 0) return;
+    for (const t of tickets) rows.push({ id: t.id, label: rowWords(t), group, state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
+    sections.push({ key, title, rows: tickets.map((t) => panelRow(t, ctx)), folded });
+  };
+  const everyone = [...towers.flatMap((tw) => ticketsOf(tw.cubes.map((c) => c.id))), ...ticketsOf(ring.tiles.map((c) => c.id))];
+  add('needs-you', SECTION_TITLE[0], SECTION_TITLE[0], everyone.filter((t) => t.needsYou), false);
+  for (const tower of towers) {
+    const all = ticketsOf(tower.cubes.map((c) => c.id));
+    const done = all.filter((t) => t.state === 'closed').length;
+    add(`tower-${tower.feature}`, `${tower.feature} · ${done} of ${all.length} done${tower.focus ? ' · in focus' : ''}`, tower.feature, all.filter((t) => !t.needsYou), !tower.focus);
+  }
+  const tiles = ticketsOf(ring.tiles.map((c) => c.id)).filter((t) => !t.needsYou);
+  add('tiles', 'No feature', 'No feature', tiles, tiles.length > 8);
+  return {
+    node: { kind: 'panel', key: `tickets-${ring.id}`, ...TICKET_PANEL, label: `${ring.id}'s tickets: what needs you first, then each tower`, body: { kind: 'rows', sections } },
+    rows,
+  };
+}
+
+/** A finished phase's tickets by section: what needs you, in progress and open, closed and folded. */
+function sectionPanel(model: OverviewModel, phase: Phase, ctx: ScreenContext): { node: PanelNode; rows: ListRow[] } {
   const sections: Ticket[][] = [[], [], []];
   for (const id of phase.tickets) {
     const t = model.tickets[id];
@@ -171,10 +107,9 @@ function ticketPanel(model: OverviewModel, phase: Phase, ctx: ScreenContext): { 
     kind: 'panel',
     key: `tickets-${phase.id}`,
     ...TICKET_PANEL,
-    label: `${phase.id}'s tickets: what needs you in front, closed work folded at the back`,
+    label: `${phase.id}'s tickets: what needs you first, closed work folded`,
     body: {
       kind: 'rows',
-      tilt: true,
       sections: sections.map((tickets, i) => {
         const sorted = [...tickets].sort(rowOrder);
         for (const t of sorted) rows.push({ id: t.id, label: rowWords(t), group: SECTION_TITLE[i]!, state: t.state, target: ctx.address({ page: 'ticket', note: t.id }) });
@@ -189,32 +124,31 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
   const phase = allPhases(model).find((p) => p.id === phaseId);
   if (phase === undefined) throw new Error(`the overview has no phase ${phaseId}`);
   const back = backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
-  const nodes: SceneNode[] = [back.node, ...heading(phase.id, plainName(phase.name))];
-  nodes.push(...frame(PHASE_SCREEN.width, PHASE_SCREEN.height), ...bezel(PHASE_SCREEN.webX, PHASE_SCREEN.webY, PHASE_SCREEN.webR + 72, 90));
-
-
-  // The status lamp, beside the name.
+  const layout = towersLayout(model, ctx, phase.id);
+  const ring = layout.phases.find((p) => p.id === phase.id);
+  const nodes: SceneNode[] = [back.node, ...heading(phase.id, plainName(phase.name)), ...frame(PHASE_SCREEN.width, PHASE_SCREEN.height)];
+  const list: ListRow[] = [back.row];
   const { closed, live } = closedOf(model, phase);
-  const lampState: State = phase.kind === 'finished' ? 'closed' : phase.status === 'active' ? 'progress' : 'open';
-  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: 86, cy: 140, r: 7 }, state: lampState, glow: true, label: `${phase.status} · ${phase.kind}` });
-
-  // How far: one bar of every live ticket, closed share lit.
-  const barX = 108;
-  const barW = 520;
-  nodes.push({ kind: 'mark', tag: 'rect', attrs: { x: barX, y: 134, width: barW, height: 12, rx: 6 }, cls: 'ov-track' });
-  if (live > 0 && closed > 0) {
-    nodes.push({ kind: 'mark', tag: 'rect', attrs: { x: barX, y: 134, width: (barW * closed) / live, height: 12, rx: 6 }, state: 'closed', markId: 'progress', count: closed, label: `${closed} of ${live} closed` });
+  list.push({ id: phase.id, label: `${phaseLabel(phase)} — ${closed} of ${live} closed, ${phase.status}`, group: 'This phase' });
+  // The exit criteria, in the list twin as the collar draws them.
+  phase.exit.items.forEach((item, i) => list.push({ id: `exit-${phase.id}-${i}`, label: `${item.ticked ? 'Met' : 'Not yet met'}: ${item.text}`, group: 'Exit criteria', state: item.ticked ? 'closed' : 'open' }));
+  if (ring !== undefined) {
+    const plan = towersPlan(layout, { only: phase.id, box: { x: 40, y: 150, w: 700, h: 800 }, tickets: false });
+    nodes.push(...plan.nodes);
+    list.push(...plan.rows.filter((r) => r.group !== 'Phases'));
+    const panel = towerPanel(model, ring, ctx);
+    nodes.push(panel.node);
+    list.push(...panel.rows);
+  } else {
+    const plan = towersPlan(layout, { tickets: false });
+    nodes.push({ kind: 'group', key: 'ring-small', transform: 'translate(40 150) scale(0.5)', children: plan.nodes });
+    const panel = sectionPanel(model, phase, ctx);
+    nodes.push(panel.node);
+    list.push(...panel.rows);
   }
-
-  nodes.push(...webNodes(model, phase));
-  const exit = exitRing(phase);
-  nodes.push(...exit.nodes);
-  const f = ticketPanel(model, phase, ctx);
-  nodes.push(f.node);
-
-  const list: ListRow[] = [back.row, { id: phase.id, label: `${phaseLabel(phase)} — ${closed} of ${live} closed, ${phase.status}`, group: 'This phase' }, ...exit.rows, ...f.rows];
-  // The phase's own id is drawn by the lamp's neighbour: a mark carrying it keeps the twin exact.
-  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: 86, cy: 140, r: 12 }, cls: 'ov-hit', markId: `phase-${phase.id}`, label: phaseLabel(phase) });
+  // The phase's own id is drawn by a mark beside the heading, so the twin stays exact.
+  nodes.push({ kind: 'mark', tag: 'circle', attrs: { cx: 86, cy: 140, r: 7 }, state: phase.kind === 'finished' ? 'closed' : phase.status === 'active' ? 'progress' : 'open', glow: true, markId: `phase-${phase.id}`, label: `${phaseLabel(phase)}: ${phase.status} · ${phase.kind}` });
+  nodes.push({ kind: 'towers', layout });
   return {
     screen: 'phase',
     address: ctx.address({ page: 'phase', note: phase.id }),

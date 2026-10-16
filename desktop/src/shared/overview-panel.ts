@@ -69,34 +69,36 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
   // first row, is kept free while an earlier one draws: a long open list must not push
   // the closed strip off the plate (Codex's review of TASK-0147).
   const live = panel.body.sections.filter((sec) => sec.rows.length > 0);
-  const least = (sec: (typeof live)[number]): number => HEAD + (sec.folded ? Math.min(4, Math.ceil(sec.rows.length / 40)) * 7 * 1.7 + 6 : ROW) + 10;
+  // A folded section is one line, its heading beside its strip (TASK-0168: a phase with a dozen towers).
+  const STRIP_AT = 230;
+  const stripLines = (sec: (typeof live)[number]): number => Math.min(4, Math.ceil(sec.rows.length / Math.max(1, Math.floor((w - STRIP_AT - 24) / (7 * 1.6)))));
+  const foldedHeight = (sec: (typeof live)[number]): number => Math.max(HEAD, stripLines(sec) * 7 * 1.7 + 6);
+  const least = (sec: (typeof live)[number]): number => (sec.folded ? foldedHeight(sec) : HEAD + ROW) + 10;
   const reserveAfter = live.map((_, i) => live.slice(i + 1).reduce((n, sec) => n + least(sec), 0));
   for (const [index, section] of live.entries()) {
     const reserve = reserveAfter[index]! * (tilt ? 1 - TILT.shrink * 0.5 : 1);
     const blocks: Array<{ height: number; draw: (top: number, s: number) => SceneNode[] }> = [];
-    blocks.push({
-      height: HEAD,
-      draw: (top, s) => [{ kind: 'text', x: widthAt(top).left, y: top + HEAD * s * 0.6, text: `${section.title} · ${section.rows.length}`, rest: true, role: 'label', size: 11 * s, cls: 'ov-dim ov-title' }],
-    });
+    const header = (top: number, s: number): SceneNode => ({ kind: 'text', x: widthAt(top).left, y: top + HEAD * s * 0.6, text: `${section.title} · ${section.rows.length}`, rest: true, role: 'label', size: 11 * s, cls: 'ov-dim ov-title' });
     if (section.folded) {
-      // The strip: one small mark per row, wrapped, then the count.
+      // One line: the heading, and beside it the strip, one small mark per row, wrapped.
       const strip = 7;
-      const perLine = Math.max(1, Math.floor((w * (1 - TILT.narrow)) / (strip * 1.6)));
-      const lines = Math.min(4, Math.ceil(section.rows.length / perLine));
+      const perLine = Math.max(1, Math.floor((w - STRIP_AT - 24) / (strip * 1.6)));
+      const lines = stripLines(section);
       blocks.push({
-        height: lines * strip * 1.7 + 6,
+        height: foldedHeight(section),
         draw: (top, s) => {
           const { left } = widthAt(top);
-          const nodes: SceneNode[] = [];
+          const nodes: SceneNode[] = [header(top, s)];
           section.rows.slice(0, lines * perLine).forEach((row, i) => {
-            const cx = left + 6 + (i % perLine) * strip * 1.6 * s;
-            const cy = top + 6 + Math.floor(i / perLine) * strip * 1.7 * s;
+            const cx = left + STRIP_AT * s + (i % perLine) * strip * 1.6 * s;
+            const cy = top + 8 + Math.floor(i / perLine) * strip * 1.7 * s;
             nodes.push(cockpitSquare(row, cx, cy, strip * s, { label: markWords(row), target: row.target }));
           });
           return nodes;
         },
       });
     } else {
+      blocks.push({ height: HEAD, draw: (top, s) => [header(top, s)] });
       for (const row of section.rows) {
         blocks.push({ height: ROW, draw: (top, s) => { const { left, width } = widthAt(top); return rowNodes(row, left, top + (ROW * s) / 2, width, s); } });
       }

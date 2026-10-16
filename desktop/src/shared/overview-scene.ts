@@ -14,6 +14,7 @@
  * `overview-types.ts`. The drawing lane owns it; a change is agreed in
  * FEAT-0026's "Questions between the lanes" first.
  */
+import type { TowersLayout } from './overview-towers.js';
 import type { Fill, NoteType, State } from './overview-types.js';
 import { FIELD, marksCss, NEEDS_YOU } from './overview-marks.js';
 import { panelCss, panelSvgNodes } from './overview-panel.js';
@@ -141,7 +142,17 @@ export interface PanelNode {
     | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string };
 }
 
-export type SceneNode = MarkNode | TextNode | ImageNode | GroupNode | PanelNode;
+/**
+ * The towers on the ring, for the renderer to draw in 3D (TASK-0167). The scene
+ * also draws the same layout flat as ordinary marks, which is what the checks,
+ * the list twin and the plates read; this node carries nothing to count.
+ */
+export interface TowersNode {
+  kind: 'towers';
+  layout: TowersLayout;
+}
+
+export type SceneNode = MarkNode | TextNode | ImageNode | GroupNode | PanelNode | TowersNode;
 
 /** One row of the list twin: the same thing a mark draws, as a row a keyboard and a screen reader can reach. */
 export interface ListRow {
@@ -222,6 +233,22 @@ ${panelCss(FIELD, NEEDS_YOU)}
 .ov .ov-arc.ov-track { stroke: hsla(195, 80%, 60%, 0.16); fill: none; }
 ${STATES.map((s) => `.ov .ov-wire.st-${s}, .ov .ov-arc.st-${s} { fill: none; stroke: ${PALETTE[s]}; }`).join('\n')}
 .ov .ov-control { fill: hsla(190, 90%, 55%, 0.14); stroke: ${PALETTE.line}; stroke-width: 1.5; }
+/* The towers on the ring, drawn flat (TASK-0166): plinths by level, the exit collar, caps, the shelf. */
+.ov .ov-plinth { stroke-width: 1; }
+.ov .ov-plinth.lv-planned { fill: hsl(205 50% 9%); stroke: hsla(200, 45%, 35%, 0.6); }
+.ov .ov-plinth.lv-active { fill: hsl(202 60% 17%); stroke: hsl(195 75% 56%); }
+.ov .ov-plinth.lv-focus { fill: hsl(198 72% 27%); stroke: hsl(188 100% 81%); stroke-width: 1.6; }
+.ov .ov-exit { fill: hsl(195 60% 11%); stroke: hsla(165, 35%, 58%, 0.8); stroke-width: 0.8; }
+.ov .ov-exit.ov-exit-met { fill: hsl(165 35% 58%); stroke: hsl(165 45% 72%); }
+.ov .ov-cap { fill: ${NEEDS_YOU}; stroke: none; }
+.ov .ov-shelf { fill: hsla(205, 50%, 12%, 0.7); stroke: hsla(200, 45%, 35%, 0.6); stroke-width: 1; }
+.ov .ov-core-disc { fill: hsl(205 55% 11%); stroke: none; }
+.ov text.ov-phase-name { font-weight: 600; }
+.ov text.ov-phase-name.lv-planned { fill: hsl(205 25% 55%); }
+.ov text.ov-phase-name.lv-focus { fill: hsl(188 100% 81%); font-weight: 800; }
+.ov text.ov-focus-tag { fill: hsl(190 100% 86%); font-weight: 700; }
+.ov text.ov-next-tag { fill: #fff; font-weight: 800; }
+.ov text.ov-needs-count { fill: ${NEEDS_YOU}; font-weight: 700; }
 .ov .ov-control.ov-go { fill: hsla(160, 62%, 46%, 0.22); stroke: ${PALETTE.closed}; }
 .ov .ov-control.ov-stop { fill: hsla(355, 88%, 62%, 0.16); stroke: ${PALETTE.failed}; }
 .ov .ov-control.ov-off { opacity: 0.3; }
@@ -289,6 +316,9 @@ function nodeSvg(node: SceneNode, flatPanels = true): string {
       // In Deck the panel is built as HTML over the picture; only its place is kept here.
       if (!flatPanels) return `<g class="ov-panel-flat"${attr('data-panel', node.key)}/>`;
       return `<g class="ov-panel-flat"${attr('data-panel', node.key)}>${panelSvgNodes(node).map((n) => nodeSvg(n)).join('')}</g>`;
+    case 'towers':
+      // Drawn by the renderer in 3D; its flat plan is already among the scene's marks.
+      return '';
     case 'group': {
       const focusable = node.target !== undefined;
       return (

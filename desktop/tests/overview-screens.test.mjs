@@ -14,6 +14,7 @@ import { desktopRoot, load } from './helpers.mjs';
 
 const { plainContext, walkScene, sceneToSvg } = load('shared/overview-scene.js');
 const { wheelScene } = load('shared/overview-wheel.js');
+const { cubesOf, towersLayout: layoutFor } = load('shared/overview-towers.js');
 const { phaseScene, bandOf } = load('shared/overview-phase.js');
 const { ticketScene, neighboursOf, LIFECYCLE } = load('shared/overview-ticket.js');
 const { rephaseScene, unplaced } = load('shared/overview-rephase.js');
@@ -78,28 +79,55 @@ for (const name of WORKSPACES) {
     assert.equal(scene.address, 'deck://abcd1234/features?page=wheel');
   });
 
-  test(`${name}: every phase opens as its web, its exit ring and its tickets as cockpit rows`, () => {
+  test(`${name}: every phase opens as its segment brought close, its tickets listed by tower, what needs you first`, () => {
     const m = model(name);
+    const listedOnRing = new Map();
     for (const p of [...m.phases, ...m.shelf, ...m.backlog]) {
       const scene = phaseScene(m, p.id, ctx);
-      const counts = drawn(scene);
-      for (const id of p.tickets) assert.equal(counts.get(id), 1, `${p.id}: ${id} drawn ${counts.get(id) ?? 0} times`);
       holdsTheLook(scene);
-      // The front section is exactly what the cockpit dots; the back is what it fills, folded.
-      // Computed here from the flags, not with the module's own section rule.
-      const front = p.tickets.filter((id) => m.tickets[id].needsYou === true).sort();
-      const back = p.tickets.filter((id) => m.tickets[id].needsYou !== true && ['delivered', 'dropped'].includes(m.tickets[id].fill)).sort();
-      const sections = panelSections(scene);
-      assert.deepEqual([...(sections.get('needs-you') ?? [])].sort(), front, p.id);
-      assert.deepEqual([...(sections.get('closed') ?? [])].sort(), back, p.id);
-      assert.deepEqual(scene.list.filter((r) => r.group === 'Needs you').map((r) => r.id).sort(), front, p.id);
+      const layout = scene.nodes.find((n) => n.kind === 'towers').layout;
+      const ring = layout.phases.find((x) => x.id === p.id);
       const panel = [...walkScene(scene.nodes)].find((n) => n.kind === 'panel');
-      assert.equal(panel.body.tilt, true, `${p.id}: the rows stand on a tilted plane`);
-      assert.equal(panel.body.sections.find((s) => s.key === 'closed').folded, true, `${p.id}: closed work starts folded`);
-      // One segment per exit criterion.
-      const segments = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && String(n.markId ?? '').startsWith(`exit-${p.id}-`));
-      assert.equal(segments.length, p.exit.items.length, p.id);
+      assert.notEqual(panel.body.tilt, true, `${p.id}: the rows are a flat list beside the picture`);
+      // The cubes on this screen are pictures; the tickets are the panel's rows, each once.
+      assert.ok(![...walkScene(scene.nodes)].some((n) => n.kind === 'mark' && n.ticket !== undefined), `${p.id}: no cube carries a ticket id`);
+      const counts = drawn(scene);
+      for (const [id, n] of counts) assert.equal(n, 1, `${p.id}: ${id} listed ${n} times`);
+      const sections = panel.body.sections;
+      for (const s of sections) {
+        const firstCalm = s.rows.findIndex((r) => !r.needsYou);
+        if (firstCalm >= 0) assert.ok(s.rows.slice(firstCalm).every((r) => !r.needsYou), `${p.id} ${s.key}: what needs you is at the top`);
+      }
+      if (ring === undefined) {
+        // A finished phase lists its own tickets by section, as before.
+        assert.equal(layout.open, null);
+        assert.deepEqual(new Set(counts.keys()), new Set(p.tickets), `${p.id}: every ticket of the finished phase`);
+        assert.deepEqual([...(sections.find((s) => s.key === 'needs-you')?.rows ?? [])].map((r) => r.id).sort(), p.tickets.filter((id) => m.tickets[id].needsYou).sort());
+        continue;
+      }
+      assert.equal(layout.open, p.id, `${p.id} is the phase brought close`);
+      // What needs you first, open; then the feature in focus, open; then each other tower folded; the tiles last.
+      const standing = [...ring.towers.flatMap((tw) => tw.cubes), ...ring.tiles];
+      const asking = standing.filter((c) => c.needsYou).map((c) => c.id).sort();
+      const needsSection = sections.find((s) => s.key === 'needs-you');
+      assert.deepEqual((needsSection?.rows ?? []).map((r) => r.id).sort(), asking, `${p.id}: everything that needs you, in the first group`);
+      if (asking.length > 0) assert.equal(sections[0].key, 'needs-you', `${p.id}: needs you comes first`);
+      assert.deepEqual(new Set(counts.keys()), new Set(standing.map((c) => c.id)), `${p.id}: the list is what stands in the segment`);
+      for (const tw of ring.towers) {
+        const s = sections.find((x) => x.key === `tower-${tw.feature}`);
+        const calm = tw.cubes.filter((c) => !c.needsYou).map((c) => c.id);
+        assert.deepEqual(new Set(s?.rows.map((r) => r.id) ?? []), new Set(calm), `${tw.feature}: its group is its floors that do not need you`);
+        if (s) assert.equal(s.folded, !tw.focus, `${tw.feature}: open only as the focus`);
+      }
+      const cells = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && String(n.markId ?? '').startsWith(`exit-${p.id}-`));
+      assert.equal(cells.length, p.exit.items.length, `${p.id}: the collar has a cell per criterion`);
+      for (const id of counts.keys()) listedOnRing.set(id, (listedOnRing.get(id) ?? 0) + 1);
     }
+    // Across the ring's phases, every ticket that stands on the ring is listed on exactly one phase's screen.
+    const layout = layoutFor(m, ctx);
+    const standing = layout.phases.flatMap((p) => [...p.tiles, ...p.towers.flatMap((tw) => tw.cubes)]).map((c) => c.id);
+    assert.deepEqual(new Set(listedOnRing.keys()), new Set(standing));
+    for (const [id, n] of listedOnRing) assert.equal(n, 1, `${id} is listed on ${n} phase screens`);
   });
 
   test(`${name}: a ticket of every kind opens on its lifecycle and its neighbours`, () => {
@@ -348,14 +376,19 @@ for (const name of WORKSPACES) {
   test(`${name}: every ticket mark on the wheel and in a phase's rows has its ticket's type, fill and needs-you flag`, () => {
     const m = model(name);
     const check = (t, mark, where) => assert.deepEqual([mark.type, mark.fill, mark.needsYou], [t.type, t.fill, t.needsYou], `${where}: ${t.id}`);
-    for (const n of walkScene(wheelScene(m, ctx).nodes)) if (n.kind === 'mark' && n.ticket !== undefined) check(m.tickets[n.ticket], n, 'wheel');
+    // The wheel's cubes are what the 3D view paints (TASK-0166): each carries its ticket's marks.
+    const layoutOf = (scene) => scene.nodes.find((n) => n.kind === 'towers').layout;
+    for (const c of cubesOf(layoutOf(wheelScene(m, ctx)))) check(m.tickets[c.id], c, 'wheel');
     const phase = m.phases[0] ?? m.shelf[0];
     for (const n of walkScene(phaseScene(m, phase.id, ctx).nodes)) {
       if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) check(m.tickets[r.id], r, phase.id);
     }
     // In the state colouring the wheel takes DES-0004's state instead.
     const state = plainContext('abcd1234', 'features', 'state');
-    for (const n of walkScene(wheelScene(m, state).nodes)) if (n.kind === 'mark' && n.ticket !== undefined) assert.equal(n.state, m.tickets[n.ticket].state);
+    const stated = wheelScene(m, state);
+    assert.equal(layoutOf(stated).colouring, 'state');
+    for (const c of cubesOf(layoutOf(stated))) assert.equal(c.state, m.tickets[c.id].state);
+    for (const n of walkScene(stated.nodes)) if (n.kind === 'mark' && n.ticket !== undefined) assert.equal(n.state, m.tickets[n.ticket].state, 'the flat plan paints by state too');
   });
 }
 
@@ -375,9 +408,6 @@ for (const name of WORKSPACES) {
     assert.equal(count.text, String(unplaced), 'the middle says how many tickets have no phase');
     assert.ok([...walkScene(release.children)].some((n) => n.kind === 'text' && n.text === 'Release test'));
     for (const id of ['rephase-button', 'release-test']) assert.ok(scene.list.some((r) => r.id === id && r.target !== undefined), `${id} is in the list twin`);
-    // Nothing else is drawn in the middle: the core's rings start outside the button.
-    const { WHEEL } = load('shared/overview-wheel.js');
-    assert.ok(WHEEL.coreInner > 42, 'the core rings leave room for the button');
   });
 }
 
@@ -414,157 +444,94 @@ test('the gate arch draws five segments that fill with their evidence and say wh
   }
 });
 
-// TASK-0155 — the wheel is a constellation: every ticket of an unfinished phase is one
-// particle in its phase's fan, done work at the ring, what needs you in front, no two
-// on one place, and a needs-you count on each segment.
+// TASK-0166 — the wheel is towers on a ring, laid out by one pure function of the model.
+// Each rule is worked out here from the model's own fields, not with the module's code.
+const { towersLayout } = load('shared/overview-towers.js');
 for (const name of WORKSPACES) {
-  test(`${name}: the wheel draws each phase as a fan of particles, done at the ring and needs-you in front`, () => {
+  test(`${name}: the towers stand every ticket once, each feature's tickets in its tower, the focus lit and the exit collar from the criteria`, () => {
     const m = model(name);
     const scene = wheelScene(m, ctx);
-    const { WHEEL } = load('shared/overview-wheel.js');
-    const distance = (n) => {
-      if (n.attrs.cx !== undefined) return Math.hypot(Number(n.attrs.cx) - WHEEL.cx, Number(n.attrs.cy) - WHEEL.cy);
-      const xy = String(n.attrs.points).split(/[ ,]/).map(Number);
-      const xs = xy.filter((_, i) => i % 2 === 0), ys = xy.filter((_, i) => i % 2 === 1);
-      return Math.hypot(xs.reduce((a, b) => a + b, 0) / xs.length - WHEEL.cx, ys.reduce((a, b) => a + b, 0) / ys.length - WHEEL.cy);
-    };
-    for (const phase of m.phases) {
-      const sector = scene.nodes.find((n) => n.kind === 'group' && n.key === `sector-${phase.id}`);
-      assert.ok(sector !== undefined, `${phase.id} is drawn`);
-      const marks = [...walkScene(sector.children)].filter((n) => n.kind === 'mark' && n.ticket !== undefined);
-      assert.equal(marks.length, phase.tickets.length, `${phase.id}: one particle per ticket`);
-      // No two particles overlap: every pair of centres stands at least a glyph apart
-      // (the review of TASK-0155 showed comparing attributes missed overlapping rows).
-      const centres = marks.map((n) => {
-        if (n.attrs.cx !== undefined) return [Number(n.attrs.cx), Number(n.attrs.cy), Number(n.attrs.r)];
-        const xy = String(n.attrs.points).split(/[ ,]/).map(Number);
-        const xs = xy.filter((_, i) => i % 2 === 0), ys = xy.filter((_, i) => i % 2 === 1);
-        const cx = xs.reduce((a, b) => a + b, 0) / xs.length, cy = ys.reduce((a, b) => a + b, 0) / ys.length;
-        return [cx, cy, Math.max(...xs.map((x, i) => Math.hypot(x - cx, ys[i] - cy)))];
-      });
-      for (let i = 0; i < centres.length; i += 1) {
-        for (let j = i + 1; j < centres.length; j += 1) {
-          const [x1, y1, r1] = centres[i], [x2, y2, r2] = centres[j];
-          assert.ok(Math.hypot(x1 - x2, y1 - y2) >= 0.9 * Math.min(r1, r2), `${phase.id}: particles ${i} and ${j} overlap`);
+    const layout = scene.nodes.find((n) => n.kind === 'towers').layout;
+    const ids = [...cubesOf(layout)].map((c) => c.id);
+    assert.equal(new Set(ids).size, ids.length, 'no ticket twice');
+    assert.deepEqual(new Set(ids), new Set(Object.keys(m.tickets)), 'every ticket');
+    const ring = [...m.phases, ...m.backlog];
+    assert.deepEqual(layout.phases.map((p) => p.id), ring.map((p) => p.id), 'the ring is the unfinished phases and the backlog, in order');
+    assert.deepEqual(layout.shelf.map((p) => p.id), m.shelf.map((p) => p.id), 'the shelf is the finished phases');
+    const ringIds = new Set(ring.map((p) => p.id));
+    for (const p of layout.phases) {
+      const phase = ring.find((x) => x.id === p.id);
+      const expected = m.focus?.phase === p.id ? 'focus' : ['active', 'doing'].includes(phase.status) ? 'active' : 'planned';
+      assert.equal(p.level, expected, `${p.id}'s level`);
+      assert.deepEqual(p.exit.cells.map((c) => [c.text, c.ticked]), phase.exit.items.map((c) => [c.text, c.ticked]), `${p.id}: one collar cell per criterion`);
+      const cells = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && String(n.markId ?? '').startsWith(`exit-${p.id}-`));
+      assert.equal(cells.length, phase.exit.items.length, `${p.id}: the flat plan draws the collar too`);
+      // A tower is a feature filed in this phase; its floors are the tickets whose feature it is.
+      const feats = Object.values(m.tickets).filter((t) => t.kind === 'feat' && t.phase === p.id).map((t) => t.id).sort();
+      assert.deepEqual(p.towers.map((t) => t.feature).sort(), feats, `${p.id}: one tower per feature`);
+      for (const tower of p.towers) {
+        const [foot, ...floors] = tower.cubes;
+        assert.equal(foot.id, tower.feature, `${tower.feature}: the feature is the tower's foot`);
+        for (const c of floors) assert.equal(m.tickets[c.id].feature, tower.feature, `${c.id} stands in ${tower.feature}`);
+        // What needs you is on top: no floor that needs you stands under one that does not.
+        const firstAsking = floors.findIndex((c) => c.needsYou);
+        if (firstAsking >= 0) assert.ok(floors.slice(firstAsking).every((c) => c.needsYou), `${tower.feature}: what needs you is on top`);
+        const asking = tower.cubes.filter((c) => c.needsYou).map((c) => c.id);
+        if (asking.length === 0) assert.equal(tower.cap, null, `${tower.feature}: no cap when nothing needs you`);
+        else {
+          assert.deepEqual(tower.cap.ids, asking, `${tower.feature}: the cap names what needs you`);
+          assert.equal(tower.cap.target, asking.length === 1 ? ctx.address({ page: 'ticket', note: asking[0] }) : ctx.address({ page: 'phase', note: p.id }), `${tower.feature}: pressing the cap opens the one ticket, or the phase`);
+          assert.ok(scene.list.some((r) => r.id === `cap-${tower.feature}` && r.target === tower.cap.target), `${tower.feature}: the cap is in the list twin`);
         }
+        assert.equal(tower.focus, m.focus?.feature === tower.feature, `${tower.feature}: lit only when it is the focus`);
+        for (const c of floors) assert.equal(c.pulse === true, tower.focus && m.tickets[c.id].kind === 'task' && m.tickets[c.id].status === 'doing', `${c.id}: pulses only as a task at doing of the feature in focus`);
       }
-      const r = (pred) => marks.filter((n) => pred(m.tickets[n.ticket])).map(distance);
-      const front = r((t) => t.needsYou), done = r((t) => !t.needsYou && ['delivered', 'dropped'].includes(t.fill)), open = r((t) => !t.needsYou && !['delivered', 'dropped'].includes(t.fill));
-      if (front.length && open.length) assert.ok(Math.max(...front) <= Math.min(...open) + 4, `${phase.id}: what needs you stands in front of open work`);
-      if (open.length && done.length) assert.ok(Math.max(...open) <= Math.min(...done) + 4, `${phase.id}: open work stands in front of done work`);
-      const waiting = phase.tickets.filter((id) => m.tickets[id].needsYou).length;
-      const badge = [...walkScene(sector.children)].find((n) => n.kind === 'mark' && n.markId === `needs-${phase.id}`);
-      if (waiting === 0) assert.equal(badge, undefined, `${phase.id}: no badge when nothing needs you`);
-      else assert.equal(badge?.count, waiting, `${phase.id}: the badge counts what needs you`);
+      // A flat tile is a ticket of this phase that no tower of the ring claims.
+      for (const c of p.tiles) {
+        const t = m.tickets[c.id];
+        assert.equal(t.phase, p.id, `${c.id} lies in its own phase`);
+        assert.ok(t.feature === undefined || !ringIds.has(m.tickets[t.feature]?.phase), `${c.id} has a tower it should stand in`);
+      }
     }
+    assert.equal(layout.next, m.next ?? null, 'the next ticket is the model\'s');
+    if (m.next) assert.ok([...walkScene(scene.nodes)].some((n) => n.kind === 'text' && n.text === `next ${m.next}`), 'the next ticket is marked');
+    assert.ok([...walkScene(scene.nodes)].some((n) => n.kind === 'text' && n.text === 'in focus') === p_hasFocusTower(layout), 'the feature in focus is named');
+    // No two cubes stand in one place.
+    const places = [...cubesOf(layout)].map((c) => `${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)}`);
+    assert.equal(new Set(places).size, places.length, 'no two cubes in one place');
   });
 }
+function p_hasFocusTower(layout) { return layout.phases.some((p) => p.towers.some((t) => t.focus)); }
 
-// TASK-0156 — the camera: ring screens lean back, text screens start flat; the middle
-// button turns and pans, the wheel zooms toward the pointer, and 0 puts it back.
-test('the overview camera turns, pans and zooms within its limits, and keeps the pointed spot under the pointer', () => {
-  const cam = load('shared/overview-camera.js');
-  const wheel = cam.defaultCamera('wheel');
-  assert.ok(wheel.tilt > 0, 'the wheel leans back');
-  assert.equal(cam.defaultCamera('ticket').tilt, 0, 'a ticket starts flat');
-  assert.equal(cam.defaultCamera('accept').tilt, 0, 'a feature gate starts flat');
-  const t = cam.turned(wheel, 100, -40);
-  // TASK-0162: a drag to the right turns the plane anticlockwise, so its near edge
-  // (the bottom of the screen, on a plane leaning back) moves right with the hand.
-  assert.equal(t.spin, -30);
-  assert.equal(t.tilt, wheel.tilt + 10);
-  const nearEdgeX = (spin) => -Math.sin((spin * Math.PI) / 180); // the plane's bottom point after rotateZ, y down
-  assert.ok(nearEdgeX(t.spin) > 0, 'the near edge goes the way the pointer went');
-  assert.equal(cam.turned(wheel, 0, -10000).tilt, cam.TILT.max, 'tilt stops at its limit');
-  assert.equal(cam.turned(wheel, 0, 10000).tilt, cam.TILT.min);
-  const p = cam.panned(wheel, 12, -7);
-  assert.deepEqual([p.panX, p.panY], [12, -7]);
-  // Zooming toward a point keeps that point where it was: (point - pan) scales with the zoom.
-  const z = cam.zoomed(wheel, 2, 100, 50);
-  assert.equal(z.zoom, 2);
-  assert.deepEqual([z.panX, z.panY], [-100, -50]);
-  assert.equal(cam.zoomed(wheel, 1000).zoom, cam.ZOOM.max);
-  assert.equal(cam.zoomed(wheel, 0.0001).zoom, cam.ZOOM.min);
-  assert.ok(cam.wheelFactor(100) < 1 && cam.wheelFactor(-100) > 1, 'a turn toward the person zooms out');
-  assert.match(cam.cameraTransform(t), /^translate\(0px, 0px\) rotateX\(36deg\) rotateZ\(-30deg\) scale\(1\)$/);
-  assert.ok(cam.isDefault(cam.defaultCamera('wheel'), 'wheel'));
-  assert.ok(!cam.isDefault(t, 'wheel'));
-  assert.ok(cam.isDefault({ ...wheel, spin: 360 }, 'wheel'), 'a whole turn is back where it started');
-  // A drag to the right makes the spin negative, so a whole turn that way must count too.
-  assert.ok(cam.isDefault({ ...wheel, spin: -360 }, 'wheel'), 'a whole turn to the right is back where it started');
-  assert.ok(cam.isDefault({ ...wheel, spin: -720.004 }, 'wheel'), 'two whole turns, give or take a rounding');
-  assert.ok(!cam.isDefault({ ...wheel, spin: -350 }, 'wheel'));
-  // Just inside two whole turns to the right: home only if the spin is wrapped into 0..360 (review round two).
-  assert.ok(cam.isDefault({ ...wheel, spin: -719.996 }, 'wheel'), 'a spin just short of two whole turns to the right is home');
-  // TASK-0162: the picture cannot be lost. Zoom runs 0.6× to 4×, and a pan stops where
-  // the picture's centre would leave the window.
-  assert.deepEqual([cam.ZOOM.min, cam.ZOOM.max], [0.6, 4]);
-  const half = { w: 400, h: 300 };
-  const far = cam.panned(wheel, 5000, -5000, half);
-  assert.deepEqual([far.panX, far.panY], [400, -300]);
-  const pinched = cam.zoomed(wheel, 4, 10000, 10000, half);
-  assert.ok(Math.abs(pinched.panX) <= 400 && Math.abs(pinched.panY) <= 300, 'zooming toward a far point keeps the centre in the window');
-  // The three views: flat, leaning as the ring screens start, and nearly edge on.
-  assert.deepEqual(cam.VIEWS, ['above', 'leaning', 'side']);
-  const moved = { ...cam.zoomed(t, 2), panX: 50, panY: 20 };
-  assert.equal(cam.viewed(moved, 'wheel', 'above').tilt, 0);
-  assert.equal(cam.viewed(moved, 'wheel', 'leaning').tilt, wheel.tilt);
-  assert.equal(cam.viewed(moved, 'ticket', 'leaning').tilt, wheel.tilt, 'a text screen leans as the ring screens start');
-  assert.ok(cam.viewed(moved, 'wheel', 'side').tilt >= cam.TILT.max - 4, 'from the side is nearly edge on');
-  const side = cam.viewed(moved, 'wheel', 'side');
-  assert.deepEqual([side.panX, side.panY, side.zoom, side.spin], [0, 0, 2, -30], 'a view recentres the picture and keeps the turn and the zoom');
-});
-
-// TASK-0158, TASK-0160 — a ticket that needs you says what to do, on S3 as a banner with a
-// button to where you act (or the sidecar's own verbs at triage), and on S2 under its row.
-test('S3 tells you what a ticket needs, with a button to where you act or the sidecar verbs at triage', () => {
-  const yt = model('your-trainer');
-  const deck = model('deck');
-  const verbs = [{ verb: 'Accept', to: 'open', confirm: false, disabled: false, reason: '' }, { verb: 'Defer', to: 'deferred', confirm: false, disabled: false, reason: '' }, { verb: 'Decline', to: 'declined', confirm: true, disabled: false, reason: '' }];
-  const pick = (m, reason) => Object.values(m.tickets).find((t) => t.needs?.reason === reason);
-  const texts = (scene) => [...walkScene(scene.nodes)].filter((n) => n.kind === 'text').map((n) => n.text);
-  const triage = pick(yt, 'triage');
-  let scene = ticketScene(yt, triage.id, ctx, { verbs, canWrite: true });
-  assert.ok(texts(scene).includes(triage.needs.say), 'the banner says what to do');
-  const actions = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.action?.startsWith('needs:')).map((n) => n.action);
-  assert.deepEqual([...actions].sort(), ['needs:declined', 'needs:deferred', 'needs:open']);
-  assert.deepEqual(scene.list.filter((r) => r.action?.startsWith('needs:')).map((r) => r.action).sort(), [...actions].sort());
-  holdsTheLook(scene);
-  // On a page that cannot write, the verbs are shown off and do nothing.
-  scene = ticketScene(yt, triage.id, ctx, { verbs, canWrite: false });
-  assert.equal([...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && n.action !== undefined).length, 0);
-  for (const [m, reason] of [[deck, 'review'], [deck, 'waiting'], [deck, 'ready'], [yt, 'waiting']]) {
-    const t = pick(m, reason);
-    const s3 = ticketScene(m, t.id, ctx);
-    const go = s3.nodes.find((n) => n.kind === 'group' && n.key === 'needs-go');
-    assert.equal(go?.target, ctx.address(t.needs.action.parts), `${t.id} (${reason}): the button goes where the person acts`);
-    assert.ok(texts(s3).includes(t.needs.say));
-    holdsTheLook(s3);
-  }
-  // A ticket that needs nothing has no banner.
-  const calm = Object.values(deck.tickets).find((t) => !t.needsYou && t.kind === 'task');
-  assert.ok(!ticketScene(deck, calm.id, ctx).nodes.some((n) => n.kind === 'mark' && n.markId === 'needs'));
-});
-
-test('S2 says under each needs-you row what to do, and the callouts say it too', () => {
-  const m = model('deck');
-  const { markWords } = load('shared/overview-marks.js');
-  for (const p of m.phases) {
-    const panel = [...walkScene(phaseScene(m, p.id, ctx).nodes)].find((n) => n.kind === 'panel');
-    for (const row of panel.body.sections.find((s) => s.key === 'needs-you')?.rows ?? []) {
-      assert.equal(row.note, m.tickets[row.id].needs.say, `${row.id}: what to do is under its title`);
-      assert.ok(markWords(m.tickets[row.id]).endsWith(`: ${m.tickets[row.id].needs.say}`), `${row.id}: its callout says what to do`);
+// A ring far busier than either fixture still places every ticket, each in its own place.
+test('a ring of busy phases still stands every ticket, each in its own place', () => {
+  const tickets = {};
+  const phases = [];
+  for (let p = 1; p <= 12; p += 1) {
+    const id = `PHASE-${String(p).padStart(3, '0')}`;
+    const ids = [];
+    for (let f = 0; f < 15; f += 1) {
+      const feat = `FEAT-${p * 100 + f}`;
+      tickets[feat] = { id: feat, kind: 'feat', type: 'feature', state: 'open', fill: 'open', needsYou: false, status: 'doing', title: feat, phase: id, placedBy: 'own', links: [] };
+      ids.push(feat);
+      for (let k = 0; k < 40; k += 1) {
+        const task = `TASK-${p * 10000 + f * 100 + k}`;
+        tickets[task] = { id: task, kind: 'task', type: 'task', state: k % 3 ? 'closed' : 'open', fill: k % 3 ? 'delivered' : 'open', needsYou: k === 7, status: k % 3 ? 'done' : 'backlog', title: task, phase: id, placedBy: 'parent', links: [], feature: feat };
+        ids.push(task);
+      }
     }
+    for (let k = 0; k < 300; k += 1) {
+      const iss = `ISS-${p * 1000 + k}`;
+      tickets[iss] = { id: iss, kind: 'iss', type: 'issue', state: 'open', fill: 'open', needsYou: false, status: 'open', title: iss, phase: id, placedBy: 'own', links: [] };
+      ids.push(iss);
+    }
+    phases.push({ id, number: String(p).padStart(3, '0'), name: `Phase ${p}`, status: p === 1 ? 'active' : 'planned', kind: 'open', exit: { items: [], prose: false }, counts: {}, tickets: ids });
   }
-});
-
-// The review of TASK-0155: a phase busier than either fixture still draws every ticket,
-// each on its own place, rather than an empty fan.
-test('a phase with thousands of tickets still draws every one of them, each on its own place', () => {
-  const { fanPlaces, WHEEL } = load('shared/overview-wheel.js');
-  for (const [count, share] of [[1500, 1 / 30], [5000, 1 / 10], [20000, 1 / 30]]) {
-    const places = fanPlaces(count, WHEEL.cx, WHEEL.cy, WHEEL.coreOuter + 16, WHEEL.ringOuter - 10, 0, Math.PI * 2 * share);
-    assert.equal(places.length, count, `${count} tickets in ${share.toFixed(3)} of the wheel`);
-    assert.equal(new Set(places.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`)).size, count, 'no two on one place');
-  }
+  const busy = { workspace: 'Busy', head: '', generated: '', phases, shelf: [], backlog: [], core: { tickets: [], counts: {} }, tickets };
+  const layout = towersLayout(busy, ctx);
+  const cubes = [...cubesOf(layout)];
+  assert.equal(cubes.length, Object.keys(tickets).length);
+  assert.ok(cubes.every((c) => [c.x, c.y, c.z].every(Number.isFinite)), 'every cube has a place');
+  const places = cubes.map((c) => `${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)}`);
+  assert.equal(new Set(places).size, places.length, 'no two cubes in one place');
 });
