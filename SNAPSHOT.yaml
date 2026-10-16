@@ -50,7 +50,7 @@ counters:
     last_date: 0
   DES: 5
   FEAT: 29
-  ISS: 91
+  ISS: 92
   PHASE: 5
   REQ: 6
   RISK: 9
@@ -2569,7 +2569,7 @@ metrics:
     tests_passing: 9
     tests_failing: 0
     issues_open: 3
-    issues_triage: 0
+    issues_triage: 1
     risks_open: 3
     releases_total: 0
     decisions_total: 8
