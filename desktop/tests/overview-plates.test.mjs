@@ -135,3 +135,29 @@ test('the plate script draws all seven screens on both workspaces, every mark in
     fs.rmSync(out, { recursive: true, force: true });
   }
 });
+
+// TASK-0163, review round one: the towers page reads which feature a ticket belongs to from
+// frontmatter written in every way the corpus writes it. Checked on small notes of its own,
+// because in the corpus a feature's own lists name the same tickets and would hide a miss.
+test('the towers page reads parents and lists however the frontmatter writes them', async () => {
+  const { relationsFrom, idsIn } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  const note = (lines) => `---\n${lines.join('\n')}\n---\n\n# A note\n`;
+  const { parent, named } = relationsFrom([
+    note(['id: TASK-0001', `parent: '[[FEAT-0001-Single-Quoted]]'`]),
+    note(['id: TASK-0002', 'parent: "[[FEAT-0002-Double-Quoted]]"']),
+    note(['id: TASK-0003', 'parent: "FEAT-0003"']),
+    note(['id: TASK-0004', 'parent: [[FEAT-0004]]', 'tests:', "- '[[TST-0004-At-Column-Zero]]'", 'related: ["[[TST-0099]]"]']),
+    note(['id: FEAT-0005', 'tests:', '  - "[[TST-0005-Indented]]"', 'implements: ["[[REQ-0005-Inline]]", "REQ-0006"]', 'designs: []']),
+    note(['id: FEAT-0006', 'tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn]]"]']),
+    note(['id: TASK-0001', 'parent: "[[FEAT-0099]]"']),
+  ]);
+  assert.equal(parent.get('TASK-0001'), 'FEAT-0001', 'a parent in single quotes');
+  assert.equal(parent.get('TASK-0002'), 'FEAT-0002', 'a parent in double quotes');
+  assert.equal(parent.get('TASK-0003'), 'FEAT-0003', 'a parent written bare');
+  assert.equal(parent.get('TASK-0004'), 'FEAT-0004', 'a parent with no quotes');
+  assert.deepEqual(named.get('TASK-0004'), ['TST-0004'], 'a dash list at column 0, and only up to the next key');
+  assert.deepEqual(named.get('FEAT-0005'), ['TST-0005', 'REQ-0005', 'REQ-0006'], 'an indented dash list, an inline list, a bare id');
+  assert.deepEqual(named.get('FEAT-0006'), ['TST-0094'], 'an id inside a link\'s file name names nothing');
+  assert.deepEqual(idsIn('[[FEAT-0001|the alias FEAT-0002]] "TASK-0003" TASK-0004-x'), ['FEAT-0001', 'TASK-0003'], 'a link counts by its target; an id joined to more words is a name, not an id');
+  assert.equal(parent.size, 4, 'the first note with an id wins');
+});
