@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0163
 title: "Towers on the ring, drawn in three.js to judge: each feature a tower of its tickets inside its phase, the active work lit, and a phase opening as its segment brought close"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-16
@@ -35,11 +35,13 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 
 ## Definition of Done
 
-- [ ] `desktop/scripts/overview-plates.mjs` writes `docs/designs/DES-0005-towers.html` from the same fixtures as the other plates, for Deck and your-trainer. Each ticket's feature comes from its note's `parent:` (followed through a task's parent) or from a feature's `tests:`, `implements:` and `designs:` lists. Each workspace's focus is read from its SNAPSHOT. Nothing on the page is entered by hand.
-- [ ] three.js is loaded on that page only, from cdnjs at the pinned version 0.160.0. Nothing is added to `desktop/package.json`, and no Deck code imports it.
-- [ ] TST-0094 checks that the page is written, holds every ticket of both fixtures exactly once, and loads nothing else from outside.
-- [ ] Pictures of the page are saved under `docs/designs/__attachments__/DES-0005/towers-*.jpg`: the opening view, from above, from the side, and a phase opened, on each workspace.
-- [ ] DES-0005 shows the pictures under a heading for the towers, says what they add and what building them into Deck would cost, and asks Edwin whether to build them.
-- [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+- [x] `desktop/scripts/overview-plates.mjs` writes `docs/designs/DES-0005-towers.html` from the same fixtures as the other plates, for Deck and your-trainer. Each ticket's feature comes from its note's `parent:` (followed through a task's parent) or from a feature's `tests:`, `implements:` and `designs:` lists. Each workspace's focus is read from its SNAPSHOT. Nothing on the page is entered by hand.
+- [x] three.js is loaded on that page only, from cdnjs at the pinned version 0.160.0. Nothing is added to `desktop/package.json`, and no Deck code imports it.
+- [x] TST-0094 checks that the page is written, holds every ticket of both fixtures exactly once, and loads nothing else from outside.
+- [x] Pictures of the page are saved under `docs/designs/__attachments__/DES-0005/towers-*.jpg`: the opening view, from above, from the side, and a phase opened, on each workspace.
+- [x] DES-0005 shows the pictures under a heading for the towers, says what they add and what building them into Deck would cost, and asks Edwin whether to build them.
+- [x] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
 
 ## Verification
+
+`desktop/scripts/overview-towers.mjs`, run by the plate script, writes `docs/designs/DES-0005-towers.html`: 395 of Deck's tickets in 29 towers and 2,747 of your-trainer's in 69, each once. Which feature a ticket belongs to is read from the notes at the fixture's commit by `desktop/scripts/overview-towers-notes.mjs`; the focus from the SNAPSHOT at the same commit (Deck PHASE-0005, FEAT-0028, next TASK-0154; your-trainer PHASE-025, FEAT-0136, next TASK-1057 by the fallback, since its snapshot names no task). three.js 0.160.0 comes from cdnjs on that page only; `desktop/package.json` is unchanged. TST-0094 checks every ticket once, the ring and the shelf, a task in its parent's tower, the parsing cases on small notes, and Deck's focus against its snapshot; each guard was broken once to see it fail. `desktop/scripts/towers-capture.cjs` took the eight pictures in a hidden window with no page errors; drag, Escape, pointing and pressing were tried there with a probe the page exposes. DES-0005 has the section "Towers on the ring" and the question whether to build it. `cd desktop && npm test`: 790 tests, 790 passed. Reviewed in two rounds by two independent Claude reviewers each (FEAT-0025, Review, Third revision).

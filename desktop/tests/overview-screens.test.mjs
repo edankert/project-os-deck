@@ -494,6 +494,8 @@ test('the overview camera turns, pans and zooms within its limits, and keeps the
   assert.ok(cam.isDefault({ ...wheel, spin: -360 }, 'wheel'), 'a whole turn to the right is back where it started');
   assert.ok(cam.isDefault({ ...wheel, spin: -720.004 }, 'wheel'), 'two whole turns, give or take a rounding');
   assert.ok(!cam.isDefault({ ...wheel, spin: -350 }, 'wheel'));
+  // Just inside two whole turns to the right: home only if the spin is wrapped into 0..360 (review round two).
+  assert.ok(cam.isDefault({ ...wheel, spin: -719.996 }, 'wheel'), 'a spin just short of two whole turns to the right is home');
   // TASK-0162: the picture cannot be lost. Zoom runs 0.6× to 4×, and a pan stops where
   // the picture's centre would leave the window.
   assert.deepEqual([cam.ZOOM.min, cam.ZOOM.max], [0.6, 4]);

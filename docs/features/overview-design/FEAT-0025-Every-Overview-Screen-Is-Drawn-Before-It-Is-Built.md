@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0025
 aliases: ["FEAT-0025"]
 title: "Every overview screen is drawn before it is built: DES-0005's prototype and one plate per screen, from real tickets"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -18,9 +18,9 @@ acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra", "model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-16
-review_verdict: changes-requested
-review_round: 1
-review_response: "Third revision (towers on the ring), round one: two Claude reviewers requested changes; all five findings are fixed in b9e61bb. See Review, Third revision."
+review_verdict: approve
+review_round: 2
+review_response: "Third revision (towers on the ring): round one asked for changes, all five fixed in b9e61bb; round two, two Claude reviewers, approve. The untested single-quoted parent they both noted is tested since."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -101,6 +101,10 @@ Fixed in `57c2e3d`: both captions, the Revisions line, the scope rewritten to wh
 Also noted: a ticket that several features name stands in the lowest-numbered one's tower, which was not stated; and your-trainer's "next" comes from the fallback, since its snapshot names no task.
 
 Fixed in `b9e61bb`: dash lists at column 0 and single-quoted parents are read; only a link's leading id counts; the notes are read at the fixture's commit (for a fixture taken with uncommitted notes, a note the commit lacks from today's file), and a fallback is printed and recorded on the page. TST-0094 now checks that a task stands in its parent's tower, both parsing cases, and Deck's focus against its snapshot at the fixture's commit; breaking each of the four guards makes it fail. DES-0005 states the lowest-numbered rule and the fallback for "next".
+
+### Third revision, round two
+
+2026-10-16: two independent Claude reviewers, each in its own worktree on `main`, checked the five findings. Both approve: each fix was shown by reverting it and watching TST-0094 fail (dash lists at column 0, ids inside link names, notes read at the fixture's commit, empty towers, a lost focus). Both noted that nothing failed when the single-quoted `parent:` rule was reverted, because FEAT-0029's own `tasks:` list names the same tasks. The note parsing moved into `desktop/scripts/overview-towers-notes.mjs` (`9421c50`) and TST-0094 now tests it on small notes of its own, single quotes included; reverting the rule makes it fail.
 
 ## Questions between the lanes
 

@@ -63,19 +63,19 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0025"
-  task: "TASK-0163"
-  note: "2026-10-15, last: the second overview revision is built by Claude alone (Codex stopped; Edwin: only Claude), reviewed in two rounds by two independent Claude reviewers, and verified (789 node tests; the window run TST-0093 on Deck and your-trainer). The wheel is a constellation, every screen stands in 3D with middle-button turn, Shift pan and zoom, the gate is an arch, S7 shows the feature's text, and needs-you says what to do with a button or the sidecar's triage verbs. FEAT-0025 to FEAT-0029 are at review. Left for Edwin: run TST-0091, TST-0092, TST-0088, TST-0089 and TST-0100; decide DES-0005 and its questions, including whether to build the 3D time-columns wheel into Deck. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: ""
+  note: "2026-10-16, last: a third design round. Edwin found the wheel flat, the turn going against the mouse, the way back hard to find and the phase web not working, and chose towers on the ring, grouped by phase, drawn in three.js first. TASK-0163 drew it: docs/designs/DES-0005-towers.html, eight pictures, and a DES-0005 section asking whether to build it into Deck. TASK-0162 fixed Deck's camera: the near edge follows the hand, Home and three views, limits. Both reviewed in two rounds by two Claude reviewers; towers approved, the camera kept open only until the window run TST-0093 passes its new camera checks, which waits for Edwin. FEAT-0025 and FEAT-0027 are at review. Left for Edwin: turn the towers page and decide whether to build it; say when the window run may go; the acceptance tests and DES-0005's other questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: doing
+      status: review
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
-      status: doing
+      status: review
       file: "docs/features/overview-wheel/FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases.md"
       owner: system:claude
     FEAT-0028:
@@ -305,7 +305,7 @@ items:
   tasks:
     TASK-0163:
       file: docs/features/overview-design/plan/tasks/TASK-0163-Towers-On-The-Ring-Drawn-In-Three-Js-To-Judge.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0153:
@@ -2564,7 +2564,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 154
-    tasks_done: 134
+    tasks_done: 135
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

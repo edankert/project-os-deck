@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0027
 aliases: ["FEAT-0027"]
 title: "Deck opens on the wheel of phases: the circular overview, with finished phases on a shelf, the backlog in a tray and tickets with no phase in the core"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-14
@@ -19,8 +19,8 @@ design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
 reviewed_by: ["model:gpt-6-astra", "model:gpt-6-astra", "model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-16
 review_verdict: changes-requested
-review_round: 1
-review_response: "Third revision (the camera), round one: two Claude reviewers requested changes; all six findings are answered in b9e61bb, the last by the window-run driver, which waits for Edwin. See Review, Third revision."
+review_round: 2
+review_response: "Third revision (the camera): round one asked for changes, answered in b9e61bb; round two, two Claude reviewers, found five of six fixed and keep the sixth open until the window run TST-0093 passes its new camera checks, which waits for Edwin."
 related: ["[[PHASE-0005-Overview]]", "[[DES-0004-The-Phase-Overview]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 ---
 
@@ -106,6 +106,10 @@ Fixed in `57c2e3d`: the wheel waits for the index and never keeps the empty answ
 6. Home, Escape, the views and the pan limit in the renderer are guarded by no test that ran; only the window run can check them (both).
 
 Fixed in `b9e61bb`: the camera bar is drawn after the new screen is current; TST-0090 checks negative whole turns; Home moves the camera only when focus is on the page or the overview's picture; a second glide takes over the first's timer; Leaning goes to 26° and From the side to 68°. The window-run driver now covers the views, the Home key, Escape on a moved and an unmoved camera, the pan limit and Home following the open screen; it waits for Edwin's word to run.
+
+### Third revision, round two
+
+2026-10-16: two independent Claude reviewers, each in its own worktree on `main`. Both found findings 1 to 5 fixed: the camera bar is drawn after the new screen is current, negative whole turns count as home, the Home key is left to the navigator and the list twin, a second glide takes over the first's timer, and Leaning and From the side match their callouts (each of the last two shown by putting the old value back and watching TST-0090 fail). Both ask for changes on finding 6 only: the window-run driver's new checks of the views, the Home key, Escape, the pan limit and Home following the screen have not run, so findings 1, 3 and 4 rest on reading the code until they do. That run waits for Edwin's word. Also fixed after the round: the comment on the Home key said the list twin goes to its first row, when the browser scrolls it (`0dea4f6`); and the negative-turn check could not fail, since −360 and −720.004 come out the same with or without the wrap, so it now checks −719.996 too.
 
 ## Questions between the lanes
 
