@@ -11,7 +11,7 @@ import * as THREE from 'three';
 
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const MARK = JSON.parse(document.getElementById('marks').textContent);
-const [ID, TYPE, FILL, NEEDS, STATUS, TITLE, SAY, STATE] = [0, 1, 2, 3, 4, 5, 6, 7];
+const [ID, TYPE, FILL, NEEDS, STATUS, TITLE, SAY, STATE, REASON] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const colourOf = (h) => new THREE.Color((h ?? 'hsl(0 0% 60%)').replace(/hsl\((\d+) (\d+)% (\d+)%\)/, 'hsl($1, $2%, $3%)'));
 const NEEDS_COLOUR = colourOf(MARK.needs);
 const EXIT_COLOUR = colourOf(MARK.exit);
@@ -334,7 +334,8 @@ function build(ws) {
   document.getElementById('q').value = '';
   document.getElementById('count').textContent = '';
   document.getElementById('results').hidden = true;
-  const d = DATA[ws];
+  dataNow = DATA[ws];
+  const d = viewOf(DATA[ws]);
   const n = d.ring.length;
   const coreR = Math.max(10, Math.sqrt(d.core.length) * 0.75 * TILE_STEP + 4);
   const R0 = coreR + 5;
@@ -357,6 +358,7 @@ function build(ws) {
   // A ring that never fits draws its crowded segments past their inner edge rather than not at all.
   if (!layouts.every(Boolean)) layouts = d.ring.map((p, i) => layoutSegment(p, angles[i][0], angles[i][1], R0, R1, true));
   const phases = [];
+  ageTags.length = 0;
   const where = new Map(); // ticket id -> { phase index, position }
   const ticketRow = new Map([...d.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]), ...d.shelf.flatMap((p) => p.tickets), ...d.core].map((r) => [r[ID], r]));
   const pickables = [];
@@ -413,9 +415,11 @@ function build(ws) {
     // A phase's name without the "Phase 25:" its number already says.
     const short = String(p.name).replace(/^phase\s*\d+\s*[:\-–]\s*/i, '');
     const nameAt = polar(R1 + 8, mid);
-    const lines = [{ text: (isFocus ? '▶ ' : '') + (p.number ? p.number + ' ' : '') + short, size: isFocus ? 3.4 : level === 'active' ? 2.8 : 2.2, colour: isFocus ? '#9ff0ff' : level === 'planned' ? '#6f93a8' : '#e6f8ff', weight: isFocus ? 800 : 600 }];
-    if (level !== 'planned') lines.push({ text: done + ' of ' + all.length + ' done' + (needs > 0 ? '  ● ' + needs + ' need you' : ''), size: 1.9, colour: needs > 0 ? '#f0b4ad' : '#8fb9cc' });
-    else if (needs > 0) lines.push({ text: '● ' + needs + ' need you', size: 1.8, colour: MARK.needs, weight: 700 });
+    // A feature's segment is narrow, so its name is smaller than a phase's (TASK-0177).
+    const k = p.kind === 'feature' ? 0.55 : 1;
+    const lines = [{ text: (isFocus ? '▶ ' : '') + (p.number ? p.number + ' ' : '') + short, size: (isFocus ? 3.4 : level === 'active' ? 2.8 : 2.2) * k, colour: isFocus ? '#9ff0ff' : level === 'planned' ? '#6f93a8' : '#e6f8ff', weight: isFocus ? 800 : 600 }];
+    if (level !== 'planned') lines.push({ text: done + ' of ' + all.length + ' done' + (needs > 0 ? '  ● ' + needs + ' need you' : ''), size: 1.9 * k, colour: needs > 0 ? '#f0b4ad' : '#8fb9cc' });
+    else if (needs > 0) lines.push({ text: '● ' + needs + ' need you', size: 1.8 * k, colour: MARK.needs, weight: 700 });
     const name = stacked(lines, isFocus);
     name.position.set(nameAt.x, h + 3.4, nameAt.z);
     tags.add(name);
@@ -451,6 +455,16 @@ function build(ws) {
       });
       const top = h + 0.6 + FLOOR * Math.ceil(tower.floors.length / PER_FLOOR);
       tallest = Math.max(tallest, top - h);
+      // An age badge when the tower's tickets have not changed for 14 days (TASK-0177),
+      // counted to the date the data was read.
+      const quiet = quietDays([tower.f, ...tower.floors].map((r) => r[ID]));
+      if (quiet !== null && quiet >= 14 && tower.f[STATE] !== 'closed' && tower.f[STATE] !== 'dropped') {
+        const badge = label('◷ ' + quiet + ' d', 1.2, '#f2c879', 700);
+        badge.position.set(centre.x, top + 1.7, centre.z);
+        badge.visible = showAges;
+        content.add(badge);
+        ageTags.push(badge);
+      }
       // A red cap when one of the tower's tickets needs you.
       const asking = [tower.f, ...tower.floors].filter((r) => r[NEEDS]).length;
       if (asking > 0) {
@@ -550,6 +564,25 @@ function build(ws) {
     shelfGroup.add(ring);
   }
 
+  // The ring of recent evidence (TASK-0177): a post for each picture, outside the shelf;
+  // the pictures themselves are drawn over the canvas as images, placed each frame.
+  const evR = d.shelf.length > 0 ? shelfR + 15 : R1 + 22;
+  const evidenceGroup = new THREE.Group();
+  world.add(evidenceGroup);
+  const anchors = [];
+  const evCount = d.evidence.length;
+  d.evidence.forEach((e, i) => {
+    const a = -Math.PI / 2 + ((i + 0.5) / evCount) * Math.PI * 2;
+    const foot = polar(evR, a);
+    const head = foot.clone().add(new THREE.Vector3(0, 6, 0));
+    evidenceGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([foot, head]), new THREE.LineBasicMaterial({ color: 0x5fb3c8, transparent: true, opacity: 0.6 })));
+    const dot = new THREE.Mesh(DOT, new THREE.MeshBasicMaterial({ color: 0x9ff0ff }));
+    dot.position.copy(foot);
+    evidenceGroup.add(dot);
+    anchors.push(head);
+  });
+  if (evCount > 0) evidenceGroup.add(arcLine(evR, 0, Math.PI * 2, 0.05, new THREE.LineBasicMaterial({ color: 0x2b5a6a, transparent: true, opacity: 0.6 })));
+
   // The core: the tickets with no phase, as tiles round a disc.
   const coreGroup = new THREE.Group();
   world.add(coreGroup);
@@ -567,7 +600,7 @@ function build(ws) {
   });
   const coreDrawn = drawBuckets(cb, coreGroup);
   if (coreDrawn.pick) pickables.push(coreDrawn.pick);
-  const coreTag = label('no phase · ' + d.core.length, 2.4, '#9cc4d6', 600);
+  const coreTag = label((grouping === 'feature' ? 'no feature · ' : 'no phase · ') + d.core.length, 2.4, '#9cc4d6', 600);
   coreTag.position.set(0, 3.2, 0);
   coreGroup.add(coreTag);
 
@@ -602,12 +635,18 @@ function build(ws) {
   // Every material that fades when a selection or a search hushes the rest of the ring.
   const allMaterials = [...phases.flatMap((ph) => ph.materials), ...shelfDrawn.materials, ...coreDrawn.materials];
   for (const m of allMaterials) m.transparent = true;
-  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow, marks, allMaterials, hush: 1, sel: null, found: null, flows: [] };
+  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow, marks, allMaterials, hush: 1, sel: null, found: null, flows: [], evidenceGroup, anchors };
   const placed = d.ring.reduce((m, p) => m + p.tiles.length + p.towers.reduce((x, t) => x + 1 + t.floors.length, 0), 0) + d.shelf.reduce((m, p) => m + p.tickets.length, 0) + d.core.length;
   window.__towers = { ws, tickets: placed, drawn: where.size, towers: d.ring.reduce((m, p) => m + p.towers.length, 0), R1, focus: d.focus, next: d.next };
   drawLegend();
+  drawEvidence();
   closePhase(false);
   drawQueue();
+  drawNeeds();
+  drawWeeks();
+  for (const b of document.querySelectorAll('#group button')) b.setAttribute('aria-pressed', String(b.dataset.group === grouping));
+  window.__towers.grouping = grouping;
+  window.__towers.ring = d.ring.map((p) => p.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -699,6 +738,7 @@ function openPhase(i, selectId = null) {
   });
   state.shelfGroup.visible = false;
   state.coreGroup.visible = false;
+  state.evidenceGroup.visible = false;
   state.nextMark.visible = state.where.get(state.d.next)?.phase === i;
   const ph = state.phases[i];
   const rMid = (state.R0 + state.R1) / 2;
@@ -718,6 +758,7 @@ function closePhase(animate = true) {
   camera.clearViewOffset();
   state.shelfGroup.visible = true;
   state.coreGroup.visible = true;
+  state.evidenceGroup.visible = true;
   state.nextMark.visible = true;
   state.phases.forEach((ph) => {
     ph.content.visible = true;
@@ -816,6 +857,9 @@ function setHush(on) {
 /** The camera leaves room for the right pane whenever it is open. */
 function syncOffset() {
   const open = !document.getElementById('panel').hidden;
+  // The panels on the right give way to the pane (TASK-0177).
+  document.getElementById('needs').hidden = open;
+  document.getElementById('weeks').hidden = open;
   if (open) camera.setViewOffset(innerWidth, innerHeight, Math.min(190, innerWidth * 0.12), 0, innerWidth, innerHeight);
   else camera.clearViewOffset();
   camera.updateProjectionMatrix();
@@ -951,7 +995,7 @@ function drawCard(id) {
   const card = document.getElementById('card');
   card.innerHTML = '<div class="head">' + sq(r[FILL], r[TYPE]) + '<div><b>' + esc(r[ID]) + '</b> <span class="sub">' + esc(MARK.typeWord[r[TYPE]] ?? r[TYPE]) + (r[ID] === state.d.next ? ' · <b>next</b>' : '') + '</span></div><button class="x" data-act="clear" title="Clear the selection (Escape)">×</button></div>' +
     '<div class="title">' + esc(r[TITLE]) + '</div>' +
-    '<div class="facts">' + fact('Status', esc(statusWord(r))) + fact('Feature', where.feature ? esc(where.feature) : '') + fact('Phase', esc(where.phase)) + fact('Owner', esc(owner)) + fact('Updated', esc(updated)) + '</div>' +
+    '<div class="facts">' + fact('Status', esc(statusWord(r))) + fact('Feature', where.feature ? esc(where.feature) : '') + fact('Phase', esc(where.phase)) + fact('Owner', esc(owner)) + fact('Updated', esc(updated) + (quietDays([id]) ? ' · ' + quietDays([id]) + ' d before the data' : '')) + '</div>' +
     (r[NEEDS] ? '<div class="needs">● ' + esc(r[SAY] || 'needs you') + '</div>' : '') +
     '<div class="kinds">' + (linked.length === 0 ? '<span class="sub">No links to other tickets</span>' : [...kinds.entries()].sort(([a], [b]) => typeRank(a) - typeRank(b)).map(([t, n]) => '<span>' + sq('delivered', t) + n + ' ' + esc(MARK.typeWord[t] ?? t) + (n === 1 ? '' : 's') + '</span>').join('')) +
     (linked.length > MAX_CURVES ? '<span class="sub">the first ' + MAX_CURVES + ' are drawn</span>' : '') + '</div>' +
@@ -1040,9 +1084,17 @@ function runSearch() {
     clearFound();
     return;
   }
+  const found = matches(q);
+  light(found, found.length === 0 ? 'no match' : found.length + (found.length === 1 ? ' match' : ' matches'));
+}
+
+/**
+ * Light these tickets where they stand, the rest faded, and list them under the search
+ * box: what a search does, and what a part of the needs-you bar or a week does (TASK-0177).
+ */
+function light(found, caption) {
   if (state.sel !== null) clearSelection();
   clearMarks();
-  const found = matches(q);
   state.found = found.map((r) => r[ID]);
   setHush(found.length > 0);
   const glow = new THREE.MeshBasicMaterial({ color: FOCUS_COLOUR, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -1056,7 +1108,7 @@ function runSearch() {
     state.marks.add(mesh);
     for (const r of found.slice(0, 40)) outline(state.where.get(r[ID]).at, colourOf(MARK.type[r[TYPE]]), 1.9, found.length <= 40 ? r[ID] : null);
   } else glow.dispose();
-  document.getElementById('count').textContent = found.length === 0 ? 'no match' : found.length + (found.length === 1 ? ' match' : ' matches');
+  document.getElementById('count').textContent = caption;
   hot = 0;
   drawResults(found);
   window.__towers.found = state.found.length;
@@ -1131,6 +1183,165 @@ function drawQueue() {
     '<div class="foot"><span>' + (more.length > 0 ? '+ ' + more.join(', ') : '') + '</span><span>data from ' + esc(q.head) + (q.generated ? ' · ' + esc(q.generated) : '') + '</span></div>';
   for (const row of el.querySelectorAll('.q[data-id]')) row.addEventListener('click', () => select(row.dataset.id, { fly: true }));
 }
+
+// ---------------------------------------------------------------------------
+// TASK-0177, the other four of Rubric's ideas: grouping by feature, age badges, a ring of
+// recent evidence, a needs-you panel and the year as weeks.
+
+/** Which grouping the ring is drawn in, kept for this viewer when the browser allows it. */
+let grouping = (() => {
+  try {
+    return localStorage.getItem('des5-towers-group') === 'feature' ? 'feature' : 'phase';
+  } catch {
+    return 'phase';
+  }
+})();
+let showAges = true;
+const ageTags = [];
+let dataNow = null;
+
+/** The workspace's data in the chosen grouping: by feature, each unfinished feature a segment holding one tower. */
+function viewOf(d0) {
+  if (grouping !== 'feature') return d0;
+  const rows = new Map([...d0.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]), ...d0.shelf.flatMap((p) => p.tickets), ...d0.core].map((r) => [r[ID], r]));
+  const short = (t) => (t.length > 22 ? t.slice(0, 21).trimEnd() + '…' : t);
+  const bf = d0.byFeature;
+  return {
+    ...d0,
+    ring: bf.ring.map((f) => ({ id: f.id, number: '', name: f.id + ' ' + short(rows.get(f.id)[TITLE]), status: f.status, kind: 'feature', exit: [], exitProse: false, towers: [{ f: rows.get(f.id), floors: f.floors.map((id) => rows.get(id)) }], tiles: [] })),
+    shelf: bf.shelf.map((f) => ({ id: f.id, number: '', name: rows.get(f.id)[TITLE], tickets: f.tickets.map((id) => rows.get(id)) })),
+    core: bf.core.map((id) => rows.get(id)),
+    focus: { ...d0.focus, phase: d0.focus.feature },
+  };
+}
+
+const DAY = 86400000;
+/** Days from the newest change among these tickets to the date the data was read, or null when none is dated. */
+function quietDays(ids) {
+  const d = dataNow ?? state?.d;
+  if (!d?.dataDate) return null;
+  let newest = '';
+  for (const id of ids) {
+    const u = d.notes[id]?.[2] ?? '';
+    if (u > newest) newest = u;
+  }
+  return newest === '' ? null : Math.max(0, Math.round((Date.parse(d.dataDate) - Date.parse(newest)) / DAY));
+}
+
+/** The evidence pictures, drawn over the canvas and placed each frame at their posts. */
+function drawEvidence() {
+  const el = document.getElementById('evidence');
+  el.innerHTML = state.d.evidence.map((e, i) => {
+    const r = state.ticketRow.get(e.id);
+    return '<figure data-i="' + i + '" data-id="' + esc(e.id) + '" title="' + esc(e.id + ' ' + (r?.[TITLE] ?? '') + ' · ' + e.path.split('/').pop()) + '"><img alt="" loading="lazy" src="' + esc(e.src) + '"><figcaption><b>' + esc(e.id) + '</b> ' + esc(e.date.slice(5)) + '</figcaption></figure>';
+  }).join('');
+  for (const fig of el.querySelectorAll('figure')) {
+    fig.querySelector('img').addEventListener('error', () => fig.classList.add('missing'));
+    fig.addEventListener('click', () => select(fig.dataset.id, { fly: true }));
+  }
+}
+
+const EV_AT = new THREE.Vector3();
+function placeEvidence() {
+  const el = document.getElementById('evidence');
+  const show = state !== null && state.open === null && state.evidenceGroup.visible;
+  el.hidden = !show;
+  if (!show) return;
+  el.querySelectorAll('figure').forEach((fig, i) => {
+    const a = state.anchors[i];
+    if (!a) return;
+    EV_AT.copy(a).project(camera);
+    const behind = EV_AT.z > 1;
+    const dist = camera.position.distanceTo(a);
+    const k = Math.min(1.15, Math.max(0.4, 260 / dist));
+    fig.style.display = behind ? 'none' : '';
+    fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
+    fig.style.opacity = state.hush < 1 && !state.marks.children.length ? 0.4 : state.hush < 1 ? 0.35 : 1;
+    fig.style.zIndex = String(1000 - Math.round(dist));
+  });
+}
+
+/** The cockpit's reasons a ticket needs you, the most urgent first, and how the panel names them. */
+const REASONS = [['failed', 'failed', '#ff4d4d'], ['review', 'to review', '#e8655a'], ['triage', 'to decide', '#f0a35b'], ['ready', 'to run', '#e9c46a'], ['waiting', 'waiting', '#8f6f78']];
+
+function drawNeeds() {
+  const el = document.getElementById('needs');
+  const rows = [...state.ticketRow.values()].filter((r) => r[NEEDS]);
+  const by = new Map(REASONS.map(([k]) => [k, []]));
+  for (const r of rows) (by.get(r[REASON]) ?? by.get('waiting')).push(r);
+  for (const list of by.values()) list.sort((a, b) => a[ID].localeCompare(b[ID], 'en', { numeric: true }));
+  const first = REASONS.flatMap(([k]) => by.get(k)).slice(0, 3);
+  el.innerHTML = '<h4>Needs you</h4><div class="big">' + rows.length + '</div>' +
+    (rows.length === 0 ? '<div class="sub">Nothing is waiting on you.</div>' :
+      '<div class="bar">' + REASONS.filter(([k]) => by.get(k).length > 0).map(([k, word, c]) => '<button data-reason="' + k + '" style="flex:' + by.get(k).length + ';background:' + c + '" title="' + by.get(k).length + ' ' + word + '"></button>').join('') + '</div>' +
+      '<div class="keys">' + REASONS.filter(([k]) => by.get(k).length > 0).map(([k, word, c]) => '<button data-reason="' + k + '"><i style="background:' + c + '"></i>' + by.get(k).length + ' ' + word + '</button>').join('') + '</div>' +
+      first.map((r) => rowHtml(r, r[ID] === state.d.next)).join(''));
+  for (const b of el.querySelectorAll('[data-reason]')) b.addEventListener('click', () => {
+    const list = by.get(b.dataset.reason);
+    light(list, list.length + ' ' + REASONS.find(([k]) => k === b.dataset.reason)[1]);
+  });
+  for (const row of el.querySelectorAll('.row[data-id]')) row.addEventListener('click', () => select(row.dataset.id, { fly: true }));
+}
+
+/** The data's year as four rows of thirteen weeks, each filled by the tickets closed that week. */
+function weekOf(date) {
+  const t = Date.parse(date);
+  const start = Date.parse(date.slice(0, 4) + '-01-01');
+  return Math.min(51, Math.floor((t - start) / DAY / 7));
+}
+
+function drawWeeks() {
+  const el = document.getElementById('weeks');
+  const d = state.d;
+  if (!d.dataDate) {
+    el.innerHTML = '';
+    return;
+  }
+  const year = d.dataDate.slice(0, 4);
+  const weeks = Array.from({ length: 52 }, () => []);
+  for (const r of state.ticketRow.values()) {
+    const u = d.notes[r[ID]]?.[2] ?? '';
+    if (r[STATE] === 'closed' && u.startsWith(year)) weeks[weekOf(u)].push(r);
+  }
+  const now = weekOf(d.dataDate);
+  const most = Math.max(1, ...weeks.map((w) => w.length));
+  const total = weeks.reduce((n, w) => n + w.length, 0);
+  const busiest = weeks.reduce((b, w, i) => (w.length > weeks[b].length ? i : b), 0);
+  const day = (i) => new Date(Date.parse(year + '-01-01') + i * 7 * DAY).toISOString().slice(5, 10);
+  let html = '<h4>' + year + '<span>' + total + ' closed · busiest week ' + (busiest + 1) + '</span></h4><div class="grid">';
+  for (let q = 0; q < 4; q += 1) {
+    html += '<span class="q">Q' + (q + 1) + '</span>';
+    for (let k = 0; k < 13; k += 1) {
+      const i = q * 13 + k;
+      const n = weeks[i].length;
+      const fill = n === 0 ? 0 : 0.25 + 0.75 * (n / most);
+      html += '<button class="wk' + (i === now ? ' now' : '') + (i > now ? ' later' : '') + '" data-week="' + i + '" style="--f:' + fill.toFixed(2) + '" title="Week ' + (i + 1) + ', from ' + day(i) + ': ' + n + ' closed"></button>';
+    }
+  }
+  el.innerHTML = html + '</div>';
+  for (const b of el.querySelectorAll('[data-week]')) b.addEventListener('click', () => {
+    const i = Number(b.dataset.week);
+    light(weeks[i], 'week ' + (i + 1) + ' · ' + weeks[i].length + ' closed');
+  });
+  state.weeks = weeks.map((w) => w.length);
+}
+
+document.getElementById('group').addEventListener('click', (e) => {
+  const g = e.target.closest('button')?.dataset.group;
+  if (!g || g === grouping) return;
+  grouping = g;
+  try {
+    localStorage.setItem('des5-towers-group', g);
+  } catch {
+    // A viewer convenience only; the page works without it.
+  }
+  showWorkspace(ws);
+});
+document.getElementById('ages').addEventListener('click', (e) => {
+  showAges = !showAges;
+  e.currentTarget.setAttribute('aria-pressed', String(showAges));
+  for (const t of ageTags) t.visible = showAges;
+});
 
 // ---------------------------------------------------------------------------
 // Pointing and pressing.
@@ -1290,7 +1501,8 @@ addEventListener('keydown', (e) => {
 });
 
 /** For the capture script and a test: show a workspace from a view, a phase brought close or not. */
-window.__showTowers = (w, name = 'home', phaseId = null) => {
+window.__showTowers = (w, name = 'home', phaseId = null, group = null) => {
+  if (group === 'phase' || group === 'feature') grouping = group;
   showWorkspace(w);
   if (name !== 'home') {
     const home = homeView();
@@ -1351,6 +1563,19 @@ window.__towersProbe = {
     clearSelection();
   },
   queue: () => [...document.querySelectorAll('#queue .q[data-id]')].map((el) => [el.dataset.id, el.className.replace(/^q /, '')]),
+  // TASK-0177: what the new panels and marks show.
+  needs: () => ({ count: Number(document.querySelector('#needs .big')?.textContent ?? 0), keys: [...document.querySelectorAll('#needs .keys button')].map((b) => b.textContent), rows: [...document.querySelectorAll('#needs .row[data-id]')].map((el) => el.dataset.id) }),
+  weeks: () => state.weeks,
+  ages: () => ageTags.map((t) => t.visible),
+  evidence: () => [...document.querySelectorAll('#evidence figure')].map((f) => ({ id: f.dataset.id, shown: f.style.display !== 'none' && !document.getElementById('evidence').hidden, missing: f.classList.contains('missing'), loaded: f.querySelector('img').complete && f.querySelector('img').naturalWidth > 0 })),
+  pressReason(k) {
+    document.querySelector('#needs .keys [data-reason="' + k + '"]')?.click();
+    return window.__towers.found;
+  },
+  pressWeek(i) {
+    document.querySelector('#weeks [data-week="' + i + '"]')?.click();
+    return window.__towers.found;
+  },
   /** The ticket of the focus phase whose links reach the most other phases, for a picture. */
   widest() {
     let best = null;
@@ -1389,5 +1614,6 @@ renderer.setAnimationLoop((now) => {
       f.spark.position.copy(f.curve.getPoint(t));
     }
   }
+  placeEvidence();
   renderer.render(scene, camera);
 });

@@ -26,7 +26,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { relationsFrom, ownerWord, boardOf } from './overview-towers-notes.mjs';
+import { relationsFrom, ownerWord, boardOf, evidenceFrom } from './overview-towers-notes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.join(here, '..');
@@ -53,47 +53,67 @@ const CHOICES = {
  */
 function notesAt(root, head, dirty) {
   const docs = path.join(root, 'docs');
+  // Each note as { path, text }, its path relative to the workspace (TASK-0177 ties a
+  // picture to the note that links to it).
   const today = () => {
-    const texts = [];
-    if (!fs.existsSync(docs)) return texts;
+    const notes = [];
+    if (!fs.existsSync(docs)) return notes;
     const stack = [docs];
     while (stack.length > 0) {
       const dir = stack.pop();
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== '__templates__') stack.push(path.join(dir, entry.name));
-        else if (entry.isFile() && entry.name.endsWith('.md')) texts.push(fs.readFileSync(path.join(dir, entry.name), 'utf-8'));
+        else if (entry.isFile() && entry.name.endsWith('.md')) notes.push({ path: path.relative(root, path.join(dir, entry.name)).split(path.sep).join('/'), text: fs.readFileSync(path.join(dir, entry.name), 'utf-8') });
       }
     }
-    return texts;
+    return notes;
   };
   if (head && spawnSync('git', ['-C', root, 'cat-file', '-e', `${head}^{commit}`]).status === 0) {
     const listed = spawnSync('git', ['-C', root, 'ls-tree', '-r', '--name-only', head, 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 26 });
     const files = listed.stdout.split('\n').filter((p) => p.endsWith('.md') && !p.includes('/__templates__/') && !p.split('/').some((s) => s.startsWith('.')));
     const batch = spawnSync('git', ['-C', root, 'cat-file', '--batch'], { input: files.map((p) => `${head}:${p}`).join('\n') + '\n', maxBuffer: 1 << 28 });
     const out = batch.stdout;
-    const texts = [];
+    const notes = [];
     let at = 0;
     while (at < out.length) {
       const nl = out.indexOf(10, at);
       if (nl < 0) break;
       const size = Number(/ (\d+)$/.exec(out.subarray(at, nl).toString('utf-8'))?.[1] ?? NaN);
       if (!Number.isFinite(size)) break;
-      texts.push(out.subarray(nl + 1, nl + 1 + size).toString('utf-8'));
+      notes.push({ path: files[notes.length], text: out.subarray(nl + 1, nl + 1 + size).toString('utf-8') });
       at = nl + 1 + size + 1;
     }
     // A fixture taken from a tree with uncommitted notes holds tickets the commit lacks;
     // their notes come from today's files, after every note the commit has (relations()
     // keeps the first it sees).
-    return { texts: dirty ? [...texts, ...today()] : texts, from: 'commit' };
+    return { notes: dirty ? [...notes, ...today()] : notes, from: 'commit' };
   }
-  const texts = today();
-  return { texts, from: texts.length > 0 ? 'working tree' : 'none' };
+  const notes = today();
+  return { notes, from: notes.length > 0 ? 'working tree' : 'none' };
+}
+
+/**
+ * The pictures under `docs/` at a commit, each with the date of its last commit before it
+ * (TASK-0177's ring of recent evidence). Only pictures still in the working tree count,
+ * since the page shows the files themselves. Without the commit, none.
+ */
+function imagesAt(root, head) {
+  if (!head || spawnSync('git', ['-C', root, 'cat-file', '-e', `${head}^{commit}`]).status !== 0) return [];
+  const log = spawnSync('git', ['-C', root, 'log', '--format=%x00%cs', '--name-only', head, '--', 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 28 });
+  const dated = new Map();
+  let date = '';
+  for (const line of log.stdout.split('\n')) {
+    if (line.startsWith('\0')) date = line.slice(1);
+    else if (line !== '' && /\.(?:png|jpe?g|webp|gif)$/i.test(line) && !dated.has(line)) dated.set(line, date);
+  }
+  const listed = spawnSync('git', ['-C', root, 'ls-tree', '-r', '--name-only', head, 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 26 });
+  return listed.stdout.split('\n').filter((p) => dated.has(p) && !p.includes('/__templates__/') && fs.existsSync(path.join(root, p))).map((p) => ({ path: p, date: dated.get(p) }));
 }
 
 /** Each note's `parent:`, the ticket lists a feature (or a task's `tests:`) names, and its facts, by id. */
 function relations(root, head, dirty) {
-  const { texts, from } = notesAt(root, head, dirty);
-  return { ...relationsFrom(texts), from };
+  const { notes, from } = notesAt(root, head, dirty);
+  return { ...relationsFrom(notes.map((n) => n.text)), notes, from };
 }
 
 /** The snapshot's focus at a commit (the fixture's), else in the working tree, and which it was. */
@@ -132,13 +152,14 @@ const floorRank = (t) => (t.needsYou ? 6 : STATE_RANK[t.state] ?? 5);
 const towersData = {};
 for (const [ws, choice] of Object.entries(CHOICES)) {
   const model = JSON.parse(fs.readFileSync(path.join(desktop, 'fixtures', 'overview', `${ws}.json`), 'utf-8'));
-  const { parent, named, facts, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
+  const { parent, named, facts, notes: noteFiles, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
   const focus = focusOf(choice.root, model.head);
   // Said out loud, never quietly: a page drawn from today's notes, or from none, is not the fixture's.
   if (notesFrom !== 'commit') console.warn(`overview-towers: ${ws}'s notes read from ${notesFrom === 'none' ? 'nowhere (no docs at ' + choice.root + ')' : 'the working tree'}, not at the fixture's commit ${String(model.head).slice(0, 7)}`);
   if (focus.from !== 'commit') console.warn(`overview-towers: ${ws}'s focus read from ${focus.from}, not at the fixture's commit`);
   const tickets = model.tickets;
-  const row = (t) => [t.id, t.type, t.fill, t.needsYou ? 1 : 0, t.status, t.title, t.needs?.say ?? '', t.state];
+  // A ticket as the page draws it; the ninth column is why it needs you (TASK-0177's panel).
+  const row = (t) => [t.id, t.type, t.fill, t.needsYou ? 1 : 0, t.status, t.title, t.needs?.say ?? '', t.state, t.needsYou ? t.needs?.reason ?? '' : ''];
 
   // Where each ticket is listed: a phase of the ring, a finished phase on the shelf, or the core.
   const ring = [...model.phases, ...model.backlog];
@@ -229,9 +250,36 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     queue = { feature: focusTower.f[0], ...board, head: String(model.head).slice(0, 7), generated: String(model.generated ?? '').slice(0, 10) };
   }
 
+  // Grouped by feature (TASK-0177): each unfinished feature a segment of the ring with its
+  // tickets as one tower, finished features on the shelf, tickets of no feature in the core.
+  // Only ids: the page takes each ticket's row from the phase grouping.
+  const members = new Map();
+  const loose = [];
+  for (const id of ids) {
+    if (tickets[id].type === 'feature') continue;
+    const f = featureOf(id);
+    if (f === null) loose.push(id);
+    else (members.get(f) ?? members.set(f, []).get(f)).push(id);
+  }
+  const floorsOf = (f) => (members.get(f) ?? []).map((id) => tickets[id]).sort((a, b) => floorRank(a) - floorRank(b) || a.id.localeCompare(b.id, 'en', { numeric: true })).map((t) => t.id);
+  const features = ids.filter((id) => tickets[id].type === 'feature');
+  const finished = (id) => tickets[id].state === 'closed' || tickets[id].state === 'dropped';
+  const byFeature = {
+    ring: features.filter((f) => !finished(f)).map((f) => ({ id: f, status: tickets[f].state === 'progress' ? 'active' : 'planned', floors: floorsOf(f) })),
+    shelf: features.filter(finished).map((f) => ({ id: f, tickets: [f, ...floorsOf(f)] })),
+    core: loose,
+  };
+
+  // The ring of recent evidence (TASK-0177): pictures beside the notes, newest first, each
+  // with its path from the page, so the page shows the file itself.
+  const evidence = evidenceFrom(imagesAt(choice.root, model.head), noteFiles, new Set(ids)).map((e) => ({ ...e, src: path.relative(path.dirname(towersPagePath), path.join(choice.root, e.path)).split(path.sep).join('/') }));
+
   towersData[ws] = {
     label: choice.label,
     head: model.head,
+    dataDate: String(model.generated ?? '').slice(0, 10),
+    byFeature,
+    evidence,
     notesFrom,
     focus,
     next,
@@ -254,7 +302,7 @@ const towersPage = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DES-0005 Towers</title>
 <style>
-:root { color-scheme: dark; --ink: hsl(195 60% 88%); --dim: hsl(205 25% 62%); --line: hsla(190, 90%, 65%, 0.45); --panel: hsla(210, 50%, 8%, 0.92); --needs: ${NEEDS_YOU}; }
+:root { color-scheme: dark; --ink: hsl(195 60% 88%); --dim: hsl(205 25% 62%); --line: hsla(190, 90%, 65%, 0.45); --panel: hsla(210, 50%, 8%, 0.92); --needs: ${NEEDS_YOU}; --exit: ${GATE_COLOUR.acceptance}; }
 html, body { margin: 0; height: 100%; background: #02040a; color: var(--ink); font: 14px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
 header { position: fixed; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; z-index: 4; pointer-events: none; }
 header > * { pointer-events: auto; }
@@ -269,7 +317,7 @@ h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 
 #tip .needs { color: var(--needs); margin-top: 4px; }
 #tip .sub { color: var(--dim); font-size: 12px; }
 #help { position: fixed; bottom: 12px; left: 16px; right: 16px; color: var(--dim); font-size: 12px; z-index: 2; pointer-events: none; }
-#legend { position: fixed; left: 16px; top: 60px; padding: 10px 12px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.7); border: 1px solid hsla(190, 90%, 65%, 0.25); font-size: 12px; z-index: 2; }
+#legend { position: fixed; left: 16px; top: 60px; padding: 10px 12px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.94); border: 1px solid hsla(190, 90%, 65%, 0.25); font-size: 12px; z-index: 2; }
 #legend div { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
 #panel { position: fixed; right: 0; top: 0; bottom: 0; width: 380px; max-width: 92vw; overflow: auto; padding: 60px 14px 40px; background: var(--panel); border-left: 1px solid var(--line); z-index: 3; box-sizing: border-box; }
 #panel[hidden] { display: none; }
@@ -318,7 +366,7 @@ canvas { display: block; }
 #card .x { margin-left: auto; background: none; border: 0; color: var(--dim); font-size: 16px; cursor: pointer; padding: 0 2px; }
 #panel .lead { font-size: 13px; line-height: 1.5; margin: 6px 0 4px; }
 #panel .back { margin-bottom: 10px; }
-#queue { position: fixed; left: 16px; bottom: 36px; width: 380px; max-width: calc(100vw - 32px); padding: 10px 12px 8px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.85); border: 1px solid hsla(190, 90%, 65%, 0.3); z-index: 2; box-sizing: border-box; }
+#queue { position: fixed; left: 16px; bottom: 36px; width: 380px; max-width: calc(100vw - 32px); padding: 10px 12px 8px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.94); border: 1px solid hsla(190, 90%, 65%, 0.3); z-index: 2; box-sizing: border-box; }
 #queue h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: flex; justify-content: space-between; color: hsl(190 90% 78%); }
 #queue h4 span { color: var(--dim); letter-spacing: .04em; text-transform: none; }
 #queue .q { display: grid; grid-template-columns: 74px 1fr auto 56px; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 5px; cursor: pointer; font-size: 12px; }
@@ -334,19 +382,53 @@ canvas { display: block; }
 #queue .q.next .k { color: hsl(190 90% 75%); font-weight: 700; }
 #queue .q.doing .k, #queue .q.review .k { color: hsl(190 70% 70%); }
 #queue .foot { display: flex; justify-content: space-between; color: var(--dim); font-size: 11px; margin-top: 6px; border-top: 1px solid hsla(190,90%,65%,.15); padding-top: 5px; }
-@media (max-width: 760px) { #queue, #legend { display: none; } #q { width: 150px; } }
+/* TASK-0177: the needs-you panel, the year as weeks, and the ring of recent evidence. */
+.hud { position: fixed; right: 16px; width: 300px; max-width: calc(100vw - 32px); padding: 10px 12px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.94); border: 1px solid hsla(190, 90%, 65%, 0.3); z-index: 2; box-sizing: border-box; }
+.hud[hidden] { display: none; }
+.hud h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: flex; justify-content: space-between; color: hsl(190 90% 78%); }
+.hud h4 span { color: var(--dim); letter-spacing: .04em; text-transform: none; }
+#needs { top: 60px; }
+#needs h4 { color: var(--needs); }
+#needs .big { font-size: 40px; font-weight: 800; line-height: 1; color: var(--needs); font-variant-numeric: tabular-nums; text-shadow: 0 0 14px color-mix(in srgb, var(--needs) 45%, transparent); }
+#needs .bar { display: flex; gap: 2px; height: 10px; margin: 8px 0 6px; border-radius: 3px; overflow: hidden; }
+#needs .bar button { border: 0; padding: 0; cursor: pointer; min-width: 4px; }
+#needs .keys { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-bottom: 6px; }
+#needs .keys button { background: none; border: 0; color: inherit; font: inherit; font-size: 12px; padding: 1px 0; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+#needs .keys button:hover { color: #fff; }
+#needs .keys i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+#weeks { bottom: 36px; }
+#weeks .grid { display: grid; grid-template-columns: 20px repeat(13, 1fr); gap: 3px; align-items: center; }
+#weeks .q { color: var(--dim); font-size: 10px; }
+#weeks .wk { aspect-ratio: 1; border: 1px solid hsla(170, 60%, 60%, 0.25); border-radius: 2px; padding: 0; cursor: pointer; background: color-mix(in srgb, var(--exit) calc(var(--f) * 100%), hsla(210, 40%, 14%, 0.9)); }
+#weeks .wk.later { opacity: .35; }
+#weeks .wk.now { outline: 2px solid #fff; outline-offset: 0; }
+#weeks .wk:hover { border-color: #fff; }
+#evidence { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+#evidence[hidden] { display: none; }
+#evidence figure { position: absolute; left: 0; top: 0; margin: 0; width: 112px; transform-origin: 50% 100%; pointer-events: auto; cursor: pointer; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.45); border-radius: 6px; padding: 3px; }
+#evidence figure:hover { border-color: #fff; }
+#evidence img { display: block; width: 104px; height: 66px; object-fit: cover; border-radius: 3px; background: #0b1a24; }
+#evidence figure.missing img { visibility: hidden; }
+#evidence figcaption { font-size: 10px; color: var(--dim); padding: 2px 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#evidence figcaption b { color: var(--ink); font-weight: 600; }
+@media (max-width: 760px) { #queue, #legend, .hud { display: none; } #q { width: 150px; } }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }</script>
 </head><body>
 <header><h1>DES-0005 · towers on the ring</h1>
 <div class="seg" id="ws">${Object.entries(CHOICES).map(([k, c], i) => `<button data-ws="${k}" aria-pressed="${i === 0}">${c.label}</button>`).join('')}</div>
 <div class="seg" id="cam"><button id="home" title="Back to where the page starts (Home, 0)" hidden>⌂ Home</button><button data-view="above" title="From above">◉ Above</button><button data-view="leaning" title="Leaning, as the page starts">◒ Leaning</button><button data-view="side" title="From the side, so the heights show">▬ Side</button></div>
+<div class="seg" id="group" title="Group the ring by phase or by feature"><button data-group="phase" aria-pressed="true">By phase</button><button data-group="feature" aria-pressed="false">By feature</button></div>
+<div class="seg"><button id="ages" aria-pressed="true" title="Show how long each quiet tower has gone without a change">◷ Ages</button></div>
 <div class="seg"><button id="back-ring" hidden title="Back to the whole ring (Escape)">‹ The ring</button></div>
 <div id="find"><input id="q" type="search" placeholder="Find a ticket ( / )" aria-label="Find a ticket by id or title" autocomplete="off" spellcheck="false"><span id="count" role="status"></span><div id="results" hidden role="listbox" aria-label="Matching tickets"></div></div>
 </header>
 <div id="legend" aria-label="What the marks mean"></div>
 <section id="card" hidden aria-label="The selected ticket"></section>
 <section id="queue" aria-label="Next up"></section>
+<section id="needs" class="hud" aria-label="What needs you"></section>
+<section id="weeks" class="hud" aria-label="The year, week by week"></section>
+<div id="evidence" aria-label="Recent evidence"></div>
 <aside id="panel" hidden aria-label="The phase's tickets"></aside>
 <div id="tip" role="status"></div>
 <div id="help">Drag (left or middle button) to turn · Shift-drag or right-drag to pan · scroll to zoom · press a ticket to see its links · press a phase to bring it close · / to find · Escape steps back. Generated by desktop/scripts/overview-towers.mjs; do not edit by hand.</div>

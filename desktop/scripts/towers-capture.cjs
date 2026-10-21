@@ -3,7 +3,8 @@
 //   npx electron scripts/towers-capture.cjs <page.html> <out dir>
 // It loads the page in a hidden window and saves `towers-<workspace>-<view>.jpg` for
 // the opening view, from above, from the side, and the focus phase brought close; and
-// (TASK-0176) `-linked` with a ticket's links drawn and `-search` with a search lit.
+// (TASK-0176) `-linked` with a ticket's links drawn and `-search` with a search lit; and
+// (TASK-0177) `-byfeature` with the ring grouped by feature.
 // The page loads three.js from cdnjs, so this needs the network. Errors the page
 // logs are printed, and fail the run.
 const { app, BrowserWindow } = require('electron');
@@ -34,6 +35,14 @@ app.whenReady().then(async () => {
       fs.writeFileSync(file, image.toJPEG(84));
       console.log(`${file}: ${info.tickets} tickets (${info.drawn} drawn), ${info.towers} towers, focus ${info.focus.phase} ${info.focus.feature}, next ${info.next}`);
     }
+    // TASK-0177: the ring grouped by feature, and what the needs-you panel, the weeks, the
+    // age badges and the evidence ring show.
+    const grouped = await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null, 'feature')`);
+    await new Promise((r) => setTimeout(r, 1500));
+    fs.writeFileSync(path.join(out, `towers-${ws}-byfeature.jpg`), (await win.webContents.capturePage()).toJPEG(84));
+    const panels = await win.webContents.executeJavaScript('({ needs: window.__towersProbe.needs(), weeks: window.__towersProbe.weeks(), ages: window.__towersProbe.ages().length, evidence: window.__towersProbe.evidence() })');
+    console.log(`towers-${ws}-byfeature.jpg: ${grouped.ring.length} features on the ring, ${grouped.drawn} tickets drawn; needs you ${panels.needs.count} (${panels.needs.keys.join(', ')}); ${panels.weeks.reduce((a, b) => a + b, 0)} closed this year; ${panels.ages} age badges; evidence ${panels.evidence.filter((e) => e.loaded).length} of ${panels.evidence.length} pictures loaded`);
+    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null, 'phase')`);
     // TASK-0176: a ticket selected with its links drawn, a search lit, and the next-up board.
     await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null)`);
     const chosen = await win.webContents.executeJavaScript('window.__towersProbe.widest()');

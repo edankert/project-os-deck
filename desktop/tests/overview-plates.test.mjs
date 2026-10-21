@@ -103,10 +103,36 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         assert.ok(!others.includes(id), `${ws}: ${id} does not link to itself`);
         for (const other of others) assert.ok(fixtureModel.tickets[id].links?.includes(other) || fixtureModel.tickets[other].links?.includes(id), `${ws}: the page's link ${id}–${other} is in the fixture`);
       }
+      // TASK-0177: each ticket's ninth column is why it needs you, as the fixture says.
+      const rowsById = new Map([...w.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]), ...w.shelf.flatMap((p) => p.tickets), ...w.core].map((r) => [r[0], r]));
+      for (const [id, t] of Object.entries(fixtureModel.tickets)) assert.equal(rowsById.get(id)[8], t.needsYou ? t.needs?.reason ?? '' : '', `${ws}: ${id}'s reason on the page`);
+      assert.equal(w.dataDate, String(fixtureModel.generated).slice(0, 10), `${ws}: the data's date is the fixture's`);
+      // Grouped by feature: every ticket once; the ring is the unfinished features, the shelf the finished ones.
+      const bf = w.byFeature;
+      const grouped = [...bf.ring.flatMap((f) => [f.id, ...f.floors]), ...bf.shelf.flatMap((f) => f.tickets), ...bf.core];
+      assert.equal(new Set(grouped).size, grouped.length, `${ws}: no ticket twice grouped by feature`);
+      assert.deepEqual(new Set(grouped), new Set(Object.keys(fixtureModel.tickets)), `${ws}: grouped by feature, every ticket is there`);
+      const features = Object.entries(fixtureModel.tickets).filter(([, t]) => t.type === 'feature');
+      assert.deepEqual(bf.ring.map((f) => f.id).sort(), features.filter(([, t]) => t.state !== 'closed' && t.state !== 'dropped').map(([id]) => id).sort(), `${ws}: the ring is the unfinished features`);
+      assert.ok(bf.ring.every((f) => f.floors.every((id) => fixtureModel.tickets[id].type !== 'feature')) && bf.shelf.every((f) => f.tickets.slice(1).every((id) => fixtureModel.tickets[id].type !== 'feature')), `${ws}: a feature is never a floor of another`);
+      // A feature's tower on the phase ring holds the same tickets as its segment grouped by feature.
+      const segment = new Map(bf.ring.map((f) => [f.id, new Set(f.floors)]));
+      for (const t of w.ring.flatMap((p) => p.towers)) {
+        if (segment.has(t.f[0])) for (const r of t.floors) assert.ok(segment.get(t.f[0]).has(r[0]), `${ws}: ${r[0]} stands in ${t.f[0]}'s tower and in its segment`);
+      }
+      // The ring of recent evidence: tickets of the fixture, newest first, at most three each and eighteen in all, each file there.
+      assert.ok(w.evidence.length <= 18, `${ws}: at most eighteen pictures`);
+      assert.ok(w.evidence.every((e) => fixtureModel.tickets[e.id] !== undefined), `${ws}: each picture belongs to a ticket`);
+      assert.ok(w.evidence.every((e, i) => i === 0 || w.evidence[i - 1].date >= e.date), `${ws}: newest first`);
+      const per = new Map();
+      for (const e of w.evidence) per.set(e.id, (per.get(e.id) ?? 0) + 1);
+      assert.ok([...per.values()].every((n) => n <= 3), `${ws}: at most three pictures for one ticket`);
+      assert.ok(w.evidence.every((e) => fs.existsSync(path.join(out, e.src))), `${ws}: each picture's file is where the page looks`);
       // The notes are read from the workspace's checkout; CI has only Deck's, and without
       // your-trainer beside it every ticket lies flat and the page has no notes or board for it.
       if (w.notesFrom === 'none') {
         assert.deepEqual(w.notes, {}, `${ws}: no notes, so no paragraphs`);
+        assert.deepEqual(w.evidence, [], `${ws}: no commit to read, so no pictures`);
         assert.equal(w.queue, null, `${ws}: no towers, so no board`);
         continue;
       }
@@ -218,6 +244,33 @@ test('the towers page reads a note\'s first paragraph, owner and date', async ()
   assert.equal(lead('\n> The rider sees their **zone**.\n'), 'The rider sees their zone.', 'a plain quote is prose');
   assert.equal(lead('\n> [!warning] Old\n> stamp\n\nThe prose.\n'), 'The prose.', 'a callout is not');
   assert.equal(lead('\n~~~\nnot prose\n~~~\nThe prose.\n'), 'The prose.', 'a tilde fence is code too');
+});
+
+// TASK-0177: which ticket a picture belongs to, on small notes and files of its own.
+test('the ring of recent evidence ties each picture to a ticket and keeps the newest', async () => {
+  const { evidenceFrom } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  const note = (p, id, body = '') => ({ path: p, text: `---\nid: ${id}\n---\n${body}` });
+  const notes = [
+    note('docs/designs/DES-0001-A.md', 'DES-0001', '![a](__attachments__/plate.png) and [b](../tests/run%20one.jpg)'),
+    note('docs/features/glass/FEAT-0002-Glass.md', 'FEAT-0002'),
+    note('docs/issues/ISS-0003-x.md', 'ISS-0003', '![[shot.webp]]'),
+  ];
+  const tickets = new Set(['DES-0001', 'FEAT-0002', 'ISS-0003', 'TST-0004']);
+  const img = (p, date) => ({ path: p, date });
+  const got = evidenceFrom([
+    img('docs/designs/__attachments__/plate.png', '2026-10-01'),
+    img('docs/tests/run one.jpg', '2026-10-02'),
+    img('docs/issues/evidence/shot.webp', '2026-10-03'),
+    img('docs/tests/acceptance/gallery/tst-4-before.png', '2026-10-04'),
+    img('docs/features/glass/evidence/a.png', '2026-10-05'),
+    img('docs/features/glass/evidence/b.png', '2026-10-06'),
+    img('docs/marketing/poster.png', '2026-10-07'),
+    img('docs/designs/__attachments__/notes.txt', '2026-10-08'),
+  ], notes, tickets, { perTicket: 1, limit: 10 });
+  assert.deepEqual(got.map((e) => [e.id, e.path.split('/').pop()]), [
+    ['FEAT-0002', 'b.png'], ['TST-0004', 'tst-4-before.png'], ['ISS-0003', 'shot.webp'], ['DES-0001', 'run one.jpg'],
+  ], 'newest first; by the folder, by the name, by a wiki link and by a relative link; one per ticket; a picture of no ticket and a file that is not a picture left out');
+  assert.equal(evidenceFrom([img('docs/designs/__attachments__/plate.png', '2026-10-01')], notes, tickets)[0].id, 'DES-0001', 'the linking note wins');
 });
 
 // TASK-0176, review round two: the board's rules on rows of its own, because neither

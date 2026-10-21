@@ -172,3 +172,67 @@ export function boardOf(tasks, next, updatedOf, room = 6) {
     more,
   };
 }
+
+const IMAGE = /\.(?:png|jpe?g|webp|gif)$/i;
+const TICKET_IN_NAME = /(?<![a-z0-9])(feat|task|tst|iss|des|req|risk|adr)-(\d{1,4})(?![0-9])/i;
+
+/**
+ * The ring of recent evidence (TASK-0177): the pictures kept beside the notes, each tied to
+ * a ticket and dated, newest first, at most `perTicket` for one ticket and `limit` in all.
+ * `images` are `{ path, date }` (repository-relative, the date of the file's last commit);
+ * `notes` are `{ path, text }`. A picture belongs to the note that links to it, else to the
+ * ticket its file name names, else to the feature whose folder holds it; only tickets in
+ * `tickets` count, and a picture with none of the three is left out.
+ */
+export function evidenceFrom(images, notes, tickets, { perTicket = 3, limit = 18 } = {}) {
+  const posix = (p) => p.split('\\').join('/');
+  const resolve = (from, link) => {
+    const parts = posix(from).split('/').slice(0, -1);
+    for (const seg of decodeURI(link).split('/')) {
+      if (seg === '..') parts.pop();
+      else if (seg !== '.' && seg !== '') parts.push(seg);
+    }
+    return parts.join('/');
+  };
+  const idOf = (text) => /^id:\s*["']?([A-Z]+-\d+)["']?\s*$/m.exec(/^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '')?.[1];
+  const byPath = new Map();
+  const byName = new Map();
+  const featureOfFolder = new Map();
+  for (const { path: p, text } of notes) {
+    const id = idOf(text);
+    if (id === undefined || !tickets.has(id)) continue;
+    const m = /^docs\/features\/([^/]+)\/FEAT-\d+[^/]*\.md$/.exec(posix(p));
+    if (m && id.startsWith('FEAT-')) featureOfFolder.set(m[1], id);
+    for (const link of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+      const target = link[1].replace(/#.*$/, '');
+      if (IMAGE.test(target) && !/^[a-z]+:/i.test(target) && !byPath.has(resolve(p, target))) byPath.set(resolve(p, target), id);
+    }
+    for (const link of text.matchAll(/!\[\[([^\]|]+)/g)) {
+      const name = link[1].split('/').pop();
+      if (IMAGE.test(name) && !byName.has(name)) byName.set(name, id);
+    }
+  }
+  const owner = (p) => {
+    const path = posix(p);
+    const name = path.split('/').pop();
+    if (byPath.has(path)) return byPath.get(path);
+    if (byName.has(name)) return byName.get(name);
+    const named = TICKET_IN_NAME.exec(name);
+    if (named) {
+      const id = `${named[1].toUpperCase()}-${named[2].padStart(4, '0')}`;
+      if (tickets.has(id)) return id;
+    }
+    const folder = /^docs\/features\/([^/]+)\//.exec(path)?.[1];
+    return folder !== undefined ? featureOfFolder.get(folder) : undefined;
+  };
+  const taken = new Map();
+  const out = [];
+  for (const image of [...images].filter((i) => IMAGE.test(i.path)).sort((a, b) => b.date.localeCompare(a.date) || a.path.localeCompare(b.path))) {
+    const id = owner(image.path);
+    if (id === undefined || (taken.get(id) ?? 0) >= perTicket) continue;
+    taken.set(id, (taken.get(id) ?? 0) + 1);
+    out.push({ id, path: posix(image.path), date: image.date });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
