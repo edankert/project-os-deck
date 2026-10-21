@@ -64,6 +64,8 @@ Round one, 2026-10-21, two independent Claude reviewers (`model:claude-opus-5-5`
 - **Under reduced motion the focus glow and beam stayed bright under a selection** (B). They fade with the rest.
 - **The hover tip stayed on screen after a press** (B, not this task's). It goes now.
 
+Round two, 2026-10-21, two fresh independent Claude reviewers on `a101bb5`, one for the data and tests, one for the page. Page: approve; all five page findings fixed, shown with real presses and keys in hidden windows, and nothing that held in round one regressed (dimming restored, no leaks over 25 rounds, caps, collar, Home and views unchanged). It noted three small things, fixed after it: choosing a search match in another phase while a phase was close left the camera on that phase drawn almost invisible (now the whole ring comes back first); the search list ran under the right pane, because the header sat below it (the header now sits above); and a red cap replacing a selection was not written down (now it is, in DES-0005).
+
 ## Acceptance checks reopened
 
 None. Deck is not changed; only the design page is.

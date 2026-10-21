@@ -1075,10 +1075,16 @@ function drawResults(found) {
   });
 }
 
-/** Choosing a match selects it and flies to it; the search gives way to the selection. */
+/**
+ * Choosing a match selects it and flies to it; the search gives way to the selection. A
+ * match outside the phase brought close is shown on the whole ring, not in a phase faded
+ * behind the one that was close (review of TASK-0176, round two).
+ */
 function pick(id) {
   clearFound();
   search.blur();
+  const w = state.where.get(id);
+  if (state.open !== null && w?.phase !== state.open) closePhase(false);
   select(id, { fly: true });
 }
 

@@ -282,7 +282,7 @@ const towersPage = `<!doctype html>
 <style>
 :root { color-scheme: dark; --ink: hsl(195 60% 88%); --dim: hsl(205 25% 62%); --line: hsla(190, 90%, 65%, 0.45); --panel: hsla(210, 50%, 8%, 0.92); --needs: ${NEEDS_YOU}; }
 html, body { margin: 0; height: 100%; background: #02040a; color: var(--ink); font: 14px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
-header { position: fixed; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; z-index: 2; pointer-events: none; }
+header { position: fixed; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; z-index: 4; pointer-events: none; }
 header > * { pointer-events: auto; }
 h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0 10px 0 0; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: hsla(210, 50%, 8%, 0.6); }
@@ -291,7 +291,7 @@ h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 
 .seg button[hidden] { display: none; }
 #home { background: hsla(190,90%,55%,.22); }
 #back-ring[hidden] { display: none; }
-#tip { position: fixed; pointer-events: none; max-width: 420px; padding: 8px 11px; border-radius: 8px; background: hsla(205,60%,12%,.95); border: 1px solid var(--line); display: none; z-index: 4; }
+#tip { position: fixed; pointer-events: none; max-width: 420px; padding: 8px 11px; border-radius: 8px; background: hsla(205,60%,12%,.95); border: 1px solid var(--line); display: none; z-index: 6; }
 #tip .needs { color: var(--needs); margin-top: 4px; }
 #tip .sub { color: var(--dim); font-size: 12px; }
 #help { position: fixed; bottom: 12px; left: 16px; right: 16px; color: var(--dim); font-size: 12px; z-index: 2; pointer-events: none; }
