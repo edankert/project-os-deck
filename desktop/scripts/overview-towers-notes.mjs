@@ -230,19 +230,22 @@ export function evidenceFrom(images, notes, tickets, { perTicket = 3, limit = 18
     // The note's `evidence:` field, as your-trainer lists a test's or an issue's pictures.
     const field = new RegExp('^evidence:(.*)((?:\\r?\\n[ \\t]*-.*)*)', 'm').exec(frontmatter(text));
     if (field) {
-      const value = field[1] + field[2];
-      for (const q of value.matchAll(/["']([^"']+)["']|([^\s"'\[\],]+)/g)) {
-        const target = (q[1] ?? q[2]).replace(/^-\s*/, '');
-        if (IMAGE.test(target.replace(/[#?].*$/, ''))) claim(byPath, resolve(p, target), id);
-      }
+      // A dash line is one value, spaces and all; an inline list splits at its commas.
+      const values = [
+        ...field[1].trim().replace(/^\[|\]$/g, '').split(','),
+        ...field[2].split(/\r?\n/).map((line) => line.replace(/^[ \t]*-[ \t]*/, '')),
+      ].map((v) => v.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      for (const target of values) if (IMAGE.test(target.replace(/[#?].*$/, ''))) claim(byPath, resolve(p, target), id);
     }
+    // A link inside a code block is an example, not a claim.
+    const prose = text.replace(/^(```|~~~)[\s\S]*?^\1/gm, '');
     // Markdown links and pictures in the body, angle-bracketed ones with spaces included.
-    for (const link of text.matchAll(/\]\(\s*(<[^>]+>|[^)\s]+)/g)) {
+    for (const link of prose.matchAll(/\]\(\s*(<[^>]+>|[^)\s]+)/g)) {
       const target = link[1];
       if (IMAGE.test(target.replace(/^<|>$/g, '').replace(/[#?].*$/, '')) && !/^<?[a-z]+:/i.test(target)) claim(byPath, resolve(p, target), id);
     }
     // Wiki links, embedded or not: by their path when they give one, else by name.
-    for (const link of text.matchAll(/\[\[([^\]|#]+)/g)) {
+    for (const link of prose.matchAll(/\[\[([^\]|#]+)/g)) {
       const target = posix(link[1].trim());
       if (!IMAGE.test(target)) continue;
       if (target.includes('/')) claim(bySuffix, target.replace(/^\/+/, ''), id);
@@ -287,4 +290,21 @@ export function lastDates(log) {
     else if (line !== '' && IMAGE.test(line) && !dated.has(line)) dated.set(line, date);
   }
   return dated;
+}
+
+/**
+ * The year as weeks (TASK-0177): `closed` is each closed ticket's id and its note's last
+ * update. Weeks run from 1 January in sevens; the year's last day or two fold into the 52nd.
+ * `now` is the week the data was read; a closed ticket with no date is counted apart.
+ */
+export function weeksOf(closed, dataDate) {
+  const DAY = 86400000;
+  const year = String(dataDate).slice(0, 4);
+  const weekOf = (date) => Math.min(51, Math.floor((Date.parse(date) - Date.parse(`${date.slice(0, 4)}-01-01`)) / DAY / 7));
+  const weeks = { year, now: dataDate ? weekOf(dataDate) : -1, closed: Array.from({ length: 52 }, () => []), undated: 0 };
+  for (const [id, updated] of closed) {
+    if (!updated) weeks.undated += 1;
+    else if (updated.startsWith(year)) weeks.closed[weekOf(updated)].push(id);
+  }
+  return weeks;
 }

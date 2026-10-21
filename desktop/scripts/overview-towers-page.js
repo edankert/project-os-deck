@@ -327,6 +327,8 @@ let state = null; // what is drawn: the workspace, its phases' groups, the sizes
 /** Frees what a scene holds on the graphics card: rebuilding for a regroup must not pile it up (review of TASK-0177). */
 function dispose(root) {
   root.traverse((o) => {
+    // An instanced mesh keeps its per-instance buffers until it is disposed itself.
+    if (o.isInstancedMesh) o.dispose();
     o.geometry?.dispose?.();
     for (const m of [o.material].flat()) {
       if (!m) continue;
@@ -724,8 +726,6 @@ function stepGlide(now) {
 }
 
 function resize() {
-  // The header wraps on a narrow window; the panels under it start where it ends.
-  document.documentElement.style.setProperty('--top', document.querySelector('header').offsetHeight + 6 + 'px');
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   syncOffset();
@@ -1142,6 +1142,11 @@ function drawResults(found) {
     results.hidden = true;
     return;
   }
+  // The list stops short of the needs-you panel, so a press meant for the panel lands on it.
+  const from = document.getElementById('find').getBoundingClientRect().left;
+  const needs = document.getElementById('needs');
+  const room = needs.hidden ? innerWidth - from - 16 : needs.getBoundingClientRect().left - from - 12;
+  results.style.width = Math.max(240, Math.min(420, room)) + 'px';
   results.innerHTML = found.slice(0, 12).map((r, i) => rowHtml(r, r[ID] === state.d.next).replace('class="row ', 'class="row ' + (i === hot ? 'hot ' : ''))).join('') + (found.length > 12 ? '<div class="sub" style="padding:4px 6px">' + (found.length - 12) + ' more lit on the ring</div>' : '');
   results.hidden = false;
   for (const el of results.querySelectorAll('.row[data-id]')) el.addEventListener('mousedown', (e) => {
@@ -1286,7 +1291,7 @@ function placeEvidence() {
     EV_AT.copy(a).project(camera);
     const behind = EV_AT.z > 1;
     const dist = camera.position.distanceTo(a);
-    const k = Math.min(1.15, Math.max(0.22, 260 / dist));
+    const k = Math.min(1.15, Math.max(0.12, 180 / dist));
     fig.style.display = behind ? 'none' : '';
     fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
     fig.style.opacity = state.hush < 1 && !state.marks.children.length ? 0.4 : state.hush < 1 ? 0.35 : 1;
@@ -1615,6 +1620,9 @@ window.__towersProbe = {
 };
 
 addEventListener('resize', resize);
+// The header wraps on a narrow window, and grows when Home or ‹ The ring appears; the panels
+// under it start where it ends, whatever made it change (review of TASK-0177, round two).
+new ResizeObserver(() => document.documentElement.style.setProperty('--top', document.querySelector('header').offsetHeight + 6 + 'px')).observe(document.querySelector('header'));
 resize();
 showWorkspace(ws);
 renderer.setAnimationLoop((now) => {

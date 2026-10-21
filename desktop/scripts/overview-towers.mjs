@@ -26,7 +26,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { relationsFrom, ownerWord, boardOf, evidenceFrom, lastDates } from './overview-towers-notes.mjs';
+import { relationsFrom, ownerWord, boardOf, evidenceFrom, lastDates, weeksOf } from './overview-towers-notes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.join(here, '..');
@@ -279,15 +279,7 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   const badged = features.filter((f) => !finished(f) && (ages[f] ?? 0) >= 14);
   // The data's year as 52 weeks of the tickets closed in each; a ticket's closing week is
   // its note's last update. A closed ticket with no date is counted apart, not lost.
-  const year = dataDate.slice(0, 4);
-  const weekOf = (date) => Math.min(51, Math.floor((Date.parse(date) - Date.parse(`${date.slice(0, 4)}-01-01`)) / DAY / 7));
-  const weeks = { year, now: dataDate ? weekOf(dataDate) : -1, closed: Array.from({ length: 52 }, () => []), undated: 0 };
-  for (const id of ids) {
-    if (tickets[id].state !== 'closed') continue;
-    const u = notes[id]?.[2] ?? '';
-    if (u === '') weeks.undated += 1;
-    else if (u.startsWith(year)) weeks.closed[weekOf(u)].push(id);
-  }
+  const weeks = weeksOf(ids.filter((id) => tickets[id].state === 'closed').map((id) => [id, notes[id]?.[2] ?? '']), dataDate);
   // What needs you, by the cockpit's reason, the most urgent first.
   const needs = Object.fromEntries(['failed', 'review', 'triage', 'ready', 'waiting'].map((k) => [k, []]));
   for (const id of ids) if (tickets[id].needsYou) (needs[tickets[id].needs?.reason] ?? needs.waiting).push(id);

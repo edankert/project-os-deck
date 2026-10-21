@@ -144,8 +144,8 @@ test('the plate script draws all seven screens on both workspaces, every mark in
           assert.ok(w.weeks.closed[week].includes(id), `${ws}: ${id}, updated ${updated(id)}, is in week ${week + 1}`);
         }
         // Each picture's date is its last commit at the fixture's commit, where this clone has it.
-        // Deck's pictures each have one commit, so first and last agree there; your-trainer's
-        // tell a first-commit date from a last one, when its checkout is beside this one.
+        // On today's fixtures every picture in the ring has one commit date, so this checks the
+        // dates were read at all; which commit dates a picture is held by lastDates' own test.
         const root = ws === 'deck' ? path.join(desktopRoot, '..') : path.join(desktopRoot, '..', '..', 'your-trainer');
         if (root !== null && spawnSync('git', ['-C', root, 'cat-file', '-e', `${fixtureModel.head}^{commit}`]).status === 0) {
           for (const e of w.evidence) assert.equal(e.date, spawnSync('git', ['-C', root, 'log', '-1', '--format=%cs', fixtureModel.head, '--', e.path], { encoding: 'utf-8' }).stdout.trim(), `${ws}: ${e.path} is dated by its last commit`);
@@ -279,7 +279,12 @@ test('the towers page reads a note\'s first paragraph, owner and date', async ()
 
 // TASK-0177: which ticket a picture belongs to, on small notes and files of its own.
 test('the ring of recent evidence ties each picture to a ticket and keeps the newest', async () => {
-  const { evidenceFrom, lastDates } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  const { evidenceFrom, lastDates, weeksOf } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  // The year as weeks, on dates of its own: the first week, the data's week, the year's last
+  // day folded into week 52, another year left out, an undated ticket counted apart.
+  const weeks = weeksOf([['A', '2026-01-01'], ['B', '2026-01-08'], ['C', '2026-10-15'], ['D', '2026-12-31'], ['E', '2025-06-01'], ['F', '']], '2026-10-15');
+  assert.deepEqual([weeks.year, weeks.now, weeks.undated], ['2026', 41, 1], 'the year, the week the data was read, and one undated');
+  assert.deepEqual(weeks.closed.map((w, i) => [i, w]).filter(([, w]) => w.length > 0), [[0, ['A']], [1, ['B']], [41, ['C']], [51, ['D']]], 'each in its week, the last day in week 52, last year left out');
   // A picture's date is its last commit: git log lists the newest first.
   assert.deepEqual([...lastDates('\0' + '2026-10-15\ndocs/a.png\ndocs/n.md\n\n\0' + '2026-10-14\ndocs/a.png\ndocs/b.jpg\n')], [['docs/a.png', '2026-10-15'], ['docs/b.jpg', '2026-10-14']], 'the newest commit dates a picture; a note is not a picture');
   const note = (p, id, body = '') => ({ path: p, text: `---\nid: ${id}\n---\n${body}` });
@@ -310,7 +315,7 @@ test('the ring of recent evidence ties each picture to a ticket and keeps the ne
   // in a link does not stop the run.
   const more = [
     note('docs/tests/TST-0004-t.md', 'TST-0004', ''),
-    { path: 'docs/tests/TST-0005-u.md', text: '---\nid: TST-0005\nevidence:\n  - "../features/glass/evidence/run.png"\n  - docs/issues/evidence/iss-3-shot.png\n---\n![bad](100%.png) [s](<shots/my shot.png>)' },
+    { path: 'docs/tests/TST-0005-u.md', text: '---\nid: TST-0005\nevidence:\n  - "../features/glass/evidence/run.png"\n  - docs/issues/evidence/iss-3-shot.png\n  - shots/my other shot.png\n---\n![bad](100%.png) [s](<shots/my shot.png>)\n\n```\n![example](shots/example.png)\n```\n' },
     note('docs/designs/DES-0001-A.md', 'DES-0001', '![[dup.png]] ![[__attachments__/deep.png]]'),
     note('docs/features/glass/FEAT-0002-Glass.md', 'FEAT-0002'),
   ];
@@ -318,14 +323,16 @@ test('the ring of recent evidence ties each picture to a ticket and keeps the ne
     img('docs/features/glass/evidence/run.png', '2026-10-09'),
     img('docs/issues/evidence/iss-3-shot.png', '2026-10-08'),
     img('docs/tests/shots/my shot.png', '2026-10-07'),
+    img('docs/tests/shots/my other shot.png', '2026-10-07'),
+    img('docs/tests/shots/example.png', '2026-10-07'),
     img('docs/designs/a/dup.png', '2026-10-06'),
     img('docs/designs/b/dup.png', '2026-10-05'),
     img('docs/designs/__attachments__/deep.png', '2026-10-04'),
     img('docs/issues/evidence/deep.png', '2026-10-03'),
   ], more, new Set(['TST-0004', 'TST-0005', 'DES-0001', 'FEAT-0002', 'ISS-0003']), { perTicket: 9 });
   assert.deepEqual(owners.map((e) => [e.path.split('/').slice(-2).join('/'), e.id]), [
-    ['evidence/run.png', 'TST-0005'], ['evidence/iss-3-shot.png', 'TST-0005'], ['shots/my shot.png', 'TST-0005'], ['__attachments__/deep.png', 'DES-0001'],
-  ], 'the evidence: field and links win over the folder and the name; a name two pictures share claims neither; a wiki path claims only its own file');
+    ['evidence/run.png', 'TST-0005'], ['evidence/iss-3-shot.png', 'TST-0005'], ['shots/my other shot.png', 'TST-0005'], ['shots/my shot.png', 'TST-0005'], ['__attachments__/deep.png', 'DES-0001'],
+  ], 'the evidence: field (a value with spaces whole) and links win over the folder and the name; a link in a code block claims nothing; a name two pictures share claims neither; a wiki path claims only its own file');
 });
 
 // TASK-0176, review round two: the board's rules on rows of its own, because neither
