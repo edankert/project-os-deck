@@ -130,6 +130,10 @@ All fixed, as listed in [[TASK-0176]]'s Review section.
 
 2026-10-21: two fresh independent Claude reviewers on `a101bb5`, each in its own worktree. Both approve. The page reviewer showed all five page fixes with real presses and keys in hidden windows, and found nothing that held in round one had regressed; its three small notes (a search match in another phase left the camera on a phase drawn almost invisible, the search list ran under the right pane, a red cap replacing a selection was unstated) were fixed in `3e964d4`. The data reviewer broke each fix 21 ways, with and without your-trainer, and every one it could reach failed TST-0094; it noted that CI, with only Deck's board, could not check the board's words and counts, so the board's rules became a function tested on rows of their own (`78b220b`).
 
+### Fifth revision, round one (needs you, grouping, ages, evidence and weeks, TASK-0177)
+
+2026-10-21: two independent Claude reviewers on `e392180`. Both requested changes; every count held. The data reviewer found that TST-0094 let four breaks through, because the ages, badges, weeks and panel counts were worked out only in the page, and that the `evidence:` field was ignored. The page reviewer found the header covering the card at 1100 wide, a needs-you press opening the search list over the bar, graphics memory growing with each regroup, evidence pictures off-screen and swallowing the wheel, and phase words left in the feature grouping. All fixed in `f6ad457` and `8a5fb90`, as listed in [[TASK-0177]]'s Review section.
+
 ## Questions between the lanes
 
 None yet. Write a question here, dated, and land it on `main`; the other agent answers under it.
