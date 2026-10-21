@@ -8,7 +8,7 @@ owner: unassigned
 created: 2026-10-16
 updated: 2026-10-16
 source: ["CI deck-smoke runs on main, 2026-10-14 to 2026-10-16"]
-reported_by: "agent:claude"
+reported_by: agent
 question: ""
 severity: medium
 component: "desktop/src/main/smoke-glass.ts"
