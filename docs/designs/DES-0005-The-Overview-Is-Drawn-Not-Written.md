@@ -253,7 +253,7 @@ A search for "heart rate" on your-trainer: 29 matches, in four phases of the rin
 **What building them into Deck would cost.** Deck's overview model already carries each ticket's links (for the ticket screen, S3) and its feature (FEAT-0026), so the curves and the card need no new data. The pane's paragraph, and the board's owners and dates, would need each note's first paragraph, `owner:` and `updated:` added to the model; on this page they are read from the notes at the fixture's commit. In the 3D view the curves, the fading and the glow are a few hundred lines of three.js beside what is there. The flat plan Deck draws when WebGL cannot start would need its own drawing of the links. Each would need the screen checks extended, and the window run TST-0093 repeated. **What it leaves open:**
 - A ticket with more than 40 links has its linked tickets outlined without their ids, so the picture stays readable; the pane lists them all.
 - Search matches ids and titles, not the notes' text.
-- The board shows the focus feature only. When the snapshot names no feature in focus, it says so and is empty.
+- The board shows the focus feature only. When the snapshot names no feature in focus, or the feature in focus does not stand on the ring, it says which and is empty.
 
 ## Answers proposed to DES-0004's open questions
 

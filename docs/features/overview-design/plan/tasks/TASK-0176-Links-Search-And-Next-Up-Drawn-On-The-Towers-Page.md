@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0176
 title: "Three of Rubric's ideas drawn on the towers page to judge: a selected ticket's links as curves with its card and text, search that lights the towers, and a next-up board"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-21
@@ -38,7 +38,7 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 - [x] TST-0094 checks that the links on the page agree with the fixture in both directions, and that the next-up board holds the focus feature's tasks.
 - [x] Pictures under `docs/designs/__attachments__/DES-0005/`: a ticket selected with its curves, a search lit, and the next-up board, on each workspace.
 - [x] DES-0005 shows the pictures under a heading of their own, says what building each into Deck would cost, and asks Edwin whether to build them.
-- [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+- [x] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
 
 ## Verification
 
@@ -65,6 +65,8 @@ Round one, 2026-10-21, two independent Claude reviewers (`model:claude-opus-5-5`
 - **The hover tip stayed on screen after a press** (B, not this task's). It goes now.
 
 Round two, 2026-10-21, two fresh independent Claude reviewers on `a101bb5`, one for the data and tests, one for the page. Page: approve; all five page findings fixed, shown with real presses and keys in hidden windows, and nothing that held in round one regressed (dimming restored, no leaks over 25 rounds, caps, collar, Home and views unchanged). It noted three small things, fixed after it: choosing a search match in another phase while a phase was close left the camera on that phase drawn almost invisible (now the whole ring comes back first); the search list ran under the right pane, because the header sat below it (the header now sits above); and a red cap replacing a selection was not written down (now it is, in DES-0005).
+
+Round two, data and tests: approve; every fix held, each shown by breaking it (21 breaks, with and without your-trainer). It noted that CI, which has only Deck's board, could not catch a wrong word or count for a task in progress, at review, cancelled or without room, since Deck's board has none of those. Fixed after it: the board's rules are `boardOf` in `overview-towers-notes.mjs`, tested on rows of their own that have each case, and breaking the review word, the counts or the cancelled rule now fails without your-trainer. Teams read as teams ("ios team", not "Ios"). DES-0005 names the board's message for a focus feature that is not on the ring. Three rules live only in the page's script and have no node test: every link drawn up to 240, search at word starts, and the empty board's message. They were checked in the hidden-window drives above.
 
 ## Acceptance checks reopened
 

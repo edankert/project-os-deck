@@ -63,15 +63,15 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0025"
-  task: "TASK-0176"
-  note: "2026-10-21: Edwin asked for Rubric's dashboard to be reviewed for ways of showing data (REFERENCE-RUBRIC-AGENTIC-OS-REVIEW). He agreed with all seven suggestions and asked for three first, drawn on the towers design page: a selected ticket's links as curves with its card and text, search that lights the towers, and a next-up board (TASK-0176). The other four wait in TASK-0177. Deck is not changed until he has tried the page. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: ""
+  note: "2026-10-21, last: Edwin asked for Rubric's dashboard to be reviewed for ways of showing data (REFERENCE-RUBRIC-AGENTIC-OS-REVIEW). He agreed with all seven suggestions and asked for three first. They are drawn on the towers design page (DES-0005-towers.html): a selected ticket's links as curves with its card and text, search that lights the towers, and a next-up board (TASK-0176, done, reviewed in two rounds by two Claude reviewers). Deck is not changed; DES-0005 asks Edwin whether to build them. The other four wait in TASK-0177. FEAT-0025 is back at review. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: doing
+      status: review
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
@@ -305,7 +305,7 @@ items:
   tasks:
     TASK-0176:
       file: docs/features/overview-design/plan/tasks/TASK-0176-Links-Search-And-Next-Up-Drawn-On-The-Towers-Page.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0177:
@@ -2624,7 +2624,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 168
-    tasks_done: 146
+    tasks_done: 147
     tests_total: 68
     tests_passing: 9
     tests_failing: 0
