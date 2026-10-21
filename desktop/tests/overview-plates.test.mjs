@@ -220,6 +220,31 @@ test('the towers page reads a note\'s first paragraph, owner and date', async ()
   assert.equal(lead('\n~~~\nnot prose\n~~~\nThe prose.\n'), 'The prose.', 'a tilde fence is code too');
 });
 
+// TASK-0176, review round two: the board's rules on rows of its own, because neither
+// fixture's focus feature has a task at review, and CI has only Deck's, whose board has
+// nothing in progress, nothing cancelled and nothing without room.
+test('the next-up board orders, names and counts a feature\'s tasks', async () => {
+  const { boardOf, ownerWord } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  const t = (id, status, state) => [id, 'task', 'open', 0, status, id, '', state];
+  const tasks = [
+    t('TASK-0001', 'done', 'closed'), t('TASK-0002', 'done', 'closed'), t('TASK-0003', 'done', 'closed'),
+    t('TASK-0004', 'cancelled', 'dropped'),
+    t('TASK-0005', 'backlog', 'open'), t('TASK-0006', 'review', 'progress'), t('TASK-0007', 'doing', 'progress'),
+    t('TASK-0008', 'doing', 'progress'), t('TASK-0009', 'backlog', 'open'), t('TASK-0010', 'planned', 'open'),
+  ];
+  const updated = { 'TASK-0001': '2026-10-20', 'TASK-0002': '2026-10-01', 'TASK-0003': '2026-10-21' };
+  const board = boardOf(tasks, 'TASK-0008', (id) => updated[id], 3);
+  assert.deepEqual(board.rows, [
+    { id: 'TASK-0001', kind: 'done' }, { id: 'TASK-0003', kind: 'done' },
+    { id: 'TASK-0008', kind: 'next' },
+    { id: 'TASK-0007', kind: 'doing' }, { id: 'TASK-0006', kind: 'review' }, { id: 'TASK-0005', kind: 'queued' },
+  ], 'the two finished last, oldest first; the next; then in progress, at review, waiting');
+  assert.deepEqual(board.more, { doing: 0, review: 0, queued: 2 }, 'what has no room is counted by kind');
+  assert.deepEqual([board.done, board.of], [3, 9], 'a cancelled task is not counted');
+  assert.deepEqual(boardOf(tasks, null, () => '', 1).more, { doing: 1, review: 1, queued: 3 }, 'without a next ticket, it waits with the rest');
+  assert.deepEqual(['system:claude', 'user:edwin', 'agent', 'team:ios', 'group:maintainers', 'unassigned', ''].map(ownerWord), ['Claude', 'Edwin', 'Agent', 'ios team', 'maintainers group', '', ''], 'owners in words');
+});
+
 // TASK-0163, review round one: the towers page reads which feature a ticket belongs to from
 // frontmatter written in every way the corpus writes it. Checked on small notes of its own,
 // because in the corpus a feature's own lists name the same tickets and would hide a miss.

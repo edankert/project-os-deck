@@ -132,3 +132,43 @@ export function relationsFrom(texts) {
   }
   return { parent, named, facts };
 }
+
+/**
+ * An owner as the board and the card show it (TASK-0176): a person or an agent by name
+ * ("Claude", "Edwin"), a team or group as one ("ios team"), nothing when unassigned.
+ */
+export function ownerWord(owner) {
+  const m = /^(system|user|agent|model|team|group):(.*)$/.exec(String(owner).trim());
+  const who = (m ? m[2] : String(owner)).trim();
+  if (who === '' || who === 'unassigned') return '';
+  if (m && (m[1] === 'team' || m[1] === 'group')) return `${who} ${m[1]}`;
+  return who.charAt(0).toUpperCase() + who.slice(1);
+}
+
+/**
+ * The next-up board's rows (TASK-0176), in the style of Rubric's routines, from a feature's
+ * task rows (`[id, type, fill, needs, status, title, say, state]`), the next ticket's id and
+ * each ticket's last update. A cancelled task is not counted. The last two finished are
+ * shown oldest first, then the next one, then up to `room` more: in progress, at review,
+ * then waiting, each by id. What has no room is counted by kind.
+ */
+export function boardOf(tasks, next, updatedOf, room = 6) {
+  const counted = tasks.filter((r) => r[7] !== 'dropped');
+  const byId = (a, b) => a[0].localeCompare(b[0], 'en', { numeric: true });
+  const done = counted.filter((r) => r[7] === 'closed').sort((a, b) => (updatedOf(b[0]) ?? '').localeCompare(updatedOf(a[0]) ?? '') || byId(b, a));
+  const kindOf = (r) => (r[4] === 'doing' ? 'doing' : r[4] === 'review' ? 'review' : 'queued');
+  const rank = { doing: 0, review: 1, queued: 2 };
+  const waiting = counted.filter((r) => r[7] !== 'closed' && r[0] !== next).sort((a, b) => rank[kindOf(a)] - rank[kindOf(b)] || byId(a, b));
+  const more = { doing: 0, review: 0, queued: 0 };
+  for (const r of waiting.slice(room)) more[kindOf(r)] += 1;
+  return {
+    done: done.length,
+    of: counted.length,
+    rows: [
+      ...done.slice(0, 2).reverse().map((r) => ({ id: r[0], kind: 'done' })),
+      ...(next !== null ? [{ id: next, kind: 'next' }] : []),
+      ...waiting.slice(0, room).map((r) => ({ id: r[0], kind: kindOf(r) })),
+    ],
+    more,
+  };
+}

@@ -26,7 +26,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { relationsFrom } from './overview-towers-notes.mjs';
+import { relationsFrom, ownerWord, boardOf } from './overview-towers-notes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.join(here, '..');
@@ -213,10 +213,6 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   for (const id of Object.keys(links)) links[id] = [...links[id]].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
 
   // What the page shows of a selected ticket: its first paragraph, who has it, when it last changed.
-  const ownerWord = (owner) => {
-    const who = String(owner).replace(/^(?:system|user|agent|model|team|group):/, '');
-    return who === '' || who === 'unassigned' ? '' : who.charAt(0).toUpperCase() + who.slice(1);
-  };
   const notes = {};
   for (const id of ids) {
     const f = facts.get(id);
@@ -229,30 +225,8 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   // each kind there are, and names the commit the data was read from.
   let queue = null;
   if (focusTower !== undefined) {
-    const tasks = focusTower.floors.filter((r) => r[1] === 'task' && r[7] !== 'dropped');
-    const fact = (id) => notes[id] ?? ['', '', ''];
-    const done = tasks.filter((r) => r[7] === 'closed').sort((a, b) => fact(b[0])[2].localeCompare(fact(a[0])[2]) || b[0].localeCompare(a[0], 'en', { numeric: true }));
-    const waiting = tasks.filter((r) => r[7] !== 'closed' && r[0] !== next);
-    const kindOf = (r) => (r[4] === 'doing' ? 'doing' : r[4] === 'review' ? 'review' : 'queued');
-    const rank = { doing: 0, review: 1, queued: 2 };
-    waiting.sort((a, b) => rank[kindOf(a)] - rank[kindOf(b)] || a[0].localeCompare(b[0], 'en', { numeric: true }));
-    const shown = waiting.slice(0, 6);
-    const more = { doing: 0, review: 0, queued: 0 };
-    for (const r of waiting.slice(6)) more[kindOf(r)] += 1;
-    const nextRow = next !== null ? [focusTower.f, ...focusTower.floors].find((r) => r[0] === next) ?? row(tickets[next]) : null;
-    queue = {
-      feature: focusTower.f[0],
-      done: done.length,
-      of: tasks.length,
-      rows: [
-        ...done.slice(0, 2).reverse().map((r) => ({ id: r[0], kind: 'done' })),
-        ...(nextRow ? [{ id: nextRow[0], kind: 'next' }] : []),
-        ...shown.map((r) => ({ id: r[0], kind: kindOf(r) })),
-      ],
-      more,
-      head: String(model.head).slice(0, 7),
-      generated: String(model.generated ?? '').slice(0, 10),
-    };
+    const board = boardOf(focusTower.floors.filter((r) => r[1] === 'task'), next, (id) => notes[id]?.[2]);
+    queue = { feature: focusTower.f[0], ...board, head: String(model.head).slice(0, 7), generated: String(model.generated ?? '').slice(0, 10) };
   }
 
   towersData[ws] = {
