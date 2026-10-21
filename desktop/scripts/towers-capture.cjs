@@ -28,7 +28,8 @@ app.whenReady().then(async () => {
   fs.mkdirSync(out, { recursive: true });
   for (const ws of workspaces) {
     for (const [name, view, phase] of VIEWS) {
-      const info = await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, ${JSON.stringify(view)}, ${phase ? 'window.__towers.focus.phase' : 'null'})`);
+      // Grouped by phase, whatever an earlier run left remembered in this profile.
+      const info = await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, ${JSON.stringify(view)}, ${phase ? `JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].focus.phase` : 'null'}, 'phase')`);
       await new Promise((r) => setTimeout(r, 1300));
       const image = await win.webContents.capturePage();
       const file = path.join(out, `towers-${ws}-${name}.jpg`);
@@ -44,13 +45,13 @@ app.whenReady().then(async () => {
     console.log(`towers-${ws}-byfeature.jpg: ${grouped.ring.length} features on the ring, ${grouped.drawn} tickets drawn; needs you ${panels.needs.count} (${panels.needs.keys.join(', ')}); ${panels.weeks.reduce((a, b) => a + b, 0)} closed this year; ${panels.ages} age badges; evidence ${panels.evidence.filter((e) => e.loaded).length} of ${panels.evidence.length} pictures loaded`);
     await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null, 'phase')`);
     // TASK-0176: a ticket selected with its links drawn, a search lit, and the next-up board.
-    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null)`);
+    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null, 'phase')`);
     const chosen = await win.webContents.executeJavaScript('window.__towersProbe.widest()');
     const picked = await win.webContents.executeJavaScript(`window.__towersProbe.select(${JSON.stringify(chosen)})`);
     await new Promise((r) => setTimeout(r, 1500));
     fs.writeFileSync(path.join(out, `towers-${ws}-linked.jpg`), (await win.webContents.capturePage()).toJPEG(84));
     console.log(`towers-${ws}-linked.jpg: ${chosen} with ${picked.links.length} links, ${picked.curves} curves; card "${String(picked.card).slice(0, 120)}"`);
-    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null)`);
+    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null, 'phase')`);
     const query = SEARCH[ws] ?? 'test';
     const found = await win.webContents.executeJavaScript(`window.__towersProbe.search(${JSON.stringify(query)})`);
     await new Promise((r) => setTimeout(r, 1300));
