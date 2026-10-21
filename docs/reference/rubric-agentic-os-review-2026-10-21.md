@@ -78,4 +78,4 @@ The arrangement is worth taking as well: one large picture in the middle and fiv
 Update this note when one of the seven is drawn, built or dropped, with the task that did it.
 
 - 2026-10-21: the first three are drawn on the towers page and reviewed ([[TASK-0176]], DES-0005's section "Links, search and next up on the towers"). Not built into Deck.
-- The other four: not yet drawn ([[TASK-0177]]).
+- 2026-10-21, later: the other four are drawn on the towers page and reviewed ([[TASK-0177]], DES-0005's section "Needs you, grouping by feature, ages and weeks"). Not built into Deck.

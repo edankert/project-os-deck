@@ -63,15 +63,15 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0025"
-  task: "TASK-0177"
-  note: "2026-10-21, late: Edwin liked the first three of Rubric's ideas on the towers page (TASK-0176) and asked for the next set. TASK-0177 draws the other four there: a needs-you panel, grouping by feature, age badges with a ring of recent evidence, and the year as weeks (REFERENCE-RUBRIC-AGENTIC-OS-REVIEW). Deck is not changed until Edwin has tried the page. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: ""
+  note: "2026-10-21, night: all seven of Rubric's ideas are drawn on the towers design page and reviewed in two rounds (TASK-0176, TASK-0177; REFERENCE-RUBRIC-AGENTIC-OS-REVIEW). Deck itself is not changed; DES-0005 asks Edwin whether to build them. FEAT-0025 is back at review. Edwin also asked how Deck should take on the cockpit's Claude and Codex terminals (T3 Code-style), Needs you and overview panels: a proposal for PHASE-0004 Parity is in chat, waiting on his decisions (which console approach, when, design page first). Eight new cockpit register rows were added to REFERENCE-COCKPIT-ADOPTION. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: doing
+      status: review
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
@@ -310,7 +310,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0177:
       file: docs/features/overview-design/plan/tasks/TASK-0177-Needs-You-Grouping-Ages-And-Weeks-Drawn-On-The-Towers-Page.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0175:
@@ -2624,7 +2624,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 168
-    tasks_done: 147
+    tasks_done: 148
     tests_total: 68
     tests_passing: 9
     tests_failing: 0

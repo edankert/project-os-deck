@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0177
 title: "The other four of Rubric's ideas drawn on the towers page: a needs-you panel, grouping by phase or by feature, age badges with a ring of recent evidence, and the year as weeks"
-status: doing
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-21
@@ -35,7 +35,7 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 - [x] Each of the four is drawn on the page from the fixtures, the notes and the pictures beside them, with nothing entered by hand.
 - [x] TST-0094 checks what each draws against the fixture.
 - [x] Pictures of each, on both workspaces, are in DES-0005 with the question whether to build them.
-- [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+- [x] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
 
 ## Verification
 
@@ -54,6 +54,10 @@ Round one, 2026-10-21, two independent Claude reviewers (`model:claude-opus-5-5`
 - **The weeks left 49 undated closed tickets out silently** (data); they are counted under the squares. That a picture changed since the commit is shown as it is today, and that the year's last days fold into week 52, is now said in DES-0005.
 - **At 1100 wide the header wrapped onto the legend and the card** (page). The panels now start below the header however tall it is, and the title gives way below 1280 px.
 - **A press on the needs-you bar opened the search list over the bar** (page). A press on a panel lights its tickets without the list; only a typed search lists.
-- **Each regroup left the old scene on the graphics card** (page): 416 textures grew to 5,376 over 40 regroups. The old scene is freed; over 20 regroups the counts stay at 254 geometries and 180 textures.
+- **Each regroup left the old scene on the graphics card** (page): 416 textures grew to 5,376 over 40 regroups. The old scene's geometries, materials and textures are freed; over 20 regroups the counts stay at 254 geometries and 180 textures. (Round two found the instanced meshes' own buffers still kept; see below.)
 - **Evidence pictures fell off-screen, crowded the middle when zoomed out, and swallowed the wheel** (page). The ring stands closer, a far picture shrinks further, and a wheel turn over a picture zooms the view. A drag that starts on a picture still does not turn it.
 - **Phase words were left grouped by feature** (page): the card's Phase now names the ticket's own phase, and the tip counts a feature's tickets. An age badge stands higher, clear of the names.
+
+Round two, 2026-10-21, two fresh independent Claude reviewers on `e0c9a91`. Data and tests: approve; the four breaks fail TST-0094 with and without your-trainer, the `evidence:` field and the link forms land on the right tickets on both corpora, and every number in DES-0005 holds. Its small notes were fixed after it: the weeks are `weeksOf`, tested on dates of its own, so CI catches a lost undated count, a wrong current week or a changed year-end fold (each broken once to see it fail); an `evidence:` list item keeps its spaces; a link inside a code block claims no picture; a test comment that overstated what the picture dates check was corrected.
+
+Page: changes requested, on two of the five fixes. **The panels' top was worked out only when the window resized**, so at 1100 wide a wheel turn (which shows Home) or a phase brought close (‹ The ring) grew the header to 97 px and the search box sat on the legend and the card again. The header is now watched for any change of height. Driven again at 1100 with a wheel turn, a phase close and a ticket selected: the header 97 px, the card from 103 px, the pane's text from 107 px. **Regrouping still kept each instanced mesh's own buffers**, which the memory probe does not count: about 162 more per regroup. Each instanced mesh is now disposed; counted at the WebGL call, buffers stay at 498 over 40 regroups. Also fixed: a typed search's list stops short of the needs-you panel, and pictures shrink further when the view is zoomed out. A review gate runs two rounds at most, so these two fixes were checked by the author in the same hidden-window drives, not by a third round; the verdict stays the reviewer's.
