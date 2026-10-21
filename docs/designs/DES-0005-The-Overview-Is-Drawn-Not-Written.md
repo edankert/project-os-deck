@@ -255,6 +255,38 @@ A search for "heart rate" on your-trainer: 29 matches, in four phases of the rin
 - Search matches ids and titles, not the notes' text.
 - The board shows the focus feature only. When the snapshot names no feature in focus, or the feature in focus does not stand on the ring, it says which and is empty.
 
+## Needs you, grouping by feature, ages and weeks, the other four ideas from Rubric
+
+**The towers page now also draws the other four ideas taken from Rubric: a needs-you panel, a switch to group the ring by feature, age badges with a ring of recent evidence, and the year as weeks** ([[TASK-0177]], 2026-10-21). Edwin asked for them after trying the first three. Deck is not changed.
+
+- **A needs-you panel, top right.** A large count of the tickets that need you, then one bar split by the cockpit's reasons: failed, to review, to decide (triage), to run (a test never run) and waiting. The first three tickets follow as cockpit rows, the most urgent reason first. Pressing a part of the bar, or its word, lights those tickets on the ring as a search does; pressing a row selects its ticket.
+- **By phase, or by feature.** A switch in the header regroups the ring. By feature, each unfinished feature is a segment with its tickets as one tower, whatever phase they are in, and the feature in focus faces you. Finished features stand on the shelf, and tickets of no feature lie in the core. Each segment's name is smaller than a phase's, since there are many more of them. The page remembers the choice in this browser.
+- **Age badges.** A tower whose tickets have not changed for 14 days or more carries "◷ 34 d": the days from its newest change to the date the data was read, which is the fixture's date, not today. The card gives the same count for one ticket. "◷ Ages" in the header hides and shows them.
+- **A ring of recent evidence**, outside the shelf: up to eighteen of the newest pictures kept beside the notes, at most three for one ticket, each on a post with its ticket's id and date. A picture belongs to the note that links to it, else to the ticket its file name names, else to the feature whose folder holds it; its date is its last commit. Pressing one selects its ticket. The pictures are the files themselves, so the page shows them only where the repositories sit side by side, as here.
+- **The year as weeks, bottom right**: four rows of thirteen squares, each filled by the tickets closed that week, the week the data was read outlined and the weeks after it faint. A ticket's closing week is the last update of its note. Pressing a week lights the tickets closed in it.
+- The two panels on the right give way to the right pane when it opens.
+
+![Deck grouped by feature](__attachments__/DES-0005/towers-deck-byfeature.jpg)
+
+Deck grouped by feature: the 15 unfinished features stand on the ring, FEAT-0028 in focus at the front, and 147 tickets of no feature lie in the core. The needs-you panel counts 12: 5 to review, 1 to run and 6 waiting. The year shows 298 tickets closed in 2026, the busiest week the 36th. The evidence ring holds eight pictures: three each of DES-0005 and DES-0004, two of DES-0003.
+
+![Deck as the page opens, with the panels round the towers](__attachments__/DES-0005/towers-deck-home.jpg)
+
+Deck by phase, as the page opens, with every panel round the towers. One tower carries an age badge: FEAT-0016 in Glass, quiet for 34 days.
+
+![your-trainer grouped by feature](__attachments__/DES-0005/towers-your-trainer-byfeature.jpg)
+
+your-trainer grouped by feature: 51 unfinished features on the ring and 1,520 tickets of no feature in the core. 75 tickets need you: 5 to decide, 9 to run and 61 waiting. 1,478 tickets closed in 2026, most in week 24.
+
+![your-trainer as the page opens](__attachments__/DES-0005/towers-your-trainer-home.jpg)
+
+your-trainer by phase: 41 towers carry age badges, the quietest FEAT-0025 and FEAT-0028 in the backlog phase at 235 and 233 days. The evidence ring holds eighteen pictures, from DES-0006, DES-0005, FEAT-0112, FEAT-0129 and six issues.
+
+**What building them into Deck would cost.** The needs-you panel needs nothing new: each ticket's reason is already in Deck's overview model. Grouping by feature uses the feature each ticket already carries (FEAT-0026). Age badges and the weeks need each note's `updated:` in the model, which TASK-0176's board needs as well. The evidence ring needs a new read: the pictures beside the notes and their dates, which the sidecar does not list today; Deck would serve them read-only, like the notes. **What it leaves open:**
+- A ticket's closing week is its note's last update, which can be later than the day it closed.
+- Ages are counted to the fixture's date on this page; in Deck they would count to today.
+- Pictures not linked from a note and not named after a ticket count only when they lie in a feature's folder; the marketing pictures in your-trainer belong to no ticket and are left out.
+
 ## Answers proposed to DES-0004's open questions
 
 1. **A backlog phase** is marked with `kind: backlog` in its note. When the note says nothing, an id ending in 999 is read as backlog, so your-trainer's PHASE-999 works today.
@@ -266,7 +298,8 @@ A search for "heart rate" on your-trainer: 29 matches, in four phases of the rin
 
 - Whether to build Level 2, the 3D wheel where height is time, into Deck, after looking at its page. It would replace or sit beside the constellation.
 - ~~Whether to build the towers on the ring into Deck.~~ Decided 2026-10-16: "I like the design page, please implement as suggested", with a different design for the exit criteria (the collar) and the red caps pressable. Built in [[TASK-0164]] to [[TASK-0168]]; three.js is [[RISK-0010]].
-- Whether to build the links as curves, search on the ring, and the next-up board into Deck, after trying them on the towers page ([[TASK-0176]]). The other four of Rubric's ideas are drawn next on the same page ([[TASK-0177]]).
+- Whether to build the links as curves, search on the ring, and the next-up board into Deck, after trying them on the towers page ([[TASK-0176]]).
+- Whether to build the needs-you panel, grouping by feature, age badges, the evidence ring and the weeks into Deck ([[TASK-0177]]), and whether the ring should open grouped by phase or by feature.
 
 - Accept or decline this design.
 - Whether S5's fanned plates should be drawn as outlines only: behind a busy plate they compete with it.

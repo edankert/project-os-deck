@@ -14,7 +14,7 @@ due: ""
 depends: ["[[TASK-0176]]"]
 blocks: []
 related: ["[[REFERENCE-RUBRIC-AGENTIC-OS-REVIEW]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[TASK-0176]]"]
-tests: []
+tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]]"]
 ---
 
 # Needs-you panel, grouping, ages and weeks drawn on the towers page
@@ -32,7 +32,15 @@ tests: []
 
 ## Definition of Done
 
-- [ ] Each of the four is drawn on the page from the fixtures, the notes and the pictures beside them, with nothing entered by hand.
-- [ ] TST-0094 checks what each draws against the fixture.
-- [ ] Pictures of each, on both workspaces, are in DES-0005 with the question whether to build them.
+- [x] Each of the four is drawn on the page from the fixtures, the notes and the pictures beside them, with nothing entered by hand.
+- [x] TST-0094 checks what each draws against the fixture.
+- [x] Pictures of each, on both workspaces, are in DES-0005 with the question whether to build them.
 - [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+
+## Verification
+
+`desktop/scripts/overview-towers.mjs` adds to each workspace: why each ticket needs you (a ninth column of its row), the date the data was read, the ring grouped by feature (ids only; the page takes the rows from the phase grouping), and the evidence pictures. `evidenceFrom` in `overview-towers-notes.mjs` picks the pictures from `git ls-tree` and `git log` at the fixture's commit, keeping those still in the working tree. Deck: 15 features on the ring, 14 on the shelf, 147 tickets in the core, 8 pictures, 12 need you (5 to review, 1 to run, 6 waiting), 298 closed in 2026, one age badge (FEAT-0016, 34 days). your-trainer: 51, 84 and 1,520; 18 pictures; 75 need you (5 to decide, 9 to run, 61 waiting); 1,478 closed; 41 age badges. The page grew to 1.75 MB.
+
+TST-0094 checks every ticket's reason against the fixture, the data's date, every ticket exactly once grouped by feature, the ring as the unfinished features, a feature's tower and segment holding the same tickets, and the pictures (tickets of the fixture, newest first, at most three each and eighteen in all, each file where the page looks). `evidenceFrom` is tested on small notes and files of its own: by a relative link, a wiki link, a name and a folder, newest first, one per ticket, the linking note first. Breaking four of the guards made it fail: four pictures for one ticket, the folder rule lost, the reason column emptied, finished features on the ring. `cd desktop && npm test`: 795 tests, 795 passed.
+
+In a hidden window the page logged no errors and was driven with real presses: the grouping switch both ways, "◷ Ages" off and on, "to review" in the needs-you panel (5 lit), week 37 (72 lit), a needs-you row (selected, the right panels giving way to the pane), Escape, and an evidence picture (its ticket selected). Pictures: `towers-<workspace>-byfeature.jpg`, and the opening views again with the panels.
