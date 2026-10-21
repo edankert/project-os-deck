@@ -132,7 +132,8 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         const members = new Map([...bf.ring.map((f) => [f.id, f.floors]), ...bf.shelf.map((f) => [f.id, f.tickets.slice(1)])]);
         for (const [f, list] of members) {
           const newest = [f, ...list].map(updated).reduce((a, b) => (b > a ? b : a), '');
-          assert.equal(w.ages[f], newest === '' ? undefined : Math.round((Date.parse(w.dataDate) - Date.parse(newest)) / DAY), `${ws}: ${f} quiet for the days since its newest change`);
+          // Never below 0: a clone without the fixture's commit reads today's notes, which can be newer than the data (CI's shallow clone).
+          assert.equal(w.ages[f], newest === '' ? undefined : Math.max(0, Math.round((Date.parse(w.dataDate) - Date.parse(newest)) / DAY)), `${ws}: ${f} quiet for the days since its newest change`);
         }
         assert.deepEqual(w.badged, bf.ring.map((f) => f.id).filter((f) => w.ages[f] >= 14), `${ws}: an unfinished feature quiet for 14 days or more, and only those, carries a badge`);
         const closed = Object.entries(fixtureModel.tickets).filter(([, t]) => t.state === 'closed').map(([id]) => id);
