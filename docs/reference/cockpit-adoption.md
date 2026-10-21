@@ -6,7 +6,7 @@ title: "Cockpit adoption table: which of project-os-cockpit's capabilities Deck 
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-10-14
+updated: 2026-10-21
 scope: "project"
 source:
   - "project-os-cockpit, docs/reference/cockpit-capability-register.md at baseline 570da22 ([[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]])"
@@ -27,7 +27,7 @@ Deck is built beside project-os-cockpit and shares its sidecar. The cockpit stay
 
 The cockpit's rule, mirrored here: a change note there that adds, changes or retires capability updates its register in the same commit. Deck's rule: when a new row appears there, it appears here as `not yet` with the date, and grooming decides.
 
-**Read against:** cockpit register at `d1df13c`, 2026-10-02. The six rows adopted for FEAT-0029 were checked again at `032a6f8` on 2026-10-14.
+**Read against:** cockpit register at `d1df13c`, 2026-10-02; re-read at `541bba6` on 2026-10-21 for the eight keys that arrived since. The six rows adopted for FEAT-0029 were checked again at `032a6f8` on 2026-10-14.
 
 **Positions last moved 2026-10-14.** FEAT-0029 adopts six rows for the exact S5–S7 uses stated below. Code and node tests establish these paths; Edwin's three acceptance walks remain pending. The cockpit still refuses feature status transitions and does not prove every person-only agent guard. RISK-0009 records those limits.
 
@@ -57,6 +57,8 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.workspaces.rail` | adopted | 2026-09-06: the rail lists the workspaces Deck knows and opens one |
 | `shell.workspaces.discovery` | adopted | 2026-09-06: the `SNAPSHOT.yaml` marker, with `.obsidian` already recognised as the vault kind so [[PHASE-0003-Vault]] adds a branch rather than a concept |
 | `shell.fleet.rollup` | not yet | |
+| `shell.fleet.needs-elsewhere` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: how many things need the person in each other project, kept per workspace with when it was counted |
+| `shell.home-draft` | not yet | registered in the cockpit on 2026-10-13, read here 2026-10-21: a small always-on-top Home window, one row per project with its session's state, what is owed and its phases |
 | `shell.nav.modes` | adopted | 2026-09-06: Deck's project-os view provider offers the same seven views, pinned to a fixture read off the cockpit's navigator; the renderer takes the list from the provider and holds no view names (Edwin, 2026-09-06) |
 | `shell.nav.needs-you` | adopted | 2026-09-07: the navigator draws the sidecar's own "Needs you" group first, and the owed verb appears on the row and on the card ([[TASK-0023-The-Groups-The-Sidecar-Sends-Are-Drawn]]). A popped-out window can carry that group alone, which is the status window ([[TASK-0026-A-Popped-Out-Window-Carries-One-Panel]]). The front plane in Glass is still [[PHASE-0002-Glass]] |
 | `shell.nav.platform` | not yet | |
@@ -88,6 +90,11 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `shell.agents.strip` | not yet | |
 | `shell.agents.usage` | not yet | registered in the cockpit on 2026-09-16, read here 2026-10-02: account usage bars at the sidebar's foot |
 | `shell.agents.codex` | not yet | registered in the cockpit on 2026-09-25, read here 2026-10-02: Codex in the embedded terminal reports to the rail dot, the agent strip and Needs you |
+| `shell.agents.claude-plugin` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: Claude Code in the embedded terminal reports to the rail dot, the agent strip and Needs you through a plugin loaded from `CLAUDE_CODE_PLUGIN_DIRS`. Matters to the agent sessions proposed for [[PHASE-0004-Parity]] |
+| `shell.agents.permission-answer` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: a Claude permission prompt appears at the top of Needs you and is answered from its own card; the answer needs the sidecar's shell secret, which Deck's sidecar does not get today |
+| `shell.agents.project-line` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: the line above a cockpit Claude prompt says how many things need the person here and in other projects |
+| `shell.agents.open-in-cockpit` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: the project line's Open in cockpit button |
+| `shell.agents.prompt-commands` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: `/cockpit-needs` and `/cockpit-release` in a cockpit Claude terminal open a pane without starting a turn |
 | `shell.agents.attention` | not yet | |
 | `shell.agents.approvals` | not yet | |
 | `shell.agents.follow` | not yet | 2026-09-10: half of it. A served page has a Follow the Mac toggle that shows the note the shell has focused (TASK-0057), which is the cockpit's toggle pointed at a different leader. Following an AGENT's navigation, and `cockpit focus` landing in Deck, are not built |
@@ -108,6 +115,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 | `api.read.record` | adopted | 2026-09-06: the stats payload only, which is what the overview view draws |
 | `api.read.check-history` | adopted | 2026-10-02: `GET /api/cockpit/acceptance?platform=<p>`, read through Deck's own host, which forwards it for GET and HEAD and refuses every other method. The evidence panel of a Glass document shows each acceptance check's standing verdict and opens its history ([[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], [[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]). 2026-10-14: S7 also reads union standings and dated automated methods; S6 now records results through the separate shell write path. |
 | `api.read.obligations` | adopted | 2026-10-14: adopted for two of this row's seven routes: `/api/cockpit/obligations` and `/api/cockpit/acceptance?platform=all` in S7. Per-feature criteria come from the separate note read `/api/notes/acceptance?id=…`. Aggregate badges never certify a feature's evidence. Other obligation routes remain unadopted. |
+| `api.read.line` | not yet | registered in the cockpit on 2026-10-14, read here 2026-10-21: the project line's data in one answer (needs-you total, kinds with their verbs, the focus item) |
 | `api.read.release-test` | adopted | 2026-10-14: S6 reads `/api/cockpit/release-test?platform=<p>&release=<REL>` through Deck's GET/HEAD host. It preserves printed steps separately from test-note results. Recorded Android and iOS payloads cover REL-0017. |
 | `api.read.vocabulary` | not yet | new in the cockpit on 2026-09-20, read here 2026-10-02: the status bands, severities and callout types as data. The cockpit's register says Deck can drop `desktop/src/shared/statuses.ts` and its recorded fixture and read these instead |
 | `api.read.agents` | not yet | |
@@ -122,6 +130,7 @@ The cockpit's rule, mirrored here: a change note there that adds, changes or ret
 
 ## Maintenance
 
+- 2026-10-21 — **no row moved; eight keys arrived.** The register was re-read at `541bba6`: `shell.agents.claude-plugin`, `shell.agents.permission-answer`, `shell.agents.project-line`, `shell.agents.open-in-cockpit`, `shell.agents.prompt-commands`, `shell.fleet.needs-elsewhere`, `shell.home-draft` and `api.read.line` are added as `not yet`. Found while reviewing how Deck could take on the cockpit's agent terminals, Needs you and overview panels, which Edwin asked about on 2026-10-21.
 - 2026-10-02 — **one row moved to `adopted` and six keys arrived.** `api.read.check-history` is adopted by [[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], and `api.read.obligations` gains a sentence because the same route sits under both keys in the cockpit's register (ADR-0008, fourth open thread). The register was re-read at `d1df13c` and compared key by key: 62 keys there, 56 here. The six this table did not carry are added as `not yet`: `shell.pages.release-test`, `api.read.release-test` and `cli.release-test` (2026-09-27, the cockpit's release test, which replaced its walk page), `api.read.vocabulary` (2026-09-20), `shell.agents.usage` (2026-09-16) and `shell.agents.codex` (2026-09-25). No key this table carries has left the register. The table had not been re-read since 2026-09-09, which is the drift the maintenance rule below is meant to prevent.
 
 - 2026-09-09 — **two keys arrived and were added as `not yet`, which is the first time this table has grown because the cockpit grew rather than because a decision changed.** The cockpit is at `11ded07` and has landed one change note since the last read, `CHG-20260908-Preparing-A-Release-Is-One-Workflow`, which added `shell.pages.release.settle` and `shell.pages.release.coverage` (FEAT-0145, ADR-0041). Both are release-page work and Deck has no release page, so both arrive with `shell.pages.release` when that row moves. Compared mechanically rather than by eye: the register lists 57, this table now carries 57, and neither side holds a key the other lacks. No row moved position. `shell.reader.actuators` stays `not yet` although [[FEAT-0013-The-First-Write]] built it — the row's own condition is that the transition is WALKED in [[TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit]], and nobody has walked it. `api.write.notes` stays `not yet` for the same reason.
