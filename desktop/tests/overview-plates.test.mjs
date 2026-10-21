@@ -120,6 +120,35 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       for (const t of w.ring.flatMap((p) => p.towers)) {
         if (segment.has(t.f[0])) for (const r of t.floors) assert.ok(segment.get(t.f[0]).has(r[0]), `${ws}: ${r[0]} stands in ${t.f[0]}'s tower and in its segment`);
       }
+      // What needs you, by reason: the fixture's tickets that need you, each under its reason, by id.
+      const reasons = ['failed', 'review', 'triage', 'ready', 'waiting'];
+      assert.deepEqual(Object.keys(w.needs), reasons, `${ws}: the reasons, the most urgent first`);
+      const byId = (a, b) => a.localeCompare(b, 'en', { numeric: true });
+      for (const k of reasons) assert.deepEqual(w.needs[k], Object.entries(fixtureModel.tickets).filter(([, t]) => t.needsYou && (reasons.includes(t.needs?.reason) ? t.needs.reason : 'waiting') === k).map(([id]) => id).sort(byId), `${ws}: the tickets ${k}`);
+      // The rest needs the notes' dates.
+      if (w.notesFrom !== 'none') {
+        const DAY = 86400000;
+        const updated = (id) => w.notes[id]?.[2] ?? '';
+        const members = new Map([...bf.ring.map((f) => [f.id, f.floors]), ...bf.shelf.map((f) => [f.id, f.tickets.slice(1)])]);
+        for (const [f, list] of members) {
+          const newest = [f, ...list].map(updated).reduce((a, b) => (b > a ? b : a), '');
+          assert.equal(w.ages[f], newest === '' ? undefined : Math.round((Date.parse(w.dataDate) - Date.parse(newest)) / DAY), `${ws}: ${f} quiet for the days since its newest change`);
+        }
+        assert.deepEqual(w.badged, bf.ring.map((f) => f.id).filter((f) => w.ages[f] >= 14), `${ws}: an unfinished feature quiet for 14 days or more, and only those, carries a badge`);
+        const closed = Object.entries(fixtureModel.tickets).filter(([, t]) => t.state === 'closed').map(([id]) => id);
+        const inYear = closed.filter((id) => updated(id).startsWith(w.weeks.year));
+        assert.equal(w.weeks.closed.flat().length, inYear.length, `${ws}: every ticket closed in the year is in a week`);
+        assert.equal(w.weeks.undated, closed.filter((id) => updated(id) === '').length, `${ws}: closed tickets with no date are counted apart`);
+        for (const id of inYear.slice(0, 50)) {
+          const week = Math.min(51, Math.floor((Date.parse(updated(id)) - Date.parse(`${w.weeks.year}-01-01`)) / DAY / 7));
+          assert.ok(w.weeks.closed[week].includes(id), `${ws}: ${id}, updated ${updated(id)}, is in week ${week + 1}`);
+        }
+        // Each picture's date is its last commit at the fixture's commit, where this clone has it.
+        const root = ws === 'deck' ? path.join(desktopRoot, '..') : null;
+        if (root !== null && spawnSync('git', ['-C', root, 'cat-file', '-e', `${fixtureModel.head}^{commit}`]).status === 0) {
+          for (const e of w.evidence) assert.equal(e.date, spawnSync('git', ['-C', root, 'log', '-1', '--format=%cs', fixtureModel.head, '--', e.path], { encoding: 'utf-8' }).stdout.trim(), `${ws}: ${e.path} is dated by its last commit`);
+        }
+      }
       // The ring of recent evidence: tickets of the fixture, newest first, at most three each and eighteen in all, each file there.
       assert.ok(w.evidence.length <= 18, `${ws}: at most eighteen pictures`);
       assert.ok(w.evidence.every((e) => fixtureModel.tickets[e.id] !== undefined), `${ws}: each picture belongs to a ticket`);
@@ -271,6 +300,28 @@ test('the ring of recent evidence ties each picture to a ticket and keeps the ne
     ['FEAT-0002', 'b.png'], ['TST-0004', 'tst-4-before.png'], ['ISS-0003', 'shot.webp'], ['DES-0001', 'run one.jpg'],
   ], 'newest first; by the folder, by the name, by a wiki link and by a relative link; one per ticket; a picture of no ticket and a file that is not a picture left out');
   assert.equal(evidenceFrom([img('docs/designs/__attachments__/plate.png', '2026-10-01')], notes, tickets)[0].id, 'DES-0001', 'the linking note wins');
+  // Review of TASK-0177: the note that names a picture wins over a ticket its file name
+  // names and over a feature's folder; the evidence: field counts, written from the
+  // workspace or from the note; a wiki link by name only when the name is unique; a lone %
+  // in a link does not stop the run.
+  const more = [
+    note('docs/tests/TST-0004-t.md', 'TST-0004', ''),
+    { path: 'docs/tests/TST-0005-u.md', text: '---\nid: TST-0005\nevidence:\n  - "../features/glass/evidence/run.png"\n  - docs/issues/evidence/iss-3-shot.png\n---\n![bad](100%.png) [s](<shots/my shot.png>)' },
+    note('docs/designs/DES-0001-A.md', 'DES-0001', '![[dup.png]] ![[__attachments__/deep.png]]'),
+    note('docs/features/glass/FEAT-0002-Glass.md', 'FEAT-0002'),
+  ];
+  const owners = evidenceFrom([
+    img('docs/features/glass/evidence/run.png', '2026-10-09'),
+    img('docs/issues/evidence/iss-3-shot.png', '2026-10-08'),
+    img('docs/tests/shots/my shot.png', '2026-10-07'),
+    img('docs/designs/a/dup.png', '2026-10-06'),
+    img('docs/designs/b/dup.png', '2026-10-05'),
+    img('docs/designs/__attachments__/deep.png', '2026-10-04'),
+    img('docs/issues/evidence/deep.png', '2026-10-03'),
+  ], more, new Set(['TST-0004', 'TST-0005', 'DES-0001', 'FEAT-0002', 'ISS-0003']), { perTicket: 9 });
+  assert.deepEqual(owners.map((e) => [e.path.split('/').slice(-2).join('/'), e.id]), [
+    ['evidence/run.png', 'TST-0005'], ['evidence/iss-3-shot.png', 'TST-0005'], ['shots/my shot.png', 'TST-0005'], ['__attachments__/deep.png', 'DES-0001'],
+  ], 'the evidence: field and links win over the folder and the name; a name two pictures share claims neither; a wiki path claims only its own file');
 });
 
 // TASK-0176, review round two: the board's rules on rows of its own, because neither

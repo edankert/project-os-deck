@@ -180,43 +180,81 @@ const TICKET_IN_NAME = /(?<![a-z0-9])(feat|task|tst|iss|des|req|risk|adr)-(\d{1,
  * The ring of recent evidence (TASK-0177): the pictures kept beside the notes, each tied to
  * a ticket and dated, newest first, at most `perTicket` for one ticket and `limit` in all.
  * `images` are `{ path, date }` (repository-relative, the date of the file's last commit);
- * `notes` are `{ path, text }`. A picture belongs to the note that links to it, else to the
- * ticket its file name names, else to the feature whose folder holds it; only tickets in
- * `tickets` count, and a picture with none of the three is left out.
+ * `notes` are `{ path, text }`. A picture belongs to the note that names it (its `evidence:`
+ * field, a Markdown link, or a wiki link by path, or by name when no other picture has that
+ * name), else to the ticket its file name names, else to the feature whose folder holds it;
+ * only tickets in `tickets` count, and a picture with none of these is left out.
  */
 export function evidenceFrom(images, notes, tickets, { perTicket = 3, limit = 18 } = {}) {
   const posix = (p) => p.split('\\').join('/');
+  // A segment that will not decode (a lone `%`) is kept as written, so one odd link cannot
+  // stop the page being written (review of TASK-0177).
+  const decode = (seg) => {
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  };
+  /** A link from a note to a file: `docs/...` and `/...` from the workspace, anything else from the note's folder. */
   const resolve = (from, link) => {
-    const parts = posix(from).split('/').slice(0, -1);
-    for (const seg of decodeURI(link).split('/')) {
+    const target = link.trim().replace(/^<|>$/g, '').replace(/[#?].*$/, '');
+    const fromRoot = target.startsWith('docs/') || target.startsWith('/');
+    const parts = fromRoot ? [] : posix(from).split('/').slice(0, -1);
+    for (const seg of target.replace(/^\//, '').split('/').map(decode)) {
       if (seg === '..') parts.pop();
       else if (seg !== '.' && seg !== '') parts.push(seg);
     }
     return parts.join('/');
   };
-  const idOf = (text) => /^id:\s*["']?([A-Z]+-\d+)["']?\s*$/m.exec(/^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '')?.[1];
+  const frontmatter = (text) => /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '';
+  const idOf = (text) => /^id:\s*["']?([A-Z]+-\d+)["']?\s*$/m.exec(frontmatter(text))?.[1];
+  // A wiki link by name alone claims a picture only when no other picture has that name.
+  const nameCount = new Map();
+  for (const { path: p } of images) {
+    const name = posix(p).split('/').pop();
+    nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+  }
   const byPath = new Map();
+  const bySuffix = new Map();
   const byName = new Map();
   const featureOfFolder = new Map();
+  const claim = (map, key, id) => {
+    if (!map.has(key)) map.set(key, id);
+  };
   for (const { path: p, text } of notes) {
     const id = idOf(text);
     if (id === undefined || !tickets.has(id)) continue;
     const m = /^docs\/features\/([^/]+)\/FEAT-\d+[^/]*\.md$/.exec(posix(p));
     if (m && id.startsWith('FEAT-')) featureOfFolder.set(m[1], id);
-    for (const link of text.matchAll(/\]\(([^)\s]+)\)/g)) {
-      const target = link[1].replace(/#.*$/, '');
-      if (IMAGE.test(target) && !/^[a-z]+:/i.test(target) && !byPath.has(resolve(p, target))) byPath.set(resolve(p, target), id);
+    // The note's `evidence:` field, as your-trainer lists a test's or an issue's pictures.
+    const field = new RegExp('^evidence:(.*)((?:\\r?\\n[ \\t]*-.*)*)', 'm').exec(frontmatter(text));
+    if (field) {
+      const value = field[1] + field[2];
+      for (const q of value.matchAll(/["']([^"']+)["']|([^\s"'\[\],]+)/g)) {
+        const target = (q[1] ?? q[2]).replace(/^-\s*/, '');
+        if (IMAGE.test(target.replace(/[#?].*$/, ''))) claim(byPath, resolve(p, target), id);
+      }
     }
-    for (const link of text.matchAll(/!\[\[([^\]|]+)/g)) {
-      const name = link[1].split('/').pop();
-      if (IMAGE.test(name) && !byName.has(name)) byName.set(name, id);
+    // Markdown links and pictures in the body, angle-bracketed ones with spaces included.
+    for (const link of text.matchAll(/\]\(\s*(<[^>]+>|[^)\s]+)/g)) {
+      const target = link[1];
+      if (IMAGE.test(target.replace(/^<|>$/g, '').replace(/[#?].*$/, '')) && !/^<?[a-z]+:/i.test(target)) claim(byPath, resolve(p, target), id);
+    }
+    // Wiki links, embedded or not: by their path when they give one, else by name.
+    for (const link of text.matchAll(/\[\[([^\]|#]+)/g)) {
+      const target = posix(link[1].trim());
+      if (!IMAGE.test(target)) continue;
+      if (target.includes('/')) claim(bySuffix, target.replace(/^\/+/, ''), id);
+      else claim(byName, target, id);
     }
   }
   const owner = (p) => {
     const path = posix(p);
     const name = path.split('/').pop();
     if (byPath.has(path)) return byPath.get(path);
-    if (byName.has(name)) return byName.get(name);
+    for (const [suffix, id] of bySuffix) if (path === suffix || path.endsWith('/' + suffix)) return id;
+    if (byName.has(name) && nameCount.get(name) === 1) return byName.get(name);
     const named = TICKET_IN_NAME.exec(name);
     if (named) {
       const id = `${named[1].toUpperCase()}-${named[2].padStart(4, '0')}`;

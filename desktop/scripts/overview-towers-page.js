@@ -324,8 +324,22 @@ let world = new THREE.Group();
 scene.add(world);
 let state = null; // what is drawn: the workspace, its phases' groups, the sizes
 
+/** Frees what a scene holds on the graphics card: rebuilding for a regroup must not pile it up (review of TASK-0177). */
+function dispose(root) {
+  root.traverse((o) => {
+    o.geometry?.dispose?.();
+    for (const m of [o.material].flat()) {
+      if (!m) continue;
+      m.map?.dispose?.();
+      m.alphaMap?.dispose?.();
+      m.dispose?.();
+    }
+  });
+}
+
 function build(ws) {
   scene.remove(world);
+  dispose(world);
   world = new THREE.Group();
   scene.add(world);
   labels.length = 0;
@@ -457,10 +471,10 @@ function build(ws) {
       tallest = Math.max(tallest, top - h);
       // An age badge when the tower's tickets have not changed for 14 days (TASK-0177),
       // counted to the date the data was read.
-      const quiet = quietDays([tower.f, ...tower.floors].map((r) => r[ID]));
-      if (quiet !== null && quiet >= 14 && tower.f[STATE] !== 'closed' && tower.f[STATE] !== 'dropped') {
+      const quiet = d.ages[tower.f[ID]] ?? null;
+      if (d.badged.includes(tower.f[ID])) {
         const badge = label('◷ ' + quiet + ' d', 1.2, '#f2c879', 700);
-        badge.position.set(centre.x, top + 1.7, centre.z);
+        badge.position.set(centre.x, top + 2.6, centre.z);
         badge.visible = showAges;
         content.add(badge);
         ageTags.push(badge);
@@ -566,7 +580,7 @@ function build(ws) {
 
   // The ring of recent evidence (TASK-0177): a post for each picture, outside the shelf;
   // the pictures themselves are drawn over the canvas as images, placed each frame.
-  const evR = d.shelf.length > 0 ? shelfR + 15 : R1 + 22;
+  const evR = d.shelf.length > 0 ? shelfR + 9 : R1 + 18;
   const evidenceGroup = new THREE.Group();
   world.add(evidenceGroup);
   const anchors = [];
@@ -710,6 +724,8 @@ function stepGlide(now) {
 }
 
 function resize() {
+  // The header wraps on a narrow window; the panels under it start where it ends.
+  document.documentElement.style.setProperty('--top', document.querySelector('header').offsetHeight + 6 + 'px');
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   syncOffset();
@@ -874,6 +890,11 @@ const linksOf = (id) => (state.d.links[id] ?? []).filter((x) => state.where.has(
 function placeOf(id) {
   const w = state.where.get(id);
   if (!w) return { feature: null, phase: 'not drawn' };
+  if (grouping === 'feature') {
+    // Grouped by feature the segment is the feature; the phase is the ticket's own.
+    const f = w.phase !== undefined ? state.phases[w.phase].p.towers[w.tower ?? 0]?.f[ID] : w.shelf !== undefined ? state.d.shelf[w.shelf].id : null;
+    return { feature: f === id ? null : f, phase: state.d.phaseOf[id] ?? 'no phase', phaseIndex: w.phase };
+  }
   if (w.phase !== undefined) {
     const p = state.phases[w.phase].p;
     const f = w.tower !== undefined ? p.towers[w.tower].f[ID] : null;
@@ -1092,7 +1113,7 @@ function runSearch() {
  * Light these tickets where they stand, the rest faded, and list them under the search
  * box: what a search does, and what a part of the needs-you bar or a week does (TASK-0177).
  */
-function light(found, caption) {
+function light(found, caption, list = true) {
   if (state.sel !== null) clearSelection();
   clearMarks();
   state.found = found.map((r) => r[ID]);
@@ -1110,7 +1131,9 @@ function light(found, caption) {
   } else glow.dispose();
   document.getElementById('count').textContent = caption;
   hot = 0;
-  drawResults(found);
+  // A typed search lists its matches; a press on a panel lights them without a list over the panel.
+  if (list) drawResults(found);
+  else results.hidden = true;
   window.__towers.found = state.found.length;
 }
 
@@ -1206,8 +1229,13 @@ function viewOf(d0) {
   const rows = new Map([...d0.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]), ...d0.shelf.flatMap((p) => p.tickets), ...d0.core].map((r) => [r[ID], r]));
   const short = (t) => (t.length > 22 ? t.slice(0, 21).trimEnd() + '…' : t);
   const bf = d0.byFeature;
+  // Each ticket's own phase, for the card, since the segments are features.
+  const phaseOf = {};
+  for (const p of d0.ring) for (const r of [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]) phaseOf[r[ID]] = p.id + ' ' + String(p.name).replace(/^phase\s*\d+\s*[:\-–]\s*/i, '');
+  for (const p of d0.shelf) for (const r of p.tickets) phaseOf[r[ID]] = p.id + ', finished';
   return {
     ...d0,
+    phaseOf,
     ring: bf.ring.map((f) => ({ id: f.id, number: '', name: f.id + ' ' + short(rows.get(f.id)[TITLE]), status: f.status, kind: 'feature', exit: [], exitProse: false, towers: [{ f: rows.get(f.id), floors: f.floors.map((id) => rows.get(id)) }], tiles: [] })),
     shelf: bf.shelf.map((f) => ({ id: f.id, number: '', name: rows.get(f.id)[TITLE], tickets: f.tickets.map((id) => rows.get(id)) })),
     core: bf.core.map((id) => rows.get(id)),
@@ -1238,6 +1266,11 @@ function drawEvidence() {
   for (const fig of el.querySelectorAll('figure')) {
     fig.querySelector('img').addEventListener('error', () => fig.classList.add('missing'));
     fig.addEventListener('click', () => select(fig.dataset.id, { fly: true }));
+    // A wheel turn over a picture zooms the view, as it does anywhere else.
+    fig.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      renderer.domElement.dispatchEvent(new WheelEvent('wheel', e));
+    }, { passive: false });
   }
 }
 
@@ -1253,7 +1286,7 @@ function placeEvidence() {
     EV_AT.copy(a).project(camera);
     const behind = EV_AT.z > 1;
     const dist = camera.position.distanceTo(a);
-    const k = Math.min(1.15, Math.max(0.4, 260 / dist));
+    const k = Math.min(1.15, Math.max(0.22, 260 / dist));
     fig.style.display = behind ? 'none' : '';
     fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
     fig.style.opacity = state.hush < 1 && !state.marks.children.length ? 0.4 : state.hush < 1 ? 0.35 : 1;
@@ -1266,10 +1299,9 @@ const REASONS = [['failed', 'failed', '#ff4d4d'], ['review', 'to review', '#e865
 
 function drawNeeds() {
   const el = document.getElementById('needs');
-  const rows = [...state.ticketRow.values()].filter((r) => r[NEEDS]);
-  const by = new Map(REASONS.map(([k]) => [k, []]));
-  for (const r of rows) (by.get(r[REASON]) ?? by.get('waiting')).push(r);
-  for (const list of by.values()) list.sort((a, b) => a[ID].localeCompare(b[ID], 'en', { numeric: true }));
+  // The lists by reason come from the data, where TST-0094 checks them against the fixture.
+  const by = new Map(REASONS.map(([k]) => [k, (state.d.needs[k] ?? []).map((id) => state.ticketRow.get(id)).filter(Boolean)]));
+  const rows = [...by.values()].flat();
   const first = REASONS.flatMap(([k]) => by.get(k)).slice(0, 3);
   el.innerHTML = '<h4>Needs you</h4><div class="big">' + rows.length + '</div>' +
     (rows.length === 0 ? '<div class="sub">Nothing is waiting on you.</div>' :
@@ -1278,52 +1310,41 @@ function drawNeeds() {
       first.map((r) => rowHtml(r, r[ID] === state.d.next)).join(''));
   for (const b of el.querySelectorAll('[data-reason]')) b.addEventListener('click', () => {
     const list = by.get(b.dataset.reason);
-    light(list, list.length + ' ' + REASONS.find(([k]) => k === b.dataset.reason)[1]);
+    light(list, list.length + ' ' + REASONS.find(([k]) => k === b.dataset.reason)[1], false);
   });
   for (const row of el.querySelectorAll('.row[data-id]')) row.addEventListener('click', () => select(row.dataset.id, { fly: true }));
 }
 
 /** The data's year as four rows of thirteen weeks, each filled by the tickets closed that week. */
-function weekOf(date) {
-  const t = Date.parse(date);
-  const start = Date.parse(date.slice(0, 4) + '-01-01');
-  return Math.min(51, Math.floor((t - start) / DAY / 7));
-}
-
 function drawWeeks() {
   const el = document.getElementById('weeks');
-  const d = state.d;
-  if (!d.dataDate) {
+  const w = state.d.weeks;
+  if (!w || w.year === '') {
     el.innerHTML = '';
     return;
   }
-  const year = d.dataDate.slice(0, 4);
-  const weeks = Array.from({ length: 52 }, () => []);
-  for (const r of state.ticketRow.values()) {
-    const u = d.notes[r[ID]]?.[2] ?? '';
-    if (r[STATE] === 'closed' && u.startsWith(year)) weeks[weekOf(u)].push(r);
-  }
-  const now = weekOf(d.dataDate);
-  const most = Math.max(1, ...weeks.map((w) => w.length));
-  const total = weeks.reduce((n, w) => n + w.length, 0);
-  const busiest = weeks.reduce((b, w, i) => (w.length > weeks[b].length ? i : b), 0);
-  const day = (i) => new Date(Date.parse(year + '-01-01') + i * 7 * DAY).toISOString().slice(5, 10);
-  let html = '<h4>' + year + '<span>' + total + ' closed · busiest week ' + (busiest + 1) + '</span></h4><div class="grid">';
+  const weeks = w.closed.map((list) => list.map((id) => state.ticketRow.get(id)).filter(Boolean));
+  const most = Math.max(1, ...weeks.map((x) => x.length));
+  const total = weeks.reduce((n, x) => n + x.length, 0);
+  const busiest = weeks.reduce((b, x, i) => (x.length > weeks[b].length ? i : b), 0);
+  const day = (i) => new Date(Date.parse(w.year + '-01-01') + i * 7 * DAY).toISOString().slice(5, 10);
+  let html = '<h4>' + w.year + '<span>' + total + ' closed · busiest week ' + (busiest + 1) + '</span></h4><div class="grid">';
   for (let q = 0; q < 4; q += 1) {
     html += '<span class="q">Q' + (q + 1) + '</span>';
     for (let k = 0; k < 13; k += 1) {
       const i = q * 13 + k;
       const n = weeks[i].length;
       const fill = n === 0 ? 0 : 0.25 + 0.75 * (n / most);
-      html += '<button class="wk' + (i === now ? ' now' : '') + (i > now ? ' later' : '') + '" data-week="' + i + '" style="--f:' + fill.toFixed(2) + '" title="Week ' + (i + 1) + ', from ' + day(i) + ': ' + n + ' closed"></button>';
+      html += '<button class="wk' + (i === w.now ? ' now' : '') + (i > w.now ? ' later' : '') + '" data-week="' + i + '" style="--f:' + fill.toFixed(2) + '" title="Week ' + (i + 1) + ', from ' + day(i) + ': ' + n + ' closed"></button>';
     }
   }
-  el.innerHTML = html + '</div>';
+  html += '</div>' + (w.undated > 0 ? '<div class="sub" style="margin-top:4px">' + w.undated + ' closed with no date are not drawn</div>' : '');
+  el.innerHTML = html;
   for (const b of el.querySelectorAll('[data-week]')) b.addEventListener('click', () => {
     const i = Number(b.dataset.week);
-    light(weeks[i], 'week ' + (i + 1) + ' · ' + weeks[i].length + ' closed');
+    light(weeks[i], 'week ' + (i + 1) + ' · ' + weeks[i].length + ' closed', false);
   });
-  state.weeks = weeks.map((w) => w.length);
+  state.weeks = weeks.map((x) => x.length);
 }
 
 document.getElementById('group').addEventListener('click', (e) => {
@@ -1380,7 +1401,8 @@ function tipFor(hit) {
     return '<b>' + rows.length + (rows.length === 1 ? ' ticket needs' : ' tickets need') + ' you</b> in ' + esc(state.phases[hit.cap.phase].p.towers[hit.cap.tower].f[ID]) + rows.map((r) => '<div class="needs">● ' + esc(r[ID]) + ' · ' + esc(r[SAY] || 'needs you') + '</div>').join('') + '<div class="sub">Press to ' + (rows.length === 1 ? 'open it' : 'open the first') + '.</div>';
   }
   const p = state.phases[hit.phase].p;
-  return '<b>' + esc(p.id) + ' ' + esc(p.name) + '</b> · ' + esc(p.status) + (p.id === d.focus.phase ? ' · in focus' : '') + '<div class="sub">' + p.towers.length + ' features, ' + p.tiles.length + ' tickets with no feature. Press to bring it close.</div>';
+  const counted = p.kind === 'feature' ? p.towers[0].floors.length + ' tickets' : p.towers.length + ' features, ' + p.tiles.length + ' tickets with no feature';
+  return '<b>' + esc(p.kind === 'feature' ? p.name : p.id + ' ' + p.name) + '</b> · ' + esc(p.status) + (p.id === d.focus.phase ? ' · in focus' : '') + '<div class="sub">' + counted + '. Press to bring it close.</div>';
 }
 
 let drag = null;
@@ -1566,6 +1588,7 @@ window.__towersProbe = {
   // TASK-0177: what the new panels and marks show.
   needs: () => ({ count: Number(document.querySelector('#needs .big')?.textContent ?? 0), keys: [...document.querySelectorAll('#needs .keys button')].map((b) => b.textContent), rows: [...document.querySelectorAll('#needs .row[data-id]')].map((el) => el.dataset.id) }),
   weeks: () => state.weeks,
+  memory: () => ({ ...renderer.info.memory }),
   ages: () => ageTags.map((t) => t.visible),
   evidence: () => [...document.querySelectorAll('#evidence figure')].map((f) => ({ id: f.dataset.id, shown: f.style.display !== 'none' && !document.getElementById('evidence').hidden, missing: f.classList.contains('missing'), loaded: f.querySelector('img').complete && f.querySelector('img').naturalWidth > 0 })),
   pressReason(k) {

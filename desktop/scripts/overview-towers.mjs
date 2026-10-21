@@ -270,6 +270,33 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     core: loose,
   };
 
+  // What TASK-0177's marks and panels show, worked out here so TST-0094 can check it.
+  const dataDate = String(model.generated ?? '').slice(0, 10);
+  const DAY = 86400000;
+  // A feature's quiet: the days from the newest change among it and its tickets to the
+  // date the data was read. A tower carries a badge from 14 days.
+  const ages = {};
+  for (const f of features) {
+    const newest = [f, ...(members.get(f) ?? [])].map((id) => notes[id]?.[2] ?? '').reduce((a, b) => (b > a ? b : a), '');
+    if (newest !== '' && dataDate !== '') ages[f] = Math.max(0, Math.round((Date.parse(dataDate) - Date.parse(newest)) / DAY));
+  }
+  // The unfinished features quiet for 14 days or more carry an age badge.
+  const badged = features.filter((f) => !finished(f) && (ages[f] ?? 0) >= 14);
+  // The data's year as 52 weeks of the tickets closed in each; a ticket's closing week is
+  // its note's last update. A closed ticket with no date is counted apart, not lost.
+  const year = dataDate.slice(0, 4);
+  const weekOf = (date) => Math.min(51, Math.floor((Date.parse(date) - Date.parse(`${date.slice(0, 4)}-01-01`)) / DAY / 7));
+  const weeks = { year, now: dataDate ? weekOf(dataDate) : -1, closed: Array.from({ length: 52 }, () => []), undated: 0 };
+  for (const id of ids) {
+    if (tickets[id].state !== 'closed') continue;
+    const u = notes[id]?.[2] ?? '';
+    if (u === '') weeks.undated += 1;
+    else if (u.startsWith(year)) weeks.closed[weekOf(u)].push(id);
+  }
+  // What needs you, by the cockpit's reason, the most urgent first.
+  const needs = Object.fromEntries(['failed', 'review', 'triage', 'ready', 'waiting'].map((k) => [k, []]));
+  for (const id of ids) if (tickets[id].needsYou) (needs[tickets[id].needs?.reason] ?? needs.waiting).push(id);
+
   // The ring of recent evidence (TASK-0177): pictures beside the notes, newest first, each
   // with its path from the page, so the page shows the file itself.
   const evidence = evidenceFrom(imagesAt(choice.root, model.head), noteFiles, new Set(ids)).map((e) => ({ ...e, src: path.relative(path.dirname(towersPagePath), path.join(choice.root, e.path)).split(path.sep).join('/') }));
@@ -277,8 +304,12 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   towersData[ws] = {
     label: choice.label,
     head: model.head,
-    dataDate: String(model.generated ?? '').slice(0, 10),
+    dataDate,
     byFeature,
+    ages,
+    badged,
+    weeks,
+    needs,
     evidence,
     notesFrom,
     focus,
@@ -302,11 +333,12 @@ const towersPage = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DES-0005 Towers</title>
 <style>
-:root { color-scheme: dark; --ink: hsl(195 60% 88%); --dim: hsl(205 25% 62%); --line: hsla(190, 90%, 65%, 0.45); --panel: hsla(210, 50%, 8%, 0.92); --needs: ${NEEDS_YOU}; --exit: ${GATE_COLOUR.acceptance}; }
+:root { color-scheme: dark; --ink: hsl(195 60% 88%); --dim: hsl(205 25% 62%); --line: hsla(190, 90%, 65%, 0.45); --panel: hsla(210, 50%, 8%, 0.97); --needs: ${NEEDS_YOU}; --exit: ${GATE_COLOUR.acceptance}; }
 html, body { margin: 0; height: 100%; background: #02040a; color: var(--ink); font: 14px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
 header { position: fixed; top: 0; left: 0; right: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; z-index: 4; pointer-events: none; }
 header > * { pointer-events: auto; }
 h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0 10px 0 0; }
+@media (max-width: 1280px) { h1 { display: none; } }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: hsla(210, 50%, 8%, 0.6); }
 .seg button { background: transparent; color: inherit; border: 0; padding: 5px 12px; font: inherit; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: hsla(190,90%,55%,.22); }
@@ -316,10 +348,10 @@ h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 
 #tip { position: fixed; pointer-events: none; max-width: 420px; padding: 8px 11px; border-radius: 8px; background: hsla(205,60%,12%,.95); border: 1px solid var(--line); display: none; z-index: 6; }
 #tip .needs { color: var(--needs); margin-top: 4px; }
 #tip .sub { color: var(--dim); font-size: 12px; }
-#help { position: fixed; bottom: 12px; left: 16px; right: 16px; color: var(--dim); font-size: 12px; z-index: 2; pointer-events: none; }
-#legend { position: fixed; left: 16px; top: 60px; padding: 10px 12px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.94); border: 1px solid hsla(190, 90%, 65%, 0.25); font-size: 12px; z-index: 2; }
+#help { position: fixed; bottom: 12px; left: 16px; right: 16px; color: var(--dim); font-size: 12px; z-index: 2; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#legend { position: fixed; left: 16px; top: var(--top, 60px); padding: 10px 12px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.94); border: 1px solid hsla(190, 90%, 65%, 0.25); font-size: 12px; z-index: 2; }
 #legend div { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-#panel { position: fixed; right: 0; top: 0; bottom: 0; width: 380px; max-width: 92vw; overflow: auto; padding: 60px 14px 40px; background: var(--panel); border-left: 1px solid var(--line); z-index: 3; box-sizing: border-box; }
+#panel { position: fixed; right: 0; top: 0; bottom: 0; width: 380px; max-width: 92vw; overflow: auto; padding: calc(var(--top, 60px) + 4px) 14px 40px; background: var(--panel); border-left: 1px solid var(--line); z-index: 3; box-sizing: border-box; }
 #panel[hidden] { display: none; }
 #panel h2 { font-size: 15px; margin: 0 0 2px; }
 #panel .sub { color: var(--dim); font-size: 12px; margin-bottom: 10px; }
@@ -351,7 +383,7 @@ canvas { display: block; }
 #results { position: absolute; top: 34px; left: 0; width: 420px; max-width: 92vw; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; z-index: 5; }
 #results[hidden] { display: none; }
 #results .row.hot { background: hsla(190,90%,55%,.2); }
-#card { position: fixed; left: 16px; top: 60px; width: 340px; max-width: calc(100vw - 32px); padding: 12px 14px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.9); border: 1px solid var(--line); z-index: 3; box-sizing: border-box; }
+#card { position: fixed; left: 16px; top: var(--top, 60px); width: 340px; max-width: calc(100vw - 32px); padding: 12px 14px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.9); border: 1px solid var(--line); z-index: 3; box-sizing: border-box; }
 #card[hidden] { display: none; }
 #card .head { display: flex; gap: 8px; align-items: flex-start; }
 #card .head .sq { margin-top: 4px; }
@@ -387,7 +419,7 @@ canvas { display: block; }
 .hud[hidden] { display: none; }
 .hud h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: flex; justify-content: space-between; color: hsl(190 90% 78%); }
 .hud h4 span { color: var(--dim); letter-spacing: .04em; text-transform: none; }
-#needs { top: 60px; }
+#needs { top: var(--top, 60px); }
 #needs h4 { color: var(--needs); }
 #needs .big { font-size: 40px; font-weight: 800; line-height: 1; color: var(--needs); font-variant-numeric: tabular-nums; text-shadow: 0 0 14px color-mix(in srgb, var(--needs) 45%, transparent); }
 #needs .bar { display: flex; gap: 2px; height: 10px; margin: 8px 0 6px; border-radius: 3px; overflow: hidden; }
