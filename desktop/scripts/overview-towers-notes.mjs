@@ -274,3 +274,17 @@ export function evidenceFrom(images, notes, tickets, { perTicket = 3, limit = 18
   }
   return out;
 }
+
+/**
+ * Each picture's last commit date from `git log --format=%x00%cs --name-only`, which lists
+ * commits newest first: the first date seen for a file is its last commit (TASK-0177).
+ */
+export function lastDates(log) {
+  const dated = new Map();
+  let date = '';
+  for (const line of log.split('\n')) {
+    if (line.startsWith('\0')) date = line.slice(1);
+    else if (line !== '' && IMAGE.test(line) && !dated.has(line)) dated.set(line, date);
+  }
+  return dated;
+}

@@ -26,7 +26,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { relationsFrom, ownerWord, boardOf, evidenceFrom } from './overview-towers-notes.mjs';
+import { relationsFrom, ownerWord, boardOf, evidenceFrom, lastDates } from './overview-towers-notes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.join(here, '..');
@@ -100,12 +100,7 @@ function notesAt(root, head, dirty) {
 function imagesAt(root, head) {
   if (!head || spawnSync('git', ['-C', root, 'cat-file', '-e', `${head}^{commit}`]).status !== 0) return [];
   const log = spawnSync('git', ['-C', root, 'log', '--format=%x00%cs', '--name-only', head, '--', 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 28 });
-  const dated = new Map();
-  let date = '';
-  for (const line of log.stdout.split('\n')) {
-    if (line.startsWith('\0')) date = line.slice(1);
-    else if (line !== '' && /\.(?:png|jpe?g|webp|gif)$/i.test(line) && !dated.has(line)) dated.set(line, date);
-  }
+  const dated = lastDates(log.stdout);
   const listed = spawnSync('git', ['-C', root, 'ls-tree', '-r', '--name-only', head, 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 26 });
   return listed.stdout.split('\n').filter((p) => dated.has(p) && !p.includes('/__templates__/') && fs.existsSync(path.join(root, p))).map((p) => ({ path: p, date: dated.get(p) }));
 }

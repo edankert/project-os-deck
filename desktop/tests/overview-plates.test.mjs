@@ -144,7 +144,9 @@ test('the plate script draws all seven screens on both workspaces, every mark in
           assert.ok(w.weeks.closed[week].includes(id), `${ws}: ${id}, updated ${updated(id)}, is in week ${week + 1}`);
         }
         // Each picture's date is its last commit at the fixture's commit, where this clone has it.
-        const root = ws === 'deck' ? path.join(desktopRoot, '..') : null;
+        // Deck's pictures each have one commit, so first and last agree there; your-trainer's
+        // tell a first-commit date from a last one, when its checkout is beside this one.
+        const root = ws === 'deck' ? path.join(desktopRoot, '..') : path.join(desktopRoot, '..', '..', 'your-trainer');
         if (root !== null && spawnSync('git', ['-C', root, 'cat-file', '-e', `${fixtureModel.head}^{commit}`]).status === 0) {
           for (const e of w.evidence) assert.equal(e.date, spawnSync('git', ['-C', root, 'log', '-1', '--format=%cs', fixtureModel.head, '--', e.path], { encoding: 'utf-8' }).stdout.trim(), `${ws}: ${e.path} is dated by its last commit`);
         }
@@ -277,7 +279,9 @@ test('the towers page reads a note\'s first paragraph, owner and date', async ()
 
 // TASK-0177: which ticket a picture belongs to, on small notes and files of its own.
 test('the ring of recent evidence ties each picture to a ticket and keeps the newest', async () => {
-  const { evidenceFrom } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  const { evidenceFrom, lastDates } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  // A picture's date is its last commit: git log lists the newest first.
+  assert.deepEqual([...lastDates('\0' + '2026-10-15\ndocs/a.png\ndocs/n.md\n\n\0' + '2026-10-14\ndocs/a.png\ndocs/b.jpg\n')], [['docs/a.png', '2026-10-15'], ['docs/b.jpg', '2026-10-14']], 'the newest commit dates a picture; a note is not a picture');
   const note = (p, id, body = '') => ({ path: p, text: `---\nid: ${id}\n---\n${body}` });
   const notes = [
     note('docs/designs/DES-0001-A.md', 'DES-0001', '![a](__attachments__/plate.png) and [b](../tests/run%20one.jpg)'),
