@@ -103,22 +103,48 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         assert.ok(!others.includes(id), `${ws}: ${id} does not link to itself`);
         for (const other of others) assert.ok(fixtureModel.tickets[id].links?.includes(other) || fixtureModel.tickets[other].links?.includes(id), `${ws}: the page's link ${id}–${other} is in the fixture`);
       }
-      // Each ticket's note facts: a first paragraph for nearly all, an owner, a date.
+      // The notes are read from the workspace's checkout; CI has only Deck's, and without
+      // your-trainer beside it every ticket lies flat and the page has no notes or board for it.
+      if (w.notesFrom === 'none') {
+        assert.deepEqual(w.notes, {}, `${ws}: no notes, so no paragraphs`);
+        assert.equal(w.queue, null, `${ws}: no towers, so no board`);
+        continue;
+      }
+      // Each ticket's note facts: a first paragraph for nearly all, an owner in a word, a date.
       const facts = Object.values(w.notes);
       assert.ok(facts.length >= Object.keys(fixtureModel.tickets).length * 0.98, `${ws}: the page has the notes of its tickets`);
       assert.ok(facts.filter(([lead]) => lead !== '').length >= facts.length * 0.95, `${ws}: nearly every note has a first paragraph on the page`);
       assert.ok(facts.every(([, , updated]) => updated === '' || /^\d{4}-\d{2}-\d{2}$/.test(updated)), `${ws}: dates are days`);
+      assert.ok(facts.every(([, owner]) => !owner.includes(':')), `${ws}: an owner is shown as a name, not as user:edwin`);
+      if (ws === 'deck') assert.ok(['Claude', 'Codex', 'Edwin'].every((who) => facts.some(([, owner]) => owner === who)), 'Deck\'s notes are owned by Claude, Codex and Edwin');
       // The next-up board: the focus feature's tasks, the next one lit, done ones closed, the rest open.
       if (w.queue !== null) {
         const tower = w.ring.flatMap((p) => p.towers).find((t) => t.f[0] === w.queue.feature);
         assert.ok(tower !== undefined && w.queue.feature === focusOfPage(w), `${ws}: the board is the focus feature's`);
-        const tasks = new Map(tower.floors.filter((r) => r[1] === 'task').map((r) => [r[0], r]));
-        assert.equal(w.queue.of, tasks.size, `${ws}: the board counts the feature's tasks`);
-        assert.equal(w.queue.done, [...tasks.values()].filter((r) => r[7] === 'closed').length, `${ws}: the board counts the done ones`);
+        // A cancelled task is not counted; the rest are, done or not.
+        const tasks = new Map(tower.floors.filter((r) => r[1] === 'task' && r[7] !== 'dropped').map((r) => [r[0], r]));
+        assert.equal(w.queue.of, tasks.size, `${ws}: the board counts the feature's tasks, cancelled ones left out`);
+        const closed = [...tasks.values()].filter((r) => r[7] === 'closed');
+        assert.equal(w.queue.done, closed.length, `${ws}: the board counts the done ones`);
+        // The lit row is the next ticket: one of the feature's tasks, or the task the snapshot names.
         assert.deepEqual(w.queue.rows.filter((r) => r.kind === 'next').map((r) => r.id), w.next === null ? [] : [w.next], `${ws}: the lit row is the next ticket`);
-        for (const r of w.queue.rows.filter((q) => q.kind !== 'next')) {
-          assert.ok(tasks.has(r.id), `${ws}: ${r.id} on the board is one of the feature's tasks`);
-          assert.equal(tasks.get(r.id)[7] === 'closed', r.kind === 'done', `${ws}: ${r.id} is ${r.kind} on the board and ${tasks.get(r.id)[7]} in the fixture`);
+        if (w.next !== null) assert.ok(tasks.has(w.next) || w.next === w.focus.task, `${ws}: the next ticket ${w.next} is the feature's or the snapshot's`);
+        // The two done rows are the two finished last, oldest first.
+        const latest = closed.sort((a, b) => w.notes[b[0]][2].localeCompare(w.notes[a[0]][2]) || b[0].localeCompare(a[0], 'en', { numeric: true })).slice(0, 2).reverse().map((r) => r[0]);
+        assert.deepEqual(w.queue.rows.filter((r) => r.kind === 'done').map((r) => r.id), latest, `${ws}: the done rows are the two finished last`);
+        // The rest: each row's word is its status, in progress first, then at review, then waiting.
+        const kindOf = (r) => (r[4] === 'doing' ? 'doing' : r[4] === 'review' ? 'review' : 'queued');
+        const rest = w.queue.rows.filter((r) => r.kind !== 'done' && r.kind !== 'next');
+        for (const r of rest) {
+          assert.ok(tasks.has(r.id) && tasks.get(r.id)[7] !== 'closed', `${ws}: ${r.id} on the board is one of the feature's open tasks`);
+          assert.equal(r.kind, kindOf(tasks.get(r.id)), `${ws}: ${r.id} is ${r.kind} on the board and ${tasks.get(r.id)[4]} in the fixture`);
+        }
+        const order = { doing: 0, review: 1, queued: 2 };
+        assert.ok(rest.every((r, i) => i === 0 || order[rest[i - 1].kind] <= order[r.kind]), `${ws}: in progress first, then at review, then waiting`);
+        // What is not shown is counted by kind, and nothing open is lost.
+        const open = [...tasks.values()].filter((r) => r[7] !== 'closed' && r[0] !== w.next);
+        for (const kind of ['doing', 'review', 'queued']) {
+          assert.equal(rest.filter((r) => r.kind === kind).length + w.queue.more[kind], open.filter((r) => kindOf(r) === kind).length, `${ws}: every task ${kind} is on the board or counted under it`);
         }
         assert.equal(w.queue.head, String(fixtureModel.head).slice(0, 7), `${ws}: the board names the fixture's commit`);
       }
@@ -185,6 +211,13 @@ test('the towers page reads a note\'s first paragraph, owner and date', async ()
   assert.deepEqual(facts.get('TASK-0004'), { lead: '', owner: 'user:edwin', updated: '2026-10-01' }, 'a note of headings only has no first paragraph; a quoted owner and a timestamp are read');
   assert.equal(facts.get('TASK-0005').lead, 'The prose after the code, at the site and example.org/b.', 'comments, pictures and code are not prose; an address loses its scheme');
   assert.equal(leadOf(`---\nid: X-1\n---\n${'word '.repeat(100)}`, 40).length, 40, 'a long paragraph is cut to the length asked');
+  const lead = (body) => leadOf(`---\nid: X-1\n---\n${body}`);
+  assert.equal(lead('\n- [x] GET the overview\n- [ ] Draw it\n'), 'GET the overview; Draw it', 'a checklist loses its boxes, its items joined');
+  assert.equal(lead('\n1. Open Workouts.\n2) Pick one.\n'), 'Open Workouts. Pick one.', 'numbered steps lose their numbers; a full stop needs no semicolon');
+  assert.equal(lead('\nReproducible by:\n\n1. Open it\n2. Close it\n\nNot this.\n'), 'Reproducible by: Open it; Close it', 'a paragraph ending in a colon takes the block after it, and no more');
+  assert.equal(lead('\n> The rider sees their **zone**.\n'), 'The rider sees their zone.', 'a plain quote is prose');
+  assert.equal(lead('\n> [!warning] Old\n> stamp\n\nThe prose.\n'), 'The prose.', 'a callout is not');
+  assert.equal(lead('\n~~~\nnot prose\n~~~\nThe prose.\n'), 'The prose.', 'a tilde fence is code too');
 });
 
 // TASK-0163, review round one: the towers page reads which feature a ticket belongs to from

@@ -224,16 +224,21 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
   }
 
   // The next-up board (TASK-0176), in the style of Rubric's routines: the focus feature's
-  // tasks, the last two finished greyed, the next one lit, then those in progress and those
-  // waiting. Its foot names the commit the data was read from.
+  // tasks, the last two finished greyed, the next one lit, then those in progress, at
+  // review, and waiting. A cancelled task is not counted. Its foot says how many more of
+  // each kind there are, and names the commit the data was read from.
   let queue = null;
   if (focusTower !== undefined) {
-    const tasks = focusTower.floors.filter((r) => r[1] === 'task');
+    const tasks = focusTower.floors.filter((r) => r[1] === 'task' && r[7] !== 'dropped');
     const fact = (id) => notes[id] ?? ['', '', ''];
     const done = tasks.filter((r) => r[7] === 'closed').sort((a, b) => fact(b[0])[2].localeCompare(fact(a[0])[2]) || b[0].localeCompare(a[0], 'en', { numeric: true }));
-    const waiting = tasks.filter((r) => r[7] !== 'closed' && r[7] !== 'dropped' && r[0] !== next);
-    const rank = (r) => (r[4] === 'doing' ? 0 : r[4] === 'review' ? 1 : 2);
-    waiting.sort((a, b) => rank(a) - rank(b) || a[0].localeCompare(b[0], 'en', { numeric: true }));
+    const waiting = tasks.filter((r) => r[7] !== 'closed' && r[0] !== next);
+    const kindOf = (r) => (r[4] === 'doing' ? 'doing' : r[4] === 'review' ? 'review' : 'queued');
+    const rank = { doing: 0, review: 1, queued: 2 };
+    waiting.sort((a, b) => rank[kindOf(a)] - rank[kindOf(b)] || a[0].localeCompare(b[0], 'en', { numeric: true }));
+    const shown = waiting.slice(0, 6);
+    const more = { doing: 0, review: 0, queued: 0 };
+    for (const r of waiting.slice(6)) more[kindOf(r)] += 1;
     const nextRow = next !== null ? [focusTower.f, ...focusTower.floors].find((r) => r[0] === next) ?? row(tickets[next]) : null;
     queue = {
       feature: focusTower.f[0],
@@ -242,9 +247,9 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
       rows: [
         ...done.slice(0, 2).reverse().map((r) => ({ id: r[0], kind: 'done' })),
         ...(nextRow ? [{ id: nextRow[0], kind: 'next' }] : []),
-        ...waiting.slice(0, 6).map((r) => ({ id: r[0], kind: r[4] === 'doing' ? 'doing' : 'queued' })),
+        ...shown.map((r) => ({ id: r[0], kind: kindOf(r) })),
       ],
-      more: Math.max(0, waiting.length - 6),
+      more,
       head: String(model.head).slice(0, 7),
       generated: String(model.generated ?? '').slice(0, 10),
     };
@@ -353,7 +358,7 @@ canvas { display: block; }
 #queue .q.next .id { background: hsl(190 90% 55%); color: #02141c; border-color: transparent; font-weight: 700; }
 #queue .q.next .t { color: #fff; font-weight: 600; }
 #queue .q.next .k { color: hsl(190 90% 75%); font-weight: 700; }
-#queue .q.doing .k { color: hsl(190 70% 70%); }
+#queue .q.doing .k, #queue .q.review .k { color: hsl(190 70% 70%); }
 #queue .foot { display: flex; justify-content: space-between; color: var(--dim); font-size: 11px; margin-top: 6px; border-top: 1px solid hsla(190,90%,65%,.15); padding-top: 5px; }
 @media (max-width: 760px) { #queue, #legend { display: none; } #q { width: 150px; } }
 </style>

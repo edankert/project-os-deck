@@ -110,6 +110,18 @@ Fixed in `b9e61bb`: dash lists at column 0 and single-quoted parents are read; o
 
 2026-10-16: two independent Claude reviewers, each in its own worktree on `main`, checked the five findings. Both approve: each fix was shown by reverting it and watching TST-0094 fail (dash lists at column 0, ids inside link names, notes read at the fixture's commit, empty towers, a lost focus). Both noted that nothing failed when the single-quoted `parent:` rule was reverted, because FEAT-0029's own `tasks:` list names the same tasks. The note parsing moved into `desktop/scripts/overview-towers-notes.mjs` (`9421c50`) and TST-0094 now tests it on small notes of its own, single quotes included; reverting the rule makes it fail.
 
+### Fourth revision, round one (links, search and next up, TASK-0176)
+
+2026-10-21: two independent Claude reviewers, each in its own worktree on `main` at `2a34949`; one checked the data and the tests, the other drove the page in hidden windows. Both requested changes. Held: every link of the fixture is on the page both ways and no other; notes, owners and dates are read at the fixture's commit; DES-0005's counts for TASK-0156 and FEAT-0124 are right; repeated selections and searches leave nothing behind; dimming comes back fully after Clear, Escape, a workspace switch and a phase opened and closed; Deck itself is unchanged.
+
+1. TST-0094 failed without your-trainer beside Deck, which is CI's case (both).
+2. The board's checks let three breaks through (the wrong done rows, the hidden count, every row "queued"), and its foot called seven in-progress tasks "queued" (A).
+3. Only 60 links were drawn, cutting 18 of your-trainer's tickets, and DES-0005 said a few came close (A).
+4. Search matched inside words (A); first paragraphs kept checklist boxes, ran numbered steps together, stopped at "Reproducible by:", dropped plain quotes and missed `~~~` fences (A); the board's empty message was wrong when the focus feature is not on the ring (A); cancelled tasks counted in its total (A).
+5. With a phase close, search and selection marked tickets that were hidden (B); pressing a phase while a ticket was selected left it dimmed under the old links (B); a search replaced a selection unannounced (B); under reduced motion the focus glow stayed bright under a selection (B).
+
+All fixed, as listed in [[TASK-0176]]'s Review section.
+
 ## Questions between the lanes
 
 None yet. Write a question here, dated, and land it on `main`; the other agent answers under it.

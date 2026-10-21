@@ -35,38 +35,66 @@ export function plainMarkdown(text) {
     .trim();
 }
 
+/** A list item's marker, and a checklist's box after it: `- `, `* `, `+ `, `1. `, `2) `, `[x] `. */
+const ITEM = /^(?:[-*+]|\d+[.)])\s+(?:\[[ xX~-]\]\s+)?/;
+
 /**
  * A note's first paragraph of prose (TASK-0176): the text after the frontmatter, past
- * headings, comments, pictures and quoted callouts, up to the first blank line, made plain
- * and cut to `max`.
+ * headings, comments, pictures, code and callouts (`> [!note]`, an acceptance stamp or a
+ * warning), up to the first blank line, made plain and cut to `max`. A paragraph that ends
+ * in a colon takes the block after it too, so "Reproducible by:" keeps its steps. List
+ * items lose their markers and checklist boxes and are joined with semicolons; a plain
+ * quote is prose (a requirement's statement often is one).
  * Notes here put their point first, so this is the sentence the pane shows.
  */
 export function leadOf(text, max = 280) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').replace(/<!--[\s\S]*?-->/g, '');
-  const lines = [];
-  let fenced = false;
+  let out = '';
+  let fence = null;
+  let callout = false;
+  let more = false; // a colon asked for the next block
   for (const line of body.split(/\r?\n/)) {
     const t = line.trim();
     // A code block is not prose: skipped from its opening fence to its closing one.
-    if (t.startsWith('```')) {
-      if (lines.length > 0) break;
-      fenced = !fenced;
+    const opens = /^(```|~~~)/.exec(t)?.[1];
+    if (fence !== null) {
+      if (opens === fence) fence = null;
       continue;
     }
-    if (fenced) continue;
+    if (opens) {
+      if (out !== '') break;
+      fence = opens;
+      continue;
+    }
     if (t === '') {
-      if (lines.length > 0) break;
+      callout = false;
+      if (out === '') continue;
+      if (more) {
+        more = false;
+        continue;
+      }
+      break;
+    }
+    if (/^>\s*\[!/.test(t)) callout = true;
+    if (callout && t.startsWith('>')) {
+      if (out !== '') break;
       continue;
     }
-    // A heading, a picture, a table, a rule or a quoted callout (an acceptance stamp, a
-    // warning) is not the note's own prose; a paragraph already begun ends there.
-    if (/^(#|!\[|\||---|>)/.test(t)) {
-      if (lines.length > 0) break;
+    callout = false;
+    // A heading, a picture, a table or a rule is not prose; a paragraph already begun ends there.
+    if (/^(#|!\[|\||---|\*\*\*)/.test(t)) {
+      if (out !== '') break;
       continue;
     }
-    lines.push(t.replace(/^[-*]\s+/, ''));
+    const quoted = t.replace(/^(?:>\s?)+/, '');
+    const item = ITEM.test(quoted);
+    const words = quoted.replace(ITEM, '');
+    if (words === '') continue;
+    // Items are joined with semicolons, unless an item already ends its sentence or a colon leads in.
+    out += out === '' ? words : (item && !/[:.!?]$/.test(out) ? '; ' : ' ') + words;
+    more = out.endsWith(':');
   }
-  const s = plainMarkdown(lines.join(' '));
+  const s = plainMarkdown(out);
   return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
 }
 

@@ -277,6 +277,7 @@ function drawBuckets(b, group) {
   let pulse = null;
   if (b.pulse.length > 0) {
     const m = new THREE.MeshBasicMaterial({ color: FOCUS_COLOUR, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending });
+    m.userData.base = 0.3;
     pulse = new THREE.InstancedMesh(BOX, m, b.pulse.length);
     b.pulse.forEach((mat, i) => pulse.setMatrixAt(i, mat.clone().multiply(new THREE.Matrix4().makeScale(1.25, 1.25, 1.25))));
     group.add(pulse);
@@ -465,6 +466,7 @@ function build(ws) {
         // The focus feature sends a beam of light up from its tower, and names itself.
         const height = 26;
         const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.6, height, 32, 1, true), new THREE.MeshBasicMaterial({ color: FOCUS_COLOUR, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, alphaMap: FADE }));
+        beam.material.userData.base = 0.3;
         beam.position.set(centre.x, top + height / 2, centre.z);
         content.add(beam);
         beams.push(beam.material);
@@ -679,6 +681,9 @@ function resize() {
 // to their plinths, its exit criteria stand over its towers, its tickets are listed.
 function openPhase(i, selectId = null) {
   if (state === null || !state.phases[i]) return;
+  // A phase brought close shows that phase, not another ticket's links or an old search.
+  clearFound();
+  clearSelection();
   state.open = i;
   state.phases.forEach((ph, k) => {
     const mine = k === i;
@@ -790,11 +795,22 @@ function applyOpacity(m) {
   m.opacity = (m.userData.base ?? 1) * (m.userData.dim ?? 1) * (state?.hush ?? 1);
 }
 
-/** Everything but the marks fades while a ticket is selected or a search is lit. */
+/**
+ * Everything but the marks fades while a ticket is selected or a search is lit. With a
+ * phase brought close, the rest of the ring, the shelf and the core come back, faded, so
+ * a curve or a match that lands there lands on something (review of TASK-0176).
+ */
 function setHush(on) {
   state.hush = on ? 0.16 : 1;
-  for (const m of state.allMaterials) applyOpacity(m);
+  for (const m of new Set([...state.allMaterials, ...state.pulses, ...state.beams])) applyOpacity(m);
   for (const s of labels) s.material.opacity = on && !s.userData.keep ? 0.22 : 1;
+  if (state.open !== null) {
+    state.phases.forEach((ph, k) => {
+      ph.content.visible = on || k === state.open;
+    });
+    state.shelfGroup.visible = on;
+    state.coreGroup.visible = on;
+  }
 }
 
 /** The camera leaves room for the right pane whenever it is open. */
@@ -851,7 +867,10 @@ function clearMarks() {
   state.flows = [];
 }
 
-const MAX_CURVES = 60;
+// Every link is drawn up to this many; the busiest ticket of either fixture has 202
+// (your-trainer's FEAT-0051). Past 40 the linked tickets are outlined without their ids.
+const MAX_CURVES = 240;
+const MAX_TAGS = 40;
 /** The selected ticket's links: a curve to each, rising with the distance it spans, and a light that runs along it. */
 function drawLinks(id) {
   const from = state.where.get(id).at;
@@ -870,7 +889,7 @@ function drawLinks(id) {
     spark.renderOrder = 13;
     state.marks.add(spark);
     state.flows.push({ curve, spark, phase: k * 0.137 });
-    outline(to, colour, 1.75, other);
+    outline(to, colour, 1.75, linked.length <= MAX_TAGS ? other : null);
   });
   const own = state.ticketRow.get(id);
   outline(from, new THREE.Color('#fff3a0'), 2.2, id);
@@ -983,19 +1002,20 @@ function drawTicketPane(id) {
   syncOffset();
 }
 
-// Search: every ticket whose id or title holds each word of the query lights where it stands.
+// Search: every ticket whose id or title has a word starting with each word of the query
+// lights where it stands ("rate" finds "Heart Rate", not "generate").
 const search = document.getElementById('q');
 const results = document.getElementById('results');
 let hot = 0;
 function matches(q) {
-  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean).map((w) => new RegExp('(?:^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   if (words.length === 0) return [];
   const exact = q.trim().toUpperCase();
   const found = [];
   for (const [id, r] of state.ticketRow) {
     if (!state.where.has(id)) continue;
     const hay = (id + ' ' + r[TITLE]).toLowerCase();
-    if (words.every((w) => hay.includes(w))) found.push(r);
+    if (words.every((w) => w.test(hay))) found.push(r);
   }
   return found.sort((a, b) => (b[ID] === exact) - (a[ID] === exact) || b[NEEDS] - a[NEEDS] || (a[STATE] === 'closed') - (b[STATE] === 'closed') || a[ID].localeCompare(b[ID], 'en', { numeric: true }));
 }
@@ -1090,17 +1110,19 @@ function drawQueue() {
   const el = document.getElementById('queue');
   const q = state.d.queue;
   if (q === null) {
-    el.innerHTML = '<h4>Next up</h4><div class="sub">This workspace\'s snapshot names no feature in focus.</div>';
+    const f = state.d.focus.feature;
+    el.innerHTML = '<h4>Next up</h4><div class="sub">' + (f ? 'The feature in focus, ' + esc(f) + ', does not stand on the ring, so it has no tasks to list here.' : 'This workspace\'s snapshot names no feature in focus.') + '</div>';
     return;
   }
-  const words = { done: 'done', next: 'next', doing: 'doing', queued: 'queued' };
+  const words = { done: 'done', next: 'next', doing: 'doing', review: 'review', queued: 'queued' };
+  const more = Object.entries(q.more).filter(([, n]) => n > 0).map(([k, n]) => n + ' ' + (k === 'doing' ? 'in progress' : k === 'review' ? 'at review' : 'waiting'));
   el.innerHTML = '<h4>Next up · ' + esc(q.feature) + '<span>' + q.done + ' of ' + q.of + ' tasks done</span></h4>' +
     q.rows.map(({ id, kind }) => {
       const r = state.ticketRow.get(id);
       const [, owner, updated] = state.d.notes[id] ?? ['', '', ''];
       return '<div class="q ' + kind + '" data-id="' + esc(id) + '" title="' + esc(id + ' ' + (r?.[TITLE] ?? '')) + '"><span class="id">' + esc(id.replace(/^[A-Z]+-0*/, '#')) + '</span><span class="t">' + esc(r?.[TITLE] ?? id) + '</span><span class="who">' + esc(kind === 'done' && updated ? updated.slice(5) : owner) + '</span><span class="k">' + words[kind] + '</span></div>';
     }).join('') +
-    '<div class="foot"><span>' + (q.more > 0 ? '+' + q.more + ' more queued' : '') + '</span><span>data from ' + esc(q.head) + (q.generated ? ' · ' + esc(q.generated) : '') + '</span></div>';
+    '<div class="foot"><span>' + (more.length > 0 ? '+ ' + more.join(', ') : '') + '</span><span>data from ' + esc(q.head) + (q.generated ? ' · ' + esc(q.generated) : '') + '</span></div>';
   for (const row of el.querySelectorAll('.q[data-id]')) row.addEventListener('click', () => select(row.dataset.id, { fly: true }));
 }
 
@@ -1158,6 +1180,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (!was || was.button !== 0 || Math.hypot(e.clientX - was.x0, e.clientY - was.y0) > 4) return;
   const hit = hitAt(e.clientX, e.clientY);
   if (hit === null) return;
+  document.getElementById('tip').style.display = 'none';
   if (hit.cap) {
     openPhase(hit.cap.phase, hit.cap.ids[0]);
     return;

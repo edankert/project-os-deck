@@ -26,9 +26,9 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 - **Selecting a ticket draws its links as curves.** Pressing a floor or a tile, or a row in a list, selects that ticket. Curves rise from it and land on every ticket it links to or that links to it, in the linked ticket's type colour, also in other phases and on the shelf. The rest of the ring dims, and each linked ticket gets an outline and its id. The links are the ones the fixture already records for each note (`links`), read in both directions, without phases and references, which are not drawn as tickets.
 - **A card for the selected ticket**, where the legend stands: its type mark, id, title, status in the cockpit's words, feature, phase, owner, last update, and what to do when it needs you. Its buttons fly the camera to the ticket and its links, bring its phase close, or clear the selection.
 - **The ticket's text in the right pane**: the first paragraph of its note, then its linked tickets as cockpit rows grouped by type, each one selecting that ticket when pressed. With a phase brought close, a "back to the phase" line returns to the phase's list.
-- **Search that lights the towers.** A box in the header (`/` puts the cursor in it) matches ids and title words. Every other ticket dims, the matches glow where they stand, and the box says how many matched. Up to twelve matches are listed under it; choosing one selects it and flies the camera to it. Escape empties the box.
+- **Search that lights the towers.** A box in the header (`/` puts the cursor in it) matches the start of words in ids and titles. A search replaces a selection. Every other ticket dims, the matches glow where they stand, and the box says how many matched. Up to twelve matches are listed under it; choosing one selects it and flies the camera to it. Escape empties the box.
 - **A next-up board**, bottom left: the focus feature's tasks in the style of Rubric's routines. The last two finished are greyed with their dates, the next ticket is lit and marked "next", the rest are queued, those in progress first. Each row names its owner (Claude, Codex or Edwin). A count says how many of the feature's tasks are done, and the foot names the commit the data was read from. Pressing a row selects that ticket.
-- Escape steps back one thing at a time: the search, then the selection, then the phase, then home.
+- Escape steps back one thing at a time: the search or the selection, then the phase, then home. Bringing a phase close clears both.
 
 ## Definition of Done
 
@@ -42,11 +42,27 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 
 ## Verification
 
-`desktop/scripts/overview-towers.mjs` writes the page with each ticket's links both ways round (from the fixture's `links`), each note's first paragraph, owner and last update (read by `overview-towers-notes.mjs` from the notes at the fixture's commit, past headings, quoted callouts, comments, pictures and code), and the next-up board. Deck: FEAT-0028, 5 of 7 tasks done, TASK-0147 and TASK-0148 done, TASK-0154 next, TASK-0158 queued. your-trainer: FEAT-0136, 0 of 17 done, TASK-1057 next, six in progress, nine more queued. The page grew from 554 KB to 1.66 MB; most of it is your-trainer's 2,743 paragraphs, each cut at 280 characters.
+`desktop/scripts/overview-towers.mjs` writes the page with each ticket's links both ways round (from the fixture's `links`), each note's first paragraph, owner and last update (read by `overview-towers-notes.mjs` from the notes at the fixture's commit, past headings, quoted callouts, comments, pictures and code), and the next-up board. Deck: FEAT-0028, 5 of 7 tasks done, TASK-0147 and TASK-0148 done, TASK-0154 next, TASK-0158 queued. your-trainer: FEAT-0136, 0 of 16 done (a seventeenth is cancelled), TASK-1057 next, six in progress shown, seven more in progress and two waiting counted in the foot. The page grew from 554 KB to 1.66 MB; most of it is your-trainer's 2,743 paragraphs, each cut at 280 characters.
 
-TST-0094's suite checks that every link of the fixture is on the page both ways and no other, that nearly every note has a paragraph, that dates are days, that the board is the focus feature's tasks with the next one lit and done ones closed, and the paragraph reader on small notes of its own. Each new guard was broken once to see it fail: links one way only, a done task shown as queued, a callout read as prose. `cd desktop && npm test`: 793 tests, 793 passed.
+TST-0094's suite checks that every link of the fixture is on the page both ways and no other, that nearly every note has a paragraph, that dates are days, that the board is the focus feature's tasks with the next one lit and done ones closed, and the paragraph reader on small notes of its own. Each new guard was broken once to see it fail: links one way only, a done task shown as queued, a callout read as prose. `cd desktop && npm test`: 793 tests, 793 passed (before the review).
 
 In a hidden window (`desktop/scripts/towers-capture.cjs`, no page errors) the pictures were taken, and the page was driven with real presses and keys: pressing a ticket on the ring selects it with its card and pane; a row of the pane selects that ticket; the card brings its phase close; the pane goes back to the phase's list; Escape clears the selection, then closes the phase; `/` and typing light 16 matches for "wheel", arrow and Enter choose one, which is selected; Escape in the box empties it; a row of the board selects its ticket; a red cap still brings its phase close with the first ticket that needs you selected and the list kept. One defect found that way was fixed: a selection left the cursor in the search box, so Escape only left the box.
+
+## Review
+
+Round one, 2026-10-21, two independent Claude reviewers (`model:claude-opus-5-5`), one on the data and tests, one driving the page in hidden windows. Both asked for changes. What was found, and what was done:
+
+- **TST-0094 failed without your-trainer beside Deck, as on CI** (both). The notes and board checks now stand down when a workspace's notes could not be read, and the page has none for it; the suite was run in a checkout with no your-trainer and passed.
+- **The board's checks let breaks through, and its foot called seven tasks in progress "queued"** (A). The board now says review for a task at review, counts what it has no room for by kind ("+ 7 in progress, 2 waiting"), and leaves cancelled tasks out of its total. The checks now hold the two done rows to the two finished last, each row's word to its status, the order, the counts by kind, the next ticket to the feature or the snapshot, and owners to names.
+- **The 60-curve limit cut 18 of your-trainer's tickets, and DES-0005 said otherwise** (A). Every link is drawn up to 240 (the busiest has 202); past 40 the linked tickets are outlined without their ids.
+- **Search matched inside words** ("rate" in "generate") (A). It now matches the start of a word.
+- **First paragraphs came out poorly**: checklist boxes kept, numbered steps run together, "Reproducible by:" alone, plain quotes dropped, `~~~` fences not seen (A). All five are read now, each checked on a small note of its own.
+- **The board's empty message was wrong when the focus feature is not on the ring** (A). It now says so.
+- **With a phase close, search and selection marked tickets that were hidden** (B). The rest of the ring, the shelf and the core come back faded while something is selected or searched.
+- **Pressing a phase while a ticket was selected left the phase dimmed under the old links** (B). Bringing a phase close now clears the search and the selection.
+- **A search replaced the selection, which the note did not say** (B). Kept, and said here and in DES-0005.
+- **Under reduced motion the focus glow and beam stayed bright under a selection** (B). They fade with the rest.
+- **The hover tip stayed on screen after a press** (B, not this task's). It goes now.
 
 ## Acceptance checks reopened
 
