@@ -2,7 +2,8 @@
 // the plate can be judged without a network connection. Run from desktop/:
 //   npx electron scripts/towers-capture.cjs <page.html> <out dir>
 // It loads the page in a hidden window and saves `towers-<workspace>-<view>.jpg` for
-// the opening view, from above, from the side, and the focus phase brought close.
+// the opening view, from above, from the side, and the focus phase brought close; and
+// (TASK-0176) `-linked` with a ticket's links drawn and `-search` with a search lit.
 // The page loads three.js from cdnjs, so this needs the network. Errors the page
 // logs are printed, and fail the run.
 const { app, BrowserWindow } = require('electron');
@@ -10,6 +11,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const [page, out] = process.argv.slice(-2);
 const VIEWS = [['home', 'home', false], ['above', 'above', false], ['side', 'side', false], ['phase', 'home', true]];
+// Words that light a handful of each workspace's tickets, for the search picture (TASK-0176).
+const SEARCH = { deck: 'wheel', 'your-trainer': 'heart rate' };
 app.whenReady().then(async () => {
   const win = new BrowserWindow({ width: 1600, height: 1000, show: false, webPreferences: { offscreen: false, backgroundThrottling: false } });
   win.webContents.setBackgroundThrottling(false);
@@ -31,6 +34,22 @@ app.whenReady().then(async () => {
       fs.writeFileSync(file, image.toJPEG(84));
       console.log(`${file}: ${info.tickets} tickets (${info.drawn} drawn), ${info.towers} towers, focus ${info.focus.phase} ${info.focus.feature}, next ${info.next}`);
     }
+    // TASK-0176: a ticket selected with its links drawn, a search lit, and the next-up board.
+    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null)`);
+    const chosen = await win.webContents.executeJavaScript('window.__towersProbe.widest()');
+    const picked = await win.webContents.executeJavaScript(`window.__towersProbe.select(${JSON.stringify(chosen)})`);
+    await new Promise((r) => setTimeout(r, 1500));
+    fs.writeFileSync(path.join(out, `towers-${ws}-linked.jpg`), (await win.webContents.capturePage()).toJPEG(84));
+    console.log(`towers-${ws}-linked.jpg: ${chosen} with ${picked.links.length} links, ${picked.curves} curves; card "${String(picked.card).slice(0, 120)}"`);
+    await win.webContents.executeJavaScript(`window.__showTowers(${JSON.stringify(ws)}, 'home', null)`);
+    const query = SEARCH[ws] ?? 'test';
+    const found = await win.webContents.executeJavaScript(`window.__towersProbe.search(${JSON.stringify(query)})`);
+    await new Promise((r) => setTimeout(r, 1300));
+    fs.writeFileSync(path.join(out, `towers-${ws}-search.jpg`), (await win.webContents.capturePage()).toJPEG(84));
+    console.log(`towers-${ws}-search.jpg: "${query}" lit ${found.found.length} (${found.count}), listed ${found.listed.length}`);
+    const queue = await win.webContents.executeJavaScript('window.__towersProbe.queue()');
+    console.log(`next up on ${ws}: ${queue.map(([id, kind]) => `${id} ${kind}`).join(', ')}`);
+    await win.webContents.executeJavaScript('window.__towersProbe.clear()');
   }
   if (errors.length > 0) {
     console.error(`the page logged ${errors.length} error(s):\n${errors.join('\n')}`);

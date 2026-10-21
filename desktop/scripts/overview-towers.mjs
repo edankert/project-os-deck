@@ -90,7 +90,7 @@ function notesAt(root, head, dirty) {
   return { texts, from: texts.length > 0 ? 'working tree' : 'none' };
 }
 
-/** Each note's `parent:`, and the ticket lists a feature (or a task's `tests:`) names, by id. */
+/** Each note's `parent:`, the ticket lists a feature (or a task's `tests:`) names, and its facts, by id. */
 function relations(root, head, dirty) {
   const { texts, from } = notesAt(root, head, dirty);
   return { ...relationsFrom(texts), from };
@@ -132,7 +132,7 @@ const floorRank = (t) => (t.needsYou ? 6 : STATE_RANK[t.state] ?? 5);
 const towersData = {};
 for (const [ws, choice] of Object.entries(CHOICES)) {
   const model = JSON.parse(fs.readFileSync(path.join(desktop, 'fixtures', 'overview', `${ws}.json`), 'utf-8'));
-  const { parent, named, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
+  const { parent, named, facts, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
   const focus = focusOf(choice.root, model.head);
   // Said out loud, never quietly: a page drawn from today's notes, or from none, is not the fixture's.
   if (notesFrom !== 'commit') console.warn(`overview-towers: ${ws}'s notes read from ${notesFrom === 'none' ? 'nowhere (no docs at ' + choice.root + ')' : 'the working tree'}, not at the fixture's commit ${String(model.head).slice(0, 7)}`);
@@ -201,12 +201,64 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     const tasks = focusTower.floors.filter((r) => r[1] === 'task');
     next = tasks.find((r) => r[4] === 'doing')?.[0] ?? tasks.find((r) => r[4] === 'backlog' || r[4] === 'planned')?.[0] ?? null;
   }
+  // A ticket's links (TASK-0176): the tickets its note names and the tickets whose notes
+  // name it, as the fixture records them. Phases and references are not drawn as tickets.
+  const links = {};
+  const link = (a, b) => {
+    if (a === b || tickets[a] === undefined || tickets[b] === undefined) return;
+    (links[a] ??= new Set()).add(b);
+    (links[b] ??= new Set()).add(a);
+  };
+  for (const id of ids) for (const other of tickets[id].links ?? []) link(id, other);
+  for (const id of Object.keys(links)) links[id] = [...links[id]].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+
+  // What the page shows of a selected ticket: its first paragraph, who has it, when it last changed.
+  const ownerWord = (owner) => {
+    const who = String(owner).replace(/^(?:system|user|agent|model|team|group):/, '');
+    return who === '' || who === 'unassigned' ? '' : who.charAt(0).toUpperCase() + who.slice(1);
+  };
+  const notes = {};
+  for (const id of ids) {
+    const f = facts.get(id);
+    if (f !== undefined) notes[id] = [f.lead, ownerWord(f.owner), f.updated];
+  }
+
+  // The next-up board (TASK-0176), in the style of Rubric's routines: the focus feature's
+  // tasks, the last two finished greyed, the next one lit, then those in progress and those
+  // waiting. Its foot names the commit the data was read from.
+  let queue = null;
+  if (focusTower !== undefined) {
+    const tasks = focusTower.floors.filter((r) => r[1] === 'task');
+    const fact = (id) => notes[id] ?? ['', '', ''];
+    const done = tasks.filter((r) => r[7] === 'closed').sort((a, b) => fact(b[0])[2].localeCompare(fact(a[0])[2]) || b[0].localeCompare(a[0], 'en', { numeric: true }));
+    const waiting = tasks.filter((r) => r[7] !== 'closed' && r[7] !== 'dropped' && r[0] !== next);
+    const rank = (r) => (r[4] === 'doing' ? 0 : r[4] === 'review' ? 1 : 2);
+    waiting.sort((a, b) => rank(a) - rank(b) || a[0].localeCompare(b[0], 'en', { numeric: true }));
+    const nextRow = next !== null ? [focusTower.f, ...focusTower.floors].find((r) => r[0] === next) ?? row(tickets[next]) : null;
+    queue = {
+      feature: focusTower.f[0],
+      done: done.length,
+      of: tasks.length,
+      rows: [
+        ...done.slice(0, 2).reverse().map((r) => ({ id: r[0], kind: 'done' })),
+        ...(nextRow ? [{ id: nextRow[0], kind: 'next' }] : []),
+        ...waiting.slice(0, 6).map((r) => ({ id: r[0], kind: r[4] === 'doing' ? 'doing' : 'queued' })),
+      ],
+      more: Math.max(0, waiting.length - 6),
+      head: String(model.head).slice(0, 7),
+      generated: String(model.generated ?? '').slice(0, 10),
+    };
+  }
+
   towersData[ws] = {
     label: choice.label,
     head: model.head,
     notesFrom,
     focus,
     next,
+    links,
+    notes,
+    queue,
     ring: [...phases.values()].sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true })).map((p) => ({ ...p, towers: [...p.towers.values()] })),
     shelf: [...shelf.values()].sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true })),
     core,
@@ -264,6 +316,46 @@ h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--needs); box-shadow: 0 0 6px var(--needs); flex: none; }
 .beam { width: 11px; height: 14px; background: linear-gradient(to top, hsla(190,100%,80%,.9), transparent); flex: none; }
 canvas { display: block; }
+/* TASK-0176: search, the selected ticket's card and the next-up board. */
+#find { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+#q { width: 230px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: hsla(210, 50%, 8%, 0.75); color: inherit; font: inherit; }
+#q:focus { outline: none; border-color: hsl(190 90% 70%); box-shadow: 0 0 0 3px hsla(190,90%,55%,.2); }
+#count { color: hsl(190 90% 78%); font-size: 12px; min-width: 70px; }
+#results { position: absolute; top: 34px; left: 0; width: 420px; max-width: 92vw; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; z-index: 5; }
+#results[hidden] { display: none; }
+#results .row.hot { background: hsla(190,90%,55%,.2); }
+#card { position: fixed; left: 16px; top: 60px; width: 340px; max-width: calc(100vw - 32px); padding: 12px 14px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.9); border: 1px solid var(--line); z-index: 3; box-sizing: border-box; }
+#card[hidden] { display: none; }
+#card .head { display: flex; gap: 8px; align-items: flex-start; }
+#card .head .sq { margin-top: 4px; }
+#card b { font-size: 14px; }
+#card .title { font-size: 14px; margin: 2px 0 6px; }
+#card .facts { color: var(--dim); font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; }
+#card .needs { color: var(--needs); font-size: 12px; margin-top: 6px; }
+#card .kinds { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 12px; }
+#card .kinds span { display: inline-flex; gap: 4px; align-items: center; }
+#card .acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+#card .acts button, #panel .back { background: hsla(190,90%,55%,.16); border: 1px solid var(--line); color: inherit; border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+#card .x { margin-left: auto; background: none; border: 0; color: var(--dim); font-size: 16px; cursor: pointer; padding: 0 2px; }
+#panel .lead { font-size: 13px; line-height: 1.5; margin: 6px 0 4px; }
+#panel .back { margin-bottom: 10px; }
+#queue { position: fixed; left: 16px; bottom: 36px; width: 380px; max-width: calc(100vw - 32px); padding: 10px 12px 8px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.85); border: 1px solid hsla(190, 90%, 65%, 0.3); z-index: 2; box-sizing: border-box; }
+#queue h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: flex; justify-content: space-between; color: hsl(190 90% 78%); }
+#queue h4 span { color: var(--dim); letter-spacing: .04em; text-transform: none; }
+#queue .q { display: grid; grid-template-columns: 74px 1fr auto 56px; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+#queue .q:hover { background: hsla(190,90%,55%,.14); }
+#queue .q .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#queue .q .who { color: var(--dim); font-size: 11px; }
+#queue .q .k { text-align: right; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+#queue .q .id { font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 4px; border: 1px solid hsla(190,60%,60%,.3); text-align: center; color: var(--dim); }
+#queue .q.done { opacity: .5; }
+#queue .q.done .t { text-decoration: line-through; }
+#queue .q.next .id { background: hsl(190 90% 55%); color: #02141c; border-color: transparent; font-weight: 700; }
+#queue .q.next .t { color: #fff; font-weight: 600; }
+#queue .q.next .k { color: hsl(190 90% 75%); font-weight: 700; }
+#queue .q.doing .k { color: hsl(190 70% 70%); }
+#queue .foot { display: flex; justify-content: space-between; color: var(--dim); font-size: 11px; margin-top: 6px; border-top: 1px solid hsla(190,90%,65%,.15); padding-top: 5px; }
+@media (max-width: 760px) { #queue, #legend { display: none; } #q { width: 150px; } }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }</script>
 </head><body>
@@ -271,11 +363,14 @@ canvas { display: block; }
 <div class="seg" id="ws">${Object.entries(CHOICES).map(([k, c], i) => `<button data-ws="${k}" aria-pressed="${i === 0}">${c.label}</button>`).join('')}</div>
 <div class="seg" id="cam"><button id="home" title="Back to where the page starts (Home, 0)" hidden>⌂ Home</button><button data-view="above" title="From above">◉ Above</button><button data-view="leaning" title="Leaning, as the page starts">◒ Leaning</button><button data-view="side" title="From the side, so the heights show">▬ Side</button></div>
 <div class="seg"><button id="back-ring" hidden title="Back to the whole ring (Escape)">‹ The ring</button></div>
+<div id="find"><input id="q" type="search" placeholder="Find a ticket ( / )" aria-label="Find a ticket by id or title" autocomplete="off" spellcheck="false"><span id="count" role="status"></span><div id="results" hidden role="listbox" aria-label="Matching tickets"></div></div>
 </header>
 <div id="legend" aria-label="What the marks mean"></div>
+<section id="card" hidden aria-label="The selected ticket"></section>
+<section id="queue" aria-label="Next up"></section>
 <aside id="panel" hidden aria-label="The phase's tickets"></aside>
 <div id="tip" role="status"></div>
-<div id="help">Drag (left or middle button) to turn · Shift-drag or right-drag to pan · scroll to zoom · press a phase to bring it close · each tower is a feature, one floor per ticket. Generated by desktop/scripts/overview-towers.mjs; do not edit by hand.</div>
+<div id="help">Drag (left or middle button) to turn · Shift-drag or right-drag to pan · scroll to zoom · press a ticket to see its links · press a phase to bring it close · / to find · Escape steps back. Generated by desktop/scripts/overview-towers.mjs; do not edit by hand.</div>
 <script type="application/json" id="data">${json(towersData)}</script>
 <script type="application/json" id="marks">${json(marks)}</script>
 <script type="module">

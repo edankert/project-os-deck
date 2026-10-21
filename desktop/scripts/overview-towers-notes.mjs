@@ -20,13 +20,66 @@ export function idsIn(value) {
   return ids;
 }
 
+/** Markdown made plain for a pane: a link reads as its alias or its id, emphasis and code marks go. */
+export function plainMarkdown(text) {
+  return text
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => alias ?? /^(?:[^#]*#)?([A-Z]+-\d+)/.exec(target)?.[1] ?? target)
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    // An address is shown without its scheme: the page loads nothing from outside, and
+    // TST-0094 holds it to that by finding no address in it at all.
+    .replace(/https?:\/\//g, '')
+    .replace(/\*\*|__|`/g, '')
+    .replace(/\*([^*\s][^*]*?)\*/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * A note's first paragraph of prose (TASK-0176): the text after the frontmatter, past
+ * headings, comments, pictures and quoted callouts, up to the first blank line, made plain
+ * and cut to `max`.
+ * Notes here put their point first, so this is the sentence the pane shows.
+ */
+export function leadOf(text, max = 280) {
+  const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').replace(/<!--[\s\S]*?-->/g, '');
+  const lines = [];
+  let fenced = false;
+  for (const line of body.split(/\r?\n/)) {
+    const t = line.trim();
+    // A code block is not prose: skipped from its opening fence to its closing one.
+    if (t.startsWith('```')) {
+      if (lines.length > 0) break;
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
+    if (t === '') {
+      if (lines.length > 0) break;
+      continue;
+    }
+    // A heading, a picture, a table, a rule or a quoted callout (an acceptance stamp, a
+    // warning) is not the note's own prose; a paragraph already begun ends there.
+    if (/^(#|!\[|\||---|>)/.test(t)) {
+      if (lines.length > 0) break;
+      continue;
+    }
+    lines.push(t.replace(/^[-*]\s+/, ''));
+  }
+  const s = plainMarkdown(lines.join(' '));
+  return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
+}
+
 /**
  * Each note's `parent:`, and the ticket lists a feature (or a task's `tests:`) names,
  * by id. The first note seen with an id wins, so a caller lists the notes it trusts first.
+ * `facts` holds what the towers page shows of a selected ticket (TASK-0176): its first
+ * paragraph, its `owner:` and its `updated:` date.
  */
 export function relationsFrom(texts) {
   const parent = new Map();
   const named = new Map();
+  const facts = new Map();
   const seen = new Set();
   for (const text of texts) {
     const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1];
@@ -34,6 +87,8 @@ export function relationsFrom(texts) {
     const id = /^id:\s*["']?([A-Z]+-\d+)["']?\s*$/m.exec(fm)?.[1];
     if (id === undefined || seen.has(id)) continue;
     seen.add(id);
+    const scalar = (key) => new RegExp(`^${key}:[ \\t]*["']?([^"'\\r\\n]*?)["']?[ \\t]*$`, 'm').exec(fm)?.[1] ?? '';
+    facts.set(id, { lead: leadOf(text), owner: scalar('owner'), updated: /^\d{4}-\d{2}-\d{2}/.exec(scalar('updated'))?.[0] ?? '' });
     const p = /^parent:\s*["']?(?:\[\[)?([A-Z]+-\d+)/m.exec(fm)?.[1];
     if (p !== undefined && !parent.has(id)) parent.set(id, p);
     // A feature's lists, and a task's tests: a test named by a task belongs to the task's feature.
@@ -47,5 +102,5 @@ export function relationsFrom(texts) {
       named.set(id, ids);
     }
   }
-  return { parent, named };
+  return { parent, named, facts };
 }

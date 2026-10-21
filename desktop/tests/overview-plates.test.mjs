@@ -91,6 +91,37 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       assert.deepEqual(w.ring.map((p) => p.id).sort(), [...fixtureModel.phases, ...fixtureModel.backlog].map((p) => p.id).sort(), `${ws}: the ring holds the unfinished phases`);
       assert.deepEqual(w.shelf.map((p) => p.id).sort(), fixtureModel.shelf.map((p) => p.id).sort(), `${ws}: the shelf holds the finished phases`);
       if (w.next !== null) assert.ok(fixtureModel.tickets[w.next] !== undefined, `${ws}: the next ticket ${w.next} is a ticket`);
+      // TASK-0176: every link the fixture records between two tickets is on the page, both ways round.
+      for (const [id, t] of Object.entries(fixtureModel.tickets)) {
+        for (const other of t.links ?? []) {
+          if (other === id || fixtureModel.tickets[other] === undefined) continue;
+          assert.ok(w.links[id]?.includes(other), `${ws}: ${id} links to ${other} on the page`);
+          assert.ok(w.links[other]?.includes(id), `${ws}: ${other} links back to ${id} on the page`);
+        }
+      }
+      for (const [id, others] of Object.entries(w.links)) {
+        assert.ok(!others.includes(id), `${ws}: ${id} does not link to itself`);
+        for (const other of others) assert.ok(fixtureModel.tickets[id].links?.includes(other) || fixtureModel.tickets[other].links?.includes(id), `${ws}: the page's link ${id}–${other} is in the fixture`);
+      }
+      // Each ticket's note facts: a first paragraph for nearly all, an owner, a date.
+      const facts = Object.values(w.notes);
+      assert.ok(facts.length >= Object.keys(fixtureModel.tickets).length * 0.98, `${ws}: the page has the notes of its tickets`);
+      assert.ok(facts.filter(([lead]) => lead !== '').length >= facts.length * 0.95, `${ws}: nearly every note has a first paragraph on the page`);
+      assert.ok(facts.every(([, , updated]) => updated === '' || /^\d{4}-\d{2}-\d{2}$/.test(updated)), `${ws}: dates are days`);
+      // The next-up board: the focus feature's tasks, the next one lit, done ones closed, the rest open.
+      if (w.queue !== null) {
+        const tower = w.ring.flatMap((p) => p.towers).find((t) => t.f[0] === w.queue.feature);
+        assert.ok(tower !== undefined && w.queue.feature === focusOfPage(w), `${ws}: the board is the focus feature's`);
+        const tasks = new Map(tower.floors.filter((r) => r[1] === 'task').map((r) => [r[0], r]));
+        assert.equal(w.queue.of, tasks.size, `${ws}: the board counts the feature's tasks`);
+        assert.equal(w.queue.done, [...tasks.values()].filter((r) => r[7] === 'closed').length, `${ws}: the board counts the done ones`);
+        assert.deepEqual(w.queue.rows.filter((r) => r.kind === 'next').map((r) => r.id), w.next === null ? [] : [w.next], `${ws}: the lit row is the next ticket`);
+        for (const r of w.queue.rows.filter((q) => q.kind !== 'next')) {
+          assert.ok(tasks.has(r.id), `${ws}: ${r.id} on the board is one of the feature's tasks`);
+          assert.equal(tasks.get(r.id)[7] === 'closed', r.kind === 'done', `${ws}: ${r.id} is ${r.kind} on the board and ${tasks.get(r.id)[7]} in the fixture`);
+        }
+        assert.equal(w.queue.head, String(fixtureModel.head).slice(0, 7), `${ws}: the board names the fixture's commit`);
+      }
     }
     // Which tower a ticket stands in, on Deck, whose notes are always here (review of TASK-0163).
     const deckTowers = new Map(towerData.deck.ring.flatMap((p) => p.towers.map((t) => [t.f[0], t.floors.map((r) => r[0])])));
@@ -135,6 +166,25 @@ test('the plate script draws all seven screens on both workspaces, every mark in
   } finally {
     fs.rmSync(out, { recursive: true, force: true });
   }
+});
+
+/** The focus feature the page names, which the next-up board must follow. */
+const focusOfPage = (w) => w.focus.feature;
+
+// TASK-0176: a selected ticket's pane shows its note's first paragraph, owner and date,
+// read past what is not the note's own prose. Checked on small notes of its own.
+test('the towers page reads a note\'s first paragraph, owner and date', async () => {
+  const { relationsFrom, leadOf } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  const note = (fm, body) => `---\n${fm.join('\n')}\n---\n${body}`;
+  const { facts } = relationsFrom([
+    note(['id: TASK-0001', 'owner: system:claude', 'updated: 2026-10-21'], '\n# Title\n\n> [!note] Accepted, 2026-10-11\n> "yes"\n\n**The point first.** A [[FEAT-0002-Some-Feature|feature]] and [[TASK-0003]] in `code`.\nIt goes on.\n\nA second paragraph.\n'),
+    note(['id: TASK-0004', 'owner: "user:edwin"', 'updated: "2026-10-01T10:00Z"'], '\n# Only headings\n\n## And more\n'),
+    note(['id: TASK-0005'], '\n<!-- a comment -->\n![a picture](x.png)\n\n```\ncode that is not prose\n```\n\nThe prose after the code, at [the site](https://example.com/a) and https://example.org/b.\n'),
+  ]);
+  assert.deepEqual(facts.get('TASK-0001'), { lead: 'The point first. A feature and TASK-0003 in code. It goes on.', owner: 'system:claude', updated: '2026-10-21' }, 'the callout is skipped, links read as their alias or id, the paragraph ends at the blank line');
+  assert.deepEqual(facts.get('TASK-0004'), { lead: '', owner: 'user:edwin', updated: '2026-10-01' }, 'a note of headings only has no first paragraph; a quoted owner and a timestamp are read');
+  assert.equal(facts.get('TASK-0005').lead, 'The prose after the code, at the site and example.org/b.', 'comments, pictures and code are not prose; an address loses its scheme');
+  assert.equal(leadOf(`---\nid: X-1\n---\n${'word '.repeat(100)}`, 40).length, 40, 'a long paragraph is cut to the length asked');
 });
 
 // TASK-0163, review round one: the towers page reads which feature a ticket belongs to from

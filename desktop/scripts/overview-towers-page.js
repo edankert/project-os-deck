@@ -328,6 +328,11 @@ function build(ws) {
   world = new THREE.Group();
   scene.add(world);
   labels.length = 0;
+  // A new workspace starts with nothing selected and nothing searched (TASK-0176).
+  document.getElementById('card').hidden = true;
+  document.getElementById('q').value = '';
+  document.getElementById('count').textContent = '';
+  document.getElementById('results').hidden = true;
   const d = DATA[ws];
   const n = d.ring.length;
   const coreR = Math.max(10, Math.sqrt(d.core.length) * 0.75 * TILE_STEP + 4);
@@ -587,12 +592,20 @@ function build(ws) {
   selection.visible = false;
   world.add(selection);
 
+  // What a selection or a search draws over everything else (TASK-0176): rebuilt each time.
+  const marks = new THREE.Group();
+  world.add(marks);
+
   const focusIndex = Math.max(0, d.ring.findIndex((p) => p.id === d.focus.phase));
-  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow };
+  // Every material that fades when a selection or a search hushes the rest of the ring.
+  const allMaterials = [...phases.flatMap((ph) => ph.materials), ...shelfDrawn.materials, ...coreDrawn.materials];
+  for (const m of allMaterials) m.transparent = true;
+  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow, marks, allMaterials, hush: 1, sel: null, found: null, flows: [] };
   const placed = d.ring.reduce((m, p) => m + p.tiles.length + p.towers.reduce((x, t) => x + 1 + t.floors.length, 0), 0) + d.shelf.reduce((m, p) => m + p.tickets.length, 0) + d.core.length;
   window.__towers = { ws, tickets: placed, drawn: where.size, towers: d.ring.reduce((m, p) => m + p.towers.length, 0), R1, focus: d.focus, next: d.next };
   drawLegend();
   closePhase(false);
+  drawQueue();
 }
 
 // ---------------------------------------------------------------------------
@@ -658,8 +671,7 @@ function stepGlide(now) {
 function resize() {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
-  if (state && state.open !== null) camera.setViewOffset(innerWidth, innerHeight, 190, 0, innerWidth, innerHeight);
-  camera.updateProjectionMatrix();
+  syncOffset();
 }
 
 // ---------------------------------------------------------------------------
@@ -677,13 +689,12 @@ function openPhase(i, selectId = null) {
     for (const m of ph.materials) {
       m.transparent = true;
       m.userData.dim = mine ? 1 : 0.25;
-      m.opacity = (m.userData.base ?? 1) * m.userData.dim;
+      applyOpacity(m);
     }
   });
   state.shelfGroup.visible = false;
   state.coreGroup.visible = false;
   state.nextMark.visible = state.where.get(state.d.next)?.phase === i;
-  camera.setViewOffset(innerWidth, innerHeight, 190, 0, innerWidth, innerHeight);
   const ph = state.phases[i];
   const rMid = (state.R0 + state.R1) / 2;
   const span = Math.min((ph.a1 - ph.a0) * rMid, 2 * rMid);
@@ -692,10 +703,12 @@ function openPhase(i, selectId = null) {
   document.getElementById('back-ring').hidden = false;
   document.getElementById('legend').hidden = true;
   drawPanel(i, selectId);
+  syncOffset();
 }
 
 function closePhase(animate = true) {
   if (state === null) return;
+  clearSelection();
   state.open = null;
   camera.clearViewOffset();
   state.shelfGroup.visible = true;
@@ -708,23 +721,15 @@ function closePhase(animate = true) {
     ph.arch.visible = false;
     for (const m of ph.materials) {
       m.userData.dim = 1;
-      m.opacity = m.userData.base ?? 1;
+      applyOpacity(m);
     }
   });
   document.getElementById('back-ring').hidden = true;
   document.getElementById('legend').hidden = false;
   document.getElementById('panel').hidden = true;
   state.selection.visible = false;
+  syncOffset();
   if (animate) glideTo(homeView());
-}
-
-function select(id) {
-  if (state === null || !state.where.has(id)) return;
-  const w = state.where.get(id);
-  state.selection.position.copy(w.at);
-  state.selection.visible = true;
-  for (const el of document.querySelectorAll('#panel .row')) el.classList.toggle('sel', el.dataset.id === id);
-  document.querySelector('#panel .row.sel')?.scrollIntoView({ block: 'nearest' });
 }
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -760,7 +765,7 @@ function drawPanel(i, selectId) {
   panel.hidden = false;
   panel.scrollTop = 0;
   for (const el of panel.querySelectorAll('.row[data-id]')) el.addEventListener('click', () => select(el.dataset.id));
-  if (selectId) select(selectId);
+  if (selectId) select(selectId, { pane: false });
 }
 
 function drawLegend() {
@@ -773,6 +778,330 @@ function drawLegend() {
     '<div><span class="dot"></span>needs you · red cap: a tower asks (press it)</div><div><span class="sq delivered" style="color:' + MARK.exit + '"></span>exit criterion met · <span class="sq open" style="color:' + MARK.exit + '"></span>not yet, on the rim</div><div><span class="beam"></span>the feature in focus</div>' +
     '<div><span style="color:#9ff0ff;font-weight:800">▶</span> the phase in focus · <b>next</b> what is next</div>' +
     '<div style="flex-wrap:wrap;max-width:300px;margin-top:6px">' + types + '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// TASK-0176, three ideas from Rubric (REFERENCE-RUBRIC-AGENTIC-OS-REVIEW): a selected
+// ticket's links drawn as curves with its card and its text, search that lights the
+// towers, and a next-up board.
+
+/** A material's opacity: its own, times its phase's dimming, times the hush of a selection or search. */
+function applyOpacity(m) {
+  m.opacity = (m.userData.base ?? 1) * (m.userData.dim ?? 1) * (state?.hush ?? 1);
+}
+
+/** Everything but the marks fades while a ticket is selected or a search is lit. */
+function setHush(on) {
+  state.hush = on ? 0.16 : 1;
+  for (const m of state.allMaterials) applyOpacity(m);
+  for (const s of labels) s.material.opacity = on && !s.userData.keep ? 0.22 : 1;
+}
+
+/** The camera leaves room for the right pane whenever it is open. */
+function syncOffset() {
+  const open = !document.getElementById('panel').hidden;
+  if (open) camera.setViewOffset(innerWidth, innerHeight, Math.min(190, innerWidth * 0.12), 0, innerWidth, innerHeight);
+  else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
+
+const TYPE_ORDER = ['feature', 'task', 'test', 'requirement', 'design', 'issue', 'risk', 'adr', 'change', 'release'];
+const typeRank = (t) => (TYPE_ORDER.indexOf(t) + 1 || 99);
+const statusWord = (r) => (r[FILL] === 'open' || r[FILL] === 'delivered' ? r[STATUS] : r[STATUS] + ' · ' + (MARK.fillWord[r[FILL]] ?? r[FILL]));
+const linksOf = (id) => (state.d.links[id] ?? []).filter((x) => state.where.has(x));
+
+/** Where a ticket stands, in words: its feature's tower, its phase, the shelf or the core. */
+function placeOf(id) {
+  const w = state.where.get(id);
+  if (!w) return { feature: null, phase: 'not drawn' };
+  if (w.phase !== undefined) {
+    const p = state.phases[w.phase].p;
+    const f = w.tower !== undefined ? p.towers[w.tower].f[ID] : null;
+    return { feature: f === id ? null : f, phase: p.id + ' ' + String(p.name).replace(/^phase\s*\d+\s*[:\-–]\s*/i, ''), phaseIndex: w.phase };
+  }
+  if (w.shelf !== undefined) return { feature: null, phase: state.d.shelf[w.shelf].id + ', finished' };
+  return { feature: null, phase: 'no phase' };
+}
+
+/** A ring of light round a ticket, and its id over it, in the ticket's type colour. */
+function outline(at, colour, size, text) {
+  const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)), new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.95, depthTest: false }));
+  box.position.copy(at);
+  box.renderOrder = 12;
+  state.marks.add(box);
+  if (text) {
+    const tag = label(text, 0.95, '#' + colour.getHexString(), 700, true);
+    tag.position.copy(at).add(new THREE.Vector3(0, size * 0.5 + 0.9, 0));
+    tag.userData.keep = true;
+    state.marks.add(tag);
+  }
+}
+
+function clearMarks() {
+  for (const o of [...state.marks.children]) {
+    state.marks.remove(o);
+    o.geometry?.dispose?.();
+    if (o.material) {
+      o.material.map?.dispose?.();
+      o.material.dispose?.();
+    }
+    const at = labels.indexOf(o);
+    if (at >= 0) labels.splice(at, 1);
+  }
+  state.flows = [];
+}
+
+const MAX_CURVES = 60;
+/** The selected ticket's links: a curve to each, rising with the distance it spans, and a light that runs along it. */
+function drawLinks(id) {
+  const from = state.where.get(id).at;
+  const linked = linksOf(id);
+  linked.slice(0, MAX_CURVES).forEach((other, k) => {
+    const to = state.where.get(other).at;
+    const r = state.ticketRow.get(other);
+    const colour = colourOf(MARK.type[r[TYPE]]);
+    const span = from.distanceTo(to);
+    const lift = 3 + span * 0.26;
+    const curve = new THREE.CubicBezierCurve3(from.clone(), from.clone().add(new THREE.Vector3(0, lift, 0)), to.clone().add(new THREE.Vector3(0, lift, 0)), to.clone());
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(16, Math.ceil(span)), 0.09 + Math.min(0.12, span * 0.002), 6, false), new THREE.MeshBasicMaterial({ color: colour, transparent: true, opacity: 0.85, depthTest: false, blending: THREE.AdditiveBlending }));
+    tube.renderOrder = 12;
+    state.marks.add(tube);
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false }));
+    spark.renderOrder = 13;
+    state.marks.add(spark);
+    state.flows.push({ curve, spark, phase: k * 0.137 });
+    outline(to, colour, 1.75, other);
+  });
+  const own = state.ticketRow.get(id);
+  outline(from, new THREE.Color('#fff3a0'), 2.2, id);
+  return { linked: linked.length, drawn: Math.min(linked.length, MAX_CURVES), type: own[TYPE] };
+}
+
+/** Select a ticket: its links as curves, the rest hushed, its card, and (unless asked not to) its text in the pane. */
+function select(id, { pane = true, fly = false } = {}) {
+  if (state === null || !state.where.has(id)) return;
+  clearFound();
+  search.blur();
+  clearMarks();
+  state.sel = id;
+  state.selection.position.copy(state.where.get(id).at);
+  state.selection.visible = true;
+  drawLinks(id);
+  setHush(true);
+  drawCard(id);
+  if (pane) drawTicketPane(id);
+  else for (const el of document.querySelectorAll('#panel .row')) el.classList.toggle('sel', el.dataset.id === id);
+  document.querySelector('#panel .row.sel')?.scrollIntoView({ block: 'nearest' });
+  if (fly) flyTo(id);
+  window.__towers.selected = { id, links: linksOf(id).length };
+}
+
+function clearSelection() {
+  if (state === null || state.sel === null) return false;
+  state.sel = null;
+  clearMarks();
+  setHush(false);
+  state.selection.visible = false;
+  document.getElementById('card').hidden = true;
+  document.getElementById('legend').hidden = state.open !== null;
+  if (state.open !== null) drawPanel(state.open);
+  else document.getElementById('panel').hidden = true;
+  syncOffset();
+  window.__towers.selected = null;
+  return true;
+}
+
+/** The camera flies to frame a ticket and everything it links to. */
+function flyTo(id) {
+  const pts = [id, ...linksOf(id)].map((x) => state.where.get(x).at);
+  const centre = pts.reduce((c, p) => c.add(p), new THREE.Vector3()).multiplyScalar(1 / pts.length);
+  const spread = Math.max(...pts.map((p) => p.distanceTo(centre)));
+  const flat = Math.hypot(centre.x, centre.z);
+  glideTo({ radius: Math.max(26, spread * 2.3 + 18), theta: flat > 4 ? Math.atan2(centre.z, centre.x) : view.theta, phi: 0.92, target: centre.clone().setY(Math.max(2, centre.y)) }, 700);
+}
+
+function drawCard(id) {
+  const r = state.ticketRow.get(id);
+  const [, owner, updated] = state.d.notes[id] ?? ['', '', ''];
+  const where = placeOf(id);
+  const linked = linksOf(id).map((x) => state.ticketRow.get(x));
+  const kinds = new Map();
+  for (const l of linked) kinds.set(l[TYPE], (kinds.get(l[TYPE]) ?? 0) + 1);
+  const sq = (fill, type) => '<span class="sq ' + esc(fill) + '" style="color:' + esc(MARK.type[type] ?? '#999') + '"></span>';
+  const fact = (k, v) => (v ? '<span>' + k + '</span><span>' + v + '</span>' : '');
+  const card = document.getElementById('card');
+  card.innerHTML = '<div class="head">' + sq(r[FILL], r[TYPE]) + '<div><b>' + esc(r[ID]) + '</b> <span class="sub">' + esc(MARK.typeWord[r[TYPE]] ?? r[TYPE]) + (r[ID] === state.d.next ? ' · <b>next</b>' : '') + '</span></div><button class="x" data-act="clear" title="Clear the selection (Escape)">×</button></div>' +
+    '<div class="title">' + esc(r[TITLE]) + '</div>' +
+    '<div class="facts">' + fact('Status', esc(statusWord(r))) + fact('Feature', where.feature ? esc(where.feature) : '') + fact('Phase', esc(where.phase)) + fact('Owner', esc(owner)) + fact('Updated', esc(updated)) + '</div>' +
+    (r[NEEDS] ? '<div class="needs">● ' + esc(r[SAY] || 'needs you') + '</div>' : '') +
+    '<div class="kinds">' + (linked.length === 0 ? '<span class="sub">No links to other tickets</span>' : [...kinds.entries()].sort(([a], [b]) => typeRank(a) - typeRank(b)).map(([t, n]) => '<span>' + sq('delivered', t) + n + ' ' + esc(MARK.typeWord[t] ?? t) + (n === 1 ? '' : 's') + '</span>').join('')) +
+    (linked.length > MAX_CURVES ? '<span class="sub">the first ' + MAX_CURVES + ' are drawn</span>' : '') + '</div>' +
+    '<div class="acts"><button data-act="fly">Fly to</button>' + (where.phaseIndex !== undefined && state.open !== where.phaseIndex ? '<button data-act="phase">Bring its phase close</button>' : '') + '<button data-act="clear">Clear</button></div>';
+  card.hidden = false;
+  document.getElementById('legend').hidden = true;
+}
+
+document.getElementById('card').addEventListener('click', (e) => {
+  const act = e.target.closest('button')?.dataset.act;
+  if (!act || state.sel === null) return;
+  const id = state.sel;
+  if (act === 'fly') flyTo(id);
+  else if (act === 'clear') clearSelection();
+  else if (act === 'phase') {
+    const w = state.where.get(id);
+    openPhase(w.phase);
+    select(id);
+  }
+});
+
+/** The right pane for a ticket: its first paragraph, then its links as cockpit rows grouped by type. */
+function drawTicketPane(id) {
+  const r = state.ticketRow.get(id);
+  const note = state.d.notes[id];
+  const lead = note?.[0] ?? '';
+  const linked = linksOf(id).map((x) => state.ticketRow.get(x));
+  const groups = new Map();
+  for (const l of linked.sort((a, b) => typeRank(a[TYPE]) - typeRank(b[TYPE]) || a[ID].localeCompare(b[ID], 'en', { numeric: true }))) {
+    if (!groups.has(l[TYPE])) groups.set(l[TYPE], []);
+    groups.get(l[TYPE]).push(l);
+  }
+  let html = state.open !== null ? '<button class="back" data-back="1">‹ ' + esc(state.phases[state.open].p.id) + "'s tickets</button>" : '';
+  html += '<h2>' + esc(r[ID]) + ' · ' + esc(r[TITLE]) + '</h2><div class="sub">' + esc(MARK.typeWord[r[TYPE]] ?? r[TYPE]) + ' · ' + esc(statusWord(r)) + '</div>';
+  if (r[NEEDS]) html += '<div class="say" style="padding-left:0">● ' + esc(r[SAY] || 'needs you') + '</div>';
+  html += lead ? '<div class="lead">' + esc(lead) + '</div>' : '<div class="sub">' + (note === undefined ? 'Its note was not found at the fixture\'s commit.' : 'Its note has no paragraph of its own before its first heading.') + '</div>';
+  if (linked.length === 0) html += '<h3>Linked tickets · none</h3>';
+  for (const [type, rows] of groups) html += '<h3>' + esc(MARK.typeWord[type] ?? type) + (rows.length === 1 ? '' : 's') + ' · ' + rows.length + '</h3>' + rows.map((l) => rowHtml(l, l[ID] === state.d.next)).join('');
+  const panel = document.getElementById('panel');
+  panel.innerHTML = html;
+  panel.hidden = false;
+  panel.scrollTop = 0;
+  panel.querySelector('[data-back]')?.addEventListener('click', () => {
+    drawPanel(state.open);
+    for (const el of panel.querySelectorAll('.row')) el.classList.toggle('sel', el.dataset.id === state.sel);
+  });
+  for (const el of panel.querySelectorAll('.row[data-id]')) el.addEventListener('click', () => select(el.dataset.id));
+  syncOffset();
+}
+
+// Search: every ticket whose id or title holds each word of the query lights where it stands.
+const search = document.getElementById('q');
+const results = document.getElementById('results');
+let hot = 0;
+function matches(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const exact = q.trim().toUpperCase();
+  const found = [];
+  for (const [id, r] of state.ticketRow) {
+    if (!state.where.has(id)) continue;
+    const hay = (id + ' ' + r[TITLE]).toLowerCase();
+    if (words.every((w) => hay.includes(w))) found.push(r);
+  }
+  return found.sort((a, b) => (b[ID] === exact) - (a[ID] === exact) || b[NEEDS] - a[NEEDS] || (a[STATE] === 'closed') - (b[STATE] === 'closed') || a[ID].localeCompare(b[ID], 'en', { numeric: true }));
+}
+
+function clearFound(andBox = true) {
+  if (state === null || state.found === null) return false;
+  state.found = null;
+  if (state.sel === null) {
+    clearMarks();
+    setHush(false);
+  }
+  if (andBox) search.value = '';
+  results.hidden = true;
+  document.getElementById('count').textContent = '';
+  window.__towers.found = null;
+  return true;
+}
+
+function runSearch() {
+  const q = search.value;
+  if (q.trim() === '') {
+    clearFound();
+    return;
+  }
+  if (state.sel !== null) clearSelection();
+  clearMarks();
+  const found = matches(q);
+  state.found = found.map((r) => r[ID]);
+  setHush(found.length > 0);
+  const glow = new THREE.MeshBasicMaterial({ color: FOCUS_COLOUR, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
+  if (found.length > 0) {
+    const mesh = new THREE.InstancedMesh(BOX, glow, found.length);
+    found.forEach((r, i) => {
+      const at = state.where.get(r[ID]).at;
+      mesh.setMatrixAt(i, new THREE.Matrix4().compose(at, new THREE.Quaternion(), new THREE.Vector3(1.7, 1.7, 1.7)));
+    });
+    mesh.renderOrder = 12;
+    state.marks.add(mesh);
+    for (const r of found.slice(0, 40)) outline(state.where.get(r[ID]).at, colourOf(MARK.type[r[TYPE]]), 1.9, found.length <= 40 ? r[ID] : null);
+  } else glow.dispose();
+  document.getElementById('count').textContent = found.length === 0 ? 'no match' : found.length + (found.length === 1 ? ' match' : ' matches');
+  hot = 0;
+  drawResults(found);
+  window.__towers.found = state.found.length;
+}
+
+function drawResults(found) {
+  if (found.length === 0) {
+    results.hidden = true;
+    return;
+  }
+  results.innerHTML = found.slice(0, 12).map((r, i) => rowHtml(r, r[ID] === state.d.next).replace('class="row ', 'class="row ' + (i === hot ? 'hot ' : ''))).join('') + (found.length > 12 ? '<div class="sub" style="padding:4px 6px">' + (found.length - 12) + ' more lit on the ring</div>' : '');
+  results.hidden = false;
+  for (const el of results.querySelectorAll('.row[data-id]')) el.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    pick(el.dataset.id);
+  });
+}
+
+/** Choosing a match selects it and flies to it; the search gives way to the selection. */
+function pick(id) {
+  clearFound();
+  search.blur();
+  select(id, { fly: true });
+}
+
+search.addEventListener('input', runSearch);
+search.addEventListener('focus', () => {
+  if (state.found !== null && state.found.length > 0) results.hidden = false;
+});
+search.addEventListener('blur', () => {
+  results.hidden = true;
+});
+search.addEventListener('keydown', (e) => {
+  const rows = [...results.querySelectorAll('.row[data-id]')];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (rows.length === 0) return;
+    hot = (hot + (e.key === 'ArrowDown' ? 1 : rows.length - 1)) % rows.length;
+    rows.forEach((el, i) => el.classList.toggle('hot', i === hot));
+  } else if (e.key === 'Enter') {
+    const el = rows[hot] ?? rows[0];
+    if (el) pick(el.dataset.id);
+  } else if (e.key === 'Escape') {
+    e.stopPropagation();
+    if (!clearFound()) search.blur();
+  }
+});
+
+/** The next-up board: the focus feature's tasks, finished greyed, the next lit, the rest queued. */
+function drawQueue() {
+  const el = document.getElementById('queue');
+  const q = state.d.queue;
+  if (q === null) {
+    el.innerHTML = '<h4>Next up</h4><div class="sub">This workspace\'s snapshot names no feature in focus.</div>';
+    return;
+  }
+  const words = { done: 'done', next: 'next', doing: 'doing', queued: 'queued' };
+  el.innerHTML = '<h4>Next up · ' + esc(q.feature) + '<span>' + q.done + ' of ' + q.of + ' tasks done</span></h4>' +
+    q.rows.map(({ id, kind }) => {
+      const r = state.ticketRow.get(id);
+      const [, owner, updated] = state.d.notes[id] ?? ['', '', ''];
+      return '<div class="q ' + kind + '" data-id="' + esc(id) + '" title="' + esc(id + ' ' + (r?.[TITLE] ?? '')) + '"><span class="id">' + esc(id.replace(/^[A-Z]+-0*/, '#')) + '</span><span class="t">' + esc(r?.[TITLE] ?? id) + '</span><span class="who">' + esc(kind === 'done' && updated ? updated.slice(5) : owner) + '</span><span class="k">' + words[kind] + '</span></div>';
+    }).join('') +
+    '<div class="foot"><span>' + (q.more > 0 ? '+' + q.more + ' more queued' : '') + '</span><span>data from ' + esc(q.head) + (q.generated ? ' · ' + esc(q.generated) : '') + '</span></div>';
+  for (const row of el.querySelectorAll('.q[data-id]')) row.addEventListener('click', () => select(row.dataset.id, { fly: true }));
 }
 
 // ---------------------------------------------------------------------------
@@ -833,13 +1162,10 @@ canvas.addEventListener('pointerup', (e) => {
     openPhase(hit.cap.phase, hit.cap.ids[0]);
     return;
   }
-  if (hit.ticket) {
-    const w = hit.ticket.where;
-    if (w?.phase !== undefined) {
-      if (state.open !== w.phase) openPhase(w.phase, hit.ticket.r[ID]);
-      else select(hit.ticket.r[ID]);
-    }
-  } else if (hit.phase !== undefined && state.open !== hit.phase) openPhase(hit.phase);
+  // A ticket is selected where it stands, its links drawn across the ring (TASK-0176);
+  // its card brings its phase close when that is wanted.
+  if (hit.ticket) select(hit.ticket.r[ID]);
+  else if (hit.phase !== undefined && state.open !== hit.phase) openPhase(hit.phase);
 });
 canvas.addEventListener('pointermove', (e) => {
   const tip = document.getElementById('tip');
@@ -917,7 +1243,15 @@ document.getElementById('ws').addEventListener('click', (e) => {
   if (e.target.dataset.ws) showWorkspace(e.target.dataset.ws);
 });
 addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+  if (e.target === search) return;
+  if (e.key === '/') {
+    e.preventDefault();
+    search.focus();
+    search.select();
+  } else if (e.key === 'Escape') {
+    // One step back at a time: the search, then the selection, then the phase, then home.
+    if (clearFound()) return;
+    if (clearSelection()) return;
     if (state && state.open !== null) closePhase();
     else glideTo(homeView());
   } else if (e.key === 'Home' || e.key === '0') {
@@ -972,6 +1306,33 @@ window.__towersProbe = {
     return this.screenOf(c.x, c.y, c.z);
   },
   open: () => (state.open === null ? null : state.d.ring[state.open].id),
+  // TASK-0176: select a ticket or search, as a person would, and read back what is drawn.
+  select(id, fly = true) {
+    select(id, { fly });
+    if (glide) stepGlide(glide.t0 + glide.ms);
+    return { selected: state.sel, links: linksOf(id), curves: state.flows.length, card: document.getElementById('card').hidden ? null : document.getElementById('card').textContent, pane: document.getElementById('panel').hidden ? null : document.getElementById('panel').textContent };
+  },
+  search(q) {
+    search.value = q;
+    runSearch();
+    return { found: state.found, count: document.getElementById('count').textContent, listed: [...results.querySelectorAll('.row[data-id]')].map((el) => el.dataset.id) };
+  },
+  clear() {
+    clearFound();
+    clearSelection();
+  },
+  queue: () => [...document.querySelectorAll('#queue .q[data-id]')].map((el) => [el.dataset.id, el.className.replace(/^q /, '')]),
+  /** The ticket of the focus phase whose links reach the most other phases, for a picture. */
+  widest() {
+    let best = null;
+    for (const [id, w] of state.where) {
+      if (w.phase !== state.focusIndex) continue;
+      const reach = new Set(linksOf(id).map((x) => state.where.get(x).phase ?? (state.where.get(x).shelf !== undefined ? 's' + state.where.get(x).shelf : 'core')));
+      const score = reach.size * 100 + linksOf(id).length;
+      if (linksOf(id).length <= MAX_CURVES && (best === null || score > best.score)) best = { id, score };
+    }
+    return best?.id ?? null;
+  },
   homeShown: () => !document.getElementById('home').hidden,
   tip: () => (document.getElementById('tip').style.display === 'block' ? document.getElementById('tip').textContent : null),
 };
@@ -989,8 +1350,15 @@ renderer.setAnimationLoop((now) => {
   }
   if (state && !reduced) {
     const pulse = 0.5 + 0.5 * Math.sin(now / 420);
-    for (const m of state.pulses) m.opacity = (m.userData.base ?? 0.4) * (m.userData.dim ?? 1) * (0.45 + 0.55 * pulse);
-    for (const m of state.beams) m.opacity = 0.14 + 0.12 * pulse;
+    for (const m of state.pulses) m.opacity = (m.userData.base ?? 0.4) * (m.userData.dim ?? 1) * state.hush * (0.45 + 0.55 * pulse);
+    for (const m of state.beams) m.opacity = (0.14 + 0.12 * pulse) * state.hush;
+  }
+  // A light runs along each of the selected ticket's links, from it to the linked ticket.
+  if (state) {
+    for (const f of state.flows) {
+      const t = reduced ? 0.5 : (now / 1700 + f.phase) % 1;
+      f.spark.position.copy(f.curve.getPoint(t));
+    }
   }
   renderer.render(scene, camera);
 });
