@@ -7,7 +7,7 @@ status: proposed
 phase: "[[PHASE-0005-Overview]]"
 owner: user:edwin
 created: 2026-10-14
-updated: 2026-10-16
+updated: 2026-10-21
 source: ["Edwin 2026-10-14: 'I still don't like the glass solution, it is too text heavy and does not look cool or minority report like. Please make sure that each of these screens identified show dialogs/views which are based more on diagrams and images to show case progress and status and less on text! Also introduce the circular view we defined previously as an overview view. And think about what is needed to handle the design, the acceptance test and the tickets acceptance flows. (the goal is to define a goal which can be worked on with both openai astra and claude opus!)'"]
 asset: "DES-0005-the-overview.html"
 implements: ["[[FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built]]", "[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]", "[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]", "[[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]", "[[PHASE-0005-Overview]]"]
@@ -16,7 +16,7 @@ superseded_by: ""
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
-related: ["[[DES-0004-The-Phase-Overview]]", "[[DES-0002-The-Glass-Cockpit]]", "[[DES-0003-Collections-And-Documents-On-Glass]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
+related: ["[[REFERENCE-RUBRIC-AGENTIC-OS-REVIEW]]", "[[DES-0004-The-Phase-Overview]]", "[[DES-0002-The-Glass-Cockpit]]", "[[DES-0003-Collections-And-Documents-On-Glass]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]"]
 tags: [design, overview, glass, acceptance]
 ---
 
@@ -223,6 +223,38 @@ The pictures from above are [towers-deck-above.jpg](__attachments__/DES-0005/tow
 - Most issues belong to no feature, so they lie flat; so do 33 of Deck's tests and 32 of your-trainer's that no feature or task names.
 - Grouping by feature, with the ring made of features, is not drawn; Edwin chose phase.
 
+## Links, search and next up on the towers, three ideas from Rubric
+
+**The towers page now draws three ways of showing the data taken from Rubric, a dashboard for AI agents: a selected ticket's links as curves, search that lights the towers, and a next-up board** ([[TASK-0176]], 2026-10-21). Edwin asked for Rubric to be reviewed; the review and all seven of its suggestions are in [[REFERENCE-RUBRIC-AGENTIC-OS-REVIEW]]. He agreed with all seven and asked for these three first. They are on the towers page only; Deck is not changed.
+
+- **Pressing a ticket selects it where it stands.** Curves rise from it to every ticket it links to or that links to it, each in the linked ticket's type colour, also into other phases, the shelf and the core. A light runs along each curve, from the ticket to the one it links to. Everything else fades, and each linked ticket gets an outline and its id. The links are the ones Deck's overview model already records for each note, read both ways round.
+- **A card for the selected ticket stands where the legend was.** It gives the ticket's type mark, id and title, its status in the cockpit's words, its feature, phase, owner and last update, and the red line saying what to do when it needs you. It counts the linked tickets by type. Its buttons fly the camera to frame the ticket and its links, bring its phase close, or clear the selection.
+- **The right pane shows the ticket's text**: the first paragraph of its note, then its linked tickets as cockpit rows grouped by type. Pressing a row selects that ticket. With a phase brought close, the pane starts with a button back to the phase's list. This is Edwin's request of 2026-10-15 that a selected item show its id, title and text and the ids and titles of the items around it.
+- **Search lights the towers.** The box in the header (`/` puts the cursor in it) matches ids and title words. Every other ticket fades, the matches glow where they stand, and the box says how many matched. Up to twelve are listed under it, what needs you first; the arrow keys and Enter, or a press, choose one, which selects it and flies the camera to it.
+- **The next-up board, bottom left, is the focus feature's tasks in the style of Rubric's routines.** The last two finished are greyed and struck through with their dates, the next ticket is lit and marked NEXT, and the rest follow, those in progress first. Each row names who has it, from the note's `owner:`. The board counts the feature's tasks done, and its foot names the commit the data was read from. Pressing a row selects that ticket.
+- **Escape steps back one thing at a time**: the search, then the selection, then the phase, then home.
+
+![Deck, TASK-0156 selected: its links as curves](__attachments__/DES-0005/towers-deck-linked.jpg)
+
+Deck with TASK-0156 selected, the ticket of the focus phase whose links reach the most places. Thirteen curves run from it: to four features (its own FEAT-0027, FEAT-0028, FEAT-0029, and FEAT-0016 in Glass), four tasks, four tests, and DES-0005 in the core. The card says it waits on TASK-0155; the pane gives its first paragraph and its links by type. The next-up board shows FEAT-0028's two last finished tasks, TASK-0154 next, and TASK-0158 queued.
+
+![Deck, a search for "wheel" lit on the ring](__attachments__/DES-0005/towers-deck-search.jpg)
+
+A search for "wheel" on Deck: 16 tickets glow where they stand: 11 in Overview, 4 in Glass and 1 in the core; the first twelve are listed under the box.
+
+![your-trainer, FEAT-0124 selected: its links as curves](__attachments__/DES-0005/towers-your-trainer-linked.jpg)
+
+your-trainer with FEAT-0124 selected, a finished navigation feature: 40 curves: to its seven tasks, five tests and four requirements, to three features, two designs and two decisions, and to seventeen issues, eight in its own phase and the rest in the core and three other phases. The next-up board shows FEAT-0136, none of its seventeen tasks done, TASK-1057 next and six in progress, all Edwin's.
+
+![your-trainer, a search for "heart rate" lit on the ring](__attachments__/DES-0005/towers-your-trainer-search.jpg)
+
+A search for "heart rate" on your-trainer: 32 matches, in four phases of the ring, four finished phases on the shelf, and the core.
+
+**What building them into Deck would cost.** Deck's overview model already carries each ticket's links (for the ticket screen, S3) and its feature (FEAT-0026), so the curves and the card need no new data. The pane's paragraph, and the board's owners and dates, would need each note's first paragraph, `owner:` and `updated:` added to the model; on this page they are read from the notes at the fixture's commit. In the 3D view the curves, the fading and the glow are a few hundred lines of three.js beside what is there. The flat plan Deck draws when WebGL cannot start would need its own drawing of the links. Each would need the screen checks extended, and the window run TST-0093 repeated. **What it leaves open:**
+- A ticket with more than 60 links has only its first 60 drawn; the card says so. On your-trainer a few phase-level features come close.
+- Search matches ids and titles, not the notes' text.
+- The board shows the focus feature only. When the snapshot names no feature in focus, it says so and is empty.
+
 ## Answers proposed to DES-0004's open questions
 
 1. **A backlog phase** is marked with `kind: backlog` in its note. When the note says nothing, an id ending in 999 is read as backlog, so your-trainer's PHASE-999 works today.
@@ -234,6 +266,7 @@ The pictures from above are [towers-deck-above.jpg](__attachments__/DES-0005/tow
 
 - Whether to build Level 2, the 3D wheel where height is time, into Deck, after looking at its page. It would replace or sit beside the constellation.
 - ~~Whether to build the towers on the ring into Deck.~~ Decided 2026-10-16: "I like the design page, please implement as suggested", with a different design for the exit criteria (the collar) and the red caps pressable. Built in [[TASK-0164]] to [[TASK-0168]]; three.js is [[RISK-0010]].
+- Whether to build the links as curves, search on the ring, and the next-up board into Deck, after trying them on the towers page ([[TASK-0176]]). The other four of Rubric's ideas are drawn next on the same page ([[TASK-0177]]).
 
 - Accept or decline this design.
 - Whether S5's fanned plates should be drawn as outlines only: behind a busy plate they compete with it.

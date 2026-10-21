@@ -32,13 +32,21 @@ tests: ["[[TST-0094-DES-0005s-Plates-Are-Drawn-For-Every-Screen-With-Every-Mark]
 
 ## Definition of Done
 
-- [ ] `desktop/scripts/overview-towers.mjs` adds to each workspace on the page: each ticket's links in both directions, and each note's first paragraph, owner and last update, read from the notes at the fixture's commit as the feature of each ticket already is. Nothing is entered by hand.
-- [ ] `desktop/scripts/overview-towers-notes.mjs` reads the first paragraph, `owner:` and `updated:`, and TST-0094's suite checks each on small notes of its own.
-- [ ] The page draws the curves, the card, the text pane, the search and the next-up board as described above, with no errors in a hidden window.
-- [ ] TST-0094 checks that the links on the page agree with the fixture in both directions, and that the next-up board holds the focus feature's tasks.
-- [ ] Pictures under `docs/designs/__attachments__/DES-0005/`: a ticket selected with its curves, a search lit, and the next-up board, on each workspace.
-- [ ] DES-0005 shows the pictures under a heading of their own, says what building each into Deck would cost, and asks Edwin whether to build them.
+- [x] `desktop/scripts/overview-towers.mjs` adds to each workspace on the page: each ticket's links in both directions, and each note's first paragraph, owner and last update, read from the notes at the fixture's commit as the feature of each ticket already is. Nothing is entered by hand.
+- [x] `desktop/scripts/overview-towers-notes.mjs` reads the first paragraph, `owner:` and `updated:`, and TST-0094's suite checks each on small notes of its own.
+- [x] The page draws the curves, the card, the text pane, the search and the next-up board as described above, with no errors in a hidden window.
+- [x] TST-0094 checks that the links on the page agree with the fixture in both directions, and that the next-up board holds the focus feature's tasks.
+- [x] Pictures under `docs/designs/__attachments__/DES-0005/`: a ticket selected with its curves, a search lit, and the next-up board, on each workspace.
+- [x] DES-0005 shows the pictures under a heading of their own, says what building each into Deck would cost, and asks Edwin whether to build them.
 - [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+
+## Verification
+
+`desktop/scripts/overview-towers.mjs` writes the page with each ticket's links both ways round (from the fixture's `links`), each note's first paragraph, owner and last update (read by `overview-towers-notes.mjs` from the notes at the fixture's commit, past headings, quoted callouts, comments, pictures and code), and the next-up board. Deck: FEAT-0028, 5 of 7 tasks done, TASK-0147 and TASK-0148 done, TASK-0154 next, TASK-0158 queued. your-trainer: FEAT-0136, 0 of 17 done, TASK-1057 next, six in progress, nine more queued. The page grew from 554 KB to 1.66 MB; most of it is your-trainer's 2,743 paragraphs, each cut at 280 characters.
+
+TST-0094's suite checks that every link of the fixture is on the page both ways and no other, that nearly every note has a paragraph, that dates are days, that the board is the focus feature's tasks with the next one lit and done ones closed, and the paragraph reader on small notes of its own. Each new guard was broken once to see it fail: links one way only, a done task shown as queued, a callout read as prose. `cd desktop && npm test`: 793 tests, 793 passed.
+
+In a hidden window (`desktop/scripts/towers-capture.cjs`, no page errors) the pictures were taken, and the page was driven with real presses and keys: pressing a ticket on the ring selects it with its card and pane; a row of the pane selects that ticket; the card brings its phase close; the pane goes back to the phase's list; Escape clears the selection, then closes the phase; `/` and typing light 16 matches for "wheel", arrow and Enter choose one, which is selected; Escape in the box empties it; a row of the board selects its ticket; a red cap still brings its phase close with the first ticket that needs you selected and the list kept. One defect found that way was fixed: a selection left the cursor in the search box, so Escape only left the box.
 
 ## Acceptance checks reopened
 
