@@ -32,8 +32,12 @@ tests: ["[[TST-0101-DES-0006s-Page-Is-Drawn-From-Recorded-Sessions-As-Counts]]"]
 
 ## Definition of Done
 
-- [ ] A script writes a fixture from each repository's `.cockpit/sessions.json`, `approvals.json` and `agent-state.json`, keeping ids, agents, states, times, tickets, file counts, cost and context, and tool names with counts; no prompt, reply or command text.
-- [ ] The page draws each item above from that fixture and the overview fixtures, on Deck and your-trainer, with no errors in a hidden window.
-- [ ] TST-0094 or a test of its own checks the fixture against the recorded files and that no text leaks into it.
-- [ ] Pictures on both workspaces are in DES-0006, which asks Edwin what to change.
+- [x] A script writes a fixture from each repository's `.cockpit/sessions.json`, `approvals.json` and `agent-state.json`, keeping ids, agents, states, times, tickets, file counts, cost and context, and tool names with counts; no prompt, reply or command text.
+- [x] The page draws each item above from that fixture and the overview fixtures, on Deck and your-trainer, with no errors in a hidden window.
+- [x] TST-0094 or a test of its own checks the fixture against the recorded files and that no text leaks into it.
+- [x] Pictures on both workspaces are in DES-0006, which asks Edwin what to change.
 - [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+
+## Verification
+
+`desktop/scripts/agents-fixture.mjs` recorded, on 2026-10-22, each workspace's model now (Deck 418 tickets, your-trainer 2,810, the cockpit 1,388) and its ten most recent sessions, plus those its last six permission requests belong to, through `sessionsFrom` and `countTranscript` in `agents-notes.mjs`: ids, states (the live one from `agent-state.json` first), times, tickets, status changes, file counts, cost and use, prompt counts and tool counts. `desktop/scripts/overview-towers.mjs` became a function with hooks for a layer, and the towers page it writes is byte for byte what it was. `desktop/scripts/agents-page.mjs` writes the page with `agents-page.js` as the layer; `agents-capture.cjs` took twelve pictures in a hidden window with no page errors (Deck: 3 of 10 sessions placed on the ring; your-trainer 6; the cockpit 1). Found and fixed on the way: the page's "? Marks" button covered the workspace switch, and the towers page's pictures hid the agents standing over the same towers, so they are left off this page. TST-0101 (`bash tools/scripts/run-desktop-tests.sh agents-page`) checks the counting, that no text reaches a session (a title leaking or the recorded state winning over the live one each made it fail), that the fixtures hold no long or spaced string, and that the page holds every recorded session.
