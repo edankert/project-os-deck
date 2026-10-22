@@ -19,6 +19,7 @@
 import { shortName } from './overview-geometry.js';
 import { cockpitSquare, markWords } from './overview-marks.js';
 import { QUIET_DAYS, quietDays, todayOf } from './overview-needs.js';
+import { deckImageHref } from './overview-flows.js';
 import type { ListRow, MarkNode, SceneNode, ScreenContext } from './overview-scene.js';
 import { emptyCounts, type Fill, type Focus, type NoteType, type OverviewModel, type Phase, type State, type Ticket } from './overview-types.js';
 
@@ -159,6 +160,50 @@ export const LINK_CAP = 240;
 /** Past this many links, the linked tickets are outlined without their ids, so the picture stays readable. */
 export const LINK_LABELS = 40;
 
+/** How near a picture's ticket is to the work in hand, from nearest to furthest (TASK-0186). */
+export type Nearness = 'feature' | 'phase' | 'ring' | 'core' | 'shelf';
+
+/**
+ * Each nearness's size and opacity: a nearer class always outsizes a further one, whatever
+ * the camera's distance, which changes a picture's size by at most `DISTANCE_RANGE` (the
+ * largest phase picture, 0.82 x 1.08, stays under the smallest of the feature in focus,
+ * 1 x 0.92, and so on down to the shelf). The page's 0.9 to 1.1 let a phase's picture
+ * outgrow the focus feature's by a fiftieth at the camera's limits.
+ */
+export const NEAR: Readonly<Record<Nearness, { size: number; alpha: number }>> = {
+  feature: { size: 1, alpha: 1 }, phase: { size: 0.82, alpha: 1 }, ring: { size: 0.62, alpha: 0.9 }, core: { size: 0.52, alpha: 0.75 }, shelf: { size: 0.42, alpha: 0.55 },
+};
+/** How much the camera's distance may change a picture's size, at the least and at the most. */
+export const DISTANCE_RANGE: readonly [number, number] = [0.92, 1.08];
+
+/** At most this many pictures stand on the ring, and at most `PICTURES_PER_TICKET` for one ticket. */
+export const PICTURES_ON_RING = 18;
+export const PICTURES_PER_TICKET = 3;
+
+/**
+ * A picture standing at its own ticket (TASK-0186, TASK-0179 on DES-0005's page): over its
+ * feature's tower, its tile, its finished phase's block on the shelf, or the core.
+ */
+export interface StandingPicture {
+  ticket: string;
+  path: string;
+  date: string;
+  /** Through Deck's host: `/deck/file/<workspace>/<path>`. */
+  href: string;
+  /** Where it stands, in world units: just above what it stands on. */
+  at: [number, number, number];
+  /** Which of the pictures at that place it is, from the middle: -1, 0, 1. */
+  slot: number;
+  /** The segment it stands in, or null on the shelf and in the core. */
+  segment: string | null;
+  near: Nearness;
+  size: number;
+  alpha: number;
+  /** A press selects its ticket. */
+  target: string;
+  label: string;
+}
+
 export interface TowersLayout {
   workspace: string;
   /** The ring runs from R0 to R1; the collar from collar[0] to collar[1]; the shelf at shelfR. */
@@ -183,6 +228,8 @@ export interface TowersLayout {
   selection: TowerSelection | null;
   /** How the ring is grouped (TASK-0185): its segments are phases, or unfinished features. */
   group: 'phase' | 'feature';
+  /** The newest pictures, each at its own ticket and sized by nearness to the work (TASK-0186). */
+  pictures: StandingPicture[];
 }
 
 export interface TowersOptions {
@@ -423,9 +470,56 @@ export function towersLayout(given: OverviewModel, ctx: ScreenContext, open: str
     colouring: ctx.colouring === 'state' ? 'state' : 'type',
     selection: null,
     group,
+    pictures: [],
   };
   layout.selection = selectionIn(model, layout, options.select ?? null);
+  layout.pictures = picturesIn(model, layout, ctx, selectTarget);
   return layout;
+}
+
+/**
+ * The pictures that stand on the ring (TASK-0186): the newest `PICTURES_ON_RING` of the model's,
+ * at most `PICTURES_PER_TICKET` for one ticket, each over what its ticket stands in. The nearer
+ * that is to the work in hand, the larger: the feature in focus, then the phase in focus, then
+ * other unfinished work, then the core, then the shelf. In both groupings, from the layout itself.
+ */
+export function picturesIn(model: OverviewModel, layout: TowersLayout, ctx: ScreenContext, target: (id: string) => string): StandingPicture[] {
+  const focusFeature = layout.focus?.feature ?? null;
+  const place = new Map<string, { at: [number, number, number]; key: string; segment: string | null; near: Nearness }>();
+  for (const p of layout.phases) {
+    for (const tw of p.towers) {
+      const near: Nearness = tw.feature === focusFeature ? 'feature' : p.level === 'focus' && layout.group === 'phase' ? 'phase' : 'ring';
+      for (const c of tw.cubes) place.set(c.id, { at: [tw.x, tw.top + (tw.cap !== null ? 2.6 : 1.8), tw.z], key: `tower-${tw.feature}`, segment: p.id, near });
+    }
+    for (const c of p.tiles) place.set(c.id, { at: [c.x, c.y + 1.2, c.z], key: `tile-${c.id}`, segment: p.id, near: p.level === 'focus' && layout.group === 'phase' ? 'phase' : 'ring' });
+  }
+  for (const sh of layout.shelf) {
+    const top = 0.62 * Math.ceil(sh.cubes.length / 25) + 3.4;
+    for (const c of sh.cubes) place.set(c.id, { at: [sh.x, top, sh.z], key: `shelf-${sh.id}`, segment: null, near: 'shelf' });
+  }
+  for (const c of layout.core) place.set(c.id, { at: [c.x, c.y + 1.2, c.z], key: `core-${c.id}`, segment: null, near: 'core' });
+  const taken = new Map<string, number>();
+  const chosen: Array<NonNullable<OverviewModel['pictures']>[number]> = [];
+  for (const pic of model.pictures ?? []) {
+    if (!place.has(pic.ticket) || (taken.get(pic.ticket) ?? 0) >= PICTURES_PER_TICKET) continue;
+    taken.set(pic.ticket, (taken.get(pic.ticket) ?? 0) + 1);
+    chosen.push(pic);
+    if (chosen.length >= PICTURES_ON_RING) break;
+  }
+  const atPlace = new Map<string, number>();
+  for (const pic of chosen) atPlace.set(place.get(pic.ticket)!.key, (atPlace.get(place.get(pic.ticket)!.key) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  return chosen.map((pic) => {
+    const where = place.get(pic.ticket)!;
+    const k = seen.get(where.key) ?? 0;
+    seen.set(where.key, k + 1);
+    const name = pic.path.split('/').pop() ?? pic.path;
+    return {
+      ticket: pic.ticket, path: pic.path, date: pic.date, href: deckImageHref(ctx.workspaceId, pic.path), at: where.at,
+      slot: k - (atPlace.get(where.key)! - 1) / 2, segment: where.segment, near: where.near, ...NEAR[where.near],
+      target: target(pic.ticket), label: `${pic.ticket}: ${name}, ${pic.date}. Press to select ${pic.ticket}`,
+    };
+  });
 }
 
 /**

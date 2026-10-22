@@ -348,6 +348,9 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-panel-button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: hsl(190 90% 80%); background: hsla(190, 90%, 55%, 0.12); border: 1px solid hsla(190, 90%, 65%, 0.4); }
 .ov-panel-button:hover, .ov-panel-button:focus-visible { background: hsla(190, 90%, 55%, 0.25); }
 .ov-pane-lead { margin: 0; font-size: 13.5px; line-height: 1.5; color: hsl(195 30% 88%); }
+.ov-pane-pictures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ov-pane-picture { margin: 0; border-radius: 6px; overflow: hidden; border: 1px solid hsla(190, 90%, 65%, 0.3); background: hsla(210, 50%, 9%, 0.8); }
+.ov-pane-picture img { display: block; width: 100%; height: 78px; object-fit: cover; }
 /* What needs you and the year as weeks (TASK-0184). */
 .ov-panel-needs, .ov-panel-weeks { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; }
 .ov-needs-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: ${needsYou}; }

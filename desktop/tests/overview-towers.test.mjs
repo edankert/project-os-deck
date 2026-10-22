@@ -500,7 +500,8 @@ test('a tower quiet for 14 days or more, counted to the day given, carries its a
 test("the card says how long the selected ticket has been quiet, counted to the model's date", () => {
   const m = fixture('deck');
   const card = panelsOf(wheelScene(m, ctx, { select: 'TASK-0154' })).find((p) => p.body.kind === 'card');
-  assert.equal(card.body.facts.find((f) => f.key === 'Quiet').value, `${quietDays([m.tickets['TASK-0154']], m.generated.slice(0, 10))} days`);
+  const n = quietDays([m.tickets['TASK-0154']], m.generated.slice(0, 10));
+  assert.equal(card.body.facts.find((f) => f.key === 'Quiet').value, `${n} ${n === 1 ? 'day' : 'days'}`);
 });
 
 for (const name of WORKSPACES) {
@@ -619,4 +620,97 @@ test('the grammar names a grouping only on the wheel, and only by feature', () =
   assert.throws(() => parseAddress('deck://abcd1234/features?page=wheel&group=phase'), /not a grouping/);
   assert.throws(() => parseAddress('deck://abcd1234/features?note=PHASE-0001&page=phase&group=feature'), /"group" needs "page=wheel"/);
   assert.equal(formatAddress(parseAddress('deck://abcd1234/features?page=wheel&select=TASK-0001&group=feature')), 'deck://abcd1234/features?page=wheel&select=TASK-0001&group=feature');
+});
+
+// --- TASK-0186: pictures stand at their own tickets ---
+
+const { NEAR, DISTANCE_RANGE, PICTURES_ON_RING, PICTURES_PER_TICKET } = load('shared/overview-towers.js');
+const { PANE_PICTURES } = load('shared/overview-select.js');
+const ORDER = ['feature', 'phase', 'ring', 'core', 'shelf'];
+
+for (const name of WORKSPACES) {
+  for (const [grouping, c] of [['phase', ctx], ['feature', featureCtx]]) {
+    test(`${name}, by ${grouping}: the newest pictures stand over what their tickets stand in, at most three a ticket and eighteen in all, larger nearer the work`, () => {
+      const m = fixture(name);
+      const layout = towersLayout(m, c);
+      const pics = layout.pictures;
+      assert.ok(pics.length > 0 && pics.length <= PICTURES_ON_RING);
+      const per = new Map();
+      for (const p of pics) per.set(p.ticket, (per.get(p.ticket) ?? 0) + 1);
+      assert.ok([...per.values()].every((n) => n <= PICTURES_PER_TICKET));
+      // Newest first, in the model's own order, none skipped that had room.
+      const want = [];
+      const taken = new Map();
+      for (const p of m.pictures) { if ((taken.get(p.ticket) ?? 0) >= 3 || want.length >= 18) continue; taken.set(p.ticket, (taken.get(p.ticket) ?? 0) + 1); want.push(p.path); }
+      assert.deepEqual(pics.map((p) => p.path), want);
+      for (const p of pics) {
+        const tower = layout.phases.flatMap((s) => s.towers.map((tw) => ({ tw, s }))).find(({ tw }) => tw.cubes.some((x) => x.id === p.ticket));
+        const tile = layout.phases.flatMap((s) => s.tiles.map((x) => ({ x, s }))).find(({ x }) => x.id === p.ticket);
+        const shelf = layout.shelf.find((s) => s.cubes.some((x) => x.id === p.ticket));
+        if (tower) {
+          assert.deepEqual([p.at[0], p.at[2]], [tower.tw.x, tower.tw.z], `${p.path} stands over ${tower.tw.feature}'s tower`);
+          assert.ok(p.at[1] > tower.tw.top, 'above it');
+          assert.equal(p.segment, tower.s.id);
+          assert.equal(p.near, tower.tw.feature === m.focus.feature ? 'feature' : tower.s.level === 'focus' && grouping === 'phase' ? 'phase' : 'ring');
+        } else if (tile) {
+          assert.equal(p.segment, tile.s.id);
+          assert.deepEqual([p.at[0], p.at[2]], [tile.x.x, tile.x.z]);
+        } else if (shelf) {
+          assert.equal(p.near, 'shelf');
+          assert.deepEqual([p.at[0], p.at[2]], [shelf.x, shelf.z]);
+        } else {
+          assert.equal(p.near, 'core');
+          assert.equal(p.segment, null);
+        }
+        assert.deepEqual([p.size, p.alpha], [NEAR[p.near].size, NEAR[p.near].alpha]);
+        assert.equal(p.target, c.address({ page: 'wheel', select: p.ticket }));
+      }
+      // Pictures at one place are spread side by side about its middle.
+      const places = new Map();
+      for (const p of pics) places.set(p.at.join(), [...(places.get(p.at.join()) ?? []), p.slot]);
+      for (const slots of places.values()) assert.equal(slots.reduce((a, b) => a + b, 0), 0);
+    });
+  }
+}
+
+test('a nearer picture always outsizes a further one, at any distance the camera allows', () => {
+  for (let i = 0; i + 1 < ORDER.length; i += 1) {
+    assert.ok(NEAR[ORDER[i]].size * DISTANCE_RANGE[0] > NEAR[ORDER[i + 1]].size * DISTANCE_RANGE[1], `${ORDER[i]} over ${ORDER[i + 1]}`);
+  }
+});
+
+test("Deck's fixture: eight pictures, DES-0005's three over FEAT-0028, the feature in focus, largest; your-trainer's: eighteen", () => {
+  const deck = towersLayout(fixture('deck'), ctx).pictures;
+  assert.equal(deck.length, 8);
+  const by = (t) => deck.filter((p) => p.ticket === t);
+  assert.equal(by('DES-0005').length, 3);
+  assert.ok(by('DES-0005').every((p) => p.near === 'feature'));
+  assert.equal(by('DES-0003').length, 2);
+  assert.equal(by('DES-0004').length, 3);
+  assert.ok(by('DES-0004').every((p) => p.near === 'core'), 'no feature names DES-0004');
+  assert.equal(towersLayout(fixture('your-trainer'), ctx).pictures.length, 18);
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: every picture's address is one Deck's host serves: its workspace, a picture file under docs, no way out`, () => {
+    const m = fixture(name);
+    for (const p of towersLayout(m, ctx).pictures) {
+      assert.ok(p.href.startsWith('/deck/file/abcd1234/'), p.href);
+      const decoded = decodeURIComponent(p.href.slice('/deck/file/'.length));
+      assert.equal(decoded, `abcd1234/${p.path}`);
+      assert.ok(!decoded.includes('%') && !decoded.includes('\\') && !decoded.split('/').includes('..') && !decoded.split('/').some((s) => s === ''), decoded);
+      assert.match(p.path, /\.(png|jpe?g|gif|webp)$/i);
+    }
+  });
+}
+
+test("a selected ticket's pane shows its own pictures, the newest twelve, and how many it has", () => {
+  const m = fixture('deck');
+  const own = m.pictures.filter((p) => p.ticket === 'DES-0005');
+  assert.ok(own.length > PANE_PICTURES, 'DES-0005 has more than twelve');
+  const pane = panelsOf(wheelScene(m, ctx, { select: 'DES-0005' })).find((p) => p.key === 'pane-DES-0005');
+  assert.equal(pane.body.pictures.total, own.length);
+  assert.deepEqual(pane.body.pictures.shown.map((p) => p.href), own.slice(0, 12).map((p) => `/deck/file/abcd1234/${p.path.split('/').map(encodeURIComponent).join('/')}`));
+  const none = panelsOf(wheelScene(m, ctx, { select: 'TASK-0154' })).find((p) => p.key === 'pane-TASK-0154');
+  assert.equal(none.body.pictures, undefined, 'a ticket with no pictures shows none');
 });

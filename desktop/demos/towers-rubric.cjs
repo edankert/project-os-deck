@@ -198,5 +198,41 @@ module.exports = async function (d) {
   check((await arrives(byFeatureAt)) === byFeatureAt, 'opened again, the wheel is still grouped by feature', { address: await shownAt() });
   await t.clickOn('.ov-grouping-toggle', 300);
   check((await arrives(`${base}?page=wheel`)) === `${base}?page=wheel`, 'and the switch puts it back by phase', { address: await shownAt() });
+
+  // ---- TASK-0186: pictures stand at their own tickets ----
+  await go(`${base}?page=wheel`);
+  await d.delay(1500);
+  const standing = await js(`(() => { const s = window.__deckOverview.current(); return s.nodes.find((n) => n.kind === 'towers').layout.pictures.map((p) => ({ ticket: p.ticket, near: p.near, segment: p.segment })); })()`);
+  let drawn = await js('window.__deckOverview.towers().pictures()');
+  for (let i = 0; i < 20 && drawn.some((p) => !p.loaded); i += 1) { await d.delay(250); drawn = await js('window.__deckOverview.towers().pictures()'); }
+  check(standing.length > 0 && drawn.length === standing.length && drawn.every((p) => p.loaded), `${standing.length} pictures stand at their tickets, each loaded through Deck's host`, { standing: standing.length, drawn: drawn.length, loaded: drawn.filter((p) => p.loaded).length });
+  const rank = ['feature', 'phase', 'ring', 'core', 'shelf'];
+  const shown = drawn.filter((p) => p.shown);
+  const ordered = shown.every((a) => shown.every((b) => rank.indexOf(a.near) >= rank.indexOf(b.near) || a.width > b.width));
+  check(shown.length > 0 && ordered, 'nearer the work, larger: every picture outsizes each one further from it', shown.map((p) => [p.ticket, p.near, p.width]));
+  await d.shot(win, '09-pictures');
+  // With a phase brought close, only its pictures stand.
+  const phaseOf = standing.find((p) => p.segment !== null)?.segment ?? null;
+  if (phaseOf !== null) {
+    await go(`${base}?note=${encodeURIComponent(phaseOf)}&page=phase`);
+    await d.delay(800);
+    const close = await js('window.__deckOverview.towers().pictures()');
+    const mine = standing.map((p, i) => ({ ...p, shown: close[i].shown }));
+    check(mine.every((p) => p.shown === false || p.segment === phaseOf) && mine.some((p) => p.segment === phaseOf && p.shown), `with ${phaseOf} close, only its pictures stand`, mine.map((p) => [p.ticket, p.segment, p.shown]));
+  }
+  // A selected ticket's pane shows its own pictures.
+  const withPictures = (model.pictures || [])[0]?.ticket;
+  if (withPictures) {
+    await go(`${base}?page=wheel&select=${encodeURIComponent(withPictures)}`);
+    let pane = null;
+    for (let i = 0; i < 20; i += 1) {
+      pane = await js(`(() => { const imgs = [...document.querySelectorAll('#overview-area .ov-pane-picture img')]; return { count: imgs.length, loaded: imgs.filter((i) => i.complete && i.naturalWidth > 0).length }; })()`);
+      if (pane.count > 0 && pane.loaded === pane.count) break;
+      await d.delay(250);
+    }
+    const own = model.pictures.filter((p) => p.ticket === withPictures).length;
+    check(pane.count === Math.min(12, own) && pane.loaded === pane.count, `${withPictures}'s pane shows ${Math.min(12, own)} of its ${own} pictures, each loaded`, pane);
+    await d.shot(win, '10-pane-pictures');
+  }
   t.finish();
 };

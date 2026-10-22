@@ -953,6 +953,7 @@ function paint(scene: Scene, workspaceId: string): void {
   if (towers !== undefined && view !== null && board !== null) {
     board.style.transform = 'none';
     board.prepend(view.canvas);
+    view.canvas.after(view.overlay);
   }
   panels = buildPanels(scene, board ?? stage, {
     reduced: reducedMotion(),

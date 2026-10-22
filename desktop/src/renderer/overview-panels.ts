@@ -216,6 +216,23 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }, reduced: boole
     plane.appendChild(acts);
   }
   if (panel.body.lead !== undefined) plane.appendChild(el('p', 'ov-pane-lead', panel.body.lead));
+  // The selected ticket's own pictures, through Deck's host (TASK-0186).
+  const pictures = panel.body.pictures;
+  if (pictures !== undefined) {
+    const strip = el('div', 'ov-pane-pictures');
+    for (const p of pictures.shown) {
+      const fig = el('figure', 'ov-pane-picture');
+      const img = el('img', '');
+      img.src = p.href;
+      img.alt = p.label;
+      img.title = p.label;
+      img.loading = 'lazy';
+      fig.appendChild(img);
+      strip.appendChild(fig);
+    }
+    plane.appendChild(strip);
+    if (pictures.total > pictures.shown.length) plane.appendChild(el('div', 'ov-board-foot', `${pictures.shown.length} of its ${pictures.total} pictures, the newest`));
+  }
   // A board's heading, with its done count as a bar (TASK-0183).
   const heading = panel.body.heading;
   if (heading !== undefined) {

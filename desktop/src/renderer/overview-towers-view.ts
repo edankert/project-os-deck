@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { GATE_COLOUR } from '../shared/overview-gate.js';
 import { NEEDS_YOU, TYPE_COLOUR } from '../shared/overview-marks.js';
 import { PALETTE } from '../shared/overview-scene.js';
-import type { Cube, RingPhase, TowersLayout } from '../shared/overview-towers.js';
+import { DISTANCE_RANGE, type Cube, type RingPhase, type TowersLayout } from '../shared/overview-towers.js';
 import { shortName } from '../shared/overview-geometry.js';
 
 export type TowersViewName = 'above' | 'leaning' | 'side';
@@ -39,6 +39,8 @@ export interface TowersViewOptions {
 
 export interface TowersView {
   canvas: HTMLCanvasElement;
+  /** The pictures standing at their tickets, laid over the canvas (TASK-0186). */
+  overlay: HTMLElement;
   show(layout: TowersLayout): void;
   home(): void;
   view(name: TowersViewName): void;
@@ -69,6 +71,8 @@ export interface TowersView {
     found(): { lit: number; glows: number; faded: boolean } | null;
     /** The quiet towers' badges: how many, how many shown, and each one's words. */
     ages(): { badges: number; shown: number; words: string[] };
+    /** The pictures standing at their tickets: each one's ticket, whether it is shown, its drawn width, and whether it loaded. */
+    pictures(): Array<{ ticket: string; near: string; shown: boolean; width: number; loaded: boolean; x: number; y: number }>;
     camera(): { radius: number; theta: number; phi: number; moved: boolean; reach: number; limit: number };
     hit(x: number, y: number): string | null;
   };
@@ -142,6 +146,12 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   renderer.setClearColor(0x000000, 0);
   const canvas = renderer.domElement;
   canvas.className = 'ov-towers';
+  // The pictures stand over the canvas as images, placed each frame where their tickets are (TASK-0186).
+  const overlay = document.createElement('div');
+  overlay.className = 'ov-pictures';
+  let figures: Array<{ el: HTMLElement; img: HTMLImageElement; pic: TowersLayout['pictures'][number]; at: THREE.Vector3 }> = [];
+  let picturesSignature = '';
+  const PICTURE_AT = new THREE.Vector3();
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog('#030712', 260, 620);
   const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 2000);
@@ -535,6 +545,65 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     glows = new THREE.Group();
     world.add(glows);
     drawFound();
+    drawPictures();
+  }
+
+  /** The pictures of the layout, as figures over the canvas; made again only when the pictures change. */
+  function drawPictures(): void {
+    const pics = layout?.pictures ?? [];
+    const sig = JSON.stringify(pics.map((p) => [p.href, p.at, p.slot, p.near]));
+    if (sig === picturesSignature) return;
+    picturesSignature = sig;
+    overlay.replaceChildren();
+    figures = pics.map((pic) => {
+      const el = document.createElement('figure');
+      el.className = `ov-picture near-${pic.near}`;
+      el.title = pic.label;
+      el.dataset['ticket'] = pic.ticket;
+      const img = document.createElement('img');
+      img.alt = pic.label;
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.src = pic.href;
+      img.draggable = false;
+      el.appendChild(img);
+      el.addEventListener('click', (event) => {
+        event.stopPropagation();
+        options.onPress(pic.target);
+      });
+      el.addEventListener('pointerenter', (event) => options.onHover(pic.label, event.clientX, event.clientY));
+      el.addEventListener('pointerleave', () => options.onHover(null, 0, 0));
+      overlay.appendChild(el);
+      return { el, img, pic, at: new THREE.Vector3(...pic.at) };
+    });
+  }
+
+  /** Each frame: every picture over its ticket, scaled by nearness and only a little by distance. */
+  function placePictures(): void {
+    const box = canvas.getBoundingClientRect();
+    const open = layout?.open ?? null;
+    const hush = (layout?.selection ?? null) !== null || found !== null;
+    for (const f of figures) {
+      // With a phase brought close, only its pictures stand.
+      if (open !== null && f.pic.segment !== open) {
+        f.el.style.display = 'none';
+        continue;
+      }
+      PICTURE_AT.copy(f.at).project(camera);
+      if (PICTURE_AT.z > 1) {
+        f.el.style.display = 'none';
+        continue;
+      }
+      const dist = camera.position.distanceTo(f.at);
+      // Distance changes the size only a little, so how near the ticket is to the work decides which is larger.
+      const k = f.pic.size * Math.min(DISTANCE_RANGE[1], Math.max(DISTANCE_RANGE[0], Math.pow(150 / dist, 0.3)));
+      const x = ((PICTURE_AT.x + 1) / 2) * box.width + f.pic.slot * 124 * k;
+      const y = ((1 - PICTURE_AT.y) / 2) * box.height;
+      f.el.style.display = '';
+      f.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`;
+      f.el.style.opacity = String((hush ? 0.35 : 1) * f.pic.alpha);
+      f.el.style.zIndex = String(1000 - Math.round(dist));
+    }
   }
 
   /** A glow over every ticket a search found, where it stands (TASK-0183). */
@@ -853,6 +922,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
 
   const api: TowersView = {
     canvas,
+    overlay,
     show(next) {
       const sig = signatureOf(next);
       const wasOpen = layout?.open ?? null;
@@ -863,6 +933,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
         applyOpen(!first && wasOpen !== next.open);
       } else {
         layout = next;
+        drawPictures();
         if (wasOpen !== next.open) applyOpen(true);
         else applyLook();
       }
@@ -945,6 +1016,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
         const faded = phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5));
         return { id: sel.id, curves: lines, outlined: boxes - 1, labelled, faded };
       },
+      pictures: () => figures.map((f) => { const r = f.el.getBoundingClientRect(); return { ticket: f.pic.ticket, near: f.pic.near, shown: f.el.style.display !== 'none' && r.width > 0, width: Math.round(r.width), loaded: f.img.complete && f.img.naturalWidth > 0, x: Math.round(r.left + r.width / 2), y: Math.round(r.bottom) }; }),
       ages: () => ({ badges: ageBadges.length, shown: ageBadges.filter((b) => b.visible).length, words: ageBadges.map((b) => String(b.userData['words'])) }),
       found: () => (found === null ? null : { lit: found.length, glows: glows.children.reduce((n, o) => n + ((o as THREE.InstancedMesh).count ?? 0), 0), faded: phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5)) }),
       camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved(), reach: Math.hypot(view.target.x, view.target.z), limit: layout === null ? 0 : layout.shelfR + 10 }),
@@ -958,6 +1030,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     // overview, so the field and everything else keep the machine to themselves.
     if (!canvas.isConnected || canvas.offsetParent === null || document.hidden) return;
     stepGlide(now);
+    placePictures();
     for (const s of labels) {
       const k = Math.sqrt(Math.max(1, camera.position.distanceTo(s.getWorldPosition(pick))) / 120);
       const [w, h] = s.userData['size'] as [number, number];

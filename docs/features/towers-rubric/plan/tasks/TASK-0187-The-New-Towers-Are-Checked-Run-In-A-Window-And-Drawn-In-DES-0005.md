@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0187
 title: "The towers' new panels pass the screen checks, the window run is repeated on both workspaces, and DES-0005 shows them in a real Deck window"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22

@@ -18,6 +18,10 @@ import { NOTE_TYPES, TYPE_WORD } from './overview-marks.js';
 import type { ListRow, PanelButton, PanelNode, PanelRow, PanelSection, ScreenContext } from './overview-scene.js';
 import { shortPhaseName, type TowersLayout } from './overview-towers.js';
 import { quietDays, todayOf } from './overview-needs.js';
+import { deckImageHref } from './overview-flows.js';
+
+/** A selected ticket's pane shows this many of its pictures (TASK-0186). */
+export const PANE_PICTURES = 12;
 
 /** The action a card's Frame button asks the 3D view for; the renderer answers it, no screen does. */
 export const FRAME_ACTION = 'towers-frame';
@@ -66,7 +70,7 @@ export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx:
     { key: 'Owner', value: t.owner ?? 'nobody' },
     { key: 'Updated', value: t.updated ?? 'no date' },
     // How long it has been quiet, counted to today as a tower's badge is (TASK-0184).
-    ...(t.updated !== undefined ? [{ key: 'Quiet', value: `${quietDays([t], todayOf(model))} days` }] : []),
+    ...(t.updated !== undefined ? [{ key: 'Quiet', value: ((n) => `${n} ${n === 1 ? 'day' : 'days'}`)(quietDays([t], todayOf(model))) }] : []),
   ];
   const linked = sel.links.map((l) => model.tickets[l.id]!).filter(Boolean);
   const counts = NOTE_TYPES.map((type) => ({ type, n: linked.filter((x) => x.type === type).length })).filter((c) => c.n > 0);
@@ -91,9 +95,12 @@ export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx:
     rows: linked.filter((x) => x.type === type).map((x) => row(x, here(x.id))),
   })).filter((s) => s.rows.length > 0);
   const paneButtons: PanelButton[] = open === null ? [] : [{ key: 'back', text: `◂ ${open}'s list`, label: `Back to ${phaseOf(open)}'s list of tickets`, target: here(null) }];
+  // Its own pictures, newest first: the model lists them all, the pane shows twelve (TASK-0186).
+  const own = (model.pictures ?? []).filter((p) => p.ticket === t.id);
+  const pictures = own.length === 0 ? {} : { pictures: { shown: own.slice(0, PANE_PICTURES).map((p) => ({ href: deckImageHref(ctx.workspaceId, p.path), label: `${p.path.split('/').pop()}, ${p.date}` })), total: own.length } };
   const pane: PanelNode = {
-    kind: 'panel', key: `pane-${t.id}`, ...places.pane, label: `${t.id}: its first paragraph and the ${linked.length} tickets it is joined to`,
-    body: { kind: 'rows', sections, buttons: paneButtons, ...(t.lead !== undefined ? { lead: t.lead } : {}) },
+    kind: 'panel', key: `pane-${t.id}`, ...places.pane, label: `${t.id}: its first paragraph${own.length > 0 ? `, its ${own.length} pictures` : ''} and the ${linked.length} tickets it is joined to`,
+    body: { kind: 'rows', sections, buttons: paneButtons, ...(t.lead !== undefined ? { lead: t.lead } : {}), ...pictures },
   };
   const more = sel.total > sel.links.length ? `, ${sel.total - sel.links.length} more not drawn` : '';
   const rows: ListRow[] = [

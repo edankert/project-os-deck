@@ -155,6 +155,8 @@ export interface PanelNode {
       heading?: { text: string; done?: number; of?: number };
       /** A line under the rows: what has no room, where the data came from, or why there are none. */
       foot?: string;
+      /** The selected ticket's pictures, newest first, at most twelve, and how many it has in all (TASK-0186). */
+      pictures?: { shown: Array<{ href: string; label: string }>; total: number };
     }
     | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string }
     | PanelCard
