@@ -497,7 +497,13 @@ export function picturesIn(model: OverviewModel, layout: TowersLayout, ctx: Scre
     const top = 0.62 * Math.ceil(sh.cubes.length / 25) + 3.4;
     for (const c of sh.cubes) place.set(c.id, { at: [sh.x, top, sh.z], key: `shelf-${sh.id}`, segment: null, near: 'shelf' });
   }
-  for (const c of layout.core) place.set(c.id, { at: [c.x, c.y + 1.2, c.z], key: `core-${c.id}`, segment: null, near: 'core' });
+  // A core ticket's pictures stand at the core's rim in its direction, so the middle, which is the
+  // way into re-phasing, stays clear.
+  for (const c of layout.core) {
+    const a = Math.atan2(c.z, c.x);
+    const r = Math.max(2, layout.coreR - 1.5);
+    place.set(c.id, { at: [r * Math.cos(a), 1.2, r * Math.sin(a)], key: `core-${c.id}`, segment: null, near: 'core' });
+  }
   const taken = new Map<string, number>();
   const chosen: Array<NonNullable<OverviewModel['pictures']>[number]> = [];
   for (const pic of model.pictures ?? []) {

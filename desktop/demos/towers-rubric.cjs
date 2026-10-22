@@ -133,7 +133,10 @@ module.exports = async function (d) {
   // The next-up board, bottom left.
   const board = await js(`(() => { const b = document.querySelector('#overview-area .ov-panel[data-panel="next-up"]'); if (!b) return null; const r = b.getBoundingClientRect(); return { left: r.left, bottom: r.bottom, head: (b.querySelector('.ov-board-head') || {}).textContent || '', rows: [...b.querySelectorAll('.ov-row')].map((e) => ({ id: e.dataset.ticket, tag: e.dataset.tag, aside: (e.querySelector('.ov-row-aside') || {}).textContent || '' })), foot: (b.querySelector('.ov-board-foot') || {}).textContent || '' }; })()`);
   const nextRow = board && board.rows.find((r) => r.tag === 'next');
-  check(board !== null && (model.next ? nextRow && nextRow.id === model.next : board.rows.length === 0), `the next-up board lists the focus feature's tasks with ${model.next || 'nothing'} marked NEXT`, board);
+  // A feature in focus that stands on no phase of the ring (your-trainer's FEAT-0140 has no phase) has no tower to list.
+  const onRing = await js(`window.__deckOverview.current().nodes.find((n) => n.kind === 'towers').layout.phases.some((p) => p.towers.some((t) => t.feature === ${JSON.stringify(model.focus?.feature ?? '')}))`);
+  if (onRing) check(board !== null && (model.next ? nextRow && nextRow.id === model.next : true), `the next-up board lists the focus feature's tasks with ${model.next || 'nothing'} marked NEXT`, board);
+  else check(board !== null && board.rows.length === 0 && board.foot.includes(String(model.focus?.feature ?? 'names no feature')), `the focus feature, ${model.focus?.feature}, stands on no phase of the ring, and the board says so`, board);
   if (board !== null && board.rows.length > 0) {
     const row = board.rows[board.rows.length - 1].id;
     await t.clickOn(`#overview-area .ov-panel[data-panel="next-up"] .ov-row[data-ticket="${row}"]`, 300);

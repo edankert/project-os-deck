@@ -9,6 +9,9 @@ module.exports = async (d) => {
   const base = `deck://${ws}/features`;
   const win = await d.open(base, { width: 1440, height: 960 });
   const js = (code) => d.js(win, code);
+  // Every error the page logs, for TASK-0187's check that the towers' new parts raise none.
+  const pageErrors = [];
+  win.webContents.on('console-message', (_event, level, message) => { if (level >= 3) pageErrors.push(String(message).slice(0, 300)); });
   const settle = async () => {
     for (let i = 0; i < 40; i += 1) {
       if (await js('Boolean(window.__deckOverview && window.__deckOverview.current())')) break;
@@ -54,7 +57,7 @@ module.exports = async (d) => {
     const seen = await js(`(() => {
       const scene = window.__deckOverview.current();
       // A ticket is drawn by a mark, or by a row of a panel built as HTML (TASK-0147, TASK-0148).
-      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); else if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) out.push(r.id); } return out; };
+      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); else if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) out.push(r.id); else if (n.kind === 'panel' && n.body.kind === 'needs') for (const r of n.body.rows) out.push(r.id); } return out; };
       return { screen: scene.screen, address: scene.address, sceneMarks: walk(scene.nodes, []).length,
         domMarks: document.querySelectorAll('#overview-area [data-ticket]').length,
         rows: scene.list.length, shown: !document.getElementById('overview-area').hidden, overview: document.body.dataset.overviewScreen };
@@ -200,8 +203,9 @@ module.exports = async (d) => {
     await d.delay(900);
     assert.equal(await js('document.body.dataset.overviewScreen'), 'wheel', 'Escape on a moved camera stays on the wheel');
     assert.equal((await cam()).moved, false, 'Escape on a moved camera brings it home');
-    // A press on a ticket opens it: the next ticket when nothing stands in front of it from
-    // where the camera starts, else the first ticket of the ring that is in plain sight.
+    // A press on a ticket selects it where it stands (TASK-0182), and its card's Open opens it:
+    // the next ticket when nothing stands in front of it from where the camera starts, else the
+    // first ticket of the ring that is in plain sight.
     const layout = await js(`window.__deckOverview.current().nodes.find((n) => n.kind === 'towers').layout`);
     const standing = layout.phases.flatMap((p) => [...p.towers.flatMap((tw) => tw.cubes), ...p.tiles]).map((c) => c.id);
     let next = null;
@@ -212,10 +216,15 @@ module.exports = async (d) => {
     }
     assert.ok(next !== null, 'some ticket on the ring is in plain sight from where the camera starts');
     await d.pointer(win, d.click(at));
+    for (let i = 0; i < 40 && !(await js('window.__deckOverview.current().address')).includes(`select=${encodeURIComponent(next)}`); i += 1) await d.delay(250);
+    const selected = await js('window.__deckOverview.current().address');
+    assert.ok(selected.includes(`page=wheel`) && selected.includes(`select=${encodeURIComponent(next)}`), `a press on ${next} selects it on the ring, not ${selected}`);
+    await d.delay(600);
+    await js(`document.querySelector('#overview-area .ov-panel-card button[data-target*="page=ticket"]').click()`);
     for (let i = 0; i < 40 && (await js('document.body.dataset.overviewScreen')) !== 'ticket'; i += 1) await d.delay(250);
     const opened = await js('window.__deckOverview.current().address');
-    d.log('the camera', { start, turnedTo, far, pressed: next, opened });
-    assert.ok(opened.includes(`note=${encodeURIComponent(next)}`), `a press on ${next} opens it, not ${opened}`);
+    d.log('the camera', { start, turnedTo, far, pressed: next, selected, opened });
+    assert.ok(opened.includes(`note=${encodeURIComponent(next)}`) && opened.includes('page=ticket'), `its card's Open opens ${next}, not ${opened}`);
   }
 
   // A red cap opens what needs you in its tower (TASK-0164): one ticket, or the phase.
@@ -284,6 +293,50 @@ module.exports = async (d) => {
   assert.equal(twin.rows, twin.scene, 'the list twin holds every row of the scene');
   d.log('summary', results);
 
+  // FEAT-0031 (TASK-0187): the towers' Rubric ideas in the same window. A ticket selected
+  // draws its curves and its card; a search lights its matches; the ring groups by feature
+  // and back; a picture loads through the host; and the page logged no error throughout.
+  {
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+    await settle();
+    const pick = Object.values(model.tickets).sort((a, b) => b.links.length - a.links.length)[0].id;
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel&select=${encodeURIComponent(pick)}`)})`);
+    await settle();
+    const sel = await js('({ selected: window.__deckOverview.towers().selected(), card: Boolean(document.querySelector("#overview-area .ov-panel-card")), pane: document.querySelectorAll("#overview-area .ov-panel-rows .ov-row").length })');
+    d.log('a ticket selected', { pick, ...sel });
+    assert.ok(sel.selected !== null && sel.selected.id === pick && sel.selected.curves > 0 && sel.card && sel.pane > 0, `${pick} selected draws its curves, its card and its pane`);
+    await d.shot(win, 'towers-selected');
+    await js(`window.__deckOverview.go(${JSON.stringify(`${base}?page=wheel`)})`);
+    await settle();
+    d.press(win, '/');
+    await d.delay(200);
+    const word = Object.values(model.tickets).map((x) => x.title.split(/\s+/).find((w) => /^[A-Za-z]{5,}$/.test(w))).find(Boolean) ?? 'the';
+    await win.webContents.insertText(word);
+    await d.delay(900);
+    const lit = await js('({ box: window.__deckOverview.search(), found: window.__deckOverview.towers().found() })');
+    d.log('a search', { word, ...lit });
+    assert.ok(lit.box.found > 0 && lit.found !== null && lit.found.lit === lit.box.found, `a search for "${word}" lights what it finds`);
+    await d.shot(win, 'towers-search');
+    d.press(win, 'Escape');
+    await d.delay(300);
+    await js(`document.querySelector('.ov-grouping-toggle').click()`);
+    for (let i = 0; i < 40 && !(await js('window.__deckOverview.current().address')).endsWith('group=feature'); i += 1) await d.delay(250);
+    assert.ok((await js('window.__deckOverview.current().address')).endsWith('&group=feature'), 'the switch groups the ring by feature');
+    await d.delay(900);
+    await d.shot(win, 'towers-by-feature');
+    await js(`document.querySelector('.ov-grouping-toggle').click()`);
+    for (let i = 0; i < 40 && (await js('window.__deckOverview.current().address')).endsWith('group=feature'); i += 1) await d.delay(250);
+    assert.ok(!(await js('window.__deckOverview.current().address')).includes('group='), 'and back by phase');
+    await d.delay(1200);
+    let pictures = await js('window.__deckOverview.towers().pictures()');
+    for (let i = 0; i < 20 && pictures.some((p) => !p.loaded); i += 1) { await d.delay(250); pictures = await js('window.__deckOverview.towers().pictures()'); }
+    d.log('the pictures', { standing: pictures.length, loaded: pictures.filter((p) => p.loaded).length });
+    if ((model.pictures ?? []).length > 0) assert.ok(pictures.length > 0 && pictures.every((p) => p.loaded), 'the pictures stand at their tickets and load through the host');
+    await d.shot(win, 'towers-pictures');
+    d.log('page errors', pageErrors);
+    assert.deepEqual(pageErrors, [], 'the page logged no error');
+  }
+
   // The served page, as a tablet loads it: no bridge, no writes. It opens on the
   // wheel too, and a flow's controls are drawn off.
   const served = d.openServedPage();
@@ -300,7 +353,10 @@ module.exports = async (d) => {
     if (await d.js(served, 'Boolean(window.__deckOverview && window.__deckOverview.current())')) break;
     await d.delay(250);
   }
-  const tablet = await d.js(served, `({ screen: document.body.dataset.overviewScreen, marks: document.querySelectorAll('#overview-area [data-ticket]').length, write: document.querySelectorAll('#overview-area [data-action]:not(.ov-off)').length, drawn: document.querySelector('#overview-area .ov-stage').classList.contains('ov-3d') ? '3d' : document.querySelector('#overview-area .ov-stage').classList.contains('ov-flat') ? 'flat' : 'none' })`);
+  // The 3D view's module loads after the wheel is first drawn; on your-trainer that takes a moment.
+  const look = () => d.js(served, `({ screen: document.body.dataset.overviewScreen, marks: document.querySelectorAll('#overview-area [data-ticket]').length, write: document.querySelectorAll('#overview-area [data-action]:not(.ov-off)').length, drawn: document.querySelector('#overview-area .ov-stage').classList.contains('ov-3d') ? '3d' : document.querySelector('#overview-area .ov-stage').classList.contains('ov-flat') ? 'flat' : 'none' })`);
+  let tablet = await look();
+  for (let i = 0; i < 60 && tablet.drawn === 'none'; i += 1) { await d.delay(250); tablet = await look(); }
   d.log('the served page', tablet);
   assert.equal(tablet.screen, 'wheel', 'the served page opens on the wheel');
   assert.ok(tablet.marks > 0, 'the served wheel draws its tickets');

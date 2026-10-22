@@ -64,6 +64,27 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
       numberErrors.push(`"${text.text}" needs one mark with the displayed count (${text.markRef ?? 'no markRef'})`);
     }
   }
+  // The new panels' numbers each stand beside the marks they count (TASK-0187): the needs-you count is
+  // its bar's parts, and its rows are among them; the year is 52 weeks with no ticket in two; a board's
+  // done count is within its total. A panel draws these as pictures, so the rule is checked on its data.
+  for (const node of nodes) {
+    if (node.kind !== 'panel') continue;
+    const b = node.body;
+    if (b.kind === 'needs') {
+      const ids = b.parts.flatMap((p) => p.ids);
+      if (b.total !== ids.length) numberErrors.push(`${node.key}: says ${b.total} need you, its bar draws ${ids.length}`);
+      if (b.parts.some((p) => p.ids.length === 0)) numberErrors.push(`${node.key}: a part of the bar draws nothing`);
+      if (b.rows.some((r) => !ids.includes(r.id))) numberErrors.push(`${node.key}: a row is in no part of the bar`);
+    }
+    if (b.kind === 'weeks') {
+      const ids = [...b.weeks.flat(), ...b.undated];
+      if (b.weeks.length !== 52) numberErrors.push(`${node.key}: draws ${b.weeks.length} weeks, not 52`);
+      if (new Set(ids).size !== ids.length) numberErrors.push(`${node.key}: a ticket is counted twice`);
+    }
+    if (b.kind === 'rows' && b.heading?.of !== undefined && b.heading.done !== undefined && !(b.heading.done >= 0 && b.heading.done <= b.heading.of)) {
+      numberErrors.push(`${node.key}: ${b.heading.done} of ${b.heading.of} done`);
+    }
+  }
   let addressError = '';
   try {
     const address = parseAddress(scene.address);
@@ -79,6 +100,8 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
   for (const node of nodes) if (node.kind === 'panel' && node.body.kind === 'rows') {
     for (const section of node.body.sections) for (const row of section.rows) drawn.add(row.id);
   }
+  // The needs-you panel's rows are ticket rows too (TASK-0184).
+  for (const node of nodes) if (node.kind === 'panel' && node.body.kind === 'needs') for (const row of node.body.rows) drawn.add(row.id);
   const listed = new Set(scene.list.filter((r) => TICKET_ID.test(r.id) || drawn.has(r.id)).map((r) => r.id));
   const missing = [...drawn].filter((id) => !listed.has(id));
   const extra = [...listed].filter((id) => !drawn.has(id));

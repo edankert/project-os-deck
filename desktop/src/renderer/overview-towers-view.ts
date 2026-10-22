@@ -559,7 +559,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       const el = document.createElement('figure');
       el.className = `ov-picture near-${pic.near}`;
       el.title = pic.label;
-      el.dataset['ticket'] = pic.ticket;
+      el.dataset['picture'] = pic.ticket;
       const img = document.createElement('img');
       img.alt = pic.label;
       img.decoding = 'async';
@@ -567,15 +567,27 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       img.src = pic.href;
       img.draggable = false;
       el.appendChild(img);
-      el.addEventListener('click', (event) => {
-        event.stopPropagation();
-        options.onPress(pic.target);
-      });
-      el.addEventListener('pointerenter', (event) => options.onHover(pic.label, event.clientX, event.clientY));
-      el.addEventListener('pointerleave', () => options.onHover(null, 0, 0));
+      // The pointer passes through to the canvas, so a drag that starts on a picture still turns
+      // the ring; the canvas sees when a press or a hover lands on one (`pictureAt`).
       overlay.appendChild(el);
       return { el, img, pic, at: new THREE.Vector3(...pic.at) };
     });
+  }
+
+  /** The picture under the pointer, the nearest when they overlap, or null. */
+  function pictureAt(x: number, y: number): (typeof figures)[number] | null {
+    let best: (typeof figures)[number] | null = null;
+    let depth = -Infinity;
+    for (const f of figures) {
+      if (f.el.style.display === 'none') continue;
+      const r = f.el.getBoundingClientRect();
+      const z = Number(f.el.style.zIndex || 0);
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom && z > depth) {
+        best = f;
+        depth = z;
+      }
+    }
+    return best;
   }
 
   /** Each frame: every picture over its ticket, scaled by nearness and only a little by distance. */
@@ -869,6 +881,14 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     drag = null;
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     if (was === null || was.button !== 0 || Math.hypot(e.clientX - was.x0, e.clientY - was.y0) > 4) return;
+    // A press on a picture selects its ticket (TASK-0186), except at the core's middle, which is
+    // the way into re-phasing and wins over a picture standing in front of it.
+    const middle = screenAt(new THREE.Vector3(0, 0.6, 0));
+    const picture = Math.hypot(e.clientX - middle.x, e.clientY - middle.y) < 48 ? null : pictureAt(e.clientX, e.clientY);
+    if (picture !== null) {
+      options.onPress(picture.pic.target);
+      return;
+    }
     const hit = hitAt(e.clientX, e.clientY);
     const target = hit === null ? null : targetOf(hit);
     if (target !== null) options.onPress(target);
@@ -884,6 +904,14 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       if (drag.pan || e.shiftKey) api.pan(dx, dy);
       else api.orbit(dx, dy);
       options.onHover(null, 0, 0);
+      return;
+    }
+    const picture = pictureAt(e.clientX, e.clientY);
+    for (const f of figures) f.el.classList.toggle('is-pointed', f === picture);
+    if (picture !== null) {
+      canvas.style.cursor = 'pointer';
+      drawWires(null);
+      options.onHover(picture.pic.label, e.clientX, e.clientY);
       return;
     }
     const hit = hitAt(e.clientX, e.clientY);
@@ -1020,7 +1048,8 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       ages: () => ({ badges: ageBadges.length, shown: ageBadges.filter((b) => b.visible).length, words: ageBadges.map((b) => String(b.userData['words'])) }),
       found: () => (found === null ? null : { lit: found.length, glows: glows.children.reduce((n, o) => n + ((o as THREE.InstancedMesh).count ?? 0), 0), faded: phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5)) }),
       camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved(), reach: Math.hypot(view.target.x, view.target.z), limit: layout === null ? 0 : layout.shelfR + 10 }),
-      hit: (x, y) => { const h = hitAt(x, y); return h === null ? null : h.kind === 'cube' ? h.cube.id : h.kind; },
+      // A picture in front of a ticket is what a press there reaches (TASK-0186).
+      hit: (x, y) => { const p = pictureAt(x, y); if (p !== null) return `picture:${p.pic.ticket}`; const h = hitAt(x, y); return h === null ? null : h.kind === 'cube' ? h.cube.id : h.kind; },
     },
   };
 

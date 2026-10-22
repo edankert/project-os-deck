@@ -661,6 +661,9 @@ for (const name of WORKSPACES) {
         } else {
           assert.equal(p.near, 'core');
           assert.equal(p.segment, null);
+          const c = layout.core.find((x) => x.id === p.ticket);
+          assert.ok(Math.abs(Math.hypot(p.at[0], p.at[2]) - (layout.coreR - 1.5)) < 1e-6, 'at the core\'s rim, clear of its middle');
+          assert.ok(Math.abs(Math.atan2(p.at[2], p.at[0]) - Math.atan2(c.z, c.x)) < 1e-6, 'in its ticket\'s direction');
         }
         assert.deepEqual([p.size, p.alpha], [NEAR[p.near].size, NEAR[p.near].alpha]);
         assert.equal(p.target, c.address({ page: 'wheel', select: p.ticket }));
@@ -714,3 +717,38 @@ test("a selected ticket's pane shows its own pictures, the newest twelve, and ho
   const none = panelsOf(wheelScene(m, ctx, { select: 'TASK-0154' })).find((p) => p.key === 'pane-TASK-0154');
   assert.equal(none.body.pictures, undefined, 'a ticket with no pictures shows none');
 });
+
+// --- TASK-0187: the look's checks hold the new panels ---
+
+test("the look's checks fail a needs-you count that is not its bar, a year that is not 52 weeks, and a board done beyond its total", () => {
+  const m = fixture('deck');
+  const scene = wheelScene(m, ctx);
+  passes(scene);
+  const broken = (edit) => {
+    const s = structuredClone(scene);
+    edit(panelsOf(s));
+    return checkScene(s).find((r) => r.rule === 'numbers');
+  };
+  assert.equal(broken((ps) => { ps.find((p) => p.key === 'needs-you').body.total += 1; }).ok, false);
+  assert.equal(broken((ps) => { ps.find((p) => p.key === 'needs-you').body.rows.push({ ...ps.find((p) => p.key === 'needs-you').body.rows[0], id: 'TASK-0001' }); }).ok, false);
+  assert.equal(broken((ps) => { ps.find((p) => p.key === 'weeks').body.weeks.pop(); }).ok, false);
+  assert.equal(broken((ps) => { const w = ps.find((p) => p.key === 'weeks').body; w.weeks[0].push(w.weeks.flat()[0] ?? 'TASK-0001'); w.weeks[1].push(w.weeks[0].at(-1)); }).ok, false);
+  assert.equal(broken((ps) => { const h = ps.find((p) => p.key === 'next-up').body.heading; h.done = h.of + 1; }).ok, false);
+  // The needs-you panel's rows are in the twin's count: a row the list twin lacks fails it.
+  const s = structuredClone(scene);
+  const row = panelsOf(s).find((p) => p.key === 'needs-you').body.rows[0].id;
+  s.list = s.list.filter((r) => r.id !== row);
+  s.nodes = s.nodes.filter((n) => !(n.kind === 'group' && n.key === 'plan'));
+  assert.equal(checkScene(s).find((r) => r.rule === 'twin').ok, false);
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: every wheel the feature draws holds the look, in both groupings and colourings, plain, selected and on the busiest ticket`, () => {
+    const m = fixture(name);
+    const busiest = Object.keys(m.tickets).sort((a, b) => joined(m, b).length - joined(m, a).length)[0];
+    for (const c of [ctx, featureCtx, plainContext('abcd1234', 'features', 'state'), plainContext('abcd1234', 'features', 'state', 'feature')]) {
+      for (const select of [null, m.next, busiest]) passes(wheelScene(m, c, { select }));
+    }
+  });
+}
+
