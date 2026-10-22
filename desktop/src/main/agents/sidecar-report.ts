@@ -18,17 +18,16 @@
  */
 import type { ConversationRecord, SessionRecord } from '../../shared/agent-types.js';
 import type { ManagerChange, SessionManager } from './sessions.js';
+import { postAgentReport } from '../../shared/write-client.js';
 
 export interface SidecarClient {
   post(base: string, path: string, body: unknown): Promise<{ ok: boolean; status: number; json: unknown }>;
   get(base: string, path: string): Promise<{ ok: boolean; status: number; json: unknown }>;
 }
 
+/** Posts leave through the write client, which sends only to the agent-report paths (ADR-0003). */
 export const fetchClient: SidecarClient = {
-  async post(base, path, body) {
-    const res = await fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };
-  },
+  post: (base, path, body) => postAgentReport(base, path, body),
   async get(base, path) {
     const res = await fetch(`${base}${path}`);
     return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };

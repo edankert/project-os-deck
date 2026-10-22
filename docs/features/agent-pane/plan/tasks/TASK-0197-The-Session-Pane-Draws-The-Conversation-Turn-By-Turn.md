@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0197
 aliases: ["TASK-0197"]
 title: "The session pane draws a conversation turn by turn: prompts as bubbles, the agent's steps as chips, edits with lines added and removed, the plan, and permission requests at their turn"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

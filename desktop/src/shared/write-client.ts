@@ -24,6 +24,21 @@
  * act on.
  */
 
+/**
+ * The sidecar paths a session Deck started reports to (FEAT-0032, TASK-0195): its events,
+ * and its permission requests offered to the cockpit and withdrawn. They change no note;
+ * they are posts all the same, so they leave Deck here, from the main process, and only
+ * to these three paths.
+ */
+export const AGENT_REPORT_PATHS: readonly string[] = ['/api/agent-hook', '/api/cockpit/approvals/ask', '/api/cockpit/approvals/handed-back'];
+
+/** Post one agent report to a sidecar; any other path is refused before anything is sent. */
+export async function postAgentReport(base: string, reportPath: string, body: unknown, fetchImpl: typeof fetch = fetch): Promise<{ ok: boolean; status: number; json: unknown }> {
+  if (!AGENT_REPORT_PATHS.includes(reportPath)) throw new Error(`Deck reports agents only to ${AGENT_REPORT_PATHS.join(', ')}, not ${reportPath}`);
+  const res = await fetchImpl(`${base}${reportPath}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };
+}
+
 export class WriteRefused extends Error {
   /** The HTTP status the sidecar answered with, for a caller that wants it. */
   readonly status: number;

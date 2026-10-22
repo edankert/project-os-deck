@@ -53,6 +53,11 @@ import {
 import { navigationFor } from '../shared/origin.js';
 import { ViewRegistry, sourceOf } from '../shared/views.js';
 import { defaultWorkspacePath, focusPolicy, pinnedCorpus, SMOKE_CORPUS, smokeVerdict } from './smoke-support.js';
+import { SessionManager } from './agents/sessions.js';
+import { SidecarReporter } from './agents/sidecar-report.js';
+import { ClaudeProvider } from './agents/claude-provider.js';
+import { CodexProvider } from './agents/codex-provider.js';
+import { registerAgentCalls } from './agents/ipc.js';
 
 // Read once, at start, so every window in a run is treated the same way
 // (ISS-0075). `focusApp` consults it; `runSmoke` prints it.
@@ -79,6 +84,16 @@ const workspaces = new WorkspaceBook(path.join(app.getPath('userData'), 'deck-wo
 const windowBook = new WindowBook(path.join(app.getPath('userData'), 'deck-windows.json'));
 const panelBook = new PanelBook(path.join(app.getPath('userData'), 'deck-panels.json'));
 const sidecars = new SidecarSupervisor();
+/**
+ * Deck's own agent sessions (FEAT-0032, ADR-0009): kept in Deck's data folder, never in a
+ * repository, reported to each workspace's sidecar, and reached only through the shell's
+ * preload bridge (RISK-0015).
+ */
+const agentSessions = new SessionManager(path.join(app.getPath('userData'), 'agents'), { claude: new ClaudeProvider(), codex: new CodexProvider() });
+const agentReports = new SidecarReporter(agentSessions, (id) => sidecars.handle(id)?.base ?? null);
+agentSessions.onChange((change) => {
+  for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.webContents.send('deck:agents:change', change);
+});
 
 /**
  * Deck's own index, one per open workspace.
@@ -507,6 +522,8 @@ function failHandoffsFor(windowId: number, answer: HandoffAnswer): void {
 
 function registerIpc(): void {
   handle('deck:capabilities', () => SHELL_CAPABILITIES);
+  // A window names a workspace; Deck's own list says where it is.
+  registerAgentCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, agentSessions, (id) => workspaces.get(id)?.root ?? null);
 
   handle('deck:workspaces:list', () => workspaces.list());
 
@@ -953,6 +970,9 @@ function shutdown(): void {
     }
   }
   store.close();
+  // An agent must not run on with nobody to answer it: every session Deck started stops with Deck.
+  agentReports.close();
+  void agentSessions.stopAll();
   closeIndexes();
   graphs.close();
   stopping = sidecars.stopAll();

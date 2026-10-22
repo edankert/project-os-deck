@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0032
 aliases: ["FEAT-0032"]
 title: "Deck starts and owns Claude and Codex sessions, each tied to the ticket it was started on, and reports them to the sidecar so the cockpit sees them too"
-status: doing
+status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -69,10 +69,16 @@ Readings of the request, recorded so the next reader can dispute them.
 
 ## Verification
 
-Not built yet. [[TST-0104]] is `bash tools/scripts/run-desktop-tests.sh agent-sessions`; [[TASK-0191]] creates it.
+Built on 2026-10-22, [[TASK-0191]] to [[TASK-0196]], one commit each. [[TST-0104]] (`bash tools/scripts/run-desktop-tests.sh agent-sessions`) has 25 checks on fake providers, a fake app-server and a recording fake sidecar; each task's checks were shown to fail against a deliberate break. `cd desktop && npm test` passes 888.
+
+Checked for real, by hand: one Claude session through the Agent SDK, read-only (Edwin allowed one); the real `codex app-server`'s handshake and a thread, with no turn; and a session reported to the cockpit's real sidecar with a fake agent. What is not yet shown with a real agent: that a tool which writes is asked about (the fakes show Deck's side), and a real Codex turn.
 
 ## Links
 
 - Plan: [PLAN.md](plan/PLAN.md)
 - Design: [[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]; decision: [[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]
 - Adoption rows this moves: `api.write.agents` and `shell.agents.codex` in part ([[REFERENCE-COCKPIT-ADOPTION]]), updated at close-out.
+
+## Review
+
+<Two independent reviewers, from the packet `tools/scripts/review-packet.py` writes; their combined verdict is transcribed here, never anticipated.>

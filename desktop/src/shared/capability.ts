@@ -11,6 +11,7 @@ export const SHELL_CAPABILITIES: Capabilities = {
   manageWorkspaces: true,
   sharedStore: true,
   write: true,
+  agents: true,
 };
 
 /** Everything the served host can honestly offer, which is reading. */
@@ -24,6 +25,9 @@ export const SERVED_CAPABILITIES: Capabilities = {
   // (ADR-0003). A write travels the preload bridge, which a served page does
   // not have, so this is a statement of fact as well as a decision.
   write: false,
+  // Agent sessions run on Edwin's machine and their prompts stay on loopback, as the
+  // sidecar keeps them (FEAT-0032, RISK-0015): a served page shows none, not even read-only.
+  agents: false,
 };
 
 /**
@@ -43,5 +47,6 @@ export function normaliseCapabilities(value: unknown): Capabilities {
     manageWorkspaces: source['manageWorkspaces'] === true,
     sharedStore: source['sharedStore'] === true,
     write: source['write'] === true,
+    agents: source['agents'] === true,
   };
 }

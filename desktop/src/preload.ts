@@ -70,6 +70,25 @@ const api = {
     sendBack: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:handoff:back', request),
   },
 
+  /** Deck's own agent sessions (FEAT-0032): the shell only; a served page has no bridge at all. */
+  agents: {
+    list: (): Promise<unknown> => ipcRenderer.invoke('deck:agents:list'),
+    conversation: (id: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:conversation', id),
+    start: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:agents:start', request),
+    send: (id: string, text: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:send', id, text),
+    answer: (id: string, permission: string, answer: unknown): Promise<unknown> => ipcRenderer.invoke('deck:agents:answer', id, permission, answer),
+    interrupt: (id: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:interrupt', id),
+    stop: (id: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:stop', id),
+    /** Every change to any session. Returns its own unsubscribe. */
+    subscribe: (fn: (change: unknown) => void): (() => void) => {
+      const handler = (_event: unknown, change: unknown): void => fn(change);
+      ipcRenderer.on('deck:agents:change', handler);
+      return () => {
+        ipcRenderer.removeListener('deck:agents:change', handler);
+      };
+    },
+  },
+
   clipboard: {
     write: (text: string): Promise<unknown> => ipcRenderer.invoke('deck:clipboard:write', text),
     read: (): Promise<unknown> => ipcRenderer.invoke('deck:clipboard:read'),

@@ -309,6 +309,8 @@ export interface Capabilities {
   manageWorkspaces: boolean;
   /** State held in the main process and broadcast to every window. */
   sharedStore: boolean;
+  /** Start, answer and stop Deck's own agent sessions (FEAT-0032). Never on a served page (RISK-0015). */
+  agents: boolean;
   /**
    * Change a note, through the shell's loopback call to the sidecar.
    *

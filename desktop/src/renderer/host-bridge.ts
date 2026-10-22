@@ -41,7 +41,20 @@ interface BridgeShape {
     sendBack(request: unknown): Promise<unknown>;
   };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
+  agents?: AgentBridge;
   write: Record<WriteVerb, (request: unknown) => Promise<unknown>>;
+}
+
+/** Deck's own agent sessions, through the preload bridge (FEAT-0032). */
+export interface AgentBridge {
+  list(): Promise<unknown>;
+  conversation(id: string): Promise<unknown>;
+  start(request: unknown): Promise<unknown>;
+  send(id: string, text: string): Promise<unknown>;
+  answer(id: string, permission: string, answer: unknown): Promise<unknown>;
+  interrupt(id: string): Promise<unknown>;
+  stop(id: string): Promise<unknown>;
+  subscribe(fn: (change: unknown) => void): () => void;
 }
 
 /** What a write came back as: the sidecar's own words when it refused. */
@@ -148,6 +161,15 @@ export class Host {
     if (this.follow === on) return;
     this.follow = on;
     this.recompute();
+  }
+
+  /**
+   * The session calls, in the shell only (FEAT-0032): null on a served page, which has no
+   * bridge, and null wherever the capability says no (RISK-0015).
+   */
+  agents(): AgentBridge | null {
+    const b = bridge();
+    return b?.agents !== undefined && this.caps.agents ? b.agents : null;
   }
 
   capabilities(): Capabilities {

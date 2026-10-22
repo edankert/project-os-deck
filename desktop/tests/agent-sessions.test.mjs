@@ -468,3 +468,88 @@ test('a session\'s events reach the sidecar in the order they happened, even whe
   await r.settled();
   r.close();
 });
+
+// --- TASK-0196: only the shell reaches sessions ---
+
+import { fakeSidecar, HEALTH } from './helpers.mjs';
+const { SHELL_CAPABILITIES, SERVED_CAPABILITIES, normaliseCapabilities } = load('shared/capability.js');
+const { parseStart, registerAgentCalls } = load('main/agents/ipc.js');
+const { DeckHost } = load('main/host.js');
+
+test('the shell has the agents capability and a served page does not', () => {
+  assert.equal(SHELL_CAPABILITIES.agents, true);
+  assert.equal(SERVED_CAPABILITIES.agents, false);
+  assert.equal(normaliseCapabilities({}).agents, false, 'missing means no');
+  assert.equal(normaliseCapabilities({ agents: 'yes' }).agents, false, 'only true means yes');
+});
+
+test('a start request is checked: the workspace\'s folder comes from Deck\'s list, and nothing outside what Deck offers is accepted', () => {
+  const rootOf = (id) => (id === 'ws1' ? '/repos/ws1' : null);
+  const good = { workspaceId: 'ws1', ticket: 'TASK-0001', agent: 'claude', model: 'claude-opus-5-5', effort: 'high', access: 'ask', place: 'worktree', prompt: 'Invented.', root: '/etc' };
+  const req = parseStart(good, rootOf);
+  assert.equal(req.root, '/repos/ws1', 'a folder the window sends is ignored');
+  assert.deepEqual([req.ticket, req.agent, req.access, req.place], ['TASK-0001', 'claude', 'ask', 'worktree']);
+  assert.equal(parseStart({ ...good, ticket: null }, rootOf).ticket, null);
+  for (const [bad, why] of [
+    [{ workspaceId: 'nope' }, /no such workspace/],
+    [{ ticket: '../etc' }, /not a ticket id/],
+    [{ agent: 'gpt' }, /not an agent/],
+    [{ access: 'bypassPermissions' }, /not an access level/],
+    [{ access: 'skip' }, /not an access level/],
+    [{ place: 'elsewhere' }, /not a place/],
+    [{ model: 'x; rm -rf /' }, /not a model/],
+    [{ prompt: '   ' }, /starts with a prompt/],
+  ]) assert.match(parseStart({ ...good, ...bad }, rootOf), why, JSON.stringify(bad));
+});
+
+test('the calls reach the manager, check their arguments, and an answer only allows or denies', async () => {
+  const calls = new Map();
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ ask: 'Edit', summary: 'x' }]]) }, { now, newId });
+  const repo = gitRepo();
+  registerAgentCalls((ch, h) => calls.set(ch, h), m, (id) => (id === 'ws1' ? repo : null));
+  assert.deepEqual([...calls.keys()].sort(), ['deck:agents:answer', 'deck:agents:conversation', 'deck:agents:interrupt', 'deck:agents:list', 'deck:agents:send', 'deck:agents:start', 'deck:agents:stop']);
+  assert.deepEqual(await calls.get('deck:agents:start')({}, { workspaceId: 'elsewhere', agent: 'claude', prompt: 'x' }), { ok: false, error: 'no such workspace' });
+  const started = await calls.get('deck:agents:start')({}, { workspaceId: 'ws1', ticket: 'TASK-0002', agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  assert.equal(started.ok, true);
+  const id = started.session.id;
+  await until(() => m.get(id).state === 'waiting');
+  assert.deepEqual(await calls.get('deck:agents:answer')({}, id, 'x', { allow: 'yes' }), { ok: false, error: 'an answer allows or denies' });
+  const ask = openRequests(await calls.get('deck:agents:conversation')({}, id))[0];
+  assert.deepEqual(await calls.get('deck:agents:answer')({}, id, ask.id, { allow: true }), { ok: true });
+  await until(() => m.get(id).state === 'idle');
+  assert.throws(() => calls.get('deck:agents:conversation')({}, '../../etc/passwd'), /not a session id/);
+  assert.equal((await calls.get('deck:agents:list')({})).length, 1);
+  assert.deepEqual(await calls.get('deck:agents:stop')({}, id), { ok: true });
+});
+
+test('Deck\'s served host forwards none of the sidecar\'s agent, session or approval routes', async () => {
+  const sidecar = await fakeSidecar({ '/healthz': HEALTH });
+  const WORKSPACE = { id: 'aaaa1111', root: '/repo', name: 'a repo', kind: 'project-os' };
+  const host = new DeckHost({ webRoot: path.join(desktopRoot, 'dist', 'web'), capabilities: SERVED_CAPABILITIES, listWorkspaces: () => [WORKSPACE], sidecarBaseFor: () => sidecar.base });
+  const { port } = await host.listen(0);
+  try {
+    const caps = await (await fetch(`http://127.0.0.1:${port}/deck/capabilities`)).json();
+    assert.equal(caps.agents, false, 'the served page is told it has no agents');
+    for (const p of ['/api/agent-hook', '/api/cockpit/sessions', '/api/cockpit/agents', '/api/cockpit/agent-state', '/api/cockpit/approvals', '/api/cockpit/approvals/ask', '/api/cockpit/approvals/handed-back', '/api/cockpit/session-cache', '/api/cockpit/caught-up', '/api/cockpit/deliveries']) {
+      for (const method of ['GET', 'POST']) {
+        const res = await fetch(`http://127.0.0.1:${port}/deck/sidecar/${WORKSPACE.id}${p}`, { method });
+        assert.ok([403, 404, 405].includes(res.status), `${method} ${p} answered ${res.status}`);
+      }
+    }
+    assert.equal(sidecar.received.filter((r) => !r.url.startsWith('/healthz')).length, 0, 'nothing reached the sidecar');
+    for (const p of ['/deck/agents', '/deck/agents/list', '/deck/sessions']) assert.ok([403, 404, 405].includes((await fetch(`http://127.0.0.1:${port}${p}`)).status), p);
+  } finally {
+    await host.close();
+    await sidecar.close();
+  }
+});
+
+test('an agent report leaves Deck through the write client, and only to the three agent paths', async () => {
+  const { postAgentReport, AGENT_REPORT_PATHS } = load('shared/write-client.js');
+  assert.deepEqual([...AGENT_REPORT_PATHS], ['/api/agent-hook', '/api/cockpit/approvals/ask', '/api/cockpit/approvals/handed-back']);
+  const sent = [];
+  const fake = async (url, init) => { sent.push([url, init.method, init.headers['content-type']]); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
+  assert.deepEqual(await postAgentReport('http://127.0.0.1:9', '/api/agent-hook', { a: 1 }, fake), { ok: true, status: 200, json: { ok: true } });
+  await assert.rejects(postAgentReport('http://127.0.0.1:9', '/api/notes/transition', {}, fake), /Deck reports agents only to/);
+  assert.deepEqual(sent, [['http://127.0.0.1:9/api/agent-hook', 'POST', 'application/json']]);
+});
