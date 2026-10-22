@@ -60,3 +60,9 @@ Option B of the three Edwin was shown on 2026-10-21:
 - The routes the sidecar allows only from this machine stay off Deck's served host.
 - Deck's sessions and the cockpit's terminals are separate processes; each app sees the other's through the sidecar.
 - This is the ADR [[PHASE-0004-Parity]]'s exit criteria ask for.
+
+## Decision record
+
+> [!note] Build started — 2026-10-22 (user:edwin)
+> Edwin: "Can you build the DES-0006 functionality?" PHASE-0005 Overview has nothing left to build, so PHASE-0004 Parity opens now and the build is FEAT-0032 to FEAT-0035. The decision above is unchanged.
+> One consequence is read narrowly while building: Deck answers its own sessions' permission requests in its main process, which needs no shell secret, and keeps borrowing a running sidecar (RISK-0001). It holds the secret, and answers the cockpit's requests, only for a sidecar it started (TASK-0204). This is open for Edwin in PHASE-0004.
