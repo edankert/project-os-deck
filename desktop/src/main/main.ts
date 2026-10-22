@@ -1266,14 +1266,20 @@ async function runSmoke(): Promise<void> {
         `(async () => {
           const box = document.getElementById('search');
           const all = document.querySelectorAll('.nav-row:not([hidden])').length;
+          // Each step looks again until the list is in the state it measures, up to four
+          // seconds; a fixed 600 ms lost the race under load once (TASK-0180, ISS-0092).
+          const rows = () => document.querySelectorAll('.nav-row:not([hidden])').length;
+          const until = async (ok) => {
+            for (let i = 0; i < 40 && !ok(); i += 1) await new Promise((r) => setTimeout(r, 100));
+          };
           box.value = 'zzzznothingmatchesthis';
           box.dispatchEvent(new Event('input'));
-          await new Promise((r) => setTimeout(r, 600));
-          const none = document.querySelectorAll('.nav-row:not([hidden])').length;
+          await until(() => rows() === 0);
+          const none = rows();
           box.value = '';
           box.dispatchEvent(new Event('input'));
-          await new Promise((r) => setTimeout(r, 600));
-          return { all, none, restored: document.querySelectorAll('.nav-row:not([hidden])').length };
+          await until(() => rows() === all);
+          return { all, none, restored: rows() };
         })()`,
       )) as { all: number; none: number; restored: number };
       record(searched.none === 0, `a search that matches nothing empties the list (${searched.none} rows)`);
