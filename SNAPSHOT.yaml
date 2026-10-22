@@ -305,7 +305,7 @@ items:
   tasks:
     TASK-0180:
       file: docs/features/overview-wheel/plan/tasks/TASK-0180-The-Search-Smoke-Check-Waits-For-The-List-To-Come-Back.md
-      status: doing
+      status: done
       parent: ISS-0092
       phase: "[[PHASE-0002]]"
     TASK-0178:
@@ -2639,7 +2639,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 171
-    tasks_done: 150
+    tasks_done: 151
     tests_total: 69
     tests_passing: 9
     tests_failing: 0

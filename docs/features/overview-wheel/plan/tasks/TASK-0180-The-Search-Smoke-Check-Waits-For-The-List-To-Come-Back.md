@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0180
 title: "The smoke check that clears the navigator's search waits for the list to come back, instead of counting the rows after a fixed 600 ms"
-status: doing
+status: done
 phase: "[[PHASE-0002-Glass]]"
 owner: system:claude
 created: 2026-10-22
@@ -23,5 +23,9 @@ tests: []
 
 ## Definition of Done
 
-- [ ] Both waits in the check (the search that matches nothing, and the clearing) look again until the list is in the state they measure, up to four seconds, and then report what they found.
-- [ ] Both halves of the smoke pass in the container.
+- [x] Both waits in the check (the search that matches nothing, and the clearing) look again until the list is in the state they measure, up to four seconds, and then report what they found.
+- [x] Both halves of the smoke pass in the container.
+
+## Verification
+
+The check now looks again every 100 ms, up to four seconds, until the list holds no row after the empty search and every row after clearing it. Both halves of the smoke passed in the container on 2026-10-22 with the change, and `cd desktop && npm test` passes (799).
