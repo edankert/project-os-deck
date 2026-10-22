@@ -17,6 +17,7 @@ import { FILL_WORD, type NoteType, type OverviewModel, type Ticket } from './ove
 import { NOTE_TYPES, TYPE_WORD } from './overview-marks.js';
 import type { ListRow, PanelButton, PanelNode, PanelRow, PanelSection, ScreenContext } from './overview-scene.js';
 import { shortPhaseName, type TowersLayout } from './overview-towers.js';
+import { quietDays, todayOf } from './overview-needs.js';
 
 /** The action a card's Frame button asks the 3D view for; the renderer answers it, no screen does. */
 export const FRAME_ACTION = 'towers-frame';
@@ -64,6 +65,8 @@ export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx:
     { key: 'Phase', value: phaseOf(t.phase) },
     { key: 'Owner', value: t.owner ?? 'nobody' },
     { key: 'Updated', value: t.updated ?? 'no date' },
+    // How long it has been quiet, counted to today as a tower's badge is (TASK-0184).
+    ...(t.updated !== undefined ? [{ key: 'Quiet', value: `${quietDays([t], todayOf(model))} days` }] : []),
   ];
   const linked = sel.links.map((l) => model.tickets[l.id]!).filter(Boolean);
   const counts = NOTE_TYPES.map((type) => ({ type, n: linked.filter((x) => x.type === type).length })).filter((c) => c.n > 0);

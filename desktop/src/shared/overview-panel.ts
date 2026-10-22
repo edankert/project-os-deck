@@ -9,7 +9,7 @@
  * narrow toward the back.
  */
 import { cockpitSquare, markWords } from './overview-marks.js';
-import type { PanelCard, PanelNode, PanelRow, SceneNode } from './overview-scene.js';
+import type { PanelCard, PanelNeeds, PanelNode, PanelRow, PanelWeeks, SceneNode } from './overview-scene.js';
 
 /** How much smaller and narrower the back of a tilted plane is than its front. */
 export const TILT = { shrink: 0.42, narrow: 0.3 } as const;
@@ -238,9 +238,49 @@ function cardPanel(panel: PanelNode & { body: PanelCard }): SceneNode[] {
   return out;
 }
 
+/** What needs you, flat (TASK-0184): the count, the bar by reason with its words, the first three rows. */
+function needsFlat(panel: PanelNode & { body: PanelNeeds }): SceneNode[] {
+  const { x, y, w, h } = panel;
+  const n = panel.body;
+  const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
+  out.push({ kind: 'text', x: x + 16, y: y + 24, text: 'NEEDS YOU', rest: true, role: 'label', size: 11, cls: 'ov-needs-count' });
+  out.push({ kind: 'text', x: x + 16, y: y + 66, text: String(n.total), rest: true, role: 'label', size: 40, cls: 'ov-needs-count' });
+  let at = x + 16;
+  const span = w - 32;
+  for (const part of n.parts) {
+    const pw = (span * part.ids.length) / Math.max(1, n.total);
+    out.push({ kind: 'mark', tag: 'rect', attrs: { x: at, y: y + 80, width: Math.max(2, pw - 2), height: 10, fill: part.colour }, cls: 'ov-needs-part' });
+    at += pw;
+  }
+  out.push({ kind: 'text', x: x + 16, y: y + 108, text: n.parts.map((p) => `${p.ids.length} ${p.word}`).join(' · '), rest: true, role: 'label', size: 11.5 });
+  n.rows.forEach((r, i) => out.push(...rowNodes(r, x + 12, y + 136 + i * ROW, w - 24, 1)));
+  return out;
+}
+
+/** The year as weeks, flat (TASK-0184). */
+function weeksFlat(panel: PanelNode & { body: PanelWeeks }): SceneNode[] {
+  const { x, y, w, h } = panel;
+  const v = panel.body;
+  const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
+  const total = v.weeks.reduce((n, ids) => n + ids.length, 0);
+  const most = Math.max(1, ...v.weeks.map((ids) => ids.length));
+  out.push({ kind: 'text', x: x + 16, y: y + 24, text: `${v.year} · ${total} closed`, rest: true, role: 'label', size: 11.5, cls: 'ov-title' });
+  const cell = Math.min(18, (w - 60) / 13);
+  for (let i = 0; i < 52; i += 1) {
+    const cx = x + 40 + (i % 13) * cell;
+    const cy = y + 40 + Math.floor(i / 13) * cell;
+    const f = v.weeks[i]!.length === 0 ? 0 : 0.25 + (0.75 * v.weeks[i]!.length) / most;
+    out.push({ kind: 'mark', tag: 'rect', attrs: { x: cx, y: cy, width: cell - 3, height: cell - 3, rx: 2, 'fill-opacity': f.toFixed(2) }, cls: `ov-week-cell${i === v.now ? ' is-now' : ''}` });
+  }
+  if (v.undated.length > 0) out.push({ kind: 'text', x: x + 16, y: y + h - 14, text: `${v.undated.length} closed with no date`, rest: true, role: 'label', size: 11, cls: 'ov-dim' });
+  return out;
+}
+
 /** A panel's flat drawing, as scene nodes for `sceneToSvg`. Not part of `scene.nodes`, so never counted. */
 export function panelSvgNodes(panel: PanelNode): SceneNode[] {
   if (panel.body.kind === 'card') return cardPanel(panel as PanelNode & { body: PanelCard });
+  if (panel.body.kind === 'needs') return needsFlat(panel as PanelNode & { body: PanelNeeds });
+  if (panel.body.kind === 'weeks') return weeksFlat(panel as PanelNode & { body: PanelWeeks });
   return panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }) : notePanel(panel as PanelNode & { body: { kind: 'note' } });
 }
 
@@ -308,6 +348,24 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-panel-button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: hsl(190 90% 80%); background: hsla(190, 90%, 55%, 0.12); border: 1px solid hsla(190, 90%, 65%, 0.4); }
 .ov-panel-button:hover, .ov-panel-button:focus-visible { background: hsla(190, 90%, 55%, 0.25); }
 .ov-pane-lead { margin: 0; font-size: 13.5px; line-height: 1.5; color: hsl(195 30% 88%); }
+/* What needs you and the year as weeks (TASK-0184). */
+.ov-panel-needs, .ov-panel-weeks { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; }
+.ov-needs-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: ${needsYou}; }
+.ov-needs-big { font-size: 40px; font-weight: 800; line-height: 1; color: ${needsYou}; font-variant-numeric: tabular-nums; text-shadow: 0 0 14px hsla(5, 50%, 65%, 0.45); }
+.ov-needs-bar { display: flex; gap: 2px; height: 10px; border-radius: 3px; overflow: hidden; }
+.ov-needs-part { all: unset; cursor: pointer; min-width: 4px; }
+.ov-needs-keys { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.ov-needs-key { all: unset; cursor: pointer; font-size: 12px; display: inline-flex; gap: 5px; align-items: center; }
+.ov-needs-key:hover, .ov-needs-key:focus-visible { color: #fff; }
+.ov-needs-key i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.ov-weeks-grid { display: grid; grid-template-columns: 20px repeat(13, 1fr); gap: 3px; align-items: center; }
+.ov-weeks-q { font-size: 10px; color: hsl(205 25% 58%); }
+.ov-week { all: unset; cursor: pointer; aspect-ratio: 1; border: 1px solid hsla(170, 60%, 60%, 0.25); border-radius: 2px; background: color-mix(in srgb, hsl(165 35% 58%) calc(var(--f) * 100%), hsla(210, 40%, 14%, 0.9)); }
+.ov-week.is-later { opacity: 0.35; }
+.ov-week.is-now { outline: 2px solid #fff; }
+.ov-week:hover, .ov-week:focus-visible { border-color: #fff; }
+.ov-weeks-undated { all: unset; cursor: pointer; font-size: 11px; color: hsl(205 25% 62%); }
+.ov .ov-week-cell { fill: hsl(165 35% 58%); stroke: hsla(170, 60%, 60%, 0.25); } .ov .ov-week-cell.is-now { stroke: #fff; stroke-width: 2; }
 /* The next-up board (TASK-0183), in the style of Rubric's routines. */
 .ov-panel[data-panel="next-up"] .ov-plane { gap: 6px; padding: 12px 14px; background: hsla(210, 50%, 8%, 0.9); }
 .ov-panel[data-panel="next-up"] .ov-sec-head { display: none; }

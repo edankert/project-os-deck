@@ -53,6 +53,8 @@ export interface TowersView {
   light(ids: readonly string[] | null): void;
   /** Turn the camera to one ticket. */
   flyTo(id: string): void;
+  /** Show or hide the badges on quiet towers (TASK-0184). */
+  showAges(on: boolean): void;
   resize(): void;
   /** For the window run: where things are on screen, and what is open. */
   probe: {
@@ -65,6 +67,8 @@ export interface TowersView {
     selected(): { id: string; curves: number; outlined: number; labelled: number; faded: boolean } | null;
     /** How many tickets a search lights, and how many glows the view draws for them (TASK-0183). */
     found(): { lit: number; glows: number; faded: boolean } | null;
+    /** The quiet towers' badges: how many, how many shown, and each one's words. */
+    ages(): { badges: number; shown: number; words: string[] };
     camera(): { radius: number; theta: number; phi: number; moved: boolean; reach: number; limit: number };
     hit(x: number, y: number): string | null;
   };
@@ -167,6 +171,9 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   let glows = new THREE.Group();
   /** A ring of thousands of glows is a fog, not an answer; past this many, the first are lit. */
   const GLOW_CAP = 600;
+  // The badges on towers quiet for 14 days or more (TASK-0184).
+  let ageBadges: THREE.Sprite[] = [];
+  let agesOn = true;
   let nextMark = new THREE.Group();
   let wires: THREE.LineSegments | null = null;
   const where = new Map<string, { at: THREE.Vector3; phase: number | null }>();
@@ -369,6 +376,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     pickables = [];
     pulses = [];
     beams = [];
+    ageBadges = [];
     layout = next;
     const { R0, R1, collar } = next;
     next.phases.forEach((p, i) => {
@@ -440,6 +448,14 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
           cap.userData['hit'] = { kind: 'cap', label: tower.cap.label, target: tower.cap.target } satisfies Hit;
           content.add(cap);
           pickables.push(cap);
+        }
+        if (tower.age !== null) {
+          const badge = label(`◷ ${tower.age} d`, 1.25, '#f0c987', 700);
+          badge.position.set(tower.x, tower.top + (tower.cap !== null ? 1.6 : 1.1), tower.z);
+          badge.visible = agesOn;
+          badge.userData['words'] = `◷ ${tower.age} d`;
+          content.add(badge);
+          ageBadges.push(badge);
         }
         if (tower.focus) {
           const height = 26;
@@ -624,7 +640,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     }
   }
 
-  const signatureOf = (l: TowersLayout): string => JSON.stringify([l.workspace, l.colouring, l.R1.toFixed(3), l.phases.map((p) => [p.id, p.level, p.tiles.length, p.towers.length, p.needs]), l.shelf.length, l.core.length, l.next, l.focus]);
+  const signatureOf = (l: TowersLayout): string => JSON.stringify([l.workspace, l.colouring, l.R1.toFixed(3), l.phases.map((p) => [p.id, p.level, p.tiles.length, p.towers.length, p.needs, p.towers.map((t) => t.age)]), l.shelf.length, l.core.length, l.next, l.focus]);
 
   // -------------------------------------------------------------------------
   // The camera.
@@ -880,6 +896,10 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       selection.visible = w !== undefined;
       if (w !== undefined) selection.position.copy(w.at);
     },
+    showAges(on) {
+      agesOn = on;
+      for (const b of ageBadges) b.visible = on;
+    },
     light(ids) {
       found = ids === null ? null : [...ids];
       drawFound();
@@ -922,6 +942,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
         const faded = phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5));
         return { id: sel.id, curves: lines, outlined: boxes - 1, labelled, faded };
       },
+      ages: () => ({ badges: ageBadges.length, shown: ageBadges.filter((b) => b.visible).length, words: ageBadges.map((b) => String(b.userData['words'])) }),
       found: () => (found === null ? null : { lit: found.length, glows: glows.children.reduce((n, o) => n + ((o as THREE.InstancedMesh).count ?? 0), 0), faded: phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5)) }),
       camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved(), reach: Math.hypot(view.target.x, view.target.z), limit: layout === null ? 0 : layout.shelfR + 10 }),
       hit: (x, y) => { const h = hitAt(x, y); return h === null ? null : h.kind === 'cube' ? h.cube.id : h.kind; },

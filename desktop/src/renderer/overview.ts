@@ -454,7 +454,22 @@ export function initOverview(host: OverviewHostApi): void {
   drawColouringToggle();
   cameraBar = buildCameraBar();
   searchBox = buildSearch();
-  area.append(stage, callout, listPanel, listToggle, colouringToggle, cameraBar, searchBox);
+  // "◷ Ages" hides and shows the badges on quiet towers (TASK-0184), for this window.
+  agesToggle = document.createElement('button');
+  agesToggle.type = 'button';
+  agesToggle.className = 'ov-list-toggle ov-ages-toggle';
+  agesToggle.textContent = '◷';
+  agesToggle.setAttribute('aria-pressed', 'true');
+  agesToggle.title = 'Ages: hide the badges on towers quiet for 14 days or more';
+  agesToggle.setAttribute('aria-label', 'Show or hide how long each quiet tower has been quiet');
+  agesToggle.hidden = true;
+  agesToggle.addEventListener('click', () => {
+    showAges = !showAges;
+    agesToggle!.setAttribute('aria-pressed', String(showAges));
+    agesToggle!.title = showAges ? 'Ages: hide the badges on towers quiet for 14 days or more' : 'Ages: show how long each quiet tower has been quiet';
+    if (towersActive()) towersView!.showAges(showAges);
+  });
+  area.append(stage, callout, listPanel, listToggle, colouringToggle, agesToggle, cameraBar, searchBox);
 
   historyBar = document.getElementById('ov-history');
   backButton = document.getElementById('ov-back') as HTMLButtonElement | null;
@@ -567,11 +582,15 @@ function buildSearch(): HTMLElement {
   return box;
 }
 
-/** The box is there only where the towers are: the wheel and a phase brought close. */
+/** The box is there only where the towers are: the wheel and a phase brought close. So is ◷. */
 function drawSearchBox(): void {
-  if (searchBox === null) return;
-  searchBox.hidden = current === null || towersOf(current.scene) === undefined;
+  const off = current === null || towersOf(current.scene) === undefined;
+  if (searchBox !== null) searchBox.hidden = off;
+  if (agesToggle !== null) agesToggle.hidden = off || !towersActive();
 }
+
+let agesToggle: HTMLButtonElement | null = null;
+let showAges = true;
 
 async function runSearch(): Promise<void> {
   if (current === null || searchInput === null) return;
@@ -638,6 +657,19 @@ function clearSearch(andText = true): void {
   if (andText && searchInput !== null) searchInput.value = '';
   if (searchCount !== null) searchCount.textContent = '';
   searchList?.replaceChildren();
+}
+
+/**
+ * Light a set of tickets the way a search does, with words in the box instead of a query
+ * (TASK-0184: a reason of the needs-you bar, a week). Escape clears it as it clears a search.
+ */
+function lightTickets(ids: readonly string[], words: string): void {
+  if (current === null) return;
+  clearSearch();
+  searching = { query: '', ids: [...ids], active: -1 };
+  lightFound(ids);
+  if (searchCount !== null) searchCount.textContent = words.replace(/: light them on the towers$/, '');
+  drawSearchList();
 }
 
 /** A match chosen: selected where it stands, on the phase brought close when it stands in it, else on the whole ring. */
@@ -887,6 +919,8 @@ function showTowers(scene: Scene): void {
   if (towers === undefined || !towersActive()) return;
   towersView!.resize();
   towersView!.show(towers.layout);
+  towersView!.showAges(showAges);
+  drawSearchBox();
 }
 
 /** Where each ticket's mark is on screen now, so the next screen can grow out of it. */
@@ -951,6 +985,7 @@ function drawList(scene: Scene): void {
     if (row.state !== undefined) button.dataset['state'] = row.state;
     if (row.target !== undefined) button.addEventListener('click', () => void go(row.target!));
     else if (row.action !== undefined) button.addEventListener('click', () => void act(row.action!));
+    else if (row.lights !== undefined) button.addEventListener('click', () => lightTickets(row.lights!, row.label));
     else button.disabled = true;
     li.appendChild(button);
     ul.appendChild(li);
@@ -1025,6 +1060,12 @@ async function act(action: string): Promise<void> {
 async function onClick(event: MouseEvent): Promise<void> {
   const target = event.target as Element | null;
   if (target === null || current === null) return;
+  // A part of the needs-you bar, a reason, a week: lights its tickets as a search does (TASK-0184).
+  const lights = target.closest('[data-light]');
+  if (lights !== null) {
+    lightTickets((lights.getAttribute('data-light') ?? '').split(' ').filter(Boolean), lights.getAttribute('data-light-label') ?? '');
+    return;
+  }
   const control = target.closest('[data-action]');
   if (control !== null) {
     await act(control.getAttribute('data-action')!);

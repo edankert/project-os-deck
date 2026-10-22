@@ -157,7 +157,35 @@ export interface PanelNode {
       foot?: string;
     }
     | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string }
-    | PanelCard;
+    | PanelCard
+    | PanelNeeds
+    | PanelWeeks;
+}
+
+/**
+ * What needs you, as a picture (TASK-0184): the count, one bar split by the cockpit's
+ * reasons, each part pressable to light its tickets, and the first three tickets as rows.
+ */
+export interface PanelNeeds {
+  kind: 'needs';
+  total: number;
+  parts: Array<{ reason: string; word: string; colour: string; ids: string[] }>;
+  rows: PanelRow[];
+}
+
+/**
+ * The year as weeks (TASK-0184): four rows of thirteen squares, each filled by the tickets
+ * closed that week and pressable to light them; this week outlined, the weeks after it faint.
+ */
+export interface PanelWeeks {
+  kind: 'weeks';
+  year: string;
+  /** This week, 0 to 51, or -1 when the data has no date. */
+  now: number;
+  /** The tickets closed in each of the 52 weeks. */
+  weeks: string[][];
+  /** Closed tickets whose notes give no date: counted apart, not lost. */
+  undated: string[];
 }
 
 /** A button in a panel: where it goes, or the action it asks for. Its words are its own. */
@@ -206,6 +234,8 @@ export interface ListRow {
   state?: State;
   target?: string;
   action?: string;
+  /** Tickets a press lights on the towers, as a search does (TASK-0184: a reason, a week). */
+  lights?: string[];
 }
 
 export interface Scene {

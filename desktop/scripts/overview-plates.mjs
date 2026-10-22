@@ -140,9 +140,11 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
         }
       }
     }
-    // A ticket is drawn by a mark, or by a row of a panel (TASK-0147, TASK-0148).
-    const marks = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'mark' && node.ticket !== undefined ? 1 : node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
-    const panelRows = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'panel' && node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : 0), 0);
+    // A ticket is drawn by a mark, or by a row of a panel (TASK-0147, TASK-0148): a list's rows,
+    // or the first rows of the needs-you panel (TASK-0184).
+    const rowsOf = (node) => (node.kind !== 'panel' ? 0 : node.body.kind === 'rows' ? node.body.sections.reduce((k, sec) => k + sec.rows.length, 0) : node.body.kind === 'needs' ? node.body.rows.length : 0);
+    const marks = [...walkScene(scene.nodes)].reduce((n, node) => n + (node.kind === 'mark' && node.ticket !== undefined ? 1 : rowsOf(node)), 0);
+    const panelRows = [...walkScene(scene.nodes)].reduce((n, node) => n + rowsOf(node), 0);
     // What the plate really draws: a flat panel can run out of room, so the count is read
     // from the SVG, beside how many the screen holds (Codex's review of TASK-0150).
     const drawnInPlate = (svg.match(/ data-ticket="/g) ?? []).length;

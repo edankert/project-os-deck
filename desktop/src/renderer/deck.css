@@ -1567,6 +1567,10 @@ body.pinned .overview-area { left: 0; }
 .ov-search-row .ov-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-searching .ov-plan [data-ticket]:not(.is-found) { opacity: 0.15; }
 .ov-colouring-toggle { right: 56px; }
+.ov-ages-toggle { right: 98px; font-size: 15px; }
+.ov-ages-toggle[hidden] { display: none; }
+.ov-ages-toggle[aria-pressed="true"] { background: hsla(190, 90%, 55%, 0.25); }
+.ov-ages-toggle:not([hidden]) ~ .ov-search { right: 142px; }
 .ov-colouring-toggle[hidden] { display: none; }
 .ov-colouring-toggle[aria-pressed="true"] { background: hsla(275, 78%, 60%, 0.25); }
 /* The towers in 3D (TASK-0167): the canvas under the scene's controls, which alone take the

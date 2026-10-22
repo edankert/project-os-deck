@@ -141,5 +141,40 @@ module.exports = async function (d) {
     check((await arrives(there)) === there, `pressing a row of the board selects ${row}`, { address: await shownAt() });
     await d.shot(win, '05-board-row-selected');
   }
+
+  // ---- TASK-0184: what needs you, ages and the weeks ----
+  await go(`${base}?page=wheel`);
+  const needing = tickets.filter((x) => x.needsYou);
+  const needs = await js(`(() => { const p = document.querySelector('#overview-area .ov-panel[data-panel="needs-you"]'); if (!p) return null; return { big: p.querySelector('.ov-needs-big').textContent, parts: [...p.querySelectorAll('.ov-needs-key')].map((k) => ({ words: k.textContent, ids: k.dataset.light.split(' ').length })), rows: [...p.querySelectorAll('.ov-row')].map((r) => r.dataset.ticket) }; })()`);
+  check(needs !== null && Number(needs.big) === needing.length && needs.parts.reduce((n, x) => n + x.ids, 0) === needing.length && needs.rows.length === Math.min(3, needing.length), `the needs-you panel counts the ${needing.length} tickets that need you, split by reason, with the first three as rows`, needs);
+  if (needs !== null && needs.parts.length > 0) {
+    await t.clickOn('#overview-area .ov-panel[data-panel="needs-you"] .ov-needs-key', 600);
+    const lit = await js(`({ box: window.__deckOverview.search(), found: window.__deckOverview.towers().found() })`);
+    check(lit.found !== null && lit.found.lit === needs.parts[0].ids && lit.box.said === needs.parts[0].words, `pressing "${needs.parts[0].words}" lights those tickets on the ring and says so in the box`, lit);
+    await d.shot(win, '06-needs-lit');
+    await d.press(win, 'Escape');
+    await d.delay(300);
+    check((await js('window.__deckOverview.towers().found()')) === null, 'Escape puts the ring back', null);
+  }
+  const weeks = await js(`(() => { const p = document.querySelector('#overview-area .ov-panel[data-panel="weeks"]'); if (!p) return null; const w = [...p.querySelectorAll('.ov-week')]; const busiest = w.reduce((b, e, i) => (e.dataset.light.split(' ').filter(Boolean).length > w[b].dataset.light.split(' ').filter(Boolean).length ? i : b), 0); return { squares: w.length, now: w.findIndex((e) => e.classList.contains('is-now')), busiest, n: w[busiest].dataset.light.split(' ').filter(Boolean).length, head: p.querySelector('.ov-board-head').textContent }; })()`);
+  check(weeks !== null && weeks.squares === 52 && weeks.now >= 0, 'the year stands as 52 weeks, this week outlined', weeks);
+  if (weeks !== null && weeks.n > 0) {
+    await t.clickOn(`#overview-area .ov-panel[data-panel="weeks"] .ov-week:nth-of-type(${weeks.busiest + 1})`, 600);
+    const lit = await js('window.__deckOverview.towers().found()');
+    check(lit !== null && lit.lit === weeks.n, `pressing the busiest week, week ${weeks.busiest + 1}, lights the ${weeks.n} tickets closed in it`, lit);
+    await d.press(win, 'Escape');
+    await d.delay(300);
+  }
+  const ages = await js('window.__deckOverview.towers().ages()');
+  d.log('age badges', ages);
+  check(ages.shown === ages.badges, 'the quiet towers carry their ages', ages);
+  await d.shot(win, '07-needs-weeks-ages');
+  if (ages.badges > 0) {
+    await t.clickOn('.ov-ages-toggle', 300);
+    const hidden = await js('window.__deckOverview.towers().ages()');
+    await t.clickOn('.ov-ages-toggle', 300);
+    const back = await js('window.__deckOverview.towers().ages()');
+    check(hidden.shown === 0 && back.shown === back.badges, '◷ hides the badges and shows them again', { hidden, back });
+  }
   t.finish();
 };

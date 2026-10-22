@@ -442,3 +442,105 @@ for (const name of WORKSPACES) {
     assert.ok(board !== undefined && board.x < 100 && board.y > 600);
   });
 }
+
+// --- TASK-0184: what needs you, ages and the weeks ---
+
+const { needsPanel, weeksPanel, needsByReason, quietDays, REASONS, QUIET_DAYS } = load('shared/overview-needs.js');
+const { weeksOf } = notes;
+
+for (const name of WORKSPACES) {
+  test(`${name}: the needs-you panel counts every ticket that needs you once, split by the cockpit's reasons`, () => {
+    const m = fixture(name);
+    const { node, rows } = needsPanel(m, ctx, { x: 0, y: 0, w: 320, h: 330 });
+    const needing = Object.values(m.tickets).filter((t) => t.needsYou);
+    assert.equal(node.body.total, needing.length);
+    const all = node.body.parts.flatMap((p) => p.ids);
+    assert.equal(new Set(all).size, all.length, 'each once');
+    assert.deepEqual([...all].sort(), needing.map((t) => t.id).sort());
+    for (const p of node.body.parts) for (const id of p.ids) assert.equal(m.tickets[id].needs?.reason ?? 'waiting', p.reason, id);
+    // The parts in the order of urgency, and the first three rows the most urgent.
+    const order = REASONS.map((r) => r.reason);
+    assert.deepEqual(node.body.parts.map((p) => p.reason), order.filter((r) => node.body.parts.some((p) => p.reason === r)));
+    assert.deepEqual(node.body.rows.map((r) => r.id), node.body.parts.flatMap((p) => p.ids).slice(0, 3));
+    for (const p of node.body.parts) assert.deepEqual(rows.find((r) => r.id === `needs-${p.reason}`).lights, p.ids, 'each part lights its tickets, from the list twin too');
+  });
+}
+
+test("the fixtures' needs: 12 on Deck (5 to review, 1 to run, 6 waiting) and 75 on your-trainer (5 to decide, 9 to run, 61 waiting), as DES-0005's page counts", () => {
+  const split = (m) => Object.fromEntries([...needsByReason(m)].filter(([, l]) => l.length > 0).map(([k, l]) => [k, l.length]));
+  assert.deepEqual(split(fixture('deck')), { review: 5, ready: 1, waiting: 6 });
+  assert.deepEqual(split(fixture('your-trainer')), { triage: 5, ready: 9, waiting: 61 });
+});
+
+test('a tower quiet for 14 days or more, counted to the day given, carries its age; a finished one does not', () => {
+  assert.equal(quietDays([{ updated: '2026-10-01' }, { updated: '2026-10-08' }, {}], '2026-10-22'), 14);
+  assert.equal(quietDays([{}], '2026-10-22'), null);
+  assert.equal(quietDays([{ updated: '2026-10-30' }], '2026-10-22'), 0, 'never below zero');
+  assert.equal(QUIET_DAYS, 14);
+  for (const name of WORKSPACES) {
+    const m = fixture(name);
+    const today = m.generated.slice(0, 10);
+    const layout = towersLayout(m, ctx, null, { today });
+    for (const tw of layout.phases.flatMap((p) => p.towers)) {
+      const tickets = tw.cubes.map((c) => m.tickets[c.id]);
+      const quiet = quietDays(tickets, today);
+      const want = m.tickets[tw.feature].state !== 'closed' && quiet !== null && quiet >= 14 ? quiet : null;
+      assert.equal(tw.age, want, `${name} ${tw.feature}`);
+      if (want !== null) assert.match(tw.label, new RegExp(`quiet for ${want} days`));
+    }
+    // A later today makes towers older, never younger.
+    const later = towersLayout(m, ctx, null, { today: '2027-01-01' });
+    assert.ok(later.phases.flatMap((p) => p.towers).filter((t) => t.age !== null).length >= layout.phases.flatMap((p) => p.towers).filter((t) => t.age !== null).length);
+  }
+  // DES-0005's page: on Deck's fixture, one tower, FEAT-0016 in Glass, quiet for 34 days.
+  const deck = towersLayout(fixture('deck'), ctx, null, { today: fixture('deck').generated.slice(0, 10) });
+  assert.deepEqual(deck.phases.flatMap((p) => p.towers).filter((t) => t.age !== null).map((t) => [t.feature, t.age]), [['FEAT-0016', 34]]);
+});
+
+test("the card says how long the selected ticket has been quiet, counted to the model's date", () => {
+  const m = fixture('deck');
+  const card = panelsOf(wheelScene(m, ctx, { select: 'TASK-0154' })).find((p) => p.body.kind === 'card');
+  assert.equal(card.body.facts.find((f) => f.key === 'Quiet').value, `${quietDays([m.tickets['TASK-0154']], m.generated.slice(0, 10))} days`);
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: the weeks count every closed ticket once: in its week, among the undated, or in another year`, () => {
+    const m = fixture(name);
+    const today = m.generated.slice(0, 10);
+    const { node, rows } = weeksPanel(m, today, { x: 0, y: 0, w: 320, h: 230 });
+    const w = node.body;
+    assert.equal(w.year, today.slice(0, 4));
+    assert.equal(w.weeks.length, 52);
+    const closed = Object.values(m.tickets).filter((t) => t.state === 'closed');
+    const inWeeks = w.weeks.flat();
+    assert.equal(new Set(inWeeks).size, inWeeks.length, 'no ticket in two weeks');
+    for (const t of closed) {
+      const where = (t.updated ?? '') === '' ? 'undated' : t.updated.startsWith(w.year) ? 'week' : 'other year';
+      assert.equal(inWeeks.includes(t.id), where === 'week', t.id);
+      assert.equal(w.undated.includes(t.id), where === 'undated', t.id);
+    }
+    assert.ok(inWeeks.every((id) => m.tickets[id].state === 'closed'));
+    assert.deepEqual(w.weeks, weeksOf(closed.map((t) => [t.id, t.updated ?? '']).sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true })), today).closed);
+    // Each week and the undated are in the list twin, and light their tickets.
+    for (let i = 0; i < 52; i += 1) assert.deepEqual(rows.find((r) => r.id === `week-${i + 1}`).lights, w.weeks[i]);
+  });
+}
+
+test("the fixtures' years: 298 closed in 2026 on Deck, busiest in week 36; 1,478 on your-trainer, busiest in week 24, with 49 undated", () => {
+  const year = (name) => { const m = fixture(name); const w = weeksPanel(m, m.generated.slice(0, 10), { x: 0, y: 0, w: 1, h: 1 }).node.body; return { total: w.weeks.flat().length, busiest: w.weeks.reduce((b, ids, i) => (ids.length > w.weeks[b].length ? i : b), 0) + 1, undated: w.undated.length }; };
+  assert.deepEqual(year('deck'), { total: 298, busiest: 36, undated: 0 });
+  assert.deepEqual(year('your-trainer'), { total: 1478, busiest: 24, undated: 49 });
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: the wheel carries what needs you and the weeks at the right, which give way to a selected ticket's pane`, () => {
+    const m = fixture(name);
+    const keys = (scene) => panelsOf(scene).map((p) => p.key);
+    const plain = wheelScene(m, ctx);
+    assert.ok(keys(plain).includes('needs-you') && keys(plain).includes('weeks'));
+    passes(plain);
+    const selected = wheelScene(m, ctx, { select: m.next });
+    assert.ok(!keys(selected).includes('needs-you') && !keys(selected).includes('weeks'));
+    assert.ok(keys(selected).includes('next-up'), 'the board stays');
+  });
+}

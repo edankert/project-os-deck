@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0185
 title: "The ring can be grouped by feature, still opening by phase, with the choice remembered and named in the address"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22

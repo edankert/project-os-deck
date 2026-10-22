@@ -18,6 +18,7 @@
  */
 import { shortName } from './overview-geometry.js';
 import { cockpitSquare, markWords } from './overview-marks.js';
+import { QUIET_DAYS, quietDays, todayOf } from './overview-needs.js';
 import type { ListRow, MarkNode, SceneNode, ScreenContext } from './overview-scene.js';
 import type { Fill, Focus, NoteType, OverviewModel, Phase, State, Ticket } from './overview-types.js';
 
@@ -77,6 +78,11 @@ export interface Tower {
   cap: { ids: string[]; target: string; label: string } | null;
   focus: boolean;
   label: string;
+  /**
+   * Days since any of its tickets last changed, counted to today, when it has been quiet
+   * for `QUIET_DAYS` or more and is not finished: the badge "◷ 34 d" (TASK-0184). Else null.
+   */
+  age: number | null;
 }
 
 export interface ExitCell {
@@ -180,6 +186,8 @@ export interface TowersLayout {
 export interface TowersOptions {
   /** The ticket selected where it stands; a ticket the model does not hold selects nothing. */
   select?: string | null;
+  /** The day ages count to, YYYY-MM-DD; the model's own date when absent (TASK-0184). */
+  today?: string;
 }
 
 const byNumber = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
@@ -230,6 +238,7 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
   const ringIds = new Set(ring.map((p) => p.id));
   const shelfIds = new Set(model.shelf.map((p) => p.id));
   const opened = open !== null && ringIds.has(open) ? open : null;
+  const today = options.today ?? todayOf(model);
   const ticketTarget = (id: string): string => ctx.address({ page: 'ticket', note: id });
   const phaseTarget = (id: string): string => ctx.address({ page: 'phase', note: id });
   // Pressing a ticket selects it where it stands, on the ring or in the phase brought close (TASK-0182).
@@ -317,7 +326,9 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
         label: `${asking.length} ${asking.length === 1 ? 'ticket needs' : 'tickets need'} you in ${tw.foot.id}: ${asking.map((t) => `${t.id}, ${t.needs?.say ?? 'needs you'}`).join('; ')}`,
       };
       const closed = [tw.foot, ...tw.floors].filter((t) => t.state === 'closed').length;
-      return { feature: tw.foot.id, x, z, angle: a, top, cubes, cap, focus: isFocusFeature, label: `${tw.foot.id} ${tw.foot.title}: ${closed} of ${tw.floors.length + 1} done${isFocusFeature ? ', in focus' : ''}` };
+      const quiet = tw.foot.state === 'closed' ? null : quietDays([tw.foot, ...tw.floors], today);
+      const age = quiet !== null && quiet >= QUIET_DAYS ? quiet : null;
+      return { feature: tw.foot.id, x, z, angle: a, top, cubes, cap, focus: isFocusFeature, age, label: `${tw.foot.id} ${tw.foot.title}: ${closed} of ${tw.floors.length + 1} done${isFocusFeature ? ', in focus' : ''}${age !== null ? `; quiet for ${age} days` : ''}` };
     });
     const everyone = [...tilesOf.get(p.id)!, ...towersIn(p.id).flatMap((t) => [t.foot, ...t.floors])];
     const done = everyone.filter((t) => t.state === 'closed').length;

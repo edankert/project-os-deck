@@ -14,7 +14,7 @@
  * for the session.
  */
 import { markWords } from '../shared/overview-marks.js';
-import { walkScene, type PanelButton, type PanelCard, type PanelNode, type PanelRow, type PanelSection, type Scene } from '../shared/overview-scene.js';
+import { walkScene, type PanelButton, type PanelCard, type PanelNeeds, type PanelNode, type PanelRow, type PanelSection, type PanelWeeks, type Scene } from '../shared/overview-scene.js';
 
 /** Sections a person opened or closed, by panel and section key, for the session. */
 const unfolded = new Map<string, boolean>();
@@ -135,6 +135,77 @@ function cardPanel(panel: PanelNode & { body: PanelCard }): HTMLElement {
   return box;
 }
 
+/** A control that lights tickets on the towers when pressed, as a search does (TASK-0184). */
+function lighter(tag: 'button', cls: string, ids: readonly string[], label: string): HTMLElement {
+  const b = el(tag, cls);
+  b.type = 'button';
+  b.dataset['light'] = ids.join(' ');
+  b.dataset['lightLabel'] = label;
+  b.dataset['label'] = label;
+  b.setAttribute('aria-label', label);
+  return b;
+}
+
+/** What needs you (TASK-0184): the count, the bar split by reason, the reasons' words, the first three rows. */
+function needsPanel(panel: PanelNode & { body: PanelNeeds }): HTMLElement {
+  const n = panel.body;
+  const box = el('div', 'ov-panel ov-panel-needs');
+  box.append(el('div', 'ov-needs-title', 'Needs you'), el('div', 'ov-needs-big', String(n.total)));
+  if (n.total === 0) {
+    box.appendChild(el('div', 'ov-board-foot', 'Nothing is waiting on you.'));
+    return box;
+  }
+  const bar = el('div', 'ov-needs-bar');
+  const keys = el('div', 'ov-needs-keys');
+  for (const part of n.parts) {
+    const words = `${part.ids.length} ${part.word}`;
+    const segment = lighter('button', 'ov-needs-part', part.ids, `${words}: light them on the towers`);
+    segment.style.flex = String(part.ids.length);
+    segment.style.background = part.colour;
+    bar.appendChild(segment);
+    const key = lighter('button', 'ov-needs-key', part.ids, `${words}: light them on the towers`);
+    const dot = el('i', '');
+    dot.style.background = part.colour;
+    key.append(dot, document.createTextNode(words));
+    keys.appendChild(key);
+  }
+  const list = el('ul', 'ov-rows');
+  for (const r of n.rows) list.appendChild(rowElement(r));
+  box.append(bar, keys, list);
+  return box;
+}
+
+/** The year as weeks (TASK-0184): four rows of thirteen squares, each lighting the tickets closed that week. */
+function weeksPanel(panel: PanelNode & { body: PanelWeeks }): HTMLElement {
+  const w = panel.body;
+  const box = el('div', 'ov-panel ov-panel-weeks');
+  const total = w.weeks.reduce((n, ids) => n + ids.length, 0);
+  const most = Math.max(1, ...w.weeks.map((ids) => ids.length));
+  const busiest = w.weeks.reduce((b, ids, i) => (ids.length > w.weeks[b]!.length ? i : b), 0);
+  const head = el('div', 'ov-board-head');
+  head.append(el('span', 'ov-board-title', w.year), el('span', 'ov-board-count', `${total} closed · busiest week ${busiest + 1}`));
+  const grid = el('div', 'ov-weeks-grid');
+  const DAY = 86400000;
+  for (let q = 0; q < 4; q += 1) {
+    grid.appendChild(el('span', 'ov-weeks-q', `Q${q + 1}`));
+    for (let k = 0; k < 13; k += 1) {
+      const i = q * 13 + k;
+      const ids = w.weeks[i]!;
+      const from = new Date(Date.parse(`${w.year}-01-01`) + i * 7 * DAY).toISOString().slice(5, 10);
+      const square = lighter('button', `ov-week${i === w.now ? ' is-now' : ''}${w.now >= 0 && i > w.now ? ' is-later' : ''}`, ids, `Week ${i + 1}, from ${from}: ${ids.length} closed`);
+      square.style.setProperty('--f', ids.length === 0 ? '0' : (0.25 + (0.75 * ids.length) / most).toFixed(2));
+      grid.appendChild(square);
+    }
+  }
+  box.append(head, grid);
+  if (w.undated.length > 0) {
+    const foot = lighter('button', 'ov-weeks-undated', w.undated, `${w.undated.length} closed with no date: light them on the towers`);
+    foot.textContent = `${w.undated.length} closed with no date`;
+    box.appendChild(foot);
+  }
+  return box;
+}
+
 function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }, reduced: boolean): HTMLElement {
   const box = el('div', `ov-panel ov-panel-rows${panel.body.tilt ? ' is-tilted' : ''}`);
   const plane = el('div', 'ov-plane');
@@ -232,7 +303,9 @@ export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced
   for (const panel of panels) {
     const box = panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }, options.reduced)
       : panel.body.kind === 'card' ? cardPanel(panel as PanelNode & { body: PanelCard })
-        : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
+        : panel.body.kind === 'needs' ? needsPanel(panel as PanelNode & { body: PanelNeeds })
+          : panel.body.kind === 'weeks' ? weeksPanel(panel as PanelNode & { body: PanelWeeks })
+            : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
     box.dataset['panel'] = panel.key;
     box.setAttribute('aria-label', panel.label);
     box.style.left = `${panel.x}px`;
