@@ -119,7 +119,9 @@ export function cockpitSquare(
     children.push({ kind: 'mark', tag: 'rect', attrs: { x: x - half - ring, y: y - half - ring, width: s + 2 * ring, height: s + 2 * ring, rx: s * 0.28, 'stroke-width': line * 0.8 }, cls: `ty-${t.type} sq-ring` });
   }
   if (t.fill === 'doing' || t.fill === 'unproven') {
-    const inset = line * 1.6;
+    // At most 30% of the square, so a square too small for the usual cut keeps a smaller one
+    // instead of one of negative size (TASK-0189: 159 of them on your-trainer's wheel).
+    const inset = Math.min(line * 1.6, s * 0.3);
     children.push({ kind: 'mark', tag: 'rect', attrs: { x: x - half + inset, y: y - half + inset, width: s - 2 * inset, height: s - 2 * inset, rx: s * 0.1, 'stroke-width': line * 0.9 }, cls: 'sq-cut' });
   }
   if (t.fill === 'dropped' || t.fill === 'deferred') {

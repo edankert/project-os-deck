@@ -11,7 +11,7 @@ updated: 2026-10-22
 source: ["Edwin 2026-10-22: 'Build the DES-0005 into the deck and for DES-0006: - I think side pane as suggested but open for discussion - The ones they started on (is this not the same?) - It should be possible to hide the overview panels - Think it would be good to do permission requests first?'"]
 goal: "In Deck itself, a person selects a ticket on the towers ring and sees its links, text and pictures; searches and sees the matches glow; sees what comes next, what needs them, which towers have gone quiet and what closed each week; and can group the ring by feature."
 requirements: []
-tasks: ["[[TASK-0181]]", "[[TASK-0182]]", "[[TASK-0183]]", "[[TASK-0184]]", "[[TASK-0185]]", "[[TASK-0186]]", "[[TASK-0187]]"]
+tasks: ["[[TASK-0181]]", "[[TASK-0182]]", "[[TASK-0183]]", "[[TASK-0184]]", "[[TASK-0185]]", "[[TASK-0186]]", "[[TASK-0187]]", "[[TASK-0189]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""

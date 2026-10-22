@@ -752,3 +752,20 @@ for (const name of WORKSPACES) {
   });
 }
 
+// --- TASK-0189: no rectangle of negative size ---
+
+test('no screen of either fixture draws a rectangle of negative width or height', () => {
+  const { ticketScene } = load('shared/overview-ticket.js');
+  const { rephaseScene } = load('shared/overview-rephase.js');
+  for (const name of WORKSPACES) {
+    const m = fixture(name);
+    const scenes = [wheelScene(m, ctx), wheelScene(m, featureCtx), wheelScene(m, ctx, { select: m.next }), rephaseScene(m, ctx, new Map()), ticketScene(m, m.next, ctx)];
+    for (const p of [...m.phases, ...m.backlog, ...m.shelf]) scenes.push(phaseScene(m, p.id, ctx));
+    for (const scene of scenes) {
+      for (const flat of ['html', 'flat']) {
+        const bad = sceneToSvg(scene, { panels: flat }).match(/<rect[^>]* (?:width|height)="-[^"]*"/g) ?? [];
+        assert.deepEqual(bad.slice(0, 2), [], `${name} ${scene.address} (${flat}): ${bad.length} rectangles of negative size`);
+      }
+    }
+  }
+});
