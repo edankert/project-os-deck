@@ -109,6 +109,7 @@ export function relationsFrom(texts) {
   const parent = new Map();
   const named = new Map();
   const facts = new Map();
+  const implementsOf = new Map();
   const seen = new Set();
   for (const text of texts) {
     const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1];
@@ -120,12 +121,12 @@ export function relationsFrom(texts) {
     facts.set(id, { lead: leadOf(text), owner: scalar('owner'), updated: /^\d{4}-\d{2}-\d{2}/.exec(scalar('updated'))?.[0] ?? '' });
     const p = /^parent:\s*["']?(?:\[\[)?([A-Z]+-\d+)/m.exec(fm)?.[1];
     if (p !== undefined && !parent.has(id)) parent.set(id, p);
-    // A design names the features it is for in its own `implements:`; with no parent, it
-    // stands in the lowest-numbered of them (TASK-0179).
-    if (id.startsWith('DES-') && !parent.has(id)) {
+    // A design names the features it is for in its own `implements:` (TASK-0179). The towers
+    // use them only when no feature names the design in `design:` or another list.
+    if (id.startsWith('DES-')) {
       const m = new RegExp('^implements:(.*)((?:\\r?\\n[ \\t]*-.*)*)', 'm').exec(fm);
-      const feature = m ? idsIn(`${m[1]}${m[2]}`).filter((x) => x.startsWith('FEAT-')).sort((x, y) => x.localeCompare(y, 'en', { numeric: true }))[0] : undefined;
-      if (feature !== undefined) parent.set(id, feature);
+      const features = m ? idsIn(`${m[1]}${m[2]}`).filter((x) => x.startsWith('FEAT-')) : [];
+      if (features.length > 0) implementsOf.set(id, features);
     }
     // A feature's lists, and a task's tests: a test named by a task belongs to the task's feature.
     if (id.startsWith('FEAT-') || id.startsWith('TASK-')) {
@@ -138,7 +139,7 @@ export function relationsFrom(texts) {
       named.set(id, ids);
     }
   }
-  return { parent, named, facts };
+  return { parent, named, facts, implementsOf };
 }
 
 /**

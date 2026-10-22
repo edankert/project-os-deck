@@ -10,9 +10,11 @@
 //
 // The tickets come from the same fixtures as every other plate. Which feature a
 // ticket belongs to is read from the notes: its `parent:` (followed through a
-// task's parent), a feature's `tests:`, `implements:`, `designs:`,
+// task's parent), a feature's `tests:`, `implements:`, `design:`,
 // `requirements:` and `tasks:` lists, or the `tests:` of a task that belongs to one.
-// A ticket that several features name stands in the lowest-numbered one's tower.
+// A ticket that several features name stands in the lowest-numbered one's tower, except a
+// design, which stands with the feature in focus when it is one of them, and which falls
+// back on its own `implements:` when no feature names it (TASK-0179).
 // The notes and the focus are both read at the commit the fixture was taken from. Without the notes (a checkout with no
 // your-trainer beside it) every ticket lies flat, and the page still holds them all.
 //
@@ -157,7 +159,7 @@ export function writeTowersPage({ choices, fixtureDir, pagePath, extra = null })
 const towersData = {};
 for (const [ws, choice] of Object.entries(choices)) {
   const model = JSON.parse(fs.readFileSync(path.join(fixtureDir, `${ws}.json`), 'utf-8'));
-  const { parent, named, facts, notes: noteFiles, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
+  const { parent, named, facts, implementsOf, notes: noteFiles, from: notesFrom } = relations(choice.root, model.head, model.dirty === true);
   const focus = focusOf(choice.root, model.head);
   // Said out loud, never quietly: a page drawn from today's notes, or from none, is not the fixture's.
   if (notesFrom !== 'commit') console.warn(`overview-towers: ${ws}'s notes read from ${notesFrom === 'none' ? 'nowhere (no docs at ' + choice.root + ')' : 'the working tree'}, not at the fixture's commit ${String(model.head).slice(0, 7)}`);
@@ -185,7 +187,21 @@ for (const [ws, choice] of Object.entries(choices)) {
     for (let i = 0; i < 6 && p !== undefined && !p.startsWith('FEAT-'); i += 1) p = parent.get(p);
     return p?.startsWith('FEAT-') ? p : undefined;
   };
+  // A design stands with a feature that names it, the feature in focus if it is one of them, else
+  // the lowest-numbered; with none, with a feature its own implements: names, by the same rule.
+  // So the design of the work in hand stands nearest it (TASK-0179, review round one).
+  const claimedBy = new Map();
+  for (const [owner, list] of named) if (owner.startsWith('FEAT-')) for (const id of list) (claimedBy.get(id) ?? claimedBy.set(id, []).get(id)).push(owner);
+  const prefer = (list) => {
+    const features = list.filter((f) => tickets[f]?.type === 'feature');
+    if (features.length === 0) return undefined;
+    return features.includes(focus.feature) ? focus.feature : features.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))[0];
+  };
   const featureOf = (id) => {
+    if (id.startsWith('DES-') && parent.get(id) === undefined) {
+      const f = prefer(claimedBy.get(id) ?? []) ?? prefer(implementsOf.get(id) ?? []);
+      if (f !== undefined) return f;
+    }
     const task = namedByTask.get(id);
     const f = upToFeature(id) ?? namedBy.get(id) ?? (task !== undefined ? upToFeature(task) ?? namedBy.get(task) : undefined);
     return f !== undefined && f !== id && tickets[f]?.type === 'feature' ? f : null;

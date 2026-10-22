@@ -173,6 +173,12 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         assert.ok((w.pictures[e.id] ?? []).some(([src]) => src === e.src), `${ws}: ${e.id}'s pane lists its picture`);
       }
       assert.ok(Object.values(w.pictures).every((list) => list.length <= 12 && list.every((x, i) => i === 0 || list[i - 1][1] >= x[1])), `${ws}: a pane lists at most twelve pictures, newest first`);
+      // Where the fixture's commit is in this clone, Deck has pictures, and the design of the
+      // feature in focus is drawn largest; a shallow clone (CI) has none to check.
+      if (ws === 'deck' && spawnSync('git', ['-C', path.join(desktopRoot, '..'), 'cat-file', '-e', `${fixtureModel.head}^{commit}`]).status === 0) {
+        assert.ok(w.evidence.length > 0 && Object.keys(w.pictures).length > 0, 'deck: with its commit here, Deck has pictures to check');
+        assert.ok(w.evidence.some((e) => e.id === 'DES-0005' && e.near === 'feature' && e.nearF === 'feature'), 'deck: DES-0005, the focus feature\'s design, is drawn largest both ways');
+      }
       // The notes are read from the workspace's checkout; CI has only Deck's, and without
       // your-trainer beside it every ticket lies flat and the page has no notes or board for it.
       if (w.notesFrom === 'none') {
@@ -227,9 +233,11 @@ test('the plate script draws all seven screens on both workspaces, every mark in
     assert.ok([...deckTowers.values()].reduce((n, f) => n + f.length, 0) >= 150, 'Deck\'s towers hold their tickets, not only their features');
     assert.equal(towerOf('TASK-0156'), 'FEAT-0027', 'a task stands in its parent feature\'s tower');
     assert.equal(towerOf('TST-0086'), 'FEAT-0029', 'a test named by a task, in a dash list at column 0, stands in that task\'s feature');
-    // A design stands in the lowest-numbered feature whose design: names it (TASK-0179). An id
-    // inside a link's file name ([[TST-0094-DES-0005s-...]]) still names nothing: idsIn's own test.
-    assert.equal(towerOf('DES-0005'), 'FEAT-0025', 'a design stands in the tower of the feature that names it');
+    // A design stands with the feature in focus when that feature names it (TASK-0179, review):
+    // FEAT-0025, FEAT-0027, FEAT-0028 and FEAT-0029 all name DES-0005 in design:, and FEAT-0028
+    // is in focus. An id inside a link's file name ([[TST-0094-DES-0005s-...]]) still names
+    // nothing: idsIn's own test.
+    assert.equal(towerOf('DES-0005'), 'FEAT-0028', 'a design stands with the feature in focus that names it');
     // The focus is the snapshot's at the fixture's commit, when this clone has that commit.
     const deckModel = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', 'deck.json'), 'utf-8'));
     const shown = spawnSync('git', ['-C', path.join(desktopRoot, '..'), 'show', `${deckModel.head}:SNAPSHOT.yaml`], { encoding: 'utf-8' });
@@ -406,9 +414,11 @@ test('the towers page reads parents and lists however the frontmatter writes the
     note(['id: FEAT-0007', 'design: "[[DES-0007-A-Design]]"']),
     note(['id: DES-0008', 'implements: ["[[FEAT-0012]]", "[[PHASE-0002]]", "[[FEAT-0011]]"]']),
     note(['id: DES-0009', 'implements: []']),
+    note(['id: TASK-0010', 'implements: ["[[FEAT-0011]]"]']),
   ]);
   assert.deepEqual(designs.named.get('FEAT-0007'), ['DES-0007'], 'a feature names its design in design:');
-  assert.equal(designs.parent.get('DES-0008'), 'FEAT-0011', 'a design stands in the lowest-numbered feature it implements');
-  assert.equal(designs.parent.has('DES-0009'), false, 'a design that implements nothing stands nowhere');
+  assert.deepEqual(designs.implementsOf.get('DES-0008'), ['FEAT-0012', 'FEAT-0011'], 'a design names the features it implements, phases left out');
+  assert.equal(designs.implementsOf.has('DES-0009') || designs.parent.has('DES-0008'), false, 'implementing nothing names nothing; implements: is not a parent');
+  assert.equal(designs.implementsOf.has('TASK-0010'), false, 'only a design is placed by its own implements:');
   assert.equal(parent.size, 4, 'the first note with an id wins');
 });
