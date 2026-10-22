@@ -331,7 +331,8 @@ test('an overview address keeps its colouring, and the grammar refuses a colouri
   // Every address the state-coloured wheel writes keeps the colouring.
   const scene = wheelScene(model('deck'), state);
   assert.equal(scene.address, wheel);
-  for (const row of scene.list) if (row.target !== undefined) assert.match(row.target, /&colour=state$/, row.id);
+  // A ticket's mark selects it (TASK-0182), and `select=` is written after the colouring.
+  for (const row of scene.list) if (row.target !== undefined) assert.match(row.target, /&colour=state(?:&select=[^&]+)?$/, row.id);
   // The default writes nothing, and a colouring outside the overview, or an unknown one, is refused.
   assert.equal(ctx.address({ page: 'wheel' }), 'deck://abcd1234/features?page=wheel');
   assert.throws(() => parseAddress('deck://abcd1234/features?note=FEAT-0024&colour=state'), /needs a "page" or a "flow"/);

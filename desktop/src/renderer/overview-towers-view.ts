@@ -47,6 +47,8 @@ export interface TowersView {
   pan(dx: number, dy: number): void;
   zoom(factor: number): void;
   select(id: string | null): void;
+  /** Turn the camera to the selected ticket and the tickets it is joined to (TASK-0182). */
+  frame(): void;
   resize(): void;
   /** For the window run: where things are on screen, and what is open. */
   probe: {
@@ -55,6 +57,8 @@ export interface TowersView {
     phaseAt(id: string): { x: number; y: number } | null;
     coreAt(): { x: number; y: number } | null;
     open(): string | null;
+    /** The selected ticket and how many curves the view draws for it (TASK-0182). */
+    selected(): { id: string; curves: number; outlined: number; labelled: number; faded: boolean } | null;
     camera(): { radius: number; theta: number; phi: number; moved: boolean; reach: number; limit: number };
     hit(x: number, y: number): string | null;
   };
@@ -146,6 +150,12 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   let beams: THREE.MeshBasicMaterial[] = [];
   let shelfGroup = new THREE.Group();
   let coreGroup = new THREE.Group();
+  let shelfMaterials: THREE.Material[] = [];
+  let coreMaterials: THREE.Material[] = [];
+  // The selected ticket's curves, their running lights, outlines and ids (TASK-0182).
+  let chosen = new THREE.Group();
+  let runners: Array<{ mesh: THREE.Mesh; curve: THREE.QuadraticBezierCurve3 }> = [];
+  let chosenSignature = '';
   let nextMark = new THREE.Group();
   let wires: THREE.LineSegments | null = null;
   const where = new Map<string, { at: THREE.Vector3; phase: number | null }>();
@@ -444,11 +454,11 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     // Finished phases outside the ring, as blocks.
     shelfGroup = new THREE.Group();
     world.add(shelfGroup);
-    const shelfMaterials: THREE.Material[] = [];
+    shelfMaterials = [];
     const sb = buckets();
     next.shelf.forEach((s) => {
       for (const c of s.cubes) addCube(sb, c, null);
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.2, 32), new THREE.MeshStandardMaterial({ color: '#0a1a26', roughness: 0.9 }));
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.2, 32), keep(shelfMaterials, new THREE.MeshStandardMaterial({ color: '#0a1a26', roughness: 0.9, transparent: true, opacity: 1 })));
       pad.position.set(s.x, 0.05, s.z);
       pad.userData['hit'] = { kind: 'shelf', label: s.label, target: s.target } satisfies Hit;
       shelfGroup.add(pad);
@@ -462,14 +472,15 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     // The core: the tickets with no phase, round the way into re-phasing.
     coreGroup = new THREE.Group();
     world.add(coreGroup);
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(next.coreR, next.coreR, 0.6, 64), new THREE.MeshStandardMaterial({ color: '#0b2232', roughness: 0.9 }));
+    coreMaterials = [];
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(next.coreR, next.coreR, 0.6, 64), keep(coreMaterials, new THREE.MeshStandardMaterial({ color: '#0b2232', roughness: 0.9, transparent: true, opacity: 1 })));
     disc.position.y = 0.3;
     disc.userData['hit'] = { kind: 'core' } satisfies Hit;
     coreGroup.add(disc);
     pickables.push(disc);
     const cb = buckets();
     for (const c of next.core) addCube(cb, c, null);
-    drawBuckets(cb, coreGroup, []);
+    drawBuckets(cb, coreGroup, coreMaterials);
     const coreTag = sprite([{ text: String(next.unplaced), size: 2.8, colour: '#e6f8ff', weight: 700 }, { text: 'no phase', size: 1.6, colour: '#9cc4d6' }]);
     coreTag.position.set(0, 3.4, 0);
     coreGroup.add(coreTag);
@@ -487,6 +498,95 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       nextMark.add(tag);
     }
     world.add(nextMark, selection);
+    chosen = new THREE.Group();
+    world.add(chosen);
+    runners = [];
+    chosenSignature = '';
+  }
+
+  /**
+   * The selected ticket (TASK-0182): a curve rising from it to every ticket it is joined
+   * to, in that ticket's type colour, with a light running along it from the selected
+   * ticket; each linked ticket outlined, with its id while there are few enough.
+   */
+  function drawChosen(): void {
+    const sel = layout?.selection ?? null;
+    const sig = sel === null ? '' : `${sel.id}:${sel.links.length}`;
+    if (sig === chosenSignature) return;
+    chosenSignature = sig;
+    for (const o of [...chosen.children]) {
+      chosen.remove(o);
+      if (o instanceof THREE.Sprite && labels.includes(o)) labels.splice(labels.indexOf(o), 1);
+      o.traverse((x) => {
+        const m = x as THREE.Mesh;
+        if (m.geometry !== undefined && m.geometry !== BOX && m.geometry !== DOT) m.geometry.dispose();
+        const mat = m.material as THREE.Material | undefined;
+        if (mat !== undefined) { (mat as THREE.SpriteMaterial).map?.dispose(); mat.dispose(); }
+      });
+    }
+    runners = [];
+    if (sel === null || layout === null) return;
+    const from = new THREE.Vector3(...sel.at);
+    const outline = (at: THREE.Vector3, size: number, colour: THREE.Color): THREE.LineSegments => {
+      const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)), new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 1, depthTest: false }));
+      box.position.copy(at);
+      box.renderOrder = 12;
+      return box;
+    };
+    for (const link of sel.links) {
+      const to = new THREE.Vector3(...link.to);
+      const colour = colourOf(TYPE_COLOUR[link.type]);
+      const span = from.distanceTo(to);
+      const mid = from.clone().add(to).multiplyScalar(0.5).add(new THREE.Vector3(0, Math.min(60, 4 + span * 0.32), 0));
+      const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)), new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.9, depthWrite: false }));
+      line.renderOrder = 11;
+      chosen.add(line, outline(to, 1.6, colour));
+      const runner = new THREE.Mesh(DOT, new THREE.MeshBasicMaterial({ color: colour.clone().lerp(new THREE.Color('#ffffff'), 0.5), transparent: true, opacity: 0.95, depthTest: false }));
+      runner.renderOrder = 13;
+      runner.position.copy(curve.getPoint(0.5));
+      chosen.add(runner);
+      runners.push({ mesh: runner, curve });
+      if (sel.labelled) {
+        const tag = label(link.id, 0.9, '#e6f8ff', 700, true);
+        tag.position.copy(to).add(new THREE.Vector3(0, 1.4, 0));
+        chosen.add(tag);
+      }
+    }
+    chosen.add(outline(from, 2.0, new THREE.Color('#fff3a0')));
+  }
+
+  /** Who is shown and how faded: the phase brought close, and the rest faded while something is selected. */
+  function applyLook(): void {
+    const open = layout?.open ?? null;
+    const hush = (layout?.selection ?? null) !== null;
+    const set = (materials: THREE.Material[], k: number): void => {
+      for (const m of materials) {
+        m.transparent = true;
+        m.userData['dim'] = k;
+        m.opacity = (m.userData['base'] ?? 1) * k;
+      }
+    };
+    for (const g of phases) {
+      const mine = open === null || g.phase.id === open;
+      // With a phase close the others are plinths only, unless something is selected: then they
+      // come back faded, so a curve that leaves the phase lands on its ticket.
+      g.content.visible = mine || hush;
+      g.tags.visible = open === null;
+      g.near.visible = open !== null && g.phase.id === open;
+      set(g.materials, hush ? (mine ? 0.3 : 0.16) : mine ? 1 : 0.25);
+    }
+    shelfGroup.visible = open === null || hush;
+    coreGroup.visible = open === null || hush;
+    set(shelfMaterials, hush ? 0.3 : 1);
+    set(coreMaterials, hush ? 0.3 : 1);
+    drawChosen();
+    // The pane a selection opens stands at the right; the ring moves left of it, as for a phase's list.
+    const want = open === null && !hush ? 0 : Math.round(options.clearRight() / 2);
+    if (want !== offset) {
+      offset = want;
+      resize();
+    }
   }
 
   const signatureOf = (l: TowersLayout): string => JSON.stringify([l.workspace, l.colouring, l.R1.toFixed(3), l.phases.map((p) => [p.id, p.level, p.tiles.length, p.towers.length, p.needs]), l.shelf.length, l.core.length, l.next, l.focus]);
@@ -555,22 +655,9 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   /** Bring the layout's open phase close, or the whole ring back: fade, show, fly. */
   const applyOpen = (animate: boolean): void => {
     const open = layout?.open ?? null;
-    for (const g of phases) {
-      const mine = open === null || g.phase.id === open;
-      g.content.visible = mine;
-      g.tags.visible = open === null;
-      g.near.visible = open !== null && g.phase.id === open;
-      for (const m of g.materials) {
-        m.transparent = true;
-        m.userData['dim'] = mine ? 1 : 0.25;
-        m.opacity = (m.userData['base'] ?? 1) * (mine ? 1 : 0.25);
-      }
-    }
-    shelfGroup.visible = open === null;
-    coreGroup.visible = open === null;
+    applyLook();
     const n = layout?.next ? where.get(layout.next) : undefined;
     nextMark.visible = open === null || (n !== undefined && layout?.phases[n.phase ?? -1]?.id === open);
-    offset = open === null ? 0 : Math.round(options.clearRight() / 2);
     resize();
     if (animate) glideTo(homeOrbit());
     else {
@@ -629,7 +716,8 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       wires.geometry.dispose();
       wires = null;
     }
-    if (hit?.kind !== 'cube' || options.linksOf === undefined) return;
+    // A selected ticket's curves stand for the links; pointing draws none over them (TASK-0182).
+    if (hit?.kind !== 'cube' || options.linksOf === undefined || (layout?.selection ?? null) !== null) return;
     const from = where.get(hit.cube.id)?.at;
     if (from === undefined) return;
     const pts: THREE.Vector3[] = [];
@@ -722,6 +810,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       } else {
         layout = next;
         if (wasOpen !== next.open) applyOpen(true);
+        else applyLook();
       }
       selection.visible = false;
     },
@@ -756,6 +845,14 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       selection.visible = w !== undefined;
       if (w !== undefined) selection.position.copy(w.at);
     },
+    frame() {
+      const sel = layout?.selection ?? null;
+      if (sel === null) return;
+      const box = new THREE.Box3().setFromPoints([new THREE.Vector3(...sel.at), ...sel.links.map((l) => new THREE.Vector3(...l.to))]);
+      const centre = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      glideTo({ radius: Math.max(30, Math.max(size.x, size.z) * 1.25 + size.y + 24), theta: Math.atan2(centre.z, centre.x) || view.theta, phi: 0.9, target: centre });
+    },
     resize,
     probe: {
       screenOf: (id) => { const w = where.get(id); return w === undefined ? null : screenAt(w.at); },
@@ -771,6 +868,15 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       },
       coreAt: () => screenAt(new THREE.Vector3(0, 0.6, 0)),
       open: () => layout?.open ?? null,
+      selected: () => {
+        const sel = layout?.selection ?? null;
+        if (sel === null) return null;
+        const lines = chosen.children.filter((o) => o instanceof THREE.Line && !(o instanceof THREE.LineSegments)).length;
+        const boxes = chosen.children.filter((o) => o instanceof THREE.LineSegments).length;
+        const labelled = chosen.children.filter((o) => o instanceof THREE.Sprite).length;
+        const faded = phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5));
+        return { id: sel.id, curves: lines, outlined: boxes - 1, labelled, faded };
+      },
       camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved(), reach: Math.hypot(view.target.x, view.target.z), limit: layout === null ? 0 : layout.shelfR + 10 }),
       hit: (x, y) => { const h = hitAt(x, y); return h === null ? null : h.kind === 'cube' ? h.cube.id : h.kind; },
     },
@@ -787,7 +893,10 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       const [w, h] = s.userData['size'] as [number, number];
       s.scale.set(w * k, h * k, 1);
     }
-    if (!options.reduced()) {
+    // The lights run along the curves from the selected ticket; still, for less motion, they sit halfway.
+    const reduced = options.reduced();
+    if (!reduced) runners.forEach((r, i) => r.mesh.position.copy(r.curve.getPoint(((now / 1800) + i * 0.137) % 1)));
+    if (!reduced) {
       const pulse = 0.5 + 0.5 * Math.sin(now / 420);
       for (const m of pulses) m.opacity = (m.userData['base'] ?? 0.4) * (m.userData['dim'] ?? 1) * (0.45 + 0.55 * pulse);
       for (const m of beams) m.opacity = 0.14 + 0.12 * pulse;

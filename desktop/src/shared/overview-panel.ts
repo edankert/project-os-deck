@@ -9,7 +9,7 @@
  * narrow toward the back.
  */
 import { cockpitSquare, markWords } from './overview-marks.js';
-import type { PanelNode, PanelRow, SceneNode } from './overview-scene.js';
+import type { PanelCard, PanelNode, PanelRow, SceneNode } from './overview-scene.js';
 
 /** How much smaller and narrower the back of a tilted plane is than its front. */
 export const TILT = { shrink: 0.42, narrow: 0.3 } as const;
@@ -59,6 +59,21 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
   };
   // A tilted plane fills from the bottom up, nearest section first; a flat one from the top down.
   let cursor = tilt ? y + h - 14 : y + 16;
+  // A flat panel's buttons and paragraph come first (TASK-0182's pane).
+  if (!tilt) {
+    const buttons = panel.body.buttons ?? [];
+    if (buttons.length > 0) {
+      out.push({ kind: 'text', x: x + 16, y: cursor + 12, text: buttons.map((b) => b.text).join('   '), rest: true, role: 'control', size: 12, cls: 'ov-dim' });
+      cursor += 26;
+    }
+    if (panel.body.lead !== undefined) {
+      for (const line of wrap(panel.body.lead, Math.floor((w - 32) / 6.6)).slice(0, 8)) {
+        out.push({ kind: 'text', x: x + 16, y: cursor + 12, text: line, rest: true, role: 'label', size: 12.5 });
+        cursor += 18;
+      }
+      cursor += 10;
+    }
+  }
   const room = (needed: number): boolean => (tilt ? cursor - needed > y + 6 : cursor + needed < y + h - 6);
   const advance = (by: number): number => {
     const at = tilt ? cursor - by : cursor;
@@ -184,8 +199,42 @@ function notePanel(panel: PanelNode & { body: { kind: 'note' } }): SceneNode[] {
   return out;
 }
 
+/** A selected ticket's card, flat (TASK-0182): its square, id and title, its state, facts, what to do, counts and buttons. */
+function cardPanel(panel: PanelNode & { body: PanelCard }): SceneNode[] {
+  const { x, y, w, h } = panel;
+  const c = panel.body;
+  const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
+  out.push(cockpitSquare(c.row, x + 24, y + 26, 14, { label: markWords(c.row) }));
+  out.push({ kind: 'text', x: x + 40, y: y + 31, text: c.row.id, rest: true, role: 'id', size: 13, cls: 'ov-dim' });
+  let top = y + 54;
+  for (const line of wrap(c.row.title, Math.floor((w - 32) / 8)).slice(0, 3)) {
+    out.push({ kind: 'text', x: x + 16, y: top, text: line, rest: true, role: 'name', size: 15 });
+    top += 20;
+  }
+  out.push({ kind: 'text', x: x + 16, y: top + 4, text: `${c.row.status} · ${c.state}`, rest: true, role: 'label', size: 12, cls: 'ov-dim' });
+  top += 26;
+  for (const f of c.facts) {
+    out.push({ kind: 'text', x: x + 16, y: top, text: f.key, rest: true, role: 'label', size: 11.5, cls: 'ov-dim' });
+    out.push({ kind: 'text', x: x + 90, y: top, text: clip(f.value, Math.floor((w - 106) / 6.4)), rest: true, role: 'label', size: 12 });
+    top += 18;
+  }
+  if (c.say !== undefined) {
+    out.push({ kind: 'text', x: x + 16, y: top + 4, text: clip(c.say, Math.floor((w - 32) / 6.4)), rest: true, role: 'label', size: 12, cls: 'ov-banner-text' });
+    top += 24;
+  }
+  let cx = x + 16;
+  for (const n of c.counts) {
+    out.push(cockpitSquare({ id: `${c.row.id}-${n.type}`, type: n.type, fill: 'delivered', needsYou: false }, cx + 5, top + 2, 9, {}));
+    out.push({ kind: 'text', x: cx + 14, y: top + 6, text: String(n.n), rest: true, role: 'label', size: 12 });
+    cx += 22 + String(n.n).length * 7;
+  }
+  out.push({ kind: 'text', x: x + 16, y: y + h - 16, text: c.buttons.map((b) => b.text).join('   '), rest: true, role: 'control', size: 12, cls: 'ov-dim' });
+  return out;
+}
+
 /** A panel's flat drawing, as scene nodes for `sceneToSvg`. Not part of `scene.nodes`, so never counted. */
 export function panelSvgNodes(panel: PanelNode): SceneNode[] {
+  if (panel.body.kind === 'card') return cardPanel(panel as PanelNode & { body: PanelCard });
   return panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }) : notePanel(panel as PanelNode & { body: { kind: 'note' } });
 }
 
@@ -239,5 +288,19 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-note table { border-collapse: collapse; font-size: 12.5px; } .ov-note td, .ov-note th { border: 1px solid hsla(190, 90%, 65%, 0.2); padding: 3px 6px; }
 .ov-note pre { overflow-x: auto; background: hsla(205, 60%, 20%, 0.4); padding: 8px; border-radius: 6px; }
 .ov-note-wait { color: hsl(205 25% 62%); font-style: italic; }
+/* A ticket selected on the towers (TASK-0182): its card, and its pane's way back and first paragraph. */
+.ov-panel-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; background: hsla(210, 50%, 9%, 0.88); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; }
+.ov-card-head { display: flex; align-items: center; gap: 8px; }
+.ov-card-state { margin-left: auto; font-size: 11.5px; color: hsl(205 25% 66%); }
+.ov-card-title { font-size: 15px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ov-card-facts { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 2px 10px; margin: 0; font-size: 12px; }
+.ov-card-facts dt { color: hsl(205 25% 62%); } .ov-card-facts dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-card-say { font-size: 12.5px; color: ${needsYou}; }
+.ov-card-counts { display: flex; flex-wrap: wrap; gap: 10px; font: 12px "SF Mono", Menlo, monospace; }
+.ov-card-count { display: inline-flex; align-items: center; gap: 4px; }
+.ov-card-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.ov-panel-button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: hsl(190 90% 80%); background: hsla(190, 90%, 55%, 0.12); border: 1px solid hsla(190, 90%, 65%, 0.4); }
+.ov-panel-button:hover, .ov-panel-button:focus-visible { background: hsla(190, 90%, 55%, 0.25); }
+.ov-pane-lead { margin: 0; font-size: 13.5px; line-height: 1.5; color: hsl(195 30% 88%); }
 `;
 }

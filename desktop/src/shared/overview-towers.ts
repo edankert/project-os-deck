@@ -122,6 +122,37 @@ export interface ShelfPhase {
   target: string;
 }
 
+/** One of a selected ticket's links, from it to the ticket it is joined to (TASK-0182). */
+export interface TowerLink {
+  id: string;
+  type: NoteType;
+  /** The centres of the two cubes. */
+  from: [number, number, number];
+  to: [number, number, number];
+  /** The selected ticket links to it (`out`), it links to the selected ticket (`in`), or both. */
+  out: boolean;
+  in: boolean;
+}
+
+/**
+ * A ticket selected where it stands (TASK-0182, TASK-0176 on DES-0005's towers page):
+ * every ticket it links to or that links to it, up to `LINK_CAP`, with their ids
+ * drawn beside them while there are `LINK_LABELS` or fewer.
+ */
+export interface TowerSelection {
+  id: string;
+  at: [number, number, number];
+  links: TowerLink[];
+  /** All its links, drawn or not: more than `links.length` past the cap. */
+  total: number;
+  labelled: boolean;
+}
+
+/** At most this many curves; the busiest ticket of either fixture, your-trainer's FEAT-0051, has 202. */
+export const LINK_CAP = 240;
+/** Past this many links, the linked tickets are outlined without their ids, so the picture stays readable. */
+export const LINK_LABELS = 40;
+
 export interface TowersLayout {
   workspace: string;
   /** The ring runs from R0 to R1; the collar from collar[0] to collar[1]; the shelf at shelfR. */
@@ -142,6 +173,13 @@ export interface TowersLayout {
   /** The phase brought close (S2), or null for the whole ring (S1). */
   open: string | null;
   colouring: 'type' | 'state';
+  /** The ticket selected on the towers, or null (TASK-0182). */
+  selection: TowerSelection | null;
+}
+
+export interface TowersOptions {
+  /** The ticket selected where it stands; a ticket the model does not hold selects nothing. */
+  select?: string | null;
 }
 
 const byNumber = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
@@ -185,14 +223,17 @@ function layoutSegment(tiles: number, towerHeights: number[], a0: number, a1: nu
 
 const polar = (r: number, a: number): [number, number] => [r * Math.cos(a), r * Math.sin(a)];
 
-export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: string | null = null): TowersLayout {
+export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: string | null = null, options: TowersOptions = {}): TowersLayout {
   const tickets = model.tickets;
   const focus = model.focus ?? null;
   const ring: Phase[] = [...model.phases, ...model.backlog];
   const ringIds = new Set(ring.map((p) => p.id));
   const shelfIds = new Set(model.shelf.map((p) => p.id));
+  const opened = open !== null && ringIds.has(open) ? open : null;
   const ticketTarget = (id: string): string => ctx.address({ page: 'ticket', note: id });
   const phaseTarget = (id: string): string => ctx.address({ page: 'phase', note: id });
+  // Pressing a ticket selects it where it stands, on the ring or in the phase brought close (TASK-0182).
+  const selectTarget = (id: string): string => ctx.address(opened === null ? { page: 'wheel', select: id } : { page: 'phase', note: opened, select: id });
   const paint = (t: Ticket): Pick<Cube, 'type' | 'fill' | 'state' | 'needsYou'> => ({ type: t.type, fill: t.fill, state: t.state, needsYou: t.needsYou });
 
   // Who stands where: a feature of a ring phase is a tower; every ticket of that
@@ -238,7 +279,7 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
   const collar: [number, number] = [R1 + 0.5, R1 + 2.7];
 
   const cube = (t: Ticket, x: number, y: number, z: number, size: [number, number, number], angle: number, extra: Partial<Cube> = {}): Cube => ({
-    id: t.id, x, y, z, sx: size[0], sy: size[1], sz: size[2], angle, ...paint(t), label: markWords(t), target: ticketTarget(t.id), ...extra,
+    id: t.id, x, y, z, sx: size[0], sy: size[1], sz: size[2], angle, ...paint(t), label: markWords(t), target: selectTarget(t.id), ...extra,
   });
 
   const phases: RingPhase[] = ring.map((p, i) => {
@@ -323,12 +364,33 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
   });
 
   const unplaced = coreTickets.filter((t) => t.placedBy !== 'project-wide').length;
-  return {
+  const layout: TowersLayout = {
     workspace: model.workspace, R0, R1, collar, coreR, shelfR, phases, shelf, core,
     coreTarget: ctx.address({ page: 'rephase' }), coreLabel: `${unplaced} ticket${unplaced === 1 ? '' : 's'} with no phase: open re-phasing to place them`, unplaced,
-    focus, next: model.next ?? null, open: open !== null && ringIds.has(open) ? open : null,
+    focus, next: model.next ?? null, open: opened,
     colouring: ctx.colouring === 'state' ? 'state' : 'type',
+    selection: null,
   };
+  layout.selection = selectionIn(model, layout, options.select ?? null);
+  return layout;
+}
+
+/**
+ * Which tickets a selected ticket is joined to, and where both ends stand (TASK-0182):
+ * the tickets it links to and those that link to it, read both ways round from the
+ * links the model records, each once, by id, at most `LINK_CAP`.
+ */
+export function selectionIn(model: OverviewModel, layout: TowersLayout, id: string | null): TowerSelection | null {
+  if (id === null || model.tickets[id] === undefined) return null;
+  const at = new Map<string, [number, number, number]>();
+  for (const c of cubesOf(layout)) at.set(c.id, [c.x, c.y, c.z]);
+  const from = at.get(id);
+  if (from === undefined) return null;
+  const out = new Set(model.tickets[id]!.links.filter((x) => x !== id && model.tickets[x] !== undefined));
+  const into = new Set(Object.values(model.tickets).filter((t) => t.id !== id && t.links.includes(id)).map((t) => t.id));
+  const all = [...new Set([...out, ...into])].filter((x) => at.has(x)).sort(byNumber);
+  const links = all.slice(0, LINK_CAP).map((x) => ({ id: x, type: model.tickets[x]!.type, from, to: at.get(x)!, out: out.has(x), in: into.has(x) }));
+  return { id, at: from, links, total: all.length, labelled: all.length <= LINK_LABELS };
 }
 
 /** Every cube of a layout, wherever it stands. */
@@ -419,8 +481,14 @@ export function towersPlan(layout: TowersLayout, options: PlanOptions = {}): { n
     const sq = cockpitSquare({ id: c.id, type: c.type, fill: c.fill, needsYou: c.needsYou }, px, py, size, { label: c.label, ticket: withTickets });
     return c.needsYou ? { kind: 'group', cls: 'glow', children: [sq] } : sq;
   };
+  // A selected ticket and the ones it is joined to stand out; everything else fades (TASK-0182).
+  const sel = layout.selection;
+  const lit = sel === null ? null : new Set([sel.id, ...sel.links.map((l) => l.id)]);
+  const shown = new Set<string>();
   const addCube = (c: Cube, group: string): void => {
-    items.push({ depth: depthOf(c.x, c.z), y: c.y, node: square(c) });
+    const node = square(c);
+    items.push({ depth: depthOf(c.x, c.z), y: c.y, node: lit !== null && !lit.has(c.id) ? { kind: 'group', cls: 'ov-faint', children: [node] } : node });
+    shown.add(c.id);
     if (withTickets) rows.push({ id: c.id, label: c.label, group, state: c.state, target: c.target });
   };
 
@@ -470,6 +538,22 @@ export function towersPlan(layout: TowersLayout, options: PlanOptions = {}): { n
       const [px, py] = at(c.x, c.y + 3.4, c.z);
       items.push({ depth: 1e6, y: 0, node: { kind: 'text', x: px, y: py, text: `next ${c.id}`, rest: true, role: 'label', size: 12, anchor: 'middle', cls: 'ov-next-tag' } });
     }
+  }
+  // The selected ticket's links, as curves rising from it in the linked ticket's colour; only to
+  // tickets this plan draws, so with a phase brought close the curves stay inside it.
+  if (sel !== null && shown.has(sel.id)) {
+    const [fx, fy] = at(...sel.at);
+    const box = (x: number, y: number, size: number, cls: string): SceneNode => ({ kind: 'mark', tag: 'rect', attrs: { x: x - size / 2, y: y - size / 2, width: size, height: size, rx: 2 }, cls });
+    for (const link of sel.links) {
+      if (!shown.has(link.id)) continue;
+      const [tx, ty] = at(...link.to);
+      const lift = Math.min(160, Math.hypot(tx - fx, ty - fy) * 0.35 + 12);
+      const d = `M${fx.toFixed(1)},${fy.toFixed(1)} Q${((fx + tx) / 2).toFixed(1)},${(Math.min(fy, ty) - lift).toFixed(1)} ${tx.toFixed(1)},${ty.toFixed(1)}`;
+      items.push({ depth: 1e6 - 2, y: 0, node: { kind: 'mark', tag: 'path', attrs: { d }, cls: `ov-curve ty-${link.type}`, label: `${sel.id} ${link.out && link.in ? '↔' : link.out ? '→' : '←'} ${link.id}` } });
+      items.push({ depth: 1e6 - 1, y: 0, node: box(tx, ty, Math.max(7, k * 1.4), `ov-outline ty-${link.type}`) });
+      if (sel.labelled) items.push({ depth: 1e6, y: 0, node: { kind: 'text', x: tx, y: ty - Math.max(7, k * 1.4), text: link.id, rest: true, role: 'id', size: 10, anchor: 'middle', cls: 'ov-link-id' } });
+    }
+    items.push({ depth: 1e6 - 1, y: 0, node: box(fx, fy, Math.max(10, k * 1.9), 'ov-outline ov-selected') });
   }
   items.sort((a, b) => a.depth - b.depth || a.y - b.y);
   // Where the core's middle is drawn, for the way into re-phasing that stands on it.

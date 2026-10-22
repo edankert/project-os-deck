@@ -23,6 +23,7 @@ import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
 import type { TowersView } from './overview-towers-view.js';
+import { FRAME_ACTION } from '../shared/overview-select.js';
 import type { TowersNode } from '../shared/overview-scene.js';
 import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
@@ -154,11 +155,14 @@ function towersOf(scene: Scene): TowersNode | undefined {
 /** The pixels at the right of the stage a phase's list covers, so the segment stands clear of it. */
 function panelCover(): number {
   if (stage === null || current === null) return 0;
-  const panel = current.scene.nodes.find((n) => n.kind === 'panel');
-  if (panel === undefined || panel.kind !== 'panel') return 0;
+  // The panel standing against the right edge: a phase's list, or a selected ticket's pane (TASK-0182).
+  const width = current.scene.width;
+  const right = current.scene.nodes.filter((n) => n.kind === 'panel' && n.x + n.w >= width - 60 && n.x > width / 3);
+  if (right.length === 0) return 0;
+  const x = Math.min(...right.map((n) => (n.kind === 'panel' ? n.x : width)));
   const box = stage.getBoundingClientRect();
-  const scale = Math.min(box.width / current.scene.width, box.height / current.scene.height);
-  const left = (box.width - current.scene.width * scale) / 2 + panel.x * scale;
+  const scale = Math.min(box.width / width, box.height / current.scene.height);
+  const left = (box.width - width * scale) / 2 + x * scale;
   return Math.max(0, box.width - left);
 }
 
@@ -544,6 +548,7 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
           flow,
           step: parts.step ?? null,
           colour: colouring === 'state' && (page !== null || flow !== null) ? 'state' : null,
+          select: parts.select ?? null,
         }),
       );
     },
@@ -848,6 +853,12 @@ export async function go(raw: string): Promise<void> {
 
 async function act(action: string): Promise<void> {
   if (current === null || api === null) return;
+  // The selected ticket's Frame button moves the 3D camera; no screen answers it (TASK-0182).
+  if (action === FRAME_ACTION) {
+    if (towersActive()) towersView!.frame();
+    else api.say('Frame turns the 3D view, which this window could not start');
+    return;
+  }
   const { definition, address } = current;
   if (definition.onAction === undefined) return;
   try {

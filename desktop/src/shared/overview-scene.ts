@@ -138,8 +138,43 @@ export interface PanelNode {
   h: number;
   label: string;
   body:
-    | { kind: 'rows'; sections: PanelSection[]; /** Rows stand on a plane tilted away, nearest at the bottom. */ tilt?: boolean }
-    | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string };
+    | {
+      kind: 'rows';
+      sections: PanelSection[];
+      /** Rows stand on a plane tilted away, nearest at the bottom. */
+      tilt?: boolean;
+      /** Buttons above the rows (TASK-0182: the selected ticket's way back to its phase's list). */
+      buttons?: PanelButton[];
+      /** A paragraph above the rows: the selected ticket's first paragraph (TASK-0182). */
+      lead?: string;
+    }
+    | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string }
+    | PanelCard;
+}
+
+/** A button in a panel: where it goes, or the action it asks for. Its words are its own. */
+export interface PanelButton {
+  key: string;
+  text: string;
+  label: string;
+  target?: string;
+  action?: string;
+}
+
+/**
+ * The card of a ticket selected on the towers (TASK-0182): its mark, id and title, its
+ * status in the cockpit's words, a few facts, what to do when it needs you, its linked
+ * tickets counted by type, and its buttons.
+ */
+export interface PanelCard {
+  kind: 'card';
+  row: PanelRow;
+  /** The status in the cockpit's words: "in progress", "done", "needs you". */
+  state: string;
+  facts: Array<{ key: string; value: string }>;
+  say?: string;
+  counts: Array<{ type: NoteType; n: number }>;
+  buttons: PanelButton[];
 }
 
 /**
@@ -252,6 +287,11 @@ ${STATES.map((s) => `.ov .ov-wire.st-${s}, .ov .ov-arc.st-${s} { fill: none; str
 .ov .ov-control.ov-go { fill: hsla(160, 62%, 46%, 0.22); stroke: ${PALETTE.closed}; }
 .ov .ov-control.ov-stop { fill: hsla(355, 88%, 62%, 0.16); stroke: ${PALETTE.failed}; }
 .ov .ov-control.ov-off { opacity: 0.3; }
+/* A ticket selected on the towers (TASK-0182): its links as curves, the tickets they reach outlined. */
+.ov .ov-curve { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-opacity: 0.85; pointer-events: none; }
+.ov .ov-outline { fill: none; stroke: currentColor; stroke-width: 1.3; pointer-events: none; }
+.ov .ov-outline.ov-selected { color: #fff3a0; stroke-width: 2; }
+.ov text.ov-link-id { fill: hsl(195 60% 88%); font-weight: 600; pointer-events: none; }
 .ov .glow { filter: url(#ov-glow); }
 .ov [data-target], .ov [data-action] { cursor: pointer; }
 .ov [data-target]:focus, .ov [data-action]:focus { outline: none; }
@@ -384,6 +424,8 @@ export interface AddressParts {
   flow?: string | null;
   note?: string | null;
   step?: string | null;
+  /** The ticket selected on the towers (TASK-0182). */
+  select?: string | null;
 }
 
 /**
@@ -403,8 +445,9 @@ export function plainContext(workspaceId: string, viewId: string, colouring: 'ty
         const value = parts[key];
         if (value !== undefined && value !== null) query.push(`${key}=${encodeURIComponent(value)}`);
       }
-      // The grammar's last key: the colouring, written only when it is not the default.
+      // Then the colouring, written only when it is not the default, and the selected ticket.
       if (colouring === 'state' && (parts.page != null || parts.flow != null)) query.push('colour=state');
+      if (parts.select != null) query.push(`select=${encodeURIComponent(parts.select)}`);
       return `deck://${workspaceId}/${viewId}${query.length > 0 ? `?${query.join('&')}` : ''}`;
     },
   };

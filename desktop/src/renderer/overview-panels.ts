@@ -14,7 +14,7 @@
  * for the session.
  */
 import { markWords } from '../shared/overview-marks.js';
-import { walkScene, type PanelNode, type PanelRow, type PanelSection, type Scene } from '../shared/overview-scene.js';
+import { walkScene, type PanelButton, type PanelCard, type PanelNode, type PanelRow, type PanelSection, type Scene } from '../shared/overview-scene.js';
 
 /** Sections a person opened or closed, by panel and section key, for the session. */
 const unfolded = new Map<string, boolean>();
@@ -91,9 +91,53 @@ function sectionElement(panel: PanelNode, section: PanelSection): HTMLElement {
   return box;
 }
 
+/** A panel's button: it carries its address or its action, so the overview's own click handling follows it. */
+function buttonElement(b: PanelButton): HTMLElement {
+  const button = el('button', 'ov-panel-button', b.text);
+  button.type = 'button';
+  button.title = b.label;
+  button.setAttribute('aria-label', b.label);
+  button.dataset['label'] = b.label;
+  if (b.target !== undefined) button.dataset['target'] = b.target;
+  if (b.action !== undefined) button.dataset['action'] = b.action;
+  return button;
+}
+
+/** A selected ticket's card (TASK-0182). */
+function cardPanel(panel: PanelNode & { body: PanelCard }): HTMLElement {
+  const c = panel.body;
+  const box = el('div', 'ov-panel ov-panel-card');
+  const head = el('div', 'ov-card-head');
+  head.append(square(c.row), el('span', 'ov-row-id', c.row.id), el('span', 'ov-card-state', `${c.row.status || '—'} · ${c.state}`));
+  const title = el('div', 'ov-card-title', c.row.title);
+  const facts = el('dl', 'ov-card-facts');
+  for (const f of c.facts) facts.append(el('dt', '', f.key), el('dd', '', f.value));
+  box.append(head, title, facts);
+  if (c.say !== undefined) box.appendChild(el('div', 'ov-card-say', c.say));
+  const counts = el('div', 'ov-card-counts');
+  for (const n of c.counts) {
+    const item = el('span', 'ov-card-count');
+    item.title = `${n.n} ${n.type}${n.n === 1 ? '' : 's'}`;
+    item.append(square({ type: n.type, fill: 'delivered', needsYou: false }, true), document.createTextNode(String(n.n)));
+    counts.appendChild(item);
+  }
+  if (c.counts.length > 0) box.appendChild(counts);
+  const acts = el('div', 'ov-card-acts');
+  for (const b of c.buttons) acts.appendChild(buttonElement(b));
+  box.appendChild(acts);
+  return box;
+}
+
 function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }, reduced: boolean): HTMLElement {
   const box = el('div', `ov-panel ov-panel-rows${panel.body.tilt ? ' is-tilted' : ''}`);
   const plane = el('div', 'ov-plane');
+  // A selected ticket's pane: its way back, then its first paragraph, then its rows (TASK-0182).
+  if ((panel.body.buttons ?? []).length > 0) {
+    const acts = el('div', 'ov-card-acts');
+    for (const b of panel.body.buttons!) acts.appendChild(buttonElement(b));
+    plane.appendChild(acts);
+  }
+  if (panel.body.lead !== undefined) plane.appendChild(el('p', 'ov-pane-lead', panel.body.lead));
   for (const section of panel.body.sections) {
     if (section.rows.length > 0) plane.appendChild(sectionElement(panel, section));
   }
@@ -163,7 +207,9 @@ export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced
   layer.style.width = `${scene.width}px`;
   layer.style.height = `${scene.height}px`;
   for (const panel of panels) {
-    const box = panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }, options.reduced) : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
+    const box = panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }, options.reduced)
+      : panel.body.kind === 'card' ? cardPanel(panel as PanelNode & { body: PanelCard })
+        : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
     box.dataset['panel'] = panel.key;
     box.setAttribute('aria-label', panel.label);
     box.style.left = `${panel.x}px`;

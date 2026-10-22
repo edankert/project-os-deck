@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0183
 title: "Search lights the towers, and the next-up board lists the focus feature's tasks"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22

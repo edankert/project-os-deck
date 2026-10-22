@@ -337,6 +337,8 @@ export interface DeckAddress {
   step: string | null;
   /** The overview's colouring: `state` for DES-0004's state colours; absent for the cockpit's type colours (TASK-0145). */
   colour: string | null;
+  /** The ticket selected on the towers, on the wheel or a phase brought close (TASK-0182). */
+  select: string | null;
 }
 
 /**

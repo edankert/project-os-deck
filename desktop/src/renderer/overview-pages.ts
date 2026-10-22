@@ -14,12 +14,12 @@ import { drawnMtime, drawnMtimeKey, noteMtime, registerScreen, type ScreenInput 
 /** S4's accepted groups, kept for the session only: accepting writes nothing. */
 const ACCEPTED = 'rephase-accepted';
 
-registerScreen('page', 'wheel', { scene: ({ model, ctx }) => wheelScene(model, ctx) });
+registerScreen('page', 'wheel', { scene: ({ model, ctx, address }) => wheelScene(model, ctx, { select: address.select }) });
 
 registerScreen('page', 'phase', {
   scene: ({ model, ctx, address }) => {
     if (address.note === null) throw new Error('a phase screen names its phase: ?page=phase&note=PHASE-…');
-    return phaseScene(model, address.note, ctx);
+    return phaseScene(model, address.note, ctx, { select: address.select });
   },
 });
 

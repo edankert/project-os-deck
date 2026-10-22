@@ -4,6 +4,7 @@
  *   deck://<workspaceId>/<viewId>
  *       [?desk=<name>][&note=<id>][&panel=<kind>]
  *       [&surface=<kind>][&page=<kind>][&flow=<kind>][&step=<id>][&colour=state]
+ *       [&select=<id>]
  *
  * Parsing REFUSES what it cannot read and never falls back to a default view.
  * The cockpit's navigator does fall back — an unknown mode silently becomes
@@ -46,7 +47,7 @@ const STEP_RE = /^(?=.{1,64}$)[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*$/;
  * refuses is an address Deck hands a person and then rejects, which is the
  * failure TASK-0017 already fixed once for desk names.
  */
-const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour'] as const;
+const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour', 'select'] as const;
 const KNOWN_KEYS = new Set<string>(QUERY_KEYS);
 
 export class AddressError extends Error {
@@ -80,6 +81,11 @@ function refusalFor(address: DeckAddress): string | null {
   if (address.colour !== null) {
     if (address.colour !== 'state') return `not a colouring: "${address.colour}" (the only one an address names is "state")`;
     if (address.page === null && address.flow === null) return `"colour" needs a "page" or a "flow": it colours an overview screen`;
+  }
+  // The ticket selected on the towers (TASK-0182): only the wheel and a phase brought close select one.
+  if (address.select !== null) {
+    if (!NOTE_RE.test(address.select)) return `not a note id: "${address.select}"`;
+    if (address.page !== 'wheel' && address.page !== 'phase') return `"select" needs "page=wheel" or "page=phase": only the towers select a ticket`;
   }
   return null;
 }
@@ -179,6 +185,7 @@ function emptyAddress(workspaceId: string, viewId: string): DeckAddress {
     flow: null,
     step: null,
     colour: null,
+    select: null,
   };
 }
 

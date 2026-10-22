@@ -183,3 +183,170 @@ test("the overview service hands the builder the workspace's pictures", () => {
   assert.deepEqual(seen, [['/w', '/w/docs', 'abc']]);
   assert.deepEqual(reply.pictures, [{ ticket: 'TASK-0001', path: 'designs/TASK-0001-shot.png', date: '2026-10-21' }]);
 });
+
+// --- TASK-0182: a selected ticket's links as curves, with its card and pane ---
+
+const { plainContext, walkScene, sceneToSvg } = load('shared/overview-scene.js');
+const { towersLayout, cubesOf, LINK_CAP, LINK_LABELS } = load('shared/overview-towers.js');
+const { wheelScene } = load('shared/overview-wheel.js');
+const { phaseScene } = load('shared/overview-phase.js');
+const { checkScene } = load('shared/overview-checks.js');
+const { parseAddress, formatAddress } = load('shared/address.js');
+const { FRAME_ACTION } = load('shared/overview-select.js');
+const ctx = plainContext('abcd1234', 'features');
+const passes = (scene) => { for (const r of checkScene(scene)) assert.ok(r.ok, `${scene.address}: ${r.rule}: ${r.detail}`); };
+const nodesOf = (scene) => [...walkScene(scene.nodes)];
+const panelsOf = (scene) => nodesOf(scene).filter((n) => n.kind === 'panel');
+
+/** Every ticket a ticket is joined to, both ways round, from the model's own links. */
+function joined(m, id) {
+  const out = new Set(m.tickets[id].links.filter((x) => x !== id && m.tickets[x] !== undefined));
+  for (const t of Object.values(m.tickets)) if (t.id !== id && t.links.includes(id)) out.add(t.id);
+  return [...out].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+}
+
+for (const name of WORKSPACES) {
+  test(`${name}: a selected ticket is joined to every ticket it links to or that links to it, each once, at both cubes`, () => {
+    const m = fixture(name);
+    const ids = Object.keys(m.tickets);
+    const sample = [...ids.filter((_, i) => i % Math.ceil(ids.length / 40) === 0), m.next].filter(Boolean);
+    const plain = towersLayout(m, ctx);
+    const at = new Map([...cubesOf(plain)].map((c) => [c.id, [c.x, c.y, c.z]]));
+    for (const id of sample) {
+      const sel = towersLayout(m, ctx, null, { select: id }).selection;
+      const want = joined(m, id);
+      assert.equal(sel.total, want.length, id);
+      assert.deepEqual(sel.links.map((l) => l.id), want.slice(0, LINK_CAP), id);
+      assert.deepEqual(sel.at, at.get(id), id);
+      for (const l of sel.links) {
+        assert.deepEqual(l.to, at.get(l.id), `${id} → ${l.id}`);
+        assert.equal(l.type, m.tickets[l.id].type);
+        assert.equal(l.out, m.tickets[id].links.includes(l.id));
+        assert.equal(l.in, m.tickets[l.id].links.includes(id));
+      }
+      assert.equal(sel.labelled, want.length <= LINK_LABELS, id);
+    }
+    assert.equal(towersLayout(m, ctx, null, { select: 'TASK-9999' }).selection, null, 'a ticket the model lacks selects nothing');
+    assert.equal(towersLayout(m, ctx).selection, null);
+  });
+}
+
+test("your-trainer's FEAT-0051, the busiest ticket, draws all 202 of its links, outlined without their ids", () => {
+  const m = fixture('your-trainer');
+  const sel = towersLayout(m, ctx, null, { select: 'FEAT-0051' }).selection;
+  assert.equal(sel.total, 202);
+  assert.equal(sel.links.length, 202);
+  assert.equal(sel.labelled, false);
+});
+
+test('past 240 links, the first 240 by id are drawn and the rest are counted', () => {
+  const m = structuredClone(fixture('deck'));
+  const ids = Object.keys(m.tickets).filter((x) => x !== 'TASK-0154');
+  m.tickets['TASK-0154'].links = ids;
+  const sel = towersLayout(m, ctx, null, { select: 'TASK-0154' }).selection;
+  assert.equal(sel.total, ids.length);
+  assert.equal(sel.links.length, LINK_CAP);
+  const s = wheelScene(m, ctx, { select: 'TASK-0154' });
+  assert.match(s.list.find((r) => r.id === 'selected-TASK-0154').label, new RegExp(`${ids.length - LINK_CAP} more not drawn`));
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: the wheel with a ticket selected draws a curve to each link, fades the rest, and keeps the look`, () => {
+    const m = fixture(name);
+    const id = name === 'deck' ? 'TASK-0156' : 'FEAT-0124';
+    const scene = wheelScene(m, ctx, { select: id });
+    passes(scene);
+    assert.equal(scene.address, `deck://abcd1234/features?page=wheel&select=${id}`);
+    assert.equal(formatAddress(parseAddress(scene.address)), scene.address, 'the selection round-trips through the grammar');
+    const want = joined(m, id);
+    const curves = nodesOf(scene).filter((n) => n.kind === 'mark' && /\bov-curve\b/.test(n.cls ?? ''));
+    assert.equal(curves.length, want.length);
+    for (const l of towersLayout(m, ctx, null, { select: id }).selection.links) assert.ok(curves.some((c) => c.cls.includes(`ty-${l.type}`) && c.label.endsWith(l.id)), l.id);
+    // Every ticket but the selected one and its links stands in a faded group.
+    const faded = new Set();
+    const walk = (nodes, under) => { for (const n of nodes) { if (n.kind === 'mark' && n.ticket && under) faded.add(n.ticket); if (n.kind === 'group') walk(n.children, under || n.cls === 'ov-faint'); } };
+    walk(scene.nodes, false);
+    assert.equal(faded.size, Object.keys(m.tickets).length - 1 - want.length);
+    assert.ok(!faded.has(id) && want.every((x) => !faded.has(x)));
+    // The ids stand beside the linked tickets only while there are 40 or fewer.
+    const ids = nodesOf(scene).filter((n) => n.kind === 'text' && n.cls === 'ov-link-id');
+    assert.equal(ids.length, want.length <= 40 ? want.length : 0);
+    // Escape clears it: the twin's way back is the wheel with nothing selected.
+    assert.equal(scene.list.find((r) => r.id === 'back').target, 'deck://abcd1234/features?page=wheel');
+  });
+
+  test(`${name}: the card says what the ticket is and its buttons go where they say; the pane lists its links by type, each selecting its ticket`, () => {
+    const m = fixture(name);
+    const id = m.next;
+    const t = m.tickets[id];
+    const scene = wheelScene(m, ctx, { select: id });
+    const [card, pane] = panelsOf(scene);
+    assert.equal(card.body.kind, 'card');
+    assert.equal(card.body.row.id, id);
+    assert.equal(card.body.row.title, t.title);
+    const fact = (k) => card.body.facts.find((f) => f.key === k)?.value;
+    assert.equal(fact('Owner'), t.owner ?? 'nobody');
+    assert.equal(fact('Updated'), t.updated ?? 'no date');
+    assert.ok(fact('Feature').startsWith(t.feature), fact('Feature'));
+    assert.ok(fact('Phase').startsWith(m.phases.concat(m.backlog, m.shelf).find((p) => p.id === t.phase).number));
+    const want = joined(m, id);
+    assert.equal(card.body.counts.reduce((n, c) => n + c.n, 0), want.length);
+    const button = (k) => card.body.buttons.find((b) => b.key === k);
+    assert.equal(button('open').target, `deck://abcd1234/features?note=${id}&page=ticket`);
+    assert.equal(button('frame').action, FRAME_ACTION);
+    assert.match(button('phase').target, new RegExp(`note=PHASE-[^&]+&page=phase&select=${id}$`));
+    assert.equal(button('clear').target, 'deck://abcd1234/features?page=wheel');
+    // The twin holds every button, so a keyboard reaches them too.
+    for (const b of card.body.buttons) assert.ok(scene.list.some((r) => r.id === `card-${b.key}` && (r.target === b.target || r.action === b.action)), b.key);
+    assert.equal(pane.body.kind, 'rows');
+    assert.equal(pane.body.lead, t.lead);
+    const rows = pane.body.sections.flatMap((s) => s.rows);
+    assert.deepEqual(rows.map((r) => r.id).sort(), [...want].sort());
+    for (const r of rows) assert.equal(r.target, `deck://abcd1234/features?page=wheel&select=${encodeURIComponent(r.id)}`);
+    for (const s of pane.body.sections) for (const r of s.rows) assert.equal(`linked-${m.tickets[r.id].type}`, s.key, r.id);
+  });
+
+  test(`${name}: with a phase brought close, a selected ticket's pane takes the list's place, the curves stay in the phase, and Escape goes back to the list`, () => {
+    const m = fixture(name);
+    const id = m.next;
+    const layout = towersLayout(m, ctx);
+    const phase = layout.phases.find((p) => p.towers.some((tw) => tw.cubes.some((c) => c.id === id)) || p.tiles.some((c) => c.id === id)).id;
+    const scene = phaseScene(m, phase, ctx, { select: id });
+    passes(scene);
+    assert.equal(scene.address, `deck://abcd1234/features?note=${phase}&page=phase&select=${id}`);
+    const panels = panelsOf(scene);
+    assert.deepEqual(panels.map((p) => p.body.kind), ['card', 'rows']);
+    assert.ok(!panels.some((p) => p.key.startsWith('tickets-')), "the phase's list gives way to the pane");
+    assert.equal(panels[1].body.buttons[0].target, `deck://abcd1234/features?note=${phase}&page=phase`);
+    assert.ok(!panels[0].body.buttons.some((b) => b.key === 'phase'), 'its phase is already close');
+    assert.equal(scene.list.find((r) => r.id === 'back').target, `deck://abcd1234/features?note=${phase}&page=phase`);
+    const inPhase = new Set(layout.phases.find((p) => p.id === phase).towers.flatMap((tw) => tw.cubes.map((c) => c.id)).concat(layout.phases.find((p) => p.id === phase).tiles.map((c) => c.id)));
+    const curves = nodesOf(scene).filter((n) => n.kind === 'mark' && /\bov-curve\b/.test(n.cls ?? ''));
+    assert.equal(curves.length, joined(m, id).filter((x) => inPhase.has(x)).length);
+    // The layout still carries every link, for the 3D view, which draws the rest faded.
+    assert.equal(towersLayout(m, ctx, phase, { select: id }).selection.links.length, joined(m, id).length);
+  });
+
+  test(`${name}: pressing a ticket on the ring or on a phase brought close selects it there`, () => {
+    const m = fixture(name);
+    for (const c of cubesOf(towersLayout(m, ctx))) assert.equal(c.target, `deck://abcd1234/features?page=wheel&select=${encodeURIComponent(c.id)}`);
+    const p = m.phases[0].id;
+    for (const c of cubesOf(towersLayout(m, ctx, p))) assert.equal(c.target, `deck://abcd1234/features?note=${p}&page=phase&select=${encodeURIComponent(c.id)}`);
+  });
+}
+
+test('the grammar names a selection only on the wheel or a phase', () => {
+  assert.equal(parseAddress('deck://abcd1234/features?page=wheel&select=TASK-0001').select, 'TASK-0001');
+  assert.throws(() => parseAddress('deck://abcd1234/features?note=TASK-0001&page=ticket&select=TASK-0001'), /"select" needs "page=wheel" or "page=phase"/);
+  assert.throws(() => parseAddress('deck://abcd1234/features?select=TASK-0001'), /"select" needs/);
+  assert.equal(wheelScene(fixture('deck'), ctx, { select: 'TASK-9999' }).address, 'deck://abcd1234/features?page=wheel', 'a ticket the model lacks is dropped from the address');
+});
+
+test('a plate draws the card and the pane flat, with the selected ticket and its first paragraph', () => {
+  const m = fixture('deck');
+  const svg = sceneToSvg(wheelScene(m, ctx, { select: 'TASK-0156' }), { panels: 'flat' });
+  assert.match(svg, /data-panel="card-TASK-0156"/);
+  assert.match(svg, /Open {3}Frame {3}Its phase {3}Clear/);
+  const { escapeXml } = load('shared/overview-scene.js');
+  assert.ok(svg.includes(escapeXml(m.tickets['TASK-0156'].lead.split(' ').slice(0, 4).join(' '))));
+});

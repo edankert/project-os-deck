@@ -12,7 +12,8 @@
  */
 import { backControl, frame, heading } from './overview-chrome.js';
 import { plainName } from './overview-geometry.js';
-import { towersLayout, towersPlan, type RingPhase } from './overview-towers.js';
+import { selectionPanels } from './overview-select.js';
+import { towersLayout, towersPlan, type RingPhase, type TowersOptions } from './overview-towers.js';
 import { rowWords } from './overview-marks.js';
 import type { ListRow, PanelNode, PanelRow, PanelSection, Scene, SceneNode, ScreenContext } from './overview-scene.js';
 import {
@@ -119,11 +120,16 @@ function sectionPanel(model: OverviewModel, phase: Phase, ctx: ScreenContext): {
   return { node, rows };
 }
 
-export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenContext): Scene {
+/** Where a selected ticket's card stands with a phase brought close (TASK-0182); its pane takes the list's place. */
+export const PHASE_CARD = { x: 40, y: 660, w: 420, h: 300 } as const;
+
+export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenContext, options: TowersOptions = {}): Scene {
   const phase = allPhases(model).find((p) => p.id === phaseId);
   if (phase === undefined) throw new Error(`the overview has no phase ${phaseId}`);
-  const back = backControl(ctx, { page: 'wheel' }, 'Back to the wheel');
-  const layout = towersLayout(model, ctx, phase.id);
+  const layout = towersLayout(model, ctx, phase.id, options);
+  // A ticket selected on the segment: Escape, and the way back, clear it before they leave the phase.
+  const sel = layout.open === phase.id ? layout.selection : null;
+  const back = sel === null ? backControl(ctx, { page: 'wheel' }, 'Back to the wheel') : backControl(ctx, { page: 'phase', note: phase.id }, `Back to ${phase.id}'s list: clear the selection of ${sel.id}`);
   const ring = layout.phases.find((p) => p.id === phase.id);
   const nodes: SceneNode[] = [back.node, ...heading(phase.id, plainName(phase.name)), ...frame(PHASE_SCREEN.width, PHASE_SCREEN.height)];
   const list: ListRow[] = [back.row];
@@ -135,9 +141,16 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
     const plan = towersPlan(layout, { only: phase.id, box: { x: 40, y: 150, w: 700, h: 800 }, tickets: false });
     nodes.push(...plan.nodes);
     list.push(...plan.rows.filter((r) => r.group !== 'Phases'));
-    const panel = towerPanel(model, ring, ctx);
-    nodes.push(panel.node);
-    list.push(...panel.rows);
+    // A selected ticket's pane stands in the list's place, and its card at the bottom left.
+    const selected = sel === null ? null : selectionPanels(model, layout, ctx, { card: PHASE_CARD, pane: TICKET_PANEL });
+    if (selected !== null && selected.nodes.length > 0) {
+      nodes.push(...selected.nodes);
+      list.push(...selected.rows);
+    } else {
+      const panel = towerPanel(model, ring, ctx);
+      nodes.push(panel.node);
+      list.push(...panel.rows);
+    }
   } else {
     const plan = towersPlan(layout, { tickets: false });
     nodes.push({ kind: 'group', key: 'ring-small', transform: 'translate(40 150) scale(0.5)', children: plan.nodes });
@@ -150,10 +163,10 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
   nodes.push({ kind: 'towers', layout });
   return {
     screen: 'phase',
-    address: ctx.address({ page: 'phase', note: phase.id }),
+    address: ctx.address({ page: 'phase', note: phase.id, select: sel?.id ?? null }),
     width: PHASE_SCREEN.width,
     height: PHASE_SCREEN.height,
-    title: `${phaseLabel(phase)}: what it owes`,
+    title: sel === null ? `${phaseLabel(phase)}: what it owes` : `${phaseLabel(phase)}: ${sel.id} selected`,
     nodes,
     list,
   };
