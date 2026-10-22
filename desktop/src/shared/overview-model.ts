@@ -6,6 +6,7 @@ import { cockpitMarks } from './overview-status.js';
 import { isTemplate, type NoteRecord } from './records.js';
 import { linksIn, Resolver, LINK_BEARING_FIELDS } from './graph.js';
 import { firstHeading, parseFrontmatter } from './yaml.js';
+import { designFeature, evidenceFrom, leadOf, ownerWord } from './overview-notes.js';
 import { CORE_KINDS, PHASE_KINDS, STATE_ORDER, emptyCounts, type Focus, type Kind, type State, type Phase, type OverviewModel, type Ticket } from './overview-types.js';
 
 export interface OverviewOptions {
@@ -25,6 +26,11 @@ export interface OverviewOptions {
   ciGreen?: boolean;
   /** The workspace's SNAPSHOT focus, from `snapshotFocus` (TASK-0165). */
   focus?: Focus;
+  /**
+   * The pictures under the docs folder, each with its path there and its date (TASK-0181).
+   * Given, the model lists those that belong to a ticket; absent, it lists none.
+   */
+  images?: ReadonlyArray<{ path: string; date: string }>;
 }
 
 /**
@@ -38,8 +44,8 @@ export function snapshotFocus(text: string): Focus | undefined {
   return { phase: pick('phase'), feature: pick('feature'), task: pick('task') };
 }
 
-/** A feature claims the tickets its lists name; a task claims the tests it names. */
-const FEATURE_LISTS = ['tests', 'implements', 'designs', 'requirements', 'tasks'];
+/** A feature claims the tickets its lists name, its design among them (TASK-0179); a task claims the tests it names. */
+const FEATURE_LISTS = ['tests', 'implements', 'design', 'designs', 'requirements', 'tasks'];
 
 const TYPES: Readonly<Record<string, Kind>> = {
   requirement: 'req', feature: 'feat', task: 'task', test: 'test', issue: 'iss',
@@ -153,6 +159,7 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
   };
   const marksFor = cockpitMarks(notes, options.today ?? options.generated?.slice(0, 10) ?? '', options.stalenessDays);
   const ticketNotes = new Map<string, NoteRecord>();
+  const bodies = new Map<string, string>();
   for (const r of notes) {
     const noteType = r.types.find((t) => Object.hasOwn(TYPES, t));
     const kind = r.types.map((t) => Object.hasOwn(TYPES, t) ? TYPES[t] : undefined).find((k) => k !== undefined);
@@ -167,14 +174,21 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
         for (const target of targets) { const note = resolve(target); if (note && note.id !== r.id) links.add(note.id); }
       }
     }
-    for (const link of linksIn(options.readBody(r.relPath))) {
+    const body = options.readBody(r.relPath);
+    for (const link of linksIn(body)) {
       const note = resolve(link.target);
       if (note && note.id !== r.id) links.add(note.id);
     }
     const state = stateFor(r, kind, options);
+    // What a selected ticket's card and pane show, and what the board, the ages and the weeks read (TASK-0181).
+    const lead = leadOf(body);
+    const owner = ownerWord(r.frontmatter['owner']);
+    const updated = day(r.frontmatter['updated']);
     model.tickets[r.id] = { id: r.id, kind, state, ...marksFor(r, noteType === 'decision' ? 'adr' : noteType as Ticket['type']), status: r.status ?? '', title: r.title ?? r.id,
-      phase: null, placedBy: kind === 'dec' || kind === 'risk' ? 'project-wide' : 'none', links: [...links].sort() };
+      phase: null, placedBy: kind === 'dec' || kind === 'risk' ? 'project-wide' : 'none', links: [...links].sort(),
+      ...(lead !== '' ? { lead } : {}), ...(owner !== '' ? { owner } : {}), ...(updated !== null ? { updated } : {}) };
     ticketNotes.set(r.id, r);
+    bodies.set(r.id, body);
   }
   // A ticket waiting on a note the overview does not draw (archived, or not a ticket
   // type) is sent to that note in the view, not to a ticket screen that cannot open.
@@ -241,7 +255,8 @@ export function buildOverview(records: NoteRecord[], options: OverviewOptions): 
     (phase.kind === 'open' ? model.phases : phase.kind === 'finished' ? model.shelf : model.backlog).push(phase);
   }
   ordered(model.core.tickets, CORE_KINDS);
-  assignFeatures(model, ticketNotes, references);
+  assignFeatures(model, ticketNotes, references, options.focus?.feature ?? null);
+  if (options.images !== undefined) model.pictures = picturesOf(model, ticketNotes, bodies, options.images);
   if (options.focus !== undefined) {
     const known = (id: string | null, kind: Kind): string | null => (id !== null && model.tickets[id]?.kind === kind ? id : null);
     const focus: Focus = { phase: options.focus.phase !== null && phases.has(options.focus.phase) ? options.focus.phase : null, feature: known(options.focus.feature, 'feat'), task: known(options.focus.task, 'task') };
@@ -259,7 +274,7 @@ const byNumber = (a: string, b: string): number => a.localeCompare(b, 'en', { nu
  * towers page): up its `parent:` to the first feature; else the lowest-numbered
  * feature whose lists name it; else the feature of a task whose `tests:` names it.
  */
-function assignFeatures(model: OverviewModel, ticketNotes: Map<string, NoteRecord>, references: (value: unknown) => NoteRecord[]): void {
+function assignFeatures(model: OverviewModel, ticketNotes: Map<string, NoteRecord>, references: (value: unknown) => NoteRecord[], focusFeature: string | null): void {
   const parentOf = new Map<string, string>();
   for (const [id, r] of ticketNotes) {
     const p = references(r.frontmatter['parent'])[0];
@@ -267,12 +282,20 @@ function assignFeatures(model: OverviewModel, ticketNotes: Map<string, NoteRecor
   }
   const namedByFeature = new Map<string, string>();
   const namedByTask = new Map<string, string>();
+  // Every feature and every task that names a ticket, for a design (TASK-0179).
+  const allByFeature = new Map<string, string[]>();
+  const allByTask = new Map<string, string[]>();
   for (const id of [...ticketNotes.keys()].sort(byNumber)) {
     const kind = model.tickets[id]!.kind;
     if (kind !== 'feat' && kind !== 'task') continue;
     const into = kind === 'feat' ? namedByFeature : namedByTask;
+    const all = kind === 'feat' ? allByFeature : allByTask;
     for (const key of kind === 'feat' ? FEATURE_LISTS : ['tests']) {
-      for (const named of references(ticketNotes.get(id)!.frontmatter[key])) if (named.id !== id && !into.has(named.id)) into.set(named.id, id);
+      for (const named of references(ticketNotes.get(id)!.frontmatter[key])) {
+        if (named.id === id) continue;
+        if (!into.has(named.id)) into.set(named.id, id);
+        all.set(named.id, [...(all.get(named.id) ?? []), id]);
+      }
     }
   }
   const upToFeature = (id: string): string | undefined => {
@@ -280,8 +303,21 @@ function assignFeatures(model: OverviewModel, ticketNotes: Map<string, NoteRecor
     for (let i = 0; i < 6 && p !== undefined && model.tickets[p]?.kind !== 'feat'; i += 1) p = parentOf.get(p);
     return p !== undefined && model.tickets[p]?.kind === 'feat' ? p : undefined;
   };
+  const isFeature = (id: string): boolean => model.tickets[id]?.kind === 'feat';
   for (const ticket of Object.values(model.tickets)) {
     if (ticket.kind === 'feat') continue;
+    // A design stands with a feature that names it, the feature in focus if it is one of them,
+    // else the lowest-numbered; then the features of the tasks that name it; then the features
+    // its own `implements:` names. So the design of the work in hand stands nearest it (TASK-0179).
+    if (ticket.type === 'design' && !parentOf.has(ticket.id)) {
+      const viaTasks = (allByTask.get(ticket.id) ?? []).map((t) => upToFeature(t) ?? namedByFeature.get(t)).filter((f): f is string => f !== undefined);
+      const implementsList = references(ticketNotes.get(ticket.id)!.frontmatter['implements']).map((r) => r.id);
+      const feature = designFeature({ namedBy: allByFeature.get(ticket.id) ?? [], viaTasks, implementsList, focus: focusFeature, isFeature });
+      if (feature !== null) {
+        ticket.feature = feature;
+        continue;
+      }
+    }
     const task = namedByTask.get(ticket.id);
     const feature = upToFeature(ticket.id) ?? namedByFeature.get(ticket.id) ?? (task !== undefined ? upToFeature(task) ?? namedByFeature.get(task) : undefined);
     if (feature !== undefined) ticket.feature = feature;
@@ -295,4 +331,24 @@ function nextTicket(model: OverviewModel, focus: Focus): string | null {
   if (focus.feature === null) return null;
   const tasks = Object.values(model.tickets).filter((t) => t.kind === 'task' && t.feature === focus.feature).sort((a, b) => byNumber(a.id, b.id));
   return tasks.find((t) => t.status === 'doing')?.id ?? tasks.find((t) => t.status === 'backlog' || t.status === 'planned')?.id ?? null;
+}
+
+/**
+ * The pictures that belong to a ticket, newest first (TASK-0181): `evidenceFrom` over the
+ * notes and the pictures beside them, as DES-0005's towers page reads them. Paths are
+ * under the docs folder; `evidenceFrom` reads them as `docs/...`, as a repository holds them.
+ */
+function picturesOf(model: OverviewModel, ticketNotes: Map<string, NoteRecord>, bodies: Map<string, string>, images: ReadonlyArray<{ path: string; date: string }>): NonNullable<OverviewModel['pictures']> {
+  const DOCS = 'docs/';
+  const notes = [...ticketNotes].map(([id, r]) => ({ path: DOCS + r.relPath, text: noteText(r, bodies.get(id) ?? '') }));
+  const found = evidenceFrom(images.map((i) => ({ path: DOCS + i.path, date: i.date })), notes, new Set(Object.keys(model.tickets)), { perTicket: Infinity, limit: Infinity });
+  return found.map((e) => ({ ticket: e.id, path: e.path.slice(DOCS.length), date: e.date }));
+}
+
+/** A note's text with its frontmatter, as `evidenceFrom` reads the `id:` and `evidence:` fields from it. */
+function noteText(record: NoteRecord, body: string): string {
+  if (/^---\r?\n/.test(body)) return body;
+  const evidence = record.frontmatter['evidence'];
+  const values = (Array.isArray(evidence) ? evidence : evidence === undefined ? [] : [evidence]).map((v) => `  - ${JSON.stringify(String(v))}`);
+  return `---\nid: ${record.id}\n${values.length > 0 ? `evidence:\n${values.join('\n')}\n` : ''}---\n${body}`;
 }

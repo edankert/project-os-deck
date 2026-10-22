@@ -128,6 +128,25 @@ export interface Ticket {
    * a ticket no feature claims.
    */
   feature?: string;
+  /** The note's first paragraph of prose, plain and at most 280 characters (`leadOf`, TASK-0181). Absent when it has none. */
+  lead?: string;
+  /** Who has it, as a word: "Edwin", "Claude", "ios team" (`ownerWord`). Absent when unassigned. */
+  owner?: string;
+  /** The note's `updated:` date, YYYY-MM-DD. Absent when it gives none. */
+  updated?: string;
+}
+
+/**
+ * A picture kept beside the notes, and the ticket it belongs to (TASK-0181): named by
+ * that ticket's note (its `evidence:` field or a link), else by its own file name, else
+ * by the feature folder it lies in (`evidenceFrom`).
+ */
+export interface Picture {
+  ticket: string;
+  /** Under the docs folder, as Deck's host serves it (`/deck/file/<workspace>/<path>`). */
+  path: string;
+  /** Its last commit's date, YYYY-MM-DD; the file's own date when it has never been committed. */
+  date: string;
 }
 
 /** What the workspace's SNAPSHOT says is being worked on (TASK-0165); each null when it names none. */
@@ -182,6 +201,8 @@ export interface OverviewModel {
    */
   next?: string | null;
   tickets: Record<string, Ticket>;
+  /** Every picture that belongs to a ticket, newest first (TASK-0181). Absent when the builder was given no pictures. */
+  pictures?: Picture[];
 }
 
 /** An all-zero count table, for a builder or a test to fill. */

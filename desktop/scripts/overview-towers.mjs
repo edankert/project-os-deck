@@ -53,7 +53,7 @@ const CHOICES = {
  * ticket belongs to agrees with the fixture and with the focus read at the same commit.
  * Without that commit (a shallow clone), today's files, and the page says so.
  */
-function notesAt(root, head, dirty) {
+export function notesAt(root, head, dirty) {
   const docs = path.join(root, 'docs');
   // Each note as { path, text }, its path relative to the workspace (TASK-0177 ties a
   // picture to the note that links to it).
@@ -99,7 +99,7 @@ function notesAt(root, head, dirty) {
  * (TASK-0177's ring of recent evidence). Only pictures still in the working tree count,
  * since the page shows the files themselves. Without the commit, none.
  */
-function imagesAt(root, head) {
+export function imagesAt(root, head) {
   if (!head || spawnSync('git', ['-C', root, 'cat-file', '-e', `${head}^{commit}`]).status !== 0) return [];
   const log = spawnSync('git', ['-C', root, 'log', '--format=%x00%cs', '--name-only', head, '--', 'docs'], { encoding: 'utf-8', maxBuffer: 1 << 28 });
   const dated = lastDates(log.stdout);
@@ -114,7 +114,7 @@ function relations(root, head, dirty) {
 }
 
 /** The snapshot's focus at a commit (the fixture's), else in the working tree, and which it was. */
-function focusOf(root, head) {
+export function focusOf(root, head) {
   let text = '';
   let from = 'none';
   const shown = head ? spawnSync('git', ['-C', root, 'show', `${head}:SNAPSHOT.yaml`], { encoding: 'utf-8' }) : null;

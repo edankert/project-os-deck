@@ -395,13 +395,14 @@ test("the cockpit's own base file draws what the cockpit draws", () => {
     counts[view.name] = result.groups.reduce((n, g) => n + g.cards.length, 0);
     assert.deepEqual(result.unsupported, [], `${view.name} could not be evaluated: ${JSON.stringify(result.unsupported)}`);
   }
-  // Read off this repository's own snapshot: thirty features and five
+  // Read off this repository's own snapshot: thirty-one features and five
   // phases. If a feature or a phase is added, this fails and says so, which is
   // the right way round for a check about agreeing with another program.
   // Twenty-nine and five since 2026-10-14, when PHASE-0005 and FEAT-0025 to
   // FEAT-0029 were planned; thirty since 2026-10-22, when FEAT-0030 (DES-0006's
-  // agent sessions page) was added.
-  assert.equal(counts['Features (All)'], 30);
+  // agent sessions page) was added; thirty-one the same day, with FEAT-0031 (the
+  // towers' Rubric ideas built into Deck).
+  assert.equal(counts['Features (All)'], 31);
   assert.equal(counts['Phases (All)'], 5);
   assert.ok(counts['Features (Open)'] <= counts['Features (All)']);
 });

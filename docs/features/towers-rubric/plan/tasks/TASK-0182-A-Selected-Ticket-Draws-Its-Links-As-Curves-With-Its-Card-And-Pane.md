@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0182
 title: "A ticket selected on the ring draws its links as curves, with its card and its pane, and the flat plan draws the links too"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22
