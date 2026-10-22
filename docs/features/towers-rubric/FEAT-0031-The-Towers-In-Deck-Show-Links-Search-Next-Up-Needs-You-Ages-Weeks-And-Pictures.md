@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-22
+review_verdict: approved
+review_round: 2
 related: ["[[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]", "[[FEAT-0026-One-List-Of-Tickets-Each-With-A-Type-A-State-And-A-Place]]", "[[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]", "[[REFERENCE-RUBRIC-AGENTIC-OS-REVIEW]]", "[[TASK-0176]]", "[[TASK-0177]]", "[[TASK-0179]]", "[[RISK-0010]]", "[[RISK-0011]]"]
 ---
 
@@ -115,3 +115,9 @@ Built on 2026-10-22, [[TASK-0181]] to [[TASK-0187]] and [[TASK-0189]], each in i
 Other observations: a dropped feature's tower still got an age; search split words at accented letters; the picture dates were read from git again on every switch of workspace; "more not drawn" would leave out a linked ticket with no cube; `drawChosen` redrew only on a new id or link count.
 
 **All fixed in [[TASK-0190]]**: the weeks count a ticket closed in another year apart, under the squares, so every closed ticket is counted once; a check on a tower quiet exactly 13 and 14 days fails the reviewers' break; a dropped feature carries no age; a letter of any alphabet is part of a word; the dates are kept per workspace; `total` counts every joined ticket; `drawChosen` redraws when where the selection stands changes.
+
+### Round two
+
+2026-10-22: two fresh independent Claude reviewers on `59d3934`, from the round-two packet. **Approved by both.** Both blocking findings are *fixed*, each shown by breaking the code again. Moving the age badge's threshold to `>` now fails one check ("14 days quiet: the badge"). Emptying the list of tickets closed in other years fails the weeks check on both workspaces. Neither raised a new finding. Neither re-broke the four smaller fixes or checked the per-workspace dates cache; one read them in the diff and found them as TASK-0190 says.
+
+Not checked by either round: what needs a window (the 3D curves, the toggles, pictures loading, a drag on a picture). The author's towers walk and TST-0093's run in the container cover those; that evidence is not independent.

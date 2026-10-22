@@ -63,8 +63,8 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0031"
-  task: "TASK-0190"
-  note: "2026-10-22, later: Edwin asked to build DES-0005's seven Rubric ideas into Deck (FEAT-0031, TASK-0181 to TASK-0187, PHASE-0005; first TASK-0181, the model's lead, owner, date and the pictures list) and answered DES-0006's four questions (TASK-0188 under FEAT-0030, PHASE-0004: side pane kept but open, agents over the ticket they were started on, panels can be hidden, permission requests first). FEAT-0030 goes back to doing when TASK-0188 starts. Still Edwin's: DES-0005's remaining questions, DES-0006's side pane, acceptance tests TST-0091 and TST-0092. Deck's repo is public: no session dollar costs, no prompt or reply text. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: ""
+  note: "2026-10-22, evening: FEAT-0031 (DES-0005's seven Rubric ideas built into Deck's towers: selection with curves, card and pane; search; next-up board; needs you; ages; weeks; grouping by feature; pictures at their tickets) is at review, approved in two independent rounds (TASK-0181 to TASK-0187, TASK-0189 a pre-existing negative-size square, TASK-0190 the review's fixes). It waits on Edwin's acceptance test TST-0103 and on DES-0005, still proposed. TASK-0188 recorded Edwin's four DES-0006 answers (side pane kept but open; agents over the ticket they were started on; panels hideable; permission requests first); FEAT-0030 stays at review. Open for Edwin: whether your-trainer's pictures may appear in Deck's public screenshots; DES-0006's side pane; DES-0005's remaining questions. Window runs on the overview go in the box (walk-in-a-box.sh overview-drive, towers-rubric). Deck's repo is public: no session dollar costs, no prompt or reply text. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
