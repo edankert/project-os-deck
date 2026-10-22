@@ -22,7 +22,9 @@ export function nextUpPanel(model: OverviewModel, layout: TowersLayout, ctx: Scr
   const base = { kind: 'panel' as const, key: 'next-up', ...place };
   if (tower === undefined) {
     const why = feature === null ? "This workspace's snapshot names no feature in focus." : `The feature in focus, ${feature}, does not stand on the ring, so it has no tasks to list here.`;
-    return { node: { ...base, label: `Next up: ${why}`, body: { kind: 'rows', sections: [], heading: { text: 'Next up' }, foot: why } }, rows: [] };
+    // Nothing to list: the board keeps its foot where it was and takes only the room its words need.
+    const short = { y: place.y + place.h - 100, h: 100 };
+    return { node: { ...base, ...short, label: `Next up: ${why}`, body: { kind: 'rows', sections: [], heading: { text: 'Next up' }, foot: why } }, rows: [] };
   }
   const tasks: BoardTask[] = tower.cubes.slice(1).map((c) => model.tickets[c.id]!).filter((t) => t.type === 'task')
     .map((t) => [t.id, t.type, t.fill, t.needsYou ? 1 : 0, t.status, t.title, t.needs?.say ?? '', t.state]);

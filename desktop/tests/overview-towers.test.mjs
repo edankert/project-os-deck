@@ -423,6 +423,7 @@ test('with no feature in focus, or one not on the ring, the board says which and
   let panel = nextUpPanel(m, towersLayout(m, ctx), ctx, { x: 0, y: 0, w: 400, h: 280 });
   assert.deepEqual(panel.node.body.sections, []);
   assert.match(panel.node.body.foot, /names no feature in focus/);
+  assert.deepEqual([panel.node.y, panel.node.h], [180, 100], 'an empty board takes only the room its words need, at the same foot');
   // A finished feature stands on the shelf, not as a tower on the ring (Deck has no finished phase yet).
   const y = structuredClone(fixture('your-trainer'));
   const shelved = Object.values(y.tickets).find((t) => t.kind === 'feat' && y.shelf.some((p) => p.id === t.phase));

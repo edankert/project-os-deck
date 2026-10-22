@@ -2108,7 +2108,7 @@ items:
       covers: ["FEAT-0031"]
     TST-0103:
       file: "docs/tests/acceptance/TST-0103-A-Ticket-Selected-Searched-And-Grouped-On-The-Towers-Reads-As-A-Picture.md"
-      status: draft
+      status: active
       owner: user:edwin
       phase: PHASE-0005
       scope: system

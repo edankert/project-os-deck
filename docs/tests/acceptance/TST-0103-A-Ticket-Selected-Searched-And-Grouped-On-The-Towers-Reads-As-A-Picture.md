@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0103
 aliases: ["TST-0103"]
 title: "On Deck's towers a ticket's links, a search, what comes next, what needs you, the quiet towers, the weeks, the grouping by feature and the pictures are each read without reading a sentence"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-10-22
 updated: 2026-10-22
@@ -37,12 +37,15 @@ after: ["[[TST-0091-Deck-Opens-On-The-Wheel-And-It-Reads-As-A-Picture]]"]
 ## Steps
 
 1. Open Deck on Deck's own repository. The ring opens by phase.
-2. Press a ticket with many links, such as a task of the focus feature. Expected: curves run to each linked ticket, the card names it, and the right pane shows its first paragraph, its linked tickets and its pictures.
+2. Press a ticket with many links, such as a task of the focus feature. Expected: curves run to each linked ticket, the card names it, and the right pane shows its first paragraph, its linked tickets and, for a design, its pictures. Press Frame on the card, then Escape twice: the camera comes home, then the selection clears.
 3. Press `/` and type "wheel". Expected: the matches glow on the ring and the box says how many.
 4. Read the next-up board. Expected: the focus feature's next task is marked NEXT, with who has it.
-5. Read the needs-you panel, the age badges and the weeks without pointing at anything. Expected: what needs you, which towers are quiet and when work closed can each be said aloud.
+5. Read the needs-you panel, the age badges and the weeks without pointing at anything. Expected: what needs you, which towers are quiet and when work closed can each be said aloud. Press a part of the needs-you bar, then a week: each lights its tickets on the ring, and Escape puts it back.
+5a. Look at the pictures standing over the towers. Expected: the pictures of the feature in focus are the largest; press one and its ticket is selected.
 6. Switch to by feature, quit Deck and open it again. Expected: it opens by feature; switch back to by phase.
-7. Repeat steps 2 to 5 on your-trainer.
+7. Repeat steps 2 to 5a on your-trainer. There the feature in focus, FEAT-0140, has no phase, so the board says it does not stand on the ring.
+
+The steps were checked against the build on 2026-10-22 ([[TASK-0187]]): each is driven, with the real pointer and keyboard, by the towers walk in the container (`bash tools/scripts/walk-in-a-box.sh towers-rubric`, and with `--workspace ../your-trainer`). That is evidence the route works, not this test's verdict, which is Edwin's.
 
 ## Verdict
 
