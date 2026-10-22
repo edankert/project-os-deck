@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-22
+review_verdict: approved
+review_round: 2
 related: ["[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[FEAT-0030-Agent-Sessions-Needs-You-And-The-Overview-Panels-Are-Drawn-Before-They-Are-Built]]", "[[FEAT-0033-A-Session-Is-Drawn-As-A-Conversation-Beside-The-Ticket-It-Was-Started-On]]", "[[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]", "[[RISK-0012]]", "[[RISK-0013]]", "[[RISK-0015]]", "[[RISK-0016]]", "[[RISK-0017]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
 ---
 
@@ -95,3 +95,7 @@ What they found, each a defect this feature wrote, fixed in [[TASK-0207]]:
 Two claims were worded wrongly, and are corrected rather than changed in code. The cockpit keeps prompt text in the repository's gitignored `.cockpit/` folder, as it does for its own sessions ([[RISK-0016]]). With Codex, "Edit files without asking" also runs commands without asking, inside the sandbox.
 
 Left as they are: an approval the cockpit records for a Codex session says Claude, because the cockpit's `approvals.py` writes `agent: "claude"` for every offer (the cockpit's to change); a failed worktree start keeps the folder it was meant to use; and requests Deck does not answer are refused with an error, which no real Codex turn has exercised yet.
+
+**Round two, 2026-10-22, at e07e359: approved by both reviewers.** Each removed every fix in turn and saw a check fail, except for two the reviewers judged by reading: the pinned Codex reviewer, whose removal breaks the TypeScript build, and Deck's quit waiting for the last reports, which no suite runs because it is Electron main-process code. One reviewer's first removals were spoiled because the two of them shared scratchpad file names; it restored its worktree and ran them again under its own names, and the other reviewer's counts agree.
+
+The feature stays at review until a real Claude session shows a writing tool being asked about. Edwin allowed one real session, which was read-only; a second needs his say.
