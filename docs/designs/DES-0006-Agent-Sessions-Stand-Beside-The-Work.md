@@ -57,7 +57,7 @@ The session opened: 47 tickets joined to it, context 67% of its 1,000k window, $
 
 ![The cockpit's repository, a session with permission requests](__attachments__/DES-0006/agents-cockpit-session.jpg)
 
-The cockpit's repository: Claude bc4cdcaa, waiting for you, worked on eleven tickets of FEAT-0157 and FEAT-0159, ran Bash 480 times, and asked six permissions on 14 October, drawn with their outcomes.
+The cockpit's repository: Claude bc4cdcaa, waiting for you, worked on eleven tickets, FEAT-0157 and its tasks among them, ran Bash 480 times, and asked six permissions on 14 October, drawn with their outcomes.
 
 ![your-trainer, the agents at their towers](__attachments__/DES-0006/agents-your-trainer-ring.jpg)
 
