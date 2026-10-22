@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0192
 aliases: ["TASK-0192"]
 title: "The Claude provider runs a session through the Agent SDK's query(), raises each permission request for Deck to answer, and never skips permissions"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
