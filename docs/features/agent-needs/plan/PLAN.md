@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0034: one Needs you and the cockpit's overview panels"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-22
 updated: 2026-10-22

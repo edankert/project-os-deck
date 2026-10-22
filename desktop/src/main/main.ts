@@ -12,6 +12,7 @@ import { runDrive } from './drive.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { BrowserWindow, app, clipboard, dialog, ipcMain, screen, shell } from 'electron';
 import { SHELL_CAPABILITIES, SERVED_CAPABILITIES } from '../shared/capability.js';
 import { type DeckAction, isRendererAction } from '../shared/store-state.js';
@@ -58,6 +59,8 @@ import { SidecarReporter } from './agents/sidecar-report.js';
 import { ClaudeProvider } from './agents/claude-provider.js';
 import { CodexProvider } from './agents/codex-provider.js';
 import { registerAgentCalls } from './agents/ipc.js';
+import type { AgentProvider } from './agents/provider.js';
+import type { AgentKind } from '../shared/agent-types.js';
 
 // Read once, at start, so every window in a run is treated the same way
 // (ISS-0075). `focusApp` consults it; `runSmoke` prints it.
@@ -89,11 +92,44 @@ const sidecars = new SidecarSupervisor();
  * repository, reported to each workspace's sidecar, and reached only through the shell's
  * preload bridge (RISK-0015).
  */
-const agentSessions = new SessionManager(path.join(app.getPath('userData'), 'agents'), { claude: new ClaudeProvider(), codex: new CodexProvider() });
+/**
+ * In a scripted drive, and only there, `--fake-agents <script.json>` plays the suite's fake
+ * provider instead of a real agent (TASK-0201): the walk shows the session screens with invented
+ * words and reaches no model. Its sessions are kept in a temporary folder, not Deck's own.
+ */
+const fakeAgentScript = process.argv.includes('--drive') ? argValue('--fake-agents') : null;
+const agentSessions = fakeAgentScript === null
+  ? new SessionManager(path.join(app.getPath('userData'), 'agents'), { claude: new ClaudeProvider(), codex: new CodexProvider() })
+  : new SessionManager(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-drive-agents-')), fakeAgents(fakeAgentScript));
+
+function fakeAgents(scriptPath: string): Record<AgentKind, AgentProvider> {
+  const script = JSON.parse(fs.readFileSync(scriptPath, 'utf8')) as Partial<Record<AgentKind, unknown[]>> & { delay?: number };
+  type Fake = { fakeProvider(agent: AgentKind, script: unknown[], options: { id: string; delay: number }): AgentProvider };
+  // The suite's own fake, an ES module, loaded the way the Agent SDK is.
+  const fake = (new Function('specifier', 'return import(specifier)') as (s: string) => Promise<Fake>)(pathToFileURL(path.join(__dirname, '..', '..', 'tests', 'fake-agent.mjs')).href);
+  let n = 0;
+  const one = (agent: AgentKind): AgentProvider => ({
+    agent,
+    start: async (options, hooks) => {
+      // Each hook the fake calls goes to the drive's log, so a walk that fails says what the agent did.
+      const said = (name: string): void => console.log(`deck: fake ${agent} ${name}`);
+      const logged: typeof hooks = { ...hooks, turnEnded: () => { said('turn ended'); hooks.turnEnded(); }, ended: (reason) => { said(`ended ${reason ?? ''}`); hooks.ended(reason); }, ask: (r) => { said(`asks ${r.id}`); return hooks.ask(r); } };
+      return (await fake).fakeProvider(agent, script[agent] ?? [], { id: `fake-${agent}-${(n += 1)}`, delay: script.delay ?? 500 }).start(options, logged);
+    },
+  });
+  return { claude: one('claude'), codex: one('codex') };
+}
 const agentReports = new SidecarReporter(agentSessions, (id) => sidecars.handle(id)?.base ?? null);
 agentSessions.onChange((change) => {
   for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.webContents.send('deck:agents:change', change);
 });
+// In a drive with the fake agent, every change goes to the log in order (TASK-0201's walk).
+if (fakeAgentScript !== null) {
+  agentSessions.onChange(({ sessionId, change }) => {
+    const c = change.kind === 'session' ? `session ${change.session.state}` : `record ${change.record.kind}${'state' in change.record ? ` ${change.record.state}` : 'outcome' in change.record ? ` ${change.record.outcome}` : ''}`;
+    console.log(`deck: change ${sessionId.slice(0, 8)} ${c} -> ${agentSessions.get(sessionId)?.state}`);
+  });
+}
 
 /**
  * Deck's own index, one per open workspace.
@@ -523,7 +559,7 @@ function failHandoffsFor(windowId: number, answer: HandoffAnswer): void {
 function registerIpc(): void {
   handle('deck:capabilities', () => SHELL_CAPABILITIES);
   // A window names a workspace; Deck's own list says where it is.
-  registerAgentCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, agentSessions, (id) => workspaces.get(id)?.root ?? null, (id) => sidecars.handle(id)?.base ?? null);
+  registerAgentCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, agentSessions, (id) => workspaces.get(id)?.root ?? null, (id) => sidecars.handle(id)?.base ?? null, { secretFor: (id) => sidecars.secretFor(id), actor: () => store.getState().actor });
 
   handle('deck:workspaces:list', () => workspaces.list());
 

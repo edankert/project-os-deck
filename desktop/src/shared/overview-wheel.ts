@@ -109,9 +109,12 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
   const board = nextUpPanel(model, layout, ctx, WHEEL_BOARD);
   // The session pane stands at the right as a selected ticket's pane does; the panels there make way for either.
   const session = layout.session === null ? null : options.session ?? null;
-  const right = layout.selection !== null || session !== null ? [] : [needsPanel(model, ctx, WHEEL_NEEDS), weeksPanel(model, options.today ?? todayOf(model), WHEEL_WEEKS)];
-  // Every agent session, in the shell only: a page given no sessions to show has no list (RISK-0015).
-  const agents = options.agents === undefined ? null : agentsPanel(options.agents, ctx, session, WHEEL_AGENTS);
+  const right = layout.selection !== null || session !== null ? [] : [needsPanel(model, ctx, WHEEL_NEEDS, options.agents !== undefined && options.needs !== undefined ? { needs: options.needs, agents: options.agents } : undefined), weeksPanel(model, options.today ?? todayOf(model), WHEEL_WEEKS)];
+  // Every agent session, in the shell only: a page given no sessions to show has no list (RISK-0015). While a
+  // session is open the ring moves left of its pane, so the panels on the left make way too, and its marker and
+  // curves stand clear; closing the pane brings them back (TASK-0201's walk).
+  const agents = options.agents === undefined || session !== null ? null : agentsPanel(options.agents, ctx, session, WHEEL_AGENTS);
+  const left = session === null ? [board] : [];
   const sel = layout.selection;
   // Escape clears the selection: the overview goes to the screen a row with id `back` names.
   const back: ListRow[] = sel === null ? [] : [{ id: 'back', label: `Clear the selection of ${sel.id}`, group: 'Go to', target: ctx.address({ page: 'wheel' }) }];
@@ -126,12 +129,12 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
       { kind: 'text', x: 40, y: 56, text: model.workspace, rest: true, role: 'name', size: 22, cls: 'ov-title' },
       ...plan.nodes,
       ...ways.nodes,
-      board.node,
+      ...left.map((p) => p.node),
       ...right.map((p) => p.node),
       ...(agents === null ? [] : [agents.node]),
       ...selected.nodes,
       { kind: 'towers', layout },
     ],
-    list: [...back, ...(session !== null && sel === null ? [{ id: 'back', label: 'Close the session', group: 'Go to', target: ctx.address({ page: 'wheel' }) }] : []), ...selected.rows, ...right.flatMap((p) => p.rows), ...(agents?.rows ?? []), ...board.rows, ...ways.rows, ...plan.rows],
+    list: [...back, ...(session !== null && sel === null ? [{ id: 'back', label: 'Close the session', group: 'Go to', target: ctx.address({ page: 'wheel' }) }] : []), ...selected.rows, ...right.flatMap((p) => p.rows), ...(agents?.rows ?? []), ...left.flatMap((p) => p.rows), ...ways.rows, ...plan.rows],
   };
 }

@@ -1,0 +1,35 @@
+{
+  "delay": 450,
+  "claude": [
+    [
+      { "text": "Reading the ticket. Every word in this session is invented for the walk." },
+      { "tool": "Read", "summary": "docs/an-invented-note.md" },
+      { "tool": "Bash", "summary": "ls" },
+      { "tool": "Bash", "summary": "git status" },
+      { "plan": [["Read the ticket", true], ["Change the example", false], ["Run the checks", false]] },
+      { "ask": "Edit", "summary": "src/example.ts" },
+      { "edit": "src/example.ts", "added": 6, "removed": 2 },
+      { "plan": [["Read the ticket", true], ["Change the example", true], ["Run the checks", false]] },
+      { "text": "Changed the example. Shall I run the checks?" }
+    ],
+    [
+      { "ask": "Bash", "summary": "npm test" },
+      { "text": "Never reached when the request is denied." }
+    ],
+    [
+      { "text": "Working through a long invented step." },
+      { "tool": "Read", "summary": "docs/one.md" },
+      { "tool": "Read", "summary": "docs/two.md" },
+      { "tool": "Read", "summary": "docs/three.md" },
+      { "tool": "Read", "summary": "docs/four.md" },
+      { "tool": "Read", "summary": "docs/five.md" },
+      { "tool": "Read", "summary": "docs/six.md" },
+      { "text": "Done reading." }
+    ]
+  ],
+  "codex": [
+    [
+      { "text": "Codex, invented for the walk." }
+    ]
+  ]
+}

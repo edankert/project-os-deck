@@ -39,6 +39,16 @@ export async function postAgentReport(base: string, reportPath: string, body: un
   return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };
 }
 
+/**
+ * Answer one of the cockpit's permission requests (FEAT-0034, TASK-0204): `POST /api/cockpit/approve`
+ * with the sidecar's shell secret, from the main process over loopback. Only a sidecar Deck started
+ * gives a secret; the secret is sent in the header the sidecar checks, and nowhere else.
+ */
+export async function answerCockpitApproval(base: string, secret: string, body: { approval_id: string; decision: 'granted' | 'denied'; actor: string }, fetchImpl: typeof fetch = fetch): Promise<{ ok: boolean; status: number; json: unknown }> {
+  const res = await fetchImpl(`${base}/api/cockpit/approve`, { method: 'POST', headers: { 'content-type': 'application/json', 'X-Cockpit-Secret': secret }, body: JSON.stringify(body) });
+  return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };
+}
+
 export class WriteRefused extends Error {
   /** The HTTP status the sidecar answered with, for a caller that wants it. */
   readonly status: number;

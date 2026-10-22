@@ -10,6 +10,7 @@
  * Deck stops only the sidecars Deck started.
  */
 import { type ChildProcess, spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
@@ -100,6 +101,18 @@ export class SidecarSupervisor {
     const record = this.records.get(workspaceId);
     return record === undefined ? null : { ...record };
   }
+
+  /**
+   * The shell secret of a sidecar Deck started (FEAT-0034, TASK-0204), which lets the main process
+   * answer the cockpit's permission requests. A borrowed sidecar gives none. Kept apart from the
+   * records, so a handle never carries it; it goes to no renderer, host, log or store.
+   */
+  secretFor(workspaceId: string): string | null {
+    const record = this.records.get(workspaceId);
+    return record !== undefined && record.ownedByDeck ? this.secrets.get(workspaceId) ?? null : null;
+  }
+
+  private readonly secrets = new Map<string, string>();
 
   /** Reuse a live sidecar for this workspace, or start one. */
   async resolve(workspace: Workspace): Promise<SidecarHandle> {
@@ -194,13 +207,20 @@ export class SidecarSupervisor {
         '--bind',
         '127.0.0.1',
         '--no-open',
+        // The shell secret on standard input, never in the arguments or the environment (TASK-0204).
+        '--secret-stdin',
       ],
       {
         cwd: workspace.root,
         env: { ...process.env, PYTHONUNBUFFERED: '1' },
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],
       },
     );
+    // Made fresh at each start, written as the one line the sidecar reads, then stdin is closed.
+    const secret = crypto.randomBytes(24).toString('hex');
+    this.secrets.set(workspace.id, secret);
+    child.stdin?.on('error', () => undefined);
+    child.stdin?.end(`${JSON.stringify({ secret })}\n`);
 
     const record: Record_ = { workspaceId: workspace.id, base, ownedByDeck: true, process: child, stderrTail: [], ready: false };
     // Registered BEFORE the readiness wait, so a quit mid-wait still kills it.

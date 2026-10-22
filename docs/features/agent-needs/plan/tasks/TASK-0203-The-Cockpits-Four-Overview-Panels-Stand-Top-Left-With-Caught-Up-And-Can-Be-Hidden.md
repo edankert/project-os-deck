@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0203
 aliases: ["TASK-0203"]
 title: "The cockpit's four overview panels stand top left on Deck's ring, Caught up writes through the shell, and Overview hides them and is remembered"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

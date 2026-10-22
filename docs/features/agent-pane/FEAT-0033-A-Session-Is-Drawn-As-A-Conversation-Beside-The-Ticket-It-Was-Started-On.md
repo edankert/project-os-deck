@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0033
 aliases: ["FEAT-0033"]
 title: "A session is drawn as a conversation in the side pane beside the ticket it was started on, agents stand over their tickets on the towers, and Work on this starts one"
-status: doing
+status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -62,7 +62,9 @@ Out of scope:
 
 ## Verification
 
-Not built yet. [[TST-0105]] is `bash tools/scripts/run-desktop-tests.sh agent-pane`; [[TASK-0197]] creates it. Edwin's acceptance test is [[TST-0108]].
+Built on 2026-10-22, [[TASK-0197]] to [[TASK-0201]]. [[TST-0105]] (`bash tools/scripts/run-desktop-tests.sh agent-pane`) has 20 checks on both overview fixtures; `cd desktop && npm test` passes. The walk `bash tools/scripts/walk-in-a-box.sh agent-sessions --copy` ran the screens in a real Deck window in the container, with the suite's scripted agent: 24 checks, all held. It found three faults, each fixed (see [[TASK-0201]] and [[TASK-0208]]).
+
+Not yet shown: a real agent in the pane (Edwin allowed one real session, which was read-only and ran before the pane existed). Edwin's acceptance test is [[TST-0108]], `draft` until FEAT-0034 and FEAT-0035 give it its last steps.
 
 ## Links
 

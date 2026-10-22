@@ -10,6 +10,7 @@ import type { AgentBridge } from './host-bridge.js';
 import type { SessionRecord } from '../shared/agent-types.js';
 import { allSummaries, cockpitSummaries, deckSummaries, type AgentSummary } from '../shared/agent-marks.js';
 import type { OverviewModel } from '../shared/overview-types.js';
+import type { AgentNeeds } from '../shared/agent-needs.js';
 
 /** How often the cockpit's sessions are read again while the overview is open. */
 const COCKPIT_EVERY_MS = 15_000;
@@ -17,6 +18,7 @@ const COCKPIT_EVERY_MS = 15_000;
 let bridge: AgentBridge | null = null;
 let deck: SessionRecord[] = [];
 const cockpit = new Map<string, unknown>();
+const needs = new Map<string, AgentNeeds | null>();
 let redraw: () => void = () => undefined;
 let lastShape = '';
 let pending: ReturnType<typeof setTimeout> | null = null;
@@ -29,10 +31,14 @@ export function watchAgents(agents: AgentBridge | null, onChange: () => void): v
   void reloadDeck();
   // A session's state or start changes its marker; a record within a turn does not.
   agents.subscribe((raw) => {
-    if ((raw as { change?: { kind?: string } }).change?.kind === 'session') void reloadDeck();
+    const kind = (raw as { change?: { kind?: string } }).change?.kind;
+    if (kind === 'session') void reloadDeck();
+    // A request opened or answered changes Needs you.
+    if (kind === 'session' || (raw as { change?: { record?: { kind?: string } } }).change?.record?.kind === 'permission') for (const workspaceId of needs.keys()) void reloadNeeds(workspaceId);
   });
   setInterval(() => {
     for (const workspaceId of cockpit.keys()) void reloadCockpit(workspaceId);
+    for (const workspaceId of needs.keys()) void reloadNeeds(workspaceId);
   }, COCKPIT_EVERY_MS);
 }
 
@@ -45,6 +51,23 @@ export function agentsFor(workspaceId: string, model: Pick<OverviewModel, 'ticke
   }
   const mine = deckSummaries(deck, workspaceId);
   return allSummaries(mine, cockpitSummaries(cockpit.get(workspaceId), model, new Set(mine.map((s) => s.id))));
+}
+
+/** The requests and git state Needs you shows; undefined where the host has none to give. */
+export function needsFor(workspaceId: string): AgentNeeds | undefined {
+  if (bridge === null || bridge.needs === undefined) return undefined;
+  if (!needs.has(workspaceId)) {
+    needs.set(workspaceId, null);
+    void reloadNeeds(workspaceId);
+  }
+  return needs.get(workspaceId) ?? { requests: [], answered: null, git: null };
+}
+
+async function reloadNeeds(workspaceId: string): Promise<void> {
+  if (bridge?.needs === undefined) return;
+  const res = (await bridge.needs(workspaceId).catch(() => null)) as { ok?: boolean; needs?: AgentNeeds } | null;
+  if (res?.ok === true && res.needs !== undefined) needs.set(workspaceId, res.needs);
+  changed();
 }
 
 /** One summary by session id, for the pane to open a cockpit session. */
@@ -71,6 +94,7 @@ function changed(): void {
   const shape = JSON.stringify([
     deck.map((s) => [s.id, s.workspaceId, s.state, s.ticket]),
     [...cockpit.entries()].map(([k, v]) => [k, ((v as { sessions?: Array<{ session_id: string; state: string; ended: unknown }> } | null)?.sessions ?? []).map((s) => [s.session_id, s.state, s.ended])]),
+    [...needs.entries()],
   ]);
   if (shape === lastShape) return;
   lastShape = shape;

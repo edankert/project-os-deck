@@ -10,7 +10,7 @@
  */
 import type { AgentBridge } from './host-bridge.js';
 import type { ConversationRecord, SessionRecord } from '../shared/agent-types.js';
-import { ACCESS_WORD, AGENT_GLYPH, AGENT_WORD, EFFORTS, MODELS, STATE_WORD, composerOf, paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
+import { ACCESS_WORD, ANSWER_WORD, AGENT_GLYPH, AGENT_WORD, EFFORTS, MODELS, STATE_WORD, composerOf, paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
 import type { AgentSummary } from '../shared/agent-marks.js';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text?: string): HTMLElementTagNameMap[K] {
@@ -199,15 +199,15 @@ export class AgentPane {
         const box = el('div', `ag-ask ag-ask-${r.outcome}`);
         box.append(el('div', 'ag-ask-what', `${r.tool}: ${r.summary}`));
         if (r.outcome === 'open') {
-          const approve = el('button', 'ag-approve', 'Approve');
-          const deny = el('button', 'ag-deny', 'Deny');
+          const approve = el('button', 'ag-approve', ANSWER_WORD.allow);
+          const deny = el('button', 'ag-deny', ANSWER_WORD.deny);
           approve.type = deny.type = 'button';
           approve.addEventListener('click', () => void this.answer(r.id, true));
           deny.addEventListener('click', () => void this.answer(r.id, false));
           const acts = el('div', 'ag-ask-acts');
           acts.append(approve, deny);
           box.appendChild(acts);
-        } else box.appendChild(el('div', 'ag-ask-outcome', r.outcome === 'approved' ? 'Approved' : `Denied${r.message ? `: ${r.message}` : ''}`));
+        } else box.appendChild(el('div', 'ag-ask-outcome', r.outcome === 'approved' ? `${ANSWER_WORD.allow}d` : `Denied${r.message ? `: ${r.message}` : ''}`));
         return box;
       }
     }

@@ -1014,6 +1014,8 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       } else {
         layout = next;
         drawPictures();
+        // The agents change without the ring changing: a session starts, waits, stops (TASK-0201's walk).
+        drawAgents();
         if (wasOpen !== next.open) applyOpen(true);
         else applyLook();
       }

@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0034
 aliases: ["FEAT-0034"]
 title: "One Needs you, with permission requests first, and the cockpit's four overview panels stand on Deck's ring, hidden by one remembered toggle"
-status: planned
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

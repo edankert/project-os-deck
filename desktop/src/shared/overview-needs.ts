@@ -8,7 +8,10 @@
  * the same answer on any day.
  */
 import { weeksOf } from './overview-notes.js';
-import type { ListRow, PanelNode, PanelRow, ScreenContext } from './overview-scene.js';
+import type { ListRow, PanelNeeds, PanelNode, PanelRow, ScreenContext } from './overview-scene.js';
+import { gitWords, waitingAgents, type AgentNeeds } from './agent-needs.js';
+import { sessionTarget, type AgentSummary } from './agent-marks.js';
+import type { AgentKind } from './agent-types.js';
 import type { NeedReason, OverviewModel, Ticket } from './overview-types.js';
 
 /** The cockpit's reasons, the most urgent first, with the words and colours the panel draws. */
@@ -48,17 +51,58 @@ function row(t: Ticket, ctx: ScreenContext): PanelRow {
   return { id: t.id, type: t.type, fill: t.fill, needsYou: t.needsYou, title: t.title, status: t.status, target: ctx.address({ page: 'wheel', select: t.id }), ...(t.needs ? { note: t.needs.say } : {}) };
 }
 
-/** The needs-you panel, top right on the wheel. */
-export function needsPanel(model: OverviewModel, ctx: ScreenContext, place: { x: number; y: number; w: number; h: number }): { node: PanelNode; rows: ListRow[] } {
+/** What the shell adds to Needs you (FEAT-0034): its requests and git state, and every agent session. */
+export interface NeedsExtra {
+  needs: AgentNeeds;
+  agents: readonly AgentSummary[];
+}
+
+/** The action a request's Approve or Deny asks for (TASK-0202, TASK-0204). */
+export const ANSWER = 'agent-answer:';
+export const answerAction = (source: 'deck' | 'cockpit', session: string, id: string, allow: boolean): string => `${ANSWER}${source}:${allow ? 'allow' : 'deny'}:${session}:${id}`;
+
+/**
+ * The needs-you panel, top right on the wheel. In the shell, everything waiting on you, in the
+ * order Edwin chose: permission requests, agents waiting, tickets by reason, then what is not pushed.
+ * On a served page, the tickets by reason alone.
+ */
+export function needsPanel(model: OverviewModel, ctx: ScreenContext, place: { x: number; y: number; w: number; h: number }, extra?: NeedsExtra): { node: PanelNode; rows: ListRow[] } {
   const by = needsByReason(model);
   const parts = REASONS.filter((r) => by.get(r.reason)!.length > 0).map((r) => ({ reason: r.reason, word: r.word, colour: r.colour, ids: by.get(r.reason)!.map((t) => t.id) }));
-  const first = REASONS.flatMap((r) => by.get(r.reason)!).slice(0, 3);
-  const total = parts.reduce((n, p) => n + p.ids.length, 0);
+  const tickets = parts.reduce((n, p) => n + p.ids.length, 0);
+  const requests = extra?.needs.requests ?? [];
+  const waiting = extra === undefined ? [] : waitingAgents(extra.agents, requests);
+  // The rows under the bar: as many tickets as the requests and agents above them leave room for.
+  const first = REASONS.flatMap((r) => by.get(r.reason)!).slice(0, Math.max(1, 3 - Math.min(2, requests.length + waiting.length)));
+  const total = tickets + requests.length + waiting.length;
+  const who = (agent: AgentKind, session: string): string => `${agent === 'codex' ? 'Codex' : 'Claude'} ${session.slice(0, 8)}`;
+  const shown = requests.map((r) => ({
+    id: r.id, tool: r.tool, summary: r.summary, who: who(r.agent, r.session), source: r.source,
+    ...(r.source === 'deck' ? { target: sessionTarget(ctx, r.session) } : {}),
+    ...(r.answerable ? { approve: answerAction(r.source, r.session, r.id, true), deny: answerAction(r.source, r.session, r.id, false) } : {}),
+    label: `${who(r.agent, r.session)} asks to use ${r.tool}: ${r.summary}${r.answerable ? '' : '. Answer in the cockpit'}`,
+  }));
+  const agents = waiting.map((s) => ({ id: s.id, words: `${who(s.agent, s.id)} is waiting for you${s.start === null ? '' : ` on ${s.start}`}`, target: sessionTarget(ctx, s.id), label: `${who(s.agent, s.id)} is waiting for you: open it` }));
+  const git = extra === undefined ? null : gitWords(extra.needs.git);
+  const answered = extra?.needs.answered ?? null;
+  const body: PanelNeeds = {
+    kind: 'needs', total, parts, rows: first.map((t) => row(t, ctx)),
+    ...(extra !== undefined ? { requests: shown, agents } : {}),
+    ...(answered !== null ? { answered: `Last answered: ${answered.tool} ${answered.summary}, ${answered.outcome}` } : {}),
+    ...(git !== null ? { git } : {}),
+  };
+  const asks = requests.length + waiting.length;
   return {
-    node: { kind: 'panel', key: 'needs-you', ...place, label: `${total} tickets need you`, body: { kind: 'needs', total, parts, rows: first.map((t) => row(t, ctx)) } },
+    node: { kind: 'panel', key: 'needs-you', ...place, label: `${total} need you${asks > 0 ? `: ${requests.length} request${requests.length === 1 ? '' : 's'}, ${waiting.length} waiting agent${waiting.length === 1 ? '' : 's'}, ${tickets} ticket${tickets === 1 ? '' : 's'}` : ''}`, body },
     rows: [
+      ...shown.flatMap((r) => [
+        { id: `request-${r.id}`, label: r.label, group: 'Needs you', ...(r.target !== undefined ? { target: r.target } : {}) },
+        ...(r.approve !== undefined ? [{ id: `request-${r.id}-approve`, label: `Approve: ${r.label}`, group: 'Needs you', action: r.approve }, { id: `request-${r.id}-deny`, label: `Deny: ${r.label}`, group: 'Needs you', action: r.deny! }] : []),
+      ]),
+      ...agents.map((a) => ({ id: `waiting-${a.id}`, label: a.label, group: 'Needs you', target: a.target })),
       ...parts.map((p) => ({ id: `needs-${p.reason}`, label: `${p.ids.length} ${p.word}: light them on the towers`, group: 'Needs you', lights: p.ids })),
       ...first.map((t) => ({ id: t.id, label: `${t.id} ${t.title}: ${t.needs?.say ?? 'needs you'}`, group: 'Needs you', state: t.state, target: ctx.address({ page: 'wheel', select: t.id }) })),
+      ...(git !== null ? [{ id: 'needs-git', label: git, group: 'Needs you' }] : []),
     ],
   };
 }

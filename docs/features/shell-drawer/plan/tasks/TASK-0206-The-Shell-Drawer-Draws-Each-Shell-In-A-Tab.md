@@ -30,3 +30,4 @@ tests: ["[[TST-0107]]"]
 - [ ] Open its shell in a session's pane opens a tab in that session's folder, its worktree when it has one.
 - [ ] The drawer and its button are absent on the served page.
 - [ ] The suite checks the drawer's tab state; the window run for FEAT-0035 is held until Edwin says, and run in the container first.
+- [ ] [[TST-0108]]'s steps 5 to 8 are checked against the build, and the note goes from `draft` to `active` (moved here from [[TASK-0201]]: they need Needs you, ◫ Overview and this drawer).

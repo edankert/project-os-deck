@@ -14,6 +14,7 @@
  * for the session.
  */
 import { markWords } from '../shared/overview-marks.js';
+import { ANSWER_WORD } from '../shared/agent-pane.js';
 import { walkScene, type PanelAgents, type PanelButton, type PanelCard, type PanelNeeds, type PanelNode, type PanelRow, type PanelSection, type PanelWeeks, type Scene } from '../shared/overview-scene.js';
 
 /** Sections a person opened or closed, by panel and section key, for the session. */
@@ -151,8 +152,42 @@ function needsPanel(panel: PanelNode & { body: PanelNeeds }): HTMLElement {
   const n = panel.body;
   const box = el('div', 'ov-panel ov-panel-needs');
   box.append(el('div', 'ov-needs-title', 'Needs you'), el('div', 'ov-needs-big', String(n.total)));
+  // In the shell, the permission requests first and then the agents waiting (FEAT-0034, TASK-0202).
+  for (const r of n.requests ?? []) {
+    const ask = el('div', `ov-needs-ask is-${r.source}`);
+    ask.dataset['label'] = r.label;
+    const what = el(r.target !== undefined ? 'button' : 'div', 'ov-needs-ask-what');
+    if (r.target !== undefined) {
+      (what as HTMLButtonElement).type = 'button';
+      what.dataset['target'] = r.target;
+      what.dataset['label'] = `${r.label}: open the session`;
+    }
+    what.append(el('span', 'ov-needs-ask-who', r.who), el('span', 'ov-needs-ask-tool', `${r.tool}: ${r.summary}`));
+    ask.appendChild(what);
+    if (r.approve !== undefined && r.deny !== undefined) {
+      const acts = el('div', 'ov-needs-ask-acts');
+      for (const [word, action] of [[ANSWER_WORD.allow, r.approve], [ANSWER_WORD.deny, r.deny]] as const) {
+        const b = el('button', `ov-needs-${word.toLowerCase()}`, word);
+        b.type = 'button';
+        b.dataset['action'] = action;
+        b.dataset['label'] = `${word}: ${r.label}`;
+        acts.appendChild(b);
+      }
+      ask.appendChild(acts);
+    } else ask.appendChild(el('div', 'ov-needs-ask-elsewhere', 'Answer in the cockpit'));
+    box.appendChild(ask);
+  }
+  if (n.answered !== undefined) box.appendChild(el('div', 'ov-board-foot', n.answered));
+  for (const a of n.agents ?? []) {
+    const b = el('button', 'ov-needs-agent', a.words);
+    b.type = 'button';
+    b.dataset['target'] = a.target;
+    b.dataset['label'] = a.label;
+    box.appendChild(b);
+  }
   if (n.total === 0) {
     box.appendChild(el('div', 'ov-board-foot', 'Nothing is waiting on you.'));
+    if (n.git !== undefined) box.appendChild(el('div', 'ov-needs-git', n.git));
     return box;
   }
   const bar = el('div', 'ov-needs-bar');
@@ -172,6 +207,8 @@ function needsPanel(panel: PanelNode & { body: PanelNeeds }): HTMLElement {
   const list = el('ul', 'ov-rows');
   for (const r of n.rows) list.appendChild(rowElement(r));
   box.append(bar, keys, list);
+  // Last, what is not pushed (TASK-0202).
+  if (n.git !== undefined) box.appendChild(el('div', 'ov-needs-git', n.git));
   return box;
 }
 

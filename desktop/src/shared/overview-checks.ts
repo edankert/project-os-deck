@@ -72,7 +72,9 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
     const b = node.body;
     if (b.kind === 'needs') {
       const ids = b.parts.flatMap((p) => p.ids);
-      if (b.total !== ids.length) numberErrors.push(`${node.key}: says ${b.total} need you, its bar draws ${ids.length}`);
+      // In the shell the count adds the open requests and the waiting agents to the bar's tickets (FEAT-0034).
+      const more = (b.requests?.length ?? 0) + (b.agents?.length ?? 0);
+      if (b.total !== ids.length + more) numberErrors.push(`${node.key}: says ${b.total} need you, it draws ${ids.length} tickets${more > 0 ? `, ${more} requests and agents` : ''}`);
       if (b.parts.some((p) => p.ids.length === 0)) numberErrors.push(`${node.key}: a part of the bar draws nothing`);
       if (b.rows.some((r) => !ids.includes(r.id))) numberErrors.push(`${node.key}: a row is in no part of the bar`);
     }

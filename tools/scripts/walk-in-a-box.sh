@@ -98,6 +98,10 @@ elif [ "$COPY" = 1 ]; then
   ARGS="--workspace /tmp/deck-copy"
 fi
 
+# A walk with a script of invented agent steps beside it (`<walk>.agents.json`) runs Deck with the
+# suite's fake agent instead of a real one (TASK-0201): no model is reached from the box.
+if [ -f "$ROOT/desktop/demos/$WALK.agents.json" ]; then ARGS="$ARGS --fake-agents demos/$WALK.agents.json"; fi
+
 # The commit the walk ran on, for its log: the box has no use for git otherwise.
 BUILD="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 if [ -n "$(git -C "$ROOT" status --porcelain -- desktop/src 2>/dev/null)" ]; then BUILD="${BUILD}+uncommitted"; fi

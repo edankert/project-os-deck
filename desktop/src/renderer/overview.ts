@@ -24,6 +24,7 @@ import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContex
 import { buildPanels, type PanelLayer } from './overview-panels.js';
 import type { TowersView } from './overview-towers-view.js';
 import { FRAME_ACTION, WORK_ON, standsIn } from '../shared/overview-select.js';
+import { ANSWER } from '../shared/overview-needs.js';
 import { openWorkOn } from './agent-start.js';
 import { SEARCH_LIST, searchTickets } from '../shared/overview-search.js';
 import { square } from './overview-panels.js';
@@ -1155,6 +1156,20 @@ async function act(action: string): Promise<void> {
   if (action === FRAME_ACTION) {
     if (towersActive()) towersView!.frame();
     else api.say('Frame turns the 3D view, which this window could not start');
+    return;
+  }
+  // Approve or Deny on a request in Needs you (TASK-0202): Deck's own through its session, the cockpit's through
+  // the main process, which alone holds the sidecar's shell secret (TASK-0204).
+  if (action.startsWith(ANSWER)) {
+    const bridge = api.agents?.() ?? null;
+    const [source, verdict, session, ...rest] = action.slice(ANSWER.length).split(':');
+    const id = rest.join(':');
+    if (bridge === null || session === undefined || id === '') return;
+    const allow = verdict === 'allow';
+    const res = (source === 'deck'
+      ? await bridge.answer(session, id, allow ? { allow: true } : { allow: false, message: 'Denied in Deck.' })
+      : await (bridge.cockpitAnswer?.(current.address.workspaceId, id, allow) ?? Promise.resolve({ ok: false, error: 'answer it in the cockpit' }))) as { ok?: boolean; error?: string };
+    if (res?.ok !== true) api.say(res?.error ?? 'that request was already answered, or its session has ended', true);
     return;
   }
   // Work on this opens its dialog over the overview, for the ticket it names (TASK-0200).

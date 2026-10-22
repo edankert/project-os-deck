@@ -245,6 +245,8 @@ function needsFlat(panel: PanelNode & { body: PanelNeeds }): SceneNode[] {
   const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
   out.push({ kind: 'text', x: x + 16, y: y + 24, text: 'NEEDS YOU', rest: true, role: 'label', size: 11, cls: 'ov-needs-count' });
   out.push({ kind: 'text', x: x + 16, y: y + 66, text: String(n.total), rest: true, role: 'label', size: 40, cls: 'ov-needs-count' });
+  // The shell's requests and waiting agents, one line each, beside the count (FEAT-0034).
+  [...(n.requests ?? []).map((r) => `${r.who}: ${r.tool} ${r.summary}`), ...(n.agents ?? []).map((a) => a.words)].slice(0, 2).forEach((line, i) => out.push({ kind: 'text', x: x + 80, y: y + 46 + i * 16, text: line.length > 44 ? `${line.slice(0, 43)}…` : line, rest: true, role: 'label', size: 11 }));
   let at = x + 16;
   const span = w - 32;
   for (const part of n.parts) {
@@ -254,6 +256,7 @@ function needsFlat(panel: PanelNode & { body: PanelNeeds }): SceneNode[] {
   }
   out.push({ kind: 'text', x: x + 16, y: y + 108, text: n.parts.map((p) => `${p.ids.length} ${p.word}`).join(' · '), rest: true, role: 'label', size: 11.5 });
   n.rows.forEach((r, i) => out.push(...rowNodes(r, x + 12, y + 136 + i * ROW, w - 24, 1)));
+  if (n.git !== undefined) out.push({ kind: 'text', x: x + 16, y: y + h - 14, text: n.git, rest: true, role: 'label', size: 11, cls: 'ov-dim' });
   return out;
 }
 
@@ -367,6 +370,17 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-pane-picture { margin: 0; border-radius: 6px; overflow: hidden; border: 1px solid hsla(190, 90%, 65%, 0.3); background: hsla(210, 50%, 9%, 0.8); }
 .ov-pane-picture img { display: block; width: 100%; height: 78px; object-fit: cover; }
 /* What needs you and the year as weeks (TASK-0184). */
+.ov-needs-ask { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 8px; border: 1px solid ${needsYou}; background: hsla(5, 50%, 30%, 0.18); pointer-events: auto; }
+.ov-needs-ask-what { all: unset; display: flex; flex-direction: column; gap: 1px; cursor: pointer; }
+div.ov-needs-ask-what { cursor: default; }
+.ov-needs-ask-who { font-size: 11px; color: hsl(205 25% 70%); }
+.ov-needs-ask-tool { font: 11.5px "SF Mono", Menlo, monospace; word-break: break-all; }
+.ov-needs-ask-acts { display: flex; gap: 6px; }
+.ov-needs-ask-acts button { all: unset; cursor: pointer; padding: 2px 10px; border-radius: 6px; font-size: 12px; border: 1px solid hsla(190, 90%, 65%, 0.45); }
+.ov-needs-approve { background: hsla(140, 50%, 40%, 0.35); } .ov-needs-deny { background: hsla(5, 60%, 45%, 0.35); }
+.ov-needs-ask-elsewhere { font-size: 11.5px; color: hsl(205 25% 70%); font-style: italic; }
+.ov-needs-agent { all: unset; cursor: pointer; font-size: 12px; padding: 3px 8px; border-radius: 6px; border: 1px solid hsla(190, 90%, 65%, 0.3); pointer-events: auto; }
+.ov-needs-git { font-size: 11.5px; color: hsl(205 25% 70%); margin-top: auto; }
 .ov-panel-agents { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; pointer-events: auto; }
 .ov-agents-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: hsl(195 40% 82%); }
 .ov-agent-row { grid-template-columns: 14px auto 1fr auto; cursor: pointer; }

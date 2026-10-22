@@ -178,6 +178,7 @@ test('an open session joins its marker to the tickets it worked on, makes the ri
   assert.equal(formatAddress(address), scene.address);
   const panels = [...walkScene(scene.nodes)].filter((n) => n.kind === 'panel').map((n) => n.key);
   assert.ok(!panels.includes('needs-you') && !panels.includes('weeks'), 'the session pane stands where they were');
+  assert.ok(!panels.includes('agents') && !panels.some((k) => /board|next/.test(k)), 'and the left side makes way for the ring, which moves left of the pane');
   assert.equal(parseAddress(scene.list.find((r) => r.id === 'back').target).session, null, 'Escape closes it');
   assert.ok([...walkScene(scene.nodes)].some((n) => n.kind === 'mark' && /ov-agent .*is-open/.test(n.cls ?? '')));
   assert.throws(() => parseAddress('deck://abcd1234/overview?page=phase&note=PHASE-0001&session=abc'), /session/);

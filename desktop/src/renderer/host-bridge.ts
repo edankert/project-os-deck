@@ -50,6 +50,10 @@ export interface AgentBridge {
   list(): Promise<unknown>;
   /** The cockpit's own sessions on a workspace, read by the main process (TASK-0199). */
   cockpit?(workspaceId: string): Promise<unknown>;
+  /** What Needs you shows beyond the tickets: open requests and git (TASK-0202). */
+  needs?(workspaceId: string): Promise<unknown>;
+  /** Answer one of the cockpit's requests; the main process holds the shell secret (TASK-0204). */
+  cockpitAnswer?(workspaceId: string, approvalId: string, allow: boolean): Promise<unknown>;
   conversation(id: string): Promise<unknown>;
   start(request: unknown): Promise<unknown>;
   send(id: string, text: string): Promise<unknown>;

@@ -42,7 +42,7 @@ Deck and the cockpit both open on Deck's own repository; the cockpit's sidecar i
 
 1. On the towers, press a backlog task's tower, then Work on this on its card.
 2. Choose Claude, leave Ask before acting and This checkout, and press Start.
-3. Ask it, in the composer, to run a command that needs permission, for example `git status`.
+3. Ask it, in the composer, to run a command that writes, for example `touch deck-check.txt`. A command that only reads, such as `git status`, runs without asking: Claude Code allows read-only commands in its default mode.
 4. Press Approve on the request at its turn.
 5. In the cockpit, look at its agents and its Needs you.
 6. In Deck, press ⌘ Shells, then New shell, then Open its shell in the session's pane.

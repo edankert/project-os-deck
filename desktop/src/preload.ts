@@ -74,6 +74,8 @@ const api = {
   agents: {
     list: (): Promise<unknown> => ipcRenderer.invoke('deck:agents:list'),
     cockpit: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:cockpit', workspaceId),
+    needs: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:needs', workspaceId),
+    cockpitAnswer: (workspaceId: string, approvalId: string, allow: boolean): Promise<unknown> => ipcRenderer.invoke('deck:agents:cockpit-answer', workspaceId, approvalId, allow),
     conversation: (id: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:conversation', id),
     start: (request: unknown): Promise<unknown> => ipcRenderer.invoke('deck:agents:start', request),
     send: (id: string, text: string): Promise<unknown> => ipcRenderer.invoke('deck:agents:send', id, text),

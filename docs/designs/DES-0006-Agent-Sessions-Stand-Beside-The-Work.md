@@ -81,6 +81,22 @@ The shell drawer open over the ring, with a tab for each workspace.
 
 The other pictures are [agents-deck-conversation.jpg](__attachments__/DES-0006/agents-deck-conversation.jpg), [agents-your-trainer-conversation.jpg](__attachments__/DES-0006/agents-your-trainer-conversation.jpg), [agents-your-trainer-session.jpg](__attachments__/DES-0006/agents-your-trainer-session.jpg), [agents-your-trainer-work.jpg](__attachments__/DES-0006/agents-your-trainer-work.jpg), [agents-your-trainer-drawer.jpg](__attachments__/DES-0006/agents-your-trainer-drawer.jpg), [agents-cockpit-ring.jpg](__attachments__/DES-0006/agents-cockpit-ring.jpg), [agents-cockpit-work.jpg](__attachments__/DES-0006/agents-cockpit-work.jpg) and [agents-cockpit-drawer.jpg](__attachments__/DES-0006/agents-cockpit-drawer.jpg).
 
+## The same screens in Deck itself, 2026-10-22
+
+**These three pictures come from a real Deck window in the container, not from this page.** The session in them is the suite's scripted agent, so every word it says, and every command and file it asks about, is invented. The ticket is TASK-0201, Deck's own.
+
+![Work on this, on TASK-0201, in Deck](__attachments__/DES-0006/deck-built-work-on-this.jpg)
+
+Work on this on TASK-0201's card: Claude, Opus 5.5, Ask before acting, this checkout, and the ticket's title as the first prompt.
+
+![The session waiting for an answer](__attachments__/DES-0006/deck-built-session-waiting.jpg)
+
+The session asks to edit a file and waits. The request stands at its turn with Approve and Deny, and the pane ends with "Claude is waiting for you". The agent's marker stands over FEAT-0033's tower, coloured as waiting. While a session is open, the panels on both sides make way and the ring moves left of the pane.
+
+![The session after three turns, stopped](__attachments__/DES-0006/deck-built-session-turns.jpg)
+
+Three turns: an edit approved, a command denied, and a long turn interrupted. Then Stop, which asked once more. Resume is offered.
+
 ## What building it would take
 
 In [[PHASE-0004-Parity]], after Overview, by [[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]: the Agent SDK and `codex app-server` in Deck's main process; the sidecar's shell secret for answering permissions; reporting each session to the sidecar so either app sees it; node-pty for the drawer; the cockpit's overview routes added to Deck's allowed list; and a write for Caught up, which ADR-0003 does not cover yet. A real session pane shows the messages themselves, which this page cannot.

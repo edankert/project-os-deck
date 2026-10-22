@@ -10,6 +10,9 @@
  */
 import { ACCESS_LEVELS, type AccessLevel, type AgentKind, type PermissionAnswer } from '../../shared/agent-types.js';
 import type { SessionManager, StartRequest } from './sessions.js';
+import { gatherNeeds } from './needs.js';
+import { answerCockpitApproval } from '../../shared/write-client.js';
+import { runGit } from './sessions.js';
 
 type Handle = (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void;
 
@@ -62,8 +65,48 @@ export function cockpitSessionsOf(payload: unknown): { sessions: Array<Record<st
   };
 }
 
-export function registerAgentCalls(handle: Handle, manager: SessionManager, rootOf: (workspaceId: string) => string | null, cockpitBase: (workspaceId: string) => string | null = () => null): void {
+export interface CockpitAnswering {
+  /** The secret of a sidecar Deck started for the workspace; null for a borrowed one or none. */
+  secretFor(workspaceId: string): string | null;
+  actor(): string;
+  answer?: typeof answerCockpitApproval;
+}
+
+export function registerAgentCalls(handle: Handle, manager: SessionManager, rootOf: (workspaceId: string) => string | null, cockpitBase: (workspaceId: string) => string | null = () => null, cockpit: CockpitAnswering = { secretFor: () => null, actor: () => '' }): void {
+  const cockpitAnswerable = (workspaceId: string): boolean => cockpitBase(workspaceId) !== null && cockpit.secretFor(workspaceId) !== null;
   handle('deck:agents:list', () => manager.list());
+  // One of the cockpit's requests, answered from Deck (TASK-0204): only with a sidecar Deck started, whose
+  // secret the main process alone holds. The window sends the approval's id and the answer, nothing more.
+  handle('deck:agents:cockpit-answer', async (_e, workspaceId, approvalId, allow) => {
+    if (typeof workspaceId !== 'string' || typeof approvalId !== 'string' || !/^[\w-]{1,64}$/.test(approvalId) || typeof allow !== 'boolean') return { ok: false, error: 'an answer names a request and allows or denies' };
+    const base = cockpitBase(workspaceId);
+    const secret = cockpit.secretFor(workspaceId);
+    if (base === null || secret === null) return { ok: false, error: 'Deck did not start this sidecar, so answer in the cockpit' };
+    // A permission decision is somebody's: the sidecar refuses one with no actor, and so does Deck.
+    const actor = cockpit.actor();
+    if (actor === '') return { ok: false, error: 'Deck has no name to answer as; set one first' };
+    try {
+      const res = await (cockpit.answer ?? answerCockpitApproval)(base, secret, { approval_id: approvalId, decision: allow ? 'granted' : 'denied', actor });
+      const said = (res.json as { error?: unknown } | null)?.error;
+      return res.ok ? { ok: true } : { ok: false, error: typeof said === 'string' ? said : `the sidecar answered ${res.status}` };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+  // What Needs you shows beyond the tickets (TASK-0202): the open requests, Deck's and the cockpit's, and git.
+  handle('deck:agents:needs', async (_e, workspaceId) => {
+    if (typeof workspaceId !== 'string' || rootOf(workspaceId) === null) return { ok: false, error: 'no such workspace' };
+    const needs = await gatherNeeds(workspaceId, {
+      sessions: manager.list(), conversation: (id) => manager.conversation(id), root: rootOf(workspaceId), base: cockpitBase(workspaceId),
+      getJson: async (url) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`the sidecar answered ${res.status}`);
+        return res.json();
+      },
+      git: runGit, cockpitAnswerable: cockpitAnswerable(workspaceId),
+    });
+    return { ok: true, needs };
+  });
   // The cockpit's own sessions, read by the main process: Deck's served host forwards no session route (TASK-0196).
   handle('deck:agents:cockpit', async (_e, workspaceId) => {
     const base = typeof workspaceId === 'string' ? cockpitBase(workspaceId) : null;

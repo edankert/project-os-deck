@@ -21,6 +21,7 @@ import { cockpitSquare, markWords } from './overview-marks.js';
 import { QUIET_DAYS, quietDays, todayOf } from './overview-needs.js';
 import { deckImageHref } from './overview-flows.js';
 import type { ListRow, MarkNode, SceneNode, ScreenContext } from './overview-scene.js';
+import type { AgentNeeds } from './agent-needs.js';
 import { agentMarkers, sessionSelection, sessionTarget, type AgentMarker, type AgentSummary } from './agent-marks.js';
 import { emptyCounts, type Fill, type Focus, type NoteType, type OverviewModel, type Phase, type State, type Ticket } from './overview-types.js';
 
@@ -248,6 +249,8 @@ export interface TowersOptions {
   agents?: readonly AgentSummary[];
   /** The session open in the pane: its marker joined by curves to the tickets it worked on (TASK-0199). */
   session?: string | null;
+  /** The open requests and git state Needs you shows in the shell (FEAT-0034). */
+  needs?: AgentNeeds;
 }
 
 /**

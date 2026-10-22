@@ -195,9 +195,18 @@ export interface PanelAgents {
  */
 export interface PanelNeeds {
   kind: 'needs';
+  /** The tickets that need you, plus the open requests and the waiting agents when the shell gives them. */
   total: number;
   parts: Array<{ reason: string; word: string; colour: string; ids: string[] }>;
   rows: PanelRow[];
+  /** In the shell only (FEAT-0034): the permission requests first, each answered in place or in the cockpit. */
+  requests?: Array<{ id: string; tool: string; summary: string; who: string; source: 'deck' | 'cockpit'; target?: string; approve?: string; deny?: string; label: string }>;
+  /** The last request answered, and how. */
+  answered?: string;
+  /** Then the agents waiting for you, each opening its session. */
+  agents?: Array<{ id: string; words: string; target: string; label: string }>;
+  /** Last, what is not pushed. */
+  git?: string;
 }
 
 /**

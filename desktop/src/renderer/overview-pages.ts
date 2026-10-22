@@ -9,12 +9,14 @@ import { rephaseScene } from '../shared/overview-rephase.js';
 import { ticketScene, type TriageVerb } from '../shared/overview-ticket.js';
 import { wheelScene } from '../shared/overview-wheel.js';
 import { featureGate } from './overview-flows.js';
-import { agentsFor } from './agent-state.js';
+import { agentsFor, needsFor } from './agent-state.js';
+import type { AgentNeeds } from '../shared/agent-needs.js';
 import { drawnMtime, drawnMtimeKey, noteMtime, registerScreen, type ScreenInput } from './overview.js';
 
-const withAgents = (workspaceId: string, model: Parameters<typeof agentsFor>[1]): { agents?: ReturnType<typeof agentsFor> & object } => {
+const withAgents = (workspaceId: string, model: Parameters<typeof agentsFor>[1]): { agents?: ReturnType<typeof agentsFor> & object; needs?: AgentNeeds } => {
   const agents = agentsFor(workspaceId, model);
-  return agents === undefined ? {} : { agents };
+  const needs = needsFor(workspaceId);
+  return agents === undefined ? {} : { agents, ...(needs !== undefined ? { needs } : {}) };
 };
 
 /** S4's accepted groups, kept for the session only: accepting writes nothing. */

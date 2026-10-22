@@ -406,8 +406,8 @@ test('the generic reader does not restate the sidecar verb table', () => {
   for (const { rel, source } of builtModules()) {
     // S5–S7 explicitly draw verdict controls (FEAT-0029); the generic reader still draws only sidecar rows.
     if (rel.endsWith(path.join('shared', 'overview-flows.js')) || rel.endsWith(path.join('renderer', 'overview-flows.js'))) continue;
-    // The session pane's Approve and Deny answer an agent's permission request, not a note's verb (FEAT-0033).
-    if (rel.endsWith(path.join('renderer', 'agent-pane.js'))) continue;
+    // The words on a permission request's buttons, kept in one place: they answer an agent, not a note's verb (FEAT-0033).
+    if (rel.endsWith(path.join('shared', 'agent-pane.js'))) continue;
     for (const verb of verbs) {
       if (source.includes(`'${verb}'`) || source.includes(`"${verb}"`)) offenders.push(`${rel}: ${verb}`);
     }

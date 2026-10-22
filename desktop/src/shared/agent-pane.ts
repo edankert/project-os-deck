@@ -14,6 +14,8 @@ import { latest, type AccessLevel, type AgentKind, type ConversationRecord, type
 export const AGENT_WORD: Readonly<Record<AgentKind, string>> = { claude: 'Claude', codex: 'Codex' };
 export const AGENT_GLYPH: Readonly<Record<AgentKind, string>> = { claude: '✳', codex: '◎' };
 export const STATE_WORD: Readonly<Record<SessionState, string>> = { working: 'working', waiting: 'waiting for you', idle: 'idle', stopped: 'stopped', failed: 'failed' };
+/** The words on a permission request's buttons: an agent's request, not a note's verb (FEAT-0033, FEAT-0034). */
+export const ANSWER_WORD = { allow: 'Approve', deny: 'Deny' } as const;
 export const ACCESS_WORD: Readonly<Record<AccessLevel, string>> = { ask: 'Ask before acting', edits: 'Edit files without asking' };
 
 export type PermissionRecord = Extract<ConversationRecord, { kind: 'permission' }>;
