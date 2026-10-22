@@ -112,7 +112,7 @@ export class SessionManager {
       folder = w.folder;
       branch = w.branch;
       if (!made.ok) {
-        const failed: SessionRecord = { id, agent: req.agent, providerId: null, workspaceId: req.workspaceId, ticket: req.ticket, folder, place: 'worktree', branch, model: req.model, effort: req.effort, access: req.access, created: at, lastActive: at, state: 'failed' };
+        const failed: SessionRecord = { id, agent: req.agent, providerId: null, workspaceId: req.workspaceId, ticket: req.ticket, folder, root: req.root, place: 'worktree', branch, model: req.model, effort: req.effort, access: req.access, created: at, lastActive: at, state: 'failed' };
         this.records.set(id, failed);
         this.append(id, { kind: 'state', at, state: 'failed', reason: `git worktree add failed: ${made.stderr.trim()}` });
         this.save();
@@ -120,7 +120,7 @@ export class SessionManager {
         return failed;
       }
     }
-    const record: SessionRecord = { id, agent: req.agent, providerId: null, workspaceId: req.workspaceId, ticket: req.ticket, folder, place: req.place, ...(branch !== undefined ? { branch } : {}), model: req.model, effort: req.effort, access: req.access, created: at, lastActive: at, state: 'idle' };
+    const record: SessionRecord = { id, agent: req.agent, providerId: null, workspaceId: req.workspaceId, ticket: req.ticket, folder, root: req.root, place: req.place, ...(branch !== undefined ? { branch } : {}), model: req.model, effort: req.effort, access: req.access, created: at, lastActive: at, state: 'idle' };
     this.records.set(id, record);
     this.save();
     const session = this.attach(record);
@@ -147,7 +147,12 @@ export class SessionManager {
     if (live !== undefined) await live.stop();
     else {
       const r = this.must(id);
-      if (r.state !== 'stopped') this.change(id, { ...r, state: 'stopped' });
+      if (r.state === 'stopped') return;
+      // Recorded as a live session's stop is, so the cockpit hears that it ended (review, round one).
+      const record: ConversationRecord = { kind: 'state', at: this.now(), state: 'stopped' };
+      this.append(id, record);
+      this.change(id, { ...r, state: 'stopped', lastActive: record.at });
+      this.tell(id, { kind: 'record', record });
     }
   }
 

@@ -26,7 +26,10 @@ export interface StartOptions {
 
 /** A tool the agent wants to use, asking first. */
 export interface PermissionAsk {
+  /** Unique for the whole life of the session, across every resume: the sidecar keeps a request by it. */
   id: string;
+  /** The tool call's own id, when the agent gives one: the id its PreToolUse and PostToolUse carry. */
+  toolUse?: string;
   tool: string;
   /** What it asks, short enough for a row: a command, a path. */
   summary: string;

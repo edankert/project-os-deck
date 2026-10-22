@@ -24,6 +24,7 @@ Deck's repository is public; your-trainer is private. Until now DES-0006 drew se
 ## Mitigation
 
 - Keep conversations under Electron's user-data folder, never in a repository
+- Send the cockpit's sidecar the prompt text but never a reply. The sidecar keeps prompts in the repository's `.cockpit/sessions.json`, as it does for its own sessions; `.cockpit/` is gitignored, so they stay out of commits (FEAT-0032 review, round one)
 - Write fixtures and pictures from scripted sessions with invented words
 - Draw no cost anywhere
 - Check committed fixtures for cost fields as DES-0006's page check does

@@ -18,6 +18,7 @@
  * dynamic import, and the query function can be injected, so the suite drives the
  * provider with a fake stream and never reaches a model (RISK-0017).
  */
+import crypto from 'node:crypto';
 import type { ConversationRecord, AccessLevel } from '../../shared/agent-types.js';
 import type { AgentProvider, ProviderHooks, ProviderSession, StartOptions } from './provider.js';
 
@@ -32,7 +33,7 @@ export interface SdkMessage {
   parent_tool_use_id?: string | null;
 }
 
-export type CanUseTool = (toolName: string, input: Record<string, unknown>, options: { signal: AbortSignal; decisionReason?: string }) => Promise<{ behavior: 'allow'; updatedInput?: Record<string, unknown> } | { behavior: 'deny'; message: string; interrupt?: boolean }>;
+export type CanUseTool = (toolName: string, input: Record<string, unknown>, options: { signal: AbortSignal; decisionReason?: string; toolUseID?: string }) => Promise<{ behavior: 'allow'; updatedInput?: Record<string, unknown> } | { behavior: 'deny'; message: string; interrupt?: boolean }>;
 
 export interface QueryHandle extends AsyncIterable<SdkMessage> {
   interrupt(): Promise<unknown>;
@@ -138,11 +139,12 @@ export class ClaudeProvider implements AgentProvider {
     const query = this.query ?? (await loadSdk()).query;
     const prompts = new PromptStream();
     const abort = new AbortController();
-    let asked = 0;
     const toolNames = new Map<string, string>();
-    const canUseTool: CanUseTool = async (toolName, input) => {
-      asked += 1;
-      const answer = await hooks.ask({ id: `claude-ask-${asked}`, tool: toolName, summary: toolSummary(toolName, input) });
+    // A request is known by its tool call's own id, unique across every resume of the session. Numbering them
+    // from one on each start let a resumed session's first request be answered by the first turn's (review, round one).
+    const canUseTool: CanUseTool = async (toolName, input, opts) => {
+      const toolUse = typeof opts?.toolUseID === 'string' && opts.toolUseID !== '' ? opts.toolUseID : undefined;
+      const answer = await hooks.ask({ id: `claude-ask-${toolUse ?? crypto.randomUUID()}`, ...(toolUse !== undefined ? { toolUse } : {}), tool: toolName, summary: toolSummary(toolName, input) });
       return answer.allow ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: answer.message ?? 'Denied in Deck.' };
     };
     const handle = query({ prompt: prompts, options: claudeOptions(options, canUseTool, abort, this.env) });

@@ -107,7 +107,7 @@ export class AgentSession {
   }
 
   private ask(request: PermissionAsk): Promise<PermissionAnswer> {
-    this.add({ kind: 'permission', at: this.now(), id: request.id, tool: request.tool, summary: request.summary, outcome: 'open' });
+    this.add({ kind: 'permission', at: this.now(), id: request.id, ...(request.toolUse !== undefined ? { toolUse: request.toolUse } : {}), tool: request.tool, summary: request.summary, outcome: 'open' });
     this.setState('waiting');
     return new Promise((resolve) => this.waiting.set(request.id, resolve));
   }

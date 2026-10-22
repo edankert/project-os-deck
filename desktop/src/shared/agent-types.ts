@@ -19,8 +19,11 @@ export type SessionState = 'working' | 'waiting' | 'idle' | 'stopped' | 'failed'
 
 /**
  * How much an agent may do without asking. Nothing Deck offers skips permissions
- * (RISK-0013): "ask" asks before every tool that changes anything, "edits" lets it
- * edit files in its folder without asking and asks for everything else.
+ * (RISK-0013): "ask" asks before every tool that changes anything. "edits" lets Claude
+ * edit files without asking and asks for everything else. Codex has no level that
+ * matches exactly: with "edits" it runs on-request, so it also runs commands without
+ * asking, but only inside the workspace-write sandbox (its folder, no network), and asks
+ * before going outside it.
  */
 export type AccessLevel = 'ask' | 'edits';
 
@@ -38,6 +41,8 @@ export interface SessionRecord {
   ticket: string | null;
   /** The folder it runs in: the checkout, or the worktree made for it. */
   folder: string;
+  /** The workspace's repository: the folder the cockpit's sidecar knows, when the session runs in a worktree beside it. */
+  root?: string;
   place: 'checkout' | 'worktree';
   /** The branch of its worktree, when it has one. */
   branch?: string;
@@ -67,7 +72,7 @@ export type ConversationRecord =
   | { kind: 'tool'; at: string; id: string; name: string; summary: string; outcome: ToolOutcome }
   | { kind: 'edit'; at: string; path: string; added: number; removed: number; diff: string }
   | { kind: 'plan'; at: string; steps: Array<{ text: string; done: boolean }> }
-  | { kind: 'permission'; at: string; id: string; tool: string; summary: string; outcome: PermissionOutcome; message?: string }
+  | { kind: 'permission'; at: string; id: string; toolUse?: string; tool: string; summary: string; outcome: PermissionOutcome; message?: string }
   | { kind: 'state'; at: string; state: SessionState; reason?: string };
 
 export type RecordKind = ConversationRecord['kind'];

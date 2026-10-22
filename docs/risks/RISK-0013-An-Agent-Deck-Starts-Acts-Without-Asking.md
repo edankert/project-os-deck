@@ -19,12 +19,12 @@ related: ["[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]"
 
 ## Description
 
-Edwin's shell aliases `claude` to `claude --dangerously-skip-permissions`, and his Claude user settings set `skipDangerousModePermissionPrompt`. A Deck session that inherited either would act without asking. The SDK ignores shell aliases, but it can read user settings, and a later option or default could change that. Codex has the same exposure through `approval_policy` and `sandbox_mode` in `~/.codex/config.toml`.
+Edwin's shell aliases `claude` to `claude --dangerously-skip-permissions`, and his Claude user settings set `skipDangerousModePermissionPrompt`. A Deck session that inherited either would act without asking. The SDK ignores shell aliases, but it can read user settings, and a later option or default could change that. Codex has the same exposure through `approval_policy`, `sandbox_mode` and `approvals_reviewer` in `~/.codex/config.toml`: with `approvals_reviewer = "auto_review"`, a model would answer the approvals Deck should put to a person.
 
 ## Mitigation
 
 - Set Claude's permission mode explicitly on every start
-- Send Codex the on-request policy and the workspace-write sandbox
+- Send Codex the untrusted or on-request policy, the workspace-write sandbox, and `approvalsReviewer: "user"` on every thread start and resume (TASK-0207)
 - Offer no access level that skips permissions
 - A check fails if a skip option appears in what either provider sends
 

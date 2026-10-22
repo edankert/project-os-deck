@@ -970,9 +970,10 @@ function shutdown(): void {
     }
   }
   store.close();
-  // An agent must not run on with nobody to answer it: every session Deck started stops with Deck.
+  // An agent must not run on with nobody to answer it: every session Deck started stops with Deck. A quit
+  // has already waited for this in `stopAgents`; a hard exit only gets to signal it.
+  if (!agentsStopped) void agentSessions.stopAll();
   agentReports.close();
-  void agentSessions.stopAll();
   closeIndexes();
   graphs.close();
   stopping = sidecars.stopAll();
@@ -990,8 +991,28 @@ function shutdown(): void {
  * the fifth criterion of FEAT-0002 and the doubt Edwin recorded when he walked
  * TST-0011 on 2026-09-07.
  */
+let agentsStopped = false;
+/**
+ * Every session stopped and every report to the sidecar sent, before the sidecars themselves stop, so the
+ * cockpit hears each session end (review, round one). Capped, so an agent slow to stop cannot hold the quit.
+ */
+async function stopAgents(): Promise<void> {
+  if (agentsStopped) return;
+  const all = (async () => {
+    await agentSessions.stopAll();
+    await agentReports.settled();
+  })().catch(() => undefined);
+  await Promise.race([all, new Promise((resolve) => setTimeout(resolve, 3000))]);
+  agentsStopped = true;
+}
+
 let quitHeld = false;
 app.on('before-quit', (event) => {
+  if (!agentsStopped && !shutDown) {
+    event.preventDefault();
+    void stopAgents().then(() => app.quit());
+    return;
+  }
   const first = !shutDown;
   shutdown();
   if (!first || quitHeld || stopping.length === 0) return;
@@ -1019,9 +1040,11 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     // and `stopOne`'s SIGKILL escalation is an `unref`'d timer that cannot
     // fire from a process that has gone. A sidecar slow on SIGTERM outlived
     // Deck on `kill -TERM`, which is how a terminal-launched Deck is stopped.
-    shutdown();
-    void waitForExit(stopping).finally(() => {
-      app.exit(1);
+    void stopAgents().finally(() => {
+      shutdown();
+      void waitForExit(stopping).finally(() => {
+        app.exit(1);
+      });
     });
   });
 }

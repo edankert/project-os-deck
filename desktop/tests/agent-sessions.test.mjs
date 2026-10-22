@@ -130,7 +130,7 @@ function fakeQuery(turns) {
           if (step.use) {
             const [name, input, id] = step.use;
             yield { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id, name, input }] } };
-            const answer = name === 'Read' || name === 'TodoWrite' ? { behavior: 'allow' } : await options.canUseTool(name, input, { signal: new AbortController().signal });
+            const answer = name === 'Read' || name === 'TodoWrite' ? { behavior: 'allow' } : await options.canUseTool(name, input, { signal: new AbortController().signal, toolUseID: id });
             yield { type: 'user', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: id, is_error: answer.behavior !== 'allow', content: answer.behavior === 'allow' ? 'ok' : answer.message }] } };
           }
         }
@@ -179,6 +179,7 @@ test('a Claude session: the SDK session id, text, a plan, a tool that asks, its 
   await s.start('Work on TASK-0001, invented.');
   await until(() => openRequests(s.records).length === 1);
   assert.deepEqual([openRequests(s.records)[0].tool, openRequests(s.records)[0].summary], ['Edit', 'src/a.ts']);
+  assert.deepEqual([openRequests(s.records)[0].id, openRequests(s.records)[0].toolUse], ['claude-ask-tu3', 'tu3'], 'a request is known by its tool call\'s own id, unique across resumes');
   assert.ok(!s.records.some((r) => r.kind === 'edit'), 'no edit before it is allowed');
   s.answer(openRequests(s.records)[0].id, { allow: true });
   await until(() => s.record.state === 'idle');
@@ -234,8 +235,8 @@ function fakeCodex(turns) {
 }
 
 test('Codex never runs without asking: untrusted for "ask", on-request for "edits", always the workspace-write sandbox', () => {
-  assert.deepEqual(codexPolicy('ask'), { approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
-  assert.deepEqual(codexPolicy('edits'), { approvalPolicy: 'on-request', sandbox: 'workspace-write' });
+  assert.deepEqual(codexPolicy('ask'), { approvalPolicy: 'untrusted', sandbox: 'workspace-write', approvalsReviewer: 'user' });
+  assert.deepEqual(codexPolicy('edits'), { approvalPolicy: 'on-request', sandbox: 'workspace-write', approvalsReviewer: 'user' });
   for (const a of ['ask', 'edits']) assert.doesNotMatch(JSON.stringify(codexPolicy(a)), /never|danger-full-access/);
   assert.deepEqual(diffCounts('--- a/x\n+++ b/x\n@@ -1,2 +1,3 @@\n a\n-b\n+c\n+d'), { added: 2, removed: 1 });
 });
@@ -251,6 +252,9 @@ test('a Codex session: a thread, text, a plan, a command and an edit each asked 
   try {
     await until(() => openRequests(s.records).length === 1);
     assert.deepEqual([openRequests(s.records)[0].tool, openRequests(s.records)[0].summary], ['Bash', 'npm test']);
+    assert.match(openRequests(s.records)[0].id, /^codex-ask-./);
+    assert.equal(openRequests(s.records)[0].id, `codex-ask-${openRequests(s.records)[0].toolUse}`, 'known by the item it approves');
+    assert.equal(requests().find((m) => m.method === 'thread/start').params.approvalsReviewer, 'user', 'a person answers Codex\'s approvals, whatever its config says');
     s.answer(openRequests(s.records)[0].id, { allow: true });
     await until(() => openRequests(s.records).length === 1 && openRequests(s.records)[0].tool === 'Edit');
     assert.equal(openRequests(s.records)[0].summary, 'src/a.ts');
@@ -289,7 +293,7 @@ test('a request Deck does not know is refused, never granted, and a Codex sessio
     await until(() => s.record.state === 'idle');
     const sent = requests();
     const resume = sent.find((m) => m.method === 'thread/resume');
-    assert.deepEqual([resume.params.threadId, resume.params.approvalPolicy, resume.params.sandbox], ['thread-9', 'on-request', 'workspace-write']);
+    assert.deepEqual([resume.params.threadId, resume.params.approvalPolicy, resume.params.sandbox, resume.params.approvalsReviewer], ['thread-9', 'on-request', 'workspace-write', 'user']);
     assert.ok(!sent.some((m) => m.method === 'thread/start'));
     const refusal = sent.find((m) => m.error !== undefined);
     assert.match(refusal.error.message, /Deck does not answer item\/tool\/requestUserInput/);
@@ -393,7 +397,11 @@ function recordingSidecar({ down = false } = {}) {
       async post(base, p, body) {
         if (down) throw new Error('connect ECONNREFUSED');
         posts.push({ base, path: p, body });
-        if (p === '/api/cockpit/approvals/ask') { const id = `ap${++n}`; approvals.set(id, { approval_id: id, status: 'open', ...body }); return { ok: true, status: 200, json: { ok: true, approval_id: id, wait_ms: 5000 } }; }
+        if (p === '/api/cockpit/approvals/ask') {
+          // As the real sidecar does: one record per session and tool use id, whatever its status, handed back to a repeat.
+          const kept = [...approvals.values()].find((a) => a.session_id === body.session_id && a.tool_use_id === body.tool_use_id);
+          if (kept !== undefined) return { ok: true, status: 200, json: { ok: true, approval_id: kept.approval_id, wait_ms: 5000 } };
+          const id = `ap${++n}`; approvals.set(id, { approval_id: id, status: 'open', ...body }); return { ok: true, status: 200, json: { ok: true, approval_id: id, wait_ms: 5000 } }; }
         if (p === '/api/cockpit/approvals/handed-back') { const a = approvals.get(body.approval_id); if (a.status === 'open') a.status = 'handed-to-terminal'; return { ok: true, status: 200, json: { ok: true, approval: a } }; }
         return { ok: true, status: 200, json: { ok: true } };
       },
@@ -425,6 +433,8 @@ test('a Deck session is reported as the cockpit\'s own are: start, prompt, tools
   for (const h of hooks) assert.deepEqual([h.session_id, h.agent, typeof h.cwd], [s.id, 'claude', 'string']);
   assert.equal(hooks[1].prompt, 'An invented prompt.');
   assert.deepEqual(hooks.find((h) => h.tool_input).tool_input, { file_path: 'src/a.ts' });
+  for (const h of hooks.filter((x) => x.hook_event_name === 'PostToolUse')) assert.ok(typeof h.tool_use_id === 'string' && h.tool_use_id.startsWith(`${s.id}:`), 'every PostToolUse names its own tool use: with none, the sidecar closes every approval in the session');
+  assert.equal(ask.body.tool_use_id, hooks.find((h) => h.hook_event_name === 'PostToolUse' && h.tool_name === 'Edit' && !h.tool_input).tool_use_id, 'the card is filed under the tool call\'s own id, so its PostToolUse closes it')
   assert.ok(!JSON.stringify(side.posts).includes('Reply text that must not be sent'), 'no reply text reaches the sidecar');
   assert.equal(side.approvals.get('ap1').status, 'handed-to-terminal');
 });
@@ -552,4 +562,101 @@ test('an agent report leaves Deck through the write client, and only to the thre
   assert.deepEqual(await postAgentReport('http://127.0.0.1:9', '/api/agent-hook', { a: 1 }, fake), { ok: true, status: 200, json: { ok: true } });
   await assert.rejects(postAgentReport('http://127.0.0.1:9', '/api/notes/transition', {}, fake), /Deck reports agents only to/);
   assert.deepEqual(sent, [['http://127.0.0.1:9/api/agent-hook', 'POST', 'application/json']]);
+});
+
+// --- TASK-0207: review round one ---
+
+test('interrupting a session denies what it was waiting for', async () => {
+  const s = new AgentSession(record(), fakeProvider('claude', SCRIPT), now);
+  await s.start('An invented prompt.');
+  await until(() => openRequests(s.records).length === 1);
+  await s.interrupt();
+  assert.equal(openRequests(s.records).length, 0);
+  assert.deepEqual(latest(s.records).filter((r) => r.kind === 'permission').map((r) => r.outcome), ['denied']);
+});
+
+test('an agent that ends by itself has its open requests denied', async () => {
+  let hooks;
+  let asked;
+  const provider = { agent: 'claude', async start(_o, h) { hooks = h; h.identified('p1'); asked = h.ask({ id: 'claude-ask-x', tool: 'Bash', summary: 'ls' }); return { async send() {}, async interrupt() {}, async stop() {} }; } };
+  const s = new AgentSession(record(), provider, now);
+  await s.start('Invented.');
+  await until(() => openRequests(s.records).length === 1);
+  hooks.ended('the agent crashed');
+  const answered = await Promise.race([asked, new Promise((done) => setTimeout(() => done('still waiting'), 500))]);
+  assert.deepEqual(answered, { allow: false, message: 'the session ended' });
+  assert.equal(s.record.state, 'failed');
+});
+
+test('a resumed session\'s request is never answered by the earlier turn\'s record the sidecar hands back', async () => {
+  const side = recordingSidecar();
+  const logs = [];
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ ask: 'Bash', summary: 'rm -rf build' }]]) }, { now, newId });
+  const r = new SidecarReporter(m, () => 'http://127.0.0.1:9', side.client, (l) => logs.push(l), 10);
+  const s = await m.start({ workspaceId: 'ws1', root: gitRepo(), ticket: 'TASK-0009', agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  await until(() => side.approvals.size === 1);
+  side.approvals.get('ap1').status = 'granted';
+  await until(() => m.get(s.id).state === 'idle');
+  await m.stop(s.id);
+  // The resumed provider numbers its request as the first one was; the sidecar hands back the granted record.
+  void m.send(s.id, 'Again, invented.');
+  await until(() => openRequests(m.conversation(s.id)).length === 1);
+  await new Promise((done) => setTimeout(done, 80));
+  await r.settled();
+  assert.equal(openRequests(m.conversation(s.id)).length, 1, 'still waiting for a person: the old grant was not taken as this request\'s');
+  assert.equal(side.approvals.size, 1);
+  assert.ok(logs.some((l) => /a record that is granted/.test(l)));
+  m.answer(s.id, openRequests(m.conversation(s.id))[0].id, { allow: false });
+  await m.stop(s.id);
+  r.close();
+});
+
+test('a session in a worktree reports the repository as its folder, so the sidecar takes it', async () => {
+  const side = recordingSidecar();
+  const repo = gitRepo();
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ text: 'ok' }]]) }, { now, newId });
+  const r = new SidecarReporter(m, () => 'http://127.0.0.1:9', side.client, () => {}, 20);
+  const s = await m.start({ workspaceId: 'ws1', root: repo, ticket: 'TASK-0009', agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'worktree', prompt: 'Invented.' });
+  await until(() => m.get(s.id).state === 'idle');
+  await m.stop(s.id);
+  await r.settled();
+  r.close();
+  assert.notEqual(m.get(s.id).folder, repo);
+  const hooks = side.posts.filter((p) => p.path === '/api/agent-hook').map((p) => p.body);
+  assert.ok(hooks.length > 0);
+  for (const h of hooks) assert.equal(h.cwd, repo);
+});
+
+test('stopping a session that is not running records it, so the cockpit hears it end', async () => {
+  const dir = dataDir();
+  const repo = gitRepo();
+  const first = new SessionManager(dir, { claude: fakeProvider('claude', [[{ text: 'ok' }]]) }, { now, newId });
+  const s = await first.start({ workspaceId: 'ws1', root: repo, ticket: null, agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  await until(() => first.get(s.id).state === 'idle');
+  const side = recordingSidecar();
+  const again = new SessionManager(dir, { claude: fakeProvider('claude', []) }, { now, newId });
+  const r = new SidecarReporter(again, () => 'http://127.0.0.1:9', side.client, () => {}, 20);
+  await again.stop(s.id);
+  await r.settled();
+  r.close();
+  assert.equal(again.get(s.id).state, 'stopped');
+  assert.equal(latest(again.conversation(s.id)).at(-1).state, 'stopped');
+  assert.deepEqual(side.posts.map((p) => p.body.hook_event_name), ['SessionEnd']);
+});
+
+test('the renderer reaches sessions only when the host has the agents capability', async () => {
+  const { pathToFileURL } = await import('node:url');
+  const { Host } = await import(pathToFileURL(path.join(desktopRoot, 'dist', 'web', 'renderer', 'host-bridge.js')));
+  const bridge = { list: async () => [] };
+  const saved = globalThis.deck;
+  try {
+    for (const [caps, reach] of [[SHELL_CAPABILITIES, true], [SERVED_CAPABILITIES, false], [{ ...SHELL_CAPABILITIES, agents: false }, false]]) {
+      globalThis.deck = { capabilities: async () => caps, state: { subscribe: () => () => {} }, agents: bridge };
+      const host = new Host();
+      await host.start();
+      assert.equal(host.agents() !== null, reach, JSON.stringify(caps));
+    }
+  } finally {
+    if (saved === undefined) delete globalThis.deck; else globalThis.deck = saved;
+  }
 });

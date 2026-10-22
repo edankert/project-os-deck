@@ -36,12 +36,14 @@ export function fakeProvider(agent, script, { id = 'fake-session-1', delay = 0 }
           } else if (step.edit !== undefined) hooks.record({ kind: 'edit', at: now(), path: step.edit, added: step.added ?? 1, removed: step.removed ?? 0, diff: `--- a/${step.edit}\n+++ b/${step.edit}\n` });
           else if (step.plan !== undefined) hooks.record({ kind: 'plan', at: now(), steps: step.plan.map(([text, done]) => ({ text, done })) });
           else if (step.ask !== undefined) {
-            const answer = await hooks.ask({ id: `ask-${n++}`, tool: step.ask, summary: step.summary ?? '' });
+            // Numbered from one on every start, as the providers once were: the reporter must not trust a repeat.
+            const tid = `tool-${n}`;
+            const answer = await hooks.ask({ id: `ask-${n++}`, toolUse: tid, tool: step.ask, summary: step.summary ?? '' });
             if (!answer.allow) {
               hooks.record({ kind: 'text', at: now(), text: `Not allowed: ${answer.message ?? 'denied'}.` });
               break;
             }
-            hooks.record({ kind: 'tool', at: now(), id: `tool-${n}`, name: step.ask, summary: step.summary ?? '', outcome: 'done' });
+            hooks.record({ kind: 'tool', at: now(), id: tid, name: step.ask, summary: step.summary ?? '', outcome: 'done' });
           }
         }
         if (!stopped) hooks.turnEnded();

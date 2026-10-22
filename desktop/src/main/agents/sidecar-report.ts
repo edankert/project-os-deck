@@ -98,8 +98,9 @@ export class SidecarReporter {
     } else if (r.kind === 'tool') {
       out.push({ hook_event_name: r.outcome === 'running' ? 'PreToolUse' : 'PostToolUse', tool_name: r.name, tool_use_id: `${session.id}:${r.id}` });
     } else if (r.kind === 'edit') {
-      // An edit as the cockpit's hooks report one, so it records the file the session touched.
-      out.push({ hook_event_name: 'PostToolUse', tool_name: 'Edit', tool_input: { file_path: r.path } });
+      // An edit as the cockpit's hooks report one, so it records the file the session touched. It carries an id
+      // of its own: with none, the sidecar closes every live approval in the session (review, round one).
+      out.push({ hook_event_name: 'PostToolUse', tool_name: 'Edit', tool_use_id: `${session.id}:edit:${r.at}:${r.path}`, tool_input: { file_path: r.path } });
     } else if (r.kind === 'permission' && r.outcome === 'open') {
       out.push({ hook_event_name: 'PermissionRequest', tool_name: r.tool, message: `${session.agent === 'codex' ? 'Codex' : 'Claude'} needs your permission to use ${r.tool}` });
     } else if (r.kind === 'state') {
@@ -110,18 +111,32 @@ export class SidecarReporter {
   }
 
   private async hook(base: string, session: SessionRecord, event: Record<string, unknown>): Promise<void> {
-    await this.send(session.id, () => this.client.post(base, '/api/agent-hook', { ...event, session_id: session.id, agent: session.agent, cwd: session.folder }));
+    // The repository, not a worktree beside it: the sidecar refuses a hook from outside its own folder (review, round one).
+    await this.send(session.id, () => this.client.post(base, '/api/agent-hook', { ...event, session_id: session.id, agent: session.agent, cwd: session.root ?? session.folder }));
   }
 
   private async offer(base: string, session: SessionRecord, r: Extract<ConversationRecord, { kind: 'permission' }>): Promise<void> {
     const key = `${session.id}:${r.id}`;
     const entry: Open = { sessionId: session.id, permission: r.id, approvalId: null, base };
     this.open.set(key, entry);
-    // The sidecar knows a request by its tool use id, so the id carries the session's own: a provider numbers
-    // its requests from one in every session, and a repeated id was answered with another session's record.
-    const res = await this.send(session.id, () => this.client.post(base, '/api/cockpit/approvals/ask', { session_id: session.id, tool: r.tool, input: { summary: r.summary }, tool_use_id: `${session.id}:${r.id}` }));
+    // The sidecar keeps one record per session and tool use id, whatever its status, and hands it back to a
+    // repeated offer. The id is the tool call's own, which its PostToolUse carries too, so the sidecar closes the
+    // card when the tool finishes; the session's id is in it because another session's request ids may repeat.
+    const res = await this.send(session.id, () => this.client.post(base, '/api/cockpit/approvals/ask', { session_id: session.id, tool: r.tool, input: { summary: r.summary }, tool_use_id: `${session.id}:${r.toolUse ?? r.id}` }));
     const id = (res?.json as { approval_id?: unknown } | null)?.approval_id;
-    if (typeof id === 'string' && id !== '') entry.approvalId = id;
+    if (typeof id !== 'string' || id === '') return this.startPolling();
+    // A record that is not open when first read was there before this request: its answer is not this request's.
+    const first = await this.client.get(base, `/api/cockpit/approvals?approval_id=${encodeURIComponent(id)}`).catch(() => null);
+    const status = (first?.json as { approval?: { status?: unknown } } | null)?.approval?.status;
+    if (status !== 'open') {
+      this.log(`the sidecar answered session ${session.id}'s request with a record that is ${String(status ?? 'missing')}; it is answered in Deck only`);
+      return this.startPolling();
+    }
+    entry.approvalId = id;
+    this.startPolling();
+  }
+
+  private startPolling(): void {
     if (this.poll === null) this.poll = setInterval(() => void this.readAnswers(), this.pollMs);
   }
 

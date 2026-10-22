@@ -11,7 +11,7 @@ updated: 2026-10-22
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'"]
 goal: "Deck's main process can start, resume, interrupt and stop a Claude session and a Codex session in this checkout or a new worktree, turns what each agent does into one conversation, asks Edwin before an agent acts, and tells the cockpit's sidecar about every session so the cockpit sees Deck's agents."
 requirements: []
-tasks: ["[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]"]
+tasks: ["[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0207]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -81,4 +81,17 @@ Checked for real, by hand: one Claude session through the Agent SDK, read-only (
 
 ## Review
 
-<Two independent reviewers, from the packet `tools/scripts/review-packet.py` writes; their combined verdict is transcribed here, never anticipated.>
+**Round one, 2026-10-22, at 17401d7: not approved by either reviewer.** Both ran `claude-opus-5-5` from the packet, each in its own worktree.
+
+What they found, each a defect this feature wrote, fixed in [[TASK-0207]]:
+
+- After a resume, a permission request could be approved by the first turn's answer. Each provider numbered requests from 1 on every start, and the sidecar hands back its existing record for a repeated session and tool use id. One reviewer reproduced it: a resumed `rm -rf build` was allowed with nobody answering.
+- Deck's edit report carried no tool use id, so the sidecar closed every open approval in the session.
+- A session in a new worktree never reached the cockpit: the sidecar refuses a hook whose folder is outside its repository.
+- Deck never pinned Codex's `approvalsReviewer`, so a setting in `~/.codex/config.toml` could hand approvals to a model.
+- Three guards could be removed with every check still passing: the interrupt's denial, the end's denial, and the renderer's capability check.
+- Smaller: stopping a session that was not running sent no SessionEnd, and Deck's quit did not wait for the last reports.
+
+Two claims were worded wrongly, and are corrected rather than changed in code. The cockpit keeps prompt text in the repository's gitignored `.cockpit/` folder, as it does for its own sessions ([[RISK-0016]]). With Codex, "Edit files without asking" also runs commands without asking, inside the sandbox.
+
+Left as they are: an approval the cockpit records for a Codex session says Claude, because the cockpit's `approvals.py` writes `agent: "claude"` for every offer (the cockpit's to change); a failed worktree start keeps the folder it was meant to use; and requests Deck does not answer are refused with an error, which no real Codex turn has exercised yet.

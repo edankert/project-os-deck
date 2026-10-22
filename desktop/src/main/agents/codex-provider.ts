@@ -19,6 +19,7 @@
  * The child process can be injected, so the suite drives the provider with a fake
  * app-server script and never reaches a model (RISK-0017).
  */
+import crypto from 'node:crypto';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import type { AccessLevel, ConversationRecord } from '../../shared/agent-types.js';
@@ -26,8 +27,10 @@ import type { AgentProvider, ProviderHooks, ProviderSession, StartOptions } from
 import { cleanEnvironment } from './claude-provider.js';
 
 /** The approval policy and sandbox for an access level. There is no level that skips permissions. */
-export function codexPolicy(access: AccessLevel): { approvalPolicy: 'untrusted' | 'on-request'; sandbox: 'workspace-write' } {
-  return { approvalPolicy: access === 'edits' ? 'on-request' : 'untrusted', sandbox: 'workspace-write' };
+export function codexPolicy(access: AccessLevel): { approvalPolicy: 'untrusted' | 'on-request'; sandbox: 'workspace-write'; approvalsReviewer: 'user' } {
+  // The reviewer is pinned to the person: left out, `~/.codex/config.toml` decides, and `auto_review` would hand
+  // Deck's approvals to a model (review, round one).
+  return { approvalPolicy: access === 'edits' ? 'on-request' : 'untrusted', sandbox: 'workspace-write', approvalsReviewer: 'user' };
 }
 
 /** How the app-server child is started: `codex app-server` on the PATH, unless the suite gives its own. */
@@ -80,30 +83,31 @@ export class CodexProvider implements AgentProvider {
     });
     let threadId = '';
     let turnId = '';
-    let asked = 0;
     // What a file change touches, from when it started, for its approval's summary.
     const changePaths = new Map<string, string>();
 
-    const ask = async (tool: string, summary: string): Promise<boolean> => {
-      asked += 1;
-      const answer = await hooks.ask({ id: `codex-ask-${asked}`, tool, summary });
+    // A request is known by the item it approves, unique across every resume of the thread; the JSON-RPC
+    // request ids start again with each app-server, so they cannot be (review, round one).
+    const ask = async (tool: string, summary: string, params: Json): Promise<boolean> => {
+      const item = String(params['itemId'] ?? params['callId'] ?? '');
+      const answer = await hooks.ask({ id: `codex-ask-${item !== '' ? item : crypto.randomUUID()}`, ...(item !== '' ? { toolUse: item } : {}), tool, summary });
       return answer.allow;
     };
     const onServerRequest = async (id: number | string, method: string, params: Json): Promise<void> => {
       try {
         if (method === 'item/commandExecution/requestApproval') {
-          const ok = await ask('Bash', clip(String(params['command'] ?? params['reason'] ?? 'a command')));
+          const ok = await ask('Bash', clip(String(params['command'] ?? params['reason'] ?? 'a command')), params);
           write({ id, result: { decision: ok ? 'accept' : 'decline' } });
         } else if (method === 'item/fileChange/requestApproval') {
-          const ok = await ask('Edit', clip(changePaths.get(String(params['itemId'] ?? '')) ?? String(params['reason'] ?? 'a file change')));
+          const ok = await ask('Edit', clip(changePaths.get(String(params['itemId'] ?? '')) ?? String(params['reason'] ?? 'a file change')), params);
           write({ id, result: { decision: ok ? 'accept' : 'decline' } });
         } else if (method === 'execCommandApproval') {
           const command = Array.isArray(params['command']) ? (params['command'] as unknown[]).join(' ') : String(params['command'] ?? '');
-          const ok = await ask('Bash', clip(command));
+          const ok = await ask('Bash', clip(command), params);
           write({ id, result: { decision: ok ? 'approved' : 'denied' } });
         } else if (method === 'applyPatchApproval') {
           const files = params['fileChanges'] !== null && typeof params['fileChanges'] === 'object' ? Object.keys(params['fileChanges'] as Json).join(', ') : 'a file change';
-          const ok = await ask('Edit', clip(files));
+          const ok = await ask('Edit', clip(files), params);
           write({ id, result: { decision: ok ? 'approved' : 'denied' } });
         } else {
           // Anything else Deck does not answer is refused, never granted by default.
