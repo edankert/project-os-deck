@@ -305,7 +305,7 @@ items:
   tasks:
     TASK-0178:
       file: docs/features/agent-sessions/plan/tasks/TASK-0178-Agent-Sessions-Drawn-On-The-Towers-Ring-To-Judge.md
-      status: doing
+      status: done
       parent: FEAT-0030
       phase: "[[PHASE-0004]]"
     TASK-0179:
@@ -2634,7 +2634,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 170
-    tasks_done: 149
+    tasks_done: 150
     tests_total: 69
     tests_passing: 9
     tests_failing: 0

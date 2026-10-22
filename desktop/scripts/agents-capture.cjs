@@ -20,6 +20,11 @@ app.whenReady().then(async () => {
   });
   await win.loadFile(path.resolve(page));
   for (let i = 0; i < 80 && !(await win.webContents.executeJavaScript('Boolean(window.__towers && window.__agents)')); i += 1) await wait(250);
+  if (!(await win.webContents.executeJavaScript('Boolean(window.__agents)'))) {
+    console.error('the page never drew its agents layer');
+    app.exit(1);
+    return;
+  }
   const js = (s) => win.webContents.executeJavaScript(s);
   const shot = async (name) => fs.writeFileSync(path.join(out, name), (await win.webContents.capturePage()).toJPEG(84));
   fs.mkdirSync(out, { recursive: true });
@@ -62,9 +67,7 @@ app.whenReady().then(async () => {
     await js('window.__agents.drawer(false)');
     console.log(`${ws}: ${sessions.length} sessions, ${placed} placed on the ring; opened ${busiest}; Work on this for ${next}`);
   }
-  if (errors.length > 0) {
-    console.error(`the page logged ${errors.length} error(s):\n${errors.join('\n')}`);
-    process.exitCode = 1;
-  }
-  app.quit();
+  // Electron ignores process.exitCode, so the status is given to app.exit (review of TASK-0178).
+  if (errors.length > 0) console.error(`the page logged ${errors.length} error(s):\n${errors.join('\n')}`);
+  app.exit(errors.length > 0 ? 1 : 0);
 });

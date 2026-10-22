@@ -1,8 +1,8 @@
 {
   "workspace": "project-os-deck",
-  "head": "a724cd93905b0e53a28366f480debafdd9f1cd68",
+  "head": "f16543ec8c368bd902c0c348af372466d7c1a6d5",
   "dirty": true,
-  "generated": "2026-10-22T13:41:35.314Z",
+  "generated": "2026-10-22T13:53:06.620Z",
   "phases": [
     {
       "id": "PHASE-0001",
@@ -846,8 +846,8 @@
           "dropped": 0
         },
         "task": {
-          "closed": 47,
-          "progress": 1,
+          "closed": 48,
+          "progress": 0,
           "failed": 0,
           "owed": 0,
           "open": 0,
@@ -5458,9 +5458,19 @@
       "kind": "feat",
       "state": "progress",
       "type": "feature",
-      "fill": "doing",
-      "needsYou": false,
-      "status": "doing",
+      "fill": "open",
+      "needsYou": true,
+      "needs": {
+        "reason": "review",
+        "say": "Review it, then accept it or send it back",
+        "action": {
+          "parts": {
+            "flow": "accept",
+            "note": "FEAT-0025"
+          }
+        }
+      },
+      "status": "review",
       "title": "Every overview screen is drawn before it is built: DES-0005's prototype and one plate per screen, from real tickets",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -5670,11 +5680,11 @@
     "TASK-0179": {
       "id": "TASK-0179",
       "kind": "task",
-      "state": "progress",
+      "state": "closed",
       "type": "task",
-      "fill": "doing",
+      "fill": "delivered",
       "needsYou": false,
-      "status": "doing",
+      "status": "done",
       "title": "Designs stand on their own tickets, not on an outer ring: on the towers page a picture stands at its ticket's tower, so the nearer the work it shows, the nearer the work it stands",
       "phase": "PHASE-0005",
       "placedBy": "own",
@@ -11124,8 +11134,8 @@
   },
   "focus": {
     "phase": "PHASE-0005",
-    "feature": "FEAT-0025",
-    "task": "TASK-0179"
+    "feature": "FEAT-0030",
+    "task": "TASK-0178"
   },
-  "next": "TASK-0179"
+  "next": "TASK-0178"
 }

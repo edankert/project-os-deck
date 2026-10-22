@@ -1,6 +1,6 @@
 {
  "workspace": "cockpit",
- "recorded": "2026-10-22T13:41:38.081Z",
+ "recorded": "2026-10-22T13:53:09.025Z",
  "head": "b049b92883d04a5c676ad988279be7a933c9df00",
  "seen": "2026-10-15T02:41:24+01:00",
  "publish": {
@@ -8,6 +8,33 @@
   "changed": 0
  },
  "sessions": [
+  {
+   "id": "56d6313a",
+   "agent": "claude",
+   "state": "waiting",
+   "started": "2026-10-22T13:43:00.513+00:00",
+   "last": "2026-10-22T13:43:46.272+00:00",
+   "ended": null,
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 1,
+   "tools": {
+    "Bash": 4
+   },
+   "turns": [
+    {
+     "ts": "2026-10-22T13:43:00.440Z",
+     "tools": {
+      "Bash": 4
+     },
+     "files": 0,
+     "plus": 0,
+     "minus": 0
+    }
+   ]
+  },
   {
    "id": "bc4cdcaa",
    "agent": "claude",
@@ -88,7 +115,7 @@
     "fiveHour": 25,
     "week": 79
    },
-   "prompts": 10,
+   "prompts": 9,
    "tools": {
     "Bash": 480,
     "Edit": 27,
@@ -100,6 +127,15 @@
     "AskUserQuestion": 1
    },
    "turns": [
+    {
+     "ts": "2026-10-14T21:03:07.605Z",
+     "tools": {
+      "Bash": 3
+     },
+     "files": 0,
+     "plus": 0,
+     "minus": 0
+    },
     {
      "ts": "2026-10-14T21:03:45.608Z",
      "tools": {
@@ -133,13 +169,6 @@
      "files": 19,
      "plus": 2113,
      "minus": 46
-    },
-    {
-     "ts": "2026-10-14T23:06:29.191Z",
-     "tools": {},
-     "files": 0,
-     "plus": 0,
-     "minus": 0
     },
     {
      "ts": "2026-10-16T19:23:25.005Z",
@@ -311,21 +340,6 @@
    "started": "2026-10-14T21:25:16.331+00:00",
    "last": "2026-10-14T21:25:16.331+00:00",
    "ended": "2026-10-14T21:25:16.331+00:00",
-   "tickets": [],
-   "changed": [],
-   "files": 0,
-   "cost": null,
-   "prompts": 0,
-   "tools": {},
-   "turns": []
-  },
-  {
-   "id": "55e0cc31",
-   "agent": "claude",
-   "state": "idle",
-   "started": "2026-10-14T21:24:51.242+00:00",
-   "last": "2026-10-14T21:24:51.242+00:00",
-   "ended": "2026-10-14T21:24:51.242+00:00",
    "tickets": [],
    "changed": [],
    "files": 0,

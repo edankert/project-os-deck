@@ -1,11 +1,11 @@
 {
  "workspace": "deck",
- "recorded": "2026-10-22T13:41:35.836Z",
- "head": "a724cd93905b0e53a28366f480debafdd9f1cd68",
+ "recorded": "2026-10-22T13:53:07.128Z",
+ "head": "f16543ec8c368bd902c0c348af372466d7c1a6d5",
  "seen": "2026-10-14T16:39:05+01:00",
  "publish": {
-  "ahead": 12,
-  "changed": 6
+  "ahead": 15,
+  "changed": 7
  },
  "sessions": [
   {
@@ -13,7 +13,7 @@
    "agent": "claude",
    "state": "busy",
    "started": "2026-10-14T20:30:24.623+00:00",
-   "last": "2026-10-22T13:41:35.147+00:00",
+   "last": "2026-10-22T13:53:06.458+00:00",
    "ended": null,
    "tickets": [
     "FEAT-0026",
@@ -63,7 +63,8 @@
     "TASK-0173",
     "TASK-0176",
     "TASK-0177",
-    "DES-0006"
+    "DES-0006",
+    "TASK-0179"
    ],
    "changed": [
     [
@@ -118,8 +119,8 @@
     ],
     [
      "FEAT-0025",
-     "doing",
-     "2026-10-22T13:12:33.984+00:00"
+     "review",
+     "2026-10-22T13:46:09.988+00:00"
     ],
     [
      "FEAT-0027",
@@ -305,21 +306,26 @@
      "DES-0006",
      "proposed",
      "2026-10-22T13:31:15.369+00:00"
+    ],
+    [
+     "TASK-0179",
+     "done",
+     "2026-10-22T13:46:09.983+00:00"
     ]
    ],
-   "files": 128,
+   "files": 132,
    "cost": {
-    "context": 80,
+    "context": 84,
     "window": 1000000,
-    "minutes": 11109,
-    "fiveHour": 14,
+    "minutes": 11118,
+    "fiveHour": 18,
     "week": 2
    },
-   "prompts": 36,
+   "prompts": 33,
    "tools": {
-    "Bash": 1320,
-    "Read": 108,
-    "Agent": 47,
+    "Bash": 1331,
+    "Read": 109,
+    "Agent": 49,
     "Write": 42,
     "Edit": 22,
     "ToolSearch": 12,
@@ -328,7 +334,7 @@
    },
    "turns": [
     {
-     "ts": "2026-10-16T17:30:32.998Z",
+     "ts": "2026-10-16T16:27:40.344Z",
      "tools": {
       "Bash": 14
      },
@@ -337,8 +343,10 @@
      "minus": 0
     },
     {
-     "ts": "2026-10-16T19:13:35.993Z",
-     "tools": {},
+     "ts": "2026-10-16T17:30:32.998Z",
+     "tools": {
+      "Bash": 14
+     },
      "files": 0,
      "plus": 0,
      "minus": 0
@@ -411,8 +419,10 @@
     {
      "ts": "2026-10-22T13:39:38.460Z",
      "tools": {
-      "Bash": 5,
-      "Write": 1
+      "Bash": 16,
+      "Agent": 2,
+      "Write": 1,
+      "Read": 1
      },
      "files": 1,
      "plus": 15,
@@ -433,37 +443,21 @@
    "changed": [],
    "files": 3,
    "cost": null,
-   "prompts": 3,
+   "prompts": 1,
    "tools": {
     "exec": 36,
     "request_user_input_async": 1
    },
    "turns": [
     {
-     "ts": "2026-10-14T16:24:15.583Z",
-     "tools": {},
-     "files": 0,
-     "plus": 0,
-     "minus": 0
-    },
-    {
      "ts": "2026-10-14T16:24:15.946Z",
      "tools": {
-      "exec": 34,
+      "exec": 36,
       "request_user_input_async": 1
      },
-     "files": 0,
-     "plus": 0,
-     "minus": 0
-    },
-    {
-     "ts": "2026-10-14T16:33:21.973Z",
-     "tools": {
-      "exec": 2
-     },
-     "files": 0,
-     "plus": 0,
-     "minus": 0
+     "files": 3,
+     "plus": 88,
+     "minus": 7
     }
    ]
   },
@@ -558,7 +552,7 @@
     "fiveHour": 11,
     "week": 44
    },
-   "prompts": 7,
+   "prompts": 6,
    "tools": {
     "Bash": 22,
     "Read": 1,
@@ -574,13 +568,6 @@
       "Bash": 4,
       "Read": 1
      },
-     "files": 0,
-     "plus": 0,
-     "minus": 0
-    },
-    {
-     "ts": "2026-10-14T15:26:54.889Z",
-     "tools": {},
      "files": 0,
      "plus": 0,
      "minus": 0
@@ -651,7 +638,7 @@
     "fiveHour": 9,
     "week": 44
    },
-   "prompts": 4,
+   "prompts": 3,
    "tools": {
     "Bash": 24,
     "Read": 1,
@@ -665,13 +652,6 @@
       "Bash": 2,
       "Read": 1
      },
-     "files": 0,
-     "plus": 0,
-     "minus": 0
-    },
-    {
-     "ts": "2026-10-14T14:55:28.949Z",
-     "tools": {},
      "files": 0,
      "plus": 0,
      "minus": 0
@@ -713,7 +693,7 @@
     "fiveHour": 24,
     "week": 43
    },
-   "prompts": 3,
+   "prompts": 2,
    "tools": {
     "Bash": 53,
     "Write": 1,
@@ -725,13 +705,6 @@
      "tools": {
       "Bash": 39
      },
-     "files": 0,
-     "plus": 0,
-     "minus": 0
-    },
-    {
-     "ts": "2026-10-14T14:49:03.409Z",
-     "tools": {},
      "files": 0,
      "plus": 0,
      "minus": 0

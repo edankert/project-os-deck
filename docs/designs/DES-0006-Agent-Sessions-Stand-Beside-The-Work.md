@@ -49,15 +49,15 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
 
 ![Deck, the agents at their towers](__attachments__/DES-0006/agents-deck-ring.jpg)
 
-Deck on 2026-10-22: this session, Claude d95491a5, working, stands over Overview; an idle Claude and Codex stand over Glass. Needs you counts the tickets that need you; no agent and no permission is waiting. Twelve commits were ahead of the upstream when it was recorded, and six files changed.
+Deck on 2026-10-22: this session, Claude d95491a5, working, stands over Overview; an idle Claude and Codex stand over Glass. Needs you counts the tickets that need you; no agent and no permission is waiting. Fifteen commits were ahead of the upstream when it was recorded, and seven files changed.
 
 ![Deck, this session opened](__attachments__/DES-0006/agents-deck-session.jpg)
 
-The session opened: 48 tickets joined to it, context 80% of its 1,000k window over 11,109 minutes, and every ticket it moved with when.
+The session opened: 49 tickets joined to it, context 84% of its 1,000k window over 11,118 minutes, and every ticket it moved with when.
 
 ![The cockpit's repository, a session with permission requests](__attachments__/DES-0006/agents-cockpit-session.jpg)
 
-The cockpit's repository: Claude bc4cdcaa, waiting for you, worked on eleven tickets, FEAT-0157 and its tasks among them, and ran Bash 480 times over ten prompts.
+The cockpit's repository: Claude bc4cdcaa, waiting for you, worked on eleven tickets, FEAT-0157 and its tasks among them, and ran Bash 480 times over nine prompts.
 
 ![The same session's conversation](__attachments__/DES-0006/agents-cockpit-conversation.jpg)
 

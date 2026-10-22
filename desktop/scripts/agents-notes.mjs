@@ -4,6 +4,12 @@
 
 const ID = /^[A-Z]+-\d+/;
 
+/** Text the harness wrote into the conversation, not a person: tags, AGENTS.md, interruptions, resumptions. */
+const isHarness = (text) => {
+  const t = String(text).trimStart();
+  return t === '' || t.startsWith('<') || t.startsWith('# AGENTS.md') || t.startsWith('[Request interrupted') || t.startsWith('This session is being continued');
+};
+
 /**
  * A Claude transcript (JSONL) or a Codex rollout, counted, never copied: tool calls by name,
  * the prompts a person typed, and each turn (from one prompt to the next) as its start time,
@@ -45,15 +51,21 @@ export function countTranscript(text, agent) {
     }
     if (agent === 'codex') {
       const p = o.payload ?? {};
+      // A person's message, not the harness's (AGENTS.md, <environment_context>, <hook_prompt>...).
       if (o.type === 'response_item' && p.type === 'message' && p.role === 'user') {
-        prompts += 1;
-        startTurn(o.timestamp);
+        const said = typeof p.content === 'string' ? p.content : (Array.isArray(p.content) ? p.content.map((b) => b?.text ?? '').join('') : '');
+        if (!isHarness(said)) {
+          prompts += 1;
+          startTurn(o.timestamp);
+        }
       }
       if (o.type === 'response_item' && (p.type === 'function_call' || p.type === 'custom_tool_call')) {
         add(p.name);
         const input = typeof p.input === 'string' ? p.input : typeof p.arguments === 'string' ? p.arguments : '';
         if (input.includes('*** Begin Patch')) {
-          for (const l of input.split('\n')) {
+          // Codex often writes the patch inside a script, its line breaks escaped as \n.
+          const patch = /\n\*\*\* /.test(input) ? input : input.replace(/\\n/g, '\n');
+          for (const l of patch.split('\n')) {
             const f = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/.exec(l)?.[1];
             if (f) edited(f, 0, 0);
             else if (l.startsWith('+') && !l.startsWith('+++')) edited(null, 1, 0);
@@ -66,7 +78,7 @@ export function countTranscript(text, agent) {
     const content = o.message?.content;
     // A prompt is a person's turn: text, not a tool's result and not the harness's own note.
     if (o.type === 'user' && !o.isMeta && !o.toolUseResult) {
-      const isText = typeof content === 'string' ? !content.startsWith('<') : Array.isArray(content) && content.some((b) => b?.type === 'text' && !String(b.text).startsWith('<')) && !content.some((b) => b?.type === 'tool_result');
+      const isText = typeof content === 'string' ? !isHarness(content) : Array.isArray(content) && content.some((b) => b?.type === 'text' && !isHarness(String(b.text))) && !content.some((b) => b?.type === 'tool_result');
       if (isText) {
         prompts += 1;
         startTurn(o.timestamp);

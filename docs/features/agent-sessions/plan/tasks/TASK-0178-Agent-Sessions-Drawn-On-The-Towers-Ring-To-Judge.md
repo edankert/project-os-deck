@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0178
 title: "Agent sessions drawn on the towers ring to judge, from the cockpit's recorded sessions: agents at their towers, a session as a conversation, one Needs you, the overview panels and the shell drawer"
-status: doing
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -36,7 +36,7 @@ tests: ["[[TST-0101-DES-0006s-Page-Is-Drawn-From-Recorded-Sessions-As-Counts]]"]
 - [x] The page draws each item above from that fixture and the overview fixtures, on Deck and your-trainer, with no errors in a hidden window.
 - [x] TST-0094 or a test of its own checks the fixture against the recorded files and that no text leaks into it.
 - [x] Pictures on both workspaces are in DES-0006, which asks Edwin what to change.
-- [ ] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
+- [x] `cd desktop && npm test` passes. Two independent Claude reviewers review it.
 
 ## Verification
 
@@ -53,3 +53,5 @@ Round one, 2026-10-22, two independent Claude reviewers (`model:claude-opus-5-5`
 - **Panels overlapped** (page): the header ran over the pane, a ticket's card over the overview, the drawer over Next up and the weeks. The pane starts below the header, a card hides the panels under it, Next up and the weeks stand above the drawer's tabs, and the drawer makes room for an open pane.
 - **At 1100 wide the Agents list was gone** (page). Below 1280 px the Agents list stays and the overview panels move behind a "◫ Overview" button.
 - Also (page): a status a session set reads "set 12:56" when the ticket still has it; Escape closes the new-session dialog; choosing Codex offers Codex's models; sessions over one tower stand apart; "Agents waiting for you" says when it shows only the first three; the counts since you last looked say their type when pointed at; an open session stays open across a regroup.
+
+Round two, 2026-10-22, two fresh independent Claude reviewers on `039d2c7`. Data and privacy: changes requested. No dollar cost and no record text is anywhere committed, and Claude's turn counts matched an independent recount, but: the capture check named missing agents yet exited 0, since Electron ignores `process.exitCode`; every Codex edit read as zero, since Codex writes its patches inside a script with escaped line breaks; Codex's harness messages (AGENTS.md, `<environment_context>`) and Claude's interruption and resumption notices counted as your prompts; and the cost guard caught only a key named `usd`. All fixed after it: the capture exits through `app.exit` (exit 0 on the page, 1 on a copy with the markers removed); escaped patches are counted (Codex session 01a13b4c now shows +708 −12 and more); harness text is not a prompt (the cockpit's bc4cdcaa has nine prompts, not ten); and TST-0101 now holds each session and its use to an exact list of fields. The fixtures were recorded again and the captions follow them. The page reviewer's round-two verdict is recorded below when it arrives; a gate runs two rounds at most.

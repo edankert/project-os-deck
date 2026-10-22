@@ -30,13 +30,18 @@ test('a transcript is counted, never copied: tool calls by name and the prompts 
   ].map((o) => JSON.stringify(o)).join('\n'), 'claude');
   assert.deepEqual(edits.turns, [{ ts: '2026-10-22T10:00:00Z', tools: { Edit: 2, Write: 1 }, files: 2, plus: 6, minus: 3 }], 'a turn counts the files it edited and the lines it added and removed, never their names or text');
   const codex = [
-    { type: 'response_item', payload: { type: 'message', role: 'user', content: 'SECRET' } },
+    { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: '<environment_context>SECRET</environment_context>' }] } },
+    { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: '# AGENTS.md instructions SECRET' }] } },
+    { type: 'response_item', timestamp: '2026-10-22T10:00:00Z', payload: { type: 'message', role: 'user', content: 'SECRET' } },
+    { type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', input: 'text(await tools.apply_patch("*** Begin Patch\\n*** Update File: /x/SECRET.md\\n@@\\n-old\\n+new\\n+more\\n*** End Patch"))' } },
     { type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', input: 'SECRET' } },
     { type: 'response_item', payload: { type: 'function_call', name: 'exec' } },
     { type: 'response_item', payload: { type: 'message', role: 'assistant', content: 'SECRET' } },
   ].map((o) => JSON.stringify(o)).join('\n');
   const cx = countTranscript(codex, 'codex');
-  assert.deepEqual([cx.tools, cx.prompts], [{ exec: 2 }, 1], 'a Codex rollout counts the same way');
+  assert.deepEqual([cx.tools, cx.prompts], [{ exec: 3 }, 1], 'a Codex rollout counts the same way; the harness\'s messages are not prompts');
+  assert.deepEqual([cx.turns[0].files, cx.turns[0].plus, cx.turns[0].minus], [1, 2, 1], 'a patch written inside a script, its line breaks escaped, is counted');
+  assert.equal(countTranscript([{ type: 'user', message: { content: '[Request interrupted by user]' } }, { type: 'user', message: { content: 'This session is being continued from a previous conversation' } }].map((o) => JSON.stringify(o)).join('\n'), 'claude').prompts, 0, 'an interruption or a resumption is not a prompt');
 });
 
 test('a session keeps ids, states, times, tickets and counts, and no text', async () => {
@@ -63,6 +68,10 @@ test('a session keeps ids, states, times, tickets and counts, and no text', asyn
   assert.deepEqual(b.changed, [['TASK-0002', 'done', '2026-10-20T11:00:00Z']]);
   assert.deepEqual(b.cost, { context: 26, window: 1000000, minutes: 10, fiveHour: 39, week: 80 }, 'use, never the dollar cost');
   assert.deepEqual([b.files, b.prompts, b.tools, b.turns.length], [2, 1, { Bash: 3 }, 1], 'counts only');
+  // Exactly these fields and no others, so nothing new (a dollar figure, a title) slips in unnoticed.
+  assert.deepEqual(Object.keys(b).sort(), ['agent', 'changed', 'cost', 'ended', 'files', 'id', 'last', 'prompts', 'started', 'state', 'tickets', 'tools', 'turns'], 'a session keeps exactly these fields');
+  assert.deepEqual(Object.keys(b.cost).sort(), ['context', 'fiveHour', 'minutes', 'week', 'window'], 'use, never money');
+  assert.ok(!JSON.stringify(out).includes('1.23') && !JSON.stringify(out).includes('1.234'), 'the dollar figure appears nowhere');
   assert.deepEqual(out.requests, [{ session: 'cccccccc', agent: 'claude', tool: 'Bash', kind: 'permission', status: 'granted', ts: '2026-10-19T11:00:00Z', closed: '2026-10-19T11:00:05Z' }], 'a request keeps its tool and outcome, never its command');
 });
 
@@ -79,7 +88,13 @@ test('the recorded fixtures hold only short words, ids, times and numbers', () =
   for (const f of files) walk(JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')));
   const bad = strings.filter((s) => s.length > 40 || /[/\\\s]/.test(s.replace(/^\d{4}-\d{2}-\d{2}T[\d:.+]+(Z|[+-]\d{2}:\d{2})?$/, '')));
   assert.deepEqual(bad, [], 'no string in the fixtures is long, holds a path or holds spaces (text would)');
-  for (const f of files) assert.ok(!/"usd"/.test(fs.readFileSync(path.join(dir, f), 'utf-8')), `${f}: no dollar cost`);
+  for (const f of files) {
+    const rec = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
+    for (const s of rec.sessions) {
+      assert.deepEqual(Object.keys(s).filter((k) => !['agent', 'changed', 'cost', 'ended', 'files', 'id', 'last', 'prompts', 'started', 'state', 'tickets', 'tools', 'turns'].includes(k)), [], `${f}: ${s.id} keeps no other field`);
+      if (s.cost) assert.deepEqual(Object.keys(s.cost).filter((k) => !['context', 'fiveHour', 'minutes', 'week', 'window'].includes(k)), [], `${f}: ${s.id}'s use holds no money`);
+    }
+  }
 });
 
 test('the page holds every recorded session of every workspace, and loads nothing else from outside', () => {
