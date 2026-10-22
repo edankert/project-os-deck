@@ -104,3 +104,115 @@ test('a session started again from its record resumes the agent by its own id', 
   assert.equal(provider.started[0].resume, 'agent-own-id');
   assert.deepEqual(turnsOf(s.records).map((t) => t.prompt), ['earlier', 'Carry on, invented.']);
 });
+
+// --- TASK-0192: the Claude provider over the Agent SDK ---
+
+const { ClaudeProvider, claudeOptions, cleanEnvironment, permissionModeFor, SETTING_SOURCES, editOf } = load('main/agents/claude-provider.js');
+
+/**
+ * A fake `query()`: for each prompt it reads from the stream, plays one turn of SDK-shaped
+ * messages. A tool use asks `canUseTool` first, as the SDK does, and its result says whether
+ * it ran. Everything here is invented (RISK-0016).
+ */
+function fakeQuery(turns) {
+  const calls = [];
+  const fn = ({ prompt, options }) => {
+    calls.push(options);
+    let interrupted = false;
+    const gen = (async function* () {
+      yield { type: 'system', subtype: 'init', session_id: options.resume ?? 'sdk-session-1' };
+      let t = 0;
+      for await (const p of prompt) {
+        const steps = turns[t++] ?? [];
+        for (const step of steps) {
+          if (interrupted) break;
+          if (step.text) yield { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'text', text: step.text }] } };
+          if (step.use) {
+            const [name, input, id] = step.use;
+            yield { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id, name, input }] } };
+            const answer = name === 'Read' || name === 'TodoWrite' ? { behavior: 'allow' } : await options.canUseTool(name, input, { signal: new AbortController().signal });
+            yield { type: 'user', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: id, is_error: answer.behavior !== 'allow', content: answer.behavior === 'allow' ? 'ok' : answer.message }] } };
+          }
+        }
+        yield { type: 'result', subtype: 'success', is_error: false, session_id: 'sdk-session-1', prompt: p };
+      }
+    })();
+    gen.interrupt = async () => { interrupted = true; };
+    return gen;
+  };
+  fn.calls = calls;
+  return fn;
+}
+
+test('the Claude options never skip permissions, read only the repository\'s settings and leave the cockpit\'s variables out', () => {
+  const start = { folder: '/tmp/ws', prompt: 'p', model: 'claude-opus-5-5', effort: 'high', access: 'ask' };
+  const env = { PATH: '/usr/bin', HOME: '/Users/x', COCKPIT_HOOK_URL: 'http://127.0.0.1:1/api/agent-hook', COCKPIT_URL: 'x', CLAUDE_CODE_PLUGIN_DIRS: '/plugins', ANTHROPIC_MODEL: 'kept' };
+  for (const access of ['ask', 'edits']) {
+    const o = claudeOptions({ ...start, access }, async () => ({ behavior: 'deny', message: 'x' }), new AbortController(), env);
+    assert.equal(o.permissionMode, access === 'edits' ? 'acceptEdits' : 'default');
+    const text = JSON.stringify(o, (k, v) => (typeof v === 'function' || v instanceof AbortController ? '[fn]' : v));
+    assert.doesNotMatch(text, /bypassPermissions|allowDangerouslySkipPermissions|dangerously/i, 'nothing that skips permissions');
+    assert.ok(!('allowDangerouslySkipPermissions' in o));
+    assert.deepEqual(o.settingSources, ['project', 'local']);
+    assert.equal(typeof o.canUseTool, 'function');
+    assert.deepEqual(Object.keys(o.env).sort(), ['ANTHROPIC_MODEL', 'HOME', 'PATH']);
+    assert.equal(o.cwd, '/tmp/ws');
+    assert.equal(o.model, 'claude-opus-5-5');
+    assert.equal(o.effort, 'high');
+    assert.ok(!('resume' in o));
+  }
+  assert.equal(claudeOptions({ ...start, resume: 'sdk-9' }, async () => ({}), new AbortController(), env).resume, 'sdk-9');
+  assert.deepEqual([...SETTING_SOURCES], ['project', 'local']);
+  assert.deepEqual(['ask', 'edits'].map(permissionModeFor), ['default', 'acceptEdits']);
+  assert.deepEqual(Object.keys(cleanEnvironment({ COCKPIT_X: '1', A: '2', CLAUDE_CODE_PLUGIN_DIRS: '3' })), ['A']);
+});
+
+test('a Claude session: the SDK session id, text, a plan, a tool that asks, its edit once made, and the turn\'s end', async () => {
+  const q = fakeQuery([[
+    { text: 'Looking at the ticket.' },
+    { use: ['Read', { file_path: 'docs/a.md' }, 'tu1'] },
+    { use: ['TodoWrite', { todos: [{ content: 'Read it', status: 'completed' }, { content: 'Fix it', status: 'pending' }] }, 'tu2'] },
+    { use: ['Edit', { file_path: 'src/a.ts', old_string: 'one', new_string: 'one\ntwo\nthree' }, 'tu3'] },
+    { text: 'Edited.' },
+  ], [{ use: ['Bash', { command: 'git push' }, 'tu4'] }]]);
+  const s = new AgentSession(record(), new ClaudeProvider(q, now, { PATH: '/bin' }), now);
+  await s.start('Work on TASK-0001, invented.');
+  await until(() => openRequests(s.records).length === 1);
+  assert.deepEqual([openRequests(s.records)[0].tool, openRequests(s.records)[0].summary], ['Edit', 'src/a.ts']);
+  assert.ok(!s.records.some((r) => r.kind === 'edit'), 'no edit before it is allowed');
+  s.answer(openRequests(s.records)[0].id, { allow: true });
+  await until(() => s.record.state === 'idle');
+  assert.equal(s.record.providerId, 'sdk-session-1');
+  const rs = latest(s.records).filter((r) => r.kind !== 'state');
+  assert.deepEqual(rs.map((r) => r.kind), ['prompt', 'text', 'tool', 'plan', 'tool', 'permission', 'edit', 'text']);
+  assert.deepEqual(rs[3].steps, [{ text: 'Read it', done: true }, { text: 'Fix it', done: false }]);
+  assert.deepEqual([rs[2].name, rs[2].summary, rs[2].outcome], ['Read', 'docs/a.md', 'done']);
+  assert.deepEqual([rs[4].name, rs[4].outcome], ['Edit', 'done']);
+  assert.deepEqual([rs[6].path, rs[6].added, rs[6].removed], ['src/a.ts', 3, 1]);
+  // The next prompt goes into the same query, and a denial reaches the SDK: the tool fails, no edit.
+  await s.send('Now push, invented.');
+  await until(() => openRequests(s.records).length === 1);
+  s.answer(openRequests(s.records)[0].id, { allow: false, message: 'not from Deck' });
+  await until(() => s.record.state === 'idle');
+  assert.equal(q.calls.length, 1, 'one query holds the whole session');
+  const last = turnsOf(s.records).at(-1);
+  assert.deepEqual(last.records.filter((r) => r.kind === 'tool').map((r) => [r.name, r.outcome]), [['Bash', 'failed']]);
+  assert.equal(last.records.find((r) => r.kind === 'permission').outcome, 'denied');
+});
+
+test('a Claude session resumed from its record continues the SDK session by its id', async () => {
+  const q = fakeQuery([[{ text: 'Back again.' }]]);
+  const s = new AgentSession(record({ providerId: 'sdk-session-7' }), new ClaudeProvider(q, now, {}), now);
+  await s.send('Carry on, invented.');
+  await until(() => s.record.state === 'idle');
+  assert.equal(q.calls[0].resume, 'sdk-session-7');
+  assert.equal(q.calls[0].permissionMode, 'default');
+});
+
+test('edits count their lines: an Edit, a MultiEdit and a Write', () => {
+  const at = 'now';
+  assert.deepEqual(['added', 'removed'].map((k) => editOf('Edit', { file_path: 'a', old_string: 'x\ny', new_string: 'z' }, at)[k]), [1, 2]);
+  assert.deepEqual(['added', 'removed'].map((k) => editOf('MultiEdit', { file_path: 'a', edits: [{ old_string: 'a', new_string: 'b\nc' }, { old_string: '', new_string: 'd' }] }, at)[k]), [3, 1]);
+  assert.deepEqual(['added', 'removed'].map((k) => editOf('Write', { file_path: 'a', content: '1\n2\n3\n4' }, at)[k]), [4, 0]);
+  assert.equal(editOf('Bash', { command: 'ls' }, at), null);
+});

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0192
 aliases: ["TASK-0192"]
 title: "The Claude provider runs a session through the Agent SDK's query(), raises each permission request for Deck to answer, and never skips permissions"
-status: doing
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -24,21 +24,31 @@ tests: ["[[TST-0104]]"]
 
 ## Definition of Done
 
-- [ ] `@anthropic-ai/claude-agent-sdk` is a dependency of `desktop/`, pinned to an exact version (0.3.308 or the latest on the day), with its licence checked and recorded in [[RISK-0012]].
-- [ ] `desktop/src/main/agents/claude-provider.ts` starts a session with the prompt, the folder, the model and the effort; streams the SDK's messages as conversation records; and maps tool uses to tool calls, Edit and Write results to file edits with lines added and removed, and TodoWrite to the plan.
-- [ ] Every permission request arrives through `canUseTool` and waits for Deck's answer; Approve and Deny reach the SDK.
-- [ ] `permissionMode` is set explicitly to `default`, or `acceptEdits` when the session's access level says so. The options never carry `bypassPermissions` or `allowDangerouslySkipPermissions`, whatever the user's settings say. A check in the suite reads the options the provider builds and fails if either appears ([[RISK-0013]]).
-- [ ] The child's environment has `CLAUDE_CODE_PLUGIN_DIRS` and the cockpit's own variables removed, so the cockpit's plugin does not also report this session.
-- [ ] `settingSources` includes `project`, so the repository's `CLAUDE.md` and project settings apply.
-- [ ] Resume continues the session by its SDK session id; Interrupt stops the current turn; Stop ends the session.
-- [ ] The suite drives the provider with a fake query stream injected in place of the SDK. No check reaches a real model ([[RISK-0017]]).
+- [x] `@anthropic-ai/claude-agent-sdk` is a dependency of `desktop/`, pinned to an exact version (0.3.308 or the latest on the day), with its licence checked and recorded in [[RISK-0012]].
+- [x] `desktop/src/main/agents/claude-provider.ts` starts a session with the prompt, the folder, the model and the effort; streams the SDK's messages as conversation records; and maps tool uses to tool calls, Edit and Write results to file edits with lines added and removed, and TodoWrite to the plan.
+- [x] Every permission request arrives through `canUseTool` and waits for Deck's answer; Approve and Deny reach the SDK.
+- [x] `permissionMode` is set explicitly to `default`, or `acceptEdits` when the session's access level says so. The options never carry `bypassPermissions` or `allowDangerouslySkipPermissions`, whatever the user's settings say. A check in the suite reads the options the provider builds and fails if either appears ([[RISK-0013]]).
+- [x] The child's environment has `CLAUDE_CODE_PLUGIN_DIRS` and the cockpit's own variables removed, so the cockpit's plugin does not also report this session.
+- [x] `settingSources` includes `project`, so the repository's `CLAUDE.md` and project settings apply.
+- [x] Resume continues the session by its SDK session id; Interrupt stops the current turn; Stop ends the session.
+- [x] The suite drives the provider with a fake query stream injected in place of the SDK. No check reaches a real model ([[RISK-0017]]).
 
 ## Steps
 
-- [ ] Read the SDK's own types for `query()`, `canUseTool`, `permissionMode`, `settingSources`, `resume` and interrupt in the installed package before writing the wrapper; do not rely on memory.
-- [ ] Inject the query function, so the suite can pass a fake.
-- [ ] Run one real session by hand on this repository, with a prompt that only reads, to confirm the message shapes. Record what was checked in Notes, without the prompt or reply text ([[RISK-0016]]).
+- [x] Read the SDK's own types for `query()`, `canUseTool`, `permissionMode`, `settingSources`, `resume` and interrupt in the installed package before writing the wrapper; do not rely on memory.
+- [x] Inject the query function, so the suite can pass a fake.
+- [x] Run one real session by hand on this repository, with a prompt that only reads, to confirm the message shapes. Record what was checked in Notes, without the prompt or reply text ([[RISK-0016]]).
 
 ## Notes
 
 Edwin's shell aliases `claude` to `--dangerously-skip-permissions`. The SDK does not read shell aliases, but it can read user settings; that is why the mode is set explicitly rather than left to the default.
+
+## What was built (2026-10-22)
+
+- `desktop/src/main/agents/claude-provider.ts`. One `query()` holds the whole session: its prompt is a stream Deck pushes each prompt into. The SDK's messages become records: text, tool calls (running, then done or failed from their results), TodoWrite as the plan, and an Edit, MultiEdit or Write as a file edit with lines added and removed, counted only once its result says it was made. A subagent's own steps stay inside its call.
+- **Permissions.** `canUseTool` asks the session and waits; Approve passes the input back unchanged, Deny passes Deck's message. `claudeOptions` builds the options as a pure function: `permissionMode` is always set, `default` or `acceptEdits`; `settingSources` is `project` and `local`, never `user`; the environment loses every `COCKPIT_*` variable and `CLAUDE_CODE_PLUGIN_DIRS`. A check reads the options for both access levels and fails on anything that skips permissions.
+- The SDK is loaded once by a dynamic import the CommonJS compiler leaves alone, and the query function can be injected; [[TST-0104]] drives the provider with a fake `query()` that asks `canUseTool` as the SDK does. 9 checks pass.
+
+## The one real session (Edwin allowed one, 2026-10-22)
+
+Run by hand through `ClaudeProvider` and `AgentSession`, in this checkout, with Haiku at low effort and a prompt that only reads; any permission request would have been denied automatically. It went idle after 12 seconds with: the SDK session id (so Resume has one), the prompt, a Bash call that ran, the agent's answer, and the state changes. No permission request came: the command was read-only, and Claude Code lets read-only commands run in its default mode without asking, as it does in a terminal, with no allow rule in this repository's settings. **Not yet shown with a real agent:** that a tool which writes is asked about. The fake `query()` shows Deck's side; the real one would need a second session, which Edwin is asked about. The prompt and reply text are not recorded here ([[RISK-0016]]).

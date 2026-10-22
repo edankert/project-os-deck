@@ -28,6 +28,8 @@ Deck now depends on two moving interfaces. `@anthropic-ai/claude-agent-sdk` is a
 - Map unknown events to nothing rather than failing
 - A missing or unknown `codex` fails the session with a sentence
 
+**Installed 2026-10-22 (TASK-0192).** `@anthropic-ai/claude-agent-sdk` 0.3.308, pinned exactly in `desktop/package.json`. Its licence is Anthropic's own: "All rights reserved. Use is subject to the Legal Agreements" at code.claude.com, not an open-source licence; Deck uses it as a dependency on Edwin's machine and does not redistribute it. It brings Claude Code's own binary for the platform as an optional dependency, 272 MB on this Mac, so `npm ci` in CI and in the smoke container downloads the Linux one. It is ESM only; Deck's main process loads it with a dynamic import.
+
 ## Triggers
 
 - A Deck session shows no steps while the agent clearly works; a permission request in the agent's own log never reaches Deck; the suite passes while a real session fails.

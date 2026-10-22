@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0193
 aliases: ["TASK-0193"]
 title: "The Codex provider runs a session through codex app-server over JSON-RPC, raises each approval request for Deck to answer, and never runs without approval"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
