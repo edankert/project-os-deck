@@ -15,7 +15,7 @@ entrypoint: "desktop/tests/agent-sessions.test.mjs"
 command: "bash tools/scripts/run-desktop-tests.sh agent-sessions"
 covers: ["[[FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On]]"]
 issues: []
-tasks: ["[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0207]]"]
+tasks: ["[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0207]]", "[[TASK-0208]]"]
 artifacts: []
 adequacy: ""
 mutation_score: ""

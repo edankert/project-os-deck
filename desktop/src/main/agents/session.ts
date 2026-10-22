@@ -83,8 +83,9 @@ export class AgentSession {
     if (open !== undefined) {
       this.add({ ...open, at: this.now(), outcome: answer.allow ? 'approved' : 'denied', ...(!answer.allow && answer.message ? { message: answer.message } : {}) });
     }
-    resolve(answer);
+    // The session is at work again before the agent is let go: what the agent does next may run inside this call.
     if (this.waiting.size === 0 && this.record.state === 'waiting') this.setState('working');
+    resolve(answer);
     return true;
   }
 
@@ -131,10 +132,20 @@ export class AgentSession {
     this.tell({ kind: 'record', record });
   }
 
+  /**
+   * The state changes before anyone is told. Telling a listener can run the agent's next steps
+   * inside this call: in Electron, sending a change to a window runs pending promise callbacks,
+   * so a turn that ends at once set the session idle in the middle of setting it to working, and
+   * the working that followed stuck (TASK-0201's walk). So the record holds the new state first,
+   * and the session change carries whatever state the session has by the time it is sent.
+   */
   private setState(state: SessionState, reason?: string): void {
     if (this.record.state === state && reason === undefined) return;
-    this.add({ kind: 'state', at: this.now(), state, ...(reason !== undefined ? { reason } : {}) });
-    this.update({ state });
+    const record: ConversationRecord = { kind: 'state', at: this.now(), state, ...(reason !== undefined ? { reason } : {}) };
+    this.record = { ...this.record, state, lastActive: record.at };
+    this.records.push(record);
+    this.tell({ kind: 'record', record });
+    this.tell({ kind: 'session', session: this.record });
   }
 
   private update(part: Partial<SessionRecord>): void {

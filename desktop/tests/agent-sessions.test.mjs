@@ -660,3 +660,28 @@ test('the renderer reaches sessions only when the host has the agents capability
     if (saved === undefined) delete globalThis.deck; else globalThis.deck = saved;
   }
 });
+
+test('an agent whose next steps run while a change is being told never leaves the session in an older state', async () => {
+  // Electron runs pending promise callbacks when a change is sent to a window, so the agent can end its
+  // turn in the middle of the session telling that it is at work again (TASK-0201's walk). Simulated here
+  // by ending the turn from inside a listener, at the moment the session says it is working again.
+  let hooks;
+  const provider = { agent: 'claude', async start(_o, h) { hooks = h; h.identified('p'); void h.ask({ id: 'a1', tool: 'Bash', summary: 'npm test' }); return { async send() {}, async interrupt() {}, async stop() {} }; } };
+  const s = new AgentSession(record(), provider, now);
+  let fired = false;
+  s.onChange((c) => {
+    if (!fired && c.kind === 'record' && c.record.kind === 'state' && c.record.state === 'working' && latest(s.records).some((r) => r.kind === 'permission' && r.outcome === 'denied')) {
+      fired = true;
+      hooks.record({ kind: 'text', at: now(), text: 'Not allowed.' });
+      hooks.turnEnded();
+    }
+  });
+  const told = [];
+  s.onChange((c) => { if (c.kind === 'session') told.push(c.session.state); });
+  await s.start('Invented.');
+  await until(() => openRequests(s.records).length === 1);
+  s.answer('a1', { allow: false });
+  assert.equal(s.record.state, 'idle');
+  assert.equal(told.at(-1), 'idle', 'the last state told is the one the session is in');
+  assert.equal(latest(s.records).filter((r) => r.kind === 'state').at(-1).state, 'idle');
+});

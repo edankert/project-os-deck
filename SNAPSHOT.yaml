@@ -55,7 +55,7 @@ counters:
   REQ: 6
   RISK: 17
   REL: 0
-  TASK: 207
+  TASK: 208
   TST: 108
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
@@ -76,7 +76,7 @@ items:
       owner: system:claude
       phase: PHASE-0004
       requirements: []
-      tasks: ["TASK-0191", "TASK-0192", "TASK-0193", "TASK-0194", "TASK-0195", "TASK-0196", "TASK-0207"]
+      tasks: ["TASK-0191", "TASK-0192", "TASK-0193", "TASK-0194", "TASK-0195", "TASK-0196", "TASK-0207", "TASK-0208"]
       note: "PLANNED 2026-10-22 from Edwin's 'Can you build the DES-0006 functionality?' (ADR-0009, option B). Deck's main process starts Claude sessions through the Agent SDK's query() and Codex sessions through codex app-server, turns both into one conversation model, keeps each in Deck's store with the ticket it was started on, starts it in a new worktree or this checkout, and reports it to the sidecar (/api/agent-hook, /api/cockpit/approvals/ask). Permission requests from Deck's own sessions are answered in Deck's main process, so they need no shell secret. Only the shell reaches sessions. Tested with fake providers. Suite TST-0104 (agent-sessions)."
     FEAT-0033:
       status: doing
@@ -400,7 +400,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0201:
       file: docs/features/agent-pane/plan/tasks/TASK-0201-The-Session-Screens-Are-Checked-Run-In-A-Window-And-Drawn-In-DES-0006.md
-      status: backlog
+      status: doing
       parent: FEAT-0033
       phase: "[[PHASE-0004]]"
     TASK-0202:
@@ -2121,7 +2121,7 @@ items:
       owner: user:edwin
       features: [FEAT-0021, FEAT-0030, FEAT-0032, FEAT-0033, FEAT-0034, FEAT-0035]
       requirements: []
-      tasks: [TASK-0178, TASK-0188, TASK-0191, TASK-0192, TASK-0193, TASK-0194, TASK-0195, TASK-0196, TASK-0197, TASK-0198, TASK-0199, TASK-0200, TASK-0201, TASK-0202, TASK-0203, TASK-0204, TASK-0205, TASK-0206, TASK-0207]
+      tasks: [TASK-0178, TASK-0188, TASK-0191, TASK-0192, TASK-0193, TASK-0194, TASK-0195, TASK-0196, TASK-0197, TASK-0198, TASK-0199, TASK-0200, TASK-0201, TASK-0202, TASK-0203, TASK-0204, TASK-0205, TASK-0206, TASK-0207, TASK-0208]
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
@@ -2876,8 +2876,8 @@ metrics:
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 198
-    tasks_done: 172
+    tasks_total: 199
+    tasks_done: 173
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

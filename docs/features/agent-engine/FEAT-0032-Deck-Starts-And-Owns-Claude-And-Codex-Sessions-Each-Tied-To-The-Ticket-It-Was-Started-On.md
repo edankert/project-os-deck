@@ -11,7 +11,7 @@ updated: 2026-10-22
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'"]
 goal: "Deck's main process can start, resume, interrupt and stop a Claude session and a Codex session in this checkout or a new worktree, turns what each agent does into one conversation, asks Edwin before an agent acts, and tells the cockpit's sidecar about every session so the cockpit sees Deck's agents."
 requirements: []
-tasks: ["[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0207]]"]
+tasks: ["[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0207]]", "[[TASK-0208]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0201
 aliases: ["TASK-0201"]
 title: "The session screens are checked, run in a window in the container, and drawn again in DES-0006 from Deck itself, with no prompt or reply text in any picture"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
