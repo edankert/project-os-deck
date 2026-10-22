@@ -334,10 +334,21 @@ for (const [ws, choice] of Object.entries(choices)) {
     if (f === focus.feature) return 'feature';
     return finished(f) ? 'shelf' : 'ring';
   };
-  const evidence = evidenceFrom(images, noteFiles, new Set(ids)).map((e) => ({ ...e, src: srcOf(e.path), near: nearOf(e.id), nearF: nearByFeature(e.id) }));
-  // Every ticket's own pictures, newest first, at most twelve, for its pane.
+  // What a picture stands on, grouped by phase: its feature's tower, its own tile, its block on the shelf, or the core.
+  const standsOn = (id) => {
+    const tower = towerOf(featureOrSelf(id));
+    if (tower !== undefined) return ['tower', tower.f[0]];
+    const h = home.get(id);
+    return h.kind === 'ring' ? ['tile', id] : h.kind === 'shelf' ? ['shelf', h.id] : ['core', id];
+  };
+  const evidence = evidenceFrom(images, noteFiles, new Set(ids)).map((e) => ({ ...e, src: srcOf(e.path), near: nearOf(e.id), nearF: nearByFeature(e.id), on: standsOn(e.id) }));
+  // Every ticket's own pictures, newest first, at most twelve, for its pane, and how many it has in all.
   const pictures = {};
-  for (const e of evidenceFrom(images, noteFiles, new Set(ids), { perTicket: 12, limit: Infinity })) (pictures[e.id] ??= []).push([srcOf(e.path), e.date, e.path.split('/').pop()]);
+  const pictureCount = {};
+  for (const e of evidenceFrom(images, noteFiles, new Set(ids), { perTicket: Infinity, limit: Infinity })) {
+    pictureCount[e.id] = (pictureCount[e.id] ?? 0) + 1;
+    if (pictureCount[e.id] <= 12) (pictures[e.id] ??= []).push([srcOf(e.path), e.date, e.path.split('/').pop()]);
+  }
 
   const layer = extra?.data ? extra.data(ws, { tickets, model, choice, notes, featureOf, home, ids }) : {};
   towersData[ws] = {
@@ -352,6 +363,7 @@ for (const [ws, choice] of Object.entries(choices)) {
     needs,
     evidence,
     pictures,
+    pictureCount,
     notesFrom,
     focus,
     next,

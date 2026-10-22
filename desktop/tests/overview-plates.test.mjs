@@ -171,8 +171,14 @@ test('the plate script draws all seven screens on both workspaces, every mark in
         const [band, f] = segmentOf.get(e.id);
         assert.equal(e.nearF, f !== null && f === w.focus.feature ? 'feature' : band, `${ws}: ${e.id}'s picture is sized by where its ticket stands grouped by feature`);
         assert.ok((w.pictures[e.id] ?? []).some(([src]) => src === e.src), `${ws}: ${e.id}'s pane lists its picture`);
+        // What it stands on: its feature's tower when it has one on the ring, else its own tile, its shelf block, or the core.
+        const [onKind, onId] = e.on;
+        if (towerFeature.has(e.id)) assert.deepEqual(e.on, ['tower', towerFeature.get(e.id)], `${ws}: ${e.id}'s picture stands on its feature's tower`);
+        else assert.equal(onKind, placed.get(e.id) === 'phase' || placed.get(e.id) === 'ring' ? 'tile' : placed.get(e.id), `${ws}: ${e.id}'s picture stands where its ticket lies`);
+        void onId;
       }
       assert.ok(Object.values(w.pictures).every((list) => list.length <= 12 && list.every((x, i) => i === 0 || list[i - 1][1] >= x[1])), `${ws}: a pane lists at most twelve pictures, newest first`);
+      assert.ok(Object.entries(w.pictures).every(([id, list]) => w.pictureCount[id] >= list.length && (w.pictureCount[id] > 12 || w.pictureCount[id] === list.length)), `${ws}: the pane's count is the ticket's pictures in all`);
       // Where the fixture's commit is in this clone, Deck has pictures, and the design of the
       // feature in focus is drawn largest; a shallow clone (CI) has none to check.
       if (ws === 'deck' && spawnSync('git', ['-C', path.join(desktopRoot, '..'), 'cat-file', '-e', `${fixtureModel.head}^{commit}`]).status === 0) {

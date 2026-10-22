@@ -1064,7 +1064,8 @@ function drawTicketPane(id) {
   if (r[NEEDS]) html += '<div class="say" style="padding-left:0">● ' + esc(r[SAY] || 'needs you') + '</div>';
   html += lead ? '<div class="lead">' + esc(lead) + '</div>' : '<div class="sub">' + (note === undefined ? 'Its note was not found at the fixture\'s commit.' : 'Its note has no paragraph of its own before its first heading.') + '</div>';
   const pics = state.d.pictures[id] ?? [];
-  if (pics.length > 0) html += '<h3>Pictures · ' + pics.length + '</h3><div class="pics">' + pics.map(([src, date, name]) => '<a href="' + esc(src) + '" target="_blank" rel="noopener" title="' + esc(name + ' · ' + date) + '"><img alt="" loading="lazy" src="' + esc(src) + '"><span>' + esc(date) + '</span></a>').join('') + '</div>';
+  const total = state.d.pictureCount?.[id] ?? pics.length;
+  if (pics.length > 0) html += '<h3>Pictures · ' + (total > pics.length ? 'the newest ' + pics.length + ' of ' + total : pics.length) + '</h3><div class="pics">' + pics.map(([src, date, name]) => '<a href="' + esc(src) + '" target="_blank" rel="noopener" title="' + esc(name + ' · ' + date) + '"><img alt="" loading="lazy" src="' + esc(src) + '"><span>' + esc(date) + '</span></a>').join('') + '</div>';
   if (linked.length === 0) html += '<h3>Linked tickets · none</h3>';
   for (const [type, rows] of groups) html += '<h3>' + esc(MARK.typeWord[type] ?? type) + (rows.length === 1 ? '' : 's') + ' · ' + rows.length + '</h3>' + rows.map((l) => rowHtml(l, l[ID] === state.d.next)).join('');
   const panel = document.getElementById('panel');
@@ -1311,9 +1312,12 @@ function placeEvidence() {
     const behind = EV_AT.z > 1;
     const dist = camera.position.distanceTo(a.at);
     const [size, alpha] = NEAR[grouping === 'feature' ? e.nearF : e.near] ?? NEAR.ring;
-    const k = size * Math.min(1.1, Math.max(0.3, 150 / dist));
+    // Distance changes a picture's size only a little, so how near its ticket is to the work
+    // decides which is larger: a near shelf picture never outgrows a far one of work in hand
+    // (review of TASK-0179).
+    const k = size * Math.min(1.1, Math.max(0.6, Math.pow(150 / dist, 0.3)));
     fig.style.display = behind ? 'none' : '';
-    fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth + a.slot * 118 * k) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
+    fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth + a.slot * 124 * k) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
     fig.style.opacity = String((state.hush < 1 ? 0.35 : 1) * alpha);
     fig.style.zIndex = String(1000 - Math.round(dist));
   });
