@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0194
 aliases: ["TASK-0194"]
 title: "A session is kept in Deck's store with the ticket it was started on, starts in a new git worktree or this checkout, and resumes after Deck restarts"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

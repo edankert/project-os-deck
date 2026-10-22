@@ -216,3 +216,85 @@ test('edits count their lines: an Edit, a MultiEdit and a Write', () => {
   assert.deepEqual(['added', 'removed'].map((k) => editOf('Write', { file_path: 'a', content: '1\n2\n3\n4' }, at)[k]), [4, 0]);
   assert.equal(editOf('Bash', { command: 'ls' }, at), null);
 });
+
+// --- TASK-0193: the Codex provider over codex app-server ---
+
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { desktopRoot } from './helpers.mjs';
+const { CodexProvider, codexPolicy, diffCounts } = load('main/agents/codex-provider.js');
+
+/** A Codex provider over the fake app-server, with its script and a log of every request it got. */
+function fakeCodex(turns) {
+  const logFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-codex-')), 'log.jsonl');
+  const spawnServer = (folder) => spawn(process.execPath, [path.join(desktopRoot, 'tests', 'fake-codex-app-server.mjs')], { cwd: folder, env: { ...process.env, FAKE_CODEX_SCRIPT: JSON.stringify(turns), FAKE_CODEX_LOG: logFile }, stdio: ['pipe', 'pipe', 'pipe'] });
+  return { provider: new CodexProvider(spawnServer, now), requests: () => (fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : []) };
+}
+
+test('Codex never runs without asking: untrusted for "ask", on-request for "edits", always the workspace-write sandbox', () => {
+  assert.deepEqual(codexPolicy('ask'), { approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
+  assert.deepEqual(codexPolicy('edits'), { approvalPolicy: 'on-request', sandbox: 'workspace-write' });
+  for (const a of ['ask', 'edits']) assert.doesNotMatch(JSON.stringify(codexPolicy(a)), /never|danger-full-access/);
+  assert.deepEqual(diffCounts('--- a/x\n+++ b/x\n@@ -1,2 +1,3 @@\n a\n-b\n+c\n+d'), { added: 2, removed: 1 });
+});
+
+test('a Codex session: a thread, text, a plan, a command and an edit each asked about, and the turn\'s end', async () => {
+  const { provider, requests } = fakeCodex([
+    [{ say: 'Looking at the ticket.' }, { plan: [['Read', true], ['Change', false]] }, { run: 'npm test', ask: true }, { patch: ['src/a.ts', '--- a/src/a.ts\n+++ b/src/a.ts\n@@\n-old\n+new\n+more'] }, { say: 'Done.' }],
+    [{ run: 'git push', ask: true }],
+  ]);
+  const folder = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-codex-ws-')));
+  const s = new AgentSession(record({ agent: 'codex', model: 'gpt-6-astra', effort: 'medium', folder }), provider, now);
+  await s.start('Work on TASK-0001, invented.');
+  try {
+    await until(() => openRequests(s.records).length === 1);
+    assert.deepEqual([openRequests(s.records)[0].tool, openRequests(s.records)[0].summary], ['Bash', 'npm test']);
+    s.answer(openRequests(s.records)[0].id, { allow: true });
+    await until(() => openRequests(s.records).length === 1 && openRequests(s.records)[0].tool === 'Edit');
+    assert.equal(openRequests(s.records)[0].summary, 'src/a.ts');
+    assert.ok(!s.records.some((r) => r.kind === 'edit'), 'no edit before it is allowed');
+    s.answer(openRequests(s.records)[0].id, { allow: true });
+    await until(() => s.record.state === 'idle');
+    assert.equal(s.record.providerId, 'thread-1');
+    const rs = latest(s.records).filter((r) => r.kind !== 'state');
+    assert.deepEqual(rs.map((r) => r.kind), ['prompt', 'text', 'plan', 'tool', 'permission', 'tool', 'permission', 'edit', 'text']);
+    assert.deepEqual(rs.find((r) => r.kind === 'edit'), { kind: 'edit', at: rs.find((r) => r.kind === 'edit').at, path: 'src/a.ts', added: 2, removed: 1, diff: '--- a/src/a.ts\n+++ b/src/a.ts\n@@\n-old\n+new\n+more' });
+    // The next prompt is a turn on the same thread; a refused command is declined, and fails.
+    await s.send('Now push, invented.');
+    await until(() => openRequests(s.records).length === 1);
+    s.answer(openRequests(s.records)[0].id, { allow: false });
+    await until(() => s.record.state === 'idle');
+    const last = turnsOf(s.records).at(-1);
+    assert.deepEqual(last.records.filter((r) => r.kind === 'tool').map((r) => [r.name, r.summary, r.outcome]), [['Bash', 'git push', 'failed']]);
+    // What Deck sent: the thread with its folder, model and the policy for "ask"; each turn's text and effort; the answers.
+    const sent = requests();
+    const thread = sent.find((m) => m.method === 'thread/start');
+    assert.deepEqual([thread.params.approvalPolicy, thread.params.sandbox, thread.params.cwd, thread.params.model], ['untrusted', 'workspace-write', folder, 'gpt-6-astra']);
+    const turns = sent.filter((m) => m.method === 'turn/start');
+    assert.deepEqual(turns.map((t) => [t.params.threadId, t.params.input[0].text, t.params.effort]), [['thread-1', 'Work on TASK-0001, invented.', 'medium'], ['thread-1', 'Now push, invented.', 'medium']]);
+    assert.deepEqual(sent.filter((m) => m.result?.decision !== undefined).map((m) => m.result.decision), ['accept', 'accept', 'decline']);
+    assert.ok(sent.some((m) => m.method === 'initialize') && sent.some((m) => m.method === 'initialized'));
+  } finally {
+    await s.stop();
+  }
+});
+
+test('a request Deck does not know is refused, never granted, and a Codex session resumes its thread by id', async () => {
+  const { provider, requests } = fakeCodex([[{ unknown: 'item/tool/requestUserInput' }]]);
+  const s = new AgentSession(record({ agent: 'codex', providerId: 'thread-9', access: 'edits', folder: fs.mkdtempSync(path.join(os.tmpdir(), 'deck-codex-ws-')) }), provider, now);
+  await s.send('Carry on, invented.');
+  try {
+    await until(() => s.record.state === 'idle');
+    const sent = requests();
+    const resume = sent.find((m) => m.method === 'thread/resume');
+    assert.deepEqual([resume.params.threadId, resume.params.approvalPolicy, resume.params.sandbox], ['thread-9', 'on-request', 'workspace-write']);
+    assert.ok(!sent.some((m) => m.method === 'thread/start'));
+    const refusal = sent.find((m) => m.error !== undefined);
+    assert.match(refusal.error.message, /Deck does not answer item\/tool\/requestUserInput/);
+    assert.equal(s.record.providerId, 'thread-9');
+  } finally {
+    await s.stop();
+  }
+});
