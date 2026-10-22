@@ -16,7 +16,7 @@ acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
 related: ["[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[PHASE-0004-Parity]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-RUBRIC-AGENTIC-OS-REVIEW]]"]
-tasks: ["[[TASK-0178]]"]
+tasks: ["[[TASK-0178]]", "[[TASK-0188]]"]
 ---
 
 # Agent sessions, Needs you and the overview panels are drawn before they are built

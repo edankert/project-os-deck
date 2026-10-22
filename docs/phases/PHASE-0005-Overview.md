@@ -7,11 +7,11 @@ status: active
 order: 5
 owner: user:edwin
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-22
 goal: "Deck opens on the circular overview, a wheel with one segment of its ring per unfinished phase and one particle per ticket (a wedge per ticket until the second revision of 2026-10-15). Every screen reached from it, including accepting a design, running an acceptance test and accepting a feature, shows status and progress as diagrams and images rather than lists of text."
-features: ["[[FEAT-0025]]", "[[FEAT-0026]]", "[[FEAT-0027]]", "[[FEAT-0028]]", "[[FEAT-0029]]"]
+features: ["[[FEAT-0025]]", "[[FEAT-0026]]", "[[FEAT-0027]]", "[[FEAT-0028]]", "[[FEAT-0029]]", "[[FEAT-0031]]"]
 requirements: []
-tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0141]]", "[[TASK-0142]]", "[[TASK-0143]]", "[[TASK-0144]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0149]]", "[[TASK-0150]]", "[[TASK-0151]]", "[[TASK-0152]]", "[[TASK-0153]]", "[[TASK-0154]]", "[[TASK-0155]]", "[[TASK-0156]]", "[[TASK-0157]]", "[[TASK-0158]]", "[[TASK-0159]]", "[[TASK-0160]]", "[[TASK-0161]]", "[[TASK-0162]]", "[[TASK-0163]]", "[[TASK-0164]]", "[[TASK-0165]]", "[[TASK-0166]]", "[[TASK-0167]]", "[[TASK-0168]]", "[[TASK-0169]]", "[[TASK-0176]]", "[[TASK-0177]]", "[[TASK-0179]]"]
+tasks: ["[[TASK-0125]]", "[[TASK-0126]]", "[[TASK-0127]]", "[[TASK-0128]]", "[[TASK-0129]]", "[[TASK-0130]]", "[[TASK-0131]]", "[[TASK-0115]]", "[[TASK-0116]]", "[[TASK-0117]]", "[[TASK-0118]]", "[[TASK-0119]]", "[[TASK-0140]]", "[[TASK-0120]]", "[[TASK-0121]]", "[[TASK-0122]]", "[[TASK-0123]]", "[[TASK-0141]]", "[[TASK-0142]]", "[[TASK-0143]]", "[[TASK-0144]]", "[[TASK-0145]]", "[[TASK-0146]]", "[[TASK-0147]]", "[[TASK-0148]]", "[[TASK-0149]]", "[[TASK-0150]]", "[[TASK-0151]]", "[[TASK-0152]]", "[[TASK-0153]]", "[[TASK-0154]]", "[[TASK-0155]]", "[[TASK-0156]]", "[[TASK-0157]]", "[[TASK-0158]]", "[[TASK-0159]]", "[[TASK-0160]]", "[[TASK-0161]]", "[[TASK-0162]]", "[[TASK-0163]]", "[[TASK-0164]]", "[[TASK-0165]]", "[[TASK-0166]]", "[[TASK-0167]]", "[[TASK-0168]]", "[[TASK-0169]]", "[[TASK-0176]]", "[[TASK-0177]]", "[[TASK-0179]]", "[[TASK-0181]]", "[[TASK-0182]]", "[[TASK-0183]]", "[[TASK-0184]]", "[[TASK-0185]]", "[[TASK-0186]]", "[[TASK-0187]]"]
 issues: []
 depends: ["[[PHASE-0001-Deck]]"]
 related: ["[[DES-0004-The-Phase-Overview]]", "[[DES-0005-The-Overview-Is-Drawn-Not-Written]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[REFERENCE-OVERVIEW-GOAL-TWO-AGENT-BRIEF]]", "[[REFERENCE-COCKPIT-ADOPTION]]"]
@@ -74,13 +74,14 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 - [[FEAT-0027-Deck-Opens-On-The-Wheel-Of-Phases]]: S1, the wheel with its shelf, tray and core, as Deck's first view. Lane: Claude.
 - [[FEAT-0028-A-Phase-And-A-Ticket-Open-As-Pictures]]: S2, S3 and S4. Lane: Claude.
 - [[FEAT-0029-Designs-Tests-And-Tickets-Are-Accepted-From-Their-Evidence]]: S5, S6 and S7, with the sidecar reads and writes they need. Lane: Codex.
+- [[FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures]]: the seven ideas from Rubric that DES-0005's towers page draws, built into Deck's towers (Edwin, 2026-10-22). Lane: Claude.
 
 ## Out of scope
 
 - **The card field of PHASE-0002.** Glass's bands, desks and scenes stay as they are; this phase does not repair or extend them. Its look (depth, glow, translucency) is what carries over.
 - **New write paths.** Re-phasing (S4) shows suggestions and moves them on screen. Writing `phase:` into a note needs a sidecar action the cockpit does not have; asking for it is a task in FEAT-0028, building it is the cockpit's.
 - **The tablet layout.** The served host shows the wheel read-only; the acceptance screens are desktop only.
-- **Dates and forecasts.** The overview shows state, not time (DES-0004, Out of scope).
+- **Forecasts.** The overview shows state and what has happened, never a prediction. Two dates are in since 2026-10-22, when Edwin asked for TASK-0177's ideas to be built (FEAT-0031): a tower's age since its last change, and the tickets closed each week. DES-0004 had put all dates out of scope.
 
 ## Exit Criteria
 

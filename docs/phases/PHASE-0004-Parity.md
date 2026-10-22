@@ -11,7 +11,7 @@ updated: 2026-10-22
 goal: "Deck carries what the cockpit does for a working day, adopted row by row from the cockpit's capability register, until Edwin does a real task in Deck instead of the cockpit and records which he would rather have used."
 features: ["[[FEAT-0021]]", "[[FEAT-0030]]"]
 requirements: []
-tasks: ["[[TASK-0178]]"]
+tasks: ["[[TASK-0178]]", "[[TASK-0188]]"]
 issues: []
 depends: ["[[PHASE-0002-Glass]]"]
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
