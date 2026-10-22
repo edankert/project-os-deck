@@ -63,7 +63,7 @@ counters:
 focus:
   phase: "PHASE-0004"
   feature: "FEAT-0033"
-  task: "TASK-0198"
+  task: "TASK-0199"
   note: "2026-10-22, evening: Edwin asked 'Can you build the DES-0006 functionality?', so PHASE-0004 Parity opens now (recorded in PHASE-0004 and in ADR-0009's decision record). PHASE-0005 has nothing left to build: FEAT-0025 to FEAT-0031 wait at review on Edwin's acceptance tests and DES-0005. The build is four features, in order: FEAT-0032 the session engine in Deck's main process (TASK-0191 to TASK-0196, first TASK-0191, the conversation model and a fake provider), FEAT-0033 the session pane, the agents on the towers and Work on this (TASK-0197 to TASK-0201), FEAT-0034 one Needs you and the cockpit's overview panels (TASK-0202 to TASK-0204), FEAT-0035 the shell drawer (TASK-0205, TASK-0206). Suites TST-0104 to TST-0107; Edwin's acceptance test TST-0108 at draft. Risks RISK-0012 to RISK-0017. Sessions always ask before acting: never bypassPermissions, never codex's never-approve, whatever Edwin's shell alias or settings say (RISK-0013). Node suites use fake providers, never a real model (RISK-0017). Deck's repo is public: no prompt or reply text and no dollar costs in fixtures, pictures or logs (RISK-0016). Open for Edwin: DES-0006's side pane; whether Deck may answer the cockpit's permission requests only when it started the sidecar; whether a shell must survive a Deck restart. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -380,12 +380,12 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0198:
       file: docs/features/agent-pane/plan/tasks/TASK-0198-The-Composer-Sends-A-Prompt-And-Resume-And-Stop-Act-On-The-Session.md
-      status: doing
+      status: done
       parent: FEAT-0033
       phase: "[[PHASE-0004]]"
     TASK-0199:
       file: docs/features/agent-pane/plan/tasks/TASK-0199-Agents-Stand-Over-Their-Start-Ticket-And-The-Agents-List-Opens-Any-Session.md
-      status: backlog
+      status: doing
       parent: FEAT-0033
       phase: "[[PHASE-0004]]"
     TASK-0200:
@@ -2872,7 +2872,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 197
-    tasks_done: 168
+    tasks_done: 169
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

@@ -63,3 +63,24 @@ test('a failure and a reason show as a note in the turn', () => {
   const turns = paneTurns([{ kind: 'prompt', at: at(1), text: 'x' }, { kind: 'state', at: at(2), state: 'failed', reason: 'codex app-server exited with 1' }, { kind: 'state', at: at(3), state: 'idle', reason: 'Deck restarted' }]);
   assert.deepEqual(turns[0].items.map((i) => i.text), ['Failed: codex app-server exited with 1', 'idle: Deck restarted']);
 });
+
+// --- TASK-0198: the composer ---
+
+const { MODELS, EFFORTS } = load('shared/agent-pane.js');
+
+test('the composer offers Send to a session waiting or idle, Interrupt to one at work, Resume to one not running, and Stop while it runs', () => {
+  const row = (state) => composerOf({ state });
+  assert.deepEqual(row('working'), { send: false, interrupt: true, resume: false, stop: true });
+  assert.deepEqual(row('waiting'), { send: true, interrupt: false, resume: false, stop: true });
+  assert.deepEqual(row('idle'), { send: true, interrupt: false, resume: true, stop: true });
+  assert.deepEqual(row('stopped'), { send: false, interrupt: false, resume: true, stop: false });
+  assert.deepEqual(row('failed'), { send: false, interrupt: false, resume: true, stop: false });
+});
+
+test('each agent is offered its own models and efforts, and the access levels never include skipping permissions', () => {
+  assert.deepEqual(MODELS.claude.map((m) => m.id), ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1']);
+  assert.deepEqual(MODELS.codex.map((m) => m.word), ['GPT-6 Astra', 'Codex default']);
+  assert.ok(EFFORTS.claude.includes('max') && !EFFORTS.codex.includes('max'));
+  assert.deepEqual(Object.keys(ACCESS_WORD), ['ask', 'edits']);
+  assert.doesNotMatch(JSON.stringify(ACCESS_WORD), /skip|bypass|danger/i);
+});

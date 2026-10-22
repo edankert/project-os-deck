@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0199
 aliases: ["TASK-0199"]
 title: "Agents stand as markers over the ticket they were started on, on the towers ring, and the Agents list opens any session"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

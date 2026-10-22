@@ -10,7 +10,7 @@
  */
 import type { AgentBridge } from './host-bridge.js';
 import type { ConversationRecord, SessionRecord } from '../shared/agent-types.js';
-import { paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
+import { ACCESS_WORD, EFFORTS, MODELS, composerOf, paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -80,6 +80,7 @@ export class AgentPane {
     this.unsubscribe = null;
     this.session = null;
     this.records = [];
+    this.composerShape = '';
     this.element.hidden = true;
     this.options.closed();
   }
@@ -182,8 +183,87 @@ export class AgentPane {
     if (res?.ok !== true) this.options.say('that request was already answered, or the session has ended', true);
   }
 
-  /** The box to answer in; TASK-0198 gives it its controls. */
+  private draft = '';
+  private stopArmed = false;
+  private composerShape = '';
+
+  /**
+   * The box to answer in (TASK-0198): the prompt, the session's model, effort and access level,
+   * and Send, or Interrupt while it works; Resume for a session that is not running; Stop, which
+   * asks once more before it ends the session. The model, effort and access level are chosen when
+   * a session starts (Work on this) and shown here. No access level skips permissions.
+   */
   protected drawComposer(_m: PaneModel): void {
-    this.composer.replaceChildren();
+    const s = this.session;
+    if (s === null) return;
+    // Made again only when what it offers changes, so a record arriving never takes the cursor from the box.
+    const shape = JSON.stringify([s.id, s.state, s.model, s.effort, s.access, this.stopArmed]);
+    if (shape === this.composerShape) return;
+    this.composerShape = shape;
+    const can = composerOf(s);
+    const area = el('textarea', 'ag-input');
+    area.placeholder = can.send ? `Answer ${s.agent === 'codex' ? 'Codex' : 'Claude'}…` : s.state === 'working' ? 'It is working; interrupt it to answer.' : 'Resume to carry on.';
+    area.value = this.draft;
+    area.rows = 3;
+    area.addEventListener('input', () => { this.draft = area.value; });
+    area.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        void this.send();
+      }
+    });
+    const choice = (label: string, options: Array<{ value: string; word: string }>, value: string): HTMLElement => {
+      const select = el('select', 'ag-choice');
+      select.disabled = true;
+      select.title = `${label}: chosen when the session started`;
+      select.setAttribute('aria-label', label);
+      for (const o of options) {
+        const opt = el('option', '', o.word);
+        opt.value = o.value;
+        opt.selected = o.value === value;
+        select.appendChild(opt);
+      }
+      return select;
+    };
+    const models = MODELS[s.agent].some((m) => m.id === s.model) ? MODELS[s.agent] : [...MODELS[s.agent], { id: s.model, word: s.model }];
+    const row = el('div', 'ag-row');
+    row.append(
+      choice('Model', models.map((m) => ({ value: m.id, word: m.word })), s.model),
+      choice('Effort', EFFORTS[s.agent].map((e) => ({ value: e, word: e })), s.effort),
+      choice('Access', (['ask', 'edits'] as const).map((a) => ({ value: a, word: ACCESS_WORD[a] })), s.access),
+    );
+    const acts = el('div', 'ag-acts');
+    const button = (text: string, cls: string, run: () => void, enabled = true): void => {
+      const b = el('button', cls, text);
+      b.type = 'button';
+      b.disabled = !enabled;
+      b.addEventListener('click', run);
+      acts.appendChild(b);
+    };
+    if (can.interrupt) button('Interrupt', 'ag-interrupt', () => void this.options.agents.interrupt(s.id));
+    else button('Send', 'ag-send', () => void this.send(), can.send);
+    if (can.resume) button('Resume', 'ag-resume', () => void this.send(this.draft.trim() === '' ? 'Carry on.' : undefined));
+    if (can.stop) button(this.stopArmed ? 'Stop? Press again' : 'Stop', `ag-stop${this.stopArmed ? ' is-armed' : ''}`, () => void this.stop());
+    this.composer.replaceChildren(area, row, acts);
+  }
+
+  private async send(fallback?: string): Promise<void> {
+    if (this.session === null) return;
+    const text = this.draft.trim() === '' ? fallback ?? '' : this.draft;
+    if (text.trim() === '') return;
+    this.draft = '';
+    const res = (await this.options.agents.send(this.session.id, text)) as { ok?: boolean; error?: string };
+    if (res?.ok !== true) this.options.say(res?.error ?? 'the prompt was not sent', true);
+  }
+
+  private async stop(): Promise<void> {
+    if (this.session === null) return;
+    if (!this.stopArmed) {
+      this.stopArmed = true;
+      this.draw();
+      return;
+    }
+    this.stopArmed = false;
+    await this.options.agents.stop(this.session.id);
   }
 }

@@ -1686,3 +1686,9 @@ body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibilit
 .ag-waiting { color: hsl(5 60% 72%); font-weight: 600; }
 .ag-composer { border-top: 1px solid hsla(190, 90%, 65%, 0.2); padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
 .ag-composer:empty { display: none; }
+.ag-input { width: 100%; box-sizing: border-box; resize: vertical; min-height: 54px; padding: 8px 10px; border-radius: 8px; border: 1px solid hsla(190, 90%, 65%, 0.35); background: hsla(210, 50%, 4%, 0.8); color: inherit; font: inherit; }
+.ag-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.ag-choice { font: 12px -apple-system, sans-serif; padding: 2px 6px; border-radius: 6px; background: hsla(205, 40%, 20%, 0.6); color: inherit; border: 1px solid hsla(190, 90%, 65%, 0.25); }
+.ag-acts { display: flex; gap: 6px; }
+.ag-send { background: hsla(190, 90%, 45%, 0.35) !important; } .ag-composer button:disabled { opacity: 0.4; cursor: default; }
+.ag-stop.is-armed { background: hsla(355, 70%, 45%, 0.55) !important; }

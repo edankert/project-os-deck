@@ -126,6 +126,20 @@ export function paneOf(session: SessionRecord, records: readonly ConversationRec
   };
 }
 
+/**
+ * The models and efforts each agent is offered (TASK-0198), the first of each the default.
+ * Claude's are the Claude 5 family and the SDK's effort levels; Codex's are the models Edwin
+ * runs it with, an empty model meaning Codex's own default, and its reasoning efforts.
+ */
+export const MODELS: Readonly<Record<AgentKind, ReadonlyArray<{ id: string; word: string }>>> = {
+  claude: [{ id: 'claude-opus-5-5', word: 'Opus 5.5' }, { id: 'claude-sonnet-5-5', word: 'Sonnet 5.5' }, { id: 'claude-haiku-5-5', word: 'Haiku 5.5' }, { id: 'claude-fable-5-1', word: 'Fable 5.1' }],
+  codex: [{ id: 'gpt-6-astra', word: 'GPT-6 Astra' }, { id: '', word: 'Codex default' }],
+};
+export const EFFORTS: Readonly<Record<AgentKind, readonly string[]>> = {
+  claude: ['high', 'medium', 'low', 'xhigh', 'max'],
+  codex: ['medium', 'low', 'high', 'xhigh'],
+};
+
 /** What the composer offers for a session in its state (TASK-0198). */
 export function composerOf(session: Pick<SessionRecord, 'state'>): { send: boolean; interrupt: boolean; resume: boolean; stop: boolean } {
   const s = session.state;
