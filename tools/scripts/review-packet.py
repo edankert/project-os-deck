@@ -128,9 +128,13 @@ def frontmatter(text):
 
 
 def fm_ids(fm, key, prefix):
-    """IDs of one kind named in a frontmatter field, list or scalar."""
-    m = re.search(r"^%s:\s*(.*)$" % re.escape(key), fm, re.M)
-    return re.findall(r"\b%s-\d+" % prefix, m.group(1)) if m else []
+    """IDs of one kind named in a frontmatter field: a scalar, an inline list,
+    or a block list (`key:` and then indented `- ...` lines), the form
+    sync-snapshot.py writes. Reading only the key's own line found no tasks in
+    a block list, and the packet then left out every commit that named only a
+    task (project-os-dev TASK-0210)."""
+    m = re.search(r"^%s:[ \t]*(.*)\n((?:[ \t]+-.*\n?)*)" % re.escape(key), fm + "\n", re.M)
+    return re.findall(r"\b%s-\d+" % prefix, m.group(1) + "\n" + m.group(2)) if m else []
 
 
 def section(text, *headings):

@@ -1,0 +1,33 @@
+// Reports a Gradle build's test progress to run-tests.py (project-os-dev
+// FEAT-0042; the line format is in tools/instructions/TEST-RUNS.md).
+//
+// An init script, so a project's own build files and tests stay as they are.
+// A test note opts in through its command:
+//
+//   command: "./gradlew test --init-script tools/scripts/gradle-test-progress.gradle"
+//
+// After each test it appends one line to the file PROJECT_OS_TEST_PROGRESS
+// names: how many tests have finished, how many failed, and the class now
+// running. Gradle does not know the total before the tests run, so there is no
+// `total`. Outside run-tests.py the variable is unset and the script does
+// nothing. A build with the configuration cache on may report that this
+// listener cannot be cached; the build still runs.
+
+def progressFile = System.getenv("PROJECT_OS_TEST_PROGRESS")
+if (progressFile) {
+    def done = new java.util.concurrent.atomic.AtomicInteger()
+    def failed = new java.util.concurrent.atomic.AtomicInteger()
+    def out = new File(progressFile)
+    allprojects {
+        tasks.withType(Test).configureEach {
+            afterTest { descriptor, result ->
+                def n = done.incrementAndGet()
+                def f = result.resultType == TestResult.ResultType.FAILURE ? failed.incrementAndGet() : failed.get()
+                def name = (descriptor.className ?: descriptor.name ?: "").tokenize('.').with { it ? it.last() : "" }
+                synchronized (out) {
+                    out << groovy.json.JsonOutput.toJson([done: n, failed: f, now: name]) + "\n"
+                }
+            }
+        }
+    }
+}

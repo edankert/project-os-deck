@@ -25,8 +25,15 @@ if [[ ! -f "$RUNNER" ]] || ! command -v python3 >/dev/null 2>&1; then
 fi
 
 echo "pre-push: running every TST-* command: (PROJECT_OS_SKIP_PREPUSH=1 skips)." >&2
-if ! python3 "$RUNNER" --repo-root "$ROOT"; then
+echo "pre-push: watch it from another terminal with python3 tools/scripts/test-status.py" >&2
+if ! python3 "$RUNNER" --repo-root "$ROOT" --source pre-push; then
   echo "pre-push: a test command failed; push refused. Fix it, or push with --no-verify" >&2
   echo "          if you have a reason and are prepared to say what it was." >&2
   exit 1
+fi
+# Nothing else says when CI on GitHub fails after the push (project-os-dev
+# FEAT-0042). The agent that pushed reads this line; LIFECYCLE.md close-out
+# step 9 says the same.
+if [[ -f "$ROOT/tools/scripts/ci-status.py" ]]; then
+  echo "pre-push: tests passed. After the push, run python3 tools/scripts/ci-status.py --wait to see CI's verdict." >&2
 fi

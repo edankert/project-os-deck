@@ -290,7 +290,20 @@ def start(payload, cwd):
         if slicer.is_file():
             result = subprocess.run([sys.executable, str(slicer), str(root)], capture_output=True, text=True, timeout=20)
             brief = result.stdout.strip() if result.returncode == 0 else ""
-        context("SessionStart", brief or "Read CONTEXT.md, docs/INDEX.md, SNAPSHOT.yaml, then run bash tools/agents/bootstrap.sh before work. Inspect the current branch, head, focus, and working tree.")
+        brief = brief or "Read CONTEXT.md, docs/INDEX.md, SNAPSHOT.yaml, then run bash tools/agents/bootstrap.sh before work. Inspect the current branch, head, focus, and working tree."
+        # A line per CI workflow that failed or is running on the branch
+        # (project-os-dev FEAT-0042); ci-status.py keeps to a few seconds and
+        # prints nothing when it cannot ask GitHub.
+        ci = root / "tools/scripts/ci-status.py"
+        if ci.is_file():
+            try:
+                lines = subprocess.run([sys.executable, str(ci), "--repo-root", str(root), "--session-line"],
+                                       capture_output=True, text=True, timeout=10).stdout.strip()
+            except (OSError, subprocess.TimeoutExpired):
+                lines = ""
+            if lines:
+                brief += "\n" + lines
+        context("SessionStart", brief)
 
 
 def prompt(payload, cwd):

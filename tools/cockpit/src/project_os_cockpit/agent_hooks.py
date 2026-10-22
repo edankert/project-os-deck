@@ -36,6 +36,7 @@ import logging
 import os
 import re
 import threading
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +67,44 @@ PERSIST_INTERVAL_SECONDS = 5.0
 # (session, event, payload) within this window is that double-capture,
 # not two real events — drop the second (TASK-0152).
 DEDUP_WINDOW_SECONDS = 2.0
+# The cockpit's Claude plugin (FEAT-0156) marks every post with this key.
+# Once a session has sent a marked post, an unmarked Claude post for it is
+# the opt-in external hook (FEAT-0027) capturing the same event a second
+# time, and is dropped. The window above still catches a terminal opened
+# before the plugin, whose shell runs the old generated hooks.
+PLUGIN_MARK = "_cockpit_plugin"
+# A delivery is one dispatched prompt on its way to one Claude session, which
+# the cockpit's plugin submits once the session is idle (FEAT-0158). States:
+#   held       nothing will submit it: no plugin claims the session yet, or
+#              the session ended (``reason`` says which)
+#   waiting    the plugin will submit it once the session is idle
+#              (``waiting_for: "you"`` while the person has stopped the
+#              session with Esc: it follows their next message, TASK-0659)
+#   sending    the plugin called ``$.prompt.submit``; the turn has not started
+#   cancelling unused: a prompt being submitted cannot be withdrawn, because a
+#              plugin's own `prompt.submit` hook never sees its own
+#              submission (TASK-0655's live run), so there is nothing to ask
+#   started    the session's turn started with it: delivered
+#   cancelled  withdrawn before the plugin claimed it (TASK-0657)
+#   dropped    ``$.prompt.submit`` refused it; ``reason`` says why
+DELIVERY_FINISHED = frozenset({"started", "cancelled"})
+DELIVERIES_MAX_OPEN = 30       # unfinished deliveries kept per workspace
+DELIVERIES_KEEP_FINISHED = 30  # finished ones kept, newest first, then pruned
+DELIVERY_REASON_UNCLAIMED = "this Claude session has no cockpit plugin"
+DELIVERY_REASON_ENDED = "the session ended"
+# A prompt the plugin was submitting when its session ended, or its sidecar
+# restarted: it may have started a turn that nobody reported (TASK-0662).
+DELIVERY_REASON_UNCONFIRMED = "the session ended before Claude confirmed its turn, so it may have run"
+# On their way into a session the plugin speaks for.
+DELIVERY_PENDING = frozenset({"waiting", "sending"})
+
+
+def _can_still_be_submitted(d: dict[str, Any]) -> bool:
+    """Counts toward the cap: on its way, or held only until a plugin claims
+    its session. A prompt whose session ended, or that was dropped, cannot
+    block new dispatches (TASK-0662)."""
+    return d.get("state") in DELIVERY_PENDING or (
+        d.get("state") == "held" and d.get("reason") == DELIVERY_REASON_UNCLAIMED)
 
 # Notification subtypes that mean "a human must act now" — the agent is
 # blocked mid-work. idle_prompt is deliberately excluded (see below):
@@ -164,6 +203,9 @@ class AgentSessionTracker:
         # desktop shell (TASK-0136).
         self._pending_dispatches: list[dict[str, Any]] = []
         self._dispatch_requests: list[dict[str, Any]] = []
+        # Deliveries (FEAT-0158 / TASK-0654), oldest first.
+        self._deliveries: list[dict[str, Any]] = []
+        self._delivery_changes: list[dict[str, Any]] = []
         self._activity: dict[str, Any] | None = None
         self._last_persist = 0.0
         # Dedup window for the terminal+external double-capture
@@ -199,6 +241,13 @@ class AgentSessionTracker:
                 rec["ended"] = rec.get("last_event") or _utc_now_iso()
             self._sessions[sid] = rec
             self._order.append(sid)
+        for rec in data.get("deliveries") or []:
+            if isinstance(rec, dict) and isinstance(rec.get("did"), str):
+                self._deliveries.append(rec)
+        # Every session was just marked ended, so nothing addressed to one
+        # can still be submitted.
+        for sid in list(self._sessions):
+            self._hold_deliveries_locked(sid, DELIVERY_REASON_ENDED, _utc_now_iso())
 
     def _persist_locked(self, *, force: bool = False) -> None:
         """Atomic (temp+rename) mirror of the session index. Called
@@ -213,7 +262,10 @@ class AgentSessionTracker:
         while len(self._order) > SESSIONS_MAX:
             dropped = self._order.pop(0)
             self._sessions.pop(dropped, None)
-        payload = {"sessions": [self._sessions[sid] for sid in self._order]}
+        payload = {
+            "sessions": [self._sessions[sid] for sid in self._order],
+            "deliveries": self._deliveries,
+        }
         try:
             self._sessions_path.parent.mkdir(parents=True, exist_ok=True)
             tmp = self._sessions_path.with_name(
@@ -341,18 +393,40 @@ class AgentSessionTracker:
             # Drop the terminal+external double-capture (TASK-0152):
             # identical payload for the same session/event within the
             # dedup window. Never persisted, no state/activity fan-out.
+            # The plugin's mark is left out of the comparison, so its copy
+            # and the external hook's match in either order (FEAT-0156
+            # review, TASK-0653). A marked copy dropped here still claims
+            # the session, so the external hook's later posts are dropped.
             now_ts = _parse_iso(ts)
+            marked = body.get(PLUGIN_MARK) is True
             try:
-                digest = hash(json.dumps(body, sort_keys=True, default=str))
+                digest = hash(json.dumps(
+                    {k: v for k, v in body.items() if k != PLUGIN_MARK},
+                    sort_keys=True, default=str))
             except (TypeError, ValueError):
                 digest = None
-            if digest is not None:
-                dk = (sid, event, digest)
+            dk = (sid, event, digest) if digest is not None else None
+            if dk is not None:
                 seen = self._recent_events.get(dk)
                 if seen is not None and now_ts - seen <= DEDUP_WINDOW_SECONDS:
+                    if marked and agent == "claude":
+                        self._claim_for_plugin_locked(sid, agent, ts)
                     return {"ok": True, "state": None, "message": None,
                             "activity": None, "ignored": True,
                             "duplicate": True}
+            if agent == "claude":
+                claimed = self._sessions.get(sid, {}).get("plugin_claimed")
+                if marked:
+                    if not claimed:
+                        self._claim_for_plugin_locked(sid, agent, ts)
+                elif claimed:
+                    return {"ok": True, "state": None, "message": None,
+                            "activity": None, "ignored": True,
+                            "duplicate": True}
+            # Only a post that is kept is remembered: a copy dropped above
+            # must not make the plugin's own copy of that event look like a
+            # duplicate of it.
+            if dk is not None:
                 self._recent_events[dk] = now_ts
                 if len(self._recent_events) > 256:
                     cutoff = now_ts - DEDUP_WINDOW_SECONDS
@@ -404,6 +478,7 @@ class AgentSessionTracker:
                 # this stamp are "in flight for the current prompt".
                 sess["prompt_started"] = ts
                 sess.pop("interrupted", None)
+                self._mark_waiting_for_person_locked(sid, False, ts)
                 state = "busy"
             elif event in ("PreToolUse", "PostToolUse"):
                 tool = body.get("tool_name")
@@ -451,13 +526,16 @@ class AgentSessionTracker:
                     else "needs permission"
                 )
                 state = "needs-input"
-            elif event == "Interrupt" and agent == "codex":
+            elif event == "Interrupt":
                 # Cancellation requires a new user decision. Using waiting
                 # would immediately release queued prompts after the user
-                # deliberately stopped the agent.
+                # deliberately stopped the agent. Codex sends this itself;
+                # for Claude the cockpit plugin sends it, because Claude Code
+                # fires no Stop for a turn stopped with Esc (TASK-0659).
                 state = "needs-input"
                 sess["interrupted"] = True
                 message = "interrupted — waiting for your input"
+                self._mark_waiting_for_person_locked(sid, True, ts)
             elif event == "Notification":
                 ntype = body.get("notification_type")
                 raw_msg = body.get("message")
@@ -479,6 +557,7 @@ class AgentSessionTracker:
             elif event == "SessionEnd":
                 sess["ended"] = ts
                 state = "idle"
+                self._hold_deliveries_locked(sid, DELIVERY_REASON_ENDED, ts)
             elif event == "Statusline":
                 cost = body.get("cost")
                 ctx = body.get("context_window")
@@ -535,7 +614,7 @@ class AgentSessionTracker:
 
             # Background tools can finish after Escape. Hold the interruption
             # until a new prompt or session exit, including a late Stop event.
-            if agent == "codex" and sess.get("interrupted") and event != "SessionEnd":
+            if sess.get("interrupted") and event != "SessionEnd":
                 state = "needs-input"
                 message = "interrupted — waiting for your input"
             self._refresh_undocumented_locked(sess)
@@ -562,13 +641,30 @@ class AgentSessionTracker:
     def record_dispatch(
         self, note_id: str, verb: str | None = None,
         agent: str | None = None, *, enqueue: bool = False,
+        delivered_by: str | None = None, rel: str | None = None,
     ) -> dict[str, Any]:
+        """A dispatch ledger entry, or with ``enqueue`` a request for the
+        desktop shell (`cockpit dispatch`). A request writes no ledger entry:
+        the shell writes the real one when it delivers, so a request used to
+        leave a second, agentless entry beside it (ISS-0320). ``rel`` is the
+        note's docs-relative path, which the request carries."""
         rec: dict[str, Any] = {"id": note_id, "ts": _utc_now_iso()}
         if verb:
             rec["verb"] = str(verb)
         if agent:
             rec["agent"] = str(agent)
+        # `typed`: the shell wrote it into the terminal, and `ts` is when.
+        # A submitted prompt is stamped by `_stamp_delivered_locked` instead.
+        if delivered_by in ("typed", "submit"):
+            rec["delivered_by"] = delivered_by
         with self._lock:
+            if enqueue:
+                request = dict(rec)
+                if rel:
+                    request["rel"] = rel
+                self._dispatch_requests.append(request)
+                del self._dispatch_requests[:-REQUESTS_MAX]
+                return request
             live = self._live_session_locked()
             if live is not None:
                 # Agent already running: this dispatch belongs to the
@@ -579,10 +675,226 @@ class AgentSessionTracker:
             else:
                 self._pending_dispatches.append(dict(rec))
                 del self._pending_dispatches[:-DISPATCHES_MAX]
-            if enqueue:
-                self._dispatch_requests.append(dict(rec))
-                del self._dispatch_requests[:-REQUESTS_MAX]
         return rec
+
+    # ---- deliveries (FEAT-0158 / TASK-0654) ----
+
+    def _claim_for_plugin_locked(self, sid: str, agent: str, ts: str) -> None:
+        """Mark the session as the plugin's, and wake what was held for it."""
+        self._session_locked(sid, agent, ts)["plugin_claimed"] = True
+        for d in self._deliveries:
+            if (d.get("session_id") == sid and d.get("state") == "held"
+                    and d.get("reason") == DELIVERY_REASON_UNCLAIMED):
+                d["state"] = "waiting"
+                d.pop("reason", None)
+                d["updated"] = ts
+                self._delivery_changes.append(dict(d))
+
+    def _hold_deliveries_locked(self, sid: str, reason: str, ts: str) -> None:
+        """Hold what was on its way to a session that can no longer take it.
+
+        A `waiting` prompt is held. A `sending` one is already in Claude's
+        hands and may have started a turn, so it becomes `dropped` as
+        unconfirmed: a late report of its turn still counts, and removing it
+        is not recorded as a cancel (TASK-0662)."""
+        for d in self._deliveries:
+            if d.get("session_id") != sid or d.get("state") not in DELIVERY_PENDING:
+                continue
+            if d["state"] == "sending":
+                d["state"], d["reason"] = "dropped", DELIVERY_REASON_UNCONFIRMED
+            else:
+                d["state"], d["reason"] = "held", reason
+            d["updated"] = ts
+            self._delivery_changes.append(dict(d))
+
+    def _mark_waiting_for_person_locked(self, sid: str, on: bool, ts: str) -> None:
+        """Mark, or unmark, the prompts waiting for a session the person
+        stopped with Esc. Claude Code takes no plugin prompt until the person
+        sends input, so the plugin holds them; the mark lets the queue list
+        say so instead of "waiting for Claude" (TASK-0659)."""
+        for d in self._deliveries:
+            if d.get("session_id") != sid or d.get("state") != "waiting":
+                continue
+            if on == (d.get("waiting_for") == "you"):
+                continue
+            if on:
+                d["waiting_for"] = "you"
+            else:
+                d.pop("waiting_for", None)
+            d["updated"] = ts
+            self._delivery_changes.append(dict(d))
+
+    def _prune_deliveries_locked(self) -> None:
+        finished = [d for d in self._deliveries if d.get("state") in DELIVERY_FINISHED]
+        drop = {id(d) for d in finished[:-DELIVERIES_KEEP_FINISHED]} if len(finished) > DELIVERIES_KEEP_FINISHED else set()
+        if drop:
+            self._deliveries = [d for d in self._deliveries if id(d) not in drop]
+
+    def take_delivery_changes(self) -> list[dict[str, Any]]:
+        """Deliveries whose state changed as a side effect of a hook event
+        (a session claimed or ended) since the last call, for the server to
+        publish. Changes made by a delivery route are returned by that route."""
+        with self._lock:
+            out = self._delivery_changes
+            self._delivery_changes = []
+            return out
+
+    def add_delivery(self, item: dict[str, Any], session_id: str) -> tuple[dict[str, Any] | None, str | None]:
+        """Address a dispatched prompt to a Claude session. Returns the new
+        delivery, or ``None`` and the reason it was refused."""
+        prompt = item.get("prompt")
+        note_id = item.get("id")
+        if not isinstance(prompt, str) or not prompt.strip():
+            return None, "missing 'prompt'"
+        if not isinstance(note_id, str) or not note_id.strip():
+            return None, "missing 'id'"
+        if not isinstance(session_id, str) or not session_id:
+            return None, "missing 'session_id'"
+        ts = _utc_now_iso()
+        with self._lock:
+            open_count = sum(1 for d in self._deliveries if _can_still_be_submitted(d))
+            if open_count >= DELIVERIES_MAX_OPEN:
+                return None, f"{DELIVERIES_MAX_OPEN} prompts are already waiting in this workspace"
+            sess = self._sessions.get(session_id)
+            rec: dict[str, Any] = {
+                "did": uuid.uuid4().hex[:12],
+                "id": note_id.strip().upper(),
+                "agent": "claude",
+                "prompt": prompt,
+                "session_id": session_id,
+                "ts": item.get("ts") if isinstance(item.get("ts"), str) else ts,
+                "created": ts,
+                "updated": ts,
+            }
+            for key in ("rel", "verb"):
+                if isinstance(item.get(key), str) and item[key]:
+                    rec[key] = item[key]
+            if sess is not None and sess.get("ended") is not None:
+                rec["state"], rec["reason"] = "held", DELIVERY_REASON_ENDED
+            elif sess is not None and sess.get("plugin_claimed"):
+                rec["state"] = "waiting"
+                if sess.get("interrupted"):
+                    rec["waiting_for"] = "you"
+            else:
+                rec["state"], rec["reason"] = "held", DELIVERY_REASON_UNCLAIMED
+            self._deliveries.append(rec)
+            self._persist_locked(force=True)
+            return dict(rec), None
+
+    def list_deliveries(self, session_id: str | None = None) -> list[dict[str, Any]]:
+        """Every delivery not yet finished, oldest first; one session's when
+        ``session_id`` is given. Reading removes nothing."""
+        with self._lock:
+            return [
+                dict(d) for d in self._deliveries
+                if d.get("state") not in DELIVERY_FINISHED
+                and (session_id is None or d.get("session_id") == session_id)
+            ]
+
+    def _find_delivery_locked(self, did: Any) -> dict[str, Any] | None:
+        if not isinstance(did, str):
+            return None
+        return next((d for d in self._deliveries if d.get("did") == did), None)
+
+    def move_delivery(
+        self, did: Any, to: str, *, turn_id: str | None = None,
+        started_at: str | None = None, reason: str | None = None,
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """One plugin step: ``claim`` (waiting to sending), ``started``
+        (sending to started, stamping the ledger) or ``dropped`` (sending to
+        dropped). Returns the delivery after the move, or ``None`` and why
+        not. A refusal carries the delivery as it now stands, so a caller that
+        lost a race learns what won."""
+        allowed = {"sending": ("waiting",), "started": ("sending", "dropped"), "dropped": ("sending",)}
+        if to not in allowed:
+            return None, f"unknown step {to!r}"
+        ts = _utc_now_iso()
+        with self._lock:
+            d = self._find_delivery_locked(did)
+            if d is None:
+                return None, "no such delivery"
+            late = to == "started" and d.get("state") == "dropped"
+            if d.get("state") not in allowed[to] or (late and d.get("reason") != DELIVERY_REASON_UNCONFIRMED):
+                return dict(d), f"the delivery is {d.get('state')}, not {' or '.join(allowed[to])}"
+            d["state"] = to
+            d["updated"] = ts
+            if to == "dropped":
+                d["reason"] = reason or "the session refused it"
+            if to == "started":
+                # A turn confirmed after its session was given up on: the
+                # report wins, because the prompt did run.
+                d.pop("reason", None)
+                d["started_at"] = started_at or ts
+                if turn_id:
+                    d["turn_id"] = turn_id
+                self._stamp_delivered_locked(d)
+            self._prune_deliveries_locked()
+            self._persist_locked(force=True)
+            return dict(d), None
+
+    def cancel_delivery(self, did: Any) -> tuple[dict[str, Any] | None, str | None]:
+        """Withdraw a delivery the plugin has not claimed (TASK-0657).
+
+        ``held``, ``waiting`` and ``dropped`` become ``cancelled``, and the
+        note's dispatch history records it: as cancelled for a prompt that
+        never left, as removed, with the reason, for a dropped one. A ``sending`` delivery is already
+        on its way into the session and cannot be withdrawn; a ``started`` one
+        has its turn running. Both are refused, with the delivery as it stands,
+        so the caller can say which. Under the lock, a cancel and a claim
+        cannot both win."""
+        ts = _utc_now_iso()
+        with self._lock:
+            d = self._find_delivery_locked(did)
+            if d is None:
+                return None, "no such delivery"
+            state = d.get("state")
+            if state == "cancelled":
+                return dict(d), None
+            if state == "sending":
+                return dict(d), "too late: it is being submitted to Claude"
+            if state == "started":
+                return dict(d), "too late: its turn has started"
+            # A dropped prompt reached Claude, or may have: removing it is
+            # not a cancel "before it reached the session" (TASK-0662).
+            removed = state == "dropped"
+            d["state"] = "cancelled"
+            d["cancelled_at"] = ts
+            d["updated"] = ts
+            sess = self._sessions.get(d.get("session_id"))
+            if sess is not None:
+                rec: dict[str, Any] = {
+                    "id": d["id"], "ts": ts, "agent": "claude",
+                    "delivery": d["did"],
+                }
+                if removed:
+                    rec["removed"] = True
+                    rec["reason"] = d.get("reason") or "not delivered"
+                else:
+                    rec["cancelled"] = True
+                if d.get("verb"):
+                    rec["verb"] = d["verb"]
+                sess.setdefault("dispatches", []).append(rec)
+                del sess["dispatches"][:-DISPATCHES_MAX]
+            self._prune_deliveries_locked()
+            self._persist_locked(force=True)
+            return dict(d), None
+
+    def _stamp_delivered_locked(self, d: dict[str, Any]) -> None:
+        """The ledger entry for a delivered prompt: on its own session, at the
+        time its turn started (FEAT-0025's ledger, ``delivered_by: submit``)."""
+        sess = self._sessions.get(d["session_id"])
+        if sess is None:
+            sess = self._session_locked(d["session_id"], "claude", d["started_at"])
+        rec: dict[str, Any] = {
+            "id": d["id"], "ts": d["started_at"], "agent": "claude",
+            "delivered_by": "submit", "delivery": d["did"],
+        }
+        if d.get("verb"):
+            rec["verb"] = d["verb"]
+        if d.get("turn_id"):
+            rec["turn_id"] = d["turn_id"]
+        sess.setdefault("dispatches", []).append(rec)
+        del sess["dispatches"][:-DISPATCHES_MAX]
 
     def take_dispatch_requests(self) -> list[dict[str, Any]]:
         """Hand queued CLI requests to the desktop shell exactly once."""
@@ -608,7 +920,10 @@ class AgentSessionTracker:
                 )
                 for d in reversed(sess.get("dispatches") or []):
                     if d["id"] == note_id:
-                        entry = {**d, "session_id": sid, "live": is_live}
+                        # A cancelled dispatch never reached the session, so
+                        # it is not live work there (the re-dispatch guard).
+                        entry = {**d, "session_id": sid,
+                                 "live": is_live and not d.get("cancelled") and not d.get("removed")}
                         cost = sess.get("cost")
                         if isinstance(cost, dict) and isinstance(
                             cost.get("total_cost_usd"), (int, float)
@@ -744,6 +1059,9 @@ class AgentSessionTracker:
             "dispatches": [dict(d) for d in sess.get("dispatches") or []],
             "undocumented": bool(sess.get("undocumented")),
             "transcript_path": sess.get("transcript_path"),
+            # The cockpit plugin speaks for this session (FEAT-0156), so a
+            # dispatch to it is submitted rather than typed (FEAT-0158).
+            "plugin_claimed": bool(sess.get("plugin_claimed")),
         }
 
     def _latest_rate_limits_locked(self) -> dict[str, Any] | None:
@@ -799,6 +1117,12 @@ class AgentSessionTracker:
                 "session": self._slim(live, live=True) if live else None,
                 "last_session": (
                     self._slim(last, live=False) if last is not None else None
+                ),
+                # Prompts on their way to a Claude session here, for the
+                # fleet view's queue depth (FEAT-0158).
+                "deliveries_open": sum(
+                    1 for d in self._deliveries
+                    if d.get("state") not in DELIVERY_FINISHED
                 ),
             }
             lrl = self._latest_rate_limits_locked()

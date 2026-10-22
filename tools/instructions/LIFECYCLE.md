@@ -45,18 +45,17 @@ When the project uses phases (`../../docs/PHASES.md`):
 
 ## Mandatory Automated Documentation
 - **No orphaned code**: every functional code change (feature, fix, behaviour change, API or dependency change) has a task under `docs/features/<slug>/plan/tasks/`. Typo, comment, formatting and documentation-only changes are exempt.
-- **Notes are the authored source of state** (ADR-0009): write a status once, in the note. `tools/scripts/sync-snapshot.py` propagates statuses, `counters` and `metrics.counts` into the snapshot at pre-commit; CI checks it with `--check`. Never hand-copy a status into the snapshot.
+- **Notes are the authored source of state** (ADR-0009): write a status once, in the note. `tools/scripts/sync-snapshot.py` propagates statuses, `counters` and `metrics.counts` into the snapshot at pre-commit; CI checks it with `--check`.
 - **Counters rise on their own**: allocating an ID means creating a note, and a deleted note never frees its number.
 - **Write a relationship once, on the child** (`parent:`, `phase:`); with `retention.derive_lists` the sync writes reverse lists and live tasks' snapshot entries (ADR-0048). Other membership and `note:` prose stay yours; `goal:` comes from the note (ADR-0018).
 
 ## Execution (implementation phase)
-- Start code changes only once the planning artifacts exist, and keep `focus` on what is being worked.
 
 ### When to pause for the user
 Pause for the user only when the work genuinely requires them: a destructive or irreversible action, a real scope change, or input that only they can provide. First do everything that does not depend on the answer; then put the question at the end of a turn that also delivers that progress. These are not pauses; do the next thing instead: a summary naming the next step without taking it; an offer to carry on unless told otherwise; a list of decisions none of which blocks the work; a report because a milestone is done or the turn is long. Reason: an early stop hands the task back unfinished.
 
 ### Scope of a change
-A defect in code this feature changed is fixed in it (`QUALITY.md`, ADR-0047). A defect you find elsewhere, whose cause you know, is fixed in the same session under its own task and commit, with no `ISS-*` (`QUALITY.md`, "A defect you find is one you fix"). A cleanup or missing abstraction elsewhere is an `ISS-*` or a follow-up in your summary, unless the requested behaviour needs it. A failing test is always fixed (`QUALITY.md`). Reason: the document-first gate blocks an edit with no focus item, and widening the task is the bypass. When the wording admits two readings, implement the one it most directly supports and state the assumption; the threshold for asking is `../skills/issue-intake/SKILL.md` step 1.
+`QUALITY.md` (ADR-0047) sets three rules: a defect in code this feature changed is fixed in it; a defect you find elsewhere, whose cause you know, is fixed in the same session under its own task and commit, with no `ISS-*`; a failing test is always fixed. A cleanup or missing abstraction elsewhere is an `ISS-*` or a follow-up in your summary, unless the requested behaviour needs it. Reason: the document-first gate blocks an edit with no focus item, and widening the task is the bypass. When the wording admits two readings, implement the one it most directly supports and state the assumption; the threshold for asking is `../skills/issue-intake/SKILL.md` step 1.
 
 ## Close-out (must happen after work)
 1. Set the note status: task `done`, issue `fixed`, requirement `implemented`, feature `done` (`STATUSES.md`).
@@ -67,7 +66,7 @@ A defect in code this feature changed is fixed in it (`QUALITY.md`, ADR-0047). A
 6. Apply the verification gate in `QUALITY.md`: a terminal status needs its required `[[test]]` notes `passing`.
 7. Run `bash tools/scripts/validate-docs.sh` and fix what it reports.
 8. Before pushing, run `bash tools/scripts/validate-docs.sh --as-committed`. Reason: CI reads the commit, so an ignored or unstaged file passes locally and is absent there.
-9. After pushing, confirm the run went green (`gh run list --limit 1`); until then the change has not landed.
+9. After pushing, `python3 tools/scripts/ci-status.py --wait` reports CI's verdict; until it is green the change has not landed.
 10. At the review gates `QUALITY.md` states ("Independent review"), run `../skills/independent-review/SKILL.md`.
 
 ## Snapshot retention (active + recent)

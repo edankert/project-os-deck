@@ -1466,6 +1466,23 @@ def release_payload(
             deselected=held_back,
             platform=_platform_of_release(index, _rel_id),
         )
+        #: **The sheet's hand-run budget, beside the owed count**
+        #: ([[ISS-0326]]): "37 checks with 240 steps are owed by hand on
+        #: Android. The limit is 10 checks." Only for a release that names
+        #: a platform this repo keeps a ledger for, because a sheet is one
+        #: platform's and a union has none to take the line from.
+        _budget_platform = _platform_of_release(index, _rel_id)
+        if gate.get("exists") and _budget_platform:
+            from . import ledger as _ledger
+            try:
+                _known = _ledger.platforms(index.docs_root)
+            except (_ledger.LedgerError, OSError):
+                _known = []
+            if _budget_platform in _known:
+                _budget = acceptance.release_test_budget(
+                    index.docs_root, platform=_budget_platform)
+                if _budget:
+                    gate["budget"] = _budget
     verified: list[dict[str, Any]] = []
     known_issues = ""
     owed: list[dict[str, Any]] = []

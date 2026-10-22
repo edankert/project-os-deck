@@ -1,0 +1,419 @@
+// project-os plugin for Claude Code (project-os-dev FEAT-0041).
+//
+// Every project-os repo loads this module in every Claude Code session, inside
+// a cockpit terminal or not. The template sync places this folder and
+// generate-adapters.py registers it in the repo's .claude/settings.json, as a
+// marketplace that lives in the repo (tools/adapters/claude-code/ADAPTER.md,
+// "The project-os plugin"). Claude Code runs it from this folder, so a sync
+// that changes it changes what runs at the next session.
+//
+// It does three things the shell hooks cannot:
+//
+//   * A file changed from the shell counts as a write at close-out (HC-006,
+//     TASK-0200). The close-out check is told a session wrote something by a
+//     marker that only the Edit, Write and NotebookEdit tools leave. This
+//     module fingerprints the working tree when a main-loop turn starts and
+//     again when it stops, and leaves the same marker when the two differ and
+//     the turn ran a tool.
+//   * A session on the wrong model is named (HC-011, TASK-0201). A resumed
+//     session keeps the model its transcript was saved with, whatever the
+//     repo pins; a warning row above the prompt and a context block say so.
+//   * The project line above the prompt (HC-012, TASK-0202): the focus item,
+//     its status and phase, the validator's counts and the routing hint, and
+//     the tests and CI segment from tools/scripts/test-status.py (FEAT-0042,
+//     TASK-0215). Another plugin may add its facts to the end of the same
+//     line; the rules are in ADAPTER.md, "The project line".
+//
+// Everything is read from the repo's own scripts, in the background, and kept
+// in memory; drawing never runs a script. A script that fails leaves its fact
+// out of the line. The one thing a turn waits for is the working tree's
+// fingerprint at its stop (two `git` reads), so the marker is there before the
+// close-out check looks.
+
+import type { EngineInterface, Register } from 'claude-code'
+
+/** What one script run gave, or undefined when it could not run at all. */
+type Ran = { exitCode: number; stdout: string; stderr: string }
+
+async function run(
+  $: EngineInterface, argv: string[], cwd: string, init: { stdin?: string; env?: Record<string, string>; timeoutMs?: number } = {},
+): Promise<Ran | undefined> {
+  try {
+    return await $.process.run(argv, { cwd, ...init })
+  } catch {
+    return undefined
+  }
+}
+
+/** The template folder this plugin sits in: tools/adapters/claude-code. */
+const adapterDir = ($: EngineInterface): string => $.plugin.root.replace(/\/plugin\/?$/, '')
+
+// ---------------------------------------------------------------------------
+// A file changed from the shell counts as a write (HC-006, TASK-0200)
+
+/** Two digests of the working tree, everything and the part the line reads,
+ *  from hooks/shared/fingerprint.sh; what each covers is stated there. */
+
+export type Fingerprint = { all: string; docs: string }
+
+/** The two digests from fingerprint.sh's output, or undefined when it failed. */
+export function parseFingerprint(r: Ran | undefined): Fingerprint | undefined {
+  if (!r || r.exitCode !== 0) return undefined
+  const [all, docs] = r.stdout.split('\n')
+  return all && docs ? { all, docs } : undefined
+}
+
+async function fingerprint($: EngineInterface): Promise<Fingerprint | undefined> {
+  return parseFingerprint(await run($, ['bash', `${adapterDir($)}/hooks/shared/fingerprint.sh`], await $.session.root()))
+}
+
+/** Leave the marker session-touch.sh leaves, at the path shared/session-marker.sh
+ *  gives, so the rule for the path stays in one place. close-out-check.sh keys
+ *  it on $CLAUDE_PROJECT_DIR; the session's root stands in when that is unset. */
+const WRITE_MARKER = '. "$1" || exit 1; m=$(session_marker "$2" "${CLAUDE_PROJECT_DIR:-$3}") || exit 1; : > "$m"'
+
+async function writeMarker($: EngineInterface, sessionId: string): Promise<void> {
+  const root = await $.session.root()
+  await run($, ['bash', '-c', WRITE_MARKER, 'project-os', `${adapterDir($)}/hooks/shared/session-marker.sh`, sessionId, root], root)
+}
+
+// ---------------------------------------------------------------------------
+// The session runs on the pinned model (HC-011, TASK-0201)
+
+/** One spelling for a model name: lower case, no `claude-` prefix, no date or
+ *  context suffix (`[1m]` or `(1M context)`). `$.session.model()` gives the
+ *  name as /model shows it, and the pin may be a full ID; both become e.g.
+ *  `opus-5-5`. */
+export function modelKey(name: string): string {
+  return name.trim().toLowerCase()
+    .replace(/\s*\([^)]*\)$/, '')
+    .replace(/\[[^\]]*\]$/, '')
+    .replace(/^claude[- ]/, '')
+    .replace(/[ .]/g, '-')
+    .replace(/-\d{8}$/, '')
+}
+
+/** Whether a session's model honours the pin. A pin that names only a family
+ *  (`opus`, `sonnet`) is honoured by any model of that family. Two aliases are
+ *  not families: `default` is honoured by any model, and `opusplan` by Opus or
+ *  Sonnet, since it switches between them. */
+export function honoursPin(model: string, pin: string): boolean {
+  const m = modelKey(model)
+  const p = modelKey(pin)
+  if (!m || !p || p === 'default') return true
+  if (m === p) return true
+  const family = m.split('-')[0]
+  if (p === 'opusplan') return family === 'opus' || family === 'sonnet'
+  return /^[a-z]+$/.test(p) && family === p
+}
+
+export function wrongModelSentence(model: string, pin: string): string {
+  return `This session runs ${model}; this repo pins ${pin} (.claude/settings.json). Switch with /model, or start a new session.`
+}
+
+/** The repo's pin, or undefined when there is none or the file cannot be read. */
+async function pinnedModel($: EngineInterface): Promise<string | undefined> {
+  try {
+    const text = String(await $.fs.read(`${await $.session.root()}/.claude/settings.json`))
+    const pin = (JSON.parse(text) as { model?: unknown }).model
+    return typeof pin === 'string' && pin.trim() ? pin.trim() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function modelWarning($: EngineInterface): Promise<string | undefined> {
+  const pin = await pinnedModel($)
+  if (!pin) return undefined
+  try {
+    const model = await $.session.model()
+    return honoursPin(model, pin) ? undefined : wrongModelSentence(model, pin)
+  } catch {
+    return undefined
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The project line (HC-012, TASK-0202)
+
+export type Focus = { id: string; status: string; phase?: string } | 'none'
+
+/** The facts on the line; a fact not read yet, or whose script failed, is absent.
+ *  `tests` is test-status.py's segment, such as `tests 44/139 ✗1 ▶ TST-0270 8m`. */
+export type Facts = { focus?: Focus; route?: string; errors?: number; reviewStale?: number; tests?: string }
+
+/** What the routing hint's category in brackets is called on the line. */
+const ROUTES: Record<string, string> = {
+  'planning': 'planner',
+  'execution': 'implement here',
+  'review': 'independent-reviewer',
+  'parked, not terminal': 'parked',
+  'terminal': 'nothing in flight',
+}
+
+/** The focus and route from model-routing-hint.sh's line, which states the
+ *  focus item, its status and phase, and in brackets what kind of work it is.
+ *  Read from the hint rather than SNAPSHOT.yaml so the line and the hint the
+ *  model gets can never disagree. */
+export function parseHint(text: string): Pick<Facts, 'focus' | 'route'> {
+  const line = text.split('\n').find(l => l.startsWith('project-os: ')) ?? ''
+  if (!line) return {}
+  if (line.startsWith('project-os: no focus item')) return { focus: 'none' }
+  const m = /^project-os: focus item (\S+) is '([^']*)'(?:, phase (\S+))? \(([^)]*)\)/.exec(line)
+  if (!m || !m[1]) return {}
+  const focus: Focus = { id: m[1], status: m[2] ?? '' }
+  if (m[3]) focus.phase = m[3]
+  const route = ROUTES[m[4] ?? '']
+  return route ? { focus, route } : { focus }
+}
+
+/** The validator's counts from its output, or undefined when it did not finish:
+ *  only a run that printed its own verdict line is counted. */
+export function parseValidator(r: Ran | undefined): Pick<Facts, 'errors' | 'reviewStale'> | undefined {
+  if (!r) return undefined
+  const out = `${r.stdout}\n${r.stderr}`
+  if (!/^validate-docs: (OK|FAIL)\b/m.test(out)) return undefined
+  const lines = out.split('\n')
+  // A REVIEW-STALE line is counted once, as review-stale, whether the
+  // validator prints it as a warning or, from 2026-11-18, as an error.
+  return {
+    errors: lines.filter(l => /^ERROR\b/.test(l) && !l.includes('[REVIEW-STALE]')).length,
+    reviewStale: lines.filter(l => l.includes('[REVIEW-STALE]')).length,
+  }
+}
+
+const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
+
+/** The line's text: project facts only, in order, joined by ` · `. */
+export function lineText(f: Facts): string {
+  const parts: string[] = []
+  if (f.focus === 'none') parts.push('no focus item')
+  else if (f.focus) {
+    parts.push(f.focus.status ? `${f.focus.id} ${f.focus.status}` : f.focus.id)
+    if (f.focus.phase) parts.push(f.focus.phase)
+  }
+  if (f.errors !== undefined) parts.push(plural(f.errors, 'validator error', 'validator errors'))
+  if (f.reviewStale !== undefined) parts.push(`${f.reviewStale} review-stale`)
+  if (f.route) parts.push(`route: ${f.route}`)
+  if (f.tests) parts.push(f.tests)
+  return parts.join(' · ')
+}
+
+/** The segment from test-status.py's output: its one line, or undefined when it
+ *  failed or had nothing to show. */
+export function parseSegment(r: Ran | undefined): string | undefined {
+  if (!r || r.exitCode !== 0) return undefined
+  const line = r.stdout.split('\n')[0]?.trim()
+  return line ? line : undefined
+}
+
+/** A segment that shows a test run in progress: `tests 44/139 ...`. */
+export const RUNNING = /^tests \d+\/\d+/
+
+/** How often, in ms, the segment is re-read while a tool runs or a test run
+ *  is in progress. */
+const RUN_POLL_MS = 3000
+
+/** The keys the line contract names. */
+export const LINE_KEY = 'project-os:line'
+const SEGMENT = /^segment:/
+
+type Node = { type?: string; props?: Record<string, unknown>; children?: unknown[] }
+
+/** Splits the tree beneath into the segments it holds and the rest. The tree
+ *  from next(e) is frozen, so the rest is rebuilt from copies; every other
+ *  node, the engine's own included, is kept where it was. `slot` marks where
+ *  the first segment stood, so the line can be put back in its place. */
+export function takeSegments(tree: unknown): { segments: unknown[]; rest: unknown } {
+  const segments: unknown[] = []
+  const SLOT = { slot: true }
+  const walk = (t: unknown): unknown => {
+    if (!t || typeof t !== 'object') return t
+    const n = t as Node
+    if (typeof n.props?.key === 'string' && SEGMENT.test(n.props.key)) {
+      segments.push(t)
+      return segments.length === 1 ? SLOT : undefined
+    }
+    if (!Array.isArray(n.children)) return t
+    return { ...n, children: n.children.map(walk).filter(c => c !== undefined) }
+  }
+  return { segments, rest: walk(tree) }
+}
+
+/** Puts `node` where the first segment stood (see takeSegments). */
+function fillSlot(tree: unknown, node: unknown): unknown {
+  if (!tree || typeof tree !== 'object') return tree
+  if ((tree as { slot?: boolean }).slot === true) return node
+  const n = tree as Node
+  return Array.isArray(n.children) ? { ...n, children: n.children.map(c => fillSlot(c, node)) } : tree
+}
+
+// ---------------------------------------------------------------------------
+
+/** The line's facts and the module's other state; one Claude session per load. */
+const facts: Facts = {}
+const st: {
+  before?: Promise<Fingerprint | undefined>
+  /** Whether the turn so far ran a tool: only then can it have written. */
+  toolRan?: boolean
+  /** The notes' digest when the last turn ended, to see a change made between turns. */
+  lastDocs?: string
+  warning?: string
+  refreshing?: boolean
+  again?: boolean
+  started?: boolean
+  /** Tool calls running now; a push runs its tests inside one. */
+  tools?: number
+  polling?: boolean
+} = {}
+
+/** Re-reads the line's facts, one refresh at a time; a request that arrives
+ *  while one runs makes it run once more. Never awaited by a hook. */
+function refresh($: EngineInterface): void {
+  st.started = true
+  if (st.refreshing) { st.again = true; return }
+  st.refreshing = true
+  void refreshLoop($).catch(() => undefined).finally(() => { st.refreshing = false })
+}
+
+async function refreshLoop($: EngineInterface): Promise<void> {
+  do {
+    st.again = false
+    const root = await $.session.root()
+    const hint = await run($, ['bash', `${adapterDir($)}/hooks/model-routing-hint.sh`], root,
+      { stdin: '{}', env: { CLAUDE_PROJECT_DIR: root } })
+    const read = hint && hint.exitCode === 0 ? parseHint(hint.stdout) : {}
+    facts.focus = read.focus
+    facts.route = read.route
+    $.ui.invalidate('ui.render')
+    await readSegment($, root)
+    // CI's latest runs, fetched at most every five minutes, so the segment
+    // can say `CI ✗` without the drawing ever touching the network.
+    await run($, ['python3', 'tools/scripts/ci-status.py', '--repo-root', root, '--max-age', '300', '--quiet'], root,
+      { timeoutMs: 30_000 })
+    await readSegment($, root)
+    // A run started outside any tool call, from another terminal.
+    if (RUNNING.test(facts.tests ?? '')) poll($)
+    const counts = parseValidator(await run($, ['bash', 'tools/scripts/validate-docs.sh'], root, { timeoutMs: 300_000 }))
+    // A run that did not finish keeps the last counts it had.
+    if (counts) Object.assign(facts, counts)
+    $.ui.invalidate('ui.render')
+  } while (st.again)
+}
+
+/** Re-reads the tests and CI segment; redraws when it changed. */
+async function readSegment($: EngineInterface, root: string): Promise<void> {
+  const text = parseSegment(await run($, ['python3', 'tools/scripts/test-status.py', '--segment', '--repo-root', root], root,
+    { timeoutMs: 10_000 }))
+  if (text !== facts.tests) {
+    facts.tests = text
+    $.ui.invalidate('ui.render')
+  }
+}
+
+/** Keeps the segment current while a tool runs or a test run is in progress.
+ *  The tests of a push run inside one tool call, and no turn event fires until
+ *  it ends. Stops by itself when neither holds. */
+function poll($: EngineInterface): void {
+  if (st.polling) return
+  st.polling = true
+  const later = (f: () => void): void => {
+    const t = setTimeout(f, RUN_POLL_MS) as unknown as { unref?: () => void }
+    t.unref?.()
+  }
+  const loop = (): void => {
+    if (!st.tools && !RUNNING.test(facts.tests ?? '')) { st.polling = false; return }
+    void $.session.root().then(root => readSegment($, root)).catch(() => undefined).finally(() => later(loop))
+  }
+  later(loop)
+}
+
+/** Redraws when the wrong-model warning appears or goes away. */
+async function checkModel($: EngineInterface): Promise<void> {
+  const warning = await modelWarning($)
+  if (warning !== st.warning) {
+    st.warning = warning
+    $.ui.invalidate('ui.render')
+  }
+}
+
+export const register: Register = on => {
+  on('session.start', ($, e, next) => {
+    refresh($)
+    void fingerprint($).then(f => { if (f && st.lastDocs === undefined) st.lastDocs = f.docs }).catch(() => undefined)
+    void checkModel($).catch(() => undefined)
+    return next(e)
+  })
+
+  on('turn.start', ($, e, next) => {
+    // A subagent's turn runs inside the main loop's.
+    if (e.agentId === undefined) {
+      st.toolRan = false
+      st.before = fingerprint($).catch(() => undefined)
+      // Notes changed between turns (another terminal, a checkout): re-read now.
+      void st.before.then(f => { if (f && st.lastDocs !== undefined && f.docs !== st.lastDocs) refresh($) })
+      void checkModel($).catch(() => undefined)
+    }
+    return next(e)
+  })
+
+  // Any tool, a subagent's included. A turn that ran none only answered, so a
+  // change in the tree during it is someone else's (FEAT-0041 review, round 1).
+  on('tool.call', async ($, e, next) => {
+    st.toolRan = true
+    st.tools = (st.tools ?? 0) + 1
+    poll($)
+    try {
+      return await next(e)
+    } finally {
+      st.tools = Math.max(0, (st.tools ?? 1) - 1)
+    }
+  })
+
+  // Before the settings Stop hooks run (close-out-check.sh among them), so the
+  // marker is there when the check looks for it.
+  on('classic.Stop', async ($, e, next) => {
+    try {
+      const before = await st.before
+      const after = before ? await fingerprint($) : undefined
+      // A blocked stop continues the same turn: compare its next stop with now.
+      st.before = after ? Promise.resolve(after) : undefined
+      if (before && after) {
+        const sessionId = (e as { session_id?: unknown }).session_id
+        if (after.all !== before.all && st.toolRan && typeof sessionId === 'string' && sessionId) await writeMarker($, sessionId)
+        if (after.docs !== before.docs) refresh($)
+      }
+      if (after) st.lastDocs = after.docs
+      st.toolRan = false
+    } catch {
+      // Whatever failed, the turn ends as it would have without this module.
+    }
+    return next(e)
+  })
+
+  // The wrong-model sentence in the model's own context, for a surface that
+  // draws nothing (VS Code, `claude -p`).
+  on('prompt.context', async ($, e, next) => {
+    const r = await next(e)
+    const warning = await modelWarning($).catch(() => undefined)
+    return warning ? { ...r, blocks: [...r.blocks, { name: 'projectOsModel', text: warning }] } : r
+  })
+
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const beneath = await next(e)
+    if (e.props.hasSurvey) return beneath
+    // A plugin reloaded mid-session hears no session.start.
+    if (!st.started) refresh($)
+    const { Box, Text } = $.ui.resolve(e)
+    const text = lineText(facts)
+    const { segments, rest } = takeSegments(beneath)
+    const line = h(Box, { key: LINE_KEY, flexDirection: 'row' },
+      text ? h(Text, { wrap: 'truncate-end' }, text) : null,
+      ...segments)
+    const block = st.warning
+      ? h(Box, { flexDirection: 'column' }, h(Text, { color: 'warning', wrap: 'wrap' }, st.warning), line)
+      : line
+    if (segments.length) return fillSlot(rest, block) as typeof beneath
+    return h(Box, { flexDirection: 'column' }, rest, block) as typeof beneath
+  })
+}

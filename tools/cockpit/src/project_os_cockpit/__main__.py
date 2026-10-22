@@ -10,6 +10,7 @@ cockpit shell (FEAT-0006) layer on top in later tasks.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -67,6 +68,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "404s.",
     )
     parser.add_argument(
+        "--secret-stdin",
+        action="store_true",
+        help="Read one JSON line from standard input before starting: "
+        '{"secret": ..., "approval_wait_ms": ...}. Passed by the Electron '
+        "shell, which alone may answer a permission prompt or hand a prompt "
+        "to a Claude session (FEAT-0159). Without it those two routes refuse "
+        "every request.",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -78,6 +88,34 @@ def _build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {__version__}",
     )
     return parser
+
+
+#: The longest a plugin may hold a permission prompt for the cockpit
+#: (FEAT-0159). The shell clamps too; this is the sidecar not trusting it.
+APPROVAL_WAIT_MAX_MS = 30000
+
+
+def read_shell_line(line: str) -> tuple[str, int]:
+    """The secret and the approval wait from the shell's one line on stdin.
+
+    The shell writes it at spawn and closes stdin (TASK-0664). Standard input,
+    not the environment, because another process run by the same user can
+    read this one's environment. Raises ``ValueError`` with a message that
+    does not contain the line.
+    """
+    try:
+        data = json.loads(line)
+    except ValueError:
+        raise ValueError("the line on standard input is not JSON") from None
+    if not isinstance(data, dict):
+        raise ValueError("the line on standard input is not a JSON object")
+    secret = data.get("secret")
+    if not isinstance(secret, str) or len(secret) < 32:
+        raise ValueError("the line on standard input has no usable secret")
+    wait = data.get("approval_wait_ms", 5000)
+    if isinstance(wait, bool) or not isinstance(wait, int):
+        raise ValueError("approval_wait_ms must be a whole number of milliseconds")
+    return secret, max(0, min(APPROVAL_WAIT_MAX_MS, wait))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -114,11 +152,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         log.warning("shell assets dir does not exist, ignoring: %s", shell_assets)
         shell_assets = None
 
+    shell_secret: str | None = None
+    approval_wait_ms = 5000
+    if args.secret_stdin:
+        try:
+            shell_secret, approval_wait_ms = read_shell_line(sys.stdin.readline())
+        except ValueError as exc:
+            # The message never repeats the line: it carries the secret.
+            print(f"project-os-cockpit: --secret-stdin: {exc}", file=sys.stderr)
+            return 2
+
     server = DocsServer(
         docs_root=docs_root,
         bind=args.bind,
         port=args.port,
         shell_assets=shell_assets,
+        shell_secret=shell_secret,
+        approval_wait_ms=approval_wait_ms,
     )
     server.run()
     return 0

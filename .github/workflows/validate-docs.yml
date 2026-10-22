@@ -48,6 +48,19 @@ jobs:
           if [ -f tools/scripts/run-tests.py ]; then
             python3 tools/scripts/run-tests.py --repo-root "$GITHUB_WORKSPACE" --ci
           fi
+      # The run file run-tests.py wrote, so ci-status.py can name a red run's
+      # failing tests instead of only its job (project-os-dev FEAT-0042;
+      # tools/instructions/TEST-RUNS.md). Hidden files must be asked for: the
+      # folder is .project-os/.
+      - name: Upload the test run's progress file, so ci-status.py can name the failing tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-os-test-run-${{ github.job }}
+          path: .project-os/runs/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Verify SNAPSHOT.yaml derived fields match the notes
         run: |
           if [ -f tools/scripts/sync-snapshot.py ]; then
@@ -69,6 +82,22 @@ jobs:
           for t in tools/scripts/test-*.sh; do echo "== $t"; bash "$t"; done
           python3 -B tools/scripts/test-retention.py
           python3 -B tools/scripts/test-release-test-preparation.py
+          python3 -B tools/scripts/test-release-ride.py
+      # The project-os plugin runs inside Claude Code, against an interface that
+      # is weeks old (project-os-dev FEAT-0041, RISK-0006). Validate and test it
+      # on the version plugin.json names; raise the pin on purpose
+      # (tools/adapters/claude-code/ADAPTER.md, "Moving the tested version").
+      # Neither command needs a login.
+      - uses: actions/setup-node@v4
+        if: github.repository == 'edankert/project-os'
+        with:
+          node-version: "20"
+      - name: Validate and test the project-os plugin on the version it declares (the template repository only)
+        if: github.repository == 'edankert/project-os'
+        run: |
+          npm install -g @anthropic-ai/claude-code@2.1.300
+          claude plugin validate tools/adapters/claude-code/plugin
+          claude plugin test tools/adapters/claude-code/plugin
       - name: Verify generated adapter artifacts are current
         run: |
           if [ -f tools/scripts/generate-adapters.py ]; then

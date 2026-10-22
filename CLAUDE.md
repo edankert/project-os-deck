@@ -39,6 +39,7 @@ These files contain detailed rules. Read them when performing the related operat
 - Acceptance test sections and lifecycle: tools/instructions/TESTING.md
 - Hook contracts: tools/instructions/HOOKS.md
 - Syncing template updates: tools/instructions/SYNCING.md
+- Test runs and CI results you can watch: tools/instructions/TEST-RUNS.md
 
 ## Skill playbooks (read before performing these operations)
 

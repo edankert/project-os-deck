@@ -9,7 +9,7 @@
 # keep resolving.
 #
 # Fails open: without python3, or if the slice prints nothing, the old reminder
-# is printed instead. Never blocks.
+# is printed instead. Never blocks. Ends with the CI line, when there is one.
 #
 # Exit 0 = allow (always)
 
@@ -19,12 +19,25 @@ if [ ! -f "$SNAPSHOT" ]; then
   exit 0
 fi
 
+# A line for each CI workflow whose latest run on the branch failed or is still
+# running (project-os-dev FEAT-0042). ci-status.py reuses a result younger than
+# five minutes, gives GitHub a few seconds at most, and prints nothing when it
+# cannot ask (RISK-0007).
+ci_line() {
+  local ci="$PROJECT_DIR/tools/scripts/ci-status.py"
+  if command -v python3 >/dev/null 2>&1 && [ -f "$ci" ]; then
+    python3 "$ci" --repo-root "$PROJECT_DIR" --session-line 2>/dev/null
+  fi
+}
+
 SLICE="$PROJECT_DIR/tools/scripts/snapshot-slice.py"
 if command -v python3 >/dev/null 2>&1 && [ -f "$SLICE" ]; then
   if python3 "$SLICE" "$PROJECT_DIR" 2>/dev/null; then
+    ci_line
     exit 0
   fi
 fi
 
 echo "REMINDER: Read SNAPSHOT.yaml to understand current project state, focus, and active work before proceeding."
+ci_line
 exit 0

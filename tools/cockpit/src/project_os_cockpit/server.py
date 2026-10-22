@@ -18,6 +18,7 @@ import atexit
 import collections
 import datetime as _dt
 import base64
+import hmac
 import binascii
 import json
 import re
@@ -50,10 +51,12 @@ from . import inbox as inbox_mod
 from .watermark import Watermark
 from . import obligations as _obligations
 from . import review
+from . import approvals as approvals_mod
 from .approvals import ApprovalStore
 from . import escalation
 from .review import ReviewStore
 from .terminal import TERMINAL_BASE_PATH, TerminalProcess
+from . import test_runs
 from .validation import ValidationRunner
 from .watcher import Watcher
 
@@ -463,6 +466,8 @@ class DocsServer:
     def __init__(
         self, *, docs_root: Path, bind: str, port: int,
         shell_assets: Path | None = None,
+        shell_secret: str | None = None,
+        approval_wait_ms: int = 5000,
     ) -> None:
         self.docs_root = docs_root.resolve(strict=True)
         if not self.docs_root.is_dir():
@@ -473,6 +478,11 @@ class DocsServer:
         # `None` in mode-1, which has no Electron build at all — so this is
         # an optional capability, never a dependency.
         self.shell_assets = shell_assets.resolve() if shell_assets else None
+        # The desktop shell's secret, read from standard input at spawn
+        # (FEAT-0159 / TASK-0664). `None` when started from a terminal: the
+        # two routes that need it then refuse every request.
+        self.shell_secret = shell_secret or None
+        self.approval_wait_ms = approval_wait_ms
         self.bus: EventBus = EventBus()
         self.index: Index = Index.build(self.docs_root)
         # Index subscribes for invalidation; the SSE channel (TASK-0006) and
@@ -510,6 +520,12 @@ class DocsServer:
             self.docs_root.parent, self.bus, resolver=self.index.resolve,
         )
         self.bus.subscribe(self.validation.on_event)
+        # The repo's latest test run and CI runs (FEAT-0161 / TASK-0681).
+        # `.project-os/` sits beside docs/ like SNAPSHOT.yaml, so it has its
+        # own observer; it publishes ``cockpit:test-run`` and starts in `run`.
+        self.test_runs: test_runs.TestRunWatcher = test_runs.TestRunWatcher(
+            self.docs_root.parent, self.bus,
+        )
         # Status-diff layer (FEAT-0036 / TASK-0162): note saves become
         # cockpit:status-change events feeding the live-work views.
         # Seeded from the current index so the first scan is silent.
@@ -555,11 +571,14 @@ class DocsServer:
             status_tracker=self.status_tracker,
             shell_assets=self.shell_assets,
             watermark=self.watermark,
+            shell_secret=self.shell_secret,
+            approval_wait_ms=self.approval_wait_ms,
         )
         self.watcher.start()
         # SNAPSHOT.yaml sits above the docs root — the validation runner
         # owns its own non-recursive observer for it (TASK-0111).
         self.validation.start()
+        self.test_runs.start()
         # Background decay thread for agent-state (FEAT-0013 / TASK-0077).
         # Wakes once a minute, asks the state for any aged-out
         # busy/waiting it should now consider idle, and publishes the
@@ -606,6 +625,7 @@ class DocsServer:
             self._decay_stop.set()
             decay_thread.join(timeout=2)
             self.validation.stop()
+            self.test_runs.stop()
             self.watcher.stop()
 
     def _agent_state_decay_loop(self) -> None:
@@ -671,6 +691,8 @@ def _make_handler(
     status_tracker: "StatusTracker | None" = None,
     shell_assets: Path | None = None,
     watermark: Watermark | None = None,
+    shell_secret: str | None = None,
+    approval_wait_ms: int = 5000,
 ) -> type[BaseHTTPRequestHandler]:
     """Build a request handler class with the per-server collaborators baked in."""
     marker = watermark or Watermark(docs_root.parent)
@@ -761,6 +783,21 @@ def _make_handler(
             if path == "/api/cockpit/dispatch":
                 self._serve_cockpit_dispatch()
                 return
+            if path == "/api/cockpit/deliveries":
+                self._serve_delivery_add()
+                return
+            if path == "/api/cockpit/deliveries/claim":
+                self._serve_delivery_claim()
+                return
+            if path == "/api/cockpit/deliveries/started":
+                self._serve_delivery_started()
+                return
+            if path == "/api/cockpit/deliveries/dropped":
+                self._serve_delivery_dropped()
+                return
+            if path == "/api/cockpit/deliveries/cancel":
+                self._serve_delivery_cancel()
+                return
             if path == "/api/cockpit/review-request":
                 self._serve_review_request()
                 return
@@ -787,6 +824,12 @@ def _make_handler(
                 return
             if path == "/api/cockpit/approve":
                 self._serve_approve()
+                return
+            if path == "/api/cockpit/approvals/ask":
+                self._serve_approval_ask()
+                return
+            if path == "/api/cockpit/approvals/handed-back":
+                self._serve_approval_handed_back()
                 return
 
             if path == "/api/notes/attach":
@@ -920,6 +963,22 @@ def _make_handler(
                 self._respond_json(_obligations.badges_payload(index))
                 return
 
+            # The cockpit's half of the project line above the Claude prompt
+            # (FEAT-0157 / TASK-0672). Loopback-only like every route the
+            # plugin calls; a failure is a 500, never a zero, because the line
+            # leaves out a number it could not read.
+            if path == "/api/cockpit/line":
+                if not self._require_loopback("line reads"):
+                    return
+                try:
+                    payload = cockpit.line_payload(index)
+                except Exception as exc:  # noqa: BLE001 -- any failure is "not read"
+                    self._respond_json({"ok": False, "error": "line not computed: %s" % exc},
+                                       status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                    return
+                self._respond_json(payload)
+                return
+
             # What one view owes, with the rows (FEAT-0092 / TASK-0387). The
             # badge's own numbers, plus what they count — the pairing the
             # badge could not make on its own.
@@ -1018,13 +1077,70 @@ def _make_handler(
             # Permission prompts as durable state (ISS-0094) — so they can be
             # answered from here and counted by the same clock as the queue.
             if path == "/api/cockpit/approvals":
+                # Loopback-only: a record carries the command it asks to run
+                # (FEAT-0159). With `approval_id`, that one record: the
+                # plugin's poll while it waits for the person.
+                if not self._require_loopback("approvals"):
+                    return
+                wanted = (urllib.parse.parse_qs(parsed.query).get("approval_id") or [""])[0]
+                if wanted:
+                    record = approval_store.get(wanted)
+                    if record is None:
+                        self._respond_json({"ok": False, "error": "no such approval"},
+                                           status=HTTPStatus.NOT_FOUND)
+                    else:
+                        self._respond_json({"ok": True, "approval": record})
+                    return
                 open_prompts = approval_store.open_prompts()
                 self._respond_json({
-                    "approvals": open_prompts,
+                    "approvals": approval_store.live_prompts(),
                     # The escalation state per prompt, so the surface shows the
                     # clock rather than only the amber.
                     "escalation": escalation.sweep(open_prompts)["counts"],
                 })
+                return
+
+            #: The repo's latest test run and each CI workflow's latest run
+            #: ([[FEAT-0161]] / [[TASK-0681]]), read from `.project-os/`. The
+            #: page re-fetches this on ``cockpit:test-run``.
+            #:
+            #: **Loopback-only, both of them**, like the inbox's read paths. A
+            #: run's reasons are the last line a test printed, and its log is
+            #: everything it printed: a test that echoes a token puts the
+            #: token here. The render server binds 0.0.0.0 so a tablet can
+            #: read the notes; a log is not a note.
+            if path == "/api/cockpit/test-run":
+                if not self._require_loopback("test run reads"):
+                    return
+                self._respond_json({
+                    "schema_version": cockpit.SCHEMA_VERSION,
+                    **test_runs.payload(project_root),
+                })
+                return
+
+            if path == test_runs.LOG_ROUTE:
+                if not self._require_loopback("test run reads"):
+                    return
+                rel = (urllib.parse.parse_qs(parsed.query).get("path") or [""])[0]
+                target = test_runs.log_file(project_root, rel)
+                if target is None:
+                    # One answer for every refusal: a path the run file does
+                    # not name, one outside `.project-os/runs/`, and a log
+                    # that is gone all mean "not a log this run has".
+                    self._respond_json(
+                        {"ok": False,
+                         "error": "not a log the latest test run names"},
+                        status=HTTPStatus.NOT_FOUND,
+                    )
+                    return
+                data = test_runs.read_log(target)
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(data)
                 return
 
             if path == "/api/cockpit/acceptance-debt":
@@ -1300,6 +1416,9 @@ def _make_handler(
 
             if path == "/api/cockpit/dispatch-requests":
                 self._serve_dispatch_requests()
+                return
+            if path == "/api/cockpit/deliveries":
+                self._serve_deliveries_list(parsed.query)
                 return
 
             if path == "/api/render":
@@ -1806,6 +1925,32 @@ def _make_handler(
                 )
                 return
             outcome = tracker.ingest(body)
+            # A session the plugin just claimed, or one that ended, moves the
+            # prompts addressed to it (FEAT-0158).
+            for delivery in tracker.take_delivery_changes():
+                bus.publish(ControlEvent("cockpit:delivery", delivery))
+            # A call that ran, a main-loop turn that ended or began, or a
+            # session that ended leaves no permission prompt to answer
+            # (FEAT-0159). A prompt refused with Esc in the terminal sends no
+            # Stop and no Interrupt (live run, 2026-10-14), so the person's
+            # next prompt is what closes it.
+            event_name = body.get("hook_event_name")
+            if event_name == "PostToolUse":
+                # Its own session's record only, as an ask reuses one
+                # (FEAT-0159 review, round 2).
+                closed = approval_store.close(
+                    session_id=str(body.get("session_id") or ""),
+                    tool_use_id=str(body.get("tool_use_id") or ""),
+                )
+            elif event_name in ("Stop", "Interrupt", "UserPromptSubmit", "SessionEnd"):
+                closed = approval_store.close(
+                    session_id=str(body.get("session_id") or ""),
+                    main_loop_only=event_name != "SessionEnd",
+                )
+            else:
+                closed = []
+            for record in closed:
+                bus.publish(ControlEvent("cockpit:approval", record))
             if not outcome.get("ok"):
                 self._respond_json(
                     {"ok": False, "error": outcome.get("error", "rejected")},
@@ -1854,15 +1999,134 @@ def _make_handler(
             verb = body.get("verb")
             agent = body.get("agent")
             enqueue = bool(body.get("enqueue"))
+            delivered_by = body.get("delivered_by")
+            rel = None
+            if enqueue:
+                # The request names the note's file, so the shell's prompt
+                # can say which one to read (ISS-0320).
+                found = index.by_id(note_id.strip().upper())
+                record = index.get(found) if found else None
+                if record is None:
+                    self._respond_json(
+                        {"ok": False, "error": f"no note with ID {note_id.strip().upper()} in this project"},
+                        status=HTTPStatus.NOT_FOUND)
+                    return
+                rel = record.rel_path
             rec = tracker.record_dispatch(
                 note_id.strip().upper(),
                 verb=str(verb) if verb else None,
                 agent=str(agent) if agent else None,
                 enqueue=enqueue,
+                delivered_by=delivered_by if isinstance(delivered_by, str) else None,
+                rel=rel,
             )
             if enqueue:
                 bus.publish(ControlEvent("cockpit:dispatch-request", rec))
             self._respond_json({"ok": True, "recorded": rec})
+
+        # ---- deliveries: a dispatched prompt for one Claude session (FEAT-0158) ----
+        #
+        # The shell adds a delivery; the cockpit plugin inside that session
+        # claims it, submits it with `$.prompt.submit` once the session is idle,
+        # and reports the turn's start. Every write is loopback-only: these
+        # routes put a prompt into a Claude session (RISK-0012). The delivery
+        # id travels in the body, so each route is a fixed path the write-guard
+        # test can enumerate.
+
+        def _serve_deliveries_list(self, query: str) -> None:
+            """``GET /api/cockpit/deliveries[?session=<id>]`` — unfinished
+            deliveries, oldest first. Loopback-only: they carry prompt text."""
+            if not self._require_loopback("deliveries"):
+                return
+            session = urllib.parse.parse_qs(query).get("session", [None])[0]
+            self._respond_json({
+                "schema_version": cockpit.SCHEMA_VERSION,
+                "deliveries": tracker.list_deliveries(session or None),
+            })
+
+        def _serve_delivery_add(self) -> None:
+            """``POST /api/cockpit/deliveries`` — body: the dispatch item
+            (``id``, ``prompt``, ``verb?``, ``rel?``, ``ts?``) and
+            ``session_id``. Starts ``waiting`` when the plugin speaks for the
+            session, ``held`` otherwise. Needs the shell's secret: it turns
+            prompt text into a Claude turn (RISK-0012, TASK-0664)."""
+            if not self._require_loopback():
+                return
+            if not self._require_json_content_type() or not self._require_shell_secret():
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            delivery, error = tracker.add_delivery(body, body.get("session_id"))
+            if delivery is None:
+                self._respond_json({"ok": False, "error": error},
+                                   status=HTTPStatus.BAD_REQUEST)
+                return
+            bus.publish(ControlEvent("cockpit:delivery", delivery))
+            self._respond_json({"ok": True, "delivery": delivery})
+
+        def _serve_delivery_claim(self) -> None:
+            """``POST /api/cockpit/deliveries/claim`` ``{did}`` — the plugin
+            takes a waiting delivery to submit it. 409 when it is no longer
+            waiting, which is how a cancel that arrived first wins."""
+            if not self._require_loopback():
+                return
+            self._delivery_step("sending")
+
+        def _serve_delivery_started(self) -> None:
+            """``POST /api/cockpit/deliveries/started`` ``{did, turn_id?,
+            started_at?}`` — the session's turn started with this prompt. The
+            ledger is stamped now, on that session."""
+            if not self._require_loopback():
+                return
+            self._delivery_step("started")
+
+        def _serve_delivery_dropped(self) -> None:
+            """``POST /api/cockpit/deliveries/dropped`` ``{did, reason?}`` —
+            ``$.prompt.submit`` refused the prompt."""
+            if not self._require_loopback():
+                return
+            self._delivery_step("dropped")
+
+        def _serve_delivery_cancel(self) -> None:
+            """``POST /api/cockpit/deliveries/cancel`` ``{did}`` — withdraw a
+            prompt the plugin has not claimed (TASK-0657). 409 with the
+            delivery when it is being submitted or its turn has started; the
+            turn itself is never touched."""
+            if not self._require_loopback():
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            delivery, error = tracker.cancel_delivery(body.get("did"))
+            if error is not None:
+                status = HTTPStatus.NOT_FOUND if delivery is None else HTTPStatus.CONFLICT
+                self._respond_json({"ok": False, "error": error, "delivery": delivery},
+                                   status=status)
+                return
+            bus.publish(ControlEvent("cockpit:delivery", delivery))
+            self._respond_json({"ok": True, "delivery": delivery})
+
+        def _delivery_step(self, to: str) -> None:
+            body = self._read_json_body()
+            if body is None:
+                return
+            turn_id = body.get("turn_id")
+            started_at = body.get("started_at")
+            reason = body.get("reason")
+            delivery, error = tracker.move_delivery(
+                body.get("did"), to,
+                turn_id=turn_id if isinstance(turn_id, str) else None,
+                started_at=started_at if isinstance(started_at, str) else None,
+                reason=str(reason)[:300] if reason else None,
+            )
+            if error is not None:
+                status = HTTPStatus.NOT_FOUND if delivery is None else HTTPStatus.CONFLICT
+                self._respond_json({"ok": False, "error": error, "delivery": delivery},
+                                   status=status)
+                return
+            bus.publish(ControlEvent("cockpit:delivery", delivery))
+            self._respond_json({"ok": True, "delivery": delivery})
 
         # ---- review desk (FEAT-0041) ----
 
@@ -1914,11 +2178,43 @@ def _make_handler(
             kind = raw.split(";", 1)[0].strip().lower()
             if kind == "application/json":
                 return True
+            # The body is unread: close, or it is parsed as the next request
+            # on a kept-alive connection (TASK-0668).
+            self.close_connection = True
             self._respond_json(
                 {"ok": False,
                  "error": ("a write must say Content-Type: application/json; "
                            "this one said %r" % (raw or "nothing"))},
                 status=HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+            )
+            return False
+
+        def _require_shell_secret(self) -> bool:
+            """Refuse a request that does not carry the desktop shell's secret
+            (FEAT-0159 / TASK-0664).
+
+            Two routes call this: the one that answers a permission prompt,
+            and the one that hands a prompt to a Claude session. Either one
+            makes a Claude session act, so "it came from this machine" is not
+            enough: the agent in that session is on this machine too, and so
+            is a page the viewer frames (ISS-0301). The shell makes the
+            secret at spawn and writes it to this process's standard input;
+            the agent's terminal, the plugin and the renderer never see it.
+
+            A server started without one refuses every request, and the
+            message never says whether the header was missing or wrong.
+            """
+            given = self.headers.get("X-Cockpit-Secret") or ""
+            if shell_secret and hmac.compare_digest(
+                    given.encode("utf-8"), shell_secret.encode("utf-8")):
+                return True
+            # Refused before the body is read: on a kept-alive connection the
+            # unread body would be parsed as the next request.
+            self.close_connection = True
+            self._respond_json(
+                {"ok": False,
+                 "error": "this route needs the desktop shell's secret"},
+                status=HTTPStatus.FORBIDDEN,
             )
             return False
 
@@ -1964,6 +2260,7 @@ def _make_handler(
             """
             if self._is_loopback():
                 return True
+            self.close_connection = True  # the body is unread (TASK-0668)
             self._respond_json(
                 {"ok": False, "error": "%s are loopback-only" % what},
                 status=HTTPStatus.FORBIDDEN,
@@ -2398,6 +2695,8 @@ def _make_handler(
             """
             if not self._require_loopback():
                 return
+            if not self._require_json_content_type() or not self._require_shell_secret():
+                return
             body = self._read_json_body()
             if body is None:
                 return
@@ -2409,7 +2708,7 @@ def _make_handler(
                 )
                 return
             try:
-                result = approval_store.answer(
+                result, answered = approval_store.answer_open(
                     str(body.get("approval_id") or ""),
                     decision=str(body.get("decision") or ""),
                     actor=str(body.get("actor") or ""),
@@ -2422,8 +2721,74 @@ def _make_handler(
                 self._respond_json({"ok": False, "error": "no such approval"},
                                    status=HTTPStatus.NOT_FOUND)
                 return
+            if not answered:
+                # The plugin gave up waiting, the call ran, or someone answered
+                # first (FEAT-0159).
+                error = (approvals_mod.HANDED_BACK
+                         if result.get("status") == "handed-to-terminal"
+                         else "this permission prompt is no longer waiting for an answer")
+                self._respond_json({"ok": False, "error": error, "approval": result},
+                                   status=HTTPStatus.CONFLICT)
+                return
             bus.publish(ControlEvent("cockpit:approval", result))
             self._respond_json({"ok": True, "result": result})
+
+        def _serve_approval_ask(self) -> None:
+            """``POST /api/cockpit/approvals/ask`` — the cockpit plugin offers a
+            Claude permission ask for the person to answer here (FEAT-0159).
+
+            Body ``{session_id, tool, input, tool_use_id, agent_id?}``. Answers
+            ``{approval_id, wait_ms}``: how long the plugin waits before the
+            terminal shows its own prompt. ``wait_ms`` 0 and no record when the
+            workspace turned this off or the input is too long to show whole.
+            No secret: an ask grants nothing.
+            """
+            if not self._require_loopback():
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            session_id = body.get("session_id")
+            tool = body.get("tool")
+            tool_use_id = body.get("tool_use_id")
+            if not all(isinstance(v, str) and v for v in (session_id, tool, tool_use_id)):
+                self._respond_json(
+                    {"ok": False, "error": "an ask needs session_id, tool and tool_use_id"},
+                    status=HTTPStatus.BAD_REQUEST)
+                return
+            if approval_wait_ms <= 0:
+                self._respond_json({"ok": True, "approval_id": None, "wait_ms": 0})
+                return
+            record = approval_store.ask(
+                session_id=session_id, tool=tool, tool_input=body.get("input"),
+                tool_use_id=tool_use_id, agent_id=str(body.get("agent_id") or ""),
+                wait_ms=approval_wait_ms,
+            )
+            if record is None:
+                self._respond_json({"ok": True, "approval_id": None, "wait_ms": 0,
+                                    "reason": "too long to show in full"})
+                return
+            bus.publish(ControlEvent("cockpit:approval", record))
+            self._respond_json({"ok": True, "approval_id": record["approval_id"],
+                                "wait_ms": approval_wait_ms})
+
+        def _serve_approval_handed_back(self) -> None:
+            """``POST /api/cockpit/approvals/handed-back`` ``{approval_id}`` —
+            the plugin's wait ran out. An open approval goes to the terminal; the
+            record comes back whatever its status, so a click that landed first
+            is the answer the plugin uses."""
+            if not self._require_loopback():
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            record = approval_store.hand_back(str(body.get("approval_id") or ""))
+            if record is None:
+                self._respond_json({"ok": False, "error": "no such approval"},
+                                   status=HTTPStatus.NOT_FOUND)
+                return
+            bus.publish(ControlEvent("cockpit:approval", record))
+            self._respond_json({"ok": True, "approval": record})
 
         def _serve_note_attach(self) -> None:
             """``POST /api/notes/attach`` — file a capture as evidence (TASK-0297).
@@ -4199,6 +4564,10 @@ def _make_handler(
             )
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-cache")
+            if self.close_connection:
+                # Say so, or a keep-alive client sends its next request down
+                # a socket this side is about to close.
+                self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(data)
 

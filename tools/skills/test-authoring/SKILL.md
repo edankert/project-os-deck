@@ -45,3 +45,25 @@ A `TST-*` note is the record of verification: the procedure, the verdict, and th
      - set `command:` and `entrypoint` (repo path) and the expected artifacts
      - leave `status: active` (`../../instructions/STATUSES.md` `[[test]]` says why); `python3 tools/scripts/run-tests.py --filter TST-####` reproduces the run
 4. Apply the gates in `../../instructions/STATUSES.md`, "The contract at a glance", before any terminal status.
+
+## Reporting progress from a long command
+A test command that runs for minutes, such as a Gradle build or an `xcodebuild test`, shows as one block while it runs unless it reports progress. `run-tests.py` sets `PROJECT_OS_TEST_PROGRESS` to a file path for each command, and a command may append one JSON object per line to it:
+
+```
+{"done": 12, "total": 60, "failed": 1, "now": "AddRiderFlowTest"}
+```
+
+Every key is optional: `done` and `total` count whatever the command runs, `failed` counts failures so far, and `now` names what runs now in a few words. The newest line that parses is copied into the command's entry in `.project-os/runs/latest.json`, and the terminal view, the status line and the cockpit show it. A command that ignores the variable still works. The full file format is in `../../instructions/TEST-RUNS.md`.
+
+- **Gradle**: add the template's init script to the command, so the project's build files stay as they are: `./gradlew test --init-script tools/scripts/gradle-test-progress.gradle`. It appends a line after each test with `done`, `failed` and the class now running. Gradle does not know the total in advance, so there is no `total`.
+- **xcodebuild**: pipe its output through a filter that counts the lines xcodebuild prints for each finished test, and pass the output on unchanged. A sketch, not yet run on a real project:
+
+  ```sh
+  set -o pipefail
+  xcodebuild test -scheme App -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | awk -v out="${PROJECT_OS_TEST_PROGRESS:-/dev/null}" '
+    /^Test [Cc]ase .*(passed|failed)/ { done++; if ($0 ~ /failed/) failed++; printf "{\"done\": %d, \"failed\": %d}\n", done, failed >> out; fflush(out) }
+    { print }'
+  ```
+
+  A project that wants a `total` counts its test cases before the run and adds it to each line.
+- Don't change a project's tests to report progress; report it from the command line that runs them, as above.

@@ -388,6 +388,21 @@ class Item:
     #: `your-trainer` carry one, and **nine of the 68 blocking its release were
     #: executed by a machine**.
     command: str = ""
+    #: `commands:` from the note, as `(platform, command)` pairs: a command
+    #: that tests the check on that platform only (project-os-dev ISS-0108,
+    #: [[ISS-0326]]). Only well-formed entries, read by the template's own
+    #: `read_commands`, so this and `release-test.py` drop the same ones.
+    commands: tuple[tuple[str, str], ...] = ()
+    #: `hand_steps:` from the note: the step positions a person still runs
+    #: where a command covers the check. `hand_steps_broken` is set when the
+    #: field is written and cannot be used, and the check then stays owed
+    #: whole, as the template's `read_hand_steps` decides.
+    hand_steps: tuple[int, ...] = ()
+    hand_steps_broken: bool = False
+    #: The platform whose verdicts this item carries, set by `load`, or ""
+    #: for the reading across every platform. It decides which `commands:`
+    #: entry applies, as the platform of a sheet does upstream.
+    platform: str = ""
     #: `kind: feature` or `kind: regression` from the note, lower-cased, or ""
     #: (project-os-dev ISS-0104, [[ISS-0316]]). It decides the check's kind
     #: after `command:` and before `covers:`; the validator refuses any other
@@ -439,6 +454,39 @@ class Item:
         from markdown.extensions.toc import slugify
 
         return slugify(self.heading, "-") if self.heading else ""
+
+    @property
+    def automated_here(self) -> bool:
+        """Whether a command tests this check on its platform.
+
+        `command:` covers every platform; `commands.<platform>` covers one.
+        With no platform, only `command:` counts, which is what
+        `release-test.py`'s `Check.automated_on` says for a reader asking
+        about the note rather than one platform's sheet.
+        """
+        return bool(self.command) or bool(
+            self.platform and dict(self.commands).get(self.platform))
+
+    @property
+    def machine_only(self) -> bool:
+        """A command covers it here and no step is left for a person.
+
+        The template's `owed_checks` keeps a check when
+        `Check.hand_parts(platform)` is not empty. That list is empty exactly
+        when a command covers the check and `hand_steps:` names no usable
+        step. An unusable `hand_steps:` keeps every step, so the check stays
+        owed whole.
+        """
+        return (self.automated_here and not self.hand_steps
+                and not self.hand_steps_broken)
+
+    @property
+    def machine_command(self) -> str:
+        """The command that runs this check on its platform, when a machine
+        runs all of it; "" when a person still owes some of it."""
+        if not self.machine_only:
+            return ""
+        return self.command or dict(self.commands).get(self.platform, "")
 
     @property
     def settled(self) -> bool:
@@ -1012,6 +1060,7 @@ def item_from_note(
         verdict_date=str(fm.get("verdict_date", "") or "").strip(),
         verdict_reason=str(fm.get("verdict_reason", "") or "").strip(),
         command=str(fm.get("command", "") or "").strip(),
+        **_coverage(fm, body, str(fm.get("id", "") or "").strip()),
         declared_kind=str(fm.get("kind", "") or "").strip().lower(),
         automation=str(fm.get("automation", "") or "").strip(),
         burden=_as_tuple(fm.get("burden")),
@@ -1104,6 +1153,26 @@ def load_notes(checks_dir: Path) -> list[Item]:
             items.append(item)
     return sort_items(items)
 
+
+
+def _coverage(fm: dict[str, Any], body: str, note_id: str) -> dict[str, Any]:
+    """`commands`, `hand_steps` and `hand_steps_broken` for an `Item`.
+
+    **Read by the template's own functions** (`read_commands`,
+    `read_hand_steps` in the bundled `release_test_bundled.py`), so which
+    entries count and when `hand_steps:` is unusable are decided once, in the
+    module the release test sheet is built from ([[ISS-0326]]). Most checks
+    have neither field, and they never load that module here.
+    """
+    if fm.get("commands") is None and fm.get("hand_steps") is None:
+        return {}
+    rt = _release_test_module()
+    commands = rt.read_commands(fm.get("commands"))
+    check = rt.Check(id=note_id, title="", path="",
+                     steps=rt.under_heading(body or "", "Steps", "Procedure"))
+    steps, broken = rt.read_hand_steps(fm.get("hand_steps"), check)
+    return {"commands": tuple(sorted(commands.items())),
+            "hand_steps": tuple(steps), "hand_steps_broken": bool(broken)}
 
 
 def apply_ledger(items: list[Item], docs_root: Path, platform: str) -> list[Item]:
@@ -1218,6 +1287,14 @@ def apply_ledger(items: list[Item], docs_root: Path, platform: str) -> list[Item
     return out
 
 
+def _on_platform(items: list[Item], platform: str) -> list[Item]:
+    """Each item told which platform it is read for, so `kind_of` applies
+    that platform's `commands:` entry ([[ISS-0326]])."""
+    if not platform:
+        return items
+    return [replace(i, platform=platform) for i in items]
+
+
 def load(docs_root: Path, index: "Any | None" = None, *,
          platform: str = "") -> Suite:
     """The suite, or an empty one when the repo has never instantiated it.
@@ -1253,6 +1330,7 @@ def load(docs_root: Path, index: "Any | None" = None, *,
         ]
         if items:
             items = apply_ledger(items, docs_root, platform)
+            items = _on_platform(items, platform)
             #: Dropped here rather than in each consumer: the gate, the tiers
             #: and the facets all read `Suite.items`, and three filters is how
             #: two of them come to disagree ([[REQ-0059]]).
@@ -1263,6 +1341,7 @@ def load(docs_root: Path, index: "Any | None" = None, *,
         items = load_notes(checks_dir)
         if items:
             items = apply_ledger(items, docs_root, platform)
+            items = _on_platform(items, platform)
             items = [i for i in items if not _is_retired(i)]
             return Suite(path=checks_dir, items=items, shape=SHAPE_NOTES,
                          platform=platform)
@@ -1688,7 +1767,15 @@ def kind_of(item: "Item") -> str:
     #: where the two fields exist.
     if not item.note_id:
         return _FILE_SHAPE_KINDS.get(item.tier, KIND_FEATURE)
-    if item.command:
+    #: **Automated where a command covers it and no step is left for a
+    #: person** ([[ISS-0326]], project-os-dev ISS-0108). This read
+    #: `item.command` alone. The template now lets a check name a command per
+    #: platform (`commands:`) and keep some steps by hand (`hand_steps:`), and
+    #: `release-test.py` owes a check on a platform exactly when a person
+    #: still runs part of it there. A check with `hand_steps:` is therefore a
+    #: manual check on that platform, owed for those steps, and is classified
+    #: by the rules below like any other.
+    if item.machine_only:
         return KIND_AUTOMATED
     #: **A check may say which kind it is** (project-os-dev ISS-0104, from
     #: your-trainer ISS-0414, Edwin, 2026-09-27). A check that covers an
@@ -2115,7 +2202,10 @@ def _row(item: "Item", **extra: Any) -> dict[str, Any]:
         # checkbox** (ADR-0039). The client cannot tell an automated check
         # from a manual one without this -- which is ISS-0237 exactly, one
         # layer up from `item_from_note` not reading the field at all.
-        "command": item.command,
+        #: The command that runs it **on this platform**, and only when a
+        #: machine runs all of it ([[ISS-0326]]): a check that keeps a hand
+        #: step is owed and gets its checkbox.
+        "command": item.machine_command,
         "invalidated_by": {
             "change": item.invalidated.change,
             "reason": item.invalidated.reason,
@@ -2612,6 +2702,44 @@ def release_test_payload_cached(docs_root: Path, *, platform: str,
     page = release_test_payload(docs_root, platform=platform, release=release)
     _PAGE_CACHE[key] = (signature, page)
     return page
+
+
+_BUDGET_CACHE: dict[tuple[str, str], tuple[tuple, "dict[str, Any] | None"]] = {}
+
+
+def release_test_budget(docs_root: Path, *, platform: str) -> "dict[str, Any] | None":
+    """The hand-run budget the platform's release test sheet prints, or None.
+
+    `{limit, checks, steps, over, line}` ([[ISS-0326]], project-os-dev
+    ISS-0108). Taken from the template's own sheet for **what is owed now**,
+    so `checks` is the number `release-test.py` prints and the release
+    page's owed count beside it. `line` is the sheet's sentence without its
+    Markdown bold. None when the platform has no sheet: no platform named,
+    no section order, or a repo the module cannot read.
+
+    Rebuilt only when a file the sheet reads has changed, like the page.
+    """
+    platform = (platform or "").strip().lower()
+    if not platform:
+        return None
+    key = (str(docs_root), platform)
+    signature = _page_signature(docs_root)
+    hit = _BUDGET_CACHE.get(key)
+    if hit is not None and hit[0] == signature:
+        return hit[1]
+    rt = _release_test_module()
+    budget: "dict[str, Any] | None" = None
+    if (docs_root / RELEASE_TEST_REL).is_file():
+        try:
+            sheet = rt.sheet_from(rt.read_repo(docs_root.parent, platform), "", platform)
+        except rt.ReleaseTestError:
+            sheet = None
+        if sheet is not None:
+            raw = sheet.budget
+            budget = {**raw, "over": max(0, raw["checks"] - raw["limit"]),
+                      "line": rt.budget_line(raw, platform).replace("**", "")}
+    _BUDGET_CACHE[key] = (signature, budget)
+    return budget
 
 
 def _page_signature(docs_root: Path) -> tuple:

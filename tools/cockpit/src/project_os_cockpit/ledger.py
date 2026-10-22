@@ -119,7 +119,29 @@ NEEDS_REASON: frozenset[str] = MARKS - {"pass"}
 #: How the result arrived. One field for two things that used to be two
 #: mechanisms: a CI exit code and a person's verdict are two answers to one
 #: question ([[ADR-0037]] decision 3).
-METHODS: frozenset[str] = frozenset({"manual", "automated", "migration"})
+#:
+#: `ride` is a result a person recorded in an app during a release ride, and
+#: imported by the template's `release-test.py --import-ride` (project-os
+#: a76657d, project-os-dev ISS-0109). A ride entry names the `build` it was
+#: recorded against, and the template's validator refuses one without it, so
+#: this module does too ([[ISS-0326]]).
+METHODS: frozenset[str] = frozenset({"manual", "automated", "migration", "ride"})
+RIDE_METHOD = "ride"
+
+#: The fields each record type reads. Anything else in the file is kept
+#: as written and put back when the ledger is rewritten ([[ISS-0326]]): a
+#: ledger is shared with the template's scripts, and a field one of them adds
+#: must not vanish because the cockpit wrote one result into the same file.
+_LEDGER_KEYS = frozenset({"platform", "release", "version", "sealed",
+                          "entries", "evidence"})
+_ENTRY_KEYS = frozenset({"check", "date", "result", "mark", "by", "method",
+                         "reason", "invalidated_by", "build", "platform"})
+_EVIDENCE_KEYS = frozenset({"check", "date", "ref", "note"})
+
+
+def _unknown(raw: dict[str, Any], known: frozenset[str]) -> dict[str, Any]:
+    """The fields of ``raw`` this module does not read, in file order."""
+    return {k: v for k, v in raw.items() if k not in known}
 
 
 class LedgerError(ValueError):
@@ -145,6 +167,12 @@ class Entry:
     #: states [[ADR-0034]] minted `rerun` to tell apart are distinguishable by
     #: construction here.
     invalidated_by: str = ""
+    #: The build a ride result was recorded against, such as `2.2.0 (123)`.
+    #: Required on a `ride` entry, optional on any other.
+    build: str = ""
+    #: Fields this module does not read, kept so a rewrite puts them back.
+    extra: dict[str, Any] = field(default_factory=dict, compare=False,
+                                  hash=False, repr=False)
 
     @property
     def is_invalidation(self) -> bool:
@@ -175,6 +203,9 @@ class Evidence:
     date: str
     ref: str
     note: str = ""
+    #: Fields this module does not read, kept so a rewrite puts them back.
+    extra: dict[str, Any] = field(default_factory=dict, compare=False,
+                                  hash=False, repr=False)
 
 
 @dataclass
@@ -189,6 +220,8 @@ class Ledger:
     sealed: str = ""
     entries: list[Entry] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
+    #: Top-level keys this module does not read, kept for the rewrite.
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_working(self) -> bool:
@@ -206,7 +239,10 @@ class Ledger:
             head["version"] = self.version
         if self.sealed:
             head["sealed"] = self.sealed
-        lines = [f'  "{k}": {json.dumps(v)},' for k, v in head.items()]
+        for key, value in self.extra.items():
+            head.setdefault(key, value)
+        lines = [f'  {json.dumps(k)}: {json.dumps(v, ensure_ascii=False)},'
+                 for k, v in head.items()]
 
         def block(name: str, rows: list[str], last: bool) -> list[str]:
             if not rows:
@@ -234,10 +270,14 @@ def _entry_json(entry: Entry) -> str:
         #: renamed its key; a sealed one keeps `mark` for good.
         row["result"] = entry.mark
     row["date"] = entry.date
-    for name in ("method", "by", "reason"):
+    #: `build` sits between `by` and `reason`, where the template's import
+    #: writes it, so a ride entry rewritten here reads the same in a diff.
+    for name in ("method", "by", "build", "reason"):
         value = getattr(entry, name)
         if value:
             row[name] = value
+    for key, value in entry.extra.items():
+        row.setdefault(key, value)
     return json.dumps(row, ensure_ascii=False)
 
 
@@ -246,6 +286,8 @@ def _evidence_json(item: Evidence) -> str:
                            "ref": item.ref}
     if item.note:
         row["note"] = item.note
+    for key, value in item.extra.items():
+        row.setdefault(key, value)
     return json.dumps(row, ensure_ascii=False)
 
 
@@ -278,7 +320,9 @@ def check_entry(raw: dict[str, Any], *, where: str) -> Entry:
                 f"{where}: {check} carries both a mark and an invalidation — "
                 f"they are two events and belong on two lines")
         return Entry(check=check, date=when, invalidated_by=invalidated,
-                     reason=str(raw.get("reason", "") or "").strip())
+                     reason=str(raw.get("reason", "") or "").strip(),
+                     build=str(raw.get("build", "") or "").strip(),
+                     extra=_unknown(raw, _ENTRY_KEYS))
 
     #: The result is stored under `result`; an entry written before 2026-09-27
     #: stores it under `mark`, and both are read for good, because a sealed
@@ -296,6 +340,12 @@ def check_entry(raw: dict[str, Any], *, where: str) -> Entry:
     by = str(raw.get("by", "") or "").strip()
     if not by:
         raise LedgerError(f"{where}: {check} names nobody in `by`")
+    build = str(raw.get("build", "") or "").strip()
+    if method == RIDE_METHOD and not build:
+        raise LedgerError(
+            f"{where}: a ride result on {check} names no `build` — a result "
+            f"recorded in the app is a result about one build, and the "
+            f"template's validator refuses it without one")
     reason = str(raw.get("reason", "") or "").strip()
     if mark in NEEDS_REASON and not reason:
         raise LedgerError(
@@ -303,7 +353,7 @@ def check_entry(raw: dict[str, Any], *, where: str) -> Entry:
             f"and its justification are one event, so a check cannot leave "
             f"the gate without saying why")
     return Entry(check=check, date=when, mark=mark, by=by, method=method,
-                 reason=reason)
+                 reason=reason, build=build, extra=_unknown(raw, _ENTRY_KEYS))
 
 
 def check_evidence(raw: dict[str, Any], *, where: str) -> Evidence:
@@ -315,7 +365,8 @@ def check_evidence(raw: dict[str, Any], *, where: str) -> Evidence:
     if not _is_date(when):
         raise LedgerError(f"{where}: evidence for {check} has no usable date")
     return Evidence(check=check, date=when, ref=ref,
-                    note=str(raw.get("note", "") or "").strip())
+                    note=str(raw.get("note", "") or "").strip(),
+                    extra=_unknown(raw, _EVIDENCE_KEYS))
 
 
 def orphan_evidence(ledger: Ledger) -> list[Evidence]:
@@ -359,6 +410,7 @@ def _parse(text: str, *, where: str, platform: str) -> Ledger:
                  for e in (raw.get("entries") or [])],
         evidence=[check_evidence(v, where=where)
                   for v in (raw.get("evidence") or [])],
+        extra=_unknown(raw, _LEDGER_KEYS),
     )
 
 

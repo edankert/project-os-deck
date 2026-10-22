@@ -809,6 +809,52 @@ def focus_block(index: Index) -> dict[str, Any] | None:
     }
 
 
+#: The focus slots the line's Open in cockpit button opens, in order of
+#: preference: the most specific item the snapshot names (FEAT-0157).
+_LINE_TARGET_SLOTS = ("task", "issue", "feature", "phase")
+
+
+def line_payload(index: Index) -> dict[str, Any]:
+    """What the cockpit adds to the project line above the Claude prompt, in
+    one answer (FEAT-0157 / TASK-0672).
+
+    `needs_you.total` is `badges_payload`'s own `total`, so the line and the
+    badges cannot disagree (ADR-0020 decision 3). `kinds` is its breakdown
+    summed across views, each with the verb it is owed and the noun for its
+    count. `open_target` is the focus item the line's button opens, or None.
+
+    Raises on any failure: the route answers 500 rather than a zero, because
+    the line leaves out a number it could not read.
+    """
+    badges = _obligations.badges_payload(index)
+    summed: dict[str, int] = {}
+    for kinds in (badges.get("breakdown") or {}).values():
+        for kind, count in kinds.items():
+            summed[kind] = summed.get(kind, 0) + int(count)
+    verbs = badges.get("verbs") or {}
+    nouns = badges.get("nouns") or {}
+    kinds_out = []
+    for kind in sorted(summed, key=lambda k: (-summed[k], k)):
+        count = summed[kind]
+        if count <= 0:
+            continue
+        pair = nouns.get(kind) or [kind, kind]
+        kinds_out.append({
+            "kind": kind,
+            "count": count,
+            "verb": verbs.get(kind, ""),
+            "noun": pair[0] if count == 1 else pair[1],
+        })
+    focus = focus_block(index) or {}
+    items = focus.get("items") or {}
+    target = next((items[slot]["id"] for slot in _LINE_TARGET_SLOTS if slot in items), None)
+    return {
+        "schema_version": 1,
+        "needs_you": {"total": int(badges["total"]), "kinds": kinds_out},
+        "open_target": target,
+    }
+
+
 def work_items_for_session(index: Index, sess: dict[str, Any]) -> list[dict[str, Any]]:
     """Enrich a session's work into work items (TASK-0191 / TASK-0193).
 
@@ -3303,7 +3349,12 @@ def _features_groups(
     )
 
     out: list[dict[str, Any]] = []
+    # Each phase group's band, so the unattached tasks can join the right one.
+    out_ranks: list[int] = []
     for _order, target, records in sortable:
+        out_ranks.append(
+            _phase_group_rank(_resolve_phase(index, target) if target else None, records)
+        )
         phase_record = _resolve_phase(index, target) if target else None
         phase_id = phase_record.note_id if phase_record else None
         phase_title = (
@@ -3364,15 +3415,21 @@ def _features_groups(
 
     task_orphans = [r for r in all_tasks if r.path not in attached_task_paths]
     if task_orphans:
-        task_orphans.sort(key=lambda x: (x.note_id or "", x.rel_path))
-        out.append(
+        # Open first, and banded like a phase group with no phase note: an
+        # open task whose parent is an issue sat below every finished phase
+        # (TASK-0669).
+        task_orphans = _open_first(task_orphans)
+        rank = _phase_group_rank(None, task_orphans)
+        at = sum(1 for r in out_ranks if r <= rank)
+        out.insert(
+            at,
             {
                 "key": "unattached-tasks",
                 "label": "Unattached tasks",
                 "url": None,
                 "status": None,
                 "items": [_task_child_item(index, r) for r in task_orphans],
-            }
+            },
         )
 
     orphans = [r for r in requirements if r.path not in attached_req_paths]

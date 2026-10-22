@@ -38,7 +38,7 @@ edit "$TMP/r/docs/INDEX.md" '- Obsidian conventions: `../tools/instructions/OBSI
 mkdir -p "$TMP/r/tools/skills/zz-new-skill"
 out="$(run)"
 check "docs/INDEX.md without OBSIDIAN.md is reported" \
-  "$(printf '%s' "$out" | grep -q 'INDEX-COVERAGE\] docs/INDEX.md lists 15 of the 16 entries in tools/instructions/; missing: OBSIDIAN.md'; echo $?)" "$out"
+  "$(printf '%s' "$out" | grep -q 'INDEX-COVERAGE\] docs/INDEX.md lists 16 of the 17 entries in tools/instructions/; missing: OBSIDIAN.md'; echo $?)" "$out"
 check "a skill no README lists is reported" \
   "$(printf '%s' "$out" | grep -q 'INDEX-COVERAGE\] tools/skills/README.md .*missing: zz-new-skill'; echo $?)" "$out"
 check "INDEX-COVERAGE warns until its promotion date" \

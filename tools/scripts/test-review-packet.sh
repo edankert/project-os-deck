@@ -155,5 +155,26 @@ check "a scaffold change is in the diff, because a scaffold is source" grep -q "
 # as "Feature note:", so grepping the whole file proves nothing.
 check "a note is still left out of the diff" bash -c '! grep -q "^+++ b/docs/features/" "$0"' "$T/p-scaffold.md"
 
+# A feature whose tasks are a block list, as sync-snapshot.py writes them, and a
+# commit whose subject names only one of those tasks (project-os-dev TASK-0210).
+mkdir -p "$R/docs/features/z"
+cat > "$R/docs/features/z/FEAT-0003-Z.md" <<'EOF'
+---
+type: "[[feature]]"
+id: FEAT-0003
+title: "Block list"
+tasks:
+  - "[[TASK-0031-First]]"
+  - "[[TASK-0032-Second]]"
+release: ""
+---
+
+# Block list
+EOF
+printf 'BLOCK_LIST_CHANGE\n' > "$R/src/z.py"
+(cd "$R" && git add -A && git -c core.hooksPath=/dev/null commit -qm "TASK-0032: the second task's code")
+python3 "$SCRIPT" FEAT-0003 --repo-root "$R" --out "$T/p-block.md" >/dev/null 2>&1
+check "a commit naming only a task from a block list is in the packet" grep -q "BLOCK_LIST_CHANGE" "$T/p-block.md"
+
 echo "test-review-packet: $n assertions, $failures failure(s)"
 [[ "$failures" -eq 0 ]]

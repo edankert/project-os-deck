@@ -33,6 +33,7 @@ This directory contains **normative instructions** for how documentation and aut
 - Quality/close-out: `QUALITY.md`
 - Hook contracts: `HOOKS.md`
 - Acceptance test sections and release gating: `TESTING.md`
+- Test runs and CI results you can watch (the progress and CI file formats): `TEST-RUNS.md`
 - Handoff/recovery: `HANDOFF.md`
 - Importing existing projects: `IMPORTING.md`
 - Template syncing: `SYNCING.md`
