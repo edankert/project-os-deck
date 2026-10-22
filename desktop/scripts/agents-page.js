@@ -18,7 +18,8 @@ function sessionAnchor(s) {
   const w = primary ? state.where.get(primary) : undefined;
   if (!w) return null;
   const base = w.tower !== undefined ? state.towerTops.get(w.phase + ':' + w.tower).clone() : w.at.clone();
-  return { at: base.add(new THREE.Vector3(0, 6.5, 0)), primary, phase: w.phase };
+  // High enough to stand clear of the pictures standing over the same tower (TASK-0179).
+  return { at: base.add(new THREE.Vector3(0, 12, 0)), primary, phase: w.phase };
 }
 
 const ORB = new THREE.SphereGeometry(0.85, 20, 14);
@@ -44,7 +45,7 @@ layers.push(() => {
     const halo = new THREE.Mesh(HALO, new THREE.MeshBasicMaterial({ color: new THREE.Color(AGENT[s.agent].colour), transparent: true, opacity: 0.9 }));
     halo.position.copy(at);
     halo.rotation.x = Math.PI / 2;
-    const stem = new THREE.Line(new THREE.BufferGeometry().setFromPoints([at, a.at.clone().add(new THREE.Vector3(0, -5.5, 0))]), new THREE.LineBasicMaterial({ color: new THREE.Color(AGENT[s.agent].colour), transparent: true, opacity: 0.5 }));
+    const stem = new THREE.Line(new THREE.BufferGeometry().setFromPoints([at, a.at.clone().add(new THREE.Vector3(0, -11, 0))]), new THREE.LineBasicMaterial({ color: new THREE.Color(AGENT[s.agent].colour), transparent: true, opacity: 0.5 }));
     const tag = label(AGENT[s.agent].glyph + ' ' + AGENT[s.agent].word + ' · ' + lookOf(s)[0], 1.05, AGENT[s.agent].colour, 700, true);
     tag.position.copy(at).add(new THREE.Vector3(0, 1.9, 0));
     tag.userData.keep = true;
@@ -259,8 +260,10 @@ function workOn(id) {
   window.__towers.workOn = id;
 }
 
+// "? Marks" sits in the header, after the search box, and shows the legend the panels replace.
+document.querySelector('header').appendChild(document.getElementById('marks-toggle'));
 document.getElementById('marks-toggle').addEventListener('click', () => {
-  if (state.sel === null && !state.session) document.getElementById('legend').hidden = !document.getElementById('legend').hidden;
+  if (state.sel === null && !state.session) document.getElementById('legend').classList.toggle('shown');
 });
 
 /** For the capture script and a check: open a session, start "Work on this", open the drawer. */

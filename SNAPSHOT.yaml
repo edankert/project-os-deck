@@ -56,7 +56,7 @@ counters:
   RISK: 10
   REL: 0
   TASK: 179
-  TST: 100
+  TST: 101
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
@@ -2635,7 +2635,7 @@ metrics:
     phases_done: 0
     tasks_total: 170
     tasks_done: 148
-    tests_total: 68
+    tests_total: 69
     tests_passing: 9
     tests_failing: 0
     issues_open: 4

@@ -14,7 +14,7 @@ due: ""
 depends: []
 blocks: []
 related: ["[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]", "[[TASK-0176]]", "[[TASK-0177]]"]
-tests: []
+tests: ["[[TST-0101-DES-0006s-Page-Is-Drawn-From-Recorded-Sessions-As-Counts]]"]
 ---
 
 # Agent sessions drawn on the towers ring to judge
