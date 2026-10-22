@@ -79,7 +79,7 @@ items:
       tasks: ["TASK-0191", "TASK-0192", "TASK-0193", "TASK-0194", "TASK-0195", "TASK-0196"]
       note: "PLANNED 2026-10-22 from Edwin's 'Can you build the DES-0006 functionality?' (ADR-0009, option B). Deck's main process starts Claude sessions through the Agent SDK's query() and Codex sessions through codex app-server, turns both into one conversation model, keeps each in Deck's store with the ticket it was started on, starts it in a new worktree or this checkout, and reports it to the sidecar (/api/agent-hook, /api/cockpit/approvals/ask). Permission requests from Deck's own sessions are answered in Deck's main process, so they need no shell secret. Only the shell reaches sessions. Tested with fake providers. Suite TST-0104 (agent-sessions)."
     FEAT-0033:
-      status: planned
+      status: doing
       file: "docs/features/agent-pane/FEAT-0033-A-Session-Is-Drawn-As-A-Conversation-Beside-The-Ticket-It-Was-Started-On.md"
       owner: system:claude
       phase: PHASE-0004

@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0033
 aliases: ["FEAT-0033"]
 title: "A session is drawn as a conversation in the side pane beside the ticket it was started on, agents stand over their tickets on the towers, and Work on this starts one"
-status: planned
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
