@@ -23,7 +23,8 @@ import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
 import type { TowersView } from './overview-towers-view.js';
-import { FRAME_ACTION, standsIn } from '../shared/overview-select.js';
+import { FRAME_ACTION, WORK_ON, standsIn } from '../shared/overview-select.js';
+import { openWorkOn } from './agent-start.js';
 import { SEARCH_LIST, searchTickets } from '../shared/overview-search.js';
 import { square } from './overview-panels.js';
 import { AgentPane } from './agent-pane.js';
@@ -1154,6 +1155,16 @@ async function act(action: string): Promise<void> {
   if (action === FRAME_ACTION) {
     if (towersActive()) towersView!.frame();
     else api.say('Frame turns the 3D view, which this window could not start');
+    return;
+  }
+  // Work on this opens its dialog over the overview, for the ticket it names (TASK-0200).
+  if (action.startsWith(WORK_ON)) {
+    const bridge = api.agents?.() ?? null;
+    const id = action.slice(WORK_ON.length);
+    const workspaceId = current.address.workspaceId;
+    const t = (await modelFor(workspaceId)).tickets[id];
+    if (bridge === null || area === null || t === undefined) return;
+    openWorkOn({ parent: area, agents: bridge, workspaceId, ticket: t, say: (m, e) => api?.say(m, e), started: (session) => void showOverview({ ...current!.address, page: 'wheel', flow: null, step: null, note: null, select: null, session }) });
     return;
   }
   const { definition, address } = current;

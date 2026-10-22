@@ -214,3 +214,46 @@ test('the cockpit\'s sessions reach the window without their prompts, files or c
   assert.deepEqual(out, { sessions: [{ session_id: 's1', agent: 'codex', state: 'idle', started: 'a', ended: null, live: true, status_touched: { 0: { id: 'FEAT-0001', ts: 't1' } } }] });
   assert.doesNotMatch(JSON.stringify(out), /secret|private|usd|transcript/);
 });
+
+// --- TASK-0200: Work on this ---
+
+const { firstPrompt, startDefaults } = load('shared/agent-marks.js');
+const { WORK_ON } = load('shared/overview-select.js');
+
+test('the first prompt is what the ticket asks of you when it needs you, else Work on with its id and title', () => {
+  assert.equal(firstPrompt({ id: 'TASK-0007', title: 'An invented ticket', needsYou: true, needs: { say: 'decide which of two layouts to keep' } }), 'TASK-0007 An invented ticket: decide which of two layouts to keep');
+  assert.equal(firstPrompt({ id: 'TASK-0008', title: 'Another invented ticket', needsYou: false }), 'Work on TASK-0008: Another invented ticket');
+  assert.equal(firstPrompt({ id: 'TASK-0009', title: 'T', needsYou: true, needs: { say: '  ' } }), 'Work on TASK-0009: T', 'an empty ask falls back');
+});
+
+test('the dialog starts on Claude, its first model and effort, Ask before acting, in this checkout', () => {
+  const d = startDefaults({ id: 'TASK-0008', title: 'Another invented ticket' });
+  assert.deepEqual(d, { agent: 'claude', model: 'claude-opus-5-5', effort: 'high', access: 'ask', place: 'checkout', prompt: 'Work on TASK-0008: Another invented ticket' });
+});
+
+for (const name of ['deck', 'your-trainer']) {
+  test(`${name}: Work on this is on a selected ticket's card in the shell only, on the wheel and with a phase close`, () => {
+    const model = fixture(name);
+    const p = places(model);
+    const buttons = (scene) => [...walkScene(scene.nodes)].filter((n) => n.kind === 'panel' && n.body.kind === 'card').flatMap((n) => n.body.buttons);
+    const shell = buttons(wheelScene(model, ctx, { select: p.tower, agents: [] }));
+    const work = shell.find((b) => b.key === 'work');
+    assert.equal(work.action, `${WORK_ON}${p.tower}`);
+    assert.equal(work.text, '▶ Work on this');
+    assert.ok(!buttons(wheelScene(model, ctx, { select: p.tower })).some((b) => b.key === 'work'), 'a served page has no Work on this');
+    const phase = towersLayout(model, ctx).phases.find((x) => x.towers.some((t) => t.cubes.some((c) => c.id === p.tower)));
+    assert.ok(buttons(phaseScene(model, phase.id, ctx, { select: p.tower, agents: [] })).some((b) => b.key === 'work'));
+    const scene = wheelScene(model, ctx, { select: p.tower, agents: [] });
+    assert.ok(scene.list.some((r) => r.id === 'card-work' && r.action === `${WORK_ON}${p.tower}`), 'the keyboard list has it too');
+    for (const r of checkScene(scene)) assert.ok(r.ok, `${r.rule}: ${r.detail}`);
+  });
+}
+
+test('what the dialog sends, with its defaults or with Codex chosen, is a start the main process accepts', () => {
+  const { parseStart } = load('main/agents/ipc.js');
+  const rootOf = (id) => (id === 'abcd1234' ? '/repo' : null);
+  const d = startDefaults({ id: 'TASK-0008', title: 'Another invented ticket' });
+  const req = parseStart({ workspaceId: 'abcd1234', ticket: 'TASK-0008', ...d }, rootOf);
+  assert.deepEqual([req.root, req.ticket, req.agent, req.access, req.place, req.prompt], ['/repo', 'TASK-0008', 'claude', 'ask', 'checkout', 'Work on TASK-0008: Another invented ticket']);
+  for (const m of MODELS.codex) for (const effort of EFFORTS.codex) assert.equal(typeof parseStart({ workspaceId: 'abcd1234', ticket: 'TASK-0008', ...d, agent: 'codex', model: m.id, effort, place: 'worktree', access: 'edits' }, rootOf), 'object', `${m.id} ${effort}`);
+});

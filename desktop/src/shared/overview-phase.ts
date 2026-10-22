@@ -143,7 +143,7 @@ export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenCon
     nodes.push(...plan.nodes);
     list.push(...plan.rows.filter((r) => r.group !== 'Phases'));
     // A selected ticket's pane stands in the list's place, and its card at the bottom left.
-    const selected = sel === null ? null : selectionPanels(model, layout, ctx, { card: PHASE_CARD, pane: TICKET_PANEL });
+    const selected = sel === null ? null : selectionPanels(model, layout, ctx, { card: PHASE_CARD, pane: TICKET_PANEL }, { workOn: options.agents !== undefined });
     if (selected !== null && selected.nodes.length > 0) {
       nodes.push(...selected.nodes);
       list.push(...selected.rows);

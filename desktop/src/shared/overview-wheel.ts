@@ -105,7 +105,7 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
   const layout = towersLayout(model, ctx, null, options);
   const plan = towersPlan(layout);
   const ways = waysIn(model, ctx, plan.centre);
-  const selected = selectionPanels(model, layout, ctx, WHEEL_SELECTION);
+  const selected = selectionPanels(model, layout, ctx, WHEEL_SELECTION, { workOn: options.agents !== undefined });
   const board = nextUpPanel(model, layout, ctx, WHEEL_BOARD);
   // The session pane stands at the right as a selected ticket's pane does; the panels there make way for either.
   const session = layout.session === null ? null : options.session ?? null;

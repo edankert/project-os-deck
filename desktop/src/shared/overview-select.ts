@@ -25,6 +25,9 @@ export const PANE_PICTURES = 12;
 
 /** The action a card's Frame button asks the 3D view for; the renderer answers it, no screen does. */
 export const FRAME_ACTION = 'towers-frame';
+/** The card's Work on this, naming its ticket (TASK-0200). */
+export const WORK_ON = 'agent-work-on:';
+export const workOnAction = (id: string): string => `${WORK_ON}${id}`;
 
 const PLURAL: Readonly<Record<NoteType, string>> = {
   feature: 'Features', task: 'Tasks', requirement: 'Requirements', issue: 'Issues', risk: 'Risks', adr: 'Decisions', design: 'Designs', test: 'Tests',
@@ -52,7 +55,7 @@ export function stateWords(t: Ticket): string {
   return [FILL_WORD[t.fill], t.needsYou ? 'needs you' : null].filter(Boolean).join(', ');
 }
 
-export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx: ScreenContext, places: SelectionPlaces): { nodes: PanelNode[]; rows: ListRow[] } {
+export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx: ScreenContext, places: SelectionPlaces, options: { workOn?: boolean } = {}): { nodes: PanelNode[]; rows: ListRow[] } {
   const sel = layout.selection;
   const t = sel === null ? undefined : model.tickets[sel.id];
   if (sel === null || t === undefined) return { nodes: [], rows: [] };
@@ -81,6 +84,8 @@ export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx:
   const buttons: PanelButton[] = [
     { key: 'open', text: 'Open', label: `Open ${t.id} on its own screen, with its whole text`, target: ctx.address({ page: 'ticket', note: t.id }) },
     { key: 'frame', text: 'Frame', label: `Turn the camera to ${t.id} and the tickets it is joined to`, action: FRAME_ACTION },
+    // Work on this starts an agent session on the ticket, in the shell only (FEAT-0033, TASK-0200).
+    ...(options.workOn === true ? [{ key: 'work', text: '▶ Work on this', label: `Start a Claude or Codex session on ${t.id}, with its own words as the first prompt`, action: workOnAction(t.id) }] : []),
     ...(stands !== null && stands !== open ? [{ key: 'phase', text: 'Its phase', label: `Bring ${phaseOf(stands)} close, with ${t.id} still selected`, target: ctx.address({ page: 'phase', note: stands, select: t.id }) }] : []),
     { key: 'clear', text: 'Clear', label: 'Clear the selection (Escape)', target: here(null) },
   ];

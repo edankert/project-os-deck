@@ -13,7 +13,7 @@ import type { AgentKind, SessionRecord, SessionState } from './agent-types.js';
 import { cubesOf, type TowerLink, type TowerSelection, type TowersLayout } from './overview-towers.js';
 import type { OverviewModel } from './overview-types.js';
 import type { ListRow, PanelAgents, PanelNode, ScreenContext } from './overview-scene.js';
-import { STATE_WORD } from './agent-pane.js';
+import { EFFORTS, MODELS, STATE_WORD } from './agent-pane.js';
 
 export interface AgentSummary {
   id: string;
@@ -139,4 +139,17 @@ export function agentsPanel(summaries: readonly AgentSummary[], ctx: ScreenConte
     node: { kind: 'panel', key: 'agents', ...place, label: `${summaries.length} agent session${summaries.length === 1 ? '' : 's'}${waiting > 0 ? `, ${waiting} waiting for you` : ''}`, body: { kind: 'agents', rows: rows.slice(0, keep) } },
     rows: rows.map((r) => ({ id: `agent-${r.id}`, label: r.label, group: 'Agents', target: r.target })),
   };
+}
+
+/**
+ * The first prompt Work on this fills in (TASK-0200, DES-0006): the ticket's own words. What it
+ * asks of you when it needs you, else "Work on" with its id and title. The person can change it.
+ */
+export function firstPrompt(t: { id: string; title: string; needsYou?: boolean; needs?: { say: string } }): string {
+  return t.needsYou === true && t.needs !== undefined && t.needs.say.trim() !== '' ? `${t.id} ${t.title}: ${t.needs.say}` : `Work on ${t.id}: ${t.title}`;
+}
+
+/** What Work on this's dialog starts with: Claude, its first model and effort, Ask before acting, this checkout. */
+export function startDefaults(t: Parameters<typeof firstPrompt>[0]): { agent: 'claude'; model: string; effort: string; access: 'ask'; place: 'checkout'; prompt: string } {
+  return { agent: 'claude', model: MODELS.claude[0]!.id, effort: EFFORTS.claude[0]!, access: 'ask', place: 'checkout', prompt: firstPrompt(t) };
 }

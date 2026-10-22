@@ -1702,3 +1702,12 @@ body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibilit
 .ov-agent-mark.is-open { outline: 2px solid #fff3a0; outline-offset: 2px; }
 @keyframes ov-agent-mark-breathe { 50% { opacity: 0.5; transform-origin: center; } }
 @media (prefers-reduced-motion: reduce) { .ov-agent-mark.st-working { animation: none; } }
+
+/* Work on this (FEAT-0033, TASK-0200): the dialog that starts a session on a ticket. */
+.ag-dialog-back { position: absolute; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: hsla(210, 60%, 3%, 0.55); }
+.ag-dialog { width: min(560px, 92%); display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: 12px; background: hsla(210, 50%, 8%, 0.98); border: 1px solid hsla(190, 90%, 65%, 0.4); color: hsl(195 40% 90%); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.ag-dialog-title { margin: 0; font-size: 16px; }
+.ag-field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 140px; }
+.ag-field-label { font-size: 11px; color: hsl(205 25% 64%); }
+.ag-dialog .ag-acts button { all: unset; cursor: pointer; padding: 5px 14px; border-radius: 6px; font-size: 13px; background: hsla(190, 90%, 55%, 0.18); border: 1px solid hsla(190, 90%, 65%, 0.45); }
+.ag-dialog .ag-acts button:disabled { opacity: 0.4; cursor: default; }
