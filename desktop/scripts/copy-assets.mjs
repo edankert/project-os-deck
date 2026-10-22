@@ -30,7 +30,15 @@ await mkdir(out, { recursive: true });
   await mkdir(path.join(out, 'vendor'), { recursive: true });
   await cp(path.join(here, '..', 'node_modules', 'three', 'build', 'three.module.min.js'), path.join(out, 'vendor', 'three.module.min.js'));
 }
-for (const file of ['index.html', 'deck.css']) {
+// xterm.js and its fit addon, for the shell drawer's frames (FEAT-0035, TASK-0206), copied from the
+// pinned packages the way three.js is. The frame page loads them as classic scripts.
+{
+  const modules = path.join(here, '..', 'node_modules');
+  await cp(path.join(modules, '@xterm', 'xterm', 'lib', 'xterm.js'), path.join(out, 'vendor', 'xterm.js'));
+  await cp(path.join(modules, '@xterm', 'xterm', 'css', 'xterm.css'), path.join(out, 'vendor', 'xterm.css'));
+  await cp(path.join(modules, '@xterm', 'addon-fit', 'lib', 'addon-fit.js'), path.join(out, 'vendor', 'addon-fit.js'));
+}
+for (const file of ['index.html', 'deck.css', 'terminal.html', 'terminal.css']) {
   await cp(path.join(src, file), path.join(out, file));
 }
 // The overview's palette and look are written once, in shared/overview-scene.ts,
@@ -39,4 +47,4 @@ for (const file of ['index.html', 'deck.css']) {
 const { writeFile } = await import('node:fs/promises');
 const scene = await import(path.join(here, '..', 'dist', 'shared', 'overview-scene.js'));
 await writeFile(path.join(out, 'overview.css'), scene.OVERVIEW_CSS ?? scene.default.OVERVIEW_CSS);
-console.log(`copy-assets: index.html, deck.css, overview.css and vendor/three.module.min.js -> ${path.relative(process.cwd(), out)}`);
+console.log(`copy-assets: index.html, deck.css, terminal.html, overview.css, vendor/three.module.min.js and vendor/xterm.js -> ${path.relative(process.cwd(), out)}`);

@@ -67,7 +67,9 @@ test('where node-pty did not install, shells are off and opening one says why', 
   const m = new ShellManager(null);
   assert.equal(m.available, false);
   assert.throws(() => m.open('/a'), /node-pty is not installed/);
-  assert.equal(loginShell({ SHELL: '/usr/bin/fish' }), '/usr/bin/fish');
+  assert.equal(loginShell({ SHELL: '/usr/bin/fish' }, (f) => f === '/usr/bin/fish'), '/usr/bin/fish', 'the person\'s own shell when it is there');
+  assert.equal(loginShell({}, (f) => f === '/bin/bash' || f === '/bin/sh'), '/bin/bash', 'else the first this machine has, never a shell it lacks');
+  assert.equal(loginShell({ SHELL: '/no/such' }, (f) => f === '/bin/sh'), '/bin/sh');
 });
 
 test('the calls open a shell only in a folder Deck knows, named by id, and check every argument', async () => {
@@ -92,4 +94,48 @@ test('the calls open a shell only in a folder Deck knows, named by id, and check
 test('the shell has the shells capability and a served page does not', () => {
   const { SHELL_CAPABILITIES, SERVED_CAPABILITIES, normaliseCapabilities } = load('shared/capability.js');
   assert.deepEqual([SHELL_CAPABILITIES.shells, SERVED_CAPABILITIES.shells, normaliseCapabilities({}).shells], [true, false, false]);
+});
+
+// --- TASK-0206: the drawer's tabs ---
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { desktopRoot } from './helpers.mjs';
+const { NO_TABS, tabsAfter, tabWords } = load('shared/shell-tabs.js');
+const tab = (id, over = {}) => ({ id, title: id.replace('shell-', 'f'), folder: `/f/${id}`, session: null, exited: false, ...over });
+
+test('a new shell is shown at once; closing the shown one shows its neighbour; switching shows another', () => {
+  let s = NO_TABS;
+  for (const id of ['shell-1', 'shell-2', 'shell-3']) s = tabsAfter(s, { kind: 'opened', tab: tab(id) });
+  assert.deepEqual([s.tabs.map((t) => t.id), s.active], [['shell-1', 'shell-2', 'shell-3'], 'shell-3']);
+  s = tabsAfter(s, { kind: 'shown', id: 'shell-2' });
+  assert.equal(s.active, 'shell-2');
+  s = tabsAfter(s, { kind: 'closed', id: 'shell-2' });
+  assert.deepEqual([s.tabs.map((t) => t.id), s.active], [['shell-1', 'shell-3'], 'shell-3'], 'the one after it');
+  s = tabsAfter(s, { kind: 'closed', id: 'shell-3' });
+  assert.equal(s.active, 'shell-1', 'the one before it, when it was last');
+  s = tabsAfter(s, { kind: 'closed', id: 'shell-1' });
+  assert.deepEqual(s, { tabs: [], active: null });
+  assert.equal(tabsAfter(s, { kind: 'shown', id: 'shell-9' }), s, 'a tab that is not there is not shown');
+});
+
+test('closing a tab that is not shown keeps the shown one; an ended shell says so on its tab', () => {
+  let s = NO_TABS;
+  for (const id of ['shell-1', 'shell-2']) s = tabsAfter(s, { kind: 'opened', tab: tab(id) });
+  s = tabsAfter(s, { kind: 'closed', id: 'shell-1' });
+  assert.equal(s.active, 'shell-2');
+  s = tabsAfter(s, { kind: 'exited', id: 'shell-2' });
+  assert.equal(tabWords(s.tabs[0]), 'f2 (ended)');
+  assert.equal(tabWords(tab('shell-4', { title: 'project-worktrees', session: 'abcdef1234' })), 'project-worktrees · abcdef12');
+});
+
+test('the drawer\'s button starts hidden, the terminal frame keeps its own policy, and Deck\'s page keeps its own', () => {
+  const page = fs.readFileSync(path.join(desktopRoot, 'src', 'renderer', 'index.html'), 'utf8');
+  assert.match(page, /id="shells-toggle" hidden/);
+  assert.match(page, /style-src 'self';/, 'Deck\'s page still allows no inline style');
+  const frame = fs.readFileSync(path.join(desktopRoot, 'src', 'renderer', 'terminal.html'), 'utf8');
+  assert.match(frame, /style-src 'self' 'unsafe-inline'/);
+  assert.match(frame, /connect-src 'none'/, 'the frame reaches nothing; the drawer reaches the shell');
+  assert.match(frame, /script-src 'self';/);
+  for (const f of ['vendor/xterm.js', 'vendor/xterm.css', 'vendor/addon-fit.js', 'terminal.html', 'renderer/terminal-frame.js']) assert.ok(fs.existsSync(path.join(desktopRoot, 'dist', 'web', f)), f);
 });

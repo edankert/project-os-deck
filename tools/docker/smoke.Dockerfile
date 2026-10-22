@@ -37,6 +37,8 @@ WORKDIR /work/project-os-deck
 # The dependency install is its own layer, so editing source does not refetch
 # Electron's ~100MB binary on every run.
 COPY desktop/package.json desktop/package-lock.json ./desktop/
+# The install runs it as postinstall: node-pty's macOS helper needs its execute bit (TASK-0205).
+COPY desktop/scripts/pty-helper.mjs ./desktop/scripts/
 RUN cd desktop && npm ci --no-audit --no-fund
 
 # Chromium's sandbox needs privileges a container does not have, and the run is

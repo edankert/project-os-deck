@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0108
 aliases: ["TST-0108"]
 title: "A session started from a ticket in Deck asks before it acts, is answered in place, is seen in the cockpit, and a shell opens beside it"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-10-22
 updated: 2026-10-22
@@ -32,7 +32,7 @@ after: ["[[TST-0103]]"]
 
 ## Purpose
 
-**Edwin checks in Deck itself that he can start an agent on a ticket, answer what it asks, see it from the cockpit, and open a shell beside it.** It stays `draft` until [[TASK-0201]] checks these steps against the build.
+**Edwin checks in Deck itself that he can start an agent on a ticket, answer what it asks, see it from the cockpit, and open a shell beside it.** The steps were checked against the build on 2026-10-22 ([[TASK-0201]], [[TASK-0206]]); walks in the container ran each screen with a scripted agent, but no person has run these steps with a real one.
 
 ## Setup
 

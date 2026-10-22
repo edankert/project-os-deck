@@ -1,0 +1,11 @@
+{
+  "delay": 400,
+  "claude": [
+    [
+      { "text": "An invented session for the walk of Needs you." },
+      { "ask": "Bash", "summary": "npm run an-invented-script" },
+      { "text": "Ran it, in words invented for the walk." }
+    ]
+  ],
+  "codex": [[{ "text": "Codex, invented." }]]
+}

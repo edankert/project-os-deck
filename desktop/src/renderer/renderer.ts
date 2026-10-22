@@ -47,6 +47,7 @@ import { joinedTo, sharedAmong } from '../shared/neighbourhood.js';
 import { hideOverview, initOverview, isOverviewAddress, isOverviewShown, overviewAddress, preferredColour, preferredGrouping, showOverview } from './overview.js';
 import './overview-pages.js';
 import './overview-flows.js';
+import { initShellDrawer } from './shell-drawer.js';
 
 const host = new Host();
 const registry = new ViewRegistry();
@@ -586,6 +587,10 @@ async function boot(): Promise<void> {
 
   workspaces = await host.workspaces();
   renderRail();
+  // The shell drawer, in the shell only (FEAT-0035): no bridge on a served page, so no drawer and no button.
+  const shellBridge = host.shells();
+  if (shellBridge !== null) initShellDrawer({ shells: shellBridge, workspaceId: () => host.state().workspaceId, say }, document.getElementById('shells-toggle') as HTMLButtonElement | null);
+
   initOverview({
     workspaceId: () => host.state().workspaceId,
     viewId: () => host.state().viewId,

@@ -8,6 +8,7 @@
  * and opening a shell says so. A shell is reached through the preload bridge only; the served
  * host has no route to it (RISK-0015).
  */
+import fs from 'node:fs';
 import { cleanEnvironment } from './agents/claude-provider.js';
 
 /** What Deck needs of a pty: node-pty's own shape, narrowed. */
@@ -44,8 +45,14 @@ export interface ShellInfo {
 
 export type ShellEvent = { kind: 'data'; id: string; data: string } | { kind: 'exit'; id: string; code: number };
 
-/** The user's login shell. */
-export const loginShell = (env: NodeJS.ProcessEnv = process.env): string => env['SHELL'] || (process.platform === 'win32' ? 'powershell.exe' : '/bin/zsh');
+/**
+ * The person's login shell: `$SHELL` when it exists, else the first of zsh, bash and sh this machine
+ * has. Assuming zsh failed every shell in the Linux container, which has none (TASK-0206's walk).
+ */
+export function loginShell(env: NodeJS.ProcessEnv = process.env, exists: (file: string) => boolean = fs.existsSync): string {
+  if (process.platform === 'win32') return env['ComSpec'] || 'powershell.exe';
+  return [env['SHELL'], '/bin/zsh', '/bin/bash', '/bin/sh'].find((f): f is string => typeof f === 'string' && f !== '' && exists(f)) ?? '/bin/sh';
+}
 
 export class ShellManager {
   private readonly shells = new Map<string, { info: ShellInfo; pty: Pty }>();

@@ -12,6 +12,7 @@ import type { AgentBridge } from './host-bridge.js';
 import type { ConversationRecord, SessionRecord } from '../shared/agent-types.js';
 import { ACCESS_WORD, ANSWER_WORD, AGENT_GLYPH, AGENT_WORD, EFFORTS, MODELS, STATE_WORD, composerOf, paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
 import type { AgentSummary } from '../shared/agent-marks.js';
+import { hasShells, openShell } from './shell-drawer.js';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -280,6 +281,8 @@ export class AgentPane {
     else button('Send', 'ag-send', () => void this.send(), can.send);
     if (can.resume) button('Resume', 'ag-resume', () => void this.send(this.draft.trim() === '' ? 'Carry on.' : undefined));
     if (can.stop) button(this.stopArmed ? 'Stop? Press again' : 'Stop', `ag-stop${this.stopArmed ? ' is-armed' : ''}`, () => void this.stop());
+    // A plain shell in the session's own folder, its worktree when it has one (FEAT-0035); absent with no drawer.
+    if (hasShells()) button('Open its shell', 'ag-shell', () => { openShell({ sessionId: s.id }); });
     this.composer.replaceChildren(area, row, acts);
   }
 

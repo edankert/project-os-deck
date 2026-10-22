@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      One shell's terminal, drawn by xterm.js inside a frame of the shell drawer (FEAT-0035, TASK-0206).
+      xterm.js writes its own <style> elements, which Deck's page policy refuses. This frame holds only
+      terminal text, which xterm.js draws as text, never as HTML, so its policy allows inline styles and
+      nothing else that Deck's page does not: code from this origin only, and no connection anywhere.
+      It talks to the drawer by messages; the shell itself is reached by the drawer, never from here.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Shell</title>
+    <link rel="stylesheet" href="./vendor/xterm.css" />
+    <link rel="stylesheet" href="./terminal.css" />
+    <script src="./vendor/xterm.js"></script>
+    <script src="./vendor/addon-fit.js"></script>
+  </head>
+  <body>
+    <div id="terminal"></div>
+    <script type="module" src="./renderer/terminal-frame.js"></script>
+  </body>
+</html>

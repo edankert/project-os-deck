@@ -95,7 +95,7 @@ items:
       tasks: ["TASK-0202", "TASK-0203", "TASK-0204"]
       note: "PLANNED 2026-10-22 (DES-0006). One Needs you: permission requests first (Deck's own, then the cockpit's), waiting agents, tickets by reason, what is not pushed. The cockpit's four overview panels with Caught up (a loopback write through the shell, which ADR-0003 covers) and the remembered Overview toggle. Cockpit permission requests are answered from Deck only when Deck started the sidecar and holds its secret. Suite TST-0106 (agent-needs)."
     FEAT-0035:
-      status: doing
+      status: review
       file: "docs/features/shell-drawer/FEAT-0035-Plain-Shells-Open-In-A-Drawer-Several-At-Once.md"
       owner: system:claude
       phase: PHASE-0004
@@ -425,7 +425,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0206:
       file: docs/features/shell-drawer/plan/tasks/TASK-0206-The-Shell-Drawer-Draws-Each-Shell-In-A-Tab.md
-      status: doing
+      status: done
       parent: FEAT-0035
       phase: "[[PHASE-0004]]"
     TASK-0190:
@@ -2255,7 +2255,7 @@ items:
       covers: ["FEAT-0035"]
     TST-0108:
       file: "docs/tests/acceptance/TST-0108-A-Session-Started-From-A-Ticket-Asks-Is-Answered-Is-Seen-In-The-Cockpit-And-A-Shell-Opens-Beside-It.md"
-      status: draft
+      status: active
       owner: user:edwin
       phase: PHASE-0004
       scope: system
@@ -2877,7 +2877,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 199
-    tasks_done: 178
+    tasks_done: 179
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

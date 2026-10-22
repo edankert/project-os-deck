@@ -1025,7 +1025,9 @@ function place(): void {
   area.style.left = `${railBox === null || railBox.width === 0 ? 0 : Math.round(railBox.right)}px`;
   // Above the status line, which is where Deck says what it is doing.
   const status = document.getElementById('status');
-  const statusTop = status === null ? window.innerHeight : status.getBoundingClientRect().top;
+  // Above the shell drawer too, when it is open, so nothing the overview offers is under it (FEAT-0035).
+  const shellDrawer = document.querySelector<HTMLElement>('.sh-drawer:not([hidden])');
+  const statusTop = Math.min(status === null ? window.innerHeight : status.getBoundingClientRect().top, shellDrawer === null ? window.innerHeight : shellDrawer.getBoundingClientRect().top);
   area.style.bottom = `${Math.max(0, Math.round(window.innerHeight - statusTop))}px`;
   panels?.place();
 }

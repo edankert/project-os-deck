@@ -1713,3 +1713,23 @@ body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibilit
 .ag-dialog .ag-acts button:disabled { opacity: 0.4; cursor: default; }
 /* ◫ Overview (TASK-0203): beside By phase, a word under the corner's buttons. */
 .ov-panels-toggle { right: 118px; }
+
+/* The shell drawer (FEAT-0035): plain terminals at the bottom of Deck, a tab each. */
+/* Above the overview (900) and the field's cards and menus (to 4600), below the callout (4700). */
+.sh-drawer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4650; display: flex; flex-direction: column; background: hsl(210 50% 5%);
+  border-top: 1px solid hsla(190, 90%, 65%, 0.4); box-shadow: 0 -8px 24px hsla(210, 60%, 3%, 0.6); font: 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: hsl(195 40% 90%); }
+.sh-drawer[hidden] { display: none; }
+.sh-grip { height: 6px; cursor: ns-resize; flex: none; }
+.sh-grip:hover { background: hsla(190, 90%, 65%, 0.25); }
+.sh-tabs { display: flex; align-items: center; gap: 4px; padding: 0 8px 4px; flex: none; overflow-x: auto; }
+.sh-tab { display: flex; align-items: center; border-radius: 6px 6px 0 0; border: 1px solid hsla(190, 90%, 65%, 0.2); border-bottom: none; }
+.sh-tab.is-active { background: hsla(190, 90%, 55%, 0.16); border-color: hsla(190, 90%, 65%, 0.5); }
+.sh-tab.has-ended .sh-tab-name { opacity: 0.55; }
+.sh-tab button, .sh-new, .sh-hide { all: unset; cursor: pointer; padding: 3px 8px; white-space: nowrap; }
+.sh-tab-close { opacity: 0.6; } .sh-tab-close:hover { opacity: 1; }
+.sh-new { color: hsl(190 90% 75%); } .sh-new[disabled] { opacity: 0.4; cursor: default; }
+.sh-hide { margin-left: auto; }
+.sh-body { position: relative; flex: 1; min-height: 0; }
+.sh-body[data-empty]::after { content: attr(data-empty); position: absolute; left: 16px; top: 12px; color: hsl(205 25% 64%); }
+.sh-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.sh-frame[hidden] { display: none; }

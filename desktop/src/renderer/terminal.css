@@ -1,0 +1,3 @@
+/* One shell's frame (FEAT-0035): the terminal fills it. */
+html, body { margin: 0; height: 100%; background: hsl(210 50% 5%); overflow: hidden; }
+#terminal { position: absolute; inset: 4px 6px; }

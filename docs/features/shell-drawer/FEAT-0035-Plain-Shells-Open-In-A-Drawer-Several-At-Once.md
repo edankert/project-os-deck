@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0035
 aliases: ["FEAT-0035"]
 title: "Plain shells open in a drawer at the bottom of Deck, several at once, one tab each, each named by its workspace"
-status: doing
+status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -51,7 +51,9 @@ Out of scope:
 
 ## Verification
 
-Not built yet. [[TST-0107]] is `bash tools/scripts/run-desktop-tests.sh shell-drawer`; [[TASK-0205]] creates it. Edwin's acceptance test is [[TST-0108]].
+Built on 2026-10-22, [[TASK-0205]] and [[TASK-0206]]. [[TST-0107]] (`bash tools/scripts/run-desktop-tests.sh shell-drawer`) has 8 checks on a fake pty; `cd desktop && npm test` passes. The walk `bash tools/scripts/walk-in-a-box.sh shell-drawer --copy` ran real shells through node-pty in a Deck window in the container: 9 checks, all held.
+
+Not yet shown: that quitting Deck leaves no shell process running, in a real quit. The suite shows every shell is killed, and Deck's quit calls it, but no run has looked for leftover processes afterwards. Edwin's acceptance test is [[TST-0108]].
 
 ## Links
 
