@@ -9,6 +9,7 @@
  * narrow toward the back.
  */
 import { cockpitSquare, markWords } from './overview-marks.js';
+import type { PanelCockpit } from './overview-cockpit.js';
 import type { PanelAgents, PanelCard, PanelNeeds, PanelNode, PanelRow, PanelWeeks, SceneNode } from './overview-scene.js';
 
 /** How much smaller and narrower the back of a tilted plane is than its front. */
@@ -293,12 +294,27 @@ function agentsFlat(panel: PanelNode & { body: PanelAgents }): SceneNode[] {
   return out;
 }
 
+/** The cockpit's overview panels, flat (TASK-0203): a line for each of the four. */
+function cockpitFlat(panel: PanelNode & { body: PanelCockpit }): SceneNode[] {
+  const { x, y, w, h } = panel;
+  const c = panel.body;
+  const line = (i: number, text: string): SceneNode => ({ kind: 'text', x: x + 16, y: y + 28 + i * 22, text, rest: true, role: 'label', size: 11.5 });
+  return [
+    { kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' },
+    line(0, !c.since.known ? 'Since you last looked: not known' : `Since you last looked: ${c.since.total} changed`),
+    line(1, `The record: ${c.record.map((r) => `${r.total} ${r.word}`).join(', ')}`),
+    line(2, `Checks: ${c.checks.parts.map((p) => `${p.n} ${p.word}`).join(', ')}`),
+    line(3, `Waiting on a decision: ${c.deciding.total}`),
+  ];
+}
+
 /** A panel's flat drawing, as scene nodes for `sceneToSvg`. Not part of `scene.nodes`, so never counted. */
 export function panelSvgNodes(panel: PanelNode): SceneNode[] {
   if (panel.body.kind === 'card') return cardPanel(panel as PanelNode & { body: PanelCard });
   if (panel.body.kind === 'needs') return needsFlat(panel as PanelNode & { body: PanelNeeds });
   if (panel.body.kind === 'weeks') return weeksFlat(panel as PanelNode & { body: PanelWeeks });
   if (panel.body.kind === 'agents') return agentsFlat(panel as PanelNode & { body: PanelAgents });
+  if (panel.body.kind === 'cockpit') return cockpitFlat(panel as PanelNode & { body: PanelCockpit });
   return panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }) : notePanel(panel as PanelNode & { body: { kind: 'note' } });
 }
 
@@ -381,6 +397,19 @@ div.ov-needs-ask-what { cursor: default; }
 .ov-needs-ask-elsewhere { font-size: 11.5px; color: hsl(205 25% 70%); font-style: italic; }
 .ov-needs-agent { all: unset; cursor: pointer; font-size: 12px; padding: 3px 8px; border-radius: 6px; border: 1px solid hsla(190, 90%, 65%, 0.3); pointer-events: auto; }
 .ov-needs-git { font-size: 11.5px; color: hsl(205 25% 70%); margin-top: auto; }
+.ov-panel-cockpit { padding: 10px 14px; display: flex; flex-direction: column; gap: 5px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; pointer-events: auto; }
+.ov-ck-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: hsl(195 40% 82%); margin-top: 2px; }
+.ov-ck-aside { font-weight: 400; color: hsl(205 25% 64%); }
+.ov-ck-since, .ov-ck-checks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+.ov-ck-count { display: inline-flex; align-items: center; gap: 4px; }
+.ov-ck-sub { color: hsl(205 25% 64%); }
+.ov-ck-caught { all: unset; cursor: pointer; margin-left: auto; padding: 2px 10px; border-radius: 6px; font-size: 12px; border: 1px solid hsla(190, 90%, 65%, 0.45); background: hsla(190, 90%, 55%, 0.18); }
+.ov-ck-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.ov-ck-tile { display: flex; flex-direction: column; gap: 1px; }
+.ov-ck-n { font-size: 16px; font-weight: 700; } .ov-ck-w { font-size: 10.5px; color: hsl(205 25% 70%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-ck-tile { min-width: 0; }
+.ov-ck-mix { display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: hsla(205, 30%, 30%, 0.4); }
+.ov-ck-checks i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .ov-panel-agents { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; pointer-events: auto; }
 .ov-agents-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: hsl(195 40% 82%); }
 .ov-agent-row { grid-template-columns: 14px auto 1fr auto; cursor: pointer; }

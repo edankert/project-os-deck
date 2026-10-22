@@ -54,6 +54,8 @@ export interface AgentBridge {
   needs?(workspaceId: string): Promise<unknown>;
   /** Answer one of the cockpit's requests; the main process holds the shell secret (TASK-0204). */
   cockpitAnswer?(workspaceId: string, approvalId: string, allow: boolean): Promise<unknown>;
+  /** Caught up: the cockpit's watermark moved to the digest's time, by the main process (TASK-0203). */
+  caughtUp?(workspaceId: string, at: string): Promise<unknown>;
   conversation(id: string): Promise<unknown>;
   start(request: unknown): Promise<unknown>;
   send(id: string, text: string): Promise<unknown>;

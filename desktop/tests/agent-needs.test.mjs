@@ -186,3 +186,65 @@ test('an answer needs somebody to answer as: with no actor name, nothing is sent
   assert.match((await h.get('deck:agents:cockpit-answer')({}, 'w', 'ap1', true)).error, /no name to answer as/);
   assert.equal(sent.length, 0);
 });
+
+// --- TASK-0203: the cockpit's four overview panels, top left ---
+
+const { cockpitPanel, digestOf, CAUGHT_UP } = load('shared/overview-cockpit.js');
+const { WHEEL_AGENTS, WHEEL_AGENTS_UP } = load('shared/overview-wheel.js');
+const panelOf = (scene, key) => [...walkScene(scene.nodes)].find((n) => n.kind === 'panel' && n.key === key);
+const DIGEST = { available: true, seen_at: '2026-10-14T16:39:05+01:00', computed_at: '2026-10-22T22:13:40+01:00', transitions: [{ id: 'TASK-0001', type: 'task' }, { id: 'TASK-0001', type: 'task' }, { id: 'FEAT-0001', type: 'feature' }, { id: 'TASK-0002', type: 'task' }] };
+
+for (const name of ['deck', 'your-trainer']) {
+  test(`${name}: the record, the checks and what waits on a decision are counted from the model, and each count is what it draws`, () => {
+    const model = fixture(name);
+    const tickets = Object.values(model.tickets);
+    const { node } = cockpitPanel(model, ctx, place, digestOf(DIGEST), true);
+    const c = node.body;
+    for (const r of c.record) {
+      const of = tickets.filter((t) => t.type === r.type);
+      assert.equal(r.total, of.length, r.type);
+      assert.equal(r.closed + r.progress + r.open + r.dropped, of.filter((t) => ['closed', 'progress', 'open', 'dropped'].includes(t.state)).length);
+    }
+    assert.equal(c.checks.total, tickets.filter((t) => t.type === 'test').length);
+    assert.ok(c.checks.parts.every((p) => p.n > 0));
+    assert.equal(c.deciding.total, tickets.filter((t) => ['adr', 'design'].includes(t.type) && ['proposed', 'draft'].includes(t.status)).length);
+    assert.ok(c.deciding.rows.length <= 3 && c.deciding.rows.every((r) => ['proposed', 'draft'].includes(r.status)));
+    const scene = wheelScene(model, ctx, { digest: digestOf(DIGEST), caughtUp: true });
+    assert.ok(panelOf(scene, 'cockpit'));
+    for (const r of checkScene(scene)) assert.ok(r.ok, `${r.rule}: ${r.detail}`);
+  });
+}
+
+test('since you last looked counts each changed ticket once, by type, and Caught up carries the digest\'s time', () => {
+  const d = digestOf(DIGEST);
+  assert.deepEqual(d, { seenAt: '2026-10-14T16:39:05+01:00', at: '2026-10-22T22:13:40+01:00', changed: [{ id: 'TASK-0001', type: 'task' }, { id: 'FEAT-0001', type: 'feature' }, { id: 'TASK-0002', type: 'task' }] });
+  const { node, rows } = cockpitPanel(fixture('deck'), ctx, place, d, true);
+  assert.deepEqual([node.body.since.total, node.body.since.byType], [3, [{ type: 'task', n: 2 }, { type: 'feature', n: 1 }]]);
+  assert.equal(node.body.since.caughtUp, `${CAUGHT_UP}2026-10-22T22:13:40+01:00`);
+  assert.equal(rows.find((r) => r.id === 'cockpit-caught-up').action, node.body.since.caughtUp);
+  assert.equal(cockpitPanel(fixture('deck'), ctx, place, d, false).node.body.since.caughtUp, undefined, 'no Caught up on a served page');
+  assert.equal(digestOf({ ...DIGEST, seen_at: '1970-01-01T00:00:00+00:00' }).seenAt, null, 'never caught up');
+  assert.equal(digestOf({ available: false }), null);
+  assert.equal(cockpitPanel(fixture('deck'), ctx, place, undefined, true).node.body.since.known, false);
+});
+
+test('◫ Overview hides the panels and the Agents list moves up into their place; a selected ticket or an open session takes it too', () => {
+  const model = fixture('deck');
+  const shown = wheelScene(model, ctx, { agents: [] });
+  assert.ok(panelOf(shown, 'cockpit'));
+  assert.equal(panelOf(shown, 'agents').y, WHEEL_AGENTS.y);
+  const hidden = wheelScene(model, ctx, { agents: [], overviewPanels: false });
+  assert.equal(panelOf(hidden, 'cockpit'), undefined);
+  assert.equal(panelOf(hidden, 'agents').y, WHEEL_AGENTS_UP.y);
+  const id = Object.keys(model.tickets)[0];
+  assert.equal(panelOf(wheelScene(model, ctx, { agents: [], select: id }), 'cockpit'), undefined, 'the selected ticket\'s card stands there');
+});
+
+test('Caught up is sent by the main process with the digest\'s time, and nothing else is accepted', async () => {
+  const sent = [];
+  const h = calls({ secretFor: () => null, actor: () => 'u', caughtUp: async (base, at) => { sent.push([base, at]); return { ok: true, status: 200, json: {} }; } });
+  assert.deepEqual(await h.get('deck:cockpit:caught-up')({}, 'w', '2026-10-22T22:13:40+01:00'), { ok: true });
+  assert.deepEqual(sent, [['http://127.0.0.1:9', '2026-10-22T22:13:40+01:00']]);
+  assert.match((await h.get('deck:cockpit:caught-up')({}, 'w', 'yesterday')).error, /digest's time/);
+  assert.equal(sent.length, 1);
+});

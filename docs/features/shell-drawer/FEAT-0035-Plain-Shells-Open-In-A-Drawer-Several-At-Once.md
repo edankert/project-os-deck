@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0035
 aliases: ["FEAT-0035"]
 title: "Plain shells open in a drawer at the bottom of Deck, several at once, one tab each, each named by its workspace"
-status: planned
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

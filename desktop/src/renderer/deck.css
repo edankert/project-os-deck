@@ -1711,3 +1711,5 @@ body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibilit
 .ag-field-label { font-size: 11px; color: hsl(205 25% 64%); }
 .ag-dialog .ag-acts button { all: unset; cursor: pointer; padding: 5px 14px; border-radius: 6px; font-size: 13px; background: hsla(190, 90%, 55%, 0.18); border: 1px solid hsla(190, 90%, 65%, 0.45); }
 .ag-dialog .ag-acts button:disabled { opacity: 0.4; cursor: default; }
+/* ◫ Overview (TASK-0203): beside By phase, a word under the corner's buttons. */
+.ov-panels-toggle { right: 118px; }

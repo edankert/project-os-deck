@@ -20,6 +20,7 @@ import { nextUpPanel } from './overview-board.js';
 import { needsPanel, todayOf, weeksPanel } from './overview-needs.js';
 import { selectionPanels } from './overview-select.js';
 import { agentsPanel } from './agent-marks.js';
+import { cockpitPanel } from './overview-cockpit.js';
 import { TOWERS_PLAN, towersLayout, towersPlan, type TowersOptions } from './overview-towers.js';
 import type { OverviewModel, Phase, Ticket } from './overview-types.js';
 
@@ -98,6 +99,9 @@ export const WHEEL_NEEDS = { x: 1090, y: 96, w: 320, h: 330 } as const;
 export const WHEEL_WEEKS = { x: 1090, y: 730, w: 320, h: 170 } as const;
 /** The Agents list, left middle (FEAT-0033, TASK-0199): between a selected ticket's card and the board. */
 export const WHEEL_AGENTS = { x: 40, y: 430, w: 420, h: 196 } as const;
+/** The cockpit's overview panels, top left (TASK-0203); hidden, the Agents list moves up into their place. */
+export const WHEEL_COCKPIT = { x: 40, y: 150, w: 420, h: 270 } as const;
+export const WHEEL_AGENTS_UP = { x: 40, y: 150, w: 420, h: 196 } as const;
 /** The next-up board, bottom left (TASK-0183). */
 export const WHEEL_BOARD = { x: 40, y: 640, w: 420, h: 330 } as const;
 
@@ -113,8 +117,11 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
   // Every agent session, in the shell only: a page given no sessions to show has no list (RISK-0015). While a
   // session is open the ring moves left of its pane, so the panels on the left make way too, and its marker and
   // curves stand clear; closing the pane brings them back (TASK-0201's walk).
-  const agents = options.agents === undefined || session !== null ? null : agentsPanel(options.agents, ctx, session, WHEEL_AGENTS);
-  const left = session === null ? [board] : [];
+  // The cockpit's four panels stand top left unless hidden, or a selected ticket's card or an open session needs the room.
+  const showCockpit = options.overviewPanels !== false && session === null && layout.selection === null;
+  const cockpit = showCockpit ? cockpitPanel(model, ctx, WHEEL_COCKPIT, options.digest, options.caughtUp === true) : null;
+  const agents = options.agents === undefined || session !== null ? null : agentsPanel(options.agents, ctx, session, options.overviewPanels === false && layout.selection === null ? WHEEL_AGENTS_UP : WHEEL_AGENTS);
+  const left = session === null ? [...(cockpit === null ? [] : [cockpit]), board] : [];
   const sel = layout.selection;
   // Escape clears the selection: the overview goes to the screen a row with id `back` names.
   const back: ListRow[] = sel === null ? [] : [{ id: 'back', label: `Clear the selection of ${sel.id}`, group: 'Go to', target: ctx.address({ page: 'wheel' }) }];

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0205
 aliases: ["TASK-0205"]
 title: "Plain shells run in Deck's main process through node-pty, several at once, each in its workspace's folder, and end when Deck quits"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

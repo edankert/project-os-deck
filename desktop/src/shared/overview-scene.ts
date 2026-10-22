@@ -18,6 +18,7 @@ import type { TowersLayout } from './overview-towers.js';
 import type { Fill, NoteType, State } from './overview-types.js';
 import { FIELD, marksCss, NEEDS_YOU } from './overview-marks.js';
 import { panelCss, panelSvgNodes } from './overview-panel.js';
+import type { PanelCockpit } from './overview-cockpit.js';
 
 /** The seven screens of DES-0005. */
 export type ScreenKind = 'wheel' | 'phase' | 'ticket' | 'rephase' | 'design' | 'test-run' | 'accept';
@@ -162,7 +163,8 @@ export interface PanelNode {
     | PanelCard
     | PanelNeeds
     | PanelWeeks
-    | PanelAgents;
+    | PanelAgents
+    | PanelCockpit;
 }
 
 /**

@@ -15,6 +15,7 @@
  */
 import { markWords } from '../shared/overview-marks.js';
 import { ANSWER_WORD } from '../shared/agent-pane.js';
+import type { PanelCockpit } from '../shared/overview-cockpit.js';
 import { walkScene, type PanelAgents, type PanelButton, type PanelCard, type PanelNeeds, type PanelNode, type PanelRow, type PanelSection, type PanelWeeks, type Scene } from '../shared/overview-scene.js';
 
 /** Sections a person opened or closed, by panel and section key, for the session. */
@@ -212,6 +213,70 @@ function needsPanel(panel: PanelNode & { body: PanelNeeds }): HTMLElement {
   return box;
 }
 
+/**
+ * The cockpit's four overview panels in one box (TASK-0203): since you last looked with Caught up,
+ * the record as tiles with a bar each, the checks, and what waits on a decision.
+ */
+function cockpitOverview(panel: PanelNode & { body: PanelCockpit }): HTMLElement {
+  const c = panel.body;
+  const box = el('div', 'ov-panel ov-panel-cockpit');
+  const head = (text: string, aside: string): HTMLElement => {
+    const h = el('div', 'ov-ck-head');
+    h.append(el('span', 'ov-ck-title', text), el('span', 'ov-ck-aside', aside));
+    return h;
+  };
+  box.appendChild(head('Since you last looked', !c.since.known ? 'not known' : c.since.seen === null ? 'never' : c.since.seen.slice(0, 10)));
+  const since = el('div', 'ov-ck-since');
+  if (c.since.known && c.since.total === 0) since.appendChild(el('span', 'ov-ck-sub', 'Nothing changed.'));
+  for (const b of c.since.byType.slice(0, 6)) {
+    const s = el('span', 'ov-ck-count');
+    s.title = `${b.n} ${b.type}${b.n === 1 ? '' : 's'} changed`;
+    s.append(square({ type: b.type, fill: 'delivered', needsYou: false }, true), document.createTextNode(String(b.n)));
+    since.appendChild(s);
+  }
+  if (c.since.caughtUp !== undefined) {
+    const b = el('button', 'ov-ck-caught', 'Caught up');
+    b.type = 'button';
+    b.dataset['action'] = c.since.caughtUp;
+    b.dataset['label'] = 'Caught up: mark everything changed so far as seen';
+    since.appendChild(b);
+  }
+  box.appendChild(since);
+  box.appendChild(head('The record', ''));
+  const tiles = el('div', 'ov-ck-tiles');
+  for (const r of c.record) {
+    const tile = el('div', 'ov-ck-tile');
+    tile.title = `${r.word}: ${r.closed} done of ${r.total}`;
+    const mix = el('div', 'ov-ck-mix');
+    for (const [n, a] of [[r.closed, 1], [r.progress, 0.6], [r.open, 0.25], [r.dropped, 0.12]] as const) {
+      if (n === 0) continue;
+      const part = el('b', '');
+      part.style.flex = String(n);
+      part.style.background = r.colour;
+      part.style.opacity = String(a);
+      mix.appendChild(part);
+    }
+    tile.append(el('div', 'ov-ck-n', String(r.total)), el('div', 'ov-ck-w', r.word), mix);
+    tiles.appendChild(tile);
+  }
+  box.appendChild(tiles);
+  box.appendChild(head('Checks', `${c.checks.total} tests`));
+  const checks = el('div', 'ov-ck-checks');
+  for (const p of c.checks.parts) {
+    const s = el('span', '');
+    const dot = el('i', '');
+    dot.style.background = p.colour;
+    s.append(dot, document.createTextNode(`${p.n} ${p.word}`));
+    checks.appendChild(s);
+  }
+  box.appendChild(checks);
+  box.appendChild(head('Waiting on a decision', String(c.deciding.total)));
+  const list = el('ul', 'ov-rows');
+  for (const r of c.deciding.rows) list.appendChild(rowElement(r));
+  box.appendChild(list);
+  return box;
+}
+
 /** The Agents list (FEAT-0033, TASK-0199): a row each, pressing one opens the session in the pane. */
 function agentsPanel(panel: PanelNode & { body: PanelAgents }): HTMLElement {
   const box = el('div', 'ov-panel ov-panel-agents');
@@ -392,6 +457,7 @@ export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced
         : panel.body.kind === 'needs' ? needsPanel(panel as PanelNode & { body: PanelNeeds })
           : panel.body.kind === 'weeks' ? weeksPanel(panel as PanelNode & { body: PanelWeeks })
             : panel.body.kind === 'agents' ? agentsPanel(panel as PanelNode & { body: PanelAgents })
+              : panel.body.kind === 'cockpit' ? cockpitOverview(panel as PanelNode & { body: PanelCockpit })
             : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
     box.dataset['panel'] = panel.key;
     box.setAttribute('aria-label', panel.label);

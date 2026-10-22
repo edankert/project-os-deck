@@ -10,8 +10,9 @@ import { ticketScene, type TriageVerb } from '../shared/overview-ticket.js';
 import { wheelScene } from '../shared/overview-wheel.js';
 import { featureGate } from './overview-flows.js';
 import { agentsFor, needsFor } from './agent-state.js';
+import { digestFor } from './cockpit-digest.js';
 import type { AgentNeeds } from '../shared/agent-needs.js';
-import { drawnMtime, drawnMtimeKey, noteMtime, registerScreen, type ScreenInput } from './overview.js';
+import { drawnMtime, drawnMtimeKey, noteMtime, overviewPanelsShown, registerScreen, type ScreenInput } from './overview.js';
 
 const withAgents = (workspaceId: string, model: Parameters<typeof agentsFor>[1]): { agents?: ReturnType<typeof agentsFor> & object; needs?: AgentNeeds } => {
   const agents = agentsFor(workspaceId, model);
@@ -23,7 +24,12 @@ const withAgents = (workspaceId: string, model: Parameters<typeof agentsFor>[1])
 const ACCEPTED = 'rephase-accepted';
 
 // The agent sessions stand over their tickets in the shell; on a served page `agentsFor` gives none (FEAT-0033).
-registerScreen('page', 'wheel', { scene: ({ model, ctx, address }) => wheelScene(model, ctx, { select: address.select, session: address.session, ...withAgents(ctx.workspaceId, model) }) });
+// The cockpit's overview panels (TASK-0203): the digest for since you last looked, shown unless ◫ Overview hid them,
+// and Caught up in the shell only.
+registerScreen('page', 'wheel', { scene: ({ model, ctx, address }) => {
+  const agents = withAgents(ctx.workspaceId, model);
+  return wheelScene(model, ctx, { select: address.select, session: address.session, ...agents, digest: digestFor(ctx.workspaceId), overviewPanels: overviewPanelsShown(), caughtUp: agents.agents !== undefined });
+} });
 
 registerScreen('page', 'phase', {
   scene: ({ model, ctx, address }) => {

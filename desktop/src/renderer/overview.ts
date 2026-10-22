@@ -25,6 +25,8 @@ import { buildPanels, type PanelLayer } from './overview-panels.js';
 import type { TowersView } from './overview-towers-view.js';
 import { FRAME_ACTION, WORK_ON, standsIn } from '../shared/overview-select.js';
 import { ANSWER } from '../shared/overview-needs.js';
+import { CAUGHT_UP } from '../shared/overview-cockpit.js';
+import { initDigest, reloadDigest } from './cockpit-digest.js';
 import { openWorkOn } from './agent-start.js';
 import { SEARCH_LIST, searchTickets } from '../shared/overview-search.js';
 import { square } from './overview-panels.js';
@@ -484,7 +486,15 @@ export function initOverview(host: OverviewHostApi): void {
   groupingToggle.className = 'ov-grouping-toggle';
   groupingToggle.hidden = true;
   groupingToggle.addEventListener('click', () => void switchGrouping());
-  area.append(stage, callout, listPanel, listToggle, colouringToggle, agesToggle, groupingToggle, cameraBar, searchBox);
+  // ◫ Overview hides and shows the cockpit's overview panels (TASK-0203).
+  panelsToggle = document.createElement('button');
+  panelsToggle.type = 'button';
+  panelsToggle.className = 'ov-grouping-toggle ov-panels-toggle';
+  panelsToggle.textContent = '◫ Overview';
+  panelsToggle.hidden = true;
+  panelsToggle.addEventListener('click', () => void switchOverviewPanels());
+  area.append(stage, callout, listPanel, listToggle, colouringToggle, agesToggle, groupingToggle, panelsToggle, cameraBar, searchBox);
+  initDigest((workspaceId, sidecarPath) => host.read(workspaceId, sidecarPath), () => void redrawForAgents());
 
   historyBar = document.getElementById('ov-history');
   backButton = document.getElementById('ov-back') as HTMLButtonElement | null;
@@ -813,6 +823,34 @@ export function preferredColour(): 'state' | null {
 let grouping: 'phase' | 'feature' = 'phase';
 let groupingToggle: HTMLButtonElement | null = null;
 
+/** Whether the cockpit's overview panels stand on the wheel: ◫ Overview hides them, and the choice is kept (TASK-0203). */
+export function overviewPanelsShown(): boolean {
+  try {
+    return localStorage.getItem('deck.overview.panels') !== 'hidden';
+  } catch {
+    return true;
+  }
+}
+
+async function switchOverviewPanels(): Promise<void> {
+  try {
+    localStorage.setItem('deck.overview.panels', overviewPanelsShown() ? 'hidden' : 'shown');
+  } catch {
+    // A page that cannot store it keeps the panels as they are.
+  }
+  drawPanelsToggle();
+  if (current !== null) await showOverview(current.address, { replace: true });
+}
+
+let panelsToggle: HTMLButtonElement | null = null;
+function drawPanelsToggle(): void {
+  if (panelsToggle === null) return;
+  const shown = overviewPanelsShown();
+  panelsToggle.hidden = current === null || current.scene.screen !== 'wheel';
+  panelsToggle.setAttribute('aria-pressed', String(shown));
+  panelsToggle.title = shown ? 'Hide the cockpit\'s overview panels' : 'Show the cockpit\'s overview panels';
+}
+
 function readGrouping(): 'phase' | 'feature' {
   try {
     return localStorage.getItem('deck.overview.grouping') === 'feature' ? 'feature' : 'phase';
@@ -927,6 +965,7 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   document.body.dataset['overviewScreen'] = scene.screen;
   drawColouringToggle();
   drawGroupingToggle();
+  drawPanelsToggle();
   drawSearchBox();
   // After `current` is the new screen and laid out: the 3D view flies to it.
   showTowers(scene);
@@ -1170,6 +1209,15 @@ async function act(action: string): Promise<void> {
       ? await bridge.answer(session, id, allow ? { allow: true } : { allow: false, message: 'Denied in Deck.' })
       : await (bridge.cockpitAnswer?.(current.address.workspaceId, id, allow) ?? Promise.resolve({ ok: false, error: 'answer it in the cockpit' }))) as { ok?: boolean; error?: string };
     if (res?.ok !== true) api.say(res?.error ?? 'that request was already answered, or its session has ended', true);
+    return;
+  }
+  // Caught up marks everything the digest listed as seen, from the main process (TASK-0203, ADR-0003).
+  if (action.startsWith(CAUGHT_UP)) {
+    const bridge = api.agents?.() ?? null;
+    const workspaceId = current.address.workspaceId;
+    const res = (await (bridge?.caughtUp?.(workspaceId, action.slice(CAUGHT_UP.length)) ?? Promise.resolve({ ok: false, error: 'Caught up is offered in Deck itself' }))) as { ok?: boolean; error?: string };
+    if (res?.ok !== true) api.say(res?.error ?? 'Caught up did not reach the cockpit', true);
+    else await reloadDigest(workspaceId);
     return;
   }
   // Work on this opens its dialog over the overview, for the ticket it names (TASK-0200).

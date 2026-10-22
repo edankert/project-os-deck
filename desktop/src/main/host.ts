@@ -37,6 +37,9 @@ const FORWARDABLE = [
   '/api/cockpit/identity',
   '/api/cockpit/nav',
   '/api/cockpit/stats',
+  // What changed since the person last caught up (TASK-0203): a READ the sidecar gives to any caller. Caught up
+  // itself is a POST, which this host refuses; the shell sends it from the main process.
+  '/api/cockpit/digest',
   '/api/cockpit/locate',
   '/api/cockpit/context',
   '/api/render',

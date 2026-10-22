@@ -62,8 +62,8 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0004"
-  feature: "FEAT-0034"
-  task: "TASK-0203"
+  feature: "FEAT-0035"
+  task: "TASK-0205"
   note: "2026-10-22, evening: Edwin asked 'Can you build the DES-0006 functionality?', so PHASE-0004 Parity opens now (recorded in PHASE-0004 and in ADR-0009's decision record). PHASE-0005 has nothing left to build: FEAT-0025 to FEAT-0031 wait at review on Edwin's acceptance tests and DES-0005. The build is four features, in order: FEAT-0032 the session engine in Deck's main process (TASK-0191 to TASK-0196, first TASK-0191, the conversation model and a fake provider), FEAT-0033 the session pane, the agents on the towers and Work on this (TASK-0197 to TASK-0201), FEAT-0034 one Needs you and the cockpit's overview panels (TASK-0202 to TASK-0204), FEAT-0035 the shell drawer (TASK-0205, TASK-0206). Suites TST-0104 to TST-0107; Edwin's acceptance test TST-0108 at draft. Risks RISK-0012 to RISK-0017. Sessions always ask before acting: never bypassPermissions, never codex's never-approve, whatever Edwin's shell alias or settings say (RISK-0013). Node suites use fake providers, never a real model (RISK-0017). Deck's repo is public: no prompt or reply text and no dollar costs in fixtures, pictures or logs (RISK-0016). Open for Edwin: DES-0006's side pane; whether Deck may answer the cockpit's permission requests only when it started the sidecar; whether a shell must survive a Deck restart. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -87,7 +87,7 @@ items:
       tasks: ["TASK-0197", "TASK-0198", "TASK-0199", "TASK-0200", "TASK-0201"]
       note: "PLANNED 2026-10-22 (DES-0006). The session pane on the right draws the conversation with the real prompt text (local only), tool chips, edits with lines added and removed, the plan, permission requests with Approve and Deny at their turn; the composer, Resume and Stop; agent markers on the towers at their start ticket; the Agents list; Work on this on a ticket's card. The served host shows no session at all. Suite TST-0105 (agent-pane)."
     FEAT-0034:
-      status: doing
+      status: review
       file: "docs/features/agent-needs/FEAT-0034-One-Needs-You-And-The-Cockpits-Overview-Panels-Stand-On-Decks-Ring.md"
       owner: system:claude
       phase: PHASE-0004
@@ -95,7 +95,7 @@ items:
       tasks: ["TASK-0202", "TASK-0203", "TASK-0204"]
       note: "PLANNED 2026-10-22 (DES-0006). One Needs you: permission requests first (Deck's own, then the cockpit's), waiting agents, tickets by reason, what is not pushed. The cockpit's four overview panels with Caught up (a loopback write through the shell, which ADR-0003 covers) and the remembered Overview toggle. Cockpit permission requests are answered from Deck only when Deck started the sidecar and holds its secret. Suite TST-0106 (agent-needs)."
     FEAT-0035:
-      status: planned
+      status: doing
       file: "docs/features/shell-drawer/FEAT-0035-Plain-Shells-Open-In-A-Drawer-Several-At-Once.md"
       owner: system:claude
       phase: PHASE-0004
@@ -410,7 +410,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0203:
       file: docs/features/agent-needs/plan/tasks/TASK-0203-The-Cockpits-Four-Overview-Panels-Stand-Top-Left-With-Caught-Up-And-Can-Be-Hidden.md
-      status: doing
+      status: done
       parent: FEAT-0034
       phase: "[[PHASE-0004]]"
     TASK-0204:
@@ -420,7 +420,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0205:
       file: docs/features/shell-drawer/plan/tasks/TASK-0205-Shells-Run-In-Decks-Main-Process-Several-At-Once-And-End-With-Deck.md
-      status: backlog
+      status: doing
       parent: FEAT-0035
       phase: "[[PHASE-0004]]"
     TASK-0206:
@@ -2877,7 +2877,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 199
-    tasks_done: 176
+    tasks_done: 177
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

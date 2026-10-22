@@ -49,6 +49,16 @@ export async function answerCockpitApproval(base: string, secret: string, body: 
   return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };
 }
 
+/**
+ * Caught up (FEAT-0034, TASK-0203): `POST /api/cockpit/caught-up` with the digest's time, so what
+ * landed while the person read is not marked seen. A write from the main process to a guarded
+ * sidecar route over loopback, as ADR-0003 decides.
+ */
+export async function postCaughtUp(base: string, at: string, fetchImpl: typeof fetch = fetch): Promise<{ ok: boolean; status: number; json: unknown }> {
+  const res = await fetchImpl(`${base}/api/cockpit/caught-up`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }) });
+  return { ok: res.ok, status: res.status, json: await res.json().catch(() => null) };
+}
+
 export class WriteRefused extends Error {
   /** The HTTP status the sidecar answered with, for a caller that wants it. */
   readonly status: number;

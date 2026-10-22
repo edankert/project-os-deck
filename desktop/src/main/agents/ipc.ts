@@ -11,7 +11,7 @@
 import { ACCESS_LEVELS, type AccessLevel, type AgentKind, type PermissionAnswer } from '../../shared/agent-types.js';
 import type { SessionManager, StartRequest } from './sessions.js';
 import { gatherNeeds } from './needs.js';
-import { answerCockpitApproval } from '../../shared/write-client.js';
+import { answerCockpitApproval, postCaughtUp } from '../../shared/write-client.js';
 import { runGit } from './sessions.js';
 
 type Handle = (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void;
@@ -70,11 +70,24 @@ export interface CockpitAnswering {
   secretFor(workspaceId: string): string | null;
   actor(): string;
   answer?: typeof answerCockpitApproval;
+  caughtUp?: typeof postCaughtUp;
 }
 
 export function registerAgentCalls(handle: Handle, manager: SessionManager, rootOf: (workspaceId: string) => string | null, cockpitBase: (workspaceId: string) => string | null = () => null, cockpit: CockpitAnswering = { secretFor: () => null, actor: () => '' }): void {
   const cockpitAnswerable = (workspaceId: string): boolean => cockpitBase(workspaceId) !== null && cockpit.secretFor(workspaceId) !== null;
   handle('deck:agents:list', () => manager.list());
+  // Caught up (TASK-0203): the digest's own time, written by the main process to the workspace's sidecar.
+  handle('deck:cockpit:caught-up', async (_e, workspaceId, at) => {
+    if (typeof workspaceId !== 'string' || typeof at !== 'string' || !/^\d{4}-\d{2}-\d{2}T[\d:.+\-Z]{0,40}$/.test(at)) return { ok: false, error: 'Caught up names a workspace and the digest\'s time' };
+    const base = cockpitBase(workspaceId);
+    if (base === null) return { ok: false, error: 'no sidecar for that workspace' };
+    try {
+      const res = await (cockpit.caughtUp ?? postCaughtUp)(base, at);
+      return res.ok ? { ok: true } : { ok: false, error: `the sidecar answered ${res.status}` };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
   // One of the cockpit's requests, answered from Deck (TASK-0204): only with a sidecar Deck started, whose
   // secret the main process alone holds. The window sends the approval's id and the answer, nothing more.
   handle('deck:agents:cockpit-answer', async (_e, workspaceId, approvalId, allow) => {

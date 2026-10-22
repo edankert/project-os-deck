@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0035: the shell drawer"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-22
 updated: 2026-10-22

@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0034
 aliases: ["FEAT-0034"]
 title: "One Needs you, with permission requests first, and the cockpit's four overview panels stand on Deck's ring, hidden by one remembered toggle"
-status: doing
+status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -56,7 +56,9 @@ Out of scope:
 
 ## Verification
 
-Not built yet. [[TST-0106]] is `bash tools/scripts/run-desktop-tests.sh agent-needs`; [[TASK-0202]] creates it. Edwin's acceptance test is [[TST-0108]].
+Built on 2026-10-22, [[TASK-0202]] to [[TASK-0204]]. [[TST-0106]] (`bash tools/scripts/run-desktop-tests.sh agent-needs`) has 17 checks against both fixtures, a real git repository and a fake sidecar; `cd desktop && npm test` passes. The walk `bash tools/scripts/walk-in-a-box.sh agent-needs` ran the panels, ◫ Overview, Caught up and a request answered from Needs you in a real Deck window in the container: 12 checks, all held.
+
+Not yet shown: a cockpit request answered from Deck through a sidecar Deck started, against the real cockpit (the suite shows Deck's side with a fake). Edwin's acceptance test is [[TST-0108]].
 
 ## Links
 

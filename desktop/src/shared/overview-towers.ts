@@ -22,6 +22,7 @@ import { QUIET_DAYS, quietDays, todayOf } from './overview-needs.js';
 import { deckImageHref } from './overview-flows.js';
 import type { ListRow, MarkNode, SceneNode, ScreenContext } from './overview-scene.js';
 import type { AgentNeeds } from './agent-needs.js';
+import type { Digest } from './overview-cockpit.js';
 import { agentMarkers, sessionSelection, sessionTarget, type AgentMarker, type AgentSummary } from './agent-marks.js';
 import { emptyCounts, type Fill, type Focus, type NoteType, type OverviewModel, type Phase, type State, type Ticket } from './overview-types.js';
 
@@ -251,6 +252,12 @@ export interface TowersOptions {
   session?: string | null;
   /** The open requests and git state Needs you shows in the shell (FEAT-0034). */
   needs?: AgentNeeds;
+  /** The cockpit's digest for its overview panels: undefined until read, null when the sidecar gives none (TASK-0203). */
+  digest?: Digest | null;
+  /** The cockpit's overview panels shown (the default) or hidden with ◫ Overview. */
+  overviewPanels?: boolean;
+  /** Caught up offered: in the shell only. */
+  caughtUp?: boolean;
 }
 
 /**
