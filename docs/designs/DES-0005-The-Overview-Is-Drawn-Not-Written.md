@@ -287,6 +287,46 @@ your-trainer by phase: 41 towers carry age badges, the quietest FEAT-0025 and FE
 - Ages are counted to the fixture's date on this page; in Deck they would count to today.
 - Pictures not linked from a note and not named after a ticket count only when they lie in a feature's folder; the marketing pictures in your-trainer belong to no ticket and are left out.
 
+## Built into Deck: the seven Rubric ideas on Deck's own towers
+
+**Since 2026-10-22 Deck's towers draw all seven Rubric ideas of the two sections above** ([[FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures]], [[TASK-0181]] to [[TASK-0189]]). Edwin asked for it in so many words: "Build the DES-0005 into the deck". The pictures below were taken from a real Deck window, on Deck's own notes as they stood that evening, by the towers walk in the container (`bash tools/scripts/walk-in-a-box.sh towers-rubric`). The walk held all 36 of its checks on Deck and all 33 on your-trainer, where the feature in focus, FEAT-0140, has no phase and so no tower for the board.
+
+![Deck, DES-0005 selected on its towers](__attachments__/DES-0005/window-rubric-selected-deck.jpg)
+
+DES-0005 pressed on the ring: 70 curves run to every ticket it is joined to, each in that ticket's type colour, and the rest of the ring fades. Its card stands under the workspace's name, with Open, Frame, Its phase and Clear; its pane at the right gives its first paragraph, twelve of its 37 pictures and its linked tickets by type.
+
+![Deck, DES-0005 selected with its phase close](__attachments__/DES-0005/window-rubric-selected-phase-deck.jpg)
+
+Its phase, Overview, brought close with DES-0005 still selected: the pane stands in the list's place, with a button back to the list, and the rest of the ring comes back faded so curves that leave the phase land on their tickets.
+
+![Deck, a search for "wheel"](__attachments__/DES-0005/window-rubric-search-deck.jpg)
+
+A search for "wheel": 18 tickets glow where they stand, and the first twelve are listed under the box, what needs you first. The next-up board stands bottom left.
+
+![Deck, what needs you, the ages and the weeks](__attachments__/DES-0005/window-rubric-panels-deck.jpg)
+
+The ring with nothing selected. Top right, 13 tickets need you: 11 to review, 1 to run, 1 waiting. Bottom right, 335 tickets closed in 2026, the busiest week the 36th. Nine towers carry an age, from 16 to 41 days; ◷ in the corner hides them. Bottom left, the board: FEAT-0031's last two finished tasks, TASK-0187 next.
+
+![Deck grouped by feature](__attachments__/DES-0005/window-rubric-byfeature-deck.jpg)
+
+By feature: 17 unfinished features stand as segments, FEAT-0031 in focus facing you. The switch is under the corner's buttons, and Deck opened again the same way.
+
+![Deck, the pictures at their tickets](__attachments__/DES-0005/window-rubric-pictures-deck.jpg)
+
+Eleven pictures at their tickets: DES-0005's three over FEAT-0031's tower, the feature in focus, largest; DES-0006's and DES-0003's over their features' towers; DES-0004's three at the core's rim, smallest.
+
+**Where Deck differs from this page**, each for a reason:
+- **Pressing a ticket selects it, in the address.** Deck's address grammar gained `select=<id>` (on the wheel and a phase brought close) and `group=feature` (on the wheel), so Back, Forward and Escape step through selections and a copied address shows the same picture. Before this, pressing a ticket opened its own screen; the card's Open does that now.
+- **The card and the pane are panels**: the card under the workspace's name, the pane at the right. With a phase close the pane stands in place of the phase's list and the card at the bottom left.
+- **Pictures pass the pointer to the canvas**, so a drag that starts on one still turns the ring, and the core's pictures stand at its rim with its middle, the way into re-phasing, winning over a picture in front of it. The page placed them over the core's middle.
+- **Distance changes a picture's size by at most 8% either way**, not 10%. At 10% a picture of the phase in focus could outgrow one of the feature in focus at the camera's limits; a check found it. The core's and the shelf's sizes are 0.52 and 0.42.
+- **Ages count to today**, the day the model was built, not to a fixture's date; the card says how long the selected ticket has been quiet.
+- **The flat plan Deck draws without WebGL shows the curves, the fading and the search, but no pictures**; a ticket's pictures are in its pane.
+- **By feature, pressing a segment selects its feature**, since Deck's phase screen is a phase's; a feature's segment has no collar.
+- **The look's checks hold the new panels**: the needs-you count is its bar's parts, the year is 52 weeks with no ticket in two, and a board's done count is within its total.
+
+Your-trainer's window pictures are kept out of this note. Its pictures stand on the ring there as thumbnails of its own app screens, and this repository is public, while your-trainer is not; Edwin allowed its ticket text, not its pictures. The walk on your-trainer is in `desktop/dist/walks/towers-rubric-yt/`, which is not committed.
+
 ## Answers proposed to DES-0004's open questions
 
 1. **A backlog phase** is marked with `kind: backlog` in its note. When the note says nothing, an id ending in 999 is read as backlog, so your-trainer's PHASE-999 works today.
@@ -369,6 +409,8 @@ your-trainer by phase: 41 towers carry age badges, the quietest FEAT-0025 and FE
   6. **A ticket that needs you says what to do.** The model carries why and what to do, ported from the cockpit's `_needs_human` reasons: triage, "Decide: take it into the backlog, or decline it", with the sidecar's own verbs as buttons; review, "Review it, then accept it or send it back", opening S7 for a feature and S5 for a design; a ready test, "Run this test: it has never been run", opening S6 at that test; failing or reopened, "It failed: fix it, or run it again"; waiting on an unfinished `depends:`, "Waiting on <ID>: finish that first", opening that ticket. It is shown as a banner at the top of S3, as a short reason in S2's needs-you rows, and in callouts ([[TASK-0153]], [[TASK-0158]], [[TASK-0160]]).
 
   Claude builds 1, 2, 3, 4 (the arch, and S3's use of it) and 6's banner, rows and callouts. Codex builds 6's model reason, 5 with S7's switch to the arch, and 6's buttons that write. Each lane's work is reviewed by the other model, in two rounds at most.
+
+- 2026-10-22 — **built into Deck** (FEAT-0031). Edwin: "Build the DES-0005 into the deck". All seven Rubric ideas of TASK-0176 and TASK-0177, with TASK-0179's pictures at their tickets, now draw on Deck's own towers; "Built into Deck" says where Deck differs and why. The two decisions about them are struck through with his answer. Status stays `proposed`.
 
 ## Review
 

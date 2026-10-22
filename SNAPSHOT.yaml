@@ -71,7 +71,7 @@ items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0031:
-      status: doing
+      status: review
       file: "docs/features/towers-rubric/FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures.md"
       owner: system:claude
       phase: PHASE-0005
@@ -323,7 +323,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0187:
       file: docs/features/towers-rubric/plan/tasks/TASK-0187-The-New-Towers-Are-Checked-Run-In-A-Window-And-Drawn-In-DES-0005.md
-      status: doing
+      status: done
       parent: FEAT-0031
       phase: "[[PHASE-0005]]"
     TASK-0188:
@@ -2714,7 +2714,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 180
-    tasks_done: 158
+    tasks_done: 159
     tests_total: 70
     tests_passing: 9
     tests_failing: 0

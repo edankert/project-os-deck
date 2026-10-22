@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0031
 aliases: ["FEAT-0031"]
 title: "The towers in Deck show a ticket's links, search, next up, what needs you, ages, the weeks and the pictures at their tickets: the seven Rubric ideas built from DES-0005's page"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22
@@ -75,10 +75,20 @@ These are readings of the request, recorded so the next reader can dispute them.
 
 ## Verification
 
-Not built yet. The node suite is [[TST-0102]] (`bash tools/scripts/run-desktop-tests.sh overview-towers`); the screen checks are TST-0090's; the window run is [[TST-0093-Every-Overview-Screen-Opens-From-Its-Address-In-A-Real-Window]]; Edwin's acceptance test is [[TST-0103]].
+Built on 2026-10-22, [[TASK-0181]] to [[TASK-0187]] and [[TASK-0189]], each in its own commit.
+
+- **The node suite** [[TST-0102]] (`bash tools/scripts/run-desktop-tests.sh overview-towers`) has 61 checks, on both fixtures, many pinned to the counts DES-0005's page showed. Each task's checks were shown to fail against deliberate breaks of the code (two to four per task). `cd desktop && npm test` passes: 860 checks.
+- **The look's checks** (TST-0090's `checkScene`) now hold the new panels' numbers to their marks, and every wheel this feature draws passes them in both groupings and both colourings, plain, selected and on the busiest ticket.
+- **The window run** [[TST-0093-Every-Overview-Screen-Opens-From-Its-Address-In-A-Real-Window]] passed on both workspaces in the container, with no page error and Deck's workspace unchanged; its Results say what it found on the way.
+- **The towers walk** (`desktop/demos/towers-rubric.cjs`, run by `bash tools/scripts/walk-in-a-box.sh towers-rubric`) drives every idea with the real pointer and keyboard: 36 of 36 checks on Deck, 33 of 33 on your-trainer.
+- **Edwin's acceptance test** [[TST-0103]] is `active`, its steps checked against the build; its verdict is his.
 
 ## Links
 
 - Design: [[DES-0005-The-Overview-Is-Drawn-Not-Written]], sections "Links, search and next up on the towers" and "Needs you, grouping by feature, ages and weeks".
 - Tasks: [[TASK-0181]] to [[TASK-0187]], in order, one commit each.
 - Risks: [[RISK-0010]] (three.js, already open; no new dependency here) and [[RISK-0011]] (the git read behind the pictures' dates).
+
+## Review
+
+<Two independent reviewers, from the packet `tools/scripts/review-packet.py` writes; their combined verdict is transcribed here, never anticipated.>
