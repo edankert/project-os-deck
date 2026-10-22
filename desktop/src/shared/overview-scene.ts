@@ -453,6 +453,8 @@ export interface ScreenContext {
    * (the default, Edwin 2026-10-15), or by DES-0004's state colours, as first built.
    */
   colouring?: 'type' | 'state';
+  /** How the wheel's ring is grouped (TASK-0185); by phase when absent. Every wheel address keeps it. */
+  grouping?: 'phase' | 'feature';
   /** The address of another screen, written by the address grammar. */
   address(parts: AddressParts): string;
 }
@@ -472,11 +474,12 @@ export interface AddressParts {
  * registered the page kinds. The key order is the grammar's (`note` before
  * `page`), so a scene's address round-trips through `parseAddress`.
  */
-export function plainContext(workspaceId: string, viewId: string, colouring: 'type' | 'state' = 'type'): ScreenContext {
+export function plainContext(workspaceId: string, viewId: string, colouring: 'type' | 'state' = 'type', grouping: 'phase' | 'feature' = 'phase'): ScreenContext {
   return {
     workspaceId,
     viewId,
     colouring,
+    grouping,
     address(parts) {
       const query: string[] = [];
       for (const key of ['note', 'page', 'flow', 'step'] as const) {
@@ -486,6 +489,7 @@ export function plainContext(workspaceId: string, viewId: string, colouring: 'ty
       // Then the colouring, written only when it is not the default, and the selected ticket.
       if (colouring === 'state' && (parts.page != null || parts.flow != null)) query.push('colour=state');
       if (parts.select != null) query.push(`select=${encodeURIComponent(parts.select)}`);
+      if (grouping === 'feature' && parts.page === 'wheel') query.push('group=feature');
       return `deck://${workspaceId}/${viewId}${query.length > 0 ? `?${query.join('&')}` : ''}`;
     },
   };

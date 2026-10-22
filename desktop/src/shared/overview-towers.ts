@@ -20,7 +20,7 @@ import { shortName } from './overview-geometry.js';
 import { cockpitSquare, markWords } from './overview-marks.js';
 import { QUIET_DAYS, quietDays, todayOf } from './overview-needs.js';
 import type { ListRow, MarkNode, SceneNode, ScreenContext } from './overview-scene.js';
-import type { Fill, Focus, NoteType, OverviewModel, Phase, State, Ticket } from './overview-types.js';
+import { emptyCounts, type Fill, type Focus, type NoteType, type OverviewModel, type Phase, type State, type Ticket } from './overview-types.js';
 
 /** Sizes, in world units. A floor holds two tickets side by side, facing out. */
 export const TOWER_SIZE = {
@@ -181,6 +181,8 @@ export interface TowersLayout {
   colouring: 'type' | 'state';
   /** The ticket selected on the towers, or null (TASK-0182). */
   selection: TowerSelection | null;
+  /** How the ring is grouped (TASK-0185): its segments are phases, or unfinished features. */
+  group: 'phase' | 'feature';
 }
 
 export interface TowersOptions {
@@ -188,6 +190,40 @@ export interface TowersOptions {
   select?: string | null;
   /** The day ages count to, YYYY-MM-DD; the model's own date when absent (TASK-0184). */
   today?: string;
+  /** The ring grouped by phase, as it opens, or by feature (TASK-0185); the context's grouping when absent. */
+  group?: 'phase' | 'feature';
+}
+
+/**
+ * The model arranged by feature (TASK-0185, the page's grouping): each unfinished feature is
+ * a segment of the ring holding one tower of all its tickets, whatever phase they are filed
+ * in; finished and dropped features stand on the shelf with theirs; tickets of no feature
+ * lie in the core. Only where things stand changes: each ticket keeps its own phase in the
+ * model the screens read, and the feature in focus faces you.
+ */
+export function byFeature(model: OverviewModel): OverviewModel {
+  const features = Object.values(model.tickets).filter((t) => t.kind === 'feat').sort((a, b) => byNumber(a.id, b.id));
+  const finished = (t: Ticket): boolean => t.state === 'closed' || t.state === 'dropped';
+  const tickets: Record<string, Ticket> = {};
+  for (const t of Object.values(model.tickets)) {
+    const home = t.kind === 'feat' ? t.id : t.feature !== undefined && model.tickets[t.feature]?.kind === 'feat' ? t.feature : null;
+    tickets[t.id] = { ...t, phase: home };
+  }
+  const members = new Map<string, string[]>(features.map((f) => [f.id, []]));
+  for (const t of Object.values(tickets)) if (t.phase !== null) members.get(t.phase)?.push(t.id);
+  const segment = (f: Ticket): Phase => ({
+    id: f.id, number: '', name: f.title, status: f.state === 'progress' ? 'active' : 'planned', kind: finished(f) ? 'finished' : 'open',
+    exit: { items: [], prose: false }, counts: emptyCounts(), tickets: members.get(f.id) ?? [],
+  });
+  return {
+    ...model,
+    phases: features.filter((f) => !finished(f)).map(segment),
+    backlog: [],
+    shelf: features.filter(finished).map(segment),
+    core: { tickets: Object.values(tickets).filter((t) => t.phase === null).map((t) => t.id), counts: emptyCounts() },
+    tickets,
+    ...(model.focus !== undefined ? { focus: { ...model.focus, phase: model.focus.feature } } : {}),
+  };
 }
 
 const byNumber = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
@@ -231,7 +267,11 @@ function layoutSegment(tiles: number, towerHeights: number[], a0: number, a1: nu
 
 const polar = (r: number, a: number): [number, number] => [r * Math.cos(a), r * Math.sin(a)];
 
-export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: string | null = null, options: TowersOptions = {}): TowersLayout {
+export function towersLayout(given: OverviewModel, ctx: ScreenContext, open: string | null = null, options: TowersOptions = {}): TowersLayout {
+  const group = options.group ?? (ctx.grouping === 'feature' ? 'feature' : 'phase');
+  // By feature, the ring's segments are the unfinished features; nothing is brought close.
+  const model = group === 'feature' ? byFeature(given) : given;
+  if (group === 'feature') open = null;
   const tickets = model.tickets;
   const focus = model.focus ?? null;
   const ring: Phase[] = [...model.phases, ...model.backlog];
@@ -240,7 +280,8 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
   const opened = open !== null && ringIds.has(open) ? open : null;
   const today = options.today ?? todayOf(model);
   const ticketTarget = (id: string): string => ctx.address({ page: 'ticket', note: id });
-  const phaseTarget = (id: string): string => ctx.address({ page: 'phase', note: id });
+  // By feature a segment is a feature: pressing it selects that feature on the ring.
+  const phaseTarget = (id: string): string => (group === 'feature' ? ctx.address({ page: 'wheel', select: id }) : ctx.address({ page: 'phase', note: id }));
   // Pressing a ticket selects it where it stands, on the ring or in the phase brought close (TASK-0182).
   const selectTarget = (id: string): string => ctx.address(opened === null ? { page: 'wheel', select: id } : { page: 'phase', note: opened, select: id });
   const paint = (t: Ticket): Pick<Cube, 'type' | 'fill' | 'state' | 'needsYou'> => ({ type: t.type, fill: t.fill, state: t.state, needsYou: t.needsYou });
@@ -341,7 +382,7 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
     const short = shortPhaseName(p.name);
     return {
       id: p.id, number: p.number, name: p.name, short, status: p.status, level, a0, a1, mid, h, tallest, done, total: everyone.length, needs,
-      label: `${p.number} ${short} (${p.status}${isFocus ? ', in focus' : ''}): ${done} of ${everyone.length} done${needs > 0 ? `, ${needs} need you` : ''}; ${towers.length} features${items.length > 0 ? `; exit criteria ${met} of ${items.length} met` : ''}`,
+      label: `${group === 'feature' ? p.id : p.number} ${short} (${group === 'feature' ? (p.status === 'active' ? 'in progress' : 'not started') : p.status}${isFocus ? ', in focus' : ''}): ${done} of ${everyone.length} done${needs > 0 ? `, ${needs} need you` : ''}; ${towers.length} features${items.length > 0 ? `; exit criteria ${met} of ${items.length} met` : ''}`,
       target: phaseTarget(p.id),
       exit: { cells, prose: p.exit.prose },
       towers,
@@ -362,7 +403,7 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
       const v = (Math.floor(cell / 5) - 2) * 0.62;
       return cube(t, x + radial[0] * u + tangent[0] * v, 0.3 + Math.floor(j / 25) * 0.62, z + radial[1] * u + tangent[1] * v, [0.55, 0.55, 0.55], a, { dim: true });
     });
-    return { id: p.id, number: p.number, name: p.name, x, z, angle: a, cubes, label: `${p.number} ${shortPhaseName(p.name)} (finished): ${cubes.length} tickets`, target: phaseTarget(p.id) };
+    return { id: p.id, number: p.number === '' ? p.id : p.number, name: p.name, x, z, angle: a, cubes, label: `${p.number === '' ? p.id : p.number} ${shortPhaseName(p.name)} (finished): ${cubes.length} tickets`, target: phaseTarget(p.id) };
   });
 
   // The core: the tickets with no phase, as tiles round its middle.
@@ -381,6 +422,7 @@ export function towersLayout(model: OverviewModel, ctx: ScreenContext, open: str
     focus, next: model.next ?? null, open: opened,
     colouring: ctx.colouring === 'state' ? 'state' : 'type',
     selection: null,
+    group,
   };
   layout.selection = selectionIn(model, layout, options.select ?? null);
   return layout;
@@ -526,7 +568,9 @@ export function towersPlan(layout: TowersLayout, options: PlanOptions = {}): { n
     // close, the screen's heading names it instead.
     if (only !== undefined) continue;
     const [nx, ny] = at((layout.collar[1] + 6) * Math.cos(p.mid), p.h + 3, (layout.collar[1] + 6) * Math.sin(p.mid));
-    items.push({ depth: 1e6, y: 0, node: { kind: 'text', x: nx, y: ny, text: `${p.level === 'focus' ? '▶ ' : ''}${p.number} ${p.level === 'focus' ? p.short : shortName(p.short, 3)}`, rest: true, role: 'name', size: p.level === 'focus' ? 20 : p.level === 'active' ? 16 : 13, anchor: 'middle', cls: `ov-phase-name lv-${p.level}` } });
+    // By feature there are dozens of segments: each is named by its id, smaller, and its title is in the callout.
+    if (layout.group === 'feature') items.push({ depth: 1e6, y: 0, node: { kind: 'text', x: nx, y: ny, text: p.id, rest: true, role: 'id', size: p.level === 'focus' ? 14 : 10, anchor: 'middle', cls: `ov-phase-name lv-${p.level}` } });
+    else items.push({ depth: 1e6, y: 0, node: { kind: 'text', x: nx, y: ny, text: `${p.level === 'focus' ? '▶ ' : ''}${p.number} ${p.level === 'focus' ? p.short : shortName(p.short, 3)}`, rest: true, role: 'name', size: p.level === 'focus' ? 20 : p.level === 'active' ? 16 : 13, anchor: 'middle', cls: `ov-phase-name lv-${p.level}` } });
     if (p.needs > 0) {
       items.push({ depth: 1e6, y: 0, node: { kind: 'group', cls: 'glow', children: [
         { kind: 'mark', tag: 'circle', attrs: { cx: nx - 10, cy: ny + 14, r: 5 }, cls: 'sq-dot', markId: `needs-${p.id}`, count: p.needs, label: `${p.needs} need you in ${p.id}` },

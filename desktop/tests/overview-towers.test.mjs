@@ -544,3 +544,79 @@ for (const name of WORKSPACES) {
     assert.ok(keys(selected).includes('next-up'), 'the board stays');
   });
 }
+
+// --- TASK-0185: the ring grouped by feature ---
+
+const { byFeature } = load('shared/overview-towers.js');
+const featureCtx = plainContext('abcd1234', 'features', 'type', 'feature');
+
+for (const name of WORKSPACES) {
+  test(`${name}: by feature, each unfinished feature is one segment holding all its tickets, and every ticket stands once`, () => {
+    const m = fixture(name);
+    const layout = towersLayout(m, featureCtx);
+    assert.equal(layout.group, 'feature');
+    const finished = (t) => t.state === 'closed' || t.state === 'dropped';
+    const features = Object.values(m.tickets).filter((t) => t.kind === 'feat');
+    assert.deepEqual(layout.phases.map((p) => p.id).sort(), features.filter((f) => !finished(f)).map((f) => f.id).sort());
+    assert.deepEqual(layout.shelf.map((p) => p.id).sort(), features.filter(finished).map((f) => f.id).sort());
+    const ids = [...cubesOf(layout)].map((c) => c.id);
+    assert.equal(ids.length, Object.keys(m.tickets).length);
+    assert.equal(new Set(ids).size, ids.length, 'each ticket once');
+    for (const p of layout.phases) {
+      assert.equal(p.towers.length, 1, `${p.id} is one tower`);
+      assert.equal(p.tiles.length, 0);
+      assert.equal(p.towers[0].feature, p.id);
+      const want = Object.values(m.tickets).filter((t) => t.id === p.id || t.feature === p.id).map((t) => t.id).sort();
+      assert.deepEqual(p.towers[0].cubes.map((c) => c.id).sort(), want, p.id);
+      assert.equal(p.exit.cells.length, 0, 'a feature has no exit criteria');
+      assert.equal(p.target, `deck://abcd1234/features?page=wheel&select=${p.id}&group=feature`, 'pressing a feature segment selects the feature');
+    }
+    assert.deepEqual(layout.core.map((c) => c.id).sort(), Object.values(m.tickets).filter((t) => t.kind !== 'feat' && (t.feature === undefined || m.tickets[t.feature] === undefined)).map((t) => t.id).sort());
+    // The feature in focus faces you.
+    assert.equal(layout.phases.find((p) => p.level === 'focus')?.id, m.focus.feature);
+    // Only where things stand changes: the model the screens read keeps each ticket's phase.
+    assert.equal(byFeature(m).tickets[m.next].phase, m.focus.feature);
+    assert.notEqual(m.tickets[m.next].phase, m.focus.feature);
+  });
+}
+
+// DES-0005's text says 147 and 1,520 in the core; it was written before TASK-0179 stood four designs
+// on each workspace with their features. The page's data now agrees but for one ticket, your-trainer's
+// ACCEPTANCE-TESTS-V2-1-0, whose id the page cannot read and whose feature, FEAT-0096, the model has.
+test("by feature: 15 features on Deck's ring and 143 tickets in its core; 51 and 1,515 on your-trainer", () => {
+  const shape = (name) => { const l = towersLayout(fixture(name), featureCtx); return [l.phases.length, l.core.length]; };
+  assert.deepEqual(shape('deck'), [15, 143]);
+  assert.deepEqual(shape('your-trainer'), [51, 1515]);
+  assert.equal(fixture('your-trainer').tickets['ACCEPTANCE-TESTS-V2-1-0'].feature, 'FEAT-0096');
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: the wheel by feature holds the look, keeps the grouping in every wheel address, and its selection, board and panels work the same`, () => {
+    const m = fixture(name);
+    const scene = wheelScene(m, featureCtx);
+    passes(scene);
+    assert.equal(scene.address, 'deck://abcd1234/features?page=wheel&group=feature');
+    for (const row of scene.list) if (row.target?.includes('page=wheel')) assert.match(row.target, /&group=feature$/, row.id);
+    assert.ok(panelsOf(scene).some((p) => p.key === 'next-up' && p.body.sections.length === 1), 'the board finds the focus feature as a segment');
+    assert.ok(panelsOf(scene).some((p) => p.key === 'needs-you') && panelsOf(scene).some((p) => p.key === 'weeks'));
+    const selected = wheelScene(m, featureCtx, { select: m.next });
+    passes(selected);
+    assert.equal(selected.address, `deck://abcd1234/features?page=wheel&select=${m.next}&group=feature`);
+    assert.equal(towersLayout(m, featureCtx, null, { select: m.next }).selection.links.length, towersLayout(m, ctx, null, { select: m.next }).selection.links.length, 'the same links in both groupings');
+    // Its phase still brings a real phase close, which is by phase.
+    const card = panelsOf(selected).find((p) => p.body.kind === 'card');
+    const phase = card.body.buttons.find((b) => b.key === 'phase');
+    assert.ok(phase !== undefined && /note=PHASE-[^&]+&page=phase/.test(phase.target), phase?.target);
+    const close = phaseScene(m, parseAddress(phase.target).note, featureCtx, { select: m.next });
+    passes(close);
+    assert.equal(towersLayout(m, featureCtx, parseAddress(phase.target).note, { group: 'phase' }).open, parseAddress(phase.target).note);
+    assert.equal(close.list.find((r) => r.id === 'back').target, `deck://abcd1234/features?note=${parseAddress(phase.target).note}&page=phase`);
+  });
+}
+
+test('the grammar names a grouping only on the wheel, and only by feature', () => {
+  assert.equal(parseAddress('deck://abcd1234/features?page=wheel&group=feature').group, 'feature');
+  assert.throws(() => parseAddress('deck://abcd1234/features?page=wheel&group=phase'), /not a grouping/);
+  assert.throws(() => parseAddress('deck://abcd1234/features?note=PHASE-0001&page=phase&group=feature'), /"group" needs "page=wheel"/);
+  assert.equal(formatAddress(parseAddress('deck://abcd1234/features?page=wheel&select=TASK-0001&group=feature')), 'deck://abcd1234/features?page=wheel&select=TASK-0001&group=feature');
+});

@@ -469,7 +469,12 @@ export function initOverview(host: OverviewHostApi): void {
     agesToggle!.title = showAges ? 'Ages: hide the badges on towers quiet for 14 days or more' : 'Ages: show how long each quiet tower has been quiet';
     if (towersActive()) towersView!.showAges(showAges);
   });
-  area.append(stage, callout, listPanel, listToggle, colouringToggle, agesToggle, cameraBar, searchBox);
+  groupingToggle = document.createElement('button');
+  groupingToggle.type = 'button';
+  groupingToggle.className = 'ov-grouping-toggle';
+  groupingToggle.hidden = true;
+  groupingToggle.addEventListener('click', () => void switchGrouping());
+  area.append(stage, callout, listPanel, listToggle, colouringToggle, agesToggle, groupingToggle, cameraBar, searchBox);
 
   historyBar = document.getElementById('ov-history');
   backButton = document.getElementById('ov-back') as HTMLButtonElement | null;
@@ -713,8 +718,10 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
     workspaceId,
     viewId,
     colouring,
+    grouping,
     // Every overview address a screen writes keeps the colouring it was drawn in, so
-    // copying an address and opening it shows the same picture (TASK-0145).
+    // copying an address and opening it shows the same picture (TASK-0145); every wheel
+    // address keeps the grouping (TASK-0185).
     address: (parts: AddressParts) => {
       const page = parts.page ?? null;
       const flow = parts.flow ?? null;
@@ -726,6 +733,7 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
           step: parts.step ?? null,
           colour: colouring === 'state' && (page !== null || flow !== null) ? 'state' : null,
           select: parts.select ?? null,
+          group: grouping === 'feature' && page === 'wheel' ? 'feature' : null,
         }),
       );
     },
@@ -735,6 +743,45 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
 /** The colouring Deck opens the wheel in when no address names one: the person's last choice. */
 export function preferredColour(): 'state' | null {
   return readColouring() === 'state' ? 'state' : null;
+}
+
+/**
+ * How the wheel's ring is grouped (TASK-0185): by phase, as it opens, or by feature. A wheel's
+ * address says which; Deck remembers the last choice on this machine only for opening the wheel.
+ */
+let grouping: 'phase' | 'feature' = 'phase';
+let groupingToggle: HTMLButtonElement | null = null;
+
+function readGrouping(): 'phase' | 'feature' {
+  try {
+    return localStorage.getItem('deck.overview.grouping') === 'feature' ? 'feature' : 'phase';
+  } catch {
+    return 'phase';
+  }
+}
+
+/** The grouping Deck opens the wheel in when no address names one: the person's last choice. */
+export function preferredGrouping(): 'feature' | null {
+  return readGrouping() === 'feature' ? 'feature' : null;
+}
+
+async function switchGrouping(): Promise<void> {
+  if (current === null || current.scene.screen !== 'wheel') return;
+  const next = grouping === 'phase' ? 'feature' : 'phase';
+  try {
+    localStorage.setItem('deck.overview.grouping', next);
+  } catch {
+    // A page that cannot store it still switches for this window.
+  }
+  await showOverview({ ...current.address, select: null, group: next === 'feature' ? 'feature' : null });
+}
+
+function drawGroupingToggle(): void {
+  if (groupingToggle === null) return;
+  groupingToggle.hidden = current === null || current.scene.screen !== 'wheel';
+  groupingToggle.textContent = grouping === 'feature' ? 'By feature' : 'By phase';
+  groupingToggle.setAttribute('aria-pressed', String(grouping === 'feature'));
+  groupingToggle.title = grouping === 'feature' ? 'The ring is grouped by feature. Press to group it by phase' : 'The ring is grouped by phase. Press to group it by feature';
 }
 
 /** How long Deck waits for an index that is still being built before it says so. */
@@ -800,6 +847,8 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   if (!searchRedraw) clearSearch();
   // The address says how to colour the screen; it wins over the remembered preference.
   colouring = address.colour === 'state' ? 'state' : 'type';
+  // The wheel's address says how its ring is grouped; another screen keeps the wheel's grouping for its way back.
+  if (address.page === 'wheel') grouping = address.group === 'feature' ? 'feature' : 'phase';
   drawColouringToggle();
   const model = await modelFor(address.workspaceId);
   const input = inputFor(model, address);
@@ -814,6 +863,7 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   place();
   document.body.dataset['overviewScreen'] = scene.screen;
   drawColouringToggle();
+  drawGroupingToggle();
   drawSearchBox();
   // After `current` is the new screen and laid out: the 3D view flies to it.
   showTowers(scene);

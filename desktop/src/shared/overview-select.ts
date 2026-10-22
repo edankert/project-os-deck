@@ -70,7 +70,10 @@ export function selectionPanels(model: OverviewModel, layout: TowersLayout, ctx:
   ];
   const linked = sel.links.map((l) => model.tickets[l.id]!).filter(Boolean);
   const counts = NOTE_TYPES.map((type) => ({ type, n: linked.filter((x) => x.type === type).length })).filter((c) => c.n > 0);
-  const stands = standsIn(layout, t.id);
+  // By feature the segments are features, so its phase is the one its feature, or it, is filed in.
+  const stands = layout.group === 'feature'
+    ? [t.kind === 'feat' ? t.phase : t.feature !== undefined ? model.tickets[t.feature]?.phase ?? t.phase : t.phase].find((p) => p !== null && p !== undefined && [...model.phases, ...model.backlog].some((x) => x.id === p)) ?? null
+    : standsIn(layout, t.id);
   const buttons: PanelButton[] = [
     { key: 'open', text: 'Open', label: `Open ${t.id} on its own screen, with its whole text`, target: ctx.address({ page: 'ticket', note: t.id }) },
     { key: 'frame', text: 'Frame', label: `Turn the camera to ${t.id} and the tickets it is joined to`, action: FRAME_ACTION },

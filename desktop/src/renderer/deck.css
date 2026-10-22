@@ -1568,6 +1568,11 @@ body.pinned .overview-area { left: 0; }
 .ov-searching .ov-plan [data-ticket]:not(.is-found) { opacity: 0.15; }
 .ov-colouring-toggle { right: 56px; }
 .ov-ages-toggle { right: 98px; font-size: 15px; }
+/* By phase or by feature (TASK-0185): under the corner's buttons, where it reads as a word. */
+.ov-grouping-toggle { position: absolute; right: 14px; top: 54px; height: 26px; padding: 0 12px; border-radius: 13px; z-index: 5;
+  background: hsla(205, 60%, 30%, 0.25); border: 1px solid hsla(190, 90%, 65%, 0.5); color: hsl(195 60% 88%); font: 12px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
+.ov-grouping-toggle[hidden] { display: none; }
+.ov-grouping-toggle[aria-pressed="true"] { background: hsla(190, 90%, 55%, 0.25); }
 .ov-ages-toggle[hidden] { display: none; }
 .ov-ages-toggle[aria-pressed="true"] { background: hsla(190, 90%, 55%, 0.25); }
 .ov-ages-toggle:not([hidden]) ~ .ov-search { right: 142px; }

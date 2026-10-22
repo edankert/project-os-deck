@@ -429,7 +429,10 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       }
       // Its number and name outside the rim, and the red count of what needs you.
       const nameAt = new THREE.Vector3((collar[1] + 6) * Math.cos(p.mid), p.h + 3.4, (collar[1] + 6) * Math.sin(p.mid));
-      const lines: Array<{ text: string; size: number; colour: string; weight?: number }> = [{ text: `${p.level === 'focus' ? '▶ ' : ''}${p.number} ${p.level === 'focus' ? p.short : shortName(p.short, 3)}`, size: p.level === 'focus' ? 3.4 : p.level === 'active' ? 2.8 : 2.2, colour: colours.name, weight: p.level === 'focus' ? 800 : 600 }];
+      // By feature a segment is named by its id and a few words of its title, smaller than a phase's name (TASK-0185).
+      const byFeature = next.group === 'feature';
+      const nameText = byFeature ? `${p.level === 'focus' ? '▶ ' : ''}${p.id} ${shortName(p.short, p.level === 'focus' ? 5 : 2)}` : `${p.level === 'focus' ? '▶ ' : ''}${p.number} ${p.level === 'focus' ? p.short : shortName(p.short, 3)}`;
+      const lines: Array<{ text: string; size: number; colour: string; weight?: number }> = [{ text: nameText, size: (p.level === 'focus' ? 3.4 : p.level === 'active' ? 2.8 : 2.2) * (byFeature ? 0.6 : 1), colour: colours.name, weight: p.level === 'focus' ? 800 : 600 }];
       if (p.needs > 0) lines.push({ text: `● ${p.needs}`, size: 2.1, colour: NEEDS_YOU.replace(/hsl\((\d+) (\d+)% (\d+)%\)/, 'hsl($1, $2%, $3%)'), weight: 700 });
       const name = sprite(lines, p.level === 'focus');
       name.position.copy(nameAt);

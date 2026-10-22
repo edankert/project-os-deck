@@ -176,5 +176,27 @@ module.exports = async function (d) {
     const back = await js('window.__deckOverview.towers().ages()');
     check(hidden.shown === 0 && back.shown === back.badges, '◷ hides the badges and shows them again', { hidden, back });
   }
+
+  // ---- TASK-0185: the ring grouped by feature ----
+  await go(`${base}?page=wheel`);
+  await t.clickOn('.ov-grouping-toggle', 300);
+  const byFeatureAt = `${base}?page=wheel&group=feature`;
+  check((await arrives(byFeatureAt)) === byFeatureAt, 'the switch groups the ring by feature, and the address says so', { address: await shownAt() });
+  const grouped = await js(`(() => { const s = window.__deckOverview.current(); const tw = s.nodes.find((n) => n.kind === 'towers').layout; const p = window.__deckOverview.towers(); return { group: tw.group, segments: tw.phases.length, focus: (tw.phases.find((x) => x.level === 'focus') || {}).id || null, faces: p.phaseAt(${JSON.stringify(model.focus?.feature ?? '')}), word: document.querySelector('.ov-grouping-toggle').textContent }; })()`);
+  const unfinished = tickets.filter((x) => x.kind === 'feat' && x.state !== 'closed' && x.state !== 'dropped').length;
+  check(grouped.group === 'feature' && grouped.segments === unfinished && grouped.focus === (model.focus?.feature ?? null) && grouped.word === 'By feature', `each of the ${unfinished} unfinished features is a segment, the feature in focus facing you`, grouped);
+  await d.shot(win, '08-by-feature');
+  // Selection and search work the same.
+  if (model.next) {
+    await go(`${base}?page=wheel&select=${encodeURIComponent(model.next)}&group=feature`);
+    const sel = await js('window.__deckOverview.towers().selected()');
+    check(sel !== null && sel.id === model.next && sel.curves === Math.min(240, joined(model.next).size), `by feature, ${model.next} selected draws its ${joined(model.next).size} curves`, sel);
+  }
+  // Deck remembers the choice: hiding the overview and opening the wheel again opens it by feature.
+  await t.clickOn('#overview-toggle', 600);
+  await t.clickOn('#overview-toggle', 300);
+  check((await arrives(byFeatureAt)) === byFeatureAt, 'opened again, the wheel is still grouped by feature', { address: await shownAt() });
+  await t.clickOn('.ov-grouping-toggle', 300);
+  check((await arrives(`${base}?page=wheel`)) === `${base}?page=wheel`, 'and the switch puts it back by phase', { address: await shownAt() });
   t.finish();
 };

@@ -339,6 +339,8 @@ export interface DeckAddress {
   colour: string | null;
   /** The ticket selected on the towers, on the wheel or a phase brought close (TASK-0182). */
   select: string | null;
+  /** How the wheel's ring is grouped: `feature`, or absent for by phase (TASK-0185). */
+  group: string | null;
 }
 
 /**

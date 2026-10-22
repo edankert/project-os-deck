@@ -126,7 +126,8 @@ export const PHASE_CARD = { x: 40, y: 660, w: 420, h: 300 } as const;
 export function phaseScene(model: OverviewModel, phaseId: string, ctx: ScreenContext, options: TowersOptions = {}): Scene {
   const phase = allPhases(model).find((p) => p.id === phaseId);
   if (phase === undefined) throw new Error(`the overview has no phase ${phaseId}`);
-  const layout = towersLayout(model, ctx, phase.id, options);
+  // A phase brought close is the ring by phase, whatever the wheel was grouped by (TASK-0185).
+  const layout = towersLayout(model, ctx, phase.id, { ...options, group: 'phase' });
   // A ticket selected on the segment: Escape, and the way back, clear it before they leave the phase.
   const sel = layout.open === phase.id ? layout.selection : null;
   const back = sel === null ? backControl(ctx, { page: 'wheel' }, 'Back to the wheel') : backControl(ctx, { page: 'phase', note: phase.id }, `Back to ${phase.id}'s list: clear the selection of ${sel.id}`);

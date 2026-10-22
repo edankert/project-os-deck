@@ -4,7 +4,7 @@
  *   deck://<workspaceId>/<viewId>
  *       [?desk=<name>][&note=<id>][&panel=<kind>]
  *       [&surface=<kind>][&page=<kind>][&flow=<kind>][&step=<id>][&colour=state]
- *       [&select=<id>]
+ *       [&select=<id>][&group=feature]
  *
  * Parsing REFUSES what it cannot read and never falls back to a default view.
  * The cockpit's navigator does fall back — an unknown mode silently becomes
@@ -47,7 +47,7 @@ const STEP_RE = /^(?=.{1,64}$)[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*$/;
  * refuses is an address Deck hands a person and then rejects, which is the
  * failure TASK-0017 already fixed once for desk names.
  */
-const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour', 'select'] as const;
+const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour', 'select', 'group'] as const;
 const KNOWN_KEYS = new Set<string>(QUERY_KEYS);
 
 export class AddressError extends Error {
@@ -86,6 +86,11 @@ function refusalFor(address: DeckAddress): string | null {
   if (address.select !== null) {
     if (!NOTE_RE.test(address.select)) return `not a note id: "${address.select}"`;
     if (address.page !== 'wheel' && address.page !== 'phase') return `"select" needs "page=wheel" or "page=phase": only the towers select a ticket`;
+  }
+  // How the wheel's ring is grouped (TASK-0185): by feature, or by phase when it says nothing.
+  if (address.group !== null) {
+    if (address.group !== 'feature') return `not a grouping: "${address.group}" (the only one an address names is "feature")`;
+    if (address.page !== 'wheel') return `"group" needs "page=wheel": it groups the wheel's ring`;
   }
   return null;
 }
@@ -186,6 +191,7 @@ function emptyAddress(workspaceId: string, viewId: string): DeckAddress {
     step: null,
     colour: null,
     select: null,
+    group: null,
   };
 }
 

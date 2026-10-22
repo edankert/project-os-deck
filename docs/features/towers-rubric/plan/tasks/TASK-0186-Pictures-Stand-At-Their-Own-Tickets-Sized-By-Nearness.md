@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0186
 title: "Pictures stand at their own tickets on the ring, larger nearer the work in hand, and a selected ticket's pane shows its pictures"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22
