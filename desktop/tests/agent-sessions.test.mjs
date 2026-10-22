@@ -298,3 +298,81 @@ test('a request Deck does not know is refused, never granted, and a Codex sessio
     await s.stop();
   }
 });
+
+// --- TASK-0194: sessions kept with their start ticket, in a worktree or the checkout ---
+
+import { execFileSync } from 'node:child_process';
+const { SessionManager, worktreeFor } = load('main/agents/sessions.js');
+
+function gitRepo() {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-agent-repo-')));
+  const repo = path.join(root, 'project');
+  fs.mkdirSync(repo);
+  const git = (...a) => execFileSync('git', ['-C', repo, ...a], { stdio: 'pipe' });
+  git('init', '-q');
+  git('config', 'user.email', 't@example.com');
+  git('config', 'user.name', 'T');
+  fs.writeFileSync(path.join(repo, 'a.txt'), 'a\n');
+  git('add', '-A');
+  git('commit', '-q', '-m', 'one');
+  return repo;
+}
+const dataDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'deck-agents-data-'));
+let ids = 0;
+const newId = () => `0000000${++ids}-aaaa-bbbb-cccc-dddddddddddd`;
+
+test('a session started for a ticket is kept with it, and its conversation in its own file outside the repository', async () => {
+  const repo = gitRepo();
+  const dir = dataDir();
+  const m = new SessionManager(dir, { claude: fakeProvider('claude', [[{ text: 'Hello.' }]]) }, { now, newId });
+  const s = await m.start({ workspaceId: 'ws1', root: repo, ticket: 'TASK-0007', agent: 'claude', model: 'claude-opus-5-5', effort: 'high', access: 'ask', place: 'checkout', prompt: 'Invented prompt.' });
+  await until(() => m.get(s.id).state === 'idle');
+  const kept = JSON.parse(fs.readFileSync(path.join(dir, 'sessions.json'), 'utf8')).sessions;
+  assert.deepEqual(kept.map((r) => [r.ticket, r.folder, r.place, r.agent, r.providerId, r.access]), [['TASK-0007', repo, 'checkout', 'claude', 'fake-session-1', 'ask']]);
+  assert.deepEqual(m.conversation(s.id).filter((r) => r.kind !== 'state').map((r) => r.kind), ['prompt', 'text']);
+  assert.ok(fs.existsSync(path.join(dir, `${s.id}.jsonl`)));
+  assert.equal(execFileSync('git', ['-C', repo, 'status', '--porcelain'], { encoding: 'utf8' }), '', 'nothing is written into the repository');
+});
+
+test('a session in a new worktree gets its own folder beside the repository, on its own branch; two sessions on one ticket are kept apart', async () => {
+  const repo = gitRepo();
+  fs.writeFileSync(path.join(repo, 'a.txt'), 'changed but not committed\n');
+  const m = new SessionManager(dataDir(), { codex: fakeProvider('codex', [[{ text: 'One.' }]]), claude: fakeProvider('claude', [[{ text: 'Two.' }]]) }, { now, newId });
+  const a = await m.start({ workspaceId: 'ws1', root: repo, ticket: 'TASK-0007', agent: 'codex', model: 'gpt-6-astra', effort: 'medium', access: 'ask', place: 'worktree', prompt: 'Invented.' });
+  const b = await m.start({ workspaceId: 'ws1', root: repo, ticket: 'TASK-0007', agent: 'claude', model: 'claude-opus-5-5', effort: 'high', access: 'ask', place: 'worktree', prompt: 'Invented.' });
+  const w = worktreeFor(repo, 'TASK-0007', a.id);
+  assert.equal(a.folder, w.folder);
+  assert.equal(path.dirname(a.folder), path.join(path.dirname(repo), 'project-worktrees'));
+  assert.match(a.branch, /^deck\/task-0007-0000000\d$/);
+  assert.notEqual(a.folder, b.folder);
+  assert.ok(fs.existsSync(path.join(a.folder, 'a.txt')), 'the worktree holds the checkout, though the checkout is dirty');
+  assert.equal(execFileSync('git', ['-C', repo, 'branch', '--list', 'deck/*'], { encoding: 'utf8' }).trim().split('\n').length, 2);
+  assert.deepEqual(m.list().filter((r) => r.ticket === 'TASK-0007').length, 2);
+  await m.stopAll();
+  assert.ok(fs.existsSync(a.folder), 'Deck never removes a worktree');
+});
+
+test('a worktree git refuses gives a session that failed with git\'s own words', async () => {
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', []) }, { now, newId, git: async () => ({ ok: false, stdout: '', stderr: "fatal: a branch named 'deck/x' already exists" }) });
+  const s = await m.start({ workspaceId: 'ws1', root: gitRepo(), ticket: null, agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'worktree', prompt: 'Invented.' });
+  assert.equal(s.state, 'failed');
+  assert.match(m.conversation(s.id).at(-1).reason, /git worktree add failed: fatal: a branch named/);
+});
+
+test('after a restart a session that was at work comes back idle, and Resume continues it by the agent\'s own id', async () => {
+  const repo = gitRepo();
+  const dir = dataDir();
+  const first = new SessionManager(dir, { claude: fakeProvider('claude', [[{ ask: 'Edit', summary: 'x' }]]) }, { now, newId });
+  const s = await first.start({ workspaceId: 'ws1', root: repo, ticket: 'TASK-0008', agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  await until(() => first.get(s.id).state === 'waiting');
+  // Deck closes with the session waiting; a new manager reads what was kept.
+  const provider = fakeProvider('claude', [[{ text: 'Resumed, invented.' }]]);
+  const second = new SessionManager(dir, { claude: provider }, { now, newId });
+  assert.equal(second.get(s.id).state, 'idle');
+  assert.equal(second.get(s.id).providerId, 'fake-session-1');
+  assert.equal(second.conversation(s.id).at(-1).reason, 'Deck restarted');
+  await second.send(s.id, 'Carry on, invented.');
+  await until(() => second.get(s.id).state === 'idle' && second.conversation(s.id).some((r) => r.kind === 'text' && r.text === 'Resumed, invented.'));
+  assert.equal(provider.started[0].resume, 'fake-session-1');
+  assert.deepEqual(second.conversation(s.id).filter((r) => r.kind === 'prompt').map((r) => r.text), ['Invented.', 'Carry on, invented.']);
+});

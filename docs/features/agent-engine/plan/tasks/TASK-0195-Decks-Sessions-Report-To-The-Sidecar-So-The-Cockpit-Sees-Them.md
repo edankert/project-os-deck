@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0195
 aliases: ["TASK-0195"]
 title: "Deck's sessions report to the sidecar through its agent hook and its approvals ask, so the cockpit sees Deck's agents and their permission requests"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
