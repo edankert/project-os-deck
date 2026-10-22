@@ -1562,7 +1562,9 @@ function placeEvidence() {
     // Distance changes a picture's size only a little, so how near its ticket is to the work
     // decides which is larger: a near shelf picture never outgrows a far one of work in hand
     // (review of TASK-0179).
-    const k = size * Math.min(1.1, Math.max(0.6, Math.pow(150 / dist, 0.3)));
+    // Kept between 0.9 and 1.1, so a nearer class always outsizes a further one: the largest
+    // shelf picture (0.45 x 1.1) stays under the smallest ring one (0.62 x 0.9).
+    const k = size * Math.min(1.1, Math.max(0.9, Math.pow(150 / dist, 0.3)));
     fig.style.display = behind ? 'none' : '';
     fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth + a.slot * 124 * k) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
     fig.style.opacity = String((state.hush < 1 ? 0.35 : 1) * alpha);

@@ -62,16 +62,16 @@ counters:
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0005"
-  feature: "FEAT-0025"
-  task: "TASK-0179"
-  note: "2026-10-22: Edwin chose option B for agents (ADR-0009: Deck runs its own Claude and Codex sessions, drawn as conversations, T3 Code-style), to be built in PHASE-0004 after Overview, and asked for the design page now: FEAT-0030 / TASK-0178 / DES-0006, drawn from the cockpit's recorded sessions with no prompt or reply text. He also found the towers page's outer ring of evidence pictures wrong (further out should be further from the work): TASK-0179 stands each picture at its own ticket. Order: TASK-0179, then TASK-0178. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  feature: "FEAT-0030"
+  task: "TASK-0178"
+  note: "2026-10-22: TASK-0179 done (designs stand at their own tickets on the towers page, sized by nearness to the work; FEAT-0025 back at review). TASK-0178 (DES-0006, the agent sessions page, PHASE-0004 by ADR-0009) is in review round two. Edwin decided (\"3\"): Deck's repo is public, your-trainer private; your-trainer ticket text may stay, session dollar costs are left out. 22 local commits wait for TASK-0178's review and a smoke run before pushing. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's and DES-0006's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: doing
+      status: review
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
@@ -310,7 +310,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0179:
       file: docs/features/overview-design/plan/tasks/TASK-0179-Designs-Stand-On-Their-Own-Tickets-Not-On-An-Outer-Ring.md
-      status: doing
+      status: done
       parent: FEAT-0025
       phase: "[[PHASE-0005]]"
     TASK-0176:
@@ -2634,7 +2634,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 170
-    tasks_done: 148
+    tasks_done: 149
     tests_total: 69
     tests_passing: 9
     tests_failing: 0
