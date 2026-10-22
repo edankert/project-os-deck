@@ -59,6 +59,7 @@ import { SidecarReporter } from './agents/sidecar-report.js';
 import { ClaudeProvider } from './agents/claude-provider.js';
 import { CodexProvider } from './agents/codex-provider.js';
 import { registerAgentCalls } from './agents/ipc.js';
+import { ShellManager, loadPty, registerShellCalls } from './shells.js';
 import type { AgentProvider } from './agents/provider.js';
 import type { AgentKind } from '../shared/agent-types.js';
 
@@ -119,6 +120,11 @@ function fakeAgents(scriptPath: string): Record<AgentKind, AgentProvider> {
   });
   return { claude: one('claude'), codex: one('codex') };
 }
+/** Plain shells for the drawer (FEAT-0035): node-pty where it installed, none where it did not. */
+const shells = new ShellManager(loadPty());
+shells.onEvent((e) => {
+  for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.webContents.send('deck:shells:event', e);
+});
 const agentReports = new SidecarReporter(agentSessions, (id) => sidecars.handle(id)?.base ?? null);
 agentSessions.onChange((change) => {
   for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.webContents.send('deck:agents:change', change);
@@ -560,6 +566,11 @@ function registerIpc(): void {
   handle('deck:capabilities', () => SHELL_CAPABILITIES);
   // A window names a workspace; Deck's own list says where it is.
   registerAgentCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, agentSessions, (id) => workspaces.get(id)?.root ?? null, (id) => sidecars.handle(id)?.base ?? null, { secretFor: (id) => sidecars.secretFor(id), actor: () => store.getState().actor });
+  registerShellCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, shells, {
+    workspace: (id) => workspaces.get(id)?.root ?? null,
+    // A session's shell opens in its own folder: its worktree when it has one.
+    session: (id) => agentSessions.get(id)?.folder ?? null,
+  });
 
   handle('deck:workspaces:list', () => workspaces.list());
 
@@ -1009,6 +1020,8 @@ function shutdown(): void {
   // An agent must not run on with nobody to answer it: every session Deck started stops with Deck. A quit
   // has already waited for this in `stopAgents`; a hard exit only gets to signal it.
   if (!agentsStopped) void agentSessions.stopAll();
+  // Every shell Deck opened ends with it (FEAT-0035).
+  shells.closeAll();
   agentReports.close();
   closeIndexes();
   graphs.close();

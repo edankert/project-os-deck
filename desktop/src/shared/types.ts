@@ -311,6 +311,8 @@ export interface Capabilities {
   sharedStore: boolean;
   /** Start, answer and stop Deck's own agent sessions (FEAT-0032). Never on a served page (RISK-0015). */
   agents: boolean;
+  /** Plain shells in the drawer (FEAT-0035): the shell only, never a served page. */
+  shells: boolean;
   /**
    * Change a note, through the shell's loopback call to the sidecar.
    *

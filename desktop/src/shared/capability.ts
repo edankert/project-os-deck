@@ -12,6 +12,7 @@ export const SHELL_CAPABILITIES: Capabilities = {
   sharedStore: true,
   write: true,
   agents: true,
+  shells: true,
 };
 
 /** Everything the served host can honestly offer, which is reading. */
@@ -28,6 +29,7 @@ export const SERVED_CAPABILITIES: Capabilities = {
   // Agent sessions run on Edwin's machine and their prompts stay on loopback, as the
   // sidecar keeps them (FEAT-0032, RISK-0015): a served page shows none, not even read-only.
   agents: false,
+  shells: false,
 };
 
 /**
@@ -48,5 +50,6 @@ export function normaliseCapabilities(value: unknown): Capabilities {
     sharedStore: source['sharedStore'] === true,
     write: source['write'] === true,
     agents: source['agents'] === true,
+    shells: source['shells'] === true,
   };
 }

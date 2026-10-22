@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
       libpango-1.0-0 libcairo2 libgtk-3-0 \
       python3 python3-pip python3-venv ca-certificates git \
+      make g++ \
   && rm -rf /var/lib/apt/lists/*
 
 # The Glass checks end by asking git whether the workspace is as it was. With

@@ -23,9 +23,12 @@ Deck has had no native module until now. node-pty compiles against one runtime; 
 
 ## Mitigation
 
-- Rebuild for Electron 32.3.3 in an install step that is written down
-- Create ptys through an injected factory so node suites use a fake
-- Check that CI's install still succeeds with node-pty listed
+- Use node-pty 1.1.0 (MIT), pinned exactly. It is built on Node-API, so its binary loads in plain node and in Electron alike, and an Electron upgrade needs no rebuild (TASK-0205, 2026-10-22).
+- Make it an optional dependency, so an install that cannot build it still succeeds and Deck says shells are off.
+- Set the execute bit on its macOS `spawn-helper` after every install (`desktop/scripts/pty-helper.mjs`); it ships without one.
+- Give the Linux container image `make` and `g++`, since Linux has no shipped binary.
+- Create ptys through an injected factory so node suites use a fake.
+- Write the install, and what to run when it fails, in `desktop/README.md`.
 
 ## Triggers
 

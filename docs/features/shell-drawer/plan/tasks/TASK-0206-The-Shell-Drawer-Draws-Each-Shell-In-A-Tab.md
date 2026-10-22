@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0206
 aliases: ["TASK-0206"]
 title: "The shell drawer draws each shell with xterm.js in its own tab, labelled by workspace, and a session's Open its shell opens one in the session's folder"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

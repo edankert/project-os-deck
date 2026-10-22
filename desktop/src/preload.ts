@@ -93,6 +93,23 @@ const api = {
     },
   },
 
+  // Plain shells in the drawer (FEAT-0035): opened in a folder Deck names, never one the window sends.
+  shells: {
+    list: (): Promise<unknown> => ipcRenderer.invoke('deck:shells:list'),
+    open: (where: unknown, cols: number, rows: number): Promise<unknown> => ipcRenderer.invoke('deck:shells:open', where, cols, rows),
+    write: (id: string, data: string): Promise<unknown> => ipcRenderer.invoke('deck:shells:write', id, data),
+    resize: (id: string, cols: number, rows: number): Promise<unknown> => ipcRenderer.invoke('deck:shells:resize', id, cols, rows),
+    close: (id: string): Promise<unknown> => ipcRenderer.invoke('deck:shells:close', id),
+    /** Every shell's output and exit. Returns its own unsubscribe. */
+    subscribe: (fn: (event: unknown) => void): (() => void) => {
+      const handler = (_event: unknown, e: unknown): void => fn(e);
+      ipcRenderer.on('deck:shells:event', handler);
+      return () => {
+        ipcRenderer.removeListener('deck:shells:event', handler);
+      };
+    },
+  },
+
   clipboard: {
     write: (text: string): Promise<unknown> => ipcRenderer.invoke('deck:clipboard:write', text),
     read: (): Promise<unknown> => ipcRenderer.invoke('deck:clipboard:read'),

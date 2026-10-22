@@ -42,6 +42,7 @@ interface BridgeShape {
   };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
   agents?: AgentBridge;
+  shells?: ShellBridge;
   write: Record<WriteVerb, (request: unknown) => Promise<unknown>>;
 }
 
@@ -63,6 +64,16 @@ export interface AgentBridge {
   interrupt(id: string): Promise<unknown>;
   stop(id: string): Promise<unknown>;
   subscribe(fn: (change: unknown) => void): () => void;
+}
+
+/** The shells the drawer draws (FEAT-0035), in the shell only. */
+export interface ShellBridge {
+  list(): Promise<unknown>;
+  open(where: { workspaceId: string } | { sessionId: string }, cols: number, rows: number): Promise<unknown>;
+  write(id: string, data: string): Promise<unknown>;
+  resize(id: string, cols: number, rows: number): Promise<unknown>;
+  close(id: string): Promise<unknown>;
+  subscribe(fn: (event: unknown) => void): () => void;
 }
 
 /** What a write came back as: the sidecar's own words when it refused. */
@@ -178,6 +189,12 @@ export class Host {
   agents(): AgentBridge | null {
     const b = bridge();
     return b?.agents !== undefined && this.caps.agents ? b.agents : null;
+  }
+
+  /** The shell drawer's calls: the shell's bridge, or null on a served page (FEAT-0035). */
+  shells(): ShellBridge | null {
+    const b = bridge();
+    return b?.shells !== undefined && this.caps.shells ? b.shells : null;
   }
 
   capabilities(): Capabilities {
