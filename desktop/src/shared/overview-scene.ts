@@ -110,6 +110,10 @@ export interface PanelRow {
   target?: string;
   /** For a ticket that needs you: what to do, shown under its title (TASK-0158). */
   note?: string;
+  /** Beside the status: who has it, or when it was finished (TASK-0183's board). */
+  aside?: string;
+  /** How a board's row stands (TASK-0183): finished and greyed, next and lit, or waiting its turn. */
+  tag?: 'done' | 'next' | 'doing' | 'review' | 'queued';
 }
 
 export interface PanelSection {
@@ -147,6 +151,10 @@ export interface PanelNode {
       buttons?: PanelButton[];
       /** A paragraph above the rows: the selected ticket's first paragraph (TASK-0182). */
       lead?: string;
+      /** A heading over the rows, with how many of how many are done as a bar (TASK-0183's board). */
+      heading?: { text: string; done?: number; of?: number };
+      /** A line under the rows: what has no room, where the data came from, or why there are none. */
+      foot?: string;
     }
     | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string }
     | PanelCard;

@@ -23,7 +23,9 @@ import { addressFor, formatAddress } from '../shared/address.js';
 import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContext } from '../shared/overview-scene.js';
 import { buildPanels, type PanelLayer } from './overview-panels.js';
 import type { TowersView } from './overview-towers-view.js';
-import { FRAME_ACTION } from '../shared/overview-select.js';
+import { FRAME_ACTION, standsIn } from '../shared/overview-select.js';
+import { SEARCH_LIST, searchTickets } from '../shared/overview-search.js';
+import { square } from './overview-panels.js';
 import type { TowersNode } from '../shared/overview-scene.js';
 import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
@@ -451,7 +453,8 @@ export function initOverview(host: OverviewHostApi): void {
   colouringToggle.addEventListener('click', () => void switchColouring());
   drawColouringToggle();
   cameraBar = buildCameraBar();
-  area.append(stage, callout, listPanel, listToggle, colouringToggle, cameraBar);
+  searchBox = buildSearch();
+  area.append(stage, callout, listPanel, listToggle, colouringToggle, cameraBar, searchBox);
 
   historyBar = document.getElementById('ov-history');
   backButton = document.getElementById('ov-back') as HTMLButtonElement | null;
@@ -486,7 +489,7 @@ export function initOverview(host: OverviewHostApi): void {
       if (!isOverviewShown()) return;
       // Home belongs to the navigator's list and the list twin when focus is in them (review of TASK-0162).
       if (event.key === 'Home' && !homeIsTheCamera(event)) return;
-      if (['Escape', 'l', 'L', 'h', 'H', 'c', 'C', '+', '=', '-', '0', 'Home'].includes(event.key)) {
+      if (['Escape', 'l', 'L', 'h', 'H', 'c', 'C', '+', '=', '-', '0', 'Home', '/'].includes(event.key)) {
         const element = event.target as Element | null;
         const typing = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
         if (!typing) event.stopPropagation();
@@ -505,7 +508,149 @@ export function initOverview(host: OverviewHostApi): void {
     go: (raw: string) => go(raw),
     // The 3D view of the towers, for the window run to press through (TASK-0169).
     towers: () => (towersActive() ? towersView!.probe : null),
+    // What the search box holds and lights (TASK-0183).
+    search: () => ({ shown: searchBox !== null && !searchBox.hidden, query: searchInput?.value ?? '', found: searching?.ids.length ?? null, listed: searchList?.children.length ?? 0, said: searchCount?.textContent ?? '' }),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Search on the towers (TASK-0183): the box in the overview's corner finds tickets by
+// the words starting their ids and titles, lights them where they stand and fades the
+// rest; up to twelve are listed under it, what needs you first. Choosing one selects it
+// and flies the camera to it. Escape clears the search before anything else.
+
+let searchBox: HTMLElement | null = null;
+let searchInput: HTMLInputElement | null = null;
+let searchCount: HTMLElement | null = null;
+let searchList: HTMLElement | null = null;
+let searching: { query: string; ids: string[]; active: number } | null = null;
+/** Set while the search itself redraws the screen (to drop a selection), so that draw keeps it. */
+let searchRedraw = false;
+
+function buildSearch(): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'ov ov-search';
+  box.hidden = true;
+  searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.placeholder = 'Find a ticket  /';
+  searchInput.setAttribute('aria-label', 'Find tickets on the towers by the words of their ids and titles');
+  searchInput.spellcheck = false;
+  searchCount = document.createElement('span');
+  searchCount.className = 'ov-search-count';
+  searchList = document.createElement('ul');
+  searchList.className = 'ov-search-list';
+  searchList.setAttribute('role', 'listbox');
+  box.append(searchInput, searchCount, searchList);
+  searchInput.addEventListener('input', () => void runSearch());
+  searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (searchInput!.value !== '') clearSearch();
+      else searchInput!.blur();
+      return;
+    }
+    if (searching === null || searching.ids.length === 0) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      event.stopPropagation();
+      const shown = Math.min(SEARCH_LIST, searching.ids.length);
+      searching.active = (searching.active + (event.key === 'ArrowDown' ? 1 : -1) + shown) % shown;
+      drawSearchList();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      void chooseMatch(searching.ids[Math.max(0, searching.active)]!);
+    }
+  });
+  return box;
+}
+
+/** The box is there only where the towers are: the wheel and a phase brought close. */
+function drawSearchBox(): void {
+  if (searchBox === null) return;
+  searchBox.hidden = current === null || towersOf(current.scene) === undefined;
+}
+
+async function runSearch(): Promise<void> {
+  if (current === null || searchInput === null) return;
+  const query = searchInput.value;
+  if (query.trim() === '') {
+    clearSearch(false);
+    return;
+  }
+  const model = models.get(current.address.workspaceId)?.model;
+  if (model === undefined) return;
+  // A search replaces a selection: the screen is drawn again with nothing selected.
+  if (current.address.select !== null) {
+    searchRedraw = true;
+    try {
+      await showOverview({ ...current.address, select: null }, { replace: true });
+    } finally {
+      searchRedraw = false;
+    }
+  }
+  const ids = searchTickets(model, query).map((t) => t.id);
+  searching = { query, ids, active: -1 };
+  lightFound(ids);
+  if (searchCount !== null) searchCount.textContent = ids.length === 0 ? 'none found' : `${ids.length} found`;
+  drawSearchList();
+}
+
+function drawSearchList(): void {
+  if (searchList === null || current === null) return;
+  searchList.replaceChildren();
+  const model = models.get(current.address.workspaceId)?.model;
+  if (searching === null || model === undefined) return;
+  searching.ids.slice(0, SEARCH_LIST).forEach((id, i) => {
+    const t = model.tickets[id]!;
+    const li = document.createElement('li');
+    li.className = `ov-search-row${i === searching!.active ? ' is-active' : ''}`;
+    li.setAttribute('role', 'option');
+    li.setAttribute('aria-selected', String(i === searching!.active));
+    li.dataset['ticket'] = id;
+    const idEl = document.createElement('span');
+    idEl.className = 'ov-row-id';
+    idEl.textContent = id;
+    const title = document.createElement('span');
+    title.className = 'ov-row-title';
+    title.textContent = t.title;
+    li.append(square(t), idEl, title);
+    li.addEventListener('mousedown', (event) => event.preventDefault());
+    li.addEventListener('click', () => void chooseMatch(id));
+    searchList!.appendChild(li);
+  });
+}
+
+/** Light the tickets a search found: in 3D, glows over them; flat, the rest fade. */
+function lightFound(ids: readonly string[] | null): void {
+  if (towersActive()) towersView!.light(ids);
+  if (stage === null) return;
+  const set = new Set(ids ?? []);
+  stage.classList.toggle('ov-searching', ids !== null);
+  for (const element of Array.from(stage.querySelectorAll<SVGElement>('.ov-plan [data-ticket]'))) element.classList.toggle('is-found', set.has(element.dataset['ticket'] ?? ''));
+}
+
+function clearSearch(andText = true): void {
+  if (searching !== null) lightFound(null);
+  searching = null;
+  if (andText && searchInput !== null) searchInput.value = '';
+  if (searchCount !== null) searchCount.textContent = '';
+  searchList?.replaceChildren();
+}
+
+/** A match chosen: selected where it stands, on the phase brought close when it stands in it, else on the whole ring. */
+async function chooseMatch(id: string): Promise<void> {
+  if (current === null || api === null) return;
+  const towers = towersOf(current.scene);
+  const open = current.address.page === 'phase' ? current.address.note : null;
+  const inOpen = open !== null && towers !== undefined && standsIn(towers.layout, id) === open;
+  const ctx = contextFor(current.address.workspaceId, current.address.viewId);
+  clearSearch();
+  searchInput?.blur();
+  await go(inOpen ? ctx.address({ page: 'phase', note: open, select: id }) : ctx.address({ page: 'wheel', select: id }));
+  if (towersActive()) towersView!.flyTo(id);
 }
 
 export function isOverviewShown(): boolean {
@@ -619,6 +764,8 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   const definition = address.page !== null ? pages.get(address.page) : address.flow !== null ? flows.get(address.flow) : undefined;
   if (definition === undefined) throw new Error(`nothing draws ${address.page ?? address.flow ?? 'that address'}`);
   const ticket = ++drawing;
+  // Any other move clears the search: bringing a phase close, a selection, back and forward (TASK-0183).
+  if (!searchRedraw) clearSearch();
   // The address says how to colour the screen; it wins over the remembered preference.
   colouring = address.colour === 'state' ? 'state' : 'type';
   drawColouringToggle();
@@ -635,6 +782,7 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   place();
   document.body.dataset['overviewScreen'] = scene.screen;
   drawColouringToggle();
+  drawSearchBox();
   // After `current` is the new screen and laid out: the 3D view flies to it.
   showTowers(scene);
   // After `current` is the new screen: Home is shown for the screen being opened, not the
@@ -1055,6 +1203,12 @@ async function onKey(event: KeyboardEvent): Promise<void> {
     return;
   }
   if (event.key === 'Escape' && !(element instanceof HTMLInputElement)) {
+    // Escape steps back one thing at a time: the search first (TASK-0183).
+    if (searching !== null || (searchInput?.value ?? '') !== '') {
+      event.preventDefault();
+      clearSearch();
+      return;
+    }
     if (listPanel !== null && !listPanel.hidden) {
       toggleList(false);
       return;
@@ -1078,6 +1232,11 @@ async function onKey(event: KeyboardEvent): Promise<void> {
   if (event.key === 'l' || event.key === 'L') {
     event.preventDefault();
     toggleList();
+  }
+  if (event.key === '/' && searchBox !== null && !searchBox.hidden && !event.metaKey && !event.ctrlKey) {
+    event.preventDefault();
+    searchInput?.focus();
+    searchInput?.select();
   }
   // + and − zoom, 0 puts the camera back (TASK-0156): for a trackpad with no middle button.
   if ((event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0' || (event.key === 'Home' && homeIsTheCamera(event))) && !event.metaKey && !event.ctrlKey) {

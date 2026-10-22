@@ -16,6 +16,7 @@
 import { frame } from './overview-chrome.js';
 import { markWords } from './overview-marks.js';
 import type { ListRow, Scene, SceneNode, ScreenContext } from './overview-scene.js';
+import { nextUpPanel } from './overview-board.js';
 import { selectionPanels } from './overview-select.js';
 import { TOWERS_PLAN, towersLayout, towersPlan, type TowersOptions } from './overview-towers.js';
 import type { OverviewModel, Phase, Ticket } from './overview-types.js';
@@ -89,13 +90,16 @@ function waysIn(model: OverviewModel, ctx: ScreenContext, centre: { x: number; y
 }
 
 /** Where a selected ticket's card and pane stand on the wheel (TASK-0182): the card under the name, the pane at the right. */
-export const WHEEL_SELECTION = { card: { x: 40, y: 128, w: 400, h: 310 }, pane: { x: 1010, y: 96, w: 400, h: 870 } } as const;
+export const WHEEL_SELECTION = { card: { x: 40, y: 128, w: 400, h: 290 }, pane: { x: 1010, y: 96, w: 400, h: 870 } } as const;
+/** The next-up board, bottom left (TASK-0183). */
+export const WHEEL_BOARD = { x: 40, y: 640, w: 420, h: 330 } as const;
 
 export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: TowersOptions = {}): Scene {
   const layout = towersLayout(model, ctx, null, options);
   const plan = towersPlan(layout);
   const ways = waysIn(model, ctx, plan.centre);
   const selected = selectionPanels(model, layout, ctx, WHEEL_SELECTION);
+  const board = nextUpPanel(model, layout, ctx, WHEEL_BOARD);
   const sel = layout.selection;
   // Escape clears the selection: the overview goes to the screen a row with id `back` names.
   const back: ListRow[] = sel === null ? [] : [{ id: 'back', label: `Clear the selection of ${sel.id}`, group: 'Go to', target: ctx.address({ page: 'wheel' }) }];
@@ -110,9 +114,10 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
       { kind: 'text', x: 40, y: 56, text: model.workspace, rest: true, role: 'name', size: 22, cls: 'ov-title' },
       ...plan.nodes,
       ...ways.nodes,
+      board.node,
       ...selected.nodes,
       { kind: 'towers', layout },
     ],
-    list: [...back, ...selected.rows, ...ways.rows, ...plan.rows],
+    list: [...back, ...selected.rows, ...board.rows, ...ways.rows, ...plan.rows],
   };
 }

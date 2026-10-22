@@ -50,7 +50,9 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       // The towers' flat plan draws the cockpit's square in its type colour (TASK-0166).
       assert.match(typed, / class="ty-[a-z]+ sq[^"]*" data-ticket=/, `${ws}: the wheel in the cockpit's colours`);
       assert.match(stated, / class="st-[a-z]+/, `${ws}: the wheel in the state colours`);
-      assert.doesNotMatch(stated, / class="ty-[a-z]+ (?:fl-[a-z]+|sq)[^"]*" data-ticket=/, `${ws}: the state wheel paints no ticket by type`);
+      // Its towers, that is: a list of tickets keeps the cockpit's marks in both colourings, and
+      // the next-up board is one (TASK-0183). The panels are drawn after the plan.
+      assert.doesNotMatch(stated.split('class="ov-panel-flat"')[0], / class="ty-[a-z]+ (?:fl-[a-z]+|sq)[^"]*" data-ticket=/, `${ws}: the state wheel paints no ticket by type`);
     }
     // The Level 2 page (TASK-0157): written beside the plates, holding every ticket of both
     // fixtures, with three.js from cdnjs at a pinned version and nothing else from outside.

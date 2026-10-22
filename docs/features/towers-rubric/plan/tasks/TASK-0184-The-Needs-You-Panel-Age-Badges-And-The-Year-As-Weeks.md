@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0184
 title: "The needs-you panel, age badges on quiet towers and the year as weeks"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-22

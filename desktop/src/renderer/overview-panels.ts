@@ -58,7 +58,14 @@ function rowElement(row: PanelRow): HTMLElement {
   li.tabIndex = -1;
   li.setAttribute('role', 'button');
   li.setAttribute('aria-label', markWords(row));
-  li.append(square(row), el('span', 'ov-row-id', row.id), el('span', 'ov-row-title', row.title), el('span', 'ov-row-status', row.status || '—'));
+  li.append(square(row), el('span', 'ov-row-id', row.id), el('span', 'ov-row-title', row.title));
+  // A board's row says who has it, or when it was finished, and how it stands (TASK-0183).
+  if (row.aside !== undefined) li.append(el('span', 'ov-row-aside', row.aside));
+  if (row.tag !== undefined) {
+    li.dataset['tag'] = row.tag;
+    li.classList.add('has-aside');
+  }
+  li.append(el('span', 'ov-row-status', row.status || '—'));
   // What needs you says what to do, under its title (TASK-0158).
   if (row.note !== undefined) li.append(el('span', 'ov-row-note', row.note));
   return li;
@@ -138,9 +145,25 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }, reduced: boole
     plane.appendChild(acts);
   }
   if (panel.body.lead !== undefined) plane.appendChild(el('p', 'ov-pane-lead', panel.body.lead));
+  // A board's heading, with its done count as a bar (TASK-0183).
+  const heading = panel.body.heading;
+  if (heading !== undefined) {
+    const h = el('div', 'ov-board-head');
+    h.appendChild(el('span', 'ov-board-title', heading.text));
+    if (heading.of !== undefined && heading.done !== undefined) {
+      h.appendChild(el('span', 'ov-board-count', `${heading.done} of ${heading.of} tasks done`));
+      const bar = el('div', 'ov-board-bar');
+      const fill = el('div', 'ov-board-fill');
+      fill.style.width = `${heading.of === 0 ? 0 : Math.round((100 * heading.done) / heading.of)}%`;
+      bar.appendChild(fill);
+      h.appendChild(bar);
+    }
+    plane.appendChild(h);
+  }
   for (const section of panel.body.sections) {
     if (section.rows.length > 0) plane.appendChild(sectionElement(panel, section));
   }
+  if (panel.body.foot !== undefined) plane.appendChild(el('div', 'ov-board-foot', panel.body.foot));
   box.appendChild(plane);
   if (panel.body.tilt && !reduced) {
     // The plane leans a little toward the pointer: depth you can feel, not a spin.

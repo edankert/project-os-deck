@@ -4,7 +4,9 @@
 //   bash tools/scripts/walk-in-a-box.sh towers-rubric
 //   bash tools/scripts/walk-in-a-box.sh towers-rubric --workspace ../your-trainer --name towers-rubric-yt
 // It reads the notes and changes nothing.
+const path = require('node:path');
 const lib = require('./lib.cjs');
+const { searchTickets } = require(path.join(__dirname, '..', 'dist', 'shared', 'overview-search.js'));
 
 module.exports = async function (d) {
   const ws = d.prepared.id;
@@ -92,6 +94,52 @@ module.exports = async function (d) {
     const close = await js(`(() => { const p = window.__deckOverview.towers(); return { open: p.open(), selected: p.selected(), list: document.querySelectorAll('#overview-area [data-panel^="tickets-"]').length, back: (document.querySelector('#overview-area .ov-panel-rows .ov-panel-button') || {}).textContent || '' }; })()`);
     check(close.open !== null && close.selected !== null && close.selected.id === chosen.id && close.list === 0 && /list/.test(close.back), "Its phase brings the phase close with the ticket still selected; the pane stands in the list's place, with a way back to it", close);
     await d.shot(win, '03-selected-in-its-phase');
+  }
+
+  // ---- TASK-0183: search lights the towers, and the next-up board ----
+  await go(`${base}?page=wheel`);
+  const query = searchTickets(model, 'wheel').length > 0 ? 'wheel' : 'heart rate';
+  const matches = searchTickets(model, query).map((x) => x.id);
+  await d.press(win, '/');
+  await d.delay(200);
+  const focused = await js(`document.activeElement && document.activeElement.closest('.ov-search') !== null`);
+  check(focused, '/ puts the cursor in the search box', { focused });
+  await win.webContents.insertText(query);
+  await d.delay(900);
+  const lit = await js(`({ box: window.__deckOverview.search(), found: window.__deckOverview.towers().found(), first: [...document.querySelectorAll('.ov-search-row')].map((r) => r.dataset.ticket) })`);
+  check(lit.box.found === matches.length && lit.box.said === `${matches.length} found`, `a search for "${query}" finds ${matches.length} tickets and says so`, lit.box);
+  check(lit.found !== null && lit.found.lit === matches.length && lit.found.glows === Math.min(600, matches.length) && lit.found.faded, 'they glow where they stand, and the rest fades', lit.found);
+  check(JSON.stringify(lit.first) === JSON.stringify(matches.slice(0, 12)), 'up to twelve are listed under the box, what needs you first', { listed: lit.first, needsYou: lit.first.filter((id) => model.tickets[id].needsYou) });
+  await d.shot(win, '04-search');
+  // The arrow keys and Enter choose one: it is selected, and the search gives way.
+  await d.press(win, 'Down');
+  await d.press(win, 'Return');
+  const pick = `${base}?page=wheel&select=${encodeURIComponent(matches[0])}`;
+  check((await arrives(pick)) === pick, `the arrow keys and Enter select ${matches[0]}`, { address: await shownAt() });
+  const chosenNow = await js(`({ box: window.__deckOverview.search(), found: window.__deckOverview.towers().found() })`);
+  check(chosenNow.box.query === "" && chosenNow.found === null, "and the search is cleared", chosenNow);
+  // Escape clears a search before anything else.
+  await d.press(win, 'Escape');
+  await d.delay(300);
+  await go(`${base}?page=wheel`);
+  await js(`(() => { const i = document.querySelector('.ov-search input'); i.focus(); })()`);
+  await win.webContents.insertText(query);
+  await d.delay(700);
+  await js('document.activeElement.blur()');
+  await d.press(win, 'Escape');
+  await d.delay(400);
+  const cleared = await js(`({ box: window.__deckOverview.search(), found: window.__deckOverview.towers().found(), address: window.__deckOverview.current().address })`);
+  check(cleared.box.query === '' && cleared.found === null && cleared.address === `${base}?page=wheel`, 'Escape clears the search and stays on the ring', cleared);
+  // The next-up board, bottom left.
+  const board = await js(`(() => { const b = document.querySelector('#overview-area .ov-panel[data-panel="next-up"]'); if (!b) return null; const r = b.getBoundingClientRect(); return { left: r.left, bottom: r.bottom, head: (b.querySelector('.ov-board-head') || {}).textContent || '', rows: [...b.querySelectorAll('.ov-row')].map((e) => ({ id: e.dataset.ticket, tag: e.dataset.tag, aside: (e.querySelector('.ov-row-aside') || {}).textContent || '' })), foot: (b.querySelector('.ov-board-foot') || {}).textContent || '' }; })()`);
+  const nextRow = board && board.rows.find((r) => r.tag === 'next');
+  check(board !== null && (model.next ? nextRow && nextRow.id === model.next : board.rows.length === 0), `the next-up board lists the focus feature's tasks with ${model.next || 'nothing'} marked NEXT`, board);
+  if (board !== null && board.rows.length > 0) {
+    const row = board.rows[board.rows.length - 1].id;
+    await t.clickOn(`#overview-area .ov-panel[data-panel="next-up"] .ov-row[data-ticket="${row}"]`, 300);
+    const there = `${base}?page=wheel&select=${encodeURIComponent(row)}`;
+    check((await arrives(there)) === there, `pressing a row of the board selects ${row}`, { address: await shownAt() });
+    await d.shot(win, '05-board-row-selected');
   }
   t.finish();
 };

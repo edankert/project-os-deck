@@ -49,6 +49,10 @@ export interface TowersView {
   select(id: string | null): void;
   /** Turn the camera to the selected ticket and the tickets it is joined to (TASK-0182). */
   frame(): void;
+  /** Light these tickets where they stand and fade the rest, or put the ring back with null (TASK-0183's search). */
+  light(ids: readonly string[] | null): void;
+  /** Turn the camera to one ticket. */
+  flyTo(id: string): void;
   resize(): void;
   /** For the window run: where things are on screen, and what is open. */
   probe: {
@@ -59,6 +63,8 @@ export interface TowersView {
     open(): string | null;
     /** The selected ticket and how many curves the view draws for it (TASK-0182). */
     selected(): { id: string; curves: number; outlined: number; labelled: number; faded: boolean } | null;
+    /** How many tickets a search lights, and how many glows the view draws for them (TASK-0183). */
+    found(): { lit: number; glows: number; faded: boolean } | null;
     camera(): { radius: number; theta: number; phi: number; moved: boolean; reach: number; limit: number };
     hit(x: number, y: number): string | null;
   };
@@ -156,6 +162,11 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   let chosen = new THREE.Group();
   let runners: Array<{ mesh: THREE.Mesh; curve: THREE.QuadraticBezierCurve3 }> = [];
   let chosenSignature = '';
+  // What a search lights (TASK-0183): a glow over each match, the rest faded.
+  let found: string[] | null = null;
+  let glows = new THREE.Group();
+  /** A ring of thousands of glows is a fog, not an answer; past this many, the first are lit. */
+  const GLOW_CAP = 600;
   let nextMark = new THREE.Group();
   let wires: THREE.LineSegments | null = null;
   const where = new Map<string, { at: THREE.Vector3; phase: number | null }>();
@@ -502,6 +513,30 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     world.add(chosen);
     runners = [];
     chosenSignature = '';
+    glows = new THREE.Group();
+    world.add(glows);
+    drawFound();
+  }
+
+  /** A glow over every ticket a search found, where it stands (TASK-0183). */
+  function drawFound(): void {
+    for (const o of [...glows.children]) {
+      glows.remove(o);
+      const m = o as THREE.Mesh;
+      (m.material as THREE.Material).dispose();
+      const at = pulses.indexOf(m.material as THREE.Material);
+      if (at >= 0) pulses.splice(at, 1);
+    }
+    if (found === null) return;
+    const at = found.map((id) => where.get(id)).filter((w): w is { at: THREE.Vector3; phase: number | null } => w !== undefined).slice(0, GLOW_CAP);
+    if (at.length === 0) return;
+    const material = new THREE.MeshBasicMaterial({ color: FOCUS, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
+    material.userData['base'] = 0.55;
+    const mesh = new THREE.InstancedMesh(BOX, material, at.length);
+    at.forEach((w, i) => mesh.setMatrixAt(i, new THREE.Matrix4().compose(w.at, new THREE.Quaternion(), new THREE.Vector3(1.7, 1.7, 1.7))));
+    mesh.renderOrder = 12;
+    glows.add(mesh);
+    pulses.push(material);
   }
 
   /**
@@ -559,7 +594,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   /** Who is shown and how faded: the phase brought close, and the rest faded while something is selected. */
   function applyLook(): void {
     const open = layout?.open ?? null;
-    const hush = (layout?.selection ?? null) !== null;
+    const hush = (layout?.selection ?? null) !== null || found !== null;
     const set = (materials: THREE.Material[], k: number): void => {
       for (const m of materials) {
         m.transparent = true;
@@ -845,6 +880,16 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       selection.visible = w !== undefined;
       if (w !== undefined) selection.position.copy(w.at);
     },
+    light(ids) {
+      found = ids === null ? null : [...ids];
+      drawFound();
+      applyLook();
+    },
+    flyTo(id) {
+      const w = where.get(id);
+      if (w === undefined) return;
+      glideTo({ radius: Math.min(view.radius, 70), theta: Math.atan2(w.at.z, w.at.x) || view.theta, phi: 0.95, target: w.at.clone() });
+    },
     frame() {
       const sel = layout?.selection ?? null;
       if (sel === null) return;
@@ -877,6 +922,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
         const faded = phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5));
         return { id: sel.id, curves: lines, outlined: boxes - 1, labelled, faded };
       },
+      found: () => (found === null ? null : { lit: found.length, glows: glows.children.reduce((n, o) => n + ((o as THREE.InstancedMesh).count ?? 0), 0), faded: phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5)) }),
       camera: () => ({ radius: view.radius, theta: view.theta, phi: view.phi, moved: moved(), reach: Math.hypot(view.target.x, view.target.z), limit: layout === null ? 0 : layout.shelfR + 10 }),
       hit: (x, y) => { const h = hitAt(x, y); return h === null ? null : h.kind === 'cube' ? h.cube.id : h.kind; },
     },

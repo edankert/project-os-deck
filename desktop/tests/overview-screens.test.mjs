@@ -69,7 +69,11 @@ for (const name of WORKSPACES) {
   test(`${name}: the wheel draws every ticket exactly once, and every phase`, () => {
     const m = model(name);
     const scene = wheelScene(m, ctx);
-    const counts = drawn(scene);
+    // The towers draw every ticket once. The next-up board (TASK-0183) lists some of them again,
+    // as rows of a list do; each of its rows names a ticket the towers draw.
+    const towers = { ...scene, nodes: scene.nodes.filter((n) => n.kind !== 'panel') };
+    const counts = drawn(towers);
+    for (const [id] of drawn({ ...scene, nodes: scene.nodes.filter((n) => n.kind === 'panel') })) assert.equal(counts.get(id), 1, `the board's ${id} stands on the towers`);
     for (const id of Object.keys(m.tickets)) assert.equal(counts.get(id), 1, `${id} drawn ${counts.get(id) ?? 0} times`);
     assert.equal(counts.size, Object.keys(m.tickets).length);
     // Every phase is drawn once too, by the mark that carries its id.
@@ -221,7 +225,8 @@ for (const name of WORKSPACES) {
   test(`${name}: every ticket on the wheel can take keyboard focus, and what needs a person glows`, () => {
     const m = model(name);
     const scene = wheelScene(m, ctx);
-    const svg = sceneToSvg(scene);
+    // The towers' marks; the board's rows, drawn after them, are reached as a list's are.
+    const svg = sceneToSvg(scene).split('class="ov-panel-flat"')[0];
     const marks = svg.match(/<[a-z]+ [^>]*data-ticket="[^"]+"[^>]*>/g) ?? [];
     assert.equal(marks.length, Object.keys(m.tickets).length);
     for (const tag of marks) assert.match(tag, /tabindex="-?[01]"/, `not focusable: ${tag.slice(0, 80)}`);

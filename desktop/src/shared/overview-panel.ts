@@ -28,14 +28,14 @@ function rowNodes(row: PanelRow, x: number, y: number, w: number, s: number): Sc
   const titleSize = 13.5 * s;
   const statusSize = 11 * s;
   const idWidth = 84 * s;
-  const statusWidth = Math.max(40, row.status.length * statusSize * 0.6 + 12 * s);
+  const statusWidth = Math.max(40, (row.status.length + (row.aside !== undefined ? row.aside.length + 3 : 0)) * statusSize * 0.6 + 12 * s);
   const titleChars = Math.floor((w - size - idWidth - statusWidth - 24 * s) / (titleSize * 0.52));
   return [
     { kind: 'mark', tag: 'rect', attrs: { x, y: y - ROW * s * 0.5, width: w, height: ROW * s - 3 * s, rx: 5 * s }, cls: 'ov-row' },
     cockpitSquare(row, x + 12 * s + size / 2, y + (ROW * s) / 2 - ROW * s * 0.5 - 1.5 * s, size, { label: markWords(row), target: row.target }),
     { kind: 'text', x: x + 22 * s + size, y: y + idSize * 0.35, text: row.id, rest: true, role: 'id', size: idSize, cls: 'ov-dim' },
     { kind: 'text', x: x + 22 * s + size + idWidth, y: y + titleSize * 0.35, text: clip(row.title, titleChars), rest: true, role: 'name', size: titleSize },
-    { kind: 'text', x: x + w - 10 * s, y: y + statusSize * 0.35, text: row.status, rest: true, role: 'label', size: statusSize, anchor: 'end', cls: 'ov-dim' },
+    { kind: 'text', x: x + w - 10 * s, y: y + statusSize * 0.35, text: row.aside !== undefined ? `${row.aside} · ${row.status}` : row.status, rest: true, role: 'label', size: statusSize, anchor: 'end', cls: 'ov-dim' },
   ];
 }
 
@@ -65,6 +65,11 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
     if (buttons.length > 0) {
       out.push({ kind: 'text', x: x + 16, y: cursor + 12, text: buttons.map((b) => b.text).join('   '), rest: true, role: 'control', size: 12, cls: 'ov-dim' });
       cursor += 26;
+    }
+    if (panel.body.heading !== undefined) {
+      const hd = panel.body.heading;
+      out.push({ kind: 'text', x: x + 16, y: cursor + 12, text: hd.of !== undefined ? `${hd.text} · ${hd.done} of ${hd.of} tasks done` : hd.text, rest: true, role: 'label', size: 11.5, cls: 'ov-title' });
+      cursor += 24;
     }
     if (panel.body.lead !== undefined) {
       for (const line of wrap(panel.body.lead, Math.floor((w - 32) / 6.6)).slice(0, 8)) {
@@ -135,6 +140,7 @@ function rowsPanel(panel: PanelNode & { body: { kind: 'rows' } }): SceneNode[] {
     }
     advance(10 * scaleAt(cursor));
   }
+  if (!tilt && panel.body.foot !== undefined) out.push({ kind: 'text', x: x + 16, y: y + h - 12, text: panel.body.foot, rest: true, role: 'label', size: 11, cls: 'ov-dim' });
   return out;
 }
 
@@ -302,5 +308,19 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-panel-button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: hsl(190 90% 80%); background: hsla(190, 90%, 55%, 0.12); border: 1px solid hsla(190, 90%, 65%, 0.4); }
 .ov-panel-button:hover, .ov-panel-button:focus-visible { background: hsla(190, 90%, 55%, 0.25); }
 .ov-pane-lead { margin: 0; font-size: 13.5px; line-height: 1.5; color: hsl(195 30% 88%); }
+/* The next-up board (TASK-0183), in the style of Rubric's routines. */
+.ov-panel[data-panel="next-up"] .ov-plane { gap: 6px; padding: 12px 14px; background: hsla(210, 50%, 8%, 0.9); }
+.ov-panel[data-panel="next-up"] .ov-sec-head { display: none; }
+.ov-board-head { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: baseline; }
+.ov-board-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: hsl(190 90% 78%); }
+.ov-board-count { font-size: 11.5px; color: hsl(205 25% 66%); }
+.ov-board-bar { grid-column: 1 / 3; height: 4px; border-radius: 2px; background: hsla(190, 90%, 65%, 0.15); overflow: hidden; }
+.ov-board-fill { height: 100%; background: hsl(140 35% 60%); }
+.ov-board-foot { font-size: 11px; color: hsl(205 25% 58%); }
+.ov-row.has-aside { grid-template-columns: 14px 78px minmax(0, 1fr) auto auto; }
+.ov-row-aside { font-size: 11px; color: hsl(205 25% 62%); }
+.ov-row[data-tag="done"] { opacity: 0.55; } .ov-row[data-tag="done"] .ov-row-title { text-decoration: line-through; }
+.ov-row[data-tag="next"] { background: hsla(190, 90%, 55%, 0.22); border-color: hsl(190 90% 72%); }
+.ov-row[data-tag="next"] .ov-row-status { color: #fff; font-weight: 800; letter-spacing: 0.08em; }
 `;
 }

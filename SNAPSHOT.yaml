@@ -63,7 +63,7 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0031"
-  task: "TASK-0183"
+  task: "TASK-0184"
   note: "2026-10-22, later: Edwin asked to build DES-0005's seven Rubric ideas into Deck (FEAT-0031, TASK-0181 to TASK-0187, PHASE-0005; first TASK-0181, the model's lead, owner, date and the pictures list) and answered DES-0006's four questions (TASK-0188 under FEAT-0030, PHASE-0004: side pane kept but open, agents over the ticket they were started on, panels can be hidden, permission requests first). FEAT-0030 goes back to doing when TASK-0188 starts. Still Edwin's: DES-0005's remaining questions, DES-0006's side pane, acceptance tests TST-0091 and TST-0092. Deck's repo is public: no session dollar costs, no prompt or reply text. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -338,12 +338,12 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0183:
       file: docs/features/towers-rubric/plan/tasks/TASK-0183-Search-Lights-The-Towers-And-The-Next-Up-Board-Lists-The-Focus-Features-Tasks.md
-      status: doing
+      status: done
       parent: FEAT-0031
       phase: "[[PHASE-0005]]"
     TASK-0184:
       file: docs/features/towers-rubric/plan/tasks/TASK-0184-The-Needs-You-Panel-Age-Badges-And-The-Year-As-Weeks.md
-      status: backlog
+      status: doing
       parent: FEAT-0031
       phase: "[[PHASE-0005]]"
     TASK-0185:
@@ -2709,7 +2709,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 179
-    tasks_done: 153
+    tasks_done: 154
     tests_total: 70
     tests_passing: 9
     tests_failing: 0

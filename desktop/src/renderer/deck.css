@@ -1553,6 +1553,19 @@ body.pinned .overview-area { left: 0; }
   background: hsla(210, 50%, 8%, 0.94); border-left: 1px solid hsla(190, 90%, 65%, 0.35);
 }
 .ov-list[hidden] { display: none; }
+/* Search on the towers (TASK-0183): a box beside the corner's buttons, its matches listed under it. */
+.ov-search { position: absolute; right: 100px; top: 12px; width: 300px; z-index: 6; font: 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.ov-search[hidden] { display: none; }
+.ov-search input { box-sizing: border-box; width: 100%; height: 34px; padding: 0 90px 0 12px; border-radius: 17px; border: 1px solid hsla(190, 90%, 65%, 0.5);
+  background: hsla(205, 60%, 12%, 0.85); color: hsl(195 60% 92%); font: inherit; outline: none; }
+.ov-search input:focus { border-color: hsl(190 90% 72%); box-shadow: 0 0 12px hsla(190, 90%, 55%, 0.35); }
+.ov-search-count { position: absolute; right: 14px; top: 9px; font-size: 12px; color: hsl(190 90% 78%); pointer-events: none; }
+.ov-search-list { list-style: none; margin: 4px 0 0; padding: 0; border-radius: 10px; overflow: hidden; background: hsla(210, 50%, 8%, 0.95); }
+.ov-search-list:empty { display: none; }
+.ov-search-row { display: grid; grid-template-columns: 14px 78px minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px 10px; cursor: pointer; color: hsl(195 60% 90%); }
+.ov-search-row:hover, .ov-search-row.is-active { background: hsla(190, 90%, 55%, 0.2); }
+.ov-search-row .ov-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-searching .ov-plan [data-ticket]:not(.is-found) { opacity: 0.15; }
 .ov-colouring-toggle { right: 56px; }
 .ov-colouring-toggle[hidden] { display: none; }
 .ov-colouring-toggle[aria-pressed="true"] { background: hsla(275, 78%, 60%, 0.25); }

@@ -280,7 +280,8 @@ for (const name of WORKSPACES) {
     const id = m.next;
     const t = m.tickets[id];
     const scene = wheelScene(m, ctx, { select: id });
-    const [card, pane] = panelsOf(scene);
+    const card = panelsOf(scene).find((p) => p.body.kind === 'card');
+    const pane = panelsOf(scene).find((p) => p.key.startsWith('pane-'));
     assert.equal(card.body.kind, 'card');
     assert.equal(card.body.row.id, id);
     assert.equal(card.body.row.title, t.title);
@@ -315,7 +316,7 @@ for (const name of WORKSPACES) {
     passes(scene);
     assert.equal(scene.address, `deck://abcd1234/features?note=${phase}&page=phase&select=${id}`);
     const panels = panelsOf(scene);
-    assert.deepEqual(panels.map((p) => p.body.kind), ['card', 'rows']);
+    assert.deepEqual(panels.map((p) => p.body.kind), ['card', 'rows'], 'no board with a phase close: the card stands where it would');
     assert.ok(!panels.some((p) => p.key.startsWith('tickets-')), "the phase's list gives way to the pane");
     assert.equal(panels[1].body.buttons[0].target, `deck://abcd1234/features?note=${phase}&page=phase`);
     assert.ok(!panels[0].body.buttons.some((b) => b.key === 'phase'), 'its phase is already close');
@@ -350,3 +351,94 @@ test('a plate draws the card and the pane flat, with the selected ticket and its
   const { escapeXml } = load('shared/overview-scene.js');
   assert.ok(svg.includes(escapeXml(m.tickets['TASK-0156'].lead.split(' ').slice(0, 4).join(' '))));
 });
+
+// --- TASK-0183: search lights the towers, and the next-up board ---
+
+const { searchTickets, SEARCH_LIST } = load('shared/overview-search.js');
+const { nextUpPanel } = load('shared/overview-board.js');
+
+test('a search finds the tickets whose id or title has a word starting with each word typed', () => {
+  const m = { tickets: {} };
+  const add = (id, title, extra = {}) => { m.tickets[id] = { id, title, state: 'open', needsYou: false, ...extra }; };
+  add('TASK-0001', 'Heart Rate zones');
+  add('TASK-0002', 'Generate the plan');
+  add('TASK-0003', 'rate limits', { state: 'closed' });
+  add('ISS-0004', 'The heart-rate strap drops', { needsYou: true });
+  add('TASK-0010', 'Heart rate graph');
+  const ids = (q) => searchTickets(m, q).map((t) => t.id);
+  assert.deepEqual(ids('rate'), ['ISS-0004', 'TASK-0001', 'TASK-0010', 'TASK-0003'], 'what needs you first, closed last; "generate" is not a match');
+  assert.deepEqual(ids('heart rate'), ['ISS-0004', 'TASK-0001', 'TASK-0010'], 'every word must start a word');
+  assert.deepEqual(ids('task-0010'), ['TASK-0010'], 'an id typed whole');
+  assert.deepEqual(ids('TASK-001'), ['TASK-0010'], 'an id typed in part');
+  assert.deepEqual(ids('task-0001')[0], 'TASK-0001', 'the id typed whole comes first');
+  assert.deepEqual(ids('   '), []);
+  assert.deepEqual(ids('a(b'), [], 'what a person types is never read as a pattern');
+});
+
+test("the fixtures' searches find what DES-0005's page found: 16 for \"wheel\" on Deck, 29 for \"heart rate\" on your-trainer", () => {
+  assert.equal(searchTickets(fixture('deck'), 'wheel').length, 16);
+  assert.equal(searchTickets(fixture('your-trainer'), 'heart rate').length, 29);
+  assert.equal(SEARCH_LIST, 12);
+});
+
+test("the board on Deck: FEAT-0028's last two finished, TASK-0154 next, then the rest in order, each with who has it", () => {
+  const m = fixture('deck');
+  const { node, rows } = nextUpPanel(m, towersLayout(m, ctx), ctx, { x: 0, y: 0, w: 400, h: 280 });
+  const board = node.body.sections[0].rows;
+  assert.equal(node.body.heading.text, 'Next up · FEAT-0028');
+  assert.deepEqual(board.slice(0, 3).map((r) => r.tag), ['done', 'done', 'next']);
+  assert.equal(board[2].id, 'TASK-0154');
+  assert.equal(board[2].status, 'NEXT');
+  assert.ok(board.some((r) => r.id === 'TASK-0158'));
+  const tasks = Object.values(m.tickets).filter((t) => t.type === 'task' && t.feature === 'FEAT-0028' && t.state !== 'dropped');
+  assert.equal(node.body.heading.of, tasks.length);
+  assert.equal(node.body.heading.done, tasks.filter((t) => t.state === 'closed').length);
+  for (const r of board) {
+    assert.equal(r.aside, r.tag === 'done' ? m.tickets[r.id].updated : m.tickets[r.id].owner, r.id);
+    assert.equal(r.target, `deck://abcd1234/features?page=wheel&select=${r.id}`);
+  }
+  // The two finished are the latest by date, shown oldest first.
+  const done = tasks.filter((t) => t.state === 'closed').sort((a, b) => (b.updated ?? '').localeCompare(a.updated ?? '') || b.id.localeCompare(a.id, 'en', { numeric: true }));
+  assert.deepEqual(board.slice(0, 2).map((r) => r.id), done.slice(0, 2).reverse().map((t) => t.id));
+  assert.deepEqual(rows.map((r) => r.id), board.map((r) => r.id), 'every row is in the list twin');
+  assert.match(node.body.foot, /read at 65c6397/);
+});
+
+test("the board on your-trainer: none of FEAT-0136's sixteen tasks done, TASK-1057 next, six in progress after it, the rest counted", () => {
+  const m = fixture('your-trainer');
+  const { node } = nextUpPanel(m, towersLayout(m, ctx), ctx, { x: 0, y: 0, w: 400, h: 280 });
+  const board = node.body.sections[0].rows;
+  assert.equal(node.body.heading.done, 0);
+  assert.equal(node.body.heading.of, 16);
+  assert.equal(board[0].id, 'TASK-1057');
+  assert.equal(board[0].tag, 'next');
+  assert.deepEqual(board.slice(1).map((r) => r.tag), Array(6).fill('doing'));
+  assert.ok(board.every((r) => r.aside === 'Edwin'));
+  assert.match(node.body.foot, /^\+ 7 in progress, 2 waiting · read at /);
+});
+
+test('with no feature in focus, or one not on the ring, the board says which and lists nothing', () => {
+  const m = structuredClone(fixture('deck'));
+  m.focus = { phase: null, feature: null, task: null };
+  let panel = nextUpPanel(m, towersLayout(m, ctx), ctx, { x: 0, y: 0, w: 400, h: 280 });
+  assert.deepEqual(panel.node.body.sections, []);
+  assert.match(panel.node.body.foot, /names no feature in focus/);
+  // A finished feature stands on the shelf, not as a tower on the ring (Deck has no finished phase yet).
+  const y = structuredClone(fixture('your-trainer'));
+  const shelved = Object.values(y.tickets).find((t) => t.kind === 'feat' && y.shelf.some((p) => p.id === t.phase));
+  y.focus.feature = shelved.id;
+  panel = nextUpPanel(y, towersLayout(y, ctx), ctx, { x: 0, y: 0, w: 400, h: 280 });
+  assert.deepEqual(panel.node.body.sections, []);
+  assert.match(panel.node.body.foot, new RegExp(`${shelved.id}, does not stand on the ring`));
+});
+
+for (const name of WORKSPACES) {
+  test(`${name}: the wheel carries the board at the bottom left and still holds the look`, () => {
+    const m = fixture(name);
+    const scene = wheelScene(m, ctx);
+    passes(scene);
+    passes(wheelScene(m, ctx, { select: m.next }));
+    const board = panelsOf(scene).find((p) => p.key === 'next-up');
+    assert.ok(board !== undefined && board.x < 100 && board.y > 600);
+  });
+}
