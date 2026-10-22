@@ -771,7 +771,10 @@ test("the look's checks fail a needs-you count that is not its bar, a year that 
 for (const name of WORKSPACES) {
   test(`${name}: every wheel the feature draws holds the look, in both groupings and colourings, plain, selected and on the busiest ticket`, () => {
     const m = fixture(name);
-    const busiest = Object.keys(m.tickets).sort((a, b) => joined(m, b).length - joined(m, a).length)[0];
+    // Each ticket's links counted once, both ways round (a sort that recounted them ran past CI's 30 s).
+    const degree = new Map(Object.keys(m.tickets).map((id) => [id, new Set(m.tickets[id].links)]));
+    for (const t of Object.values(m.tickets)) for (const x of t.links) degree.get(x)?.add(t.id);
+    const busiest = [...degree].sort((a, b) => b[1].size - a[1].size)[0][0];
     for (const c of [ctx, featureCtx, plainContext('abcd1234', 'features', 'state'), plainContext('abcd1234', 'features', 'state', 'feature')]) {
       for (const select of [null, m.next, busiest]) passes(wheelScene(m, c, { select }));
     }
