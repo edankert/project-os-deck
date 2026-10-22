@@ -606,6 +606,8 @@ async function boot(): Promise<void> {
     leaveTo: async (raw) => {
       await applyAddress(raw);
     },
+    // Deck's own agent sessions: the shell's bridge, null on a served page (FEAT-0033, RISK-0015).
+    agents: () => host.agents(),
   });
 
   const requested = new URLSearchParams(location.search).get('address');

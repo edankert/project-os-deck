@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0198
 aliases: ["TASK-0198"]
 title: "The composer sends a prompt with a model, an effort and an access level, and Resume, Interrupt and Stop act on the open session"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

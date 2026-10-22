@@ -26,6 +26,8 @@ import type { TowersView } from './overview-towers-view.js';
 import { FRAME_ACTION, standsIn } from '../shared/overview-select.js';
 import { SEARCH_LIST, searchTickets } from '../shared/overview-search.js';
 import { square } from './overview-panels.js';
+import { AgentPane } from './agent-pane.js';
+import type { AgentBridge } from './host-bridge.js';
 import type { TowersNode } from '../shared/overview-scene.js';
 import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
 import { afterDraw, canGoBack, canGoForward, current as trailNow, emptyTrail, stepped, type Trail, type TravelIntent } from '../shared/overview-trail.js';
@@ -67,6 +69,8 @@ export interface OverviewHostApi {
   noteHtml?(workspaceId: string, noteId: string): Promise<string>;
   /** Leave the overview for an ordinary address (no page, no flow). */
   leaveTo(address: string): Promise<void>;
+  /** Deck's own agent sessions (FEAT-0033): the shell's bridge, or null on a served page. */
+  agents?(): AgentBridge | null;
 }
 
 const pages = new Map<string, ScreenDefinition>();
@@ -528,9 +532,28 @@ export function initOverview(host: OverviewHostApi): void {
     go: (raw: string) => go(raw),
     // The 3D view of the towers, for the window run to press through (TASK-0169).
     towers: () => (towersActive() ? towersView!.probe : null),
+    // The session pane (FEAT-0033): open a session, and read what it draws.
+    agents: {
+      open: (id: string) => sessionPane()?.open(id) ?? Promise.resolve(false),
+      model: () => sessionPane()?.model() ?? null,
+      openId: () => sessionPane()?.openId ?? null,
+    },
     // What the search box holds and lights (TASK-0183).
     search: () => ({ shown: searchBox !== null && !searchBox.hidden, query: searchInput?.value ?? '', found: searching?.ids.length ?? null, listed: searchList?.children.length ?? 0, said: searchCount?.textContent ?? '' }),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Deck's own agent sessions (FEAT-0033): the session pane, made the first time it is needed,
+// in the shell only.
+
+let agentPane: AgentPane | null = null;
+
+function sessionPane(): AgentPane | null {
+  const bridge = api?.agents?.() ?? null;
+  if (bridge === null || area === null) return null;
+  agentPane ??= new AgentPane({ agents: bridge, parent: area, say: (m, e) => api?.say(m, e), closed: () => undefined });
+  return agentPane;
 }
 
 // ---------------------------------------------------------------------------

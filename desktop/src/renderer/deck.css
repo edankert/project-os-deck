@@ -1650,3 +1650,39 @@ body[data-overview-screen]:not([data-overview-screen=""]) .overview-toggle { col
 body[data-overview-screen]:not([data-overview-screen=""]) .field-area,
 body[data-overview-screen]:not([data-overview-screen=""]) .desk-area,
 body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibility: hidden; }
+
+/* The session pane (FEAT-0033, DES-0006): one session on the right, turn by turn, the way T3 Code draws one. */
+.ag-pane { position: absolute; right: 0; top: 0; bottom: 0; width: min(600px, 48vw); z-index: 7; display: flex; flex-direction: column;
+  background: hsla(210, 50%, 7%, 0.97); border-left: 1px solid hsla(190, 90%, 65%, 0.35); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: hsl(195 40% 90%); }
+.ag-pane[hidden] { display: none; }
+.ag-body { flex: 1; overflow-y: auto; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
+.ag-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid hsla(190, 90%, 65%, 0.15); }
+.ag-title { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.ag-glyph { font-size: 16px; } .ag-glyph.ag-claude { color: hsl(18 80% 66%); } .ag-glyph.ag-codex { color: hsl(200 70% 70%); }
+.ag-state { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: hsla(205, 40%, 40%, 0.4); }
+.ag-st-working { background: hsla(190, 90%, 45%, 0.45); } .ag-st-waiting { background: hsla(5, 60%, 50%, 0.55); } .ag-st-failed { background: hsla(355, 70%, 45%, 0.6); }
+.ag-close { margin-left: auto; all: unset; cursor: pointer; padding: 0 6px; font-size: 18px; color: hsl(205 25% 70%); }
+.ag-close:hover { color: #fff; }
+.ag-facts { font-size: 11.5px; color: hsl(205 25% 64%); }
+.ag-turn { display: flex; flex-direction: column; gap: 6px; }
+.ag-prompt { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 12px 12px 2px 12px; background: hsla(200, 70%, 40%, 0.35); white-space: pre-wrap; }
+.ag-text { white-space: pre-wrap; }
+.ag-note { font-size: 12px; color: hsl(205 25% 64%); font-style: italic; }
+.ag-steps { display: flex; flex-wrap: wrap; gap: 4px; }
+.ag-chip { font: 11.5px "SF Mono", Menlo, monospace; padding: 2px 8px; border-radius: 10px; background: hsla(205, 40%, 35%, 0.35); border: 1px solid hsla(190, 90%, 65%, 0.2); }
+.ag-chip.has-failed { border-color: hsla(5, 70%, 60%, 0.6); } .ag-chip.is-running { border-color: hsl(190 90% 70%); }
+.ag-edits { display: flex; flex-direction: column; gap: 2px; }
+.ag-edit summary { cursor: pointer; display: flex; gap: 8px; font: 12px "SF Mono", Menlo, monospace; }
+.ag-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ag-plus { color: hsl(140 50% 62%); } .ag-minus { color: hsl(5 60% 66%); }
+.ag-diff { max-height: 260px; overflow: auto; margin: 4px 0; padding: 6px 8px; font: 11.5px "SF Mono", Menlo, monospace; background: hsla(210, 50%, 4%, 0.8); border-radius: 6px; }
+.ag-plan { margin: 0; padding-left: 18px; } .ag-plan li.is-done { text-decoration: line-through; opacity: 0.6; }
+.ag-ask { padding: 8px 10px; border-radius: 8px; border: 1px solid hsla(5, 60%, 60%, 0.6); background: hsla(5, 50%, 30%, 0.18); display: flex; flex-direction: column; gap: 6px; }
+.ag-ask-approved, .ag-ask-denied { border-color: hsla(190, 90%, 65%, 0.2); background: transparent; opacity: 0.75; }
+.ag-ask-what { font: 12px "SF Mono", Menlo, monospace; word-break: break-all; }
+.ag-ask-acts { display: flex; gap: 6px; }
+.ag-ask-acts button, .ag-composer button { all: unset; cursor: pointer; padding: 4px 12px; border-radius: 6px; font-size: 12.5px; background: hsla(190, 90%, 55%, 0.18); border: 1px solid hsla(190, 90%, 65%, 0.45); }
+.ag-approve { background: hsla(140, 50%, 40%, 0.35) !important; } .ag-deny { background: hsla(5, 60%, 45%, 0.35) !important; }
+.ag-ask-outcome { font-size: 12px; color: hsl(205 25% 70%); }
+.ag-waiting { color: hsl(5 60% 72%); font-weight: 600; }
+.ag-composer { border-top: 1px solid hsla(190, 90%, 65%, 0.2); padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ag-composer:empty { display: none; }
