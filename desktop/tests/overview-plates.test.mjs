@@ -243,7 +243,11 @@ test('the plate script draws all seven screens on both workspaces, every mark in
     // FEAT-0025, FEAT-0027, FEAT-0028 and FEAT-0029 all name DES-0005 in design:, and FEAT-0028
     // is in focus. An id inside a link's file name ([[TST-0094-DES-0005s-...]]) still names
     // nothing: idsIn's own test.
-    assert.equal(towerOf('DES-0005'), 'FEAT-0028', 'a design stands with the feature in focus that names it');
+    // The focus is the fixture commit's (FEAT-0028) where this clone has it, else today's (a shallow
+    // clone, CI's case); either way it is one of DES-0005's four, so DES-0005 stands with it.
+    const desNamers = ['FEAT-0025', 'FEAT-0027', 'FEAT-0028', 'FEAT-0029'];
+    assert.equal(towerOf('DES-0005'), desNamers.includes(towerData.deck.focus.feature) ? towerData.deck.focus.feature : 'FEAT-0025', 'a design stands with the feature in focus that names it');
+    assert.equal(towerOf('DES-0003'), 'FEAT-0017', 'with the focus not among them, a design stands with the lowest-numbered feature that names it (FEAT-0017, FEAT-0020, FEAT-0022)');
     // The focus is the snapshot's at the fixture's commit, when this clone has that commit.
     const deckModel = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', 'deck.json'), 'utf-8'));
     const shown = spawnSync('git', ['-C', path.join(desktopRoot, '..'), 'show', `${deckModel.head}:SNAPSHOT.yaml`], { encoding: 'utf-8' });
@@ -426,5 +430,13 @@ test('the towers page reads parents and lists however the frontmatter writes the
   assert.deepEqual(designs.implementsOf.get('DES-0008'), ['FEAT-0012', 'FEAT-0011'], 'a design names the features it implements, phases left out');
   assert.equal(designs.implementsOf.has('DES-0009') || designs.parent.has('DES-0008'), false, 'implementing nothing names nothing; implements: is not a parent');
   assert.equal(designs.implementsOf.has('TASK-0010'), false, 'only a design is placed by its own implements:');
+  // The choice itself (review round two of TASK-0179), on lists of its own.
+  const { designFeature } = await import(path.join(desktopRoot, 'scripts', 'overview-towers-notes.mjs'));
+  assert.equal(designFeature({ namedBy: ['FEAT-0029', 'FEAT-0025', 'FEAT-0028'] }), 'FEAT-0025', 'the lowest-numbered feature that names it');
+  assert.equal(designFeature({ namedBy: ['FEAT-0029', 'FEAT-0025', 'FEAT-0028'], focus: 'FEAT-0028' }), 'FEAT-0028', 'the feature in focus, when it names it');
+  assert.equal(designFeature({ namedBy: ['FEAT-0134'], implementsList: ['FEAT-0078', 'FEAT-0134'] }), 'FEAT-0134', 'a feature naming it beats its own implements:');
+  assert.equal(designFeature({ viaTasks: ['FEAT-0040'], implementsList: ['FEAT-0012'] }), 'FEAT-0040', 'a task naming it brings it to the task\'s feature before implements:');
+  assert.equal(designFeature({ implementsList: ['FEAT-0012', 'FEAT-0011'] }), 'FEAT-0011', 'with only implements:, its lowest-numbered');
+  assert.equal(designFeature({ namedBy: ['FEAT-0001'], isFeature: () => false }), null, 'a name that is not a feature of the workspace counts for nothing');
   assert.equal(parent.size, 4, 'the first note with an id wins');
 });

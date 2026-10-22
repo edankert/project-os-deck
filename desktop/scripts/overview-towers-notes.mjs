@@ -317,3 +317,18 @@ export function weeksOf(closed, dataDate) {
   }
   return weeks;
 }
+
+/**
+ * The feature a design stands with (TASK-0179): of the features that name it in their lists,
+ * the one in focus if it is among them, else the lowest-numbered; with none, the same choice
+ * among the features of the tasks that name it; with none, among the features its own
+ * `implements:` names. `isFeature` says which ids are features of the workspace.
+ */
+export function designFeature({ namedBy = [], viaTasks = [], implementsList = [], focus = null, isFeature = () => true }) {
+  const prefer = (list) => {
+    const features = [...new Set(list)].filter(isFeature);
+    if (features.length === 0) return undefined;
+    return focus !== null && features.includes(focus) ? focus : features.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))[0];
+  };
+  return prefer(namedBy) ?? prefer(viaTasks) ?? prefer(implementsList) ?? null;
+}

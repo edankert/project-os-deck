@@ -28,7 +28,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { relationsFrom, ownerWord, boardOf, evidenceFrom, lastDates, weeksOf } from './overview-towers-notes.mjs';
+import { relationsFrom, ownerWord, boardOf, evidenceFrom, lastDates, weeksOf, designFeature } from './overview-towers-notes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.join(here, '..');
@@ -188,19 +188,20 @@ for (const [ws, choice] of Object.entries(choices)) {
     return p?.startsWith('FEAT-') ? p : undefined;
   };
   // A design stands with a feature that names it, the feature in focus if it is one of them, else
-  // the lowest-numbered; with none, with a feature its own implements: names, by the same rule.
-  // So the design of the work in hand stands nearest it (TASK-0179, review round one).
+  // the lowest-numbered; then the features of the tasks that name it; then the features its own
+  // implements: names (designFeature). So the design of the work in hand stands nearest it
+  // (TASK-0179, review rounds one and two).
   const claimedBy = new Map();
-  for (const [owner, list] of named) if (owner.startsWith('FEAT-')) for (const id of list) (claimedBy.get(id) ?? claimedBy.set(id, []).get(id)).push(owner);
-  const prefer = (list) => {
-    const features = list.filter((f) => tickets[f]?.type === 'feature');
-    if (features.length === 0) return undefined;
-    return features.includes(focus.feature) ? focus.feature : features.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))[0];
-  };
+  const claimedByTask = new Map();
+  for (const [owner, list] of named) {
+    const into = owner.startsWith('FEAT-') ? claimedBy : claimedByTask;
+    for (const id of list) (into.get(id) ?? into.set(id, []).get(id)).push(owner);
+  }
   const featureOf = (id) => {
     if (id.startsWith('DES-') && parent.get(id) === undefined) {
-      const f = prefer(claimedBy.get(id) ?? []) ?? prefer(implementsOf.get(id) ?? []);
-      if (f !== undefined) return f;
+      const viaTasks = (claimedByTask.get(id) ?? []).map((t) => upToFeature(t) ?? namedBy.get(t)).filter(Boolean);
+      const f = designFeature({ namedBy: claimedBy.get(id) ?? [], viaTasks, implementsList: implementsOf.get(id) ?? [], focus: focus.feature, isFeature: (x) => tickets[x]?.type === 'feature' });
+      if (f !== null) return f;
     }
     const task = namedByTask.get(id);
     const f = upToFeature(id) ?? namedBy.get(id) ?? (task !== undefined ? upToFeature(task) ?? namedBy.get(task) : undefined);
