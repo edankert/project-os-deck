@@ -68,12 +68,16 @@ export function weeksPanel(model: OverviewModel, today: string, place: { x: numb
   const closed = Object.values(model.tickets).filter((t) => t.state === 'closed').sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }));
   const w = weeksOf(closed.map((t) => [t.id, t.updated ?? '']), today);
   const undated = closed.filter((t) => (t.updated ?? '') === '').map((t) => t.id);
+  // A ticket closed in another year is in none of this year's weeks; it is counted apart, so that
+  // every closed ticket is counted once, on 1 January too (review of FEAT-0031, TASK-0190).
+  const other = closed.filter((t) => (t.updated ?? '') !== '' && !t.updated!.startsWith(w.year)).map((t) => t.id);
   const total = w.closed.reduce((n, ids) => n + ids.length, 0);
   return {
-    node: { kind: 'panel', key: 'weeks', ...place, label: `${w.year}: ${total} tickets closed, by week`, body: { kind: 'weeks', year: w.year, now: w.now, weeks: w.closed, undated } },
+    node: { kind: 'panel', key: 'weeks', ...place, label: `${w.year}: ${total} tickets closed, by week`, body: { kind: 'weeks', year: w.year, now: w.now, weeks: w.closed, undated, other } },
     rows: [
       ...w.closed.map((ids, i) => ({ id: `week-${i + 1}`, label: `Week ${i + 1} of ${w.year}: ${ids.length} closed${i === w.now ? ' (this week)' : ''}`, group: `${w.year} by week`, lights: ids })),
       ...(undated.length > 0 ? [{ id: 'weeks-undated', label: `${undated.length} closed with no date`, group: `${w.year} by week`, lights: undated }] : []),
+      ...(other.length > 0 ? [{ id: 'weeks-other', label: `${other.length} closed in other years`, group: `${w.year} by week`, lights: other }] : []),
     ],
   };
 }

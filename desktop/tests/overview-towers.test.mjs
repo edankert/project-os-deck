@@ -485,7 +485,7 @@ test('a tower quiet for 14 days or more, counted to the day given, carries its a
     for (const tw of layout.phases.flatMap((p) => p.towers)) {
       const tickets = tw.cubes.map((c) => m.tickets[c.id]);
       const quiet = quietDays(tickets, today);
-      const want = m.tickets[tw.feature].state !== 'closed' && quiet !== null && quiet >= 14 ? quiet : null;
+      const want = !['closed', 'dropped'].includes(m.tickets[tw.feature].state) && quiet !== null && quiet >= 14 ? quiet : null;
       assert.equal(tw.age, want, `${name} ${tw.feature}`);
       if (want !== null) assert.match(tw.label, new RegExp(`quiet for ${want} days`));
     }
@@ -496,6 +496,24 @@ test('a tower quiet for 14 days or more, counted to the day given, carries its a
   // DES-0005's page: on Deck's fixture, one tower, FEAT-0016 in Glass, quiet for 34 days.
   const deck = towersLayout(fixture('deck'), ctx, null, { today: fixture('deck').generated.slice(0, 10) });
   assert.deepEqual(deck.phases.flatMap((p) => p.towers).filter((t) => t.age !== null).map((t) => [t.feature, t.age]), [['FEAT-0016', 34]]);
+});
+
+test('the age badge starts at exactly 14 quiet days, and a dropped feature, like a finished one, carries none', () => {
+  const m = structuredClone(fixture('deck'));
+  const layout0 = towersLayout(m, ctx);
+  const tower = layout0.phases.flatMap((p) => p.towers).find((tw) => m.tickets[tw.feature].state !== 'closed' && m.tickets[tw.feature].state !== 'dropped');
+  for (const c of tower.cubes) m.tickets[c.id].updated = '2026-10-01';
+  const age = (today) => towersLayout(m, ctx, null, { today }).phases.flatMap((p) => p.towers).find((tw) => tw.feature === tower.feature).age;
+  assert.equal(age('2026-10-14'), null, '13 days quiet: no badge');
+  assert.equal(age('2026-10-15'), 14, '14 days quiet: the badge');
+  m.tickets[tower.feature].state = 'dropped';
+  assert.equal(age('2026-10-15'), null, 'a dropped feature carries no age');
+});
+
+test('search reads a letter of any alphabet as part of a word', () => {
+  const m = { tickets: { 'TASK-0001': { id: 'TASK-0001', title: 'Un élan vital', state: 'open', needsYou: false }, 'TASK-0002': { id: 'TASK-0002', title: 'The lane', state: 'open', needsYou: false } } };
+  assert.deepEqual(searchTickets(m, 'lan').map((t) => t.id), ['TASK-0002'], '"lan" does not find "élan"');
+  assert.deepEqual(searchTickets(m, 'élan').map((t) => t.id), ['TASK-0001']);
 });
 
 test("the card says how long the selected ticket has been quiet, counted to the model's date", () => {
@@ -520,7 +538,14 @@ for (const name of WORKSPACES) {
       const where = (t.updated ?? '') === '' ? 'undated' : t.updated.startsWith(w.year) ? 'week' : 'other year';
       assert.equal(inWeeks.includes(t.id), where === 'week', t.id);
       assert.equal(w.undated.includes(t.id), where === 'undated', t.id);
+      assert.equal(w.other.includes(t.id), where === 'other year', t.id);
     }
+    // Every closed ticket once, in a week, among the undated or in another year (review of FEAT-0031).
+    assert.equal(inWeeks.length + w.undated.length + w.other.length, closed.length);
+    // On 1 January the year starts empty, and last year's closures are counted under the squares, not lost.
+    const next = weeksPanel(m, '2027-01-02', { x: 0, y: 0, w: 320, h: 230 }).node.body;
+    assert.equal(next.weeks.flat().length, 0);
+    assert.equal(next.other.length + next.undated.length, closed.length);
     assert.ok(inWeeks.every((id) => m.tickets[id].state === 'closed'));
     assert.deepEqual(w.weeks, weeksOf(closed.map((t) => [t.id, t.updated ?? '']).sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true })), today).closed);
     // Each week and the undated are in the list twin, and light their tickets.

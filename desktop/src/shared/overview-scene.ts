@@ -188,6 +188,8 @@ export interface PanelWeeks {
   weeks: string[][];
   /** Closed tickets whose notes give no date: counted apart, not lost. */
   undated: string[];
+  /** Closed tickets dated in another year: counted apart too, so every closed ticket is counted once (TASK-0190). */
+  other: string[];
 }
 
 /** A button in a panel: where it goes, or the action it asks for. Its words are its own. */

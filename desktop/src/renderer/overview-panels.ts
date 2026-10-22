@@ -198,9 +198,11 @@ function weeksPanel(panel: PanelNode & { body: PanelWeeks }): HTMLElement {
     }
   }
   box.append(head, grid);
-  if (w.undated.length > 0) {
-    const foot = lighter('button', 'ov-weeks-undated', w.undated, `${w.undated.length} closed with no date: light them on the towers`);
-    foot.textContent = `${w.undated.length} closed with no date`;
+  // What closed outside this year's weeks is counted under them, so every closed ticket is counted once.
+  for (const [ids, words] of [[w.undated, 'closed with no date'], [w.other, 'closed in other years']] as const) {
+    if (ids.length === 0) continue;
+    const foot = lighter('button', 'ov-weeks-undated', ids, `${ids.length} ${words}: light them on the towers`);
+    foot.textContent = `${ids.length} ${words}`;
     box.appendChild(foot);
   }
   return box;

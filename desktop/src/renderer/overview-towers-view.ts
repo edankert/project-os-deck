@@ -646,7 +646,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
    */
   function drawChosen(): void {
     const sel = layout?.selection ?? null;
-    const sig = sel === null ? '' : `${sel.id}:${sel.links.length}`;
+    const sig = sel === null ? '' : JSON.stringify([sel.id, sel.at, sel.links.length, sel.links[0]?.to ?? null]);
     if (sig === chosenSignature) return;
     chosenSignature = sig;
     for (const o of [...chosen.children]) {

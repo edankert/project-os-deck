@@ -272,7 +272,8 @@ function weeksFlat(panel: PanelNode & { body: PanelWeeks }): SceneNode[] {
     const f = v.weeks[i]!.length === 0 ? 0 : 0.25 + (0.75 * v.weeks[i]!.length) / most;
     out.push({ kind: 'mark', tag: 'rect', attrs: { x: cx, y: cy, width: cell - 3, height: cell - 3, rx: 2, 'fill-opacity': f.toFixed(2) }, cls: `ov-week-cell${i === v.now ? ' is-now' : ''}` });
   }
-  if (v.undated.length > 0) out.push({ kind: 'text', x: x + 16, y: y + h - 14, text: `${v.undated.length} closed with no date`, rest: true, role: 'label', size: 11, cls: 'ov-dim' });
+  const apart = [v.undated.length > 0 ? `${v.undated.length} closed with no date` : '', v.other.length > 0 ? `${v.other.length} in other years` : ''].filter(Boolean).join(' · ');
+  if (apart !== '') out.push({ kind: 'text', x: x + 16, y: y + h - 14, text: apart, rest: true, role: 'label', size: 11, cls: 'ov-dim' });
   return out;
 }
 

@@ -13,7 +13,8 @@ import type { OverviewModel, Ticket } from './overview-types.js';
 export const SEARCH_LIST = 12;
 
 export function searchTickets(model: OverviewModel, query: string): Ticket[] {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean).map((w) => new RegExp(`(?:^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  // A word starts after anything that is not a letter or a digit of any alphabet, so "lan" does not find "élan" (review of FEAT-0031).
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean).map((w) => new RegExp(`(?:^|[^\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u'));
   if (words.length === 0) return [];
   const exact = query.trim().toUpperCase();
   const found = Object.values(model.tickets).filter((t) => {

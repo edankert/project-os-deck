@@ -77,7 +77,7 @@ export function checkScene(scene: Scene, options: SceneCheckOptions = {}): Scene
       if (b.rows.some((r) => !ids.includes(r.id))) numberErrors.push(`${node.key}: a row is in no part of the bar`);
     }
     if (b.kind === 'weeks') {
-      const ids = [...b.weeks.flat(), ...b.undated];
+      const ids = [...b.weeks.flat(), ...b.undated, ...b.other];
       if (b.weeks.length !== 52) numberErrors.push(`${node.key}: draws ${b.weeks.length} weeks, not 52`);
       if (new Set(ids).size !== ids.length) numberErrors.push(`${node.key}: a ticket is counted twice`);
     }

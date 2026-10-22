@@ -11,7 +11,7 @@ updated: 2026-10-22
 source: ["Edwin 2026-10-22: 'Build the DES-0005 into the deck and for DES-0006: - I think side pane as suggested but open for discussion - The ones they started on (is this not the same?) - It should be possible to hide the overview panels - Think it would be good to do permission requests first?'"]
 goal: "In Deck itself, a person selects a ticket on the towers ring and sees its links, text and pictures; searches and sees the matches glow; sees what comes next, what needs them, which towers have gone quiet and what closed each week; and can group the ring by feature."
 requirements: []
-tasks: ["[[TASK-0181]]", "[[TASK-0182]]", "[[TASK-0183]]", "[[TASK-0184]]", "[[TASK-0185]]", "[[TASK-0186]]", "[[TASK-0187]]", "[[TASK-0189]]"]
+tasks: ["[[TASK-0181]]", "[[TASK-0182]]", "[[TASK-0183]]", "[[TASK-0184]]", "[[TASK-0185]]", "[[TASK-0186]]", "[[TASK-0187]]", "[[TASK-0189]]", "[[TASK-0190]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
@@ -91,4 +91,27 @@ Built on 2026-10-22, [[TASK-0181]] to [[TASK-0187]] and [[TASK-0189]], each in i
 
 ## Review
 
-<Two independent reviewers, from the packet `tools/scripts/review-packet.py` writes; their combined verdict is transcribed here, never anticipated.>
+### Round one
+
+2026-10-22: two fresh independent Claude reviewers (claude-opus-5-5, separate worktrees) on `1f6e623`, from the packet `review-packet.py` wrote. **Changes requested by both.** Each broke three guards; the combined claims:
+
+| # | Claim | Verdict | Evidence |
+|---|---|---|---|
+| 1 | A selected ticket draws one curve to every ticket it is joined to, up to 240, on both workspaces | holds (layout and flat plan); 3D not checked | Both selected every ticket of both fixtures in both groupings: no selection empty, links equal to the model's both ways, `ov-curve` paths equal to min(240, links). Removing the reverse links failed 9 checks. |
+| 2 | The card and the pane say what the criterion lists | holds | `selectionPanels`; the card reads the model before regrouping. |
+| 3 | Search finds word starts in ids and titles, and says how many | holds | Removing the word-start guard failed 2 checks. |
+| 4 | The next-up board lists the last two finished, the next and six more | holds (one reviewer); not checked (the other) | Deck and your-trainer boards as pinned. |
+| 5 | The needs-you count and its split by reason | holds | 12 and 12 on Deck, 75 and 75 on your-trainer. |
+| 6 | A tower quiet 14 days or more carries its age; ◷ hides them | the code holds; **its test refuted by both**; the toggle not checked | `quiet >= QUIET_DAYS` changed to `>` left 61 of 61 passing: no fixture tower sits at exactly 14 days. |
+| 7 | **The weeks count every closed ticket once: in its week, or among the undated** | **refuted by both** | A ticket dated in another year was in neither. With today 2027-01-02 the panel counted 0 of Deck's 298 closures. |
+| 8 | By feature: one segment per unfinished feature, the switch, the memory, the address | holds | Breaking `byFeature` failed 3 checks. |
+| 9 | Up to eighteen pictures, three a ticket, sized by nearness, each through the host | holds | Removing the three-a-ticket limit failed 5 checks. |
+| 10 | Every screen still passes the look's checks | not checked | |
+| 11 | TST-0103 passes | not checked | Edwin's. |
+| A1 | Selection in the address; the grammar refuses `select=` elsewhere | holds (grammar); history not checked | |
+| A2 | Pictures never block the ring | not checked (needs a window); placement at the core's rim read in the code | |
+| A3 | By feature changes only where tickets stand | holds | Every ticket once; `phaseScene` forces by phase. |
+
+Other observations: a dropped feature's tower still got an age; search split words at accented letters; the picture dates were read from git again on every switch of workspace; "more not drawn" would leave out a linked ticket with no cube; `drawChosen` redrew only on a new id or link count.
+
+**All fixed in [[TASK-0190]]**: the weeks count a ticket closed in another year apart, under the squares, so every closed ticket is counted once; a check on a tower quiet exactly 13 and 14 days fails the reviewers' break; a dropped feature carries no age; a letter of any alphabet is part of a word; the dates are kept per workspace; `total` counts every joined ticket; `drawChosen` redraws when where the selection stands changes.

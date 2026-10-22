@@ -42,11 +42,12 @@ export interface OverviewIo {
  * a third of a second on your-trainer's 2,900 commits). Kept per commit, since the dates
  * change only when HEAD does. An empty map when the folder is not in a Git repository.
  */
-const datesByHead = new Map<string, Map<string, string>>();
+const datesByWorkspace = new Map<string, { head: string; dated: Map<string, string> }>();
 function commitDates(root: string, docsRoot: string, head: string): Map<string, string> {
-  const key = `${root}\0${docsRoot}\0${head}`;
-  const known = datesByHead.get(key);
-  if (known !== undefined) return known;
+  // One entry per workspace, replaced when its HEAD moves, so switching between workspaces reads nothing again.
+  const key = `${root}\0${docsRoot}`;
+  const known = datesByWorkspace.get(key);
+  if (known !== undefined && known.head === head) return known.dated;
   let dated = new Map<string, string>();
   try {
     const top = fs.realpathSync(execFileSync('git', ['-C', docsRoot, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim());
@@ -61,8 +62,7 @@ function commitDates(root: string, docsRoot: string, head: string): Map<string, 
   } catch {
     dated = new Map(); // A vault need not be a Git repository.
   }
-  datesByHead.clear(); // One commit's dates per workspace at a time is all a build reads.
-  datesByHead.set(key, dated);
+  datesByWorkspace.set(key, { head, dated });
   return dated;
 }
 

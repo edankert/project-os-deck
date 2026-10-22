@@ -414,7 +414,8 @@ export function towersLayout(given: OverviewModel, ctx: ScreenContext, open: str
         label: `${asking.length} ${asking.length === 1 ? 'ticket needs' : 'tickets need'} you in ${tw.foot.id}: ${asking.map((t) => `${t.id}, ${t.needs?.say ?? 'needs you'}`).join('; ')}`,
       };
       const closed = [tw.foot, ...tw.floors].filter((t) => t.state === 'closed').length;
-      const quiet = tw.foot.state === 'closed' ? null : quietDays([tw.foot, ...tw.floors], today);
+      // A finished feature, done or dropped, carries no age (review of FEAT-0031).
+      const quiet = tw.foot.state === "closed" || tw.foot.state === "dropped" ? null : quietDays([tw.foot, ...tw.floors], today);
       const age = quiet !== null && quiet >= QUIET_DAYS ? quiet : null;
       return { feature: tw.foot.id, x, z, angle: a, top, cubes, cap, focus: isFocusFeature, age, label: `${tw.foot.id} ${tw.foot.title}: ${closed} of ${tw.floors.length + 1} done${isFocusFeature ? ', in focus' : ''}${age !== null ? `; quiet for ${age} days` : ''}` };
     });
@@ -541,9 +542,11 @@ export function selectionIn(model: OverviewModel, layout: TowersLayout, id: stri
   if (from === undefined) return null;
   const out = new Set(model.tickets[id]!.links.filter((x) => x !== id && model.tickets[x] !== undefined));
   const into = new Set(Object.values(model.tickets).filter((t) => t.id !== id && t.links.includes(id)).map((t) => t.id));
-  const all = [...new Set([...out, ...into])].filter((x) => at.has(x)).sort(byNumber);
+  const joined = [...new Set([...out, ...into])];
+  const all = joined.filter((x) => at.has(x)).sort(byNumber);
   const links = all.slice(0, LINK_CAP).map((x) => ({ id: x, type: model.tickets[x]!.type, from, to: at.get(x)!, out: out.has(x), in: into.has(x) }));
-  return { id, at: from, links, total: all.length, labelled: all.length <= LINK_LABELS };
+  // `total` counts every ticket it is joined to, so "more not drawn" includes any with no cube (review of FEAT-0031).
+  return { id, at: from, links, total: joined.length, labelled: all.length <= LINK_LABELS };
 }
 
 /** Every cube of a layout, wherever it stands. */
