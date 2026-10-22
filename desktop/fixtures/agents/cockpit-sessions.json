@@ -1,0 +1,287 @@
+{
+ "workspace": "cockpit",
+ "recorded": "2026-10-22T13:21:21.445Z",
+ "head": "b049b92883d04a5c676ad988279be7a933c9df00",
+ "seen": "2026-10-15T02:41:24+01:00",
+ "publish": {
+  "ahead": 8,
+  "changed": 0
+ },
+ "sessions": [
+  {
+   "id": "bc4cdcaa",
+   "agent": "claude",
+   "state": "waiting",
+   "started": "2026-10-14T21:02:28.527+00:00",
+   "last": "2026-10-21T20:03:50.261+00:00",
+   "ended": null,
+   "tickets": [
+    "FEAT-0157",
+    "TASK-0672",
+    "TASK-0671",
+    "TASK-0675",
+    "TASK-0673",
+    "TASK-0674",
+    "TASK-0676",
+    "TASK-0677",
+    "TASK-0679",
+    "TASK-0680",
+    "TST-0096"
+   ],
+   "changed": [
+    [
+     "FEAT-0157",
+     "doing",
+     "2026-10-14T21:19:41.740+00:00"
+    ],
+    [
+     "TASK-0672",
+     "done",
+     "2026-10-14T21:53:06.435+00:00"
+    ],
+    [
+     "TASK-0671",
+     "done",
+     "2026-10-14T21:56:30.308+00:00"
+    ],
+    [
+     "TASK-0675",
+     "done",
+     "2026-10-14T22:02:45.573+00:00"
+    ],
+    [
+     "TASK-0673",
+     "done",
+     "2026-10-14T22:02:45.571+00:00"
+    ],
+    [
+     "TASK-0674",
+     "done",
+     "2026-10-14T22:02:45.572+00:00"
+    ],
+    [
+     "TASK-0676",
+     "done",
+     "2026-10-14T22:11:42.422+00:00"
+    ],
+    [
+     "TASK-0677",
+     "done",
+     "2026-10-16T19:40:27.251+00:00"
+    ],
+    [
+     "TASK-0679",
+     "done",
+     "2026-10-21T19:32:20.107+00:00"
+    ],
+    [
+     "TASK-0680",
+     "done",
+     "2026-10-21T20:02:00.335+00:00"
+    ]
+   ],
+   "files": 32,
+   "cost": {
+    "usd": 57.95,
+    "context": 39,
+    "window": 1000000,
+    "minutes": 10020,
+    "fiveHour": 25,
+    "week": 79
+   },
+   "prompts": 10,
+   "tools": {
+    "Bash": 480,
+    "Edit": 27,
+    "Write": 15,
+    "Agent": 10,
+    "Read": 5,
+    "SendMessage": 2,
+    "ToolSearch": 2,
+    "AskUserQuestion": 1
+   }
+  },
+  {
+   "id": "e828d594",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-21T19:23:02.548+00:00",
+   "last": "2026-10-21T19:23:06.778+00:00",
+   "ended": "2026-10-21T19:23:06.778+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 1,
+   "tools": {}
+  },
+  {
+   "id": "f0c84ad5",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-21T19:22:43.748+00:00",
+   "last": "2026-10-21T19:22:47.198+00:00",
+   "ended": "2026-10-21T19:22:47.198+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 1,
+   "tools": {}
+  },
+  {
+   "id": "d14c7033",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T22:01:46.660+00:00",
+   "last": "2026-10-14T22:01:46.660+00:00",
+   "ended": "2026-10-14T22:01:46.660+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  },
+  {
+   "id": "0f1c2ea0",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T21:49:21.724+00:00",
+   "last": "2026-10-14T21:49:21.724+00:00",
+   "ended": "2026-10-14T21:49:21.724+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  },
+  {
+   "id": "a548f257",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T21:42:04.095+00:00",
+   "last": "2026-10-14T21:42:04.095+00:00",
+   "ended": "2026-10-14T21:42:04.095+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  },
+  {
+   "id": "b204338a",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T21:41:46.999+00:00",
+   "last": "2026-10-14T21:41:46.999+00:00",
+   "ended": "2026-10-14T21:41:46.999+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  },
+  {
+   "id": "6b843217",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T21:26:16.602+00:00",
+   "last": "2026-10-14T21:26:16.602+00:00",
+   "ended": "2026-10-14T21:26:16.602+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  },
+  {
+   "id": "df5a959e",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T21:25:16.331+00:00",
+   "last": "2026-10-14T21:25:16.331+00:00",
+   "ended": "2026-10-14T21:25:16.331+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  },
+  {
+   "id": "55e0cc31",
+   "agent": "claude",
+   "state": "idle",
+   "started": "2026-10-14T21:24:51.242+00:00",
+   "last": "2026-10-14T21:24:51.242+00:00",
+   "ended": "2026-10-14T21:24:51.242+00:00",
+   "tickets": [],
+   "changed": [],
+   "files": 0,
+   "cost": null,
+   "prompts": 0,
+   "tools": {}
+  }
+ ],
+ "requests": [
+  {
+   "session": "bc4cdcaa",
+   "agent": "claude",
+   "tool": "Bash",
+   "kind": "permission",
+   "status": "closed",
+   "ts": "2026-10-14T21:06:20+00:00",
+   "closed": "2026-10-14T21:06:48+00:00"
+  },
+  {
+   "session": "bc4cdcaa",
+   "agent": "claude",
+   "tool": "Edit",
+   "kind": "permission",
+   "status": "closed",
+   "ts": "2026-10-14T21:05:52+00:00",
+   "closed": "2026-10-14T21:06:08+00:00"
+  },
+  {
+   "session": "bc4cdcaa",
+   "agent": "claude",
+   "tool": "Bash",
+   "kind": "permission",
+   "status": "closed",
+   "ts": "2026-10-14T21:04:50+00:00",
+   "closed": "2026-10-14T21:05:43+00:00"
+  },
+  {
+   "session": "bc4cdcaa",
+   "agent": "claude",
+   "tool": "Bash",
+   "kind": "permission",
+   "status": "granted",
+   "ts": "2026-10-14T21:04:42+00:00",
+   "closed": ""
+  },
+  {
+   "session": "bc4cdcaa",
+   "agent": "claude",
+   "tool": "Bash",
+   "kind": "permission",
+   "status": "granted",
+   "ts": "2026-10-14T21:03:54+00:00",
+   "closed": ""
+  },
+  {
+   "session": "bc4cdcaa",
+   "agent": "claude",
+   "tool": "Bash",
+   "kind": "permission",
+   "status": "denied",
+   "ts": "2026-10-14T21:03:24+00:00",
+   "closed": ""
+  }
+ ]
+}

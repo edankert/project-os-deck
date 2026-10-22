@@ -463,6 +463,8 @@ function layoutSegment(p, a0, a1, R0, R1, force = false) {
 
 // ---------------------------------------------------------------------------
 let world = new THREE.Group();
+/** Layers drawn over the towers after each build; a page that adds one pushes it here. */
+const layers = [];
 scene.add(world);
 let state = null; // what is drawn: the workspace, its phases' groups, the sizes
 
@@ -799,7 +801,7 @@ function build(ws) {
   // Every material that fades when a selection or a search hushes the rest of the ring.
   const allMaterials = [...phases.flatMap((ph) => ph.materials), ...shelfDrawn.materials, ...coreDrawn.materials];
   for (const m of allMaterials) m.transparent = true;
-  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow, marks, allMaterials, hush: 1, sel: null, found: null, flows: [], evidenceGroup, anchors };
+  state = { ws, d, phases, where, pickables, plinths, pulses, beams, R0, R1, shelfR, focusIndex, selection, open: null, shelfGroup, coreGroup, nextMark, exitPick, capPick, ticketRow, marks, allMaterials, hush: 1, sel: null, found: null, flows: [], evidenceGroup, anchors, towerTops, extraPick: [] };
   const placed = d.ring.reduce((m, p) => m + p.tiles.length + p.towers.reduce((x, t) => x + 1 + t.floors.length, 0), 0) + d.shelf.reduce((m, p) => m + p.tickets.length, 0) + d.core.length;
   window.__towers = { ws, tickets: placed, drawn: where.size, towers: d.ring.reduce((m, p) => m + p.towers.length, 0), R1, focus: d.focus, next: d.next };
   drawLegend();
@@ -808,6 +810,8 @@ function build(ws) {
   drawQueue();
   drawNeeds();
   drawWeeks();
+  // A layer drawn over the towers (DES-0006's agents, TASK-0178) adds itself after each build.
+  for (const layer of layers) layer();
   for (const b of document.querySelectorAll('#group button')) b.setAttribute('aria-pressed', String(b.dataset.group === grouping));
   window.__towers.grouping = grouping;
   window.__towers.ring = d.ring.map((p) => p.id);
@@ -1537,8 +1541,9 @@ function hitAt(x, y) {
   const open = state.open;
   const visiblePick = state.pickables.filter((m) => m.parent.visible);
   const caps = state.capPick.filter((m) => m.parent.visible);
-  const hits = ray.intersectObjects([...caps, ...visiblePick, ...state.exitPick, ...state.plinths], false);
+  const hits = ray.intersectObjects([...state.extraPick.filter((m) => m.visible), ...caps, ...visiblePick, ...state.exitPick, ...state.plinths], false);
   for (const h of hits) {
+    if (h.object.userData.extra) return { extra: h.object.userData.extra };
     if (h.object.userData.cap) return { cap: h.object.userData.cap };
     if (h.object.userData.rows) return { ticket: h.object.userData.rows[h.instanceId] };
     if (h.object.userData.exit) return { exit: h.object.userData.exit };
@@ -1549,6 +1554,7 @@ function hitAt(x, y) {
 
 function tipFor(hit) {
   const d = state.d;
+  if (hit.extra) return hit.extra.tip();
   if (hit.ticket) {
     const { r, where } = hit.ticket;
     const phase = where?.phase !== undefined ? state.phases[where.phase].p : null;
@@ -1583,6 +1589,10 @@ canvas.addEventListener('pointerup', (e) => {
   const hit = hitAt(e.clientX, e.clientY);
   if (hit === null) return;
   document.getElementById('tip').style.display = 'none';
+  if (hit.extra) {
+    hit.extra.press();
+    return;
+  }
   if (hit.cap) {
     openPhase(hit.cap.phase, hit.cap.ids[0]);
     return;
