@@ -1,8 +1,8 @@
 {
   "workspace": "project-os-deck",
-  "head": "708af83d317700cf28ba5cdccb1bd494b0571a76",
+  "head": "a724cd93905b0e53a28366f480debafdd9f1cd68",
   "dirty": true,
-  "generated": "2026-10-22T13:21:18.985Z",
+  "generated": "2026-10-22T13:41:35.314Z",
   "phases": [
     {
       "id": "PHASE-0001",
@@ -650,7 +650,7 @@
           "dropped": 0
         },
         "test": {
-          "closed": 0,
+          "closed": 1,
           "progress": 0,
           "failed": 0,
           "owed": 0,
@@ -670,6 +670,7 @@
         "FEAT-0030",
         "FEAT-0021",
         "TASK-0178",
+        "TST-0101",
         "TST-0015"
       ]
     },
@@ -1405,7 +1406,7 @@
       "type": "design",
       "fill": "open",
       "needsYou": false,
-      "status": "draft",
+      "status": "proposed",
       "title": "Agent sessions stand beside the work: Claude and Codex at the towers they work on, a session drawn as a conversation, one Needs you, and the cockpit's overview panels as pictures",
       "phase": null,
       "placedBy": "project-wide",
@@ -1414,7 +1415,7 @@
         "DES-0005",
         "FEAT-0030",
         "PHASE-0004",
-        "TASK-0178"
+        "PHASE-0005"
       ]
     },
     "FEAT-0006": {
@@ -1584,7 +1585,28 @@
         "FEAT-0030",
         "PHASE-0004",
         "TASK-0176",
-        "TASK-0177"
+        "TASK-0177",
+        "TST-0101"
+      ],
+      "feature": "FEAT-0030"
+    },
+    "TST-0101": {
+      "id": "TST-0101",
+      "kind": "test",
+      "state": "closed",
+      "type": "test",
+      "fill": "doing",
+      "needsYou": false,
+      "status": "active",
+      "title": "DES-0006's page is drawn from the sessions the cockpit recorded, keeping only ids, states, times, tickets and counts, and holds every recorded session of every workspace",
+      "phase": "PHASE-0004",
+      "placedBy": "own",
+      "links": [
+        "DES-0006",
+        "FEAT-0030",
+        "PHASE-0004",
+        "TASK-0178",
+        "TST-0094"
       ],
       "feature": "FEAT-0030"
     },

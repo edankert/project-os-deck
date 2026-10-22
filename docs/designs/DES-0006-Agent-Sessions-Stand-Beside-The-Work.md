@@ -30,12 +30,12 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
 
 - **Agents at their towers.** Each recorded session stands as a marker over the tower or tile of the ticket it last moved on: its colour is its state (working, waiting for you, idle) and its ring its agent (✳ Claude, ◎ Codex). A working session breathes, as the focus feature's tasks do. Sessions that changed no ticket the workspace holds are not on the ring but in the Agents list.
 - **The Agents list, left middle**: every recorded session, its agent and state, the ticket it worked on and how many more, and when it was last active. Pressing one opens it.
-- **A session opened**, by pressing its marker or its row. Its tickets light and are joined to it by curves; the rest fades. The right pane shows, top to bottom:
+- **A session opened**, by pressing its marker or its row. Its tickets light and are joined to it by curves; the rest fades. A wide pane on the right shows the session the way T3 Code does, top to bottom:
   - the agent, the session's id, its state and its times;
   - its context, five-hour and weekly use as bars, and its minutes (not its cost: Deck's repository is public, and Edwin left the dollar cost out on 2026-10-22);
-  - the tickets it worked on as cockpit rows, each with the status it moved it to and when;
-  - the conversation: its prompts and its steps as tool chips (Bash 480, Edit 27, Read 5);
-  - its permission requests, the latest drawn with Approve and Deny as it stood before it was answered;
+  - the tickets it worked on as cockpit rows, each with the status it set and when;
+  - **the conversation, turn by turn**: each of your prompts as a bubble on the right (its words are not on this page), then the agent's reply as its steps (Bash 237, Edit 17, Write 12), the files it edited with the lines added and removed (+2113 −46), and any permission request at the turn it was asked in, with its outcome. A session waiting for you ends with "Claude is waiting for you";
+  - the box to answer in, with the model, the effort and how much it may do without asking, and Send;
   - Resume, Open its shell and Stop.
 - **One Needs you, top right.** Its count adds open permission requests and waiting agents to the tickets that need you. Below the count come permission requests (open, and the last one with its outcome), the agents waiting for you (pressing one opens it), the tickets by reason as on the towers page, and what is not pushed: commits ahead of the upstream and files changed.
 - **The cockpit's overview panels, top left**, in place of the legend (which "? Marks" brings back):
@@ -49,15 +49,19 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
 
 ![Deck, the agents at their towers](__attachments__/DES-0006/agents-deck-ring.jpg)
 
-Deck on 2026-10-22: this session, Claude d95491a5, working, stands over Overview; an idle Claude and Codex stand over Glass. Needs you counts 11: nine to review, one to run, one waiting; nothing is waiting on a permission. Three commits are ahead and nine files changed.
+Deck on 2026-10-22: this session, Claude d95491a5, working, stands over Overview; an idle Claude and Codex stand over Glass. Needs you counts the tickets that need you; no agent and no permission is waiting. Twelve commits were ahead of the upstream when it was recorded, and six files changed.
 
 ![Deck, this session opened](__attachments__/DES-0006/agents-deck-session.jpg)
 
-The session opened: 47 tickets joined to it, context 67% of its 1,000k window over 11,089 minutes, and every ticket it moved with when.
+The session opened: 48 tickets joined to it, context 80% of its 1,000k window over 11,109 minutes, and every ticket it moved with when.
 
 ![The cockpit's repository, a session with permission requests](__attachments__/DES-0006/agents-cockpit-session.jpg)
 
-The cockpit's repository: Claude bc4cdcaa, waiting for you, worked on eleven tickets, FEAT-0157 and its tasks among them, ran Bash 480 times, and asked six permissions on 14 October, drawn with their outcomes.
+The cockpit's repository: Claude bc4cdcaa, waiting for you, worked on eleven tickets, FEAT-0157 and its tasks among them, and ran Bash 480 times over ten prompts.
+
+![The same session's conversation](__attachments__/DES-0006/agents-cockpit-conversation.jpg)
+
+Its conversation, the last eight turns: in the fourth, Claude edited two files (+43 −4) and asked four permissions, drawn at that turn with their outcomes; in the fifth it edited nineteen files (+2113 −46).
 
 ![your-trainer, the agents at their towers](__attachments__/DES-0006/agents-your-trainer-ring.jpg)
 
@@ -71,7 +75,7 @@ Work on this, on TASK-0179: Claude or Codex, the model, the effort, a new worktr
 
 The shell drawer open over the ring, with a tab for each workspace.
 
-The other pictures are [agents-your-trainer-session.jpg](__attachments__/DES-0006/agents-your-trainer-session.jpg), [agents-your-trainer-work.jpg](__attachments__/DES-0006/agents-your-trainer-work.jpg), [agents-your-trainer-drawer.jpg](__attachments__/DES-0006/agents-your-trainer-drawer.jpg), [agents-cockpit-ring.jpg](__attachments__/DES-0006/agents-cockpit-ring.jpg), [agents-cockpit-work.jpg](__attachments__/DES-0006/agents-cockpit-work.jpg) and [agents-cockpit-drawer.jpg](__attachments__/DES-0006/agents-cockpit-drawer.jpg).
+The other pictures are [agents-deck-conversation.jpg](__attachments__/DES-0006/agents-deck-conversation.jpg), [agents-your-trainer-conversation.jpg](__attachments__/DES-0006/agents-your-trainer-conversation.jpg), [agents-your-trainer-session.jpg](__attachments__/DES-0006/agents-your-trainer-session.jpg), [agents-your-trainer-work.jpg](__attachments__/DES-0006/agents-your-trainer-work.jpg), [agents-your-trainer-drawer.jpg](__attachments__/DES-0006/agents-your-trainer-drawer.jpg), [agents-cockpit-ring.jpg](__attachments__/DES-0006/agents-cockpit-ring.jpg), [agents-cockpit-work.jpg](__attachments__/DES-0006/agents-cockpit-work.jpg) and [agents-cockpit-drawer.jpg](__attachments__/DES-0006/agents-cockpit-drawer.jpg).
 
 ## What building it would take
 
@@ -80,6 +84,6 @@ In [[PHASE-0004-Parity]], after Overview, by [[ADR-0009-Deck-Runs-Its-Own-Agent-
 ## What is Edwin's to decide
 
 - Whether agents should stand over the ticket they last moved on, as here, or over the ticket they were started on.
-- Whether the session pane should replace the ticket pane, as here, or stand beside it.
+- Whether the session should open in the wide right pane, as here, or as a larger window of its own over the ring, as T3 Code gives a conversation the whole window.
 - Whether the overview panels belong on the ring's screen at all times, or behind a button, given how much the ring's screen now holds.
 - Whether Needs you should put permission requests first, as here, even above the tickets you were asked to review.

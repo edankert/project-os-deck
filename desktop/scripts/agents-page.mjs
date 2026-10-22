@@ -94,10 +94,41 @@ button[disabled] { opacity: .55; cursor: not-allowed; }
 #newsession .prompt { border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 13px; background: hsla(210, 40%, 12%, 0.7); }
 #newsession .acts { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
 #card .work { background: hsla(150, 60%, 40%, .3) !important; border-color: hsla(150, 60%, 60%, .5) !important; }
-@media (max-width: 1280px) { #drawer { left: 16px; right: 16px; bottom: 34px; } #agents { display: none; } }
+/* Review of TASK-0178: the pane starts below the header; a session's pane is wide; the drawer's tabs clear Next up and the weeks; a ticket's card hides the panels it would cover. */
+#panel { top: var(--top, 60px); padding-top: 12px; }
+#panel.wide { width: 560px; }
+#queue, #weeks { bottom: 66px; }
+#panel:not([hidden]) ~ #drawer { right: 396px; }
+#panel.wide:not([hidden]) ~ #drawer { right: 576px; }
+#card:not([hidden]) ~ #overview, #card:not([hidden]) ~ #agents { visibility: hidden; }
+#overview-seg { display: none; }
+.thread { margin: 4px 0 8px; }
+.thread .you { display: flex; gap: 8px; align-items: baseline; justify-content: flex-end; font-size: 12px; color: var(--dim); margin: 10px 0 4px; }
+.thread .you span { color: var(--ink); font-weight: 600; background: hsla(210, 40%, 22%, 0.9); border-radius: 999px; padding: 1px 9px; }
+.thread .you em { font-style: italic; opacity: .7; }
+.thread .turn { margin: 0; }
+.thread .by { font-size: 12px; font-weight: 700; margin-bottom: 5px; }
+.diff { font-size: 12px; color: var(--dim); }
+.diff .plus { color: hsl(140 60% 62%); }
+.diff .minus { color: hsl(0 70% 68%); }
+.waiting { margin: 10px 0 4px; padding: 6px 10px; border: 1px dashed; border-radius: 8px; font-size: 12px; }
+.composer { border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-top: 10px; background: hsla(210, 40%, 10%, 0.9); }
+.composer textarea { width: 100%; box-sizing: border-box; min-height: 52px; resize: none; background: transparent; border: 0; color: var(--ink); font: inherit; font-size: 13px; }
+.composer-row { display: flex; gap: 6px; align-items: center; }
+.composer-row .grow { flex: 1; }
+.composer-row button { background: hsla(190,90%,55%,.25); border: 1px solid var(--line); color: inherit; border-radius: 6px; padding: 3px 12px; font: inherit; font-size: 12px; }
+@media (max-width: 1280px) {
+  #drawer { left: 16px; right: 16px; bottom: 34px; }
+  #overview { display: none; z-index: 4; }
+  body.show-overview #overview { display: block; }
+  #agents { top: var(--top, 60px); max-height: 220px; }
+  #overview-seg { display: inline-flex; }
+  #panel.wide { width: 92vw; }
+}
 `;
 
-const html = `<section id="overview" aria-label="The project at a glance"></section>
+const html = `<div class="seg" id="overview-seg"><button id="overview-toggle" title="Show the overview panels">◫ Overview</button></div>
+<section id="overview" aria-label="The project at a glance"></section>
 <section id="agents" aria-label="Agent sessions"></section>
 <section id="drawer" aria-label="Shells"></section>
 <div id="newsession" hidden role="dialog" aria-label="New session"></div>

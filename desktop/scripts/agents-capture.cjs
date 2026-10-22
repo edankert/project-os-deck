@@ -2,7 +2,8 @@
 // connection. Run from desktop/:
 //   npx electron scripts/agents-capture.cjs <page.html> <out dir>
 // For each workspace it saves `agents-<workspace>-ring.jpg` (the agents at their towers and
-// the panels), `-session.jpg` (the session with the most tickets opened), `-work.jpg`
+// the panels), `-session.jpg` (the session with the most tickets opened) and `-conversation.jpg`
+// (its pane scrolled to the conversation), `-work.jpg`
 // ("Work on this" on the next ticket) and `-drawer.jpg` (the shell drawer open), in a hidden
 // window, grouped by phase. Errors the page logs fail the run.
 const { app, BrowserWindow } = require('electron');
@@ -41,6 +42,10 @@ app.whenReady().then(async () => {
       if (opened.session !== busiest || !/Working on/.test(opened.pane) || !/The conversation/.test(opened.pane)) errors.push(`${ws}: the session pane for ${busiest} is not drawn`);
       await wait(1200);
       await shot(`agents-${ws}-session.jpg`);
+      // The same session scrolled to its conversation.
+      await js(`(() => { const p = document.getElementById('panel'); const h = [...p.querySelectorAll('h3')].find((x) => x.textContent.startsWith('The conversation')); p.scrollTop = h ? h.offsetTop - 10 : 0; })()`);
+      await wait(400);
+      await shot(`agents-${ws}-conversation.jpg`);
       await js('window.__agents.close()');
     }
     const next = info.next ?? (await js(`JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].focus.feature`));

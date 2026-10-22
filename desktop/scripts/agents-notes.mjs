@@ -4,12 +4,36 @@
 
 const ID = /^[A-Z]+-\d+/;
 
-/** Tool calls in a Claude transcript (JSONL) or a Codex rollout, by name, and the prompts typed, as counts. */
+/**
+ * A Claude transcript (JSONL) or a Codex rollout, counted, never copied: tool calls by name,
+ * the prompts a person typed, and each turn (from one prompt to the next) as its start time,
+ * its tool calls by name, how many files it edited and how many lines it added and removed.
+ */
 export function countTranscript(text, agent) {
   const tools = {};
   let prompts = 0;
+  const turns = [];
+  let turn = null;
+  const files = new Set();
+  const startTurn = (ts) => {
+    turn = { ts: String(ts ?? ''), tools: {}, files: 0, plus: 0, minus: 0 };
+    files.clear();
+    turns.push(turn);
+  };
   const add = (name) => {
-    if (name) tools[name] = (tools[name] ?? 0) + 1;
+    if (!name) return;
+    tools[name] = (tools[name] ?? 0) + 1;
+    if (turn) turn.tools[name] = (turn.tools[name] ?? 0) + 1;
+  };
+  const lines = (v) => (typeof v === 'string' && v !== '' ? v.split('\n').length : 0);
+  const edited = (file, plus, minus) => {
+    if (!turn) return;
+    if (file && !files.has(file)) {
+      files.add(file);
+      turn.files += 1;
+    }
+    turn.plus += plus;
+    turn.minus += minus;
   };
   for (const line of text.split('\n')) {
     if (line.trim() === '') continue;
@@ -21,19 +45,46 @@ export function countTranscript(text, agent) {
     }
     if (agent === 'codex') {
       const p = o.payload ?? {};
-      if (o.type === 'response_item' && (p.type === 'function_call' || p.type === 'custom_tool_call')) add(p.name);
-      if (o.type === 'response_item' && p.type === 'message' && p.role === 'user') prompts += 1;
+      if (o.type === 'response_item' && p.type === 'message' && p.role === 'user') {
+        prompts += 1;
+        startTurn(o.timestamp);
+      }
+      if (o.type === 'response_item' && (p.type === 'function_call' || p.type === 'custom_tool_call')) {
+        add(p.name);
+        const input = typeof p.input === 'string' ? p.input : typeof p.arguments === 'string' ? p.arguments : '';
+        if (input.includes('*** Begin Patch')) {
+          for (const l of input.split('\n')) {
+            const f = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/.exec(l)?.[1];
+            if (f) edited(f, 0, 0);
+            else if (l.startsWith('+') && !l.startsWith('+++')) edited(null, 1, 0);
+            else if (l.startsWith('-') && !l.startsWith('---')) edited(null, 0, 1);
+          }
+        }
+      }
       continue;
     }
     const content = o.message?.content;
-    if (o.type === 'assistant' && Array.isArray(content)) for (const b of content) if (b?.type === 'tool_use') add(b.name);
     // A prompt is a person's turn: text, not a tool's result and not the harness's own note.
     if (o.type === 'user' && !o.isMeta && !o.toolUseResult) {
       const isText = typeof content === 'string' ? !content.startsWith('<') : Array.isArray(content) && content.some((b) => b?.type === 'text' && !String(b.text).startsWith('<')) && !content.some((b) => b?.type === 'tool_result');
-      if (isText) prompts += 1;
+      if (isText) {
+        prompts += 1;
+        startTurn(o.timestamp);
+      }
+    }
+    if (o.type === 'assistant' && Array.isArray(content)) {
+      for (const b of content) {
+        if (b?.type !== 'tool_use') continue;
+        add(b.name);
+        const i = b.input ?? {};
+        if (b.name === 'Edit') edited(i.file_path, lines(i.new_string), lines(i.old_string));
+        else if (b.name === 'Write') edited(i.file_path, lines(i.content), 0);
+        else if (b.name === 'MultiEdit') for (const e of i.edits ?? []) edited(i.file_path, lines(e.new_string), lines(e.old_string));
+      }
     }
   }
-  return { tools, prompts };
+  const top = (m, n) => Object.fromEntries(Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, n));
+  return { tools, prompts, turns: turns.map((t) => ({ ...t, tools: top(t.tools, 6) })) };
 }
 
 /** The ticket id a note's path names, by its file name. */
@@ -73,6 +124,8 @@ export function sessionsFrom({ sessions, approvals = [], agentState = null, coun
       cost: c ? { context: c.used_percentage ?? null, window: c.context_window_size ?? null, minutes: Math.round((c.total_duration_ms ?? 0) / 60000), fiveHour: c.rate_limits?.five_hour?.used_percentage ?? null, week: c.rate_limits?.seven_day?.used_percentage ?? null } : null,
       prompts: n?.prompts ?? (s.prompts ?? []).length,
       tools: n ? Object.fromEntries(Object.entries(n.tools).sort((a, b) => b[1] - a[1]).slice(0, 8)) : {},
+      // The last eight turns, as counts: when each began, its steps, the files and lines it changed.
+      turns: n?.turns ? n.turns.slice(-8) : [],
     };
   });
   const requestsOut = recent.map((a) => ({ session: short(a.session_id), agent: a.agent === 'codex' ? 'codex' : 'claude', tool: String(a.tool ?? ''), kind: String(a.kind ?? 'permission'), status: String(a.status ?? ''), ts: String(a.ts ?? ''), closed: String(a.closed_at ?? a.handed_back_at ?? '') }));

@@ -21,14 +21,22 @@ test('a transcript is counted, never copied: tool calls by name and the prompts 
     { type: 'user', isMeta: true, message: { content: 'meta' } },
     { type: 'user', message: { content: [{ type: 'text', text: 'and the second prompt' }] } },
   ].map((o) => JSON.stringify(o)).join('\n') + '\nnot json\n';
-  assert.deepEqual(countTranscript(claude, 'claude'), { tools: { Bash: 2, Edit: 1 }, prompts: 2 }, 'two prompts, three tool calls; the harness, meta lines and tool results are not prompts');
+  const counted = countTranscript(claude, 'claude');
+  assert.deepEqual([counted.tools, counted.prompts], [{ Bash: 2, Edit: 1 }, 2], 'two prompts, three tool calls; the harness, meta lines and tool results are not prompts');
+  assert.deepEqual(counted.turns.map((t) => t.tools), [{ Bash: 2, Edit: 1 }, {}], 'each turn its own steps');
+  const edits = countTranscript([
+    { type: 'user', timestamp: '2026-10-22T10:00:00Z', message: { content: 'go' } },
+    { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Edit', input: { file_path: '/x/a.md', old_string: 'one\ntwo', new_string: 'one\ntwo\nthree' } }, { type: 'tool_use', name: 'Write', input: { file_path: '/x/b.md', content: 'a\nb' } }, { type: 'tool_use', name: 'Edit', input: { file_path: '/x/a.md', old_string: 'x', new_string: 'y' } }] } },
+  ].map((o) => JSON.stringify(o)).join('\n'), 'claude');
+  assert.deepEqual(edits.turns, [{ ts: '2026-10-22T10:00:00Z', tools: { Edit: 2, Write: 1 }, files: 2, plus: 6, minus: 3 }], 'a turn counts the files it edited and the lines it added and removed, never their names or text');
   const codex = [
     { type: 'response_item', payload: { type: 'message', role: 'user', content: 'SECRET' } },
     { type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', input: 'SECRET' } },
     { type: 'response_item', payload: { type: 'function_call', name: 'exec' } },
     { type: 'response_item', payload: { type: 'message', role: 'assistant', content: 'SECRET' } },
   ].map((o) => JSON.stringify(o)).join('\n');
-  assert.deepEqual(countTranscript(codex, 'codex'), { tools: { exec: 2 }, prompts: 1 }, 'a Codex rollout counts the same way');
+  const cx = countTranscript(codex, 'codex');
+  assert.deepEqual([cx.tools, cx.prompts], [{ exec: 2 }, 1], 'a Codex rollout counts the same way');
 });
 
 test('a session keeps ids, states, times, tickets and counts, and no text', async () => {
@@ -45,7 +53,7 @@ test('a session keeps ids, states, times, tickets and counts, and no text', asyn
   const sessions = [session('aaaaaaaa-1', '2026-10-20T12:00:00Z'), session('bbbbbbbb-2', '2026-10-21T12:00:00Z'), session('cccccccc-3', '2026-10-19T12:00:00Z')];
   const approvals = [{ approval_id: 'x', session_id: 'cccccccc-3', agent: 'claude', tool: 'Bash', input: { command: 'SECRET-COMMAND', description: 'SECRET-DESCRIPTION' }, prompt: 'SECRET-COMMAND', status: 'granted', ts: '2026-10-19T11:00:00Z', kind: 'permission', closed_at: '2026-10-19T11:00:05Z' }];
   const agentState = { hook_sessions: { 'bbbbbbbb-2': { state: 'waiting', message: 'SECRET-MESSAGE' } } };
-  const out = sessionsFrom({ sessions, approvals, agentState, counts: () => ({ tools: { Bash: 3 }, prompts: 1 }), tickets: new Set(['TASK-0002']), keep: 1 });
+  const out = sessionsFrom({ sessions, approvals, agentState, counts: () => ({ tools: { Bash: 3 }, prompts: 1, turns: [{ ts: '2026-10-20T10:00:01Z', tools: { Bash: 3 }, files: 0, plus: 0, minus: 0 }] }), tickets: new Set(['TASK-0002']), keep: 1 });
   const text = JSON.stringify(out);
   for (const secret of ['SECRET', '/Users/', 'src/', 'docs/a.md']) assert.ok(!text.includes(secret), `nothing like ${secret} gets through`);
   assert.deepEqual(out.sessions.map((s) => s.id), ['bbbbbbbb', 'cccccccc'], 'the most recent session, and the one a recent request belongs to, newest first');
@@ -54,7 +62,7 @@ test('a session keeps ids, states, times, tickets and counts, and no text', asyn
   assert.deepEqual(b.tickets, ['TASK-0002'], 'tickets from the status changes and the notes it wrote, only those the model holds');
   assert.deepEqual(b.changed, [['TASK-0002', 'done', '2026-10-20T11:00:00Z']]);
   assert.deepEqual(b.cost, { context: 26, window: 1000000, minutes: 10, fiveHour: 39, week: 80 }, 'use, never the dollar cost');
-  assert.deepEqual([b.files, b.prompts, b.tools], [2, 1, { Bash: 3 }], 'counts only');
+  assert.deepEqual([b.files, b.prompts, b.tools, b.turns.length], [2, 1, { Bash: 3 }, 1], 'counts only');
   assert.deepEqual(out.requests, [{ session: 'cccccccc', agent: 'claude', tool: 'Bash', kind: 'permission', status: 'granted', ts: '2026-10-19T11:00:00Z', closed: '2026-10-19T11:00:05Z' }], 'a request keeps its tool and outcome, never its command');
 });
 

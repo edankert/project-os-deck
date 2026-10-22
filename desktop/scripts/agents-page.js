@@ -11,6 +11,7 @@ const STATE_LOOK = { busy: ['working', '#5fe0ff'], waiting: ['waiting for you', 
 const lookOf = (s) => STATE_LOOK[s.state] ?? STATE_LOOK.idle;
 const when = (iso) => (iso ? new Date(iso).toISOString().replace('T', ' ').slice(5, 16) : '');
 const sessionById = (id) => state.d.agents.sessions.find((s) => s.id === id);
+let openId = null;
 
 /** Where a session stands: over the tower or tile of the ticket it last changed, else the first it touched. */
 function sessionAnchor(s) {
@@ -33,7 +34,8 @@ layers.push(() => {
   for (const s of state.d.agents.sessions) {
     const a = sessionAnchor(s);
     if (!a) continue;
-    const key = a.primary;
+    // Several sessions over one tower stand side by side round it.
+    const key = a.at.toArray().map((v) => v.toFixed(1)).join(',');
     const n = spots.get(key) ?? 0;
     spots.set(key, n + 1);
     // Several sessions on one ticket stand side by side round it.
@@ -61,6 +63,9 @@ layers.push(() => {
   drawAgents();
   drawOverviewPanels();
   drawDrawer();
+  // A session open before a regroup stays open after it; another workspace has other sessions.
+  if (openId !== null && sessionById(openId)) openSession(openId);
+  else openId = null;
 });
 
 function sessionTip(s) {
@@ -76,6 +81,7 @@ function openSession(id) {
   clearSelection();
   clearMarks();
   state.session = id;
+  openId = id;
   const o = state.orbs.get(id);
   const ids = s.tickets.filter((t) => state.where.has(t)).slice(0, MAX_CURVES);
   for (const t of ids) {
@@ -101,6 +107,8 @@ function openSession(id) {
 
 function closeSession() {
   state.session = null;
+  openId = null;
+  document.getElementById('panel').classList.remove('wide');
   clearMarks();
   setHush(false);
   if (state.open !== null) drawPanel(state.open);
@@ -108,6 +116,18 @@ function closeSession() {
   syncOffset();
   window.__towers.session = null;
 }
+
+// The pane is wide for a session only; a ticket's pane or a phase's list is the usual width.
+const towersDrawTicketPane = drawTicketPane;
+drawTicketPane = function (id) {
+  document.getElementById('panel').classList.remove('wide');
+  towersDrawTicketPane(id);
+};
+const towersDrawPanel = drawPanel;
+drawPanel = function (i, selectId) {
+  document.getElementById('panel').classList.remove('wide');
+  towersDrawPanel(i, selectId);
+};
 
 // Escape and every other way out of a selection closes a session first.
 const towersClearSelection = clearSelection;
@@ -121,7 +141,11 @@ clearSelection = function () {
 
 const bar = (label, value, max, colour, suffix) => '<div class="meter"><span>' + esc(label) + '</span><i><b style="width:' + Math.min(100, Math.round((100 * (value ?? 0)) / max)) + '%;background:' + colour + '"></b></i><em>' + (value === null || value === undefined ? '—' : esc(String(value)) + (suffix ?? '')) + '</em></div>';
 
-/** The session in the right pane, the way T3 Code draws one: who, how far, what it works on, what it did, what it asks. */
+/**
+ * The session in the right pane, the way T3 Code draws one: who and how far, what it works on,
+ * the conversation turn by turn, what it asks, and the box to answer in. The prompts and replies
+ * are not on this page (it is drawn from counts), so each turn shows its steps, not its words.
+ */
 function drawSessionPane(s) {
   const a = AGENT[s.agent];
   const [word, colour] = lookOf(s);
@@ -129,24 +153,48 @@ function drawSessionPane(s) {
   const requests = state.d.agents.requests.filter((r) => r.session === s.id);
   const changed = new Map(s.changed.map(([id, status, ts]) => [id, [status, ts]]));
   const rows = s.tickets.slice(0, 40).map((id) => state.ticketRow.get(id)).filter(Boolean);
-  let html = '<div class="session-head"><span class="glyph" style="color:' + a.colour + '">' + a.glyph + '</span><div><h2>' + a.word + ' · ' + esc(s.id) + '</h2><div class="sub"><span class="state" style="background:' + colour + '"></span>' + esc(word) + ' · started ' + esc(when(s.started)) + ' · last ' + esc(when(s.last)) + (s.ended ? ' · ended' : '') + '</div></div></div>';
+  let html = '<div class="session-head"><span class="glyph" style="color:' + a.colour + '">' + a.glyph + '</span><div><h2>' + a.word + ' · ' + esc(s.id) + '</h2><div class="sub"><span class="state" style="background:' + colour + '"></span> ' + esc(word) + ' · started ' + esc(when(s.started)) + ' · last ' + esc(when(s.last)) + (s.ended ? ' · ended' : '') + '</div></div></div>';
   if (c) html += '<div class="meters">' + bar('Context', c.context, 100, '#5fe0ff', '%') + bar('5 hours', c.fiveHour, 100, '#ffb54d', '%') + bar('Week', c.week, 100, '#f0a77e', '%') + '<div class="costline">' + c.minutes + ' min · ' + Math.round((c.window ?? 0) / 1000) + 'k window</div></div>';
   html += '<h3>Working on · ' + s.tickets.length + '</h3>' + (rows.length === 0 ? '<div class="sub">It changed no ticket this page knows.</div>' : rows.map((r) => {
     const ch = changed.get(r[ID]);
-    return rowHtml(r, r[ID] === state.d.next).replace('</div>', (ch ? '<span class="moved">→ ' + esc(ch[0]) + ' ' + esc(when(ch[1]).slice(6)) + '</span>' : '') + '</div>');
+    // The status it set and when; "set" when the ticket still has that status.
+    const moved = ch ? (ch[0] === r[STATUS] ? 'set ' : '→ ' + esc(ch[0]) + ' ') + esc(when(ch[1]).slice(6)) : '';
+    return rowHtml(r, r[ID] === state.d.next).replace('</div>', (moved ? '<span class="moved">' + moved + '</span>' : '') + '</div>');
   }).join('') + (s.tickets.length > rows.length ? '<div class="sub">and ' + (s.tickets.length - rows.length) + ' more</div>' : ''));
-  const tools = Object.entries(s.tools);
-  html += '<h3>The conversation · ' + s.prompts + (s.prompts === 1 ? ' prompt' : ' prompts') + '</h3><div class="turn"><div class="you">Your prompts are not on this page: it is drawn from counts.</div><div class="steps">' + (tools.length === 0 ? '<span class="sub">No steps recorded</span>' : tools.map(([name, n]) => '<span class="chip">' + esc(name) + ' <b>' + n + '</b></span>').join('')) + '</div><div class="sub">' + s.files + ' files touched · ' + s.changed.length + ' tickets moved on</div></div>';
-  if (requests.length > 0) {
-    html += '<h3>Permission requests · ' + requests.length + '</h3>' + requests.map((r, i) => '<div class="ask' + (i === 0 ? ' first' : '') + '"><b>' + esc(r.tool) + '</b> <span class="sub">asked ' + esc(when(r.ts).slice(6)) + ' · ' + esc(r.status) + (r.closed ? ' ' + esc(when(r.closed).slice(6)) : '') + '</span>' + (i === 0 ? '<div class="answer"><button disabled>Approve</button><button disabled>Deny</button><span class="sub">as it stood before it was answered</span></div>' : '') + '</div>').join('');
-  }
+  // The conversation, turn by turn, with each permission request at the turn it was asked in.
+  const turns = s.turns ?? [];
+  const placedAsks = new Set();
+  const asksIn = (t, next) => requests.filter((r) => r.ts >= t.ts && (next === undefined || r.ts < next.ts));
+  html += '<h3>The conversation · ' + s.prompts + (s.prompts === 1 ? ' prompt' : ' prompts') + (turns.length < s.prompts ? ' · the last ' + turns.length : '') + '</h3><div class="thread">';
+  if (turns.length === 0) html += '<div class="sub">No turns recorded for this session.</div>';
+  turns.forEach((t, i) => {
+    const k = s.prompts - turns.length + i + 1;
+    const steps = Object.entries(t.tools);
+    const asks = asksIn(t, turns[i + 1]);
+    for (const r of asks) placedAsks.add(r);
+    html += '<div class="you"><span>You</span> prompt ' + k + ' · ' + esc(when(t.ts)) + '<em>its words are not on this page</em></div>' +
+      '<div class="turn"><div class="by" style="color:' + a.colour + '">' + a.glyph + ' ' + a.word + '</div><div class="steps">' + (steps.length === 0 ? '<span class="sub">answered without a step</span>' : steps.map(([name, n]) => '<span class="chip">' + esc(name) + ' <b>' + n + '</b></span>').join('')) + '</div>' +
+      (t.files > 0 ? '<div class="diff">Edited ' + t.files + (t.files === 1 ? ' file' : ' files') + ' <b class="plus">+' + t.plus + '</b> <b class="minus">−' + t.minus + '</b></div>' : '') +
+      asks.map((r) => askHtml(r, false)).join('') + '</div>';
+  });
+  if (s.state === 'waiting' || s.state === 'needs-input') html += '<div class="waiting" style="border-color:' + colour + '">' + a.word + ' is waiting for you</div>';
+  html += '</div>';
+  const rest = requests.filter((r) => !placedAsks.has(r));
+  if (rest.length > 0) html += '<h3>Permission requests · ' + rest.length + '</h3>' + rest.map((r, i) => askHtml(r, i === 0)).join('');
+  html += '<div class="composer"><textarea disabled placeholder="Message ' + a.word + '…  (design only)"></textarea><div class="composer-row"><span class="chip">' + (s.agent === 'codex' ? 'GPT-6 Astra' : 'Opus 5.5') + '</span><span class="chip">high</span><span class="chip">ask before edits</span><span class="grow"></span><button disabled>Send</button></div></div>';
   html += '<div class="acts session-acts"><button disabled title="Design only">↻ Resume</button><button disabled title="Design only">⌘ Open its shell</button><button disabled title="Design only">■ Stop</button></div>';
   const panel = document.getElementById('panel');
+  panel.classList.add('wide');
   panel.innerHTML = html;
   panel.hidden = false;
   panel.scrollTop = 0;
   for (const el of panel.querySelectorAll('.row[data-id]')) el.addEventListener('click', () => select(el.dataset.id));
   syncOffset();
+}
+
+/** A permission request as T3 Code shows one in the conversation: the tool, when, and its outcome; the latest one open with Approve and Deny. */
+function askHtml(r, open) {
+  return '<div class="ask' + (open ? ' first' : '') + '"><b>' + esc(r.tool) + '</b> <span class="sub">asked ' + esc(when(r.ts).slice(6)) + ' · ' + esc(r.status) + (r.closed ? ' ' + esc(when(r.closed).slice(6)) : '') + '</span>' + (open ? '<div class="answer"><button disabled>Approve</button><button disabled>Deny</button><span class="sub">as it stood before it was answered</span></div>' : '') + '</div>';
 }
 
 /** Every recorded session as a row, left middle: its agent, its state, its ticket, when. */
@@ -174,7 +222,7 @@ drawNeeds = function () {
   if (big) big.textContent = String(Number(big.textContent) + open.length + waiting.length);
   const last = ag.requests[0];
   const top = '<div class="nsec"><b>Permission requests</b> · ' + open.length + ' open' + (last ? '<span class="sub"> · last ' + esc(last.tool) + ', ' + esc(last.status) + ' ' + esc(when(last.closed || last.ts).slice(0, 11)) + '</span>' : '') + '</div>' +
-    '<div class="nsec"><b>Agents waiting for you</b> · ' + waiting.length + '</div>' + waiting.slice(0, 3).map((s) => '<div class="ag" data-session="' + esc(s.id) + '"><span class="glyph" style="color:' + AGENT[s.agent].colour + '">' + AGENT[s.agent].glyph + '</span><span class="state" style="background:' + lookOf(s)[1] + '"></span><span class="t">' + esc(s.id) + ' · ' + esc(s.tickets[0] ?? 'no ticket') + '</span><span class="k">' + esc(when(s.last).slice(0, 11)) + '</span></div>').join('') +
+    '<div class="nsec"><b>Agents waiting for you</b> · ' + waiting.length + (waiting.length > 3 ? '<span class="sub"> · the first 3</span>' : '') + '</div>' + waiting.slice(0, 3).map((s) => '<div class="ag" data-session="' + esc(s.id) + '"><span class="glyph" style="color:' + AGENT[s.agent].colour + '">' + AGENT[s.agent].glyph + '</span><span class="state" style="background:' + lookOf(s)[1] + '"></span><span class="t">' + esc(s.id) + ' · ' + esc(s.tickets[0] ?? 'no ticket') + '</span><span class="k">' + esc(when(s.last).slice(0, 11)) + '</span></div>').join('') +
     '<div class="nsec"><b>Tickets</b></div>';
   big?.insertAdjacentHTML('afterend', top);
   const p = ag.publish;
@@ -195,7 +243,7 @@ function drawOverviewPanels() {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   };
   const sq = (type) => '<span class="sq delivered" style="color:' + esc(MARK.type[type] ?? '#999') + '"></span>';
-  let html = '<h4>Since you last looked<span>' + (seen ? esc(seen) : 'never') + '</span></h4><div class="since">' + (since.length === 0 ? '<span class="sub">Nothing changed.</span>' : byType(since).slice(0, 6).map(([t, n]) => '<span>' + sq(t) + n + '</span>').join('')) + '<button disabled title="Design only">Caught up</button></div>';
+  let html = '<h4>Since you last looked<span>' + (seen ? esc(seen) : 'never') + '</span></h4><div class="since">' + (since.length === 0 ? '<span class="sub">Nothing changed.</span>' : byType(since).slice(0, 6).map(([t, n]) => '<span title="' + n + ' ' + esc(MARK.typeWord[t] ?? t) + (n === 1 ? '' : 's') + ' changed">' + sq(t) + n + '</span>').join('')) + '<button disabled title="Design only">Caught up</button></div>';
   html += '<h4>The record</h4><div class="tiles">' + ['feature', 'task', 'requirement', 'test', 'issue', 'risk'].map((t) => {
     const list = rows.filter((r) => r[TYPE] === t);
     if (list.length === 0) return '';
@@ -249,10 +297,16 @@ function workOn(id) {
     '<label>First prompt</label><div class="prompt">' + esc(first) + '</div>' +
     '<div class="acts"><button disabled title="Design only">Start</button><button data-close>Cancel</button></div></div>';
   el.hidden = false;
-  for (const seg of el.querySelectorAll('.seg')) seg.addEventListener('click', (e) => {
+  const segs = [...el.querySelectorAll('.seg')];
+  for (const seg of segs) seg.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
     for (const x of seg.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+    // The models follow the agent: Claude's for Claude, Codex's for Codex.
+    if (seg === segs[0]) {
+      const codex = b.textContent.includes('Codex');
+      segs[1].innerHTML = (codex ? ['GPT-6 Astra', 'Codex default'] : ['Opus 5.5', 'Sonnet 5.5', 'Haiku 5.5']).map((m, i) => '<button aria-pressed="' + (i === 0) + '">' + m + '</button>').join('');
+    }
   });
   el.querySelector('[data-close]').addEventListener('click', () => {
     el.hidden = true;
@@ -265,6 +319,17 @@ document.querySelector('header').appendChild(document.getElementById('marks-togg
 document.getElementById('marks-toggle').addEventListener('click', () => {
   if (state.sel === null && !state.session) document.getElementById('legend').classList.toggle('shown');
 });
+
+// Escape closes the new-session dialog before anything else.
+addEventListener('keydown', (e) => {
+  const dialog = document.getElementById('newsession');
+  if (e.key === 'Escape' && !dialog.hidden) {
+    dialog.hidden = true;
+    e.stopImmediatePropagation();
+  }
+}, true);
+document.getElementById('overview-toggle')?.addEventListener('click', () => document.body.classList.toggle('show-overview'));
+document.querySelector('header').appendChild(document.getElementById('overview-seg'));
 
 /** For the capture script and a check: open a session, start "Work on this", open the drawer. */
 window.__agents = {
