@@ -55,15 +55,15 @@ counters:
   REQ: 6
   RISK: 17
   REL: 0
-  TASK: 206
+  TASK: 207
   TST: 108
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
   phase: "PHASE-0004"
-  feature: "FEAT-0033"
-  task: "TASK-0199"
+  feature: "FEAT-0032"
+  task: "TASK-0207"
   note: "2026-10-22, evening: Edwin asked 'Can you build the DES-0006 functionality?', so PHASE-0004 Parity opens now (recorded in PHASE-0004 and in ADR-0009's decision record). PHASE-0005 has nothing left to build: FEAT-0025 to FEAT-0031 wait at review on Edwin's acceptance tests and DES-0005. The build is four features, in order: FEAT-0032 the session engine in Deck's main process (TASK-0191 to TASK-0196, first TASK-0191, the conversation model and a fake provider), FEAT-0033 the session pane, the agents on the towers and Work on this (TASK-0197 to TASK-0201), FEAT-0034 one Needs you and the cockpit's overview panels (TASK-0202 to TASK-0204), FEAT-0035 the shell drawer (TASK-0205, TASK-0206). Suites TST-0104 to TST-0107; Edwin's acceptance test TST-0108 at draft. Risks RISK-0012 to RISK-0017. Sessions always ask before acting: never bypassPermissions, never codex's never-approve, whatever Edwin's shell alias or settings say (RISK-0013). Node suites use fake providers, never a real model (RISK-0017). Deck's repo is public: no prompt or reply text and no dollar costs in fixtures, pictures or logs (RISK-0016). Open for Edwin: DES-0006's side pane; whether Deck may answer the cockpit's permission requests only when it started the sidecar; whether a shell must survive a Deck restart. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -71,12 +71,12 @@ items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0032:
-      status: review
+      status: doing
       file: "docs/features/agent-engine/FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On.md"
       owner: system:claude
       phase: PHASE-0004
       requirements: []
-      tasks: ["TASK-0191", "TASK-0192", "TASK-0193", "TASK-0194", "TASK-0195", "TASK-0196"]
+      tasks: ["TASK-0191", "TASK-0192", "TASK-0193", "TASK-0194", "TASK-0195", "TASK-0196", "TASK-0207"]
       note: "PLANNED 2026-10-22 from Edwin's 'Can you build the DES-0006 functionality?' (ADR-0009, option B). Deck's main process starts Claude sessions through the Agent SDK's query() and Codex sessions through codex app-server, turns both into one conversation model, keeps each in Deck's store with the ticket it was started on, starts it in a new worktree or this checkout, and reports it to the sidecar (/api/agent-hook, /api/cockpit/approvals/ask). Permission requests from Deck's own sessions are answered in Deck's main process, so they need no shell secret. Only the shell reaches sessions. Tested with fake providers. Suite TST-0104 (agent-sessions)."
     FEAT-0033:
       status: doing
@@ -343,6 +343,11 @@ items:
       tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0173"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
   tasks:
+    TASK-0207:
+      file: docs/features/agent-engine/plan/tasks/TASK-0207-Review-Round-One-A-Request-Is-Never-Answered-By-An-Old-Record-And-Every-Session-Reaches-The-Cockpit.md
+      status: doing
+      parent: FEAT-0032
+      phase: "[[PHASE-0004]]"
     TASK-0191:
       file: docs/features/agent-engine/plan/tasks/TASK-0191-The-Conversation-Model-And-The-Provider-Interface-Are-Tested-With-A-Fake-Provider.md
       status: done
@@ -2116,7 +2121,7 @@ items:
       owner: user:edwin
       features: [FEAT-0021, FEAT-0030, FEAT-0032, FEAT-0033, FEAT-0034, FEAT-0035]
       requirements: []
-      tasks: [TASK-0178, TASK-0188, TASK-0191, TASK-0192, TASK-0193, TASK-0194, TASK-0195, TASK-0196, TASK-0197, TASK-0198, TASK-0199, TASK-0200, TASK-0201, TASK-0202, TASK-0203, TASK-0204, TASK-0205, TASK-0206]
+      tasks: [TASK-0178, TASK-0188, TASK-0191, TASK-0192, TASK-0193, TASK-0194, TASK-0195, TASK-0196, TASK-0197, TASK-0198, TASK-0199, TASK-0200, TASK-0201, TASK-0202, TASK-0203, TASK-0204, TASK-0205, TASK-0206, TASK-0207]
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
@@ -2871,7 +2876,7 @@ metrics:
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 197
+    tasks_total: 198
     tasks_done: 169
     tests_total: 74
     tests_passing: 9
