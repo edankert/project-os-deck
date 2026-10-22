@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0030
 aliases: ["FEAT-0030"]
 title: "Agent sessions, Needs you and the cockpit's overview panels are drawn before they are built: a design page from real recorded sessions"
-status: doing
+status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -47,6 +47,10 @@ Out of scope: any code in Deck's application. Building is PHASE-0004's work afte
 
 2026-10-22: two independent Claude reviewers on `5d1e2ec`, one on the data, privacy and tests, one driving the page as a person. Both requested changes; no record text leaked and every count held. Found: nothing checked that the page draws agents; the note overstated the towers refactor; Deck's repository is public and your-trainer's private (Edwin chose to keep the ticket text and leave the dollar costs out); the conversation itself was not drawn; panels overlapped and the Agents list vanished at 1100 wide; smaller points. All answered in `f16b19e`, `a724cd9` and `0d107bd`, as listed in [[TASK-0178]]'s Review section.
 
+### Round two (TASK-0178)
+
+2026-10-22: two fresh independent Claude reviewers on `039d2c7`. Data and privacy: changes requested (the capture check exited 0 on failure; Codex edits read as zero; harness messages counted as prompts; the cost guard was narrow), all fixed in `56f6b1a`. Page: changes requested at 1100 wide only (the session pane over the Agents list and the drawer, the open drawer over Next up, the overview over the Agents list, a turn's requests newest first), fixed after it. Details in [[TASK-0178]]'s Review section. A gate runs two rounds at most.
+
 ## Where this stands
 
-2026-10-22: started, with [[TASK-0178]].
+2026-10-22: started, with [[TASK-0178]]. Later the same day: DES-0006 is proposed with its page and pictures, reviewed in two rounds; at `review`, waiting on Edwin's verdict on DES-0006. The build waits for PHASE-0004, after Overview.

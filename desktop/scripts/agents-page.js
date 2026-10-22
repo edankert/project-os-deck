@@ -164,7 +164,8 @@ function drawSessionPane(s) {
   // The conversation, turn by turn, with each permission request at the turn it was asked in.
   const turns = s.turns ?? [];
   const placedAsks = new Set();
-  const asksIn = (t, next) => requests.filter((r) => r.ts >= t.ts && (next === undefined || r.ts < next.ts));
+  // Within a turn, the requests in the order they were asked.
+  const asksIn = (t, next) => requests.filter((r) => r.ts >= t.ts && (next === undefined || r.ts < next.ts)).sort((x, y) => x.ts.localeCompare(y.ts));
   html += '<h3>The conversation · ' + s.prompts + (s.prompts === 1 ? ' prompt' : ' prompts') + (turns.length < s.prompts ? ' · the last ' + turns.length : '') + '</h3><div class="thread">';
   if (turns.length === 0) html += '<div class="sub">No turns recorded for this session.</div>';
   turns.forEach((t, i) => {

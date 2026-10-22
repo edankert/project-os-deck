@@ -123,7 +123,12 @@ button[disabled] { opacity: .55; cursor: not-allowed; }
   body.show-overview #overview { display: block; }
   #agents { top: var(--top, 60px); max-height: 220px; }
   #overview-seg { display: inline-flex; }
-  #panel.wide { width: 92vw; }
+  /* Review round two of TASK-0178: the session pane leaves the Agents list in view; the drawer gives way to a wide pane and, open, hides Next up; the overview, when shown, takes the Agents list's place. */
+  #panel.wide { width: min(640px, calc(100vw - 420px)); }
+  #panel:not([hidden]) ~ #drawer { right: 396px; }
+  #panel.wide:not([hidden]) ~ #drawer { display: none; }
+  body:has(#drawer.open):not(:has(#panel.wide:not([hidden]))) #queue { visibility: hidden; }
+  body.show-overview #agents { display: none; }
 }
 `;
 

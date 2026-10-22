@@ -214,7 +214,12 @@ button[disabled] { opacity: .55; cursor: not-allowed; }
   body.show-overview #overview { display: block; }
   #agents { top: var(--top, 60px); max-height: 220px; }
   #overview-seg { display: inline-flex; }
-  #panel.wide { width: 92vw; }
+  /* Review round two of TASK-0178: the session pane leaves the Agents list in view; the drawer gives way to a wide pane and, open, hides Next up; the overview, when shown, takes the Agents list's place. */
+  #panel.wide { width: min(640px, calc(100vw - 420px)); }
+  #panel:not([hidden]) ~ #drawer { right: 396px; }
+  #panel.wide:not([hidden]) ~ #drawer { display: none; }
+  body:has(#drawer.open):not(:has(#panel.wide:not([hidden]))) #queue { visibility: hidden; }
+  body.show-overview #agents { display: none; }
 }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }</script>
@@ -2094,7 +2099,8 @@ function drawSessionPane(s) {
   // The conversation, turn by turn, with each permission request at the turn it was asked in.
   const turns = s.turns ?? [];
   const placedAsks = new Set();
-  const asksIn = (t, next) => requests.filter((r) => r.ts >= t.ts && (next === undefined || r.ts < next.ts));
+  // Within a turn, the requests in the order they were asked.
+  const asksIn = (t, next) => requests.filter((r) => r.ts >= t.ts && (next === undefined || r.ts < next.ts)).sort((x, y) => x.ts.localeCompare(y.ts));
   html += '<h3>The conversation · ' + s.prompts + (s.prompts === 1 ? ' prompt' : ' prompts') + (turns.length < s.prompts ? ' · the last ' + turns.length : '') + '</h3><div class="thread">';
   if (turns.length === 0) html += '<div class="sub">No turns recorded for this session.</div>';
   turns.forEach((t, i) => {

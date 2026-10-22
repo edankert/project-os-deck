@@ -63,8 +63,8 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0030"
-  task: "TASK-0178"
-  note: "2026-10-22: TASK-0179 done (designs stand at their own tickets on the towers page, sized by nearness to the work; FEAT-0025 back at review). TASK-0178 (DES-0006, the agent sessions page, PHASE-0004 by ADR-0009) is in review round two. Edwin decided (\"3\"): Deck's repo is public, your-trainer private; your-trainer ticket text may stay, session dollar costs are left out. 22 local commits wait for TASK-0178's review and a smoke run before pushing. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's and DES-0006's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: ""
+  note: "2026-10-22, last: DES-0006 (the agent sessions page, T3 Code-style conversations, one Needs you, the cockpit's overview panels; ADR-0009, PHASE-0004) is proposed and reviewed in two rounds (TASK-0178 done; FEAT-0030 at review). TASK-0179 done: designs stand at their own tickets on the towers page. Edwin decided (\"3\"): Deck's repo is public, your-trainer private; your-trainer ticket text may stay, session dollar costs are left out. Still Edwin's: DES-0005's and DES-0006's questions, acceptance tests TST-0091 and TST-0092. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
