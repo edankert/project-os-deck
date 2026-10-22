@@ -29,17 +29,24 @@ app.whenReady().then(async () => {
     await shot(`agents-${ws}-ring.jpg`);
     const sessions = await js('window.__agents.sessions()');
     const placed = sessions.filter((s) => s.placed).length;
+    // A check, not only pictures (review of TASK-0178): every session whose ticket stands on the
+    // ring is drawn there, and Needs you counts what the data holds.
+    const expected = await js(`(() => { const d = JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].agents.sessions; return d.filter((s) => s.tickets.some((t) => window.__towersProbe.ticketAt(t) !== null)).map((s) => s.id); })()`);
+    const missing = expected.filter((id) => !sessions.find((s) => s.id === id && s.placed));
+    if (missing.length > 0) errors.push(`${ws}: sessions with a ticket on the ring but no marker: ${missing.join(', ')}`);
     // The session that worked on the most tickets and is placed on the ring.
     const busiest = await js(`(() => { const d = JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].agents.sessions; const placed = new Set(window.__agents.sessions().filter((s) => s.placed).map((s) => s.id)); return [...d].filter((s) => placed.has(s.id)).sort((a, b) => b.tickets.length - a.tickets.length)[0]?.id ?? d[0]?.id ?? null; })()`);
     if (busiest) {
-      await js(`window.__agents.open(${JSON.stringify(busiest)})`);
+      const opened = await js(`window.__agents.open(${JSON.stringify(busiest)})`);
+      if (opened.session !== busiest || !/Working on/.test(opened.pane) || !/The conversation/.test(opened.pane)) errors.push(`${ws}: the session pane for ${busiest} is not drawn`);
       await wait(1200);
       await shot(`agents-${ws}-session.jpg`);
       await js('window.__agents.close()');
     }
     const next = info.next ?? (await js(`JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].focus.feature`));
     if (next) {
-      await js(`window.__agents.workOn(${JSON.stringify(next)})`);
+      const dialog = await js(`window.__agents.workOn(${JSON.stringify(next)})`);
+      if (!dialog.includes('New session') || !dialog.includes(next)) errors.push(`${ws}: Work on this did not open for ${next}`);
       await wait(900);
       await shot(`agents-${ws}-work.jpg`);
       await js('window.__agents.close()');
