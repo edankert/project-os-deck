@@ -2,6 +2,8 @@
 // Pure, so a test can check on records of its own that nothing but ids, states, times,
 // counts and names gets through: no prompt, no reply, no command, no file path.
 
+import { createRequire } from 'node:module';
+
 const ID = /^[A-Z]+-\d+/;
 
 /** Text the harness wrote into the conversation, not a person: tags, AGENTS.md, interruptions, resumptions. */
@@ -103,11 +105,12 @@ export function countTranscript(text, agent) {
  * The ticket a session was started on, where it stands on the ring (TASK-0188, Edwin's answer of
  * 2026-10-22). The cockpit records no start ticket, so for a recorded session it is the first
  * ticket whose status it changed, in the order the cockpit first saw each change, else the first
- * ticket it touched. A session Deck starts with "Work on this" will know its ticket exactly.
+ * ticket it touched. A session Deck starts with "Work on this" knows its ticket exactly.
+ *
+ * One copy, Deck's own (`desktop/src/shared/agent-marks.ts`, TASK-0199), so the page and Deck
+ * stand a session over the same ticket. It is read from the build: `npm run build` first.
  */
-export function startOf(session) {
-  return session.changed?.[0]?.[0] ?? session.tickets?.[0] ?? null;
-}
+export const { startOf } = createRequire(import.meta.url)('../dist/shared/agent-marks.js');
 
 /** The ticket id a note's path names, by its file name. */
 const ticketOfPath = (p) => ID.exec(String(p).split('/').pop() ?? '')?.[0] ?? null;

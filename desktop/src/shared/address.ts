@@ -4,7 +4,7 @@
  *   deck://<workspaceId>/<viewId>
  *       [?desk=<name>][&note=<id>][&panel=<kind>]
  *       [&surface=<kind>][&page=<kind>][&flow=<kind>][&step=<id>][&colour=state]
- *       [&select=<id>][&group=feature]
+ *       [&select=<id>][&group=feature][&session=<id>]
  *
  * Parsing REFUSES what it cannot read and never falls back to a default view.
  * The cockpit's navigator does fall back — an unknown mode silently becomes
@@ -47,7 +47,7 @@ const STEP_RE = /^(?=.{1,64}$)[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*$/;
  * refuses is an address Deck hands a person and then rejects, which is the
  * failure TASK-0017 already fixed once for desk names.
  */
-const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour', 'select', 'group'] as const;
+const QUERY_KEYS = ['desk', 'note', 'panel', 'surface', 'page', 'flow', 'step', 'colour', 'select', 'group', 'session'] as const;
 const KNOWN_KEYS = new Set<string>(QUERY_KEYS);
 
 export class AddressError extends Error {
@@ -91,6 +91,11 @@ function refusalFor(address: DeckAddress): string | null {
   if (address.group !== null) {
     if (address.group !== 'feature') return `not a grouping: "${address.group}" (the only one an address names is "feature")`;
     if (address.page !== 'wheel') return `"group" needs "page=wheel": it groups the wheel's ring`;
+  }
+  // The agent session open in the pane (TASK-0199): a session's own id, on the wheel only.
+  if (address.session !== null) {
+    if (!/^[\w-]{1,80}$/.test(address.session)) return `not a session id: "${address.session}"`;
+    if (address.page !== 'wheel') return `"session" needs "page=wheel": a session opens beside the towers`;
   }
   return null;
 }
@@ -192,6 +197,7 @@ function emptyAddress(workspaceId: string, viewId: string): DeckAddress {
     colour: null,
     select: null,
     group: null,
+    session: null,
   };
 }
 

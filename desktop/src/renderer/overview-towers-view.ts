@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { GATE_COLOUR } from '../shared/overview-gate.js';
 import { NEEDS_YOU, TYPE_COLOUR } from '../shared/overview-marks.js';
 import { PALETTE } from '../shared/overview-scene.js';
-import { DISTANCE_RANGE, type Cube, type RingPhase, type TowersLayout } from '../shared/overview-towers.js';
+import { DISTANCE_RANGE, type Cube, type RingPhase, type TowerSelection, type TowersLayout } from '../shared/overview-towers.js';
 import { shortName } from '../shared/overview-geometry.js';
 
 export type TowersViewName = 'above' | 'leaning' | 'side';
@@ -71,6 +71,8 @@ export interface TowersView {
     found(): { lit: number; glows: number; faded: boolean } | null;
     /** The quiet towers' badges: how many, how many shown, and each one's words. */
     ages(): { badges: number; shown: number; words: string[] };
+    /** The agents over their start tickets (TASK-0199): each one's session, ticket, state, whether it is shown and where. */
+    agents(): Array<{ id: string; ticket: string; state: string; shown: boolean; x: number; y: number }>;
     /** The pictures standing at their tickets: each one's ticket, whether it is shown, its drawn width, and whether it loaded. */
     pictures(): Array<{ ticket: string; near: string; shown: boolean; width: number; loaded: boolean; x: number; y: number }>;
     camera(): { radius: number; theta: number; phi: number; moved: boolean; reach: number; limit: number };
@@ -149,6 +151,15 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   // The pictures stand over the canvas as images, placed each frame where their tickets are (TASK-0186).
   const overlay = document.createElement('div');
   overlay.className = 'ov-pictures';
+  // The pictures and the agents' marks each in a box of their own, so drawing one leaves the other.
+  const pictureBox = document.createElement('div');
+  const agentBox = document.createElement('div');
+  agentBox.className = 'ov-agent-marks';
+  overlay.append(pictureBox, agentBox);
+  let agentMarks: Array<{ el: HTMLElement; marker: TowersLayout['agents'][number]; at: THREE.Vector3 }> = [];
+  let agentsSignature = '';
+  /** What is drawn as chosen: a selected ticket, or else the open session (TASK-0199). */
+  const chosenOf = (): TowerSelection | null => layout?.selection ?? layout?.session ?? null;
   let figures: Array<{ el: HTMLElement; img: HTMLImageElement; pic: TowersLayout['pictures'][number]; at: THREE.Vector3 }> = [];
   let picturesSignature = '';
   const PICTURE_AT = new THREE.Vector3();
@@ -546,6 +557,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     world.add(glows);
     drawFound();
     drawPictures();
+    drawAgents();
   }
 
   /** The pictures of the layout, as figures over the canvas; made again only when the pictures change. */
@@ -554,7 +566,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     const sig = JSON.stringify(pics.map((p) => [p.href, p.at, p.slot, p.near]));
     if (sig === picturesSignature) return;
     picturesSignature = sig;
-    overlay.replaceChildren();
+    pictureBox.replaceChildren();
     figures = pics.map((pic) => {
       const el = document.createElement('figure');
       el.className = `ov-picture near-${pic.near}`;
@@ -569,9 +581,49 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       el.appendChild(img);
       // The pointer passes through to the canvas, so a drag that starts on a picture still turns
       // the ring; the canvas sees when a press or a hover lands on one (`pictureAt`).
-      overlay.appendChild(el);
+      pictureBox.appendChild(el);
       return { el, img, pic, at: new THREE.Vector3(...pic.at) };
     });
+  }
+
+  /**
+   * The agents over the tickets they were started on (FEAT-0033, TASK-0199), laid over the canvas as
+   * small marks a press opens: the fill their state, the ring their agent, a working one breathing.
+   * Made again only when the agents change.
+   */
+  function drawAgents(): void {
+    const marks = layout?.agents ?? [];
+    const sig = JSON.stringify(marks.map((m) => [m.id, m.state, m.at, layout?.session?.id === `session:${m.id}`]));
+    if (sig === agentsSignature) return;
+    agentsSignature = sig;
+    agentBox.replaceChildren();
+    agentMarks = marks.map((marker) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = `ov-agent-mark ag-${marker.agent} st-${marker.state}${layout?.session?.id === `session:${marker.id}` ? ' is-open' : ''}`;
+      el.dataset['agent'] = marker.id;
+      el.setAttribute('aria-label', marker.label);
+      el.addEventListener('click', (e) => { e.stopPropagation(); options.onPress(marker.target); });
+      el.addEventListener('pointerenter', (e) => options.onHover(marker.label, e.clientX, e.clientY));
+      el.addEventListener('pointerleave', () => options.onHover(null, 0, 0));
+      agentBox.appendChild(el);
+      return { el, marker, at: new THREE.Vector3(...marker.at) };
+    });
+  }
+
+  /** Each frame: every agent's mark over its ticket; with a phase brought close, only that phase's. */
+  function placeAgents(): void {
+    const box = canvas.getBoundingClientRect();
+    const open = layout?.open ?? null;
+    for (const a of agentMarks) {
+      PICTURE_AT.copy(a.at).project(camera);
+      if ((open !== null && a.marker.segment !== open) || PICTURE_AT.z > 1) {
+        a.el.style.display = 'none';
+        continue;
+      }
+      a.el.style.display = '';
+      a.el.style.transform = `translate(${(((PICTURE_AT.x + 1) / 2) * box.width).toFixed(1)}px, ${(((1 - PICTURE_AT.y) / 2) * box.height).toFixed(1)}px) translate(-50%, -50%)`;
+    }
   }
 
   /** The picture under the pointer, the nearest when they overlap, or null. */
@@ -594,7 +646,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   function placePictures(): void {
     const box = canvas.getBoundingClientRect();
     const open = layout?.open ?? null;
-    const hush = (layout?.selection ?? null) !== null || found !== null;
+    const hush = chosenOf() !== null || found !== null;
     for (const f of figures) {
       // With a phase brought close, only its pictures stand.
       if (open !== null && f.pic.segment !== open) {
@@ -645,7 +697,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
    * ticket; each linked ticket outlined, with its id while there are few enough.
    */
   function drawChosen(): void {
-    const sel = layout?.selection ?? null;
+    const sel = chosenOf();
     const sig = sel === null ? '' : JSON.stringify([sel.id, sel.at, sel.links.length, sel.links[0]?.to ?? null]);
     if (sig === chosenSignature) return;
     chosenSignature = sig;
@@ -694,7 +746,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
   /** Who is shown and how faded: the phase brought close, and the rest faded while something is selected. */
   function applyLook(): void {
     const open = layout?.open ?? null;
-    const hush = (layout?.selection ?? null) !== null || found !== null;
+    const hush = chosenOf() !== null || found !== null;
     const set = (materials: THREE.Material[], k: number): void => {
       for (const m of materials) {
         m.transparent = true;
@@ -852,7 +904,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       wires = null;
     }
     // A selected ticket's curves stand for the links; pointing draws none over them (TASK-0182).
-    if (hit?.kind !== 'cube' || options.linksOf === undefined || (layout?.selection ?? null) !== null) return;
+    if (hit?.kind !== 'cube' || options.linksOf === undefined || chosenOf() !== null) return;
     const from = where.get(hit.cube.id)?.at;
     if (from === undefined) return;
     const pts: THREE.Vector3[] = [];
@@ -1013,7 +1065,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       glideTo({ radius: Math.min(view.radius, 70), theta: Math.atan2(w.at.z, w.at.x) || view.theta, phi: 0.95, target: w.at.clone() });
     },
     frame() {
-      const sel = layout?.selection ?? null;
+      const sel = chosenOf();
       if (sel === null) return;
       const box = new THREE.Box3().setFromPoints([new THREE.Vector3(...sel.at), ...sel.links.map((l) => new THREE.Vector3(...l.to))]);
       const centre = box.getCenter(new THREE.Vector3());
@@ -1036,7 +1088,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
       coreAt: () => screenAt(new THREE.Vector3(0, 0.6, 0)),
       open: () => layout?.open ?? null,
       selected: () => {
-        const sel = layout?.selection ?? null;
+        const sel = chosenOf();
         if (sel === null) return null;
         const lines = chosen.children.filter((o) => o instanceof THREE.Line && !(o instanceof THREE.LineSegments)).length;
         const boxes = chosen.children.filter((o) => o instanceof THREE.LineSegments).length;
@@ -1044,6 +1096,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
         const faded = phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5));
         return { id: sel.id, curves: lines, outlined: boxes - 1, labelled, faded };
       },
+      agents: () => agentMarks.map((a) => { const r = a.el.getBoundingClientRect(); return { id: a.marker.id, ticket: a.marker.ticket, state: a.marker.state, shown: a.el.style.display !== 'none' && r.width > 0, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; }),
       pictures: () => figures.map((f) => { const r = f.el.getBoundingClientRect(); return { ticket: f.pic.ticket, near: f.pic.near, shown: f.el.style.display !== 'none' && r.width > 0, width: Math.round(r.width), loaded: f.img.complete && f.img.naturalWidth > 0, x: Math.round(r.left + r.width / 2), y: Math.round(r.bottom) }; }),
       ages: () => ({ badges: ageBadges.length, shown: ageBadges.filter((b) => b.visible).length, words: ageBadges.map((b) => String(b.userData['words'])) }),
       found: () => (found === null ? null : { lit: found.length, glows: glows.children.reduce((n, o) => n + ((o as THREE.InstancedMesh).count ?? 0), 0), faded: phases.every((g) => g.materials.every((m) => (m.userData['dim'] ?? 1) < 0.5)) }),
@@ -1060,6 +1113,7 @@ export function createTowersView(options: TowersViewOptions): TowersView | null 
     if (!canvas.isConnected || canvas.offsetParent === null || document.hidden) return;
     stepGlide(now);
     placePictures();
+    placeAgents();
     for (const s of labels) {
       const k = Math.sqrt(Math.max(1, camera.position.distanceTo(s.getWorldPosition(pick))) / 120);
       const [w, h] = s.userData['size'] as [number, number];

@@ -161,7 +161,32 @@ export interface PanelNode {
     | { kind: 'note'; id: string; title: string; /** The note's Markdown body, without frontmatter. */ text: string }
     | PanelCard
     | PanelNeeds
-    | PanelWeeks;
+    | PanelWeeks
+    | PanelAgents;
+}
+
+/**
+ * The Agents list (FEAT-0033, TASK-0199): every session on the workspace, Deck's and the cockpit's,
+ * each a row that opens it in the session pane. In the shell only; a served page has no such panel.
+ */
+export interface PanelAgents {
+  kind: 'agents';
+  rows: Array<{
+    id: string;
+    agent: 'claude' | 'codex';
+    state: 'working' | 'waiting' | 'idle' | 'stopped' | 'failed';
+    /** Its state in words: "working", "waiting for you". */
+    word: string;
+    /** The ticket it stands over, or null when it moved none the workspace holds. */
+    start: string | null;
+    /** How many more tickets it worked on. */
+    more: number;
+    last: string;
+    source: 'deck' | 'cockpit';
+    open: boolean;
+    target: string;
+    label: string;
+  }>;
 }
 
 /**
@@ -330,6 +355,14 @@ ${STATES.map((s) => `.ov .ov-wire.st-${s}, .ov .ov-arc.st-${s} { fill: none; str
 .ov .ov-control.ov-stop { fill: hsla(355, 88%, 62%, 0.16); stroke: ${PALETTE.failed}; }
 .ov .ov-control.ov-off { opacity: 0.3; }
 /* A ticket selected on the towers (TASK-0182): its links as curves, the tickets they reach outlined. */
+/* An agent over the ticket it was started on (FEAT-0033): its state the fill, its agent the ring; a working one breathes. */
+.ov .ov-agent { stroke-width: 2.4; cursor: pointer; }
+.ov .ov-agent.ag-claude { stroke: hsl(18 80% 66%); } .ov .ov-agent.ag-codex { stroke: hsl(200 70% 70%); }
+.ov .ov-agent.st-working { fill: hsl(190 90% 60%); animation: ov-agent-breathe 2.4s ease-in-out infinite; }
+.ov .ov-agent.st-waiting { fill: hsl(5 75% 60%); } .ov .ov-agent.st-idle, .ov .ov-agent.st-stopped { fill: hsl(205 20% 45%); } .ov .ov-agent.st-failed { fill: hsl(355 70% 50%); }
+.ov .ov-agent.is-open { stroke: #fff3a0; }
+@keyframes ov-agent-breathe { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .ov .ov-agent.st-working { animation: none; } }
 .ov .ov-curve { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-opacity: 0.85; pointer-events: none; }
 .ov .ov-outline { fill: none; stroke: currentColor; stroke-width: 1.3; pointer-events: none; }
 .ov .ov-outline.ov-selected { color: #fff3a0; stroke-width: 2; }
@@ -470,6 +503,8 @@ export interface AddressParts {
   step?: string | null;
   /** The ticket selected on the towers (TASK-0182). */
   select?: string | null;
+  /** The agent session open in the pane (TASK-0199). */
+  session?: string | null;
 }
 
 /**
@@ -494,6 +529,7 @@ export function plainContext(workspaceId: string, viewId: string, colouring: 'ty
       if (colouring === 'state' && (parts.page != null || parts.flow != null)) query.push('colour=state');
       if (parts.select != null) query.push(`select=${encodeURIComponent(parts.select)}`);
       if (grouping === 'feature' && parts.page === 'wheel') query.push('group=feature');
+      if (parts.session != null) query.push(`session=${encodeURIComponent(parts.session)}`);
       return `deck://${workspaceId}/${viewId}${query.length > 0 ? `?${query.join('&')}` : ''}`;
     },
   };

@@ -343,6 +343,8 @@ export interface DeckAddress {
   select: string | null;
   /** How the wheel's ring is grouped: `feature`, or absent for by phase (TASK-0185). */
   group: string | null;
+  /** The agent session open in the pane, on the wheel (FEAT-0033, TASK-0199). */
+  session: string | null;
 }
 
 /**

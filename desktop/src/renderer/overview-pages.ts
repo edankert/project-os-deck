@@ -9,17 +9,24 @@ import { rephaseScene } from '../shared/overview-rephase.js';
 import { ticketScene, type TriageVerb } from '../shared/overview-ticket.js';
 import { wheelScene } from '../shared/overview-wheel.js';
 import { featureGate } from './overview-flows.js';
+import { agentsFor } from './agent-state.js';
 import { drawnMtime, drawnMtimeKey, noteMtime, registerScreen, type ScreenInput } from './overview.js';
+
+const withAgents = (workspaceId: string, model: Parameters<typeof agentsFor>[1]): { agents?: ReturnType<typeof agentsFor> & object } => {
+  const agents = agentsFor(workspaceId, model);
+  return agents === undefined ? {} : { agents };
+};
 
 /** S4's accepted groups, kept for the session only: accepting writes nothing. */
 const ACCEPTED = 'rephase-accepted';
 
-registerScreen('page', 'wheel', { scene: ({ model, ctx, address }) => wheelScene(model, ctx, { select: address.select }) });
+// The agent sessions stand over their tickets in the shell; on a served page `agentsFor` gives none (FEAT-0033).
+registerScreen('page', 'wheel', { scene: ({ model, ctx, address }) => wheelScene(model, ctx, { select: address.select, session: address.session, ...withAgents(ctx.workspaceId, model) }) });
 
 registerScreen('page', 'phase', {
   scene: ({ model, ctx, address }) => {
     if (address.note === null) throw new Error('a phase screen names its phase: ?page=phase&note=PHASE-…');
-    return phaseScene(model, address.note, ctx, { select: address.select });
+    return phaseScene(model, address.note, ctx, { select: address.select, ...withAgents(ctx.workspaceId, model) });
   },
 });
 

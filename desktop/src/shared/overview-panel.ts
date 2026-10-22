@@ -9,7 +9,7 @@
  * narrow toward the back.
  */
 import { cockpitSquare, markWords } from './overview-marks.js';
-import type { PanelCard, PanelNeeds, PanelNode, PanelRow, PanelWeeks, SceneNode } from './overview-scene.js';
+import type { PanelAgents, PanelCard, PanelNeeds, PanelNode, PanelRow, PanelWeeks, SceneNode } from './overview-scene.js';
 
 /** How much smaller and narrower the back of a tilted plane is than its front. */
 export const TILT = { shrink: 0.42, narrow: 0.3 } as const;
@@ -277,11 +277,25 @@ function weeksFlat(panel: PanelNode & { body: PanelWeeks }): SceneNode[] {
   return out;
 }
 
+/** The Agents list, flat (TASK-0199): a dot coloured by its state and ringed by its agent, and its words. */
+function agentsFlat(panel: PanelNode & { body: PanelAgents }): SceneNode[] {
+  const { x, y, w, h } = panel;
+  const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
+  out.push({ kind: 'text', x: x + 16, y: y + 24, text: panel.label, rest: true, role: 'label', size: 11.5, cls: 'ov-title' });
+  panel.body.rows.forEach((r, i) => {
+    const cy = y + 48 + i * 28;
+    out.push({ kind: 'mark', tag: 'circle', attrs: { cx: x + 22, cy, r: 6 }, cls: `ov-agent ag-${r.agent} st-${r.state}`, target: r.target, label: r.label });
+    out.push({ kind: 'text', x: x + 36, y: cy + 4, text: `${r.agent === 'codex' ? 'Codex' : 'Claude'} ${r.id.slice(0, 8)} · ${r.start ?? 'no ticket'}${r.more > 0 ? ` +${r.more}` : ''} · ${r.word}`, rest: true, role: 'label', size: 11.5 });
+  });
+  return out;
+}
+
 /** A panel's flat drawing, as scene nodes for `sceneToSvg`. Not part of `scene.nodes`, so never counted. */
 export function panelSvgNodes(panel: PanelNode): SceneNode[] {
   if (panel.body.kind === 'card') return cardPanel(panel as PanelNode & { body: PanelCard });
   if (panel.body.kind === 'needs') return needsFlat(panel as PanelNode & { body: PanelNeeds });
   if (panel.body.kind === 'weeks') return weeksFlat(panel as PanelNode & { body: PanelWeeks });
+  if (panel.body.kind === 'agents') return agentsFlat(panel as PanelNode & { body: PanelAgents });
   return panel.body.kind === 'rows' ? rowsPanel(panel as PanelNode & { body: { kind: 'rows' } }) : notePanel(panel as PanelNode & { body: { kind: 'note' } });
 }
 
@@ -353,6 +367,13 @@ export function panelCss(field: string, needsYou: string): string {
 .ov-pane-picture { margin: 0; border-radius: 6px; overflow: hidden; border: 1px solid hsla(190, 90%, 65%, 0.3); background: hsla(210, 50%, 9%, 0.8); }
 .ov-pane-picture img { display: block; width: 100%; height: 78px; object-fit: cover; }
 /* What needs you and the year as weeks (TASK-0184). */
+.ov-panel-agents { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; pointer-events: auto; }
+.ov-agents-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: hsl(195 40% 82%); }
+.ov-agent-row { grid-template-columns: 14px auto 1fr auto; cursor: pointer; }
+.ov-agent-row.is-open { outline: 1px solid hsl(190 90% 65%); border-radius: 6px; }
+.ov-agent-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; box-sizing: border-box; align-self: center; }
+.ov-agent-dot.ag-claude { border-color: hsl(18 80% 66%); } .ov-agent-dot.ag-codex { border-color: hsl(200 70% 70%); }
+.ov-agent-dot.st-working { background: hsl(190 90% 60%); } .ov-agent-dot.st-waiting { background: ${needsYou}; } .ov-agent-dot.st-idle, .ov-agent-dot.st-stopped { background: hsl(205 20% 45%); } .ov-agent-dot.st-failed { background: hsl(355 70% 50%); }
 .ov-panel-needs, .ov-panel-weeks { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; }
 .ov-needs-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: ${needsYou}; }
 .ov-needs-big { font-size: 40px; font-weight: 800; line-height: 1; color: ${needsYou}; font-variant-numeric: tabular-nums; text-shadow: 0 0 14px hsla(5, 50%, 65%, 0.45); }

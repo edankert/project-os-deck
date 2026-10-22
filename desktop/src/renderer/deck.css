@@ -1692,3 +1692,13 @@ body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibilit
 .ag-acts { display: flex; gap: 6px; }
 .ag-send { background: hsla(190, 90%, 45%, 0.35) !important; } .ag-composer button:disabled { opacity: 0.4; cursor: default; }
 .ag-stop.is-armed { background: hsla(355, 70%, 45%, 0.55) !important; }
+
+/* An agent over the ticket it was started on, in the 3D towers (FEAT-0033, TASK-0199). */
+.ov-agent-mark { all: unset; position: absolute; left: 0; top: 0; width: 14px; height: 14px; border-radius: 50%; border: 3px solid; box-sizing: border-box; cursor: pointer; pointer-events: auto; box-shadow: 0 0 10px hsla(190, 90%, 60%, 0.45); }
+.ov-agent-mark.ag-claude { border-color: hsl(18 80% 66%); } .ov-agent-mark.ag-codex { border-color: hsl(200 70% 70%); }
+.ov-agent-mark.st-working { background: hsl(190 90% 60%); animation: ov-agent-mark-breathe 2.4s ease-in-out infinite; }
+.ov-agent-mark.st-waiting { background: hsl(5 75% 60%); box-shadow: 0 0 12px hsla(5, 80%, 60%, 0.7); }
+.ov-agent-mark.st-idle, .ov-agent-mark.st-stopped { background: hsl(205 20% 45%); box-shadow: none; } .ov-agent-mark.st-failed { background: hsl(355 70% 50%); }
+.ov-agent-mark.is-open { outline: 2px solid #fff3a0; outline-offset: 2px; }
+@keyframes ov-agent-mark-breathe { 50% { opacity: 0.5; transform-origin: center; } }
+@media (prefers-reduced-motion: reduce) { .ov-agent-mark.st-working { animation: none; } }

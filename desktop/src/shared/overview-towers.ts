@@ -21,6 +21,7 @@ import { cockpitSquare, markWords } from './overview-marks.js';
 import { QUIET_DAYS, quietDays, todayOf } from './overview-needs.js';
 import { deckImageHref } from './overview-flows.js';
 import type { ListRow, MarkNode, SceneNode, ScreenContext } from './overview-scene.js';
+import { agentMarkers, sessionSelection, sessionTarget, type AgentMarker, type AgentSummary } from './agent-marks.js';
 import { emptyCounts, type Fill, type Focus, type NoteType, type OverviewModel, type Phase, type State, type Ticket } from './overview-types.js';
 
 /** Sizes, in world units. A floor holds two tickets side by side, facing out. */
@@ -230,6 +231,10 @@ export interface TowersLayout {
   group: 'phase' | 'feature';
   /** The newest pictures, each at its own ticket and sized by nearness to the work (TASK-0186). */
   pictures: StandingPicture[];
+  /** The agents standing over the tickets they were started on (FEAT-0033, TASK-0199). */
+  agents: AgentMarker[];
+  /** The open session drawn as a selection is, from its marker; null when none is open or it stands on no ticket. */
+  session: TowerSelection | null;
 }
 
 export interface TowersOptions {
@@ -239,6 +244,10 @@ export interface TowersOptions {
   today?: string;
   /** The ring grouped by phase, as it opens, or by feature (TASK-0185); the context's grouping when absent. */
   group?: 'phase' | 'feature';
+  /** Every agent session on the workspace (FEAT-0033); absent on a page that has none to show, as a served one. */
+  agents?: readonly AgentSummary[];
+  /** The session open in the pane: its marker joined by curves to the tickets it worked on (TASK-0199). */
+  session?: string | null;
 }
 
 /**
@@ -472,8 +481,14 @@ export function towersLayout(given: OverviewModel, ctx: ScreenContext, open: str
     selection: null,
     group,
     pictures: [],
+    agents: [],
+    session: null,
   };
   layout.selection = selectionIn(model, layout, options.select ?? null);
+  layout.agents = agentMarkers(layout, options.agents ?? [], (id) => sessionTarget(ctx, id));
+  const marker = options.session == null ? undefined : layout.agents.find((m) => m.id === options.session);
+  const summary = options.session == null ? undefined : options.agents?.find((s) => s.id === options.session);
+  if (marker !== undefined && summary !== undefined) layout.session = sessionSelection(layout, marker, summary.tickets, model);
   layout.pictures = picturesIn(model, layout, ctx, selectTarget);
   return layout;
 }
@@ -637,8 +652,9 @@ export function towersPlan(layout: TowersLayout, options: PlanOptions = {}): { n
     const sq = cockpitSquare({ id: c.id, type: c.type, fill: c.fill, needsYou: c.needsYou }, px, py, size, { label: c.label, ticket: withTickets });
     return c.needsYou ? { kind: 'group', cls: 'glow', children: [sq] } : sq;
   };
-  // A selected ticket and the ones it is joined to stand out; everything else fades (TASK-0182).
-  const sel = layout.selection;
+  // A selected ticket and the ones it is joined to stand out; everything else fades (TASK-0182). An open
+  // session lights the tickets it worked on the same way (TASK-0199).
+  const sel = layout.selection ?? layout.session;
   const lit = sel === null ? null : new Set([sel.id, ...sel.links.map((l) => l.id)]);
   const shown = new Set<string>();
   const addCube = (c: Cube, group: string): void => {
@@ -699,7 +715,7 @@ export function towersPlan(layout: TowersLayout, options: PlanOptions = {}): { n
   }
   // The selected ticket's links, as curves rising from it in the linked ticket's colour; only to
   // tickets this plan draws, so with a phase brought close the curves stay inside it.
-  if (sel !== null && shown.has(sel.id)) {
+  if (sel !== null && (shown.has(sel.id) || sel === layout.session)) {
     const [fx, fy] = at(...sel.at);
     const box = (x: number, y: number, size: number, cls: string): SceneNode => ({ kind: 'mark', tag: 'rect', attrs: { x: x - size / 2, y: y - size / 2, width: size, height: size, rx: 2 }, cls });
     for (const link of sel.links) {
@@ -711,7 +727,13 @@ export function towersPlan(layout: TowersLayout, options: PlanOptions = {}): { n
       items.push({ depth: 1e6 - 1, y: 0, node: box(tx, ty, Math.max(7, k * 1.4), `ov-outline ty-${link.type}`) });
       if (sel.labelled) items.push({ depth: 1e6, y: 0, node: { kind: 'text', x: tx, y: ty - Math.max(7, k * 1.4), text: link.id, rest: true, role: 'id', size: 10, anchor: 'middle', cls: 'ov-link-id' } });
     }
-    items.push({ depth: 1e6 - 1, y: 0, node: box(fx, fy, Math.max(10, k * 1.9), 'ov-outline ov-selected') });
+    if (sel !== layout.session) items.push({ depth: 1e6 - 1, y: 0, node: box(fx, fy, Math.max(10, k * 1.9), 'ov-outline ov-selected') });
+  }
+  // Each agent over the ticket it was started on (TASK-0199): its state the fill, its agent the ring.
+  for (const m of layout.agents) {
+    if (only !== undefined && m.segment !== only.id) continue;
+    const [px, py] = at(...m.at);
+    items.push({ depth: 1e6 + 1, y: 0, node: { kind: 'mark', tag: 'circle', attrs: { cx: px, cy: py, r: Math.max(5, k * 1.1) }, cls: `ov-agent ag-${m.agent} st-${m.state}${layout.session?.id === `session:${m.id}` ? ' is-open' : ''}`, markId: `agent-${m.id}`, target: m.target, label: m.label } });
   }
   items.sort((a, b) => a.depth - b.depth || a.y - b.y);
   // Where the core's middle is drawn, for the way into re-phasing that stands on it.

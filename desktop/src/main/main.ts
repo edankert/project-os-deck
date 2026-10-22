@@ -523,7 +523,7 @@ function failHandoffsFor(windowId: number, answer: HandoffAnswer): void {
 function registerIpc(): void {
   handle('deck:capabilities', () => SHELL_CAPABILITIES);
   // A window names a workspace; Deck's own list says where it is.
-  registerAgentCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, agentSessions, (id) => workspaces.get(id)?.root ?? null);
+  registerAgentCalls(handle as (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void, agentSessions, (id) => workspaces.get(id)?.root ?? null, (id) => sidecars.handle(id)?.base ?? null);
 
   handle('deck:workspaces:list', () => workspaces.list());
 

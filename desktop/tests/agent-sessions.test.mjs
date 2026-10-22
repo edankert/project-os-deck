@@ -517,7 +517,7 @@ test('the calls reach the manager, check their arguments, and an answer only all
   const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ ask: 'Edit', summary: 'x' }]]) }, { now, newId });
   const repo = gitRepo();
   registerAgentCalls((ch, h) => calls.set(ch, h), m, (id) => (id === 'ws1' ? repo : null));
-  assert.deepEqual([...calls.keys()].sort(), ['deck:agents:answer', 'deck:agents:conversation', 'deck:agents:interrupt', 'deck:agents:list', 'deck:agents:send', 'deck:agents:start', 'deck:agents:stop']);
+  assert.deepEqual([...calls.keys()].sort(), ['deck:agents:answer', 'deck:agents:cockpit', 'deck:agents:conversation', 'deck:agents:interrupt', 'deck:agents:list', 'deck:agents:send', 'deck:agents:start', 'deck:agents:stop']);
   assert.deepEqual(await calls.get('deck:agents:start')({}, { workspaceId: 'elsewhere', agent: 'claude', prompt: 'x' }), { ok: false, error: 'no such workspace' });
   const started = await calls.get('deck:agents:start')({}, { workspaceId: 'ws1', ticket: 'TASK-0002', agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
   assert.equal(started.ok, true);

@@ -19,6 +19,7 @@ import type { ListRow, Scene, SceneNode, ScreenContext } from './overview-scene.
 import { nextUpPanel } from './overview-board.js';
 import { needsPanel, todayOf, weeksPanel } from './overview-needs.js';
 import { selectionPanels } from './overview-select.js';
+import { agentsPanel } from './agent-marks.js';
 import { TOWERS_PLAN, towersLayout, towersPlan, type TowersOptions } from './overview-towers.js';
 import type { OverviewModel, Phase, Ticket } from './overview-types.js';
 
@@ -95,6 +96,8 @@ export const WHEEL_SELECTION = { card: { x: 40, y: 128, w: 400, h: 290 }, pane: 
 /** What needs you, top right, and the year as weeks, bottom right (TASK-0184); a selected ticket's pane takes their place. */
 export const WHEEL_NEEDS = { x: 1090, y: 96, w: 320, h: 330 } as const;
 export const WHEEL_WEEKS = { x: 1090, y: 730, w: 320, h: 170 } as const;
+/** The Agents list, left middle (FEAT-0033, TASK-0199): between a selected ticket's card and the board. */
+export const WHEEL_AGENTS = { x: 40, y: 430, w: 420, h: 196 } as const;
 /** The next-up board, bottom left (TASK-0183). */
 export const WHEEL_BOARD = { x: 40, y: 640, w: 420, h: 330 } as const;
 
@@ -104,13 +107,17 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
   const ways = waysIn(model, ctx, plan.centre);
   const selected = selectionPanels(model, layout, ctx, WHEEL_SELECTION);
   const board = nextUpPanel(model, layout, ctx, WHEEL_BOARD);
-  const right = layout.selection !== null ? [] : [needsPanel(model, ctx, WHEEL_NEEDS), weeksPanel(model, options.today ?? todayOf(model), WHEEL_WEEKS)];
+  // The session pane stands at the right as a selected ticket's pane does; the panels there make way for either.
+  const session = layout.session === null ? null : options.session ?? null;
+  const right = layout.selection !== null || session !== null ? [] : [needsPanel(model, ctx, WHEEL_NEEDS), weeksPanel(model, options.today ?? todayOf(model), WHEEL_WEEKS)];
+  // Every agent session, in the shell only: a page given no sessions to show has no list (RISK-0015).
+  const agents = options.agents === undefined ? null : agentsPanel(options.agents, ctx, session, WHEEL_AGENTS);
   const sel = layout.selection;
   // Escape clears the selection: the overview goes to the screen a row with id `back` names.
   const back: ListRow[] = sel === null ? [] : [{ id: 'back', label: `Clear the selection of ${sel.id}`, group: 'Go to', target: ctx.address({ page: 'wheel' }) }];
   return {
     screen: 'wheel',
-    address: ctx.address({ page: 'wheel', select: sel?.id ?? null }),
+    address: ctx.address({ page: 'wheel', select: sel?.id ?? null, session }),
     width: TOWERS_PLAN.width,
     height: TOWERS_PLAN.height,
     title: sel === null ? `${model.workspace}: the overview` : `${model.workspace}: the overview, ${sel.id} selected`,
@@ -121,9 +128,10 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
       ...ways.nodes,
       board.node,
       ...right.map((p) => p.node),
+      ...(agents === null ? [] : [agents.node]),
       ...selected.nodes,
       { kind: 'towers', layout },
     ],
-    list: [...back, ...selected.rows, ...right.flatMap((p) => p.rows), ...board.rows, ...ways.rows, ...plan.rows],
+    list: [...back, ...(session !== null && sel === null ? [{ id: 'back', label: 'Close the session', group: 'Go to', target: ctx.address({ page: 'wheel' }) }] : []), ...selected.rows, ...right.flatMap((p) => p.rows), ...(agents?.rows ?? []), ...board.rows, ...ways.rows, ...plan.rows],
   };
 }

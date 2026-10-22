@@ -10,7 +10,8 @@
  */
 import type { AgentBridge } from './host-bridge.js';
 import type { ConversationRecord, SessionRecord } from '../shared/agent-types.js';
-import { ACCESS_WORD, EFFORTS, MODELS, composerOf, paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
+import { ACCESS_WORD, AGENT_GLYPH, AGENT_WORD, EFFORTS, MODELS, STATE_WORD, composerOf, paneOf, type PaneItem, type PaneModel } from '../shared/agent-pane.js';
+import type { AgentSummary } from '../shared/agent-marks.js';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -48,8 +49,40 @@ export class AgentPane {
     options.parent.appendChild(this.element);
   }
 
+  /** A cockpit session open to read: what the cockpit records, with nothing to send (TASK-0199). */
+  private cockpitId: string | null = null;
+
   get openId(): string | null {
-    return this.session?.id ?? null;
+    return this.session?.id ?? this.cockpitId;
+  }
+
+  /**
+   * A session the cockpit runs, opened to read. Its conversation lives in the cockpit's terminal,
+   * so the pane shows only what the sidecar records: who, how it stands, and the tickets it changed.
+   */
+  openCockpit(s: AgentSummary): void {
+    this.unsubscribe?.();
+    this.unsubscribe = null;
+    this.session = null;
+    this.records = [];
+    this.composerShape = '';
+    this.cockpitId = s.id;
+    const word = AGENT_WORD[s.agent];
+    const box = el('header', 'ag-head');
+    const title = el('div', 'ag-title');
+    title.append(el('span', `ag-glyph ag-${s.agent}`, AGENT_GLYPH[s.agent]), el('strong', '', `${word} · ${s.id.slice(0, 8)}`), el('span', `ag-state ag-st-${s.state}`, STATE_WORD[s.state]));
+    const close = el('button', 'ag-close', '×');
+    close.type = 'button';
+    close.title = 'Close the session pane (Escape)';
+    close.addEventListener('click', () => this.close());
+    title.appendChild(close);
+    box.append(title, el('div', 'ag-facts', [`a cockpit session`, s.last === '' ? '' : `last active ${time(s.last)}`].filter(Boolean).join(' · ')));
+    const tickets = el('ul', 'ag-plan');
+    for (const t of s.tickets) tickets.appendChild(el('li', '', t));
+    this.body.replaceChildren(box, ...(s.tickets.length > 0 ? [el('div', 'ag-note', 'The tickets it changed, the first where it stands:'), tickets] : [el('div', 'ag-note', 'It has changed no ticket on this workspace.')]),
+      el('div', 'ag-note', `This session runs in the cockpit's terminal. Deck shows what the cockpit records, and cannot send to it.`));
+    this.composer.replaceChildren();
+    this.element.hidden = false;
   }
 
   /** Open a session: its record, its conversation, and every change to it from now on. */
@@ -61,6 +94,7 @@ export class AgentPane {
       return false;
     }
     this.unsubscribe?.();
+    this.cockpitId = null;
     this.session = session;
     this.records = (await this.options.agents.conversation(id)) as ConversationRecord[];
     this.unsubscribe = this.options.agents.subscribe((raw) => {
@@ -75,14 +109,16 @@ export class AgentPane {
     return true;
   }
 
-  close(): void {
+  /** Close the pane; `tell` false when the overview closed it itself, by going to an address without a session. */
+  close(tell = true): void {
     this.unsubscribe?.();
     this.unsubscribe = null;
     this.session = null;
+    this.cockpitId = null;
     this.records = [];
     this.composerShape = '';
     this.element.hidden = true;
-    this.options.closed();
+    if (tell) this.options.closed();
   }
 
   /** The pane as laid out now, for the window run and the suite. */

@@ -84,3 +84,133 @@ test('each agent is offered its own models and efforts, and the access levels ne
   assert.deepEqual(Object.keys(ACCESS_WORD), ['ask', 'edits']);
   assert.doesNotMatch(JSON.stringify(ACCESS_WORD), /skip|bypass|danger/i);
 });
+
+// --- TASK-0199: agents over their start tickets, and the Agents list ---
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { desktopRoot } from './helpers.mjs';
+
+const { agentMarkers, cockpitSummaries, deckSummaries, allSummaries, agentsPanel, startOf } = load('shared/agent-marks.js');
+const { towersLayout, towersPlan, cubesOf } = load('shared/overview-towers.js');
+const { wheelScene } = load('shared/overview-wheel.js');
+const { phaseScene } = load('shared/overview-phase.js');
+const { plainContext, walkScene } = load('shared/overview-scene.js');
+const { parseAddress, formatAddress } = load('shared/address.js');
+const { checkScene } = load('shared/overview-checks.js');
+const { cockpitSessionsOf } = load('main/agents/ipc.js');
+const fixture = (name) => JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', `${name}.json`), 'utf8'));
+const ctx = plainContext('abcd1234', 'overview');
+
+/** One ticket of each place a marker can stand over: in a tower, a tile, the core, the shelf. */
+function places(model) {
+  const layout = towersLayout(model, ctx);
+  const tower = layout.phases.flatMap((p) => p.towers)[0];
+  return {
+    layout,
+    tower: tower.cubes[0].id,
+    towerTop: tower.top,
+    tile: layout.phases.flatMap((p) => p.tiles)[0]?.id ?? null,
+    core: layout.core[0]?.id ?? null,
+    shelf: layout.shelf.flatMap((s) => s.cubes)[0]?.id ?? null,
+  };
+}
+const deckSession = (id, ticket, over = {}) => session({ id, ticket, workspaceId: 'abcd1234', lastActive: at(100), ...over });
+
+for (const name of ['deck', 'your-trainer']) {
+  test(`${name}: each Deck session stands over its exact start ticket, a tower's top or a tile, and one on no ticket the workspace holds is only in the list`, () => {
+    const model = fixture(name);
+    const p = places(model);
+    const sessions = [deckSession('aaaaaaaa-1', p.tower), deckSession('bbbbbbbb-2', p.tower, { agent: 'codex', state: 'working' }), deckSession('cccccccc-3', 'TASK-9999'), ...(p.tile ? [deckSession('dddddddd-4', p.tile, { state: 'waiting' })] : []), ...(p.core ? [deckSession('eeeeeeee-5', p.core)] : []), ...(p.shelf ? [deckSession('ffffffff-6', p.shelf)] : [])];
+    const summaries = deckSummaries(sessions, 'abcd1234');
+    const marks = agentMarkers(p.layout, summaries, (id) => `t:${id}`);
+    const by = new Map(marks.map((m) => [m.id, m]));
+    assert.equal(by.get('aaaaaaaa-1').ticket, p.tower);
+    assert.ok(by.get('aaaaaaaa-1').at[1] > p.towerTop, 'over the tower, not inside it');
+    assert.ok(by.get('bbbbbbbb-2').at[1] > by.get('aaaaaaaa-1').at[1], 'two over one tower stand one above the other');
+    assert.deepEqual([by.get('bbbbbbbb-2').agent, by.get('bbbbbbbb-2').state], ['codex', 'working']);
+    assert.ok(!by.has('cccccccc-3'), 'a ticket the workspace does not hold has no marker');
+    if (p.tile) assert.equal(by.get('dddddddd-4').state, 'waiting');
+    for (const id of ['eeeeeeee-5', 'ffffffff-6']) if (summaries.some((s) => s.id === id)) assert.ok(by.has(id), `${id} on the core or the shelf`);
+    const list = agentsPanel(summaries, ctx, null, { x: 0, y: 0, w: 100, h: 100 }, 99);
+    assert.equal(list.rows.length, summaries.length, 'every session is in the list, the one on no ticket too');
+    assert.ok(list.rows.some((r) => r.label.includes('cccccccc') && r.label.includes('on TASK-9999')));
+    assert.equal(new Set(list.rows.map((r) => r.id)).size, list.rows.length, 'once each');
+  });
+
+  test(`${name}: the wheel draws every marker in the flat plan and the Agents list, and passes its checks`, () => {
+    const model = fixture(name);
+    const p = places(model);
+    const agents = deckSummaries([deckSession('aaaaaaaa-1', p.tower, { state: 'waiting' }), deckSession('cccccccc-3', null)], 'abcd1234');
+    const scene = wheelScene(model, ctx, { agents });
+    const nodes = [...walkScene(scene.nodes)];
+    const marks = nodes.filter((n) => n.kind === 'mark' && /\bov-agent\b/.test(n.cls ?? ''));
+    assert.equal(marks.length, 1);
+    assert.equal(parseAddress(marks[0].target).session, 'aaaaaaaa-1');
+    const panel = nodes.find((n) => n.kind === 'panel' && n.key === 'agents');
+    assert.deepEqual(panel.body.rows.map((r) => [r.id, r.start]), [['aaaaaaaa-1', p.tower], ['cccccccc-3', null]], 'the one waiting for you first');
+    assert.match(panel.label, /2 agent sessions, 1 waiting for you/);
+    for (const r of checkScene(scene)) assert.ok(r.ok, `${r.rule}: ${r.detail}`);
+  });
+}
+
+test('a page given no sessions has no marker and no Agents list, as a served page (RISK-0015)', () => {
+  const model = fixture('deck');
+  const scene = wheelScene(model, ctx, {});
+  const nodes = [...walkScene(scene.nodes)];
+  assert.ok(!nodes.some((n) => n.kind === 'panel' && n.key === 'agents'));
+  assert.ok(!nodes.some((n) => n.kind === 'mark' && /\bov-agent\b/.test(n.cls ?? '')));
+  assert.deepEqual(nodes.find((n) => n.kind === 'towers').layout.agents, []);
+});
+
+test('an open session joins its marker to the tickets it worked on, makes the right side clear, and its address round-trips', () => {
+  const model = fixture('deck');
+  const p = places(model);
+  const agents = deckSummaries([deckSession('aaaaaaaa-1', p.tower)], 'abcd1234');
+  const scene = wheelScene(model, ctx, { agents, session: 'aaaaaaaa-1' });
+  const layout = [...walkScene(scene.nodes)].find((n) => n.kind === 'towers').layout;
+  assert.equal(layout.selection, null);
+  assert.equal(layout.session.id, 'session:aaaaaaaa-1');
+  assert.deepEqual(layout.session.links.map((l) => l.id), [p.tower]);
+  assert.deepEqual(layout.session.at, layout.agents[0].at, 'the curves start at its marker');
+  const address = parseAddress(scene.address);
+  assert.equal(address.session, 'aaaaaaaa-1');
+  assert.equal(formatAddress(address), scene.address);
+  const panels = [...walkScene(scene.nodes)].filter((n) => n.kind === 'panel').map((n) => n.key);
+  assert.ok(!panels.includes('needs-you') && !panels.includes('weeks'), 'the session pane stands where they were');
+  assert.equal(parseAddress(scene.list.find((r) => r.id === 'back').target).session, null, 'Escape closes it');
+  assert.ok([...walkScene(scene.nodes)].some((n) => n.kind === 'mark' && /ov-agent .*is-open/.test(n.cls ?? '')));
+  assert.throws(() => parseAddress('deck://abcd1234/overview?page=phase&note=PHASE-0001&session=abc'), /session/);
+});
+
+test('a phase brought close draws only its own agents', () => {
+  const model = fixture('deck');
+  const layout = towersLayout(model, ctx);
+  const [a, b] = layout.phases.filter((p) => p.towers.length > 0);
+  const agents = deckSummaries([deckSession('aaaaaaaa-1', a.towers[0].cubes[0].id), deckSession('bbbbbbbb-2', b.towers[0].cubes[0].id)], 'abcd1234');
+  const scene = phaseScene(model, a.id, ctx, { agents });
+  const marks = [...walkScene(scene.nodes)].filter((n) => n.kind === 'mark' && /\bov-agent\b/.test(n.cls ?? '') && n.markId?.startsWith('agent-'));
+  assert.deepEqual(marks.map((m) => m.markId), ['agent-aaaaaaaa-1']);
+});
+
+test('a cockpit session stands over the first ticket whose status it changed, and Deck\'s own sessions are not counted twice', () => {
+  const model = fixture('deck');
+  const ids = Object.keys(model.tickets).slice(0, 3);
+  const payload = { sessions: [
+    { session_id: 'cock-1', agent: 'claude', state: 'busy', started: at(10), ended: null, live: true, status_touched: { b: { id: ids[1], ts: at(30) }, a: { id: ids[0], ts: at(20) }, x: { id: 'TASK-9999', ts: at(5) } } },
+    { session_id: 'cock-2', agent: 'codex', state: 'idle', started: at(1), ended: at(2), live: false, status_touched: {} },
+    { session_id: 'deck-own', agent: 'claude', state: 'busy', started: at(3), ended: null, live: true, status_touched: {} },
+  ] };
+  const got = cockpitSummaries(payload, model, new Set(['deck-own']));
+  assert.deepEqual(got.map((s) => [s.id, s.start, s.state, s.source]), [['cock-1', ids[0], 'working', 'cockpit'], ['cock-2', null, 'idle', 'cockpit']]);
+  assert.deepEqual(got[0].tickets, [ids[0], ids[1]], 'in the order the cockpit first saw them; one the workspace does not hold is left out');
+  assert.equal(startOf({ changed: [['TASK-1', 'done']] }), 'TASK-1');
+  const all = allSummaries(deckSummaries([deckSession('deck-own', ids[2], { state: 'waiting' })], 'abcd1234'), got);
+  assert.deepEqual(all.map((s) => s.id), ['deck-own', 'cock-1', 'cock-2'], 'waiting first, then working, then the rest');
+});
+
+test('the cockpit\'s sessions reach the window without their prompts, files or costs', () => {
+  const out = cockpitSessionsOf({ sessions: [{ session_id: 's1', agent: 'codex', state: 'idle', started: 'a', ended: null, live: true, last_prompt: 'secret words', prompts: ['secret words'], files: ['/private/x'], cost: { usd: 3 }, transcript_path: '/t', status_touched: { 'features/x.md': { id: 'FEAT-0001', status: 'done', ts: 't1', title: 'T' } } }] });
+  assert.deepEqual(out, { sessions: [{ session_id: 's1', agent: 'codex', state: 'idle', started: 'a', ended: null, live: true, status_touched: { 0: { id: 'FEAT-0001', ts: 't1' } } }] });
+  assert.doesNotMatch(JSON.stringify(out), /secret|private|usd|transcript/);
+});

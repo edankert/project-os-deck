@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0033: the session pane, the agents on the towers and Work on this"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-22
 updated: 2026-10-22

@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0200
 aliases: ["TASK-0200"]
 title: "Work on this on a ticket's card opens a dialog that starts a session with the agent, model, effort and place chosen, and the ticket's own words as the first prompt"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

@@ -27,6 +27,7 @@ import { FRAME_ACTION, standsIn } from '../shared/overview-select.js';
 import { SEARCH_LIST, searchTickets } from '../shared/overview-search.js';
 import { square } from './overview-panels.js';
 import { AgentPane } from './agent-pane.js';
+import { summaryOf, watchAgents } from './agent-state.js';
 import type { AgentBridge } from './host-bridge.js';
 import type { TowersNode } from '../shared/overview-scene.js';
 import { cameraTransform, defaultCamera, isDefault, panned, turned, viewed, VIEW_WORD, VIEWS, wheelFactor, withinView, zoomed, type Camera, type View } from '../shared/overview-camera.js';
@@ -161,6 +162,9 @@ function towersOf(scene: Scene): TowersNode | undefined {
 /** The pixels at the right of the stage a phase's list covers, so the segment stands clear of it. */
 function panelCover(): number {
   if (stage === null || current === null) return 0;
+  // The session pane, when the address opens one (TASK-0199): laid over the stage, not drawn in the scene,
+  // and opened a moment after the ring is placed, so its width is the stylesheet's, min(600px, 48vw).
+  if (current.address.session !== null && (api?.agents?.() ?? null) !== null) return Math.min(600, window.innerWidth * 0.48);
   // The panel standing against the right edge: a phase's list, or a selected ticket's pane (TASK-0182).
   const width = current.scene.width;
   const right = current.scene.nodes.filter((n) => n.kind === 'panel' && n.x + n.w >= width - 60 && n.x > width / 3);
@@ -552,8 +556,39 @@ let agentPane: AgentPane | null = null;
 function sessionPane(): AgentPane | null {
   const bridge = api?.agents?.() ?? null;
   if (bridge === null || area === null) return null;
-  agentPane ??= new AgentPane({ agents: bridge, parent: area, say: (m, e) => api?.say(m, e), closed: () => undefined });
+  // Closing the pane goes to the same screen without the session, so the address says what is open.
+  agentPane ??= new AgentPane({ agents: bridge, parent: area, say: (m, e) => api?.say(m, e), closed: () => void closeSessionAddress() });
   return agentPane;
+}
+
+function syncSessionPane(address: DeckAddress, model: OverviewModel): void {
+  const pane = address.session === null ? agentPane : sessionPane();
+  if (pane === null) return;
+  if (address.session === null) {
+    if (pane.openId !== null) pane.close(false);
+    return;
+  }
+  if (pane.openId === address.session) return;
+  const summary = summaryOf(address.workspaceId, model, address.session);
+  // A cockpit session shows what the cockpit records; Deck cannot send to it.
+  if (summary?.source === 'cockpit') pane.openCockpit(summary);
+  else void pane.open(address.session);
+}
+
+async function closeSessionAddress(): Promise<void> {
+  if (current === null || current.address.session === null) return;
+  await showOverview({ ...current.address, session: null });
+}
+
+/** A session started, stopped or changed state: the same screen drawn again, its markers with it. */
+async function redrawForAgents(): Promise<void> {
+  if (current === null || !isOverviewShown()) return;
+  searchRedraw = true;
+  try {
+    await showOverview(current.address, { replace: true });
+  } finally {
+    searchRedraw = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -757,6 +792,7 @@ export function contextFor(workspaceId: string, viewId: string): ScreenContext {
           colour: colouring === 'state' && (page !== null || flow !== null) ? 'state' : null,
           select: parts.select ?? null,
           group: grouping === 'feature' && page === 'wheel' ? 'feature' : null,
+          session: parts.session ?? null,
         }),
       );
     },
@@ -873,6 +909,8 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   // The wheel's address says how its ring is grouped; another screen keeps the wheel's grouping for its way back.
   if (address.page === 'wheel') grouping = address.group === 'feature' ? 'feature' : 'phase';
   drawColouringToggle();
+  // The agents are followed from the first screen on, in the shell only (FEAT-0033).
+  watchAgents(api.agents?.() ?? null, () => void redrawForAgents());
   const model = await modelFor(address.workspaceId);
   const input = inputFor(model, address);
   const scene = await definition.scene(input);
@@ -893,6 +931,8 @@ export async function showOverview(address: DeckAddress, options: { replace?: bo
   // After `current` is the new screen: Home is shown for the screen being opened, not the
   // one being left (review of TASK-0162).
   drawCameraBar();
+  // The session the address names opens in the pane; an address with none closes it (TASK-0199).
+  syncSessionPane(address, model);
   trail = afterDraw(trail, scene.address, travelIntent, options.replace === true);
   travelIntent = null;
   drawHistory();

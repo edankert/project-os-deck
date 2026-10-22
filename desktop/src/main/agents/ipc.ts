@@ -45,8 +45,37 @@ const sessionId = (v: unknown): string => {
   return v;
 };
 
-export function registerAgentCalls(handle: Handle, manager: SessionManager, rootOf: (workspaceId: string) => string | null): void {
+/**
+ * The cockpit's sessions, as the Agents list and the markers need them (TASK-0199): who, how it
+ * stands, when, and which tickets it changed. Prompts, files and costs are left in the sidecar.
+ */
+export function cockpitSessionsOf(payload: unknown): { sessions: Array<Record<string, unknown>> } {
+  const raw = ((payload ?? {}) as { sessions?: unknown }).sessions;
+  const sessions = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
+  return {
+    sessions: sessions.slice(0, 200).map((s) => ({
+      session_id: String(s['session_id'] ?? ''), agent: s['agent'] === 'codex' ? 'codex' : 'claude', state: String(s['state'] ?? ''),
+      started: s['started'] ?? null, ended: s['ended'] ?? null, live: s['live'] === true,
+      status_touched: Object.fromEntries(Object.entries((s['status_touched'] ?? {}) as Record<string, { id?: unknown; ts?: unknown }>)
+        .map(([k, v], i) => [String(i), { id: String(v?.id ?? ''), ts: String(v?.ts ?? '') }]).filter(([, v]) => (v as { id: string }).id !== '')),
+    })),
+  };
+}
+
+export function registerAgentCalls(handle: Handle, manager: SessionManager, rootOf: (workspaceId: string) => string | null, cockpitBase: (workspaceId: string) => string | null = () => null): void {
   handle('deck:agents:list', () => manager.list());
+  // The cockpit's own sessions, read by the main process: Deck's served host forwards no session route (TASK-0196).
+  handle('deck:agents:cockpit', async (_e, workspaceId) => {
+    const base = typeof workspaceId === 'string' ? cockpitBase(workspaceId) : null;
+    if (base === null) return { ok: false, error: 'no sidecar for that workspace' };
+    try {
+      const res = await fetch(`${base}/api/cockpit/sessions`);
+      if (!res.ok) return { ok: false, error: `the sidecar answered ${res.status}` };
+      return { ok: true, ...cockpitSessionsOf(await res.json()) };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
   handle('deck:agents:conversation', (_e, id) => manager.conversation(sessionId(id)));
   handle('deck:agents:start', async (_e, raw) => {
     const req = parseStart(raw, rootOf);

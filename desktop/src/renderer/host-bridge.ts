@@ -48,6 +48,8 @@ interface BridgeShape {
 /** Deck's own agent sessions, through the preload bridge (FEAT-0032). */
 export interface AgentBridge {
   list(): Promise<unknown>;
+  /** The cockpit's own sessions on a workspace, read by the main process (TASK-0199). */
+  cockpit?(workspaceId: string): Promise<unknown>;
   conversation(id: string): Promise<unknown>;
   start(request: unknown): Promise<unknown>;
   send(id: string, text: string): Promise<unknown>;

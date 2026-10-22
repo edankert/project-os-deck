@@ -14,7 +14,7 @@
  * for the session.
  */
 import { markWords } from '../shared/overview-marks.js';
-import { walkScene, type PanelButton, type PanelCard, type PanelNeeds, type PanelNode, type PanelRow, type PanelSection, type PanelWeeks, type Scene } from '../shared/overview-scene.js';
+import { walkScene, type PanelAgents, type PanelButton, type PanelCard, type PanelNeeds, type PanelNode, type PanelRow, type PanelSection, type PanelWeeks, type Scene } from '../shared/overview-scene.js';
 
 /** Sections a person opened or closed, by panel and section key, for the session. */
 const unfolded = new Map<string, boolean>();
@@ -175,6 +175,36 @@ function needsPanel(panel: PanelNode & { body: PanelNeeds }): HTMLElement {
   return box;
 }
 
+/** The Agents list (FEAT-0033, TASK-0199): a row each, pressing one opens the session in the pane. */
+function agentsPanel(panel: PanelNode & { body: PanelAgents }): HTMLElement {
+  const box = el('div', 'ov-panel ov-panel-agents');
+  box.appendChild(el('div', 'ov-agents-title', panel.label));
+  if (panel.body.rows.length === 0) {
+    box.appendChild(el('div', 'ov-board-foot', 'No agent sessions. Work on this, on a ticket, starts one.'));
+    return box;
+  }
+  const list = el('ul', 'ov-rows');
+  for (const r of panel.body.rows) {
+    const li = el('li', `ov-row ov-agent-row st-${r.state}${r.open ? ' is-open' : ''}`);
+    li.dataset['target'] = r.target;
+    li.dataset['label'] = r.label;
+    li.dataset['agent'] = r.id;
+    li.tabIndex = -1;
+    li.setAttribute('role', 'button');
+    li.setAttribute('aria-label', r.label);
+    const when = r.last === '' ? '' : new Date(r.last).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    li.append(
+      el('span', `ov-agent-dot ag-${r.agent} st-${r.state}`),
+      el('span', 'ov-row-id', `${r.agent === 'codex' ? 'Codex' : 'Claude'} ${r.id.slice(0, 8)}`),
+      el('span', 'ov-row-title', r.start === null ? 'no ticket' : `${r.start}${r.more > 0 ? ` +${r.more}` : ''}${r.source === 'cockpit' ? ' · cockpit' : ''}`),
+      el('span', 'ov-row-status', `${r.word}${when === '' ? '' : ` · ${when}`}`),
+    );
+    list.appendChild(li);
+  }
+  box.appendChild(list);
+  return box;
+}
+
 /** The year as weeks (TASK-0184): four rows of thirteen squares, each lighting the tickets closed that week. */
 function weeksPanel(panel: PanelNode & { body: PanelWeeks }): HTMLElement {
   const w = panel.body;
@@ -324,6 +354,7 @@ export function buildPanels(scene: Scene, stage: HTMLElement, options: { reduced
       : panel.body.kind === 'card' ? cardPanel(panel as PanelNode & { body: PanelCard })
         : panel.body.kind === 'needs' ? needsPanel(panel as PanelNode & { body: PanelNeeds })
           : panel.body.kind === 'weeks' ? weeksPanel(panel as PanelNode & { body: PanelWeeks })
+            : panel.body.kind === 'agents' ? agentsPanel(panel as PanelNode & { body: PanelAgents })
             : notePanel(panel as PanelNode & { body: { kind: 'note' } }, options.loader, options.follow ?? null);
     box.dataset['panel'] = panel.key;
     box.setAttribute('aria-label', panel.label);
