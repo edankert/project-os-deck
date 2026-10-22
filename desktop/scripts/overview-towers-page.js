@@ -375,6 +375,7 @@ function build(ws) {
   if (!layouts.every(Boolean)) layouts = d.ring.map((p, i) => layoutSegment(p, angles[i][0], angles[i][1], R0, R1, true));
   const phases = [];
   ageTags.length = 0;
+  const towerTops = new Map();
   const where = new Map(); // ticket id -> { phase index, position }
   const ticketRow = new Map([...d.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])]), ...d.shelf.flatMap((p) => p.tickets), ...d.core].map((r) => [r[ID], r]));
   const pickables = [];
@@ -471,6 +472,7 @@ function build(ws) {
       });
       const top = h + 0.6 + FLOOR * Math.ceil(tower.floors.length / PER_FLOOR);
       tallest = Math.max(tallest, top - h);
+      towerTops.set(i + ':' + k, new THREE.Vector3(centre.x, top, centre.z));
       // An age badge when the tower's tickets have not changed for 14 days (TASK-0177),
       // counted to the date the data was read.
       const quiet = d.ages[tower.f[ID]] ?? null;
@@ -580,24 +582,10 @@ function build(ws) {
     shelfGroup.add(ring);
   }
 
-  // The ring of recent evidence (TASK-0177): a post for each picture, outside the shelf;
-  // the pictures themselves are drawn over the canvas as images, placed each frame.
-  const evR = d.shelf.length > 0 ? shelfR + 9 : R1 + 18;
+  // Evidence pictures stand at their tickets (TASK-0179); their anchors are found once
+  // everything is placed, below.
   const evidenceGroup = new THREE.Group();
   world.add(evidenceGroup);
-  const anchors = [];
-  const evCount = d.evidence.length;
-  d.evidence.forEach((e, i) => {
-    const a = -Math.PI / 2 + ((i + 0.5) / evCount) * Math.PI * 2;
-    const foot = polar(evR, a);
-    const head = foot.clone().add(new THREE.Vector3(0, 6, 0));
-    evidenceGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([foot, head]), new THREE.LineBasicMaterial({ color: 0x5fb3c8, transparent: true, opacity: 0.6 })));
-    const dot = new THREE.Mesh(DOT, new THREE.MeshBasicMaterial({ color: 0x9ff0ff }));
-    dot.position.copy(foot);
-    evidenceGroup.add(dot);
-    anchors.push(head);
-  });
-  if (evCount > 0) evidenceGroup.add(arcLine(evR, 0, Math.PI * 2, 0.05, new THREE.LineBasicMaterial({ color: 0x2b5a6a, transparent: true, opacity: 0.6 })));
 
   // The core: the tickets with no phase, as tiles round a disc.
   const coreGroup = new THREE.Group();
@@ -642,6 +630,24 @@ function build(ws) {
   const selection = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.7, 1.7, 1.7)), new THREE.LineBasicMaterial({ color: 0xfff3a0 }));
   selection.visible = false;
   world.add(selection);
+
+  // Each picture's anchor: over its ticket's tower top, its tile, its block on the shelf or its
+  // tile in the core; pictures of one ticket stand side by side (TASK-0179).
+  const anchors = d.evidence.map((e) => {
+    const w = where.get(e.id);
+    if (!w) return null;
+    const base = w.tower !== undefined ? towerTops.get(w.phase + ':' + w.tower).clone().add(new THREE.Vector3(0, 3.2, 0)) : w.at.clone().add(new THREE.Vector3(0, 2.6, 0));
+    return { at: base, phase: w.phase };
+  });
+  const sameSpot = new Map();
+  anchors.forEach((a, i) => {
+    if (!a) return;
+    const key = a.at.toArray().map((v) => v.toFixed(1)).join(',');
+    (sameSpot.get(key) ?? sameSpot.set(key, []).get(key)).push(i);
+  });
+  for (const list of sameSpot.values()) list.forEach((i, k) => {
+    anchors[i].slot = k - (list.length - 1) / 2;
+  });
 
   // What a selection or a search draws over everything else (TASK-0176): rebuilt each time.
   const marks = new THREE.Group();
@@ -1053,6 +1059,8 @@ function drawTicketPane(id) {
   html += '<h2>' + esc(r[ID]) + ' · ' + esc(r[TITLE]) + '</h2><div class="sub">' + esc(MARK.typeWord[r[TYPE]] ?? r[TYPE]) + ' · ' + esc(statusWord(r)) + '</div>';
   if (r[NEEDS]) html += '<div class="say" style="padding-left:0">● ' + esc(r[SAY] || 'needs you') + '</div>';
   html += lead ? '<div class="lead">' + esc(lead) + '</div>' : '<div class="sub">' + (note === undefined ? 'Its note was not found at the fixture\'s commit.' : 'Its note has no paragraph of its own before its first heading.') + '</div>';
+  const pics = state.d.pictures[id] ?? [];
+  if (pics.length > 0) html += '<h3>Pictures · ' + pics.length + '</h3><div class="pics">' + pics.map(([src, date, name]) => '<a href="' + esc(src) + '" target="_blank" rel="noopener" title="' + esc(name + ' · ' + date) + '"><img alt="" loading="lazy" src="' + esc(src) + '"><span>' + esc(date) + '</span></a>').join('') + '</div>';
   if (linked.length === 0) html += '<h3>Linked tickets · none</h3>';
   for (const [type, rows] of groups) html += '<h3>' + esc(MARK.typeWord[type] ?? type) + (rows.length === 1 ? '' : 's') + ' · ' + rows.length + '</h3>' + rows.map((l) => rowHtml(l, l[ID] === state.d.next)).join('');
   const panel = document.getElementById('panel');
@@ -1261,7 +1269,7 @@ function quietDays(ids) {
   return newest === '' ? null : Math.max(0, Math.round((Date.parse(d.dataDate) - Date.parse(newest)) / DAY));
 }
 
-/** The evidence pictures, drawn over the canvas and placed each frame at their posts. */
+/** The evidence pictures, drawn over the canvas and placed each frame at their tickets. */
 function drawEvidence() {
   const el = document.getElementById('evidence');
   el.innerHTML = state.d.evidence.map((e, i) => {
@@ -1280,21 +1288,29 @@ function drawEvidence() {
 }
 
 const EV_AT = new THREE.Vector3();
+/** How large a picture stands for how near its ticket is to the work (TASK-0179). */
+const NEAR = { feature: [1, 1], phase: [0.82, 1], ring: [0.62, 0.9], core: [0.55, 0.75], shelf: [0.45, 0.55] };
 function placeEvidence() {
   const el = document.getElementById('evidence');
-  const show = state !== null && state.open === null && state.evidenceGroup.visible;
+  const show = state !== null && state.evidenceGroup.visible;
   el.hidden = !show;
   if (!show) return;
   el.querySelectorAll('figure').forEach((fig, i) => {
     const a = state.anchors[i];
-    if (!a) return;
-    EV_AT.copy(a).project(camera);
+    const e = state.d.evidence[i];
+    // With a phase brought close, only that phase's pictures stand.
+    if (!a || (state.open !== null && a.phase !== state.open)) {
+      fig.style.display = 'none';
+      return;
+    }
+    EV_AT.copy(a.at).project(camera);
     const behind = EV_AT.z > 1;
-    const dist = camera.position.distanceTo(a);
-    const k = Math.min(1.15, Math.max(0.12, 180 / dist));
+    const dist = camera.position.distanceTo(a.at);
+    const [size, alpha] = NEAR[grouping === 'feature' ? e.nearF : e.near] ?? NEAR.ring;
+    const k = size * Math.min(1.1, Math.max(0.3, 150 / dist));
     fig.style.display = behind ? 'none' : '';
-    fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
-    fig.style.opacity = state.hush < 1 && !state.marks.children.length ? 0.4 : state.hush < 1 ? 0.35 : 1;
+    fig.style.transform = 'translate(' + (((EV_AT.x + 1) / 2) * innerWidth + a.slot * 118 * k) + 'px,' + (((1 - EV_AT.y) / 2) * innerHeight) + 'px) translate(-50%,-100%) scale(' + k.toFixed(3) + ')';
+    fig.style.opacity = String((state.hush < 1 ? 0.35 : 1) * alpha);
     fig.style.zIndex = String(1000 - Math.round(dist));
   });
 }
@@ -1595,7 +1611,7 @@ window.__towersProbe = {
   weeks: () => state.weeks,
   memory: () => ({ ...renderer.info.memory }),
   ages: () => ageTags.map((t) => t.visible),
-  evidence: () => [...document.querySelectorAll('#evidence figure')].map((f) => ({ id: f.dataset.id, shown: f.style.display !== 'none' && !document.getElementById('evidence').hidden, missing: f.classList.contains('missing'), loaded: f.querySelector('img').complete && f.querySelector('img').naturalWidth > 0 })),
+  evidence: () => [...document.querySelectorAll('#evidence figure')].map((f, i) => ({ id: f.dataset.id, near: state.d.evidence[i][grouping === 'feature' ? 'nearF' : 'near'], at: state.anchors[i] ? state.anchors[i].at.toArray() : null, shown: f.style.display !== 'none' && !document.getElementById('evidence').hidden, missing: f.classList.contains('missing'), loaded: f.querySelector('img').complete && f.querySelector('img').naturalWidth > 0 })),
   pressReason(k) {
     document.querySelector('#needs .keys [data-reason="' + k + '"]')?.click();
     return window.__towers.found;

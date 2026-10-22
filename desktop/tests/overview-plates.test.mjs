@@ -160,11 +160,25 @@ test('the plate script draws all seven screens on both workspaces, every mark in
       for (const e of w.evidence) per.set(e.id, (per.get(e.id) ?? 0) + 1);
       assert.ok([...per.values()].every((n) => n <= 3), `${ws}: at most three pictures for one ticket`);
       assert.ok(w.evidence.every((e) => fs.existsSync(path.join(out, e.src))), `${ws}: each picture's file is where the page looks`);
+      // TASK-0179: a picture stands at its ticket, sized by how near that is to the work. Grouped
+      // by phase: the feature in focus, the phase in focus, another unfinished phase, the shelf,
+      // the core; grouped by feature: the feature in focus, another unfinished one, the shelf, the core.
+      const towerFeature = new Map(w.ring.flatMap((p) => p.towers.flatMap((t) => [[t.f[0], t.f[0]], ...t.floors.map((r) => [r[0], t.f[0]])])));
+      const placed = new Map([...w.ring.flatMap((p) => [...p.tiles, ...p.towers.flatMap((t) => [t.f, ...t.floors])].map((r) => [r[0], p.id === w.focus.phase ? 'phase' : 'ring'])), ...w.shelf.flatMap((p) => p.tickets.map((r) => [r[0], 'shelf'])), ...w.core.map((r) => [r[0], 'core'])]);
+      const segmentOf = new Map([...bf.ring.flatMap((f) => [[f.id, ['ring', f.id]], ...f.floors.map((id) => [id, ['ring', f.id]])]), ...bf.shelf.flatMap((f) => f.tickets.map((id) => [id, ['shelf', f.id]])), ...bf.core.map((id) => [id, ['core', null]])]);
+      for (const e of w.evidence) {
+        assert.equal(e.near, towerFeature.get(e.id) === w.focus.feature && w.focus.feature !== null ? 'feature' : placed.get(e.id), `${ws}: ${e.id}'s picture is sized by where its ticket stands grouped by phase`);
+        const [band, f] = segmentOf.get(e.id);
+        assert.equal(e.nearF, f !== null && f === w.focus.feature ? 'feature' : band, `${ws}: ${e.id}'s picture is sized by where its ticket stands grouped by feature`);
+        assert.ok((w.pictures[e.id] ?? []).some(([src]) => src === e.src), `${ws}: ${e.id}'s pane lists its picture`);
+      }
+      assert.ok(Object.values(w.pictures).every((list) => list.length <= 12 && list.every((x, i) => i === 0 || list[i - 1][1] >= x[1])), `${ws}: a pane lists at most twelve pictures, newest first`);
       // The notes are read from the workspace's checkout; CI has only Deck's, and without
       // your-trainer beside it every ticket lies flat and the page has no notes or board for it.
       if (w.notesFrom === 'none') {
         assert.deepEqual(w.notes, {}, `${ws}: no notes, so no paragraphs`);
         assert.deepEqual(w.evidence, [], `${ws}: no commit to read, so no pictures`);
+        assert.deepEqual(w.pictures, {}, `${ws}: and none for a pane`);
         assert.equal(w.queue, null, `${ws}: no towers, so no board`);
         continue;
       }
@@ -213,7 +227,9 @@ test('the plate script draws all seven screens on both workspaces, every mark in
     assert.ok([...deckTowers.values()].reduce((n, f) => n + f.length, 0) >= 150, 'Deck\'s towers hold their tickets, not only their features');
     assert.equal(towerOf('TASK-0156'), 'FEAT-0027', 'a task stands in its parent feature\'s tower');
     assert.equal(towerOf('TST-0086'), 'FEAT-0029', 'a test named by a task, in a dash list at column 0, stands in that task\'s feature');
-    assert.equal(towerOf('DES-0005'), null, 'an id inside a link\'s file name ([[TST-0094-DES-0005s-...]]) names nothing');
+    // A design stands in the lowest-numbered feature whose design: names it (TASK-0179). An id
+    // inside a link's file name ([[TST-0094-DES-0005s-...]]) still names nothing: idsIn's own test.
+    assert.equal(towerOf('DES-0005'), 'FEAT-0025', 'a design stands in the tower of the feature that names it');
     // The focus is the snapshot's at the fixture's commit, when this clone has that commit.
     const deckModel = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'overview', 'deck.json'), 'utf-8'));
     const shown = spawnSync('git', ['-C', path.join(desktopRoot, '..'), 'show', `${deckModel.head}:SNAPSHOT.yaml`], { encoding: 'utf-8' });
@@ -384,5 +400,15 @@ test('the towers page reads parents and lists however the frontmatter writes the
   assert.deepEqual(named.get('FEAT-0005'), ['TST-0005', 'REQ-0005', 'REQ-0006'], 'an indented dash list, an inline list, a bare id');
   assert.deepEqual(named.get('FEAT-0006'), ['TST-0094'], 'an id inside a link\'s file name names nothing');
   assert.deepEqual(idsIn('[[FEAT-0001|the alias FEAT-0002]] "TASK-0003" TASK-0004-x'), ['FEAT-0001', 'TASK-0003'], 'a link counts by its target; an id joined to more words is a name, not an id');
+  // TASK-0179: a feature's design: names its design; a design with no parent stands in the
+  // lowest-numbered feature its own implements: names.
+  const designs = relationsFrom([
+    note(['id: FEAT-0007', 'design: "[[DES-0007-A-Design]]"']),
+    note(['id: DES-0008', 'implements: ["[[FEAT-0012]]", "[[PHASE-0002]]", "[[FEAT-0011]]"]']),
+    note(['id: DES-0009', 'implements: []']),
+  ]);
+  assert.deepEqual(designs.named.get('FEAT-0007'), ['DES-0007'], 'a feature names its design in design:');
+  assert.equal(designs.parent.get('DES-0008'), 'FEAT-0011', 'a design stands in the lowest-numbered feature it implements');
+  assert.equal(designs.parent.has('DES-0009'), false, 'a design that implements nothing stands nowhere');
   assert.equal(parent.size, 4, 'the first note with an id wins');
 });

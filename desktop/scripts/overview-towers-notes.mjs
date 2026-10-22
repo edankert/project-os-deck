@@ -2,7 +2,8 @@
 // for the towers page. Pure, so TST-0094 tests each case on small notes of its own
 // (review of TASK-0163: a single-quoted `parent:` could not be told apart in the corpus).
 
-export const LIST_KEYS = ['tests', 'implements', 'designs', 'requirements', 'tasks'];
+// A feature names its design in `design:`; `designs:` is kept for a note that writes the plural (TASK-0179).
+export const LIST_KEYS = ['tests', 'implements', 'design', 'designs', 'requirements', 'tasks'];
 
 /**
  * The ids a frontmatter value names. A link counts by the id it starts with, so
@@ -119,6 +120,13 @@ export function relationsFrom(texts) {
     facts.set(id, { lead: leadOf(text), owner: scalar('owner'), updated: /^\d{4}-\d{2}-\d{2}/.exec(scalar('updated'))?.[0] ?? '' });
     const p = /^parent:\s*["']?(?:\[\[)?([A-Z]+-\d+)/m.exec(fm)?.[1];
     if (p !== undefined && !parent.has(id)) parent.set(id, p);
+    // A design names the features it is for in its own `implements:`; with no parent, it
+    // stands in the lowest-numbered of them (TASK-0179).
+    if (id.startsWith('DES-') && !parent.has(id)) {
+      const m = new RegExp('^implements:(.*)((?:\\r?\\n[ \\t]*-.*)*)', 'm').exec(fm);
+      const feature = m ? idsIn(`${m[1]}${m[2]}`).filter((x) => x.startsWith('FEAT-')).sort((x, y) => x.localeCompare(y, 'en', { numeric: true }))[0] : undefined;
+      if (feature !== undefined) parent.set(id, feature);
+    }
     // A feature's lists, and a task's tests: a test named by a task belongs to the task's feature.
     if (id.startsWith('FEAT-') || id.startsWith('TASK-')) {
       const ids = [];

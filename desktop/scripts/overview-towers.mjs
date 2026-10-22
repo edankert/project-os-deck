@@ -286,7 +286,32 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
 
   // The ring of recent evidence (TASK-0177): pictures beside the notes, newest first, each
   // with its path from the page, so the page shows the file itself.
-  const evidence = evidenceFrom(imagesAt(choice.root, model.head), noteFiles, new Set(ids)).map((e) => ({ ...e, src: path.relative(path.dirname(towersPagePath), path.join(choice.root, e.path)).split(path.sep).join('/') }));
+  const images = imagesAt(choice.root, model.head);
+  const srcOf = (p) => path.relative(path.dirname(towersPagePath), path.join(choice.root, p)).split(path.sep).join('/');
+  // Where a picture stands is its ticket's place (TASK-0179), and how near that is to the
+  // work sizes it: the feature in focus, the phase in focus, another unfinished phase or
+  // feature, the shelf, the core. Worked out for both groupings.
+  const featureOrSelf = (id) => (tickets[id].type === 'feature' ? id : featureOf(id));
+  const placedPhase = (id) => {
+    const tower = towerOf(featureOrSelf(id));
+    if (tower !== undefined) return home.get(tower.f[0]);
+    return home.get(id);
+  };
+  const nearOf = (id) => {
+    if (featureOrSelf(id) !== null && featureOrSelf(id) === focus.feature) return 'feature';
+    const h = placedPhase(id);
+    return h.kind === 'ring' ? (h.id === focus.phase ? 'phase' : 'ring') : h.kind;
+  };
+  const nearByFeature = (id) => {
+    const f = featureOrSelf(id);
+    if (f === null) return 'core';
+    if (f === focus.feature) return 'feature';
+    return finished(f) ? 'shelf' : 'ring';
+  };
+  const evidence = evidenceFrom(images, noteFiles, new Set(ids)).map((e) => ({ ...e, src: srcOf(e.path), near: nearOf(e.id), nearF: nearByFeature(e.id) }));
+  // Every ticket's own pictures, newest first, at most twelve, for its pane.
+  const pictures = {};
+  for (const e of evidenceFrom(images, noteFiles, new Set(ids), { perTicket: 12, limit: Infinity })) (pictures[e.id] ??= []).push([srcOf(e.path), e.date, e.path.split('/').pop()]);
 
   towersData[ws] = {
     label: choice.label,
@@ -298,6 +323,7 @@ for (const [ws, choice] of Object.entries(CHOICES)) {
     weeks,
     needs,
     evidence,
+    pictures,
     notesFrom,
     focus,
     next,
@@ -401,7 +427,7 @@ canvas { display: block; }
 #queue .q.next .k { color: hsl(190 90% 75%); font-weight: 700; }
 #queue .q.doing .k, #queue .q.review .k { color: hsl(190 70% 70%); }
 #queue .foot { display: flex; justify-content: space-between; color: var(--dim); font-size: 11px; margin-top: 6px; border-top: 1px solid hsla(190,90%,65%,.15); padding-top: 5px; }
-/* TASK-0177: the needs-you panel, the year as weeks, and the ring of recent evidence. */
+/* TASK-0177: the needs-you panel and the year as weeks; TASK-0179: each picture at its ticket. */
 .hud { position: fixed; right: 16px; width: 300px; max-width: calc(100vw - 32px); padding: 10px 12px; border-radius: 10px; background: hsla(210, 50%, 8%, 0.94); border: 1px solid hsla(190, 90%, 65%, 0.3); z-index: 2; box-sizing: border-box; }
 .hud[hidden] { display: none; }
 .hud h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: flex; justify-content: space-between; color: hsl(190 90% 78%); }
@@ -424,12 +450,16 @@ canvas { display: block; }
 #weeks .wk:hover { border-color: #fff; }
 #evidence { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 #evidence[hidden] { display: none; }
-#evidence figure { position: absolute; left: 0; top: 0; margin: 0; width: 112px; transform-origin: 50% 100%; pointer-events: auto; cursor: pointer; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.45); border-radius: 6px; padding: 3px; }
+#evidence figure { position: absolute; left: 0; top: 0; margin: 0; width: 112px; transform-origin: 50% 100%; transition: opacity .2s; pointer-events: auto; cursor: pointer; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.45); border-radius: 6px; padding: 3px; }
 #evidence figure:hover { border-color: #fff; }
 #evidence img { display: block; width: 104px; height: 66px; object-fit: cover; border-radius: 3px; background: #0b1a24; }
 #evidence figure.missing img { visibility: hidden; }
 #evidence figcaption { font-size: 10px; color: var(--dim); padding: 2px 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #evidence figcaption b { color: var(--ink); font-weight: 600; }
+#panel .pics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 8px; }
+#panel .pics a { display: block; border: 1px solid hsla(190, 90%, 65%, 0.35); border-radius: 4px; overflow: hidden; background: #0b1a24; }
+#panel .pics img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+#panel .pics span { display: block; font-size: 10px; color: var(--dim); padding: 1px 3px; }
 @media (max-width: 760px) { #queue, #legend, .hud { display: none; } #q { width: 150px; } }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }</script>
