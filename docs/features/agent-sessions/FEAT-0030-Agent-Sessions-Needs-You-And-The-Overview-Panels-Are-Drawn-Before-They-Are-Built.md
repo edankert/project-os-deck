@@ -41,6 +41,12 @@ Out of scope: any code in Deck's application. Building is PHASE-0004's work afte
 - DES-0006 is `proposed`, with its page and pictures on both workspaces, and asks Edwin what to change.
 - Nothing on the page is entered by hand: sessions, tickets and counts come from the recorded files and the overview fixtures.
 
+## Review
+
+### Round one (TASK-0178)
+
+2026-10-22: two independent Claude reviewers on `5d1e2ec`, one on the data, privacy and tests, one driving the page as a person. Both requested changes; no record text leaked and every count held. Found: nothing checked that the page draws agents; the note overstated the towers refactor; Deck's repository is public and your-trainer's private (Edwin chose to keep the ticket text and leave the dollar costs out); the conversation itself was not drawn; panels overlapped and the Agents list vanished at 1100 wide; smaller points. All answered in `f16b19e`, `a724cd9` and `0d107bd`, as listed in [[TASK-0178]]'s Review section.
+
 ## Where this stands
 
 2026-10-22: started, with [[TASK-0178]].
