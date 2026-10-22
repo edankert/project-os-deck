@@ -65,7 +65,7 @@ layers.push(() => {
 
 function sessionTip(s) {
   const c = s.cost;
-  return '<b>' + AGENT[s.agent].glyph + ' ' + AGENT[s.agent].word + '</b> ' + esc(s.id) + ' · ' + esc(lookOf(s)[0]) + '<div class="sub">' + s.tickets.length + ' tickets · ' + s.files + ' files · last ' + esc(when(s.last)) + (c ? ' · $' + c.usd + ' · context ' + c.context + '%' : '') + '</div><div class="sub">Press to open the session.</div>';
+  return '<b>' + AGENT[s.agent].glyph + ' ' + AGENT[s.agent].word + '</b> ' + esc(s.id) + ' · ' + esc(lookOf(s)[0]) + '<div class="sub">' + s.tickets.length + ' tickets · ' + s.files + ' files · last ' + esc(when(s.last)) + (c ? ' · context ' + c.context + '%' : '') + '</div><div class="sub">Press to open the session.</div>';
 }
 
 /** A session opened: its tickets lit and joined to it, the rest faded, the session in the right pane. */
@@ -130,7 +130,7 @@ function drawSessionPane(s) {
   const changed = new Map(s.changed.map(([id, status, ts]) => [id, [status, ts]]));
   const rows = s.tickets.slice(0, 40).map((id) => state.ticketRow.get(id)).filter(Boolean);
   let html = '<div class="session-head"><span class="glyph" style="color:' + a.colour + '">' + a.glyph + '</span><div><h2>' + a.word + ' · ' + esc(s.id) + '</h2><div class="sub"><span class="state" style="background:' + colour + '"></span>' + esc(word) + ' · started ' + esc(when(s.started)) + ' · last ' + esc(when(s.last)) + (s.ended ? ' · ended' : '') + '</div></div></div>';
-  if (c) html += '<div class="meters">' + bar('Context', c.context, 100, '#5fe0ff', '%') + bar('5 hours', c.fiveHour, 100, '#ffb54d', '%') + bar('Week', c.week, 100, '#f0a77e', '%') + '<div class="costline">$' + c.usd + ' · ' + c.minutes + ' min · ' + Math.round((c.window ?? 0) / 1000) + 'k window</div></div>';
+  if (c) html += '<div class="meters">' + bar('Context', c.context, 100, '#5fe0ff', '%') + bar('5 hours', c.fiveHour, 100, '#ffb54d', '%') + bar('Week', c.week, 100, '#f0a77e', '%') + '<div class="costline">' + c.minutes + ' min · ' + Math.round((c.window ?? 0) / 1000) + 'k window</div></div>';
   html += '<h3>Working on · ' + s.tickets.length + '</h3>' + (rows.length === 0 ? '<div class="sub">It changed no ticket this page knows.</div>' : rows.map((r) => {
     const ch = changed.get(r[ID]);
     return rowHtml(r, r[ID] === state.d.next).replace('</div>', (ch ? '<span class="moved">→ ' + esc(ch[0]) + ' ' + esc(when(ch[1]).slice(6)) + '</span>' : '') + '</div>');

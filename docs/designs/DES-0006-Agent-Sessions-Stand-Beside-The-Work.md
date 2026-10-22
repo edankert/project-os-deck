@@ -32,7 +32,7 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
 - **The Agents list, left middle**: every recorded session, its agent and state, the ticket it worked on and how many more, and when it was last active. Pressing one opens it.
 - **A session opened**, by pressing its marker or its row. Its tickets light and are joined to it by curves; the rest fades. The right pane shows, top to bottom:
   - the agent, the session's id, its state and its times;
-  - its context, five-hour and weekly use as bars, its cost and its minutes;
+  - its context, five-hour and weekly use as bars, and its minutes (not its cost: Deck's repository is public, and Edwin left the dollar cost out on 2026-10-22);
   - the tickets it worked on as cockpit rows, each with the status it moved it to and when;
   - the conversation: its prompts and its steps as tool chips (Bash 480, Edit 27, Read 5);
   - its permission requests, the latest drawn with Approve and Deny as it stood before it was answered;
@@ -53,7 +53,7 @@ Deck on 2026-10-22: this session, Claude d95491a5, working, stands over Overview
 
 ![Deck, this session opened](__attachments__/DES-0006/agents-deck-session.jpg)
 
-The session opened: 47 tickets joined to it, context 67% of its 1,000k window, $272.59 over 11,089 minutes, and every ticket it moved with when.
+The session opened: 47 tickets joined to it, context 67% of its 1,000k window over 11,089 minutes, and every ticket it moved with when.
 
 ![The cockpit's repository, a session with permission requests](__attachments__/DES-0006/agents-cockpit-session.jpg)
 

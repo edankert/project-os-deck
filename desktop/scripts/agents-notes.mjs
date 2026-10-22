@@ -69,7 +69,8 @@ export function sessionsFrom({ sessions, approvals = [], agentState = null, coun
       tickets: ids,
       changed: changed.filter((x) => tickets.has(x[0])),
       files: (s.files ?? []).length,
-      cost: c ? { usd: Math.round((c.total_cost_usd ?? 0) * 100) / 100, context: c.used_percentage ?? null, window: c.context_window_size ?? null, minutes: Math.round((c.total_duration_ms ?? 0) / 60000), fiveHour: c.rate_limits?.five_hour?.used_percentage ?? null, week: c.rate_limits?.seven_day?.used_percentage ?? null } : null,
+      // Use, not money: Deck's repository is public, and Edwin left each session's dollar cost out (2026-10-22).
+      cost: c ? { context: c.used_percentage ?? null, window: c.context_window_size ?? null, minutes: Math.round((c.total_duration_ms ?? 0) / 60000), fiveHour: c.rate_limits?.five_hour?.used_percentage ?? null, week: c.rate_limits?.seven_day?.used_percentage ?? null } : null,
       prompts: n?.prompts ?? (s.prompts ?? []).length,
       tools: n ? Object.fromEntries(Object.entries(n.tools).sort((a, b) => b[1] - a[1]).slice(0, 8)) : {},
     };

@@ -34,6 +34,8 @@ The build itself comes after [[PHASE-0005-Overview]] (Edwin, 2026-10-22), in fea
 
 Out of scope: any code in Deck's application. Building is PHASE-0004's work after Overview.
 
+**What may be published** (Edwin, 2026-10-22, answering "3"): project-os-deck is a public repository and your-trainer a private one. Edwin accepts that your-trainer's ticket text (titles, exit criteria, first paragraphs) is in Deck's committed fixtures and pages, as it has been since 2026-10-14. The dollar cost of each session is left out; context and usage percentages stay.
+
 ## Acceptance
 
 - DES-0006 is `proposed`, with its page and pictures on both workspaces, and asks Edwin what to change.

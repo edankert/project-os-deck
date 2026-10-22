@@ -303,7 +303,6 @@
    ],
    "files": 107,
    "cost": {
-    "usd": 272.59,
     "context": 67,
     "window": 1000000,
     "minutes": 11089,
@@ -380,7 +379,6 @@
    "changed": [],
    "files": 0,
    "cost": {
-    "usd": 0,
     "context": null,
     "window": 1000000,
     "minutes": 0,
@@ -423,7 +421,6 @@
    ],
    "files": 0,
    "cost": {
-    "usd": 1.47,
     "context": 11,
     "window": 1000000,
     "minutes": 14,
@@ -451,7 +448,6 @@
    "changed": [],
    "files": 0,
    "cost": {
-    "usd": 1.41,
     "context": 10,
     "window": 1000000,
     "minutes": 25,
@@ -477,7 +473,6 @@
    "changed": [],
    "files": 1,
    "cost": {
-    "usd": 2.61,
     "context": 14,
     "window": 1000000,
     "minutes": 9,

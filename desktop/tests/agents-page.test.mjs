@@ -53,7 +53,7 @@ test('a session keeps ids, states, times, tickets and counts, and no text', asyn
   assert.equal(b.state, 'waiting', 'the live state wins over the recorded one');
   assert.deepEqual(b.tickets, ['TASK-0002'], 'tickets from the status changes and the notes it wrote, only those the model holds');
   assert.deepEqual(b.changed, [['TASK-0002', 'done', '2026-10-20T11:00:00Z']]);
-  assert.deepEqual(b.cost, { usd: 1.23, context: 26, window: 1000000, minutes: 10, fiveHour: 39, week: 80 });
+  assert.deepEqual(b.cost, { context: 26, window: 1000000, minutes: 10, fiveHour: 39, week: 80 }, 'use, never the dollar cost');
   assert.deepEqual([b.files, b.prompts, b.tools], [2, 1, { Bash: 3 }], 'counts only');
   assert.deepEqual(out.requests, [{ session: 'cccccccc', agent: 'claude', tool: 'Bash', kind: 'permission', status: 'granted', ts: '2026-10-19T11:00:00Z', closed: '2026-10-19T11:00:05Z' }], 'a request keeps its tool and outcome, never its command');
 });
@@ -71,6 +71,7 @@ test('the recorded fixtures hold only short words, ids, times and numbers', () =
   for (const f of files) walk(JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')));
   const bad = strings.filter((s) => s.length > 40 || /[/\\\s]/.test(s.replace(/^\d{4}-\d{2}-\d{2}T[\d:.+]+(Z|[+-]\d{2}:\d{2})?$/, '')));
   assert.deepEqual(bad, [], 'no string in the fixtures is long, holds a path or holds spaces (text would)');
+  for (const f of files) assert.ok(!/"usd"/.test(fs.readFileSync(path.join(dir, f), 'utf-8')), `${f}: no dollar cost`);
 });
 
 test('the page holds every recorded session of every workspace, and loads nothing else from outside', () => {
