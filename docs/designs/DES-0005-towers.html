@@ -902,7 +902,7 @@ function openPhase(i, selectId = null) {
   });
   state.shelfGroup.visible = false;
   state.coreGroup.visible = false;
-  state.evidenceGroup.visible = false;
+  // The phase's own pictures still stand at their tickets; the others are hidden in placeEvidence.
   state.nextMark.visible = state.where.get(state.d.next)?.phase === i;
   const ph = state.phases[i];
   const rMid = (state.R0 + state.R1) / 2;
