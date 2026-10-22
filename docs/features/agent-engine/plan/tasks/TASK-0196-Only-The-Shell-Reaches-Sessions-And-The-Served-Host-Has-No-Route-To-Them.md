@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0196
 aliases: ["TASK-0196"]
 title: "Only the shell reaches sessions: the preload bridge carries them, the capability set gains agents, and Deck's served host has no route to them"
-status: backlog
+status: doing
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22

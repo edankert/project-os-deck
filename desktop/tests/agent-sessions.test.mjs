@@ -376,3 +376,95 @@ test('after a restart a session that was at work comes back idle, and Resume con
   assert.equal(provider.started[0].resume, 'fake-session-1');
   assert.deepEqual(second.conversation(s.id).filter((r) => r.kind === 'prompt').map((r) => r.text), ['Invented.', 'Carry on, invented.']);
 });
+
+// --- TASK-0195: sessions reported to the sidecar ---
+
+const { SidecarReporter } = load('main/agents/sidecar-report.js');
+
+/** A recording fake sidecar: every post kept; an ask gets an approval id; an approval's status can be set as the cockpit would. */
+function recordingSidecar({ down = false } = {}) {
+  const posts = [];
+  const approvals = new Map();
+  let n = 0;
+  return {
+    posts,
+    approvals,
+    client: {
+      async post(base, p, body) {
+        if (down) throw new Error('connect ECONNREFUSED');
+        posts.push({ base, path: p, body });
+        if (p === '/api/cockpit/approvals/ask') { const id = `ap${++n}`; approvals.set(id, { approval_id: id, status: 'open', ...body }); return { ok: true, status: 200, json: { ok: true, approval_id: id, wait_ms: 5000 } }; }
+        if (p === '/api/cockpit/approvals/handed-back') { const a = approvals.get(body.approval_id); if (a.status === 'open') a.status = 'handed-to-terminal'; return { ok: true, status: 200, json: { ok: true, approval: a } }; }
+        return { ok: true, status: 200, json: { ok: true } };
+      },
+      async get(base, p) {
+        const id = new URL(`http://x${p}`).searchParams.get('approval_id');
+        return { ok: true, status: 200, json: { ok: true, approval: approvals.get(id) } };
+      },
+    },
+  };
+}
+
+test('a Deck session is reported as the cockpit\'s own are: start, prompt, tools, an edit with its file, a request offered and withdrawn, the turn\'s end and the end', async () => {
+  const side = recordingSidecar();
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ tool: 'Read', summary: 'a.md' }, { ask: 'Edit', summary: 'src/a.ts' }, { edit: 'src/a.ts', added: 2 }, { text: 'Reply text that must not be sent.' }]]) }, { now, newId });
+  const r = new SidecarReporter(m, () => 'http://127.0.0.1:9', side.client, () => {}, 20);
+  const s = await m.start({ workspaceId: 'ws1', root: gitRepo(), ticket: 'TASK-0009', agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'An invented prompt.' });
+  await until(() => m.get(s.id).state === 'waiting');
+  const ask = side.posts.find((p) => p.path === '/api/cockpit/approvals/ask');
+  assert.deepEqual([ask.body.session_id, ask.body.tool, ask.body.input.summary], [s.id, 'Edit', 'src/a.ts']);
+  assert.ok(ask.body.tool_use_id.startsWith(`${s.id}:`), 'the id the sidecar knows a request by carries the session\'s own, so two sessions never share one');
+  m.answer(s.id, openRequests(m.conversation(s.id))[0].id, { allow: true });
+  await until(() => m.get(s.id).state === 'idle');
+  await until(() => side.posts.some((p) => p.path === '/api/cockpit/approvals/handed-back'));
+  await m.stop(s.id);
+  await r.settled();
+  r.close();
+  const hooks = side.posts.filter((p) => p.path === '/api/agent-hook').map((p) => p.body);
+  assert.deepEqual(hooks.map((h) => h.hook_event_name), ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'PostToolUse', 'PostToolUse', 'Stop', 'SessionEnd']);
+  for (const h of hooks) assert.deepEqual([h.session_id, h.agent, typeof h.cwd], [s.id, 'claude', 'string']);
+  assert.equal(hooks[1].prompt, 'An invented prompt.');
+  assert.deepEqual(hooks.find((h) => h.tool_input).tool_input, { file_path: 'src/a.ts' });
+  assert.ok(!JSON.stringify(side.posts).includes('Reply text that must not be sent'), 'no reply text reaches the sidecar');
+  assert.equal(side.approvals.get('ap1').status, 'handed-to-terminal');
+});
+
+test('a request answered in the cockpit first is the answer the agent gets', async () => {
+  const side = recordingSidecar();
+  const m = new SessionManager(dataDir(), { codex: fakeProvider('codex', [[{ ask: 'Bash', summary: 'npm test' }, { text: 'after' }]]) }, { now, newId });
+  const r = new SidecarReporter(m, () => 'http://127.0.0.1:9', side.client, () => {}, 10);
+  const s = await m.start({ workspaceId: 'ws1', root: gitRepo(), ticket: null, agent: 'codex', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  await until(() => side.approvals.size === 1);
+  side.approvals.get('ap1').status = 'denied';
+  await until(() => m.get(s.id).state === 'idle');
+  r.close();
+  const p = latest(m.conversation(s.id)).find((x) => x.kind === 'permission');
+  assert.deepEqual([p.outcome, p.message], ['denied', 'Denied in the cockpit.']);
+});
+
+test('a sidecar that is down never stops a session, and says so once', async () => {
+  const side = recordingSidecar({ down: true });
+  const logged = [];
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ tool: 'Read' }, { text: 'fine' }]]) }, { now, newId });
+  new SidecarReporter(m, () => 'http://127.0.0.1:9', side.client, (msg) => logged.push(msg), 10).close();
+  const s = await m.start({ workspaceId: 'ws1', root: gitRepo(), ticket: null, agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  await until(() => m.get(s.id).state === 'idle');
+  assert.equal(logged.length, 1);
+  assert.match(logged[0], /ECONNREFUSED; the session goes on/);
+  assert.ok(latest(m.conversation(s.id)).some((r) => r.kind === 'text' && r.text === 'fine'));
+});
+
+test('a session\'s events reach the sidecar in the order they happened, even when the sidecar answers slowly', async () => {
+  const side = recordingSidecar();
+  const slow = { ...side.client, post: async (b, p, body) => { await new Promise((x) => setTimeout(x, body.hook_event_name === 'SessionStart' ? 30 : 1)); return side.client.post(b, p, body); } };
+  const m = new SessionManager(dataDir(), { claude: fakeProvider('claude', [[{ ask: 'Edit', summary: 'x' }]]) }, { now, newId });
+  const r = new SidecarReporter(m, () => 'http://127.0.0.1:9', slow, () => {}, 10);
+  const s = await m.start({ workspaceId: 'ws1', root: gitRepo(), ticket: null, agent: 'claude', model: 'm', effort: '', access: 'ask', place: 'checkout', prompt: 'Invented.' });
+  await until(() => m.get(s.id).state === 'waiting');
+  await r.settled();
+  const order = side.posts.map((p) => p.body.hook_event_name ?? p.path);
+  assert.deepEqual(order, ['SessionStart', 'UserPromptSubmit', 'PermissionRequest', '/api/cockpit/approvals/ask']);
+  await m.stop(s.id);
+  await r.settled();
+  r.close();
+});
