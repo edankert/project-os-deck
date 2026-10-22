@@ -45,17 +45,17 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 8
+  ADR: 9
   CHG:
     last_date: 0
-  DES: 5
-  FEAT: 29
+  DES: 6
+  FEAT: 30
   ISS: 92
   PHASE: 5
   REQ: 6
   RISK: 10
   REL: 0
-  TASK: 177
+  TASK: 179
   TST: 100
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
@@ -63,15 +63,15 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0025"
-  task: ""
-  note: "2026-10-21, night: all seven of Rubric's ideas are drawn on the towers design page and reviewed in two rounds (TASK-0176, TASK-0177; REFERENCE-RUBRIC-AGENTIC-OS-REVIEW). Deck itself is not changed; DES-0005 asks Edwin whether to build them. FEAT-0025 is back at review. Edwin also asked how Deck should take on the cockpit's Claude and Codex terminals (T3 Code-style), Needs you and overview panels: a proposal for PHASE-0004 Parity is in chat, waiting on his decisions (which console approach, when, design page first). Eight new cockpit register rows were added to REFERENCE-COCKPIT-ADOPTION. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  task: "TASK-0179"
+  note: "2026-10-22: Edwin chose option B for agents (ADR-0009: Deck runs its own Claude and Codex sessions, drawn as conversations, T3 Code-style), to be built in PHASE-0004 after Overview, and asked for the design page now: FEAT-0030 / TASK-0178 / DES-0006, drawn from the cockpit's recorded sessions with no prompt or reply text. He also found the towers page's outer ring of evidence pictures wrong (further out should be further from the work): TASK-0179 stands each picture at its own ticket. Order: TASK-0179, then TASK-0178. Still Edwin's: acceptance tests TST-0091 and TST-0092, DES-0005's questions. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0025:
-      status: review
+      status: doing
       file: "docs/features/overview-design/FEAT-0025-Every-Overview-Screen-Is-Drawn-Before-It-Is-Built.md"
       owner: system:claude
     FEAT-0027:
@@ -303,6 +303,16 @@ items:
       tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0173"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
   tasks:
+    TASK-0178:
+      file: docs/features/agent-sessions/plan/tasks/TASK-0178-Agent-Sessions-Drawn-On-The-Towers-Ring-To-Judge.md
+      status: doing
+      parent: FEAT-0030
+      phase: "[[PHASE-0004]]"
+    TASK-0179:
+      file: docs/features/overview-design/plan/tasks/TASK-0179-Designs-Stand-On-Their-Own-Tickets-Not-On-An-Outer-Ring.md
+      status: doing
+      parent: FEAT-0025
+      phase: "[[PHASE-0005]]"
     TASK-0176:
       file: docs/features/overview-design/plan/tasks/TASK-0176-Links-Search-And-Next-Up-Drawn-On-The-Towers-Page.md
       status: done
@@ -1964,9 +1974,9 @@ items:
       status: planned
       order: 3
       owner: user:edwin
-      features: [FEAT-0021]
+      features: [FEAT-0021, FEAT-0030]
       requirements: []
-      tasks: []
+      tasks: [TASK-0178]
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
@@ -2619,11 +2629,11 @@ items:
 
 metrics:
   counts:
-    features_total: 29
+    features_total: 30
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 168
+    tasks_total: 170
     tasks_done: 148
     tests_total: 68
     tests_passing: 9
@@ -2632,4 +2642,4 @@ metrics:
     issues_triage: 0
     risks_open: 4
     releases_total: 0
-    decisions_total: 8
+    decisions_total: 9

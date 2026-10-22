@@ -7,11 +7,11 @@ status: planned
 order: 3
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-10-01
+updated: 2026-10-22
 goal: "Deck carries what the cockpit does for a working day, adopted row by row from the cockpit's capability register, until Edwin does a real task in Deck instead of the cockpit and records which he would rather have used."
-features: ["[[FEAT-0021]]"]
+features: ["[[FEAT-0021]]", "[[FEAT-0030]]"]
 requirements: []
-tasks: []
+tasks: ["[[TASK-0178]]"]
 issues: []
 depends: ["[[PHASE-0002-Glass]]"]
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
@@ -32,6 +32,7 @@ Two words are used throughout. **Parity** means Deck does what the cockpit does 
 
 - **The console, several at once, as furniture.** A console defaults to bottom-centre, drags anywhere, resizes, is translucent without blur, and the field flows around it. Several are open at once, because one terminal panel makes a second shell a tab and a tab means the first is gone. The cockpit's register row is `shell.terminal`: one PTY per workspace inside tmux, drawn with xterm.js over Electron IPC, in `desktop/src/ipc/terminal.ts` of the cockpit.
 - **Before the console is built, evaluate T3 Code's terminal instead of the cockpit's.** Edwin, 2026-09-07: "I want to see if we can introduce the t3.codes console solution instead of our current console." T3 Code (github.com/pingdotgg/t3code) is a Node server that owns the PTYs with node-pty and streams them over a WebSocket to an xterm.js client in a web app, with an Electron shell that bundles the server; the terminal lives in `apps/server/src/terminal/` and the client transport in `apps/web/src/wsTransport.ts`. That shape matches Deck's two hosts better than the cockpit's IPC-only terminal, because a console reachable over a WebSocket can be shown to the tablet host too, and it separates the PTY owner from the window that draws it, which is what the DES-0002 review asked for when it said the carousel must present a control plane rather than the PTY list. What has to be checked before choosing: whether its server can run beside the sidecar and be started by Deck's main process; whether sessions survive an app restart the way the cockpit's tmux sessions do; the WebGL context budget past a few consoles, which xterm.js documents at about sixteen per page; and the licence. The evaluation is a task in this phase and its outcome is an ADR, because the choice decides where PTYs live for every later feature.
+- **Decided 2026-10-22: Deck runs its own agent sessions, drawn as conversations** ([[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]). The evaluation found T3 Code is no longer a streamed terminal: it runs Codex through `codex app-server` and Claude through Anthropic's Agent SDK and draws each session as a conversation, with plain shells in a separate drawer, and its packages are private. Edwin chose that shape for Deck (option B of three), to be built after [[PHASE-0005-Overview]] and drawn first as [[DES-0006-Agent-Sessions-Stand-Beside-The-Work]] ([[FEAT-0030-Agent-Sessions-Needs-You-And-The-Overview-Panels-Are-Drawn-Before-They-Are-Built]]). The paragraph above describes T3 Code as it was in September.
 - **The pages a day needs.** Checks with the mark dialog, history, release, the acceptance runner and the test runner, each as a panel a window can carry. `shell.pages.checks`, `shell.checks.mark-dialog`, `api.read.check-history`, `shell.pages.history`, `shell.pages.release`, `shell.pages.accept`, `shell.pages.test-run`.
 - **The verbs, behind the same guards.** The reader's actuator row, the tick prompt with evidence, the release gate: the same endpoints the cockpit calls, with Deck's host forwarding nothing that writes from beyond loopback. `shell.reader.actuators` and the `api.write.*` rows Deck adopts one by one. This is the first write path Deck offers and it is opt-in by row; [[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]] stays the rule for the served host.
 - **Agents.** The strip with cost, context and touched notes, the attention and approval verbs, and the sessions in the same carousel as the consoles. `shell.agents.*`, `api.read.agents`, `api.write.agents`.
@@ -49,7 +50,7 @@ Two words are used throughout. **Parity** means Deck does what the cockpit does 
 ## Exit Criteria
 
 - [ ] Edwin does one real task in Deck instead of the cockpit, for example triaging a day's issues across two screens, and records which of the two he would rather have used and why. The walk is [[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]], moved here from [[PHASE-0001-Deck]] on 2026-09-07 because his first attempt came back as a question: it cannot be answered until the functionality is there. Either answer is a valid result.
-- [ ] The console decision is recorded as an ADR naming what was evaluated (T3 Code's terminal against the cockpit's), what was measured, and what was chosen.
+- [x] The console decision is recorded as an ADR naming what was evaluated (T3 Code's terminal against the cockpit's), what was measured, and what was chosen. ([[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]], 2026-10-22)
 - [ ] Several consoles are open at once in Deck, each a slab that drags, resizes and fades on its own, and a console survives a Deck restart the way the cockpit's tmux session does.
 - [ ] Every row of the cockpit's capability register is `adopted`, `replaced by` or `not applicable` in [[REFERENCE-COCKPIT-ADOPTION]], with a reason on every `not applicable`, and the register re-read on the day the phase closes.
 - [ ] Every verb Deck offers goes through the sidecar's existing guards, and the served host still refuses every method that is not a read.
