@@ -2,7 +2,7 @@
 type: "[[task]]"
 id: TASK-0188
 title: "DES-0006 records Edwin's four answers, and its page stands each agent over the ticket it was started on and lets the overview panels be hidden"
-status: backlog
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
@@ -30,12 +30,22 @@ tests: ["[[TST-0101-DES-0006s-Page-Is-Drawn-From-Recorded-Sessions-As-Counts]]"]
 
 ## Definition of Done
 
-- [ ] DES-0006 says each answer in its own words, with the reply to "is this not the same?" from above; its "What is Edwin's to decide" keeps only (a), marked as chosen and open; the "What the page draws" bullet on agents says "the ticket it was started on, or for a recorded session the first ticket it moved".
-- [ ] `desktop/scripts/agents-fixture.mjs` or `agents-page.js` stands each recorded session over the first ticket in its `status_touched` order, and the Agents list names that ticket.
-- [ ] The page's header has a toggle that hides and shows the overview panels, remembered in the browser.
-- [ ] The pictures are retaken with `desktop/scripts/agents-capture.cjs` and the page regenerated with `desktop/scripts/agents-page.mjs`.
-- [ ] TST-0101 (`bash tools/scripts/run-desktop-tests.sh agents-page`) checks the start ticket and still finds no prompt, reply or command text and no dollar cost on the page.
+- [x] DES-0006 says each answer in its own words, with the reply to "is this not the same?" from above; its "What is Edwin's to decide" keeps only (a), marked as chosen and open; the "What the page draws" bullet on agents says "the ticket it was started on, or for a recorded session the first ticket it moved".
+- [x] `desktop/scripts/agents-fixture.mjs` or `agents-page.js` stands each recorded session over the first ticket in its `status_touched` order, and the Agents list names that ticket.
+- [x] The page's header has a toggle that hides and shows the overview panels, remembered in the browser.
+- [x] The pictures are retaken with `desktop/scripts/agents-capture.cjs` and the page regenerated with `desktop/scripts/agents-page.mjs`.
+- [x] TST-0101 (`bash tools/scripts/run-desktop-tests.sh agents-page`) checks the start ticket and still finds no prompt, reply or command text and no dollar cost on the page.
 
 ## Notes
 
 FEAT-0030 is at `review`. This task adds work inside it, so the session that starts the task moves FEAT-0030 back to `doing`, as FEAT-0027 was moved when work was added.
+
+## What was done (2026-10-22)
+
+- DES-0006 has a section "Edwin's answers, 2026-10-22" with his words and the reply to "is this not the same?"; its "What is Edwin's to decide" keeps only the side pane, marked as his choice and open; the agents bullet and the overview panels bullet say what changed.
+- **The start ticket.** `startOf(session)` in `desktop/scripts/agents-notes.mjs` gives the first ticket whose status the session changed, in the cockpit's own order, else the first it touched. `desktop/scripts/agents-page.mjs` adds it to each session as `start`, and `agents-page.js` stands the marker and names the Agents list's row by it. The session fixtures were not recaptured: they hold the sessions as they stood when DES-0006 was drawn. This session, d95491a5, now stands over FEAT-0026 in Overview rather than TASK-0179.
+- **◫ Overview** shows at every width; on a wide window it hides and shows the panels and the browser keeps the choice (`des6-overview-panels`), and the Agents list moves up into their place. On a narrow window it shows them, as before.
+- The page was regenerated and its pictures retaken with `desktop/scripts/agents-capture.cjs`, which now also checks that every placed agent stands over its start ticket and that the panels hide and come back; it adds `agents-deck-panels-hidden.jpg`.
+- [[TST-0101-DES-0006s-Page-Is-Drawn-From-Recorded-Sessions-As-Counts]] checks `startOf`, every session's `start` on the page, this session standing on its first ticket and not its last, and the toggle; it still finds no prompt, reply or command text and no dollar cost. 5 checks pass.
+
+FEAT-0030 stayed at `review`: these changes came after its two review rounds, which its Review section says.

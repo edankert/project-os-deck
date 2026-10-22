@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 process.env.DECK_TOWERS_NO_DEFAULT = '1';
 const { writeTowersPage } = await import('./overview-towers.mjs');
+const { startOf } = await import('./agents-notes.mjs');
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.join(here, '..');
@@ -101,7 +102,6 @@ button[disabled] { opacity: .55; cursor: not-allowed; }
 #panel:not([hidden]) ~ #drawer { right: 396px; }
 #panel.wide:not([hidden]) ~ #drawer { right: 576px; }
 #card:not([hidden]) ~ #overview, #card:not([hidden]) ~ #agents { visibility: hidden; }
-#overview-seg { display: none; }
 .thread { margin: 4px 0 8px; }
 .thread .you { display: flex; gap: 8px; align-items: baseline; justify-content: flex-end; font-size: 12px; color: var(--dim); margin: 10px 0 4px; }
 .thread .you span { color: var(--ink); font-weight: 600; background: hsla(210, 40%, 22%, 0.9); border-radius: 999px; padding: 1px 9px; }
@@ -117,12 +117,15 @@ button[disabled] { opacity: .55; cursor: not-allowed; }
 .composer-row { display: flex; gap: 6px; align-items: center; }
 .composer-row .grow { flex: 1; }
 .composer-row button { background: hsla(190,90%,55%,.25); border: 1px solid var(--line); color: inherit; border-radius: 6px; padding: 3px 12px; font: inherit; font-size: 12px; }
+/* TASK-0188 (Edwin: "It should be possible to hide the overview panels"): ◫ Overview hides them at any width, remembered in this browser; the Agents list moves up into their place. */
+#overview-seg { display: inline-flex; }
+body.hide-overview #overview { display: none; }
+body.hide-overview #agents { top: var(--top, 60px); max-height: 300px; }
 @media (max-width: 1280px) {
   #drawer { left: 16px; right: 16px; bottom: 34px; }
   #overview { display: none; z-index: 4; }
   body.show-overview #overview { display: block; }
   #agents { top: var(--top, 60px); max-height: 220px; }
-  #overview-seg { display: inline-flex; }
   /* Review round two of TASK-0178: the session pane leaves the Agents list in view; the drawer gives way to a wide pane and, open, hides Next up; the overview, when shown, takes the Agents list's place. */
   #panel.wide { width: min(640px, calc(100vw - 420px)); }
   #panel:not([hidden]) ~ #drawer { right: 396px; }
@@ -132,7 +135,7 @@ button[disabled] { opacity: .55; cursor: not-allowed; }
 }
 `;
 
-const html = `<div class="seg" id="overview-seg"><button id="overview-toggle" title="Show the overview panels">◫ Overview</button></div>
+const html = `<div class="seg" id="overview-seg"><button id="overview-toggle" aria-pressed="true" title="Hide the overview panels">◫ Overview</button></div>
 <section id="overview" aria-label="The project at a glance"></section>
 <section id="agents" aria-label="Agent sessions"></section>
 <section id="drawer" aria-label="Shells"></section>
@@ -150,7 +153,11 @@ const towersData = writeTowersPage({
     css,
     html: html + '<div class="seg" id="marks-seg"><button id="marks-toggle" title="What the marks mean">? Marks</button></div>\n',
     script: fs.readFileSync(path.join(here, 'agents-page.js'), 'utf-8'),
-    data: (ws) => ({ agents: JSON.parse(fs.readFileSync(path.join(fixtures, `${ws}-sessions.json`), 'utf-8')) }),
+    // Each session with the ticket it was started on, where it stands (TASK-0188).
+    data: (ws) => {
+      const agents = JSON.parse(fs.readFileSync(path.join(fixtures, `${ws}-sessions.json`), 'utf-8'));
+      return { agents: { ...agents, sessions: agents.sessions.map((s) => ({ ...s, start: startOf(s) })) } };
+    },
   },
 });
 console.log(`wrote the agent sessions page ${path.relative(process.cwd(), pagePath)} (${Object.entries(towersData).map(([k, w]) => `${k}: ${w.agents.sessions.length} sessions, ${w.agents.requests.length} requests`).join('; ')})`);

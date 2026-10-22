@@ -51,6 +51,10 @@ Out of scope: any code in Deck's application. Building is PHASE-0004's work afte
 
 2026-10-22: two fresh independent Claude reviewers on `039d2c7`. Data and privacy: changes requested (the capture check exited 0 on failure; Codex edits read as zero; harness messages counted as prompts; the cost guard was narrow), all fixed in `56f6b1a`. Page: changes requested at 1100 wide only (the session pane over the Agents list and the drawer, the open drawer over Next up, the overview over the Agents list, a turn's requests newest first), fixed after it. Details in [[TASK-0178]]'s Review section. A gate runs two rounds at most.
 
+### After the rounds (TASK-0188)
+
+2026-10-22, later: Edwin answered DES-0006's four questions, and [[TASK-0188]] changed the page to match after both rounds had reviewed it. Agents now stand over the ticket they were started on (`startOf` in `desktop/scripts/agents-notes.mjs`), and ◫ Overview hides the overview panels at any width, remembered. These changes were not reviewed; TST-0101 checks both, and the capture now checks that every placed agent stands over its start ticket and that the panels hide and come back.
+
 ## Where this stands
 
-2026-10-22: started, with [[TASK-0178]]. Later the same day: DES-0006 is proposed with its page and pictures, reviewed in two rounds; at `review`, waiting on Edwin's verdict on DES-0006. The build waits for PHASE-0004, after Overview.
+2026-10-22: started, with [[TASK-0178]]. Later the same day: DES-0006 is proposed with its page and pictures, reviewed in two rounds; at `review`, waiting on Edwin's verdict on DES-0006. The build waits for PHASE-0004, after Overview. Later still: Edwin's four answers are in DES-0006 ([[TASK-0188]]); only the side pane stays open for discussion.

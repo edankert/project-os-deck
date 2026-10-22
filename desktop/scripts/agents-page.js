@@ -13,9 +13,9 @@ const when = (iso) => (iso ? new Date(iso).toISOString().replace('T', ' ').slice
 const sessionById = (id) => state.d.agents.sessions.find((s) => s.id === id);
 let openId = null;
 
-/** Where a session stands: over the tower or tile of the ticket it last changed, else the first it touched. */
+/** Where a session stands: over the tower or tile of the ticket it was started on (TASK-0188, `start`). */
 function sessionAnchor(s) {
-  const primary = s.changed.length > 0 ? s.changed[s.changed.length - 1][0] : s.tickets[0];
+  const primary = s.start;
   const w = primary ? state.where.get(primary) : undefined;
   if (!w) return null;
   const base = w.tower !== undefined ? state.towerTops.get(w.phase + ':' + w.tower).clone() : w.at.clone();
@@ -58,7 +58,7 @@ layers.push(() => {
       orb.material.userData.base = 0.95;
       state.pulses.push(orb.material);
     }
-    state.orbs.set(s.id, { at, phase: a.phase, orb, group: [orb, halo, stem, tag] });
+    state.orbs.set(s.id, { at, phase: a.phase, orb, group: [orb, halo, stem, tag], over: a.primary });
   }
   drawAgents();
   drawOverviewPanels();
@@ -205,7 +205,7 @@ function drawAgents() {
   el.innerHTML = '<h4>Agents<span>' + list.filter((s) => s.state !== 'idle').length + ' active of ' + list.length + '</span></h4>' + list.map((s) => {
     const a = AGENT[s.agent];
     const [word, colour] = lookOf(s);
-    const first = s.changed.length > 0 ? s.changed[s.changed.length - 1][0] : s.tickets[0];
+    const first = s.start;
     return '<div class="ag" data-session="' + esc(s.id) + '" title="' + esc(a.word + ' ' + s.id + ' · ' + word) + '"><span class="glyph" style="color:' + a.colour + '">' + a.glyph + '</span><span class="state" style="background:' + colour + '"></span><span class="t">' + esc(first ?? 'no ticket') + (s.tickets.length > 1 ? ' +' + (s.tickets.length - 1) : '') + '</span><span class="who">' + esc(word) + '</span><span class="k">' + esc(when(s.last).slice(0, 5)) + '</span></div>';
   }).join('');
   for (const row of el.querySelectorAll('[data-session]')) row.addEventListener('click', () => openSession(row.dataset.session));
@@ -329,12 +329,39 @@ addEventListener('keydown', (e) => {
     e.stopImmediatePropagation();
   }
 }, true);
-document.getElementById('overview-toggle')?.addEventListener('click', () => document.body.classList.toggle('show-overview'));
+// ◫ Overview hides and shows the overview panels (TASK-0188), at any width; the choice is kept in
+// this browser. At narrow widths, where they start hidden, it shows them in the Agents list's place.
+const overviewToggle = document.getElementById('overview-toggle');
+const narrow = () => matchMedia('(max-width: 1280px)').matches;
+const drawOverviewToggle = () => {
+  const shown = narrow() ? document.body.classList.contains('show-overview') : !document.body.classList.contains('hide-overview');
+  overviewToggle?.setAttribute('aria-pressed', String(shown));
+  if (overviewToggle) overviewToggle.title = shown ? 'Hide the overview panels' : 'Show the overview panels';
+};
+try {
+  if (localStorage.getItem('des6-overview-panels') === 'hidden') document.body.classList.add('hide-overview');
+} catch {
+  // A viewer convenience only; the page works without it.
+}
+overviewToggle?.addEventListener('click', () => {
+  if (narrow()) document.body.classList.toggle('show-overview');
+  else {
+    const hidden = document.body.classList.toggle('hide-overview');
+    try {
+      localStorage.setItem('des6-overview-panels', hidden ? 'hidden' : 'shown');
+    } catch {
+      // As above.
+    }
+  }
+  drawOverviewToggle();
+});
+addEventListener('resize', drawOverviewToggle);
+drawOverviewToggle();
 document.querySelector('header').appendChild(document.getElementById('overview-seg'));
 
 /** For the capture script and a check: open a session, start "Work on this", open the drawer. */
 window.__agents = {
-  sessions: () => state.d.agents.sessions.map((s) => ({ id: s.id, placed: state.orbs.has(s.id) })),
+  sessions: () => state.d.agents.sessions.map((s) => ({ id: s.id, placed: state.orbs.has(s.id), start: s.start, over: state.orbs.get(s.id)?.over ?? null })),
   open(id) {
     openSession(id);
     return { session: state.session, pane: document.getElementById('panel').textContent };

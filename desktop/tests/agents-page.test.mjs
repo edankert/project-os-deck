@@ -97,6 +97,13 @@ test('the recorded fixtures hold only short words, ids, times and numbers', () =
   }
 });
 
+test('a session stands over the ticket it was started on: the first whose status it changed, else the first it touched', async () => {
+  const { startOf } = await notes();
+  assert.equal(startOf({ changed: [['TASK-0002', 'doing', '2026-10-20'], ['TASK-0009', 'done', '2026-10-21']], tickets: ['TASK-0002', 'TASK-0009', 'FEAT-0001'] }), 'TASK-0002');
+  assert.equal(startOf({ changed: [], tickets: ['FEAT-0001', 'TASK-0002'] }), 'FEAT-0001');
+  assert.equal(startOf({ changed: [], tickets: [] }), null);
+});
+
 test('the page holds every recorded session of every workspace, and loads nothing else from outside', () => {
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-agents-'));
   try {
@@ -110,7 +117,17 @@ test('the page holds every recorded session of every workspace, and loads nothin
       assert.deepEqual(data[ws].agents.sessions.map((s) => s.id), recorded.sessions.map((s) => s.id), `${ws}: every recorded session`);
       const model = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'fixtures', 'agents', `${ws}.json`), 'utf-8'));
       for (const s of recorded.sessions) for (const t of s.tickets) assert.ok(model.tickets[t] !== undefined, `${ws}: ${s.id}'s ticket ${t} is a ticket of the workspace`);
+      // Each session stands over the ticket it was started on: the first whose status it changed (TASK-0188).
+      for (const [i, s] of data[ws].agents.sessions.entries()) assert.equal(s.start, recorded.sessions[i].changed[0]?.[0] ?? recorded.sessions[i].tickets[0] ?? null, `${ws}: ${s.id} stands on its first ticket`);
     }
+    // This session started on no ticket and moved 49; it stands over the first it moved, not the last (Edwin: "is this not the same?").
+    const own = data.deck.agents.sessions.find((s) => s.id === 'd95491a5');
+    assert.equal(own.start, 'FEAT-0026');
+    assert.notEqual(own.start, own.changed.at(-1)[0]);
+    // The overview panels can be hidden at any width, and the choice is kept in the browser.
+    assert.match(html, /id="overview-toggle" aria-pressed="true"/);
+    assert.match(html, /body\.hide-overview #overview \{ display: none; \}/);
+    assert.match(html, /localStorage\.setItem\('des6-overview-panels'/);
     assert.match(html, /<title>DES-0006 Agent sessions<\/title>/);
     assert.match(html, /window\.__agents/, 'the agents layer is on the page');
     assert.deepEqual([...html.matchAll(/https?:\/\/[^"' )]+/g)].map((m) => m[0]).filter((u) => !u.startsWith('https://cdnjs.cloudflare.com/ajax/libs/three.js/')), [], 'nothing else from outside');

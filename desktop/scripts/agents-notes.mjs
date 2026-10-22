@@ -99,6 +99,16 @@ export function countTranscript(text, agent) {
   return { tools, prompts, turns: turns.map((t) => ({ ...t, tools: top(t.tools, 6) })) };
 }
 
+/**
+ * The ticket a session was started on, where it stands on the ring (TASK-0188, Edwin's answer of
+ * 2026-10-22). The cockpit records no start ticket, so for a recorded session it is the first
+ * ticket whose status it changed, in the order the cockpit first saw each change, else the first
+ * ticket it touched. A session Deck starts with "Work on this" will know its ticket exactly.
+ */
+export function startOf(session) {
+  return session.changed?.[0]?.[0] ?? session.tickets?.[0] ?? null;
+}
+
 /** The ticket id a note's path names, by its file name. */
 const ticketOfPath = (p) => ID.exec(String(p).split('/').pop() ?? '')?.[0] ?? null;
 

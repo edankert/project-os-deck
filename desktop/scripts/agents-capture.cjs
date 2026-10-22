@@ -40,6 +40,20 @@ app.whenReady().then(async () => {
     const expected = await js(`(() => { const d = JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].agents.sessions; return d.filter((s) => s.tickets.some((t) => window.__towersProbe.ticketAt(t) !== null)).map((s) => s.id); })()`);
     const missing = expected.filter((id) => !sessions.find((s) => s.id === id && s.placed));
     if (missing.length > 0) errors.push(`${ws}: sessions with a ticket on the ring but no marker: ${missing.join(', ')}`);
+    // Each stands over the ticket it was started on (TASK-0188).
+    const astray = sessions.filter((s) => s.placed && s.over !== s.start).map((s) => `${s.id} over ${s.over}, started on ${s.start}`);
+    if (astray.length > 0) errors.push(`${ws}: sessions not over their start ticket: ${astray.join('; ')}`);
+    // The overview panels hide and come back (TASK-0188).
+    if (ws === workspaces[0]) {
+      await js(`document.getElementById('overview-toggle').click()`);
+      await wait(400);
+      const hidden = await js(`getComputedStyle(document.getElementById('overview')).display === 'none' && document.getElementById('overview-toggle').getAttribute('aria-pressed') === 'false'`);
+      if (!hidden) errors.push(`${ws}: ◫ Overview did not hide the overview panels`);
+      await shot(`agents-${ws}-panels-hidden.jpg`);
+      await js(`document.getElementById('overview-toggle').click()`);
+      await wait(300);
+      if (!(await js(`getComputedStyle(document.getElementById('overview')).display !== 'none'`))) errors.push(`${ws}: ◫ Overview did not bring the panels back`);
+    }
     // The session that worked on the most tickets and is placed on the ring.
     const busiest = await js(`(() => { const d = JSON.parse(document.getElementById('data').textContent)[${JSON.stringify(ws)}].agents.sessions; const placed = new Set(window.__agents.sessions().filter((s) => s.placed).map((s) => s.id)); return [...d].filter((s) => placed.has(s.id)).sort((a, b) => b.tickets.length - a.tickets.length)[0]?.id ?? d[0]?.id ?? null; })()`);
     if (busiest) {

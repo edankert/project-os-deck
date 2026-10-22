@@ -28,7 +28,7 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
 
 ## What the page draws
 
-- **Agents at their towers.** Each recorded session stands as a marker over the tower or tile of the ticket it last moved on: its colour is its state (working, waiting for you, idle) and its ring its agent (✳ Claude, ◎ Codex). A working session breathes, as the focus feature's tasks do. Sessions that changed no ticket the workspace holds are not on the ring but in the Agents list.
+- **Agents at their towers.** Each session stands as a marker over the tower or tile of the ticket it was started on (Edwin, 2026-10-22). The cockpit records no start ticket, so for a recorded session that is the first ticket whose status it changed. Its colour is its state (working, waiting for you, idle) and its ring its agent (✳ Claude, ◎ Codex). A working session breathes, as the focus feature's tasks do. Sessions that changed no ticket the workspace holds are not on the ring but in the Agents list.
 - **The Agents list, left middle**: every recorded session, its agent and state, the ticket it worked on and how many more, and when it was last active. Pressing one opens it.
 - **A session opened**, by pressing its marker or its row. Its tickets light and are joined to it by curves; the rest fades. A wide pane on the right shows the session the way T3 Code does, top to bottom:
   - the agent, the session's id, its state and its times;
@@ -38,7 +38,7 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
   - the box to answer in, with the model, the effort and how much it may do without asking, and Send;
   - Resume, Open its shell and Stop.
 - **One Needs you, top right.** Its count adds open permission requests and waiting agents to the tickets that need you. Below the count come permission requests (open, and the last one with its outcome), the agents waiting for you (pressing one opens it), the tickets by reason as on the towers page, and what is not pushed: commits ahead of the upstream and files changed.
-- **The cockpit's overview panels, top left**, in place of the legend (which "? Marks" brings back):
+- **The cockpit's overview panels, top left**, in place of the legend (which "? Marks" brings back). ◫ Overview in the header hides them and brings them back at any width, and the browser keeps the choice; hidden, the Agents list moves up into their place (Edwin, 2026-10-22):
   - since you last looked: tickets changed since the cockpit's last catch-up, by type, with Caught up;
   - the record: each type's count with a bar of how far along it is;
   - the checks: tests passing, never run and active;
@@ -50,6 +50,10 @@ The page is [DES-0006-agent-sessions.html](DES-0006-agent-sessions.html), writte
 ![Deck, the agents at their towers](__attachments__/DES-0006/agents-deck-ring.jpg)
 
 Deck on 2026-10-22: this session, Claude d95491a5, working, stands over Overview; an idle Claude and Codex stand over Glass. Needs you counts the tickets that need you; no agent and no permission is waiting. Fifteen commits were ahead of the upstream when it was recorded, and seven files changed.
+
+![Deck, the overview panels hidden](__attachments__/DES-0006/agents-deck-panels-hidden.jpg)
+
+The same ring with ◫ Overview pressed: the cockpit's panels are gone, and the Agents list stands in their place.
 
 ![Deck, this session opened](__attachments__/DES-0006/agents-deck-session.jpg)
 
@@ -81,9 +85,15 @@ The other pictures are [agents-deck-conversation.jpg](__attachments__/DES-0006/a
 
 In [[PHASE-0004-Parity]], after Overview, by [[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]: the Agent SDK and `codex app-server` in Deck's main process; the sidecar's shell secret for answering permissions; reporting each session to the sidecar so either app sees it; node-pty for the drawer; the cockpit's overview routes added to Deck's allowed list; and a write for Caught up, which ADR-0003 does not cover yet. A real session pane shows the messages themselves, which this page cannot.
 
+## Edwin's answers, 2026-10-22
+
+His words: "I think side pane as suggested but open for discussion - The ones they started on (is this not the same?) - It should be possible to hide the overview panels - Think it would be good to do permission requests first?"
+
+- **A session opens in the side pane, as drawn.** He keeps this open for discussion, so it stays below.
+- **Agents stand over the ticket they were started on.** That is not the same as the ticket they last moved, which the page used until now. The cockpit records no start ticket at all: a session's record (`.cockpit/sessions.json`) holds its id, agent, times, prompts, files and the statuses it changed, but not what it was started for. And one session moves many tickets. This page's own session started on a Rubric review, with no ticket, and moved 49, the first FEAT-0026 and the last TASK-0179; your-trainer's 7ca462d7 moved 68, the first TST-0157 and the last TST-0687. So a recorded session now stands over the first ticket whose status it changed. A session Deck starts itself, with "Work on this", will know its ticket exactly.
+- **The overview panels can be hidden.** ◫ Overview in the header hides and shows them, at any width, and the browser remembers the choice.
+- **Permission requests come first in Needs you**, as the page already drew them.
+
 ## What is Edwin's to decide
 
-- Whether agents should stand over the ticket they last moved on, as here, or over the ticket they were started on.
-- Whether the session should open in the wide right pane, as here, or as a larger window of its own over the ring, as T3 Code gives a conversation the whole window.
-- Whether the overview panels belong on the ring's screen at all times, or behind a button, given how much the ring's screen now holds.
-- Whether Needs you should put permission requests first, as here, even above the tickets you were asked to review.
+- Whether the session should open in the wide right pane, as now and as he chose on 2026-10-22, or as a larger window of its own over the ring, as T3 Code gives a conversation the whole window. He chose the pane and left it open for discussion.

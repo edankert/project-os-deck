@@ -328,7 +328,7 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0188:
       file: docs/features/agent-sessions/plan/tasks/TASK-0188-DES-0006-Records-Edwins-Four-Answers-And-Its-Page-Is-Revised.md
-      status: backlog
+      status: done
       parent: FEAT-0030
       phase: "[[PHASE-0004]]"
     TASK-0181:
@@ -2714,7 +2714,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 180
-    tasks_done: 159
+    tasks_done: 160
     tests_total: 70
     tests_passing: 9
     tests_failing: 0
