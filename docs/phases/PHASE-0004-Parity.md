@@ -11,7 +11,7 @@ updated: 2026-10-23
 goal: "Deck carries what the cockpit does for a working day, adopted row by row from the cockpit's capability register, until Edwin does a real task in Deck instead of the cockpit and records which he would rather have used."
 features: ["[[FEAT-0030]]", "[[FEAT-0032]]", "[[FEAT-0033]]", "[[FEAT-0034]]", "[[FEAT-0035]]"]
 requirements: []
-tasks: ["[[TASK-0178]]", "[[TASK-0188]]", "[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0197]]", "[[TASK-0198]]", "[[TASK-0199]]", "[[TASK-0200]]", "[[TASK-0201]]", "[[TASK-0202]]", "[[TASK-0203]]", "[[TASK-0204]]", "[[TASK-0205]]", "[[TASK-0206]]", "[[TASK-0207]]", "[[TASK-0208]]", "[[TASK-0209]]", "[[TASK-0210]]", "[[TASK-0211]]", "[[TASK-0212]]"]
+tasks: ["[[TASK-0178]]", "[[TASK-0188]]", "[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0197]]", "[[TASK-0198]]", "[[TASK-0199]]", "[[TASK-0200]]", "[[TASK-0201]]", "[[TASK-0202]]", "[[TASK-0203]]", "[[TASK-0204]]", "[[TASK-0205]]", "[[TASK-0206]]", "[[TASK-0207]]", "[[TASK-0208]]", "[[TASK-0209]]", "[[TASK-0210]]", "[[TASK-0211]]", "[[TASK-0212]]", "[[TASK-0218]]"]
 issues: []
 depends: []
 related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]

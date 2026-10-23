@@ -11,7 +11,7 @@ updated: 2026-10-23
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'", "Edwin 2026-10-22, on DES-0006: 'It should be possible to hide the overview panels - Think it would be good to do permission requests first?'"]
 goal: "On Deck's ring Edwin sees everything waiting on him in one Needs you, permission requests first, and the cockpit's overview panels (since you last looked, the record, the checks, decisions waiting), which one button hides."
 requirements: []
-tasks: ["[[TASK-0202]]", "[[TASK-0203]]", "[[TASK-0204]]", "[[TASK-0210]]"]
+tasks: ["[[TASK-0202]]", "[[TASK-0203]]", "[[TASK-0204]]", "[[TASK-0210]]", "[[TASK-0218]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""

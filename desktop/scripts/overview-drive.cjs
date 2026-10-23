@@ -57,7 +57,7 @@ module.exports = async (d) => {
     const seen = await js(`(() => {
       const scene = window.__deckOverview.current();
       // A ticket is drawn by a mark, or by a row of a panel built as HTML (TASK-0147, TASK-0148).
-      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); else if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) out.push(r.id); else if (n.kind === 'panel' && n.body.kind === 'needs') for (const r of n.body.rows) out.push(r.id); } return out; };
+      const walk = (ns, out) => { for (const n of ns) { if (n.kind === 'group') walk(n.children, out); else if (n.kind === 'mark' && n.ticket) out.push(n.ticket); else if (n.kind === 'panel' && n.body.kind === 'rows') for (const s of n.body.sections) for (const r of s.rows) out.push(r.id); else if (n.kind === 'panel' && n.body.kind === 'needs') for (const r of n.body.rows) out.push(r.id); else if (n.kind === 'panel' && n.body.kind === 'cockpit') for (const r of n.body.deciding.rows) out.push(r.id); } return out; };
       return { screen: scene.screen, address: scene.address, sceneMarks: walk(scene.nodes, []).length,
         domMarks: document.querySelectorAll('#overview-area [data-ticket]').length,
         rows: scene.list.length, shown: !document.getElementById('overview-area').hidden, overview: document.body.dataset.overviewScreen };
