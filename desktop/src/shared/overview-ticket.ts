@@ -15,7 +15,7 @@ import { backControl, frame } from './overview-chrome.js';
 import { cockpitSquare, rowWords } from './overview-marks.js';
 import { walkScene, type AddressParts, type ListRow, type PanelNode, type Scene, type SceneNode, type ScreenContext } from './overview-scene.js';
 import { panelRow, rowOrder } from './overview-phase.js';
-import { type Kind, type OverviewModel, type Ticket } from './overview-types.js';
+import { allPhases, type Kind, type OverviewModel, type Ticket } from './overview-types.js';
 import { ticketLabel } from './overview-wheel.js';
 import { checkScene } from './overview-checks.js';
 import { gateFromModel, type AcceptData } from './overview-flows.js';
@@ -171,11 +171,24 @@ function actWord(t: Ticket): string {
 }
 
 /**
+ * Where an address the model holds opens on the overview: as it is when it names a page or a
+ * flow, a phase's own screen when it names a phase, and nowhere otherwise (TASK-0219). Until
+ * 2026-10-23 a note the overview does not draw opened in Spread, which left main (ADR-0010).
+ */
+export function screenFor(model: OverviewModel, parts: AddressParts): AddressParts | null {
+  if ((parts.page ?? null) !== null || (parts.flow ?? null) !== null) return parts;
+  const note = parts.note ?? undefined;
+  if (note !== undefined && model.tickets[note] !== undefined) return { page: 'ticket', note };
+  if (note !== undefined && allPhases(model).some((p) => p.id === note)) return { page: 'phase', note };
+  return null;
+}
+
+/**
  * What a ticket that needs you asks of you, as a banner under its stages
  * (TASK-0158): the sentence, and a button to where you act, or for a ticket at
  * triage the sidecar's own verbs (TASK-0160).
  */
-function banner(t: Ticket, ctx: ScreenContext, extras: TicketExtras): { nodes: SceneNode[]; rows: ListRow[] } {
+function banner(model: OverviewModel, t: Ticket, ctx: ScreenContext, extras: TicketExtras): { nodes: SceneNode[]; rows: ListRow[] } {
   const needs = t.needs!;
   const x = 40;
   const y = 196;
@@ -189,7 +202,10 @@ function banner(t: Ticket, ctx: ScreenContext, extras: TicketExtras): { nodes: S
   const rows: ListRow[] = [{ id: 'needs', label: `${t.id} needs you: ${needs.say}`, group: 'Needs you' }];
   const buttons: Array<{ key: string; word: string; target?: string; action?: string; enabled: boolean; label: string }> = [];
   if ('parts' in needs.action) {
-    buttons.push({ key: 'needs-go', word: actWord(t), target: ctx.address(needs.action.parts), enabled: true, label: `${actWord(t)}: ${needs.say}` });
+    // A ticket waiting on a note that is neither a ticket nor a phase has nowhere to go: the button is drawn off and says why.
+    const parts = screenFor(model, needs.action.parts);
+    if (parts !== null) buttons.push({ key: 'needs-go', word: actWord(t), target: ctx.address(parts), enabled: true, label: `${actWord(t)}: ${needs.say}` });
+    else buttons.push({ key: 'needs-go', word: actWord(t), enabled: false, label: `${needs.waitingOn ?? 'That note'} is not a ticket or a phase, so the overview has no screen for it` });
   } else {
     for (const v of extras.verbs ?? []) {
       const enabled = extras.canWrite === true && !v.disabled;
@@ -265,7 +281,7 @@ export function ticketScene(model: OverviewModel, ticketId: string, ctx: ScreenC
   }
   // What it needs from you, under its stages, before its text.
   if (t.needs !== undefined) {
-    const b = banner(t, ctx, extras);
+    const b = banner(model, t, ctx, extras);
     nodes.push(...b.nodes);
     list.push(...b.rows);
     top = Math.max(top, 240);

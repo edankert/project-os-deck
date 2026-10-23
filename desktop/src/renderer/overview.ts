@@ -24,6 +24,7 @@ import { sceneToSvg, walkScene, type AddressParts, type Scene, type ScreenContex
 import { buildPanels, type PanelLayer } from './overview-panels.js';
 import type { TowersView } from './overview-towers-view.js';
 import { FRAME_ACTION, WORK_ON, standsIn } from '../shared/overview-select.js';
+import { screenFor } from '../shared/overview-ticket.js';
 import { ANSWER } from '../shared/overview-needs.js';
 import { CAUGHT_UP } from '../shared/overview-cockpit.js';
 import { initDigest, reloadDigest } from './cockpit-digest.js';
@@ -1161,8 +1162,9 @@ function toggleList(force?: boolean): void {
 
 /**
  * A link inside a ticket's text (S3): the note it names opens as its own ticket
- * screen when the overview knows it, and otherwise in the view, as Deck opens
- * any note.
+ * screen when the overview knows it, or as its phase's screen when it is a phase.
+ * Any other note has no screen since Spread left main (ADR-0010), so the person
+ * stays where they are and is told (TASK-0219).
  */
 async function followNoteLink(workspaceId: string, rel: string): Promise<void> {
   if (api === null || current === null) return;
@@ -1176,7 +1178,12 @@ async function followNoteLink(workspaceId: string, rel: string): Promise<void> {
     }
     const model = await modelFor(workspaceId);
     const ctx = contextFor(workspaceId, current.address.viewId);
-    await go(model.tickets[id] !== undefined ? ctx.address({ page: 'ticket', note: id }) : ctx.address({ note: id }));
+    const parts = screenFor(model, { note: id });
+    if (parts === null) {
+      api.say(`${id} is not a ticket or a phase, so the overview has no screen for it (${rel})`);
+      return;
+    }
+    await go(ctx.address(parts));
   } catch (err) {
     api.say(err instanceof Error ? err.message : String(err), true);
   }

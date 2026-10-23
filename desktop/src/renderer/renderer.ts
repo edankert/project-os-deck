@@ -11,7 +11,7 @@
  * address Deck writes names `features`, and an old one naming a desk, a note, a panel
  * or a surface opens the overview and says that part is not in this Deck.
  */
-import type { Workspace } from '../shared/types.js';
+import type { DeckAddress, Workspace } from '../shared/types.js';
 import type { NoteRecord } from '../shared/records.js';
 import { addressFor, tryParseAddress } from '../shared/address.js';
 import { SidecarClient } from '../shared/sidecar-client.js';
@@ -188,14 +188,21 @@ async function openWorkspace(id: string): Promise<boolean> {
   return true;
 }
 
-/** The wheel of a workspace, in the colouring and grouping chosen last on this machine. */
-async function openWheel(id: string): Promise<void> {
-  if (!(await openWorkspace(id))) return;
+/** The wheel of a workspace, in the colouring and grouping chosen last on this machine. False when it did not open, which has been said. */
+async function openWheel(id: string): Promise<boolean> {
+  if (!(await openWorkspace(id))) return false;
   try {
     await showOverview(addressFor(id, VIEW, { page: 'wheel', colour: preferredColour(), group: preferredGrouping() }));
+    return true;
   } catch (err) {
     say(err instanceof Error ? err.message : String(err), true);
+    return false;
   }
+}
+
+/** The parts of an address that left Deck with Spread and Glass, in words; empty when it names none. */
+function partsGone(address: DeckAddress): string[] {
+  return [address.desk !== null ? 'a desk' : null, address.panel !== null ? 'a popped-out panel' : null, address.surface !== null ? `the ${address.surface} surface` : null].filter((part): part is string => part !== null);
 }
 
 /**
@@ -217,10 +224,14 @@ async function applyAddress(raw: string): Promise<void> {
   if (isOverviewAddress(address)) {
     if (!(await openWorkspace(address.workspaceId))) return;
     await showOverview(address);
+    // An overview screen that also names what left with Spread and Glass opens, and says what it dropped.
+    const dropped = partsGone(address);
+    if (dropped.length > 0) say(`that address also names ${dropped.join(' and ')}, which is not in this Deck since Spread and Glass were parked; the rest of it is open`);
     return;
   }
-  await openWheel(address.workspaceId);
-  const gone = [address.desk !== null ? 'a desk' : null, address.note !== null ? 'a note in a view' : null, address.panel !== null ? 'a popped-out panel' : null, address.surface !== null ? `the ${address.surface} surface` : null].filter((part) => part !== null);
+  // Said only once the wheel is open: when it is not, the line that says why stays.
+  if (!(await openWheel(address.workspaceId))) return;
+  const gone = [...partsGone(address), ...(address.note !== null ? ['a note in a view'] : [])];
   say(`that address names ${gone.length > 0 ? gone.join(' and ') : `the ${address.viewId} view`}, which is not in this Deck since Spread and Glass were parked; this is the overview`);
 }
 

@@ -694,6 +694,10 @@ async function runSmoke(): Promise<void> {
       record(drawn.gone.length === 0, `nothing of Spread or Glass is in the page${drawn.gone.length === 0 ? '' : ` (${drawn.gone.join(', ')})`}`);
       record(drawn.shells, 'the rail offers the shell drawer');
       // An address from before 2026-10-23, naming the Spread surface: the wheel, and a line saying so.
+      // Followed from another screen, so arriving on the wheel is something the address did.
+      await focus.webContents.executeJavaScript(`window.__deckOverview.go(${JSON.stringify(formatAddress(addressFor(prepared.id, 'features', { page: 'rephase' })))})`);
+      const before = await screenOf(focus);
+      record(before === 'rephase', `the re-phasing screen opens from its address (it shows ${before ?? 'nothing'})`);
       const old = formatAddress(addressFor(prepared.id, 'features', { surface: 'spread' }));
       await focus.webContents.executeJavaScript(`window.__deckOverview.go(${JSON.stringify(old)})`);
       await delay(600);

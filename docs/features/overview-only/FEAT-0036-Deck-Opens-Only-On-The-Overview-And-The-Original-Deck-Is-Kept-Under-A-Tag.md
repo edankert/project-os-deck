@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0036
 aliases: ["FEAT-0036"]
 title: "Deck opens only on the overview, and the original Deck is kept under a tag"
-status: review
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23
@@ -13,7 +13,7 @@ source:
   - "Edwin 2026-10-23, answering the proposal: 'tag and remove; park Vault too (as far as I know the other sessions are stopped??? otherwise I think it is save to stop them)'"
 goal: "Deck opens on the overview and on nothing else, its code and tests carry only the overview, the agent sessions and the shell drawer, and the original Deck (Spread, Glass, the orbit) is kept whole under the tag original-deck-2026-10-23."
 requirements: []
-tasks: ["[[TASK-0213]]", "[[TASK-0214]]", "[[TASK-0215]]", "[[TASK-0216]]", "[[TASK-0217]]"]
+tasks: ["[[TASK-0213]]", "[[TASK-0214]]", "[[TASK-0215]]", "[[TASK-0216]]", "[[TASK-0217]]", "[[TASK-0219]]"]
 deferred: []
 release: ""
 acceptance_exception: ""

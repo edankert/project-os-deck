@@ -16,7 +16,7 @@ const { plainContext, walkScene, sceneToSvg } = load('shared/overview-scene.js')
 const { wheelScene } = load('shared/overview-wheel.js');
 const { cubesOf, towersLayout: layoutFor } = load('shared/overview-towers.js');
 const { phaseScene, bandOf } = load('shared/overview-phase.js');
-const { ticketScene, neighboursOf, LIFECYCLE } = load('shared/overview-ticket.js');
+const { ticketScene, neighboursOf, LIFECYCLE, screenFor } = load('shared/overview-ticket.js');
 const { rephaseScene, unplaced } = load('shared/overview-rephase.js');
 const unplacedTickets = unplaced;
 const { checkScene } = load('shared/overview-checks.js');
@@ -645,4 +645,29 @@ test('a ring of busy phases still stands every ticket, each in its own place', (
   assert.ok(cubes.every((c) => [c.x, c.y, c.z].every(Number.isFinite)), 'every cube has a place');
   const places = cubes.map((c) => `${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)}`);
   assert.equal(new Set(places).size, places.length, 'no two cubes in one place');
+});
+
+// TASK-0219 — since Spread left main (ADR-0010) a note the overview does not draw has no screen. A ticket
+// waiting on a phase opens that phase; waiting on any other note, its button is drawn off and says why.
+test('a waiting button goes to a ticket or a phase, and is drawn off for a note with no screen', () => {
+  const m = model('deck');
+  const phase = [...m.phases, ...m.shelf, ...m.backlog][0].id;
+  const t = Object.values(m.tickets).find((x) => x.needs?.reason === 'waiting');
+  assert.ok(t !== undefined && phase !== undefined, 'the fixture has a waiting ticket and a phase');
+  const goOf = (on) => {
+    const copy = structuredClone(m);
+    copy.tickets[t.id].needs = { ...t.needs, waitingOn: on, say: `Waiting on ${on}: finish that first`, action: { parts: { note: on } } };
+    return ticketScene(copy, t.id, ctx).nodes.find((n) => n.kind === 'group' && n.key === 'needs-go');
+  };
+  const toPhase = goOf(phase);
+  assert.equal(toPhase.target, ctx.address({ page: 'phase', note: phase }), 'a phase opens its own screen');
+  const toNothing = goOf('CHG-20261023-A-Change-Note');
+  assert.equal(toNothing.target, undefined, 'a note with no screen gets no address');
+  assert.match(toNothing.label, /is not a ticket or a phase/);
+  assert.ok([...walkScene(toNothing.children)].every((n) => n.kind !== 'mark' || String(n.cls).includes('ov-off')), 'and the button is drawn off');
+  // The rule itself: a page or a flow is kept, a ticket opens as a ticket, a phase as a phase, anything else nowhere.
+  assert.deepEqual(screenFor(m, { page: 'wheel' }), { page: 'wheel' });
+  assert.deepEqual(screenFor(m, { note: t.id }), { page: 'ticket', note: t.id });
+  assert.deepEqual(screenFor(m, { note: phase }), { page: 'phase', note: phase });
+  assert.equal(screenFor(m, { note: 'REFERENCE-SOMETHING' }), null);
 });
