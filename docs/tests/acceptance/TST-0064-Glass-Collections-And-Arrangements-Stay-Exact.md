@@ -2,11 +2,11 @@
 type: "[[test]]"
 id: TST-0064
 title: "Glass collections and arrangements stay exact"
-status: active
+status: retired
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"]
 scope: feature
 level: acceptance
@@ -23,6 +23,9 @@ after: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]"]
 ---
 
 # Glass collections and arrangements stay exact
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Setup
 

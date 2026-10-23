@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0009
 aliases: ["TST-0009"]
 title: "A status window carrying one panel reopens on the display it was left on, across a restart"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-10-23
 source: ["[[PHASE-0001-Deck]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -28,6 +28,9 @@ area: "windows"
 ---
 
 # A popped-out window reopens where it was left
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

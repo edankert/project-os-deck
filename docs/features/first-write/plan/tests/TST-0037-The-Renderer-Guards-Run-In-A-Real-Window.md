@@ -6,7 +6,7 @@ title: "A note cannot run script in the window that writes, every verb asks why,
 status: passing
 owner: user:edwin
 created: 2026-09-09
-updated: 2026-09-09
+updated: 2026-10-23
 source: ["[[ISS-0044-The-Renderer-Guards-Run-In-No-Gate]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -28,6 +28,9 @@ related: ["[[TST-0033-The-Write-Channel-Exists-In-The-Shell-And-Not-When-Served]
 ---
 
 # The three guards that only a real window can hold
+
+> [!note] One guard of four is left, 2026-10-23
+> The reader, its verbs, its verdict buttons and its tick controls left main with Spread and Glass ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), and so did the three smoke checks that pressed them. The overview's writes go through its accept flows, which `overview-flow-writes.test.mjs` checks (TST-0087). What stays here is the first guard: a script in a note's markup does not run in the window that writes. The smoke run still drives it, now in a window of the overview, as `a script tag inside a note's markup does not run in a Deck window` and `the window's content policy names script-src 'self'`.
 
 ## Purpose
 

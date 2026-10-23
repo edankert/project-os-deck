@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0008
 aliases: ["TST-0008"]
 title: "Spread opens the same views and the same notes as the cockpit, for this repository, checked side by side"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-10-23
 source: ["[[PHASE-0001-Deck]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -28,6 +28,9 @@ area: "spread"
 ---
 
 # Spread opens the same notes as the cockpit
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

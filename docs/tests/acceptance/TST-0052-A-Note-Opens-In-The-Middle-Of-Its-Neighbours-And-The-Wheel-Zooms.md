@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0052
 aliases: ["TST-0052"]
 title: "A note opened in Glass or the orbit stands in the middle of its neighbours and Escape puts the field back, and the mouse wheel zooms toward the pointer"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit]]", "[[FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ area: "glass"
 ---
 
 # A focused document keeps its size and neighbourhood
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

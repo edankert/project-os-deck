@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0068
 aliases: ["TST-0068"]
 title: "The Glass desktop is walked with a real pointer and keyboard: the collection on the field, a full note opened from a card, a row and a link, read, moved, found again and closed back to its row, in a narrow window and on the served page"
-status: passing
+status: retired
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -29,6 +29,9 @@ related: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]", "[[TST-0045-Gla
 ---
 
 # The Glass desktop is walked with a real pointer
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -164,6 +164,9 @@ one() {
     }
     console.log(ok && bad.length === 0 ? "OK" : "BAD " + bad.join("; "));
   ' "$out")"
+  # With every check printed (DECK_SMOKE_DEBUG=1), the lines are shown whatever the verdict, so a run
+  # that passed can say which checks it made.
+  if [ "${DECK_SMOKE_DEBUG:-}" = "1" ]; then grep -E '^(PASS|FAIL|====) ' "$out" | sed "s/^/${mode}: /" || true; fi
   if [ "$verdict" = "OK" ] && [ "$status" -eq 0 ]; then
     rm -f "$out"
     return 0

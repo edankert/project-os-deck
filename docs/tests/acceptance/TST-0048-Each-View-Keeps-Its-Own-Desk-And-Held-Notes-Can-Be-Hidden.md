@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0048
 aliases: ["TST-0048"]
 title: "Each view keeps its own desk, a note kept on every view follows every switch, and Hide notes clears the window without taking anything off the desk"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-23
 source: ["[[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ area: "glass"
 ---
 
 # Each view keeps its own desk, and held notes can be hidden
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

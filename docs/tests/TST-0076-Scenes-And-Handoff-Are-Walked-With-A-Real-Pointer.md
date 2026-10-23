@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0076
 aliases: ["TST-0076"]
 title: "Scenes and handoff are walked with a real pointer and keyboard: a scene saved, the workspace changed under it, reopened and undone; a document moved to a second window, shown in a reader, sent back, and left alone when the other window does not answer"
-status: passing
+status: retired
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ related: ["[[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]]", "[[TST-0074
 ---
 
 # Scenes and handoff are walked with a real pointer
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -2241,14 +2241,14 @@ items:
     RISK-0008:
       file: "docs/risks/RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes.md"
       title: "The evidence panel misreports a verdict when the sidecar's acceptance payload changes"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0002
       note: "Risk scan for FEAT-0024, 2026-10-02. Deck starts reading GET /api/cockpit/acceptance, a payload the cockpit owns and may reshape (schema 4 today). The harmful failure is quiet: a renamed field would make a check Edwin passed read 'not walked'. Mitigation in TASK-0111 and TASK-0112: refuse a payload whose schema or shape is not the one pinned, say 'the acceptance record could not be read', and keep a dated fixture of the real payload. Also covers the walker's reasons and name becoming readable on the local network under --lan."
     RISK-0007:
       file: "docs/risks/RISK-0007-Glass-Restoration-Loses-Identity-Or-Layout.md"
       title: "Glass restoration loses identity or layout"
-      status: open
+      status: closed
       owner: user:edwin
       phase: PHASE-0002
     RISK-0005:
@@ -2351,7 +2351,7 @@ items:
     TST-0077:
       file: "docs/tests/acceptance/TST-0077-A-Claims-Evidence-Stands-Beside-It.md"
       title: "A claim's evidence stands beside it"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: feature
@@ -2368,7 +2368,7 @@ items:
       covers: ["FEAT-0024", "REQ-0006"]
     TST-0079:
       file: "docs/tests/TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer.md"
-      status: passing
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: system
@@ -2378,7 +2378,7 @@ items:
     TST-0073:
       file: "docs/tests/acceptance/TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens.md"
       title: "A scene reopens and a note crosses screens"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: feature
@@ -2404,7 +2404,7 @@ items:
       covers: ["FEAT-0023", "REQ-0005"]
     TST-0076:
       file: "docs/tests/TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer.md"
-      status: passing
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: system
@@ -2414,13 +2414,13 @@ items:
     TST-0064:
       file: "docs/tests/acceptance/TST-0064-Glass-Collections-And-Arrangements-Stay-Exact.md"
       title: "Glass collections and arrangements stay exact"
-      status: active
+      status: retired
       owner: user:edwin
       covers: ["FEAT-0022"]
     TST-0063:
       file: "docs/tests/acceptance/TST-0063-A-Collection-And-Full-Note-Share-Glass.md"
       title: "A collection and full note share Glass"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0020"]
@@ -2529,7 +2529,7 @@ items:
     TST-0008:
       file: "docs/tests/acceptance/TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit.md"
       title: "Spread opens the same views and the same notes as the cockpit, for this repository, checked side by side"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0005"]
@@ -2537,7 +2537,7 @@ items:
     TST-0009:
       file: "docs/tests/acceptance/TST-0009-A-Status-Window-Survives-A-Restart-On-A-Second-Display.md"
       title: "A status window carrying one panel reopens on the display it was left on, across a restart"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0004"]
@@ -2561,7 +2561,7 @@ items:
     TST-0012:
       file: "docs/tests/acceptance/TST-0012-Two-Windows-Show-The-Same-State.md"
       title: "Two windows show the same state, and Deck reopens where you left it"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0003-One-Store-In-The-Main-Process"]
@@ -2617,7 +2617,7 @@ items:
     TST-0020:
       file: "docs/features/windows/plan/tests/TST-0020-A-Popped-Out-Window-Carries-One-Panel.md"
       title: "A popped-out window carries one named panel, and an address naming a panel Deck cannot draw is refused"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0004"]
@@ -2641,7 +2641,7 @@ items:
     TST-0023:
       file: "docs/tests/acceptance/TST-0023-Glass-Opens-First-And-A-Days-Notes-Are-Read-In-It.md"
       title: "Glass opens first, and a day's notes are read in it: the owed work in front, the quiet work behind, and the same cards moving when the view changes"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0009"]
@@ -2649,7 +2649,7 @@ items:
     TST-0024:
       file: "docs/tests/acceptance/TST-0024-A-Note-Is-Lifted-And-Its-Neighbourhood-Arrives.md"
       title: "A note is lifted in Glass, its neighbourhood arrives at the front, two notes show what they share, and the same desk is there in Spread"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0010"]
@@ -2657,7 +2657,7 @@ items:
     TST-0025:
       file: "docs/tests/acceptance/TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible.md"
       title: "A planted orphan and a cluster hanging by one edge are both visible in the orbit without being told where to look"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0001"]
@@ -2673,7 +2673,7 @@ items:
     TST-0027:
       file: "docs/tests/acceptance/TST-0027-A-Base-File-Reads-As-A-Description-And-The-Seven-Views-Are-Unchanged.md"
       title: "The seven project-os views look exactly as they did, and a base file from the vault reads as a description whose unsupported constructs are named on screen"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0012"]
@@ -2681,7 +2681,7 @@ items:
     TST-0028:
       file: "docs/tests/acceptance/TST-0028-A-Criterion-Ticked-In-Deck-Is-Ticked-In-The-Cockpit.md"
       title: "A criterion ticked in Deck is ticked in the file and in the cockpit, one transition moves a status, and the tablet is offered no verb at all"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0013"]
@@ -2737,7 +2737,7 @@ items:
     TST-0038:
       file: "docs/tests/acceptance/TST-0038-The-Field-Is-Arranged-By-Hand-And-A-Note-Is-Thrown-To-Another-Screen.md"
       title: "The field is arranged by hand, a note is thrown to another screen, the tablet shows what the Mac holds, and the record is untouched"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0014"]
@@ -2745,7 +2745,7 @@ items:
     TST-0048:
       file: "docs/tests/acceptance/TST-0048-Each-View-Keeps-Its-Own-Desk-And-Held-Notes-Can-Be-Hidden.md"
       title: "Each view keeps its own desk, a note kept on every view follows every switch, and Hide notes clears the window without taking anything off the desk"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0015"]
@@ -2777,7 +2777,7 @@ items:
     TST-0052:
       file: "docs/tests/acceptance/TST-0052-A-Note-Opens-In-The-Middle-Of-Its-Neighbours-And-The-Wheel-Zooms.md"
       title: "A note opened in Glass or the orbit stands in the middle of its neighbours and Escape puts the field back, and the mouse wheel zooms toward the pointer"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0016", "FEAT-0017"]
@@ -2809,7 +2809,7 @@ items:
     TST-0056:
       file: "docs/tests/acceptance/TST-0056-Every-Note-Is-Somewhere-And-A-Finished-Note-Can-Be-Pulled-Forward.md"
       title: "Every note the view holds is somewhere in the field, and a finished note can be clicked, read and pulled to the front — the walk Edwin takes on a real workspace"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0018"]
@@ -2955,10 +2955,10 @@ metrics:
     tasks_total: 208
     tasks_done: 186
     tests_total: 74
-    tests_passing: 9
+    tests_passing: 2
     tests_failing: 0
     issues_open: 0
     issues_triage: 0
-    risks_open: 12
+    risks_open: 10
     releases_total: 0
     decisions_total: 10

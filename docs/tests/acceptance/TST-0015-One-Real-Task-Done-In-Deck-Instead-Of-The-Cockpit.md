@@ -6,7 +6,7 @@ title: "One real task done in Deck instead of the cockpit, and a record of which
 status: active
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-10-23
 source: ["[[PHASE-0004-Parity]]", "[[PHASE-0001-Deck]]", "[[REFERENCE-PHASE-0001-REVIEW]]"]
 phase: "[[PHASE-0004-Parity]]"
 scope: system
@@ -23,11 +23,14 @@ mutation_score: ""
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
-related: ["[[PHASE-0004-Parity]]", "[[PHASE-0001-Deck]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]]", "[[FEAT-0010-Lifting-A-Note]]"]
+related: ["[[PHASE-0004-Parity]]", "[[PHASE-0001-Deck]]", "[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]", "[[REFERENCE-PHASE-0001-REVIEW]]", "[[TST-0008-Spread-Opens-The-Same-Notes-As-The-Cockpit]]", "[[FEAT-0010-Lifting-A-Note]]"]
 area: "parity"
 ---
 
 # One real task done in Deck instead of the cockpit
+
+> [!note] Rewritten 2026-10-23
+> Spread, Glass and pop-out panels left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The task is now done in the overview, the agent pane and the shell drawer. The walk recorded on 2026-09-07 below was made in Spread.
 
 ## Purpose
 
@@ -41,21 +44,20 @@ Deck runs from this repository; there is no installed application yet.
 - To start it: `cd desktop && npm start`. A window opens. The console line `deck: serving ... on 127.0.0.1:<port>` is Deck's own web host, and you can ignore it here.
 - To stop it: quit the application, or press Ctrl+C in the terminal you started it from.
 - **A workspace is added once, by hand.** Deck scans nothing. In the window, the left rail carries **+ add a workspace**; choose a folder that holds a `SNAPSHOT.yaml`. Pick a repository with real work in it that day; Your Trainer has hundreds of issues and is a better test than this repository's thirty notes.
-- **A second display**, so that a popped-out panel can sit on it.
 - **The cockpit open on the same repository**, so the same task can be done there afterwards for comparison.
 - **Not before** [[PHASE-0004-Parity]] has given Deck the day's tools: a console, the pages a day needs, the verbs behind the sidecar's guards, and live changes announced. The 2026-09-07 walk showed that Spread alone is not enough to judge. Glass ([[PHASE-0002-Glass]]) should be the surface the task is done in, since it is the view Deck opens.
 
 ## Procedure
 
 - Choose a task you would otherwise do in the cockpit that morning: triaging the issues that arrived, or reading through one phase's open tasks and deciding what comes next.
-- Do it in Deck first. Put the notes you are working through on a desk, move the ones you have decided about aside, pop the Needs-you strip or a note out onto the second display, and use search when you need a note the desk does not show.
+- Do it in Deck first: from the wheel, Needs you and a phase's or a ticket's screen, with an agent session or a shell where the task needs one, and the overview's search when you need a ticket the screen does not show.
 - Do the same task, or the remainder of it, in the cockpit.
 - Write down which of the two you would rather have used for that task, and one sentence on why.
 
 ## Expected results
 
 - The task could be done in Deck from start to finish without opening the cockpit for a step Deck could not do.
-- Edwin records which application he would rather have used and why. Either answer is a valid result; a preference for the cockpit is a finding about Spread, not a failed walk.
+- Edwin records which application he would rather have used and why. Either answer is a valid result; a preference for the cockpit is a finding about Deck, not a failed test.
 
 ## Evidence (fill after running)
 

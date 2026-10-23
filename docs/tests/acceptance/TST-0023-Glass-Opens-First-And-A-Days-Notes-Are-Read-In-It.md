@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0023
 aliases: ["TST-0023"]
 title: "Glass opens first, and a day's notes are read in it: the owed work in front, the quiet work behind, and the same cards moving when the view changes"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[PHASE-0002-Glass]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ area: "glass"
 ---
 
 # Glass opens first, and a day's notes are read in it
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

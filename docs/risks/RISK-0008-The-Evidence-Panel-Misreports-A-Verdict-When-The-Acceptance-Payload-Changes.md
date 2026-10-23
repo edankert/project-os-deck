@@ -3,10 +3,10 @@ type: "[[risk]]"
 id: RISK-0008
 aliases: ["RISK-0008"]
 title: "The evidence panel misreports a verdict when the sidecar's acceptance payload changes"
-status: open
+status: closed
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Risk scan for [[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]], 2026-10-02", "[[ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said]]"]
 phase: "[[PHASE-0002-Glass]]"
 likelihood: medium
@@ -57,3 +57,7 @@ The risk stays `open`. Two things are not mitigated. Nothing runs when the cockp
 - The panel reads "not walked" for a check the cockpit shows as passed, or the reverse.
 - The re-recorded fixture differs in shape from the committed one.
 - Deck is run with `--lan` on a network that people other than Edwin use.
+
+## Closed, 2026-10-23
+
+The evidence panel left main with Glass ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), and the code is kept under the git tag `original-deck-2026-10-23`. The overview's acceptance flows read the same payload; that hazard is RISK-0009's, which stays open. A repository revived from the tag starts with this risk open, as it was.

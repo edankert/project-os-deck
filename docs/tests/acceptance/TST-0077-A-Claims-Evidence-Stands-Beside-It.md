@@ -2,11 +2,11 @@
 type: "[[test]]"
 id: TST-0077
 title: "A claim's evidence stands beside it"
-status: active
+status: retired
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]]"]
 scope: feature
 level: acceptance
@@ -23,6 +23,9 @@ after: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]"]
 ---
 
 # A claim's evidence stands beside it
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Setup
 

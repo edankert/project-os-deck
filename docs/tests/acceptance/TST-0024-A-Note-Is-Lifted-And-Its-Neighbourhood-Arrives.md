@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0024
 aliases: ["TST-0024"]
 title: "A note is lifted in Glass, its neighbourhood arrives at the front, two notes show what they share, and the same desk is there in Spread"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[PHASE-0002-Glass]]", "[[FEAT-0010-Lifting-A-Note]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ area: "glass"
 ---
 
 # A note is lifted and its neighbourhood arrives
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

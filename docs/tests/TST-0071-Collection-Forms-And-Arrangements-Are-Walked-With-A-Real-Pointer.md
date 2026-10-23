@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0071
 aliases: ["TST-0071"]
 title: "Collection forms and arrangements are walked with a real pointer and keyboard: the same members as a table, as cards and as a header; Read, Compare and Show related shown before they are applied; undo; one relationship picked out; and a preview and an undo that meet a changed desk"
-status: passing
+status: retired
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0101-Change-A-Collection-Between-Stack-Table-And-Cards]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -29,6 +29,9 @@ related: ["[[TST-0064-Glass-Collections-And-Arrangements-Stay-Exact]]", "[[TST-0
 ---
 
 # Collection forms and arrangements are walked with a real pointer
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -38,17 +38,3 @@ gates:
     FEAT-0011: "walked as TST-0026; the verdict will live in WORKING-app.json — ISS-0016"
     FEAT-0012: "walked as TST-0027; the verdict will live in WORKING-app.json — ISS-0016"
     FEAT-0013: "walked as TST-0028; the verdict will live in WORKING-app.json — ISS-0016"
-
-  # **Two scripted walks are `passing` with no review verdict of their own.**
-  #
-  # The REVIEW gate became an error on 2026-10-23. Their features were each
-  # reviewed by two reviewers on 2026-10-02, but FEAT-0023's review left
-  # TST-0076 unchecked (it opens a window) and FEAT-0024's round two found
-  # TST-0079's landing check short of one case, fixed afterwards and never
-  # re-read. Copying "approved" onto either would be false. Both are Edwin's
-  # notes, so whether to have them reviewed or set back from `passing` is his
-  # call; until then they warn. TST-0068 to TST-0072 are in the same state but
-  # have left the snapshot, which is all this gate reads.
-  REVIEW:
-    TST-0076: "covered by FEAT-0023's review without being checked; Edwin to choose review or a lower status (asked 2026-10-23)"
-    TST-0079: "FEAT-0024's round two found its landing check short, fixed after and not re-read; Edwin to choose (asked 2026-10-23)"

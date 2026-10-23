@@ -2,16 +2,16 @@
 type: "[[risk]]"
 id: RISK-0007
 title: "Glass restoration loses identity or layout"
-status: open
+status: closed
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]", "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"]
 likelihood: medium
 impact: high
 mitigation: ["[[TASK-0095-Model-An-Exact-Collection-On-The-Desk]]", "[[TASK-0101-Change-A-Collection-Between-Stack-Table-And-Cards]]", "[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]", "[[TASK-0106-Keep-A-Scene-In-The-Store]]", "[[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]]"]
-related: ["[[REQ-0001-Glass-Collections-Remain-Exact-And-Interactive]]", "[[REQ-0003-Glass-Arrangements-Preserve-Membership-And-Reading-Size]]", "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]", "[[REQ-0004-A-Glass-Scene-Reopens-With-Live-Content-And-Says-What-Changed]]", "[[REQ-0005-A-Handoff-Is-Acknowledged-Before-The-Source-Lets-Go]]", "[[ADR-0007-A-Scene-Is-A-Saved-Desk-Read-Live-And-A-Handoff-Waits-For-The-Destination]]"]
+related: ["[[REQ-0001-Glass-Collections-Remain-Exact-And-Interactive]]", "[[REQ-0003-Glass-Arrangements-Preserve-Membership-And-Reading-Size]]", "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]", "[[REQ-0004-A-Glass-Scene-Reopens-With-Live-Content-And-Says-What-Changed]]", "[[REQ-0005-A-Handoff-Is-Acknowledged-Before-The-Source-Lets-Go]]", "[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]"]
 ---
 
 # Glass restoration loses identity or layout
@@ -48,3 +48,7 @@ Collection query and layout fields and a remembered reading size extend the save
 ## Closure evidence
 
 Close only after the linked mitigation tasks supply compatibility and restore evidence and the corresponding walks record their outcomes. **On 2026-10-02 this risk stays `open` by that rule.** TASK-0104 has supplied its compatibility evidence and is not done. The walks TST-0052, TST-0063, TST-0064 and TST-0073 are a person's; none has been walked and the acceptance ledger holds no verdict for any of them. What the other four tasks have supplied is recorded in their own notes. The scenes feature repeated the scan on 2026-10-02 (FEAT-0023, "Risk scan"). It adds no camera persistence and saves nothing about a handoff, so neither of those is a hazard yet. A later change that saves yaw, zoom or a handoff's records repeats the scan. TST-0074, TST-0075, the walk TST-0076 and the acceptance check TST-0073 supply the scene and handoff evidence.
+
+## Closed, 2026-10-23
+
+The code this risk watched left main. Glass's collections, documents, arrangements and scenes are kept under the git tag `original-deck-2026-10-23`, and nothing on main restores a Glass layout any more ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]). A repository revived from the tag starts with this risk open, as it was.

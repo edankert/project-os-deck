@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0072
 aliases: ["TST-0072"]
 title: "Glass is measured at the size of a real workspace, with the collection and full documents on the field: script work per frame while turning, how long a note takes to open, and the cases a small workspace does not have"
-status: passing
+status: retired
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0099-Walk-The-Glass-Desktop-At-Real-Scale]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -29,6 +29,9 @@ related: ["[[TST-0057-The-Measurement-Is-Kept-In-A-File]]", "[[TST-0068-The-Glas
 ---
 
 # Glass is measured at the size of a real workspace
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

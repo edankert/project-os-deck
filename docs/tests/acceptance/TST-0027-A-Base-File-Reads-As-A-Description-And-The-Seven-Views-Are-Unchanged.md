@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0027
 aliases: ["TST-0027"]
 title: "The seven project-os views look exactly as they did, and a base file from the vault reads as a description whose unsupported constructs are named on screen"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-10-23
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -28,6 +28,9 @@ area: "descriptions"
 ---
 
 # A base file reads as a description, and the seven views are unchanged
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0056
 aliases: ["TST-0056"]
 title: "Every note the view holds is somewhere in the field, and a finished note can be clicked, read and pulled to the front — the walk Edwin takes on a real workspace"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-10-23
 source: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -27,6 +27,9 @@ related: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[TST-0023-Glass-
 ---
 
 # Every note is somewhere, and a finished note can be pulled forward
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

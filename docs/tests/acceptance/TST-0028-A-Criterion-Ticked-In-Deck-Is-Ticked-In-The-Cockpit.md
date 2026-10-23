@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0028
 aliases: ["TST-0028"]
 title: "A criterion ticked in Deck is ticked in the file and in the cockpit, one transition moves a status, and the tablet is offered no verb at all"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-10-23
 source: ["[[FEAT-0013-The-First-Write]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: system
@@ -28,6 +28,9 @@ area: "writes"
 ---
 
 # A criterion ticked in Deck is ticked in the cockpit
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

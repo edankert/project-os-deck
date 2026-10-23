@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0045
 aliases: ["TST-0045"]
 title: "Glass is driven with a real pointer in a real window: the field, the lift, the hands, the panes, the reach, the throw and the keyboard, with the store read back and git status unchanged"
-status: passing
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-10-14
+updated: 2026-10-23
 source: ["[[PHASE-0002-Glass]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ review_response: "Recorded 2026-10-02 from this note's own history; the verdict 
 related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-The-Smoke-Run-Opens-A-Workspace-Or-Says-What-It-Skipped]]", "[[ISS-0008-Nothing-In-CI-Exercises-The-Renderer]]"]
 ---
 # Glass is driven with a real pointer
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

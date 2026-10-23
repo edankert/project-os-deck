@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0038
 aliases: ["TST-0038"]
 title: "The field is arranged by hand, a note is thrown to another screen, the tablet shows what the Mac holds, and the record is untouched"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[PHASE-0002-Glass]]", "[[FEAT-0014-The-Hands]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -28,6 +28,9 @@ area: "glass"
 ---
 
 # The field is arranged by hand and a note is thrown to another screen
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 
