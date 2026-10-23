@@ -4,12 +4,16 @@
  *
  * Each tab is a frame (`terminal.html`) where xterm.js draws the shell, under a policy of its own
  * that allows the inline styles xterm.js writes; Deck's page keeps its own policy. This module, in
- * Deck's page, is the only thing that reaches a shell: it passes output into the frame and the
- * frame's typing and size out to the main process. On a served page there are no shells
+ * Deck's page, passes output into the frame and the frame's typing and size out to the main process.
+ *
+ * The frame is served from Deck's own origin, so script in it could reach this page and its bridge
+ * (review, round one: an earlier note said it had none). What keeps it harmless is what it runs:
+ * only Deck's own script files (`script-src 'self'`, no inline script), and the shell's output,
+ * which xterm.js draws as text, never as HTML. On a served page there are no shells
  * (`Host.shells()` is null), and neither the drawer nor its button is made (RISK-0015).
  */
 import type { ShellBridge } from './host-bridge.js';
-import { NO_TABS, tabWords, tabsAfter, type ShellTab, type TabsAction, type TabsState } from '../shared/shell-tabs.js';
+import { NO_TABS, piecesOf, tabWords, tabsAfter, type ShellTab, type TabsAction, type TabsState } from '../shared/shell-tabs.js';
 
 const HEIGHT_KEY = 'deck.shells.height';
 const OPEN_KEY = 'deck.shells.open';
@@ -41,7 +45,12 @@ interface Frame {
   ready: boolean;
   /** Output that came before the frame could take it. */
   waiting: string[];
+  /** The shell's exit code, when it ended before the frame could say so (TASK-0211). */
+  ended: number | null;
 }
+
+/** What one write may carry; a larger paste goes in pieces, in order (the main process's `WRITE_MAX`). */
+const WRITE_PIECE = 16_384;
 
 export interface ShellDrawerOptions {
   shells: ShellBridge;
@@ -93,10 +102,20 @@ export class ShellDrawer {
     }
     options.shells.subscribe((raw) => this.onShellEvent(raw as { kind: string; id: string; data?: string; code?: number }));
     window.addEventListener('message', (event) => this.onFrameMessage(event));
-    void options.shells.list().then((res) => {
-      const r = res as { available?: boolean; shells?: ShellTab[] };
+    // Shells already running, opened before this window loaded or by another of Deck's windows, are drawn
+    // here too, each with its latest output; they would otherwise run on with no tab to reach them (TASK-0211).
+    void options.shells.list(true).then((res) => {
+      const r = res as { available?: boolean; shells?: ShellTab[]; recent?: Record<string, string> };
       this.available = r.available !== false;
-      // Shells opened before this window, by another of Deck's windows, are not drawn here.
+      for (const shell of r.shells ?? []) {
+        if (this.frames.has(shell.id)) continue;
+        const f = this.makeFrame(shell.id);
+        const recent = r.recent?.[shell.id] ?? '';
+        if (recent !== '') f.waiting.push(recent);
+        if (shell.exited) f.ended = 0;
+        this.frames.set(shell.id, f);
+        this.state = tabsAfter(this.state, { kind: 'opened', tab: shell });
+      }
       this.draw();
     });
     if (stored(OPEN_KEY) === 'yes') this.toggle(true);
@@ -152,7 +171,7 @@ export class ShellDrawer {
     frame.title = `Shell ${id}`;
     frame.dataset['shell'] = id;
     this.body.appendChild(frame);
-    return { frame, ready: false, waiting: [] };
+    return { frame, ready: false, waiting: [], ended: null };
   }
 
   private draw(): void {
@@ -195,7 +214,9 @@ export class ShellDrawer {
       if (f.ready) f.frame.contentWindow?.postMessage({ kind: 'data', data: e.data }, location.origin);
       else f.waiting.push(e.data);
     } else if (e.kind === 'exit') {
-      f.frame.contentWindow?.postMessage({ kind: 'ended', code: e.code ?? 0 }, location.origin);
+      // An end that comes before the frame is ready is said once it is, after the output before it.
+      if (f.ready) f.frame.contentWindow?.postMessage({ kind: 'ended', code: e.code ?? 0 }, location.origin);
+      else f.ended = e.code ?? 0;
       this.apply({ kind: 'exited', id: e.id });
     }
   }
@@ -209,10 +230,12 @@ export class ShellDrawer {
     if (m.kind === 'ready') {
       f.ready = true;
       for (const d of f.waiting.splice(0)) f.frame.contentWindow?.postMessage({ kind: 'data', data: d }, location.origin);
+      if (f.ended !== null) f.frame.contentWindow?.postMessage({ kind: 'ended', code: f.ended }, location.origin);
       if (this.state.active === id) f.frame.contentWindow?.postMessage({ kind: 'focus' }, location.origin);
     }
     if ((m.kind === 'ready' || m.kind === 'size') && typeof m.cols === 'number' && typeof m.rows === 'number') void this.options.shells.resize(id, m.cols, m.rows);
-    if (m.kind === 'input' && typeof m.data === 'string') void this.options.shells.write(id, m.data);
+    // A paste larger than one write goes in pieces; the calls arrive in the order they are made.
+    if (m.kind === 'input' && typeof m.data === 'string') for (const piece of piecesOf(m.data, WRITE_PIECE)) void this.options.shells.write(id, piece);
   }
 
   private setHeight(h: number): void {

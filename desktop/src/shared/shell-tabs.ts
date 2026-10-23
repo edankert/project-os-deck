@@ -48,3 +48,20 @@ export function tabsAfter(state: TabsState, action: TabsAction): TabsState {
 export function tabWords(t: ShellTab): string {
   return `${t.title}${t.session !== null ? ` · ${t.session.slice(0, 8)}` : ''}${t.exited ? ' (ended)' : ''}`;
 }
+
+/**
+ * Text cut into pieces of at most `size` characters, in order, never between the two halves of a
+ * character outside the basic plane (TASK-0211): a paste larger than one write is sent whole.
+ */
+export function piecesOf(text: string, size: number): string[] {
+  const out: string[] = [];
+  let at = 0;
+  while (at < text.length) {
+    let end = Math.min(text.length, at + size);
+    const code = text.charCodeAt(end - 1);
+    if (end < text.length && end - at > 1 && code >= 0xd800 && code <= 0xdbff) end -= 1;
+    out.push(text.slice(at, end));
+    at = end;
+  }
+  return out;
+}

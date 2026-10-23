@@ -1,7 +1,8 @@
 /**
  * Inside one shell's frame (FEAT-0035, TASK-0206): xterm.js draws the shell's output and sends
  * back what is typed and the size that fits. The frame never reaches the shell itself; the
- * drawer, in Deck's page, does, and it is the only window it answers.
+ * drawer, in Deck's page, does, and it is the only window it answers. The frame shares Deck's
+ * origin, so it could reach the page; it runs this file and xterm.js and nothing else.
  */
 interface XTerm {
   open(el: HTMLElement): void;

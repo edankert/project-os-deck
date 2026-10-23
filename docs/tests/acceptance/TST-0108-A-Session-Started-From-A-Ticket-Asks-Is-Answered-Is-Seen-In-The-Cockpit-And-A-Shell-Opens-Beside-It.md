@@ -6,7 +6,7 @@ title: "A session started from a ticket in Deck asks before it acts, is answered
 status: active
 owner: user:edwin
 created: 2026-10-22
-updated: 2026-10-22
+updated: 2026-10-23
 source: ["[[FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On]]"]
 phase: "[[PHASE-0004-Parity]]"
 scope: system
@@ -47,7 +47,7 @@ Deck and the cockpit both open on Deck's own repository; the cockpit's sidecar i
 5. In the cockpit, look at its agents and its Needs you.
 6. In Deck, press ⌘ Shells, then New shell, then Open its shell in the session's pane.
 7. Repeat steps 1 to 4 with Codex.
-8. Press ◫ Overview twice, then quit and reopen Deck.
+8. In one shell, start `sleep 4242 &`. Press ◫ Overview twice, then quit Deck, and in Terminal run `pgrep -fl 'sleep 4242'` before reopening it.
 
 ## Expect
 
@@ -55,6 +55,7 @@ Deck and the cockpit both open on Deck's own repository; the cockpit's sidecar i
 - The request appears at its turn and at the top of Needs you before you answer; after Approve the agent goes on and the request shows its outcome.
 - The cockpit lists the Deck session in its agents, and showed the request as waiting while it was open.
 - Two shell tabs are open, one named by the workspace and one in the session's folder; both take input.
+- After the quit, `pgrep` prints nothing: no shell Deck opened, and no job started in one, is left running.
 - The overview panels hide and come back; after reopening, the session is listed as idle with Resume, and the panels keep their last state.
 - Nothing in Deck offered to skip permissions.
 

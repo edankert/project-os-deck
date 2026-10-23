@@ -54,8 +54,20 @@ export function loginShell(env: NodeJS.ProcessEnv = process.env, exists: (file: 
   return [env['SHELL'], '/bin/zsh', '/bin/bash', '/bin/sh'].find((f): f is string => typeof f === 'string' && f !== '' && exists(f)) ?? '/bin/sh';
 }
 
+/** How much of a shell's latest output Deck keeps, for a window that loads while it runs (TASK-0211). */
+export const RECENT_CHARS = 100_000;
+
+/** The tail of a shell's output, cut at a line's start so a reloaded tab does not begin mid-line. */
+export function keepRecent(kept: string, data: string, max = RECENT_CHARS): string {
+  const all = kept + data;
+  if (all.length <= max) return all;
+  const cut = all.length - max;
+  const line = all.indexOf('\n', cut);
+  return line < 0 || line - cut > 4096 ? all.slice(cut) : all.slice(line + 1);
+}
+
 export class ShellManager {
-  private readonly shells = new Map<string, { info: ShellInfo; pty: Pty }>();
+  private readonly shells = new Map<string, { info: ShellInfo; pty: Pty; recent: string }>();
   private readonly listeners = new Set<(e: ShellEvent) => void>();
   private next = 1;
 
@@ -74,6 +86,11 @@ export class ShellManager {
     return [...this.shells.values()].map((s) => ({ ...s.info }));
   }
 
+  /** A shell's latest output, up to `RECENT_CHARS`; empty for a shell Deck does not hold. */
+  recent(id: string): string {
+    return this.shells.get(id)?.recent ?? '';
+  }
+
   /** A login shell in `folder`, which Deck chose: the workspace's repository or a session's folder. */
   open(folder: string, options: { cols?: number; rows?: number; session?: string | null } = {}): ShellInfo {
     if (this.factory === null) throw new Error('shells are off: node-pty is not installed here (see desktop/README.md)');
@@ -85,8 +102,12 @@ export class ShellManager {
       env: { ...cleanEnvironment(this.env), TERM: 'xterm-256color', COLORTERM: 'truecolor' }, name: 'xterm-256color',
     });
     const info: ShellInfo = { id, title: folder.split(/[\\/]/).filter(Boolean).pop() ?? folder, folder, session: options.session ?? null, exited: false };
-    this.shells.set(id, { info, pty });
-    pty.onData((data) => this.tell({ kind: 'data', id, data }));
+    const held = { info, pty, recent: '' };
+    this.shells.set(id, held);
+    pty.onData((data) => {
+      held.recent = keepRecent(held.recent, data);
+      this.tell({ kind: 'data', id, data });
+    });
     pty.onExit((e) => {
       info.exited = true;
       this.tell({ kind: 'exit', id, code: e.exitCode });
@@ -135,6 +156,9 @@ export class ShellManager {
 
 const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, Math.round(Number.isFinite(n) ? n : lo)));
 
+/** The most one write may carry; the drawer sends a larger paste in pieces (`piecesOf`). */
+export const WRITE_MAX = 65_536;
+
 type Handle = (channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => void;
 
 /**
@@ -144,7 +168,11 @@ type Handle = (channel: string, handler: (event: unknown, ...args: unknown[]) =>
 export function registerShellCalls(handle: Handle, manager: ShellManager, folderOf: { workspace(id: string): string | null; session(id: string): string | null }): void {
   const shellId = (raw: unknown): string => (typeof raw === 'string' && /^shell-\d{1,6}$/.test(raw) ? raw : '');
   const size = (n: unknown): number | undefined => (typeof n === 'number' && Number.isFinite(n) ? n : undefined);
-  handle('deck:shells:list', () => ({ available: manager.available, shells: manager.list() }));
+  // With `recent`, each shell's latest output too: a window that loads while shells run draws them again (TASK-0211).
+  handle('deck:shells:list', (_e, recent) => {
+    const shells = manager.list();
+    return { available: manager.available, shells, ...(recent === true ? { recent: Object.fromEntries(shells.map((s) => [s.id, manager.recent(s.id)])) } : {}) };
+  });
   handle('deck:shells:open', (_e, raw, cols, rows) => {
     const where = (raw ?? {}) as { workspaceId?: unknown; sessionId?: unknown };
     const session = typeof where.sessionId === 'string' ? where.sessionId : null;
@@ -158,7 +186,8 @@ export function registerShellCalls(handle: Handle, manager: ShellManager, folder
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
-  handle('deck:shells:write', (_e, id, data) => ({ ok: typeof data === 'string' && data.length <= 65_536 && manager.write(shellId(id), data) }));
+  // A larger paste comes in pieces of at most this, from the drawer, in order.
+  handle('deck:shells:write', (_e, id, data) => ({ ok: typeof data === 'string' && data.length <= WRITE_MAX && manager.write(shellId(id), data) }));
   handle('deck:shells:resize', (_e, id, cols, rows) => ({ ok: manager.resize(shellId(id), size(cols) ?? 0, size(rows) ?? 0) }));
   handle('deck:shells:close', (_e, id) => ({ ok: manager.close(shellId(id)) }));
 }

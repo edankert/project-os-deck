@@ -95,7 +95,7 @@ const api = {
 
   // Plain shells in the drawer (FEAT-0035): opened in a folder Deck names, never one the window sends.
   shells: {
-    list: (): Promise<unknown> => ipcRenderer.invoke('deck:shells:list'),
+    list: (recent?: boolean): Promise<unknown> => ipcRenderer.invoke('deck:shells:list', recent === true),
     open: (where: unknown, cols: number, rows: number): Promise<unknown> => ipcRenderer.invoke('deck:shells:open', where, cols, rows),
     write: (id: string, data: string): Promise<unknown> => ipcRenderer.invoke('deck:shells:write', id, data),
     resize: (id: string, cols: number, rows: number): Promise<unknown> => ipcRenderer.invoke('deck:shells:resize', id, cols, rows),

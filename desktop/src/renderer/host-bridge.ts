@@ -68,7 +68,8 @@ export interface AgentBridge {
 
 /** The shells the drawer draws (FEAT-0035), in the shell only. */
 export interface ShellBridge {
-  list(): Promise<unknown>;
+  /** With `recent`, each shell's latest output as well. */
+  list(recent?: boolean): Promise<unknown>;
   open(where: { workspaceId: string } | { sessionId: string }, cols: number, rows: number): Promise<unknown>;
   write(id: string, data: string): Promise<unknown>;
   resize(id: string, cols: number, rows: number): Promise<unknown>;
