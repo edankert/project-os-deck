@@ -275,7 +275,7 @@ Focus+context, piles, animation:
 Mode awareness and the cockpit analogy:
 
 - Sarter and Woods, How in the world did we ever get into that mode? (Human Factors 1995): https://www.semanticscholar.org/paper/How-in-the-World-Did-We-Ever-Get-into-That-Mode-and-Sarter-Woods/4ee9a6e53060f4aeab08c455555bc9a2c1a0d7f0
-- The dark cockpit philosophy: https://www.airflow.blog/2025/01/16/the-dark-cockpit-philosophy-enhancing-efficiency-and-safety-in-modern-aviation/
+- The dark cockpit philosophy: https://web.archive.org/web/20251007181148/https://www.airflow.blog/2025/01/16/the-dark-cockpit-philosophy-enhancing-efficiency-and-safety-in-modern-aviation/ (archived; the site no longer answers)
 
 Accessibility:
 

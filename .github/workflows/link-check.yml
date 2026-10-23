@@ -12,12 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 429 (too many requests) means the page is there and the site is slowing the checker down.
+      # The ACM digital library answers every automated request with 403, so its links are not checked.
       - name: Check external links
         uses: lycheeverse/lychee-action@v2
         with:
           args: >-
             --no-progress
             --scheme https --scheme http
+            --accept '100..=103,200..=299,429'
+            --exclude '^https://dl\.acm\.org/'
             --exclude-path docs/__templates__
             "docs/**/*.md" "tools/**/*.md" "*.md"
           fail: true

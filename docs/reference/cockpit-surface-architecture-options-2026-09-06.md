@@ -368,7 +368,7 @@ Canvases and zooming:
 - tldraw SDK: https://tldraw.dev/
 - JSON Canvas: https://jsoncanvas.org
 - Zooming user interfaces and Pad++: https://en.wikipedia.org/wiki/Zooming_user_interface
-- Muse on the infinite canvas: https://museapp.com/memos/2020-12-infinite-canvas/
+- Muse on the infinite canvas: https://web.archive.org/web/20260422150225/https://museapp.com/memos/2020-12-infinite-canvas/ (archived; the page is gone)
 - Kinopio: https://kinopio.club/about
 - Heptabase and Scrintal compared: https://storyflow.so/blog/best-heptabase-alternatives-2026
 
