@@ -17,9 +17,9 @@ acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
-review_date: 2026-10-22
-review_verdict: changes-requested
-review_round: 1
+review_date: 2026-10-23
+review_verdict: approved
+review_round: 2
 related: ["[[FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On]]", "[[FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures]]", "[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[RISK-0013]]", "[[RISK-0015]]", "[[RISK-0016]]"]
 ---
 
@@ -79,6 +79,8 @@ What they found, each fixed in [[TASK-0209]]:
 - The composer kept one session's words and an armed Stop when another opened, and a failed Send lost its words without saying why.
 
 Also changed: a cockpit session that has ended reads as stopped, not idle. Left as they are: the model, effort and access choices in the composer are shown, not changeable, because they are chosen when a session starts; Resume beside an enabled Send on an idle session sends "Carry on." when the box is empty.
+
+**Round two, 2026-10-23, at 86854d0: approved by both reviewers.** Between them they broke about twenty guards and a check failed for each but one: both found that removing the loop that draws the bars passed every check, because only the pane's model was checked. A check now reads the bars and the Moved line as the pane draws them, and the text given back after a Send whose call throws ([[TASK-0209]]). One reviewer did not get to Open its shell, which [[TASK-0206]] built and the other checked by reading.
 
 ## Links
 
