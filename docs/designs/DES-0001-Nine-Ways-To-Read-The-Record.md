@@ -24,6 +24,9 @@ tags: [design, survey, exploration]
 
 # Nine ways to read the record, and a tenth
 
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
+
 > **Rev 2 changed what this document is.** Rev 1 drew nine *views*. Edwin's response was that he had asked for **full replacements of the cockpit** — applications carrying everything it does today, terminal included. So every plate now answers for the whole application, a capability inventory read off the code says what "everything" means, and a coverage table records which designs cannot carry it. **Four of the ten cannot, and say so.** One thing is now real: ORBIT was asked for and is filed as [[FEAT-0001]], with its visual treatment left open and drawn three ways.
 
 ## Problem

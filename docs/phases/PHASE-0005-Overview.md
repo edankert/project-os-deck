@@ -78,7 +78,7 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 
 ## Out of scope
 
-- **The card field of PHASE-0002.** Glass's bands, desks and scenes stay as they are; this phase does not repair or extend them. Its look (depth, glow, translucency) is what carries over.
+- **The card field of PHASE-0002.** Glass's bands, desks and scenes left main on 2026-10-23 by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and are kept under the git tag `original-deck-2026-10-23`. Their look (depth, glow, translucency) is what carries over.
 - **New write paths.** Re-phasing (S4) shows suggestions and moves them on screen. Writing `phase:` into a note needs a sidecar action the cockpit does not have; asking for it is a task in FEAT-0028, building it is the cockpit's.
 - **The tablet layout.** The served host shows the wheel read-only; the acceptance screens are desktop only.
 - **Forecasts.** The overview shows state and what has happened, never a prediction. Two dates are in since 2026-10-22, when Edwin asked for TASK-0177's ideas to be built (FEAT-0031): a tower's age since its last change, and the tickets closed each week. DES-0004 had put all dates out of scope.
@@ -97,7 +97,7 @@ These are rows [[PHASE-0004-Parity]] planned to adopt. This phase adopts them ea
 
 - **Order.** `order: 5` only because the field cannot repeat. Edwin set Glass aside on 2026-10-08 to get the overview right first (DES-0004), so this phase is worked next. He set it `active` on 2026-10-14. Moving it in [PHASES.md](../PHASES.md) is his call.
 - **Open questions carried from DES-0004.** How a backlog phase is marked (an id ending in 999, or `kind: backlog`); whether an open risk is amber; whether accepting a re-phase suggestion should write. The design lane proposes an answer to each in DES-0005, and Edwin decides when he accepts it.
-- **Depends on PHASE-0001** for the store, the addresses, the view provider and Deck's index. It does not depend on PHASE-0002's unfinished work.
+- **Depends on PHASE-0001** for the store, the addresses and Deck's index. That work is finished and stays on main, although PHASE-0001 is parked; the view provider left main with Spread and Glass ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]). It does not depend on PHASE-0002.
 
 ## Where this stands
 

@@ -7,18 +7,21 @@ status: active
 order: 3
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-10-22
+updated: 2026-10-23
 goal: "Deck carries what the cockpit does for a working day, adopted row by row from the cockpit's capability register, until Edwin does a real task in Deck instead of the cockpit and records which he would rather have used."
-features: ["[[FEAT-0021]]", "[[FEAT-0030]]", "[[FEAT-0032]]", "[[FEAT-0033]]", "[[FEAT-0034]]", "[[FEAT-0035]]"]
+features: ["[[FEAT-0030]]", "[[FEAT-0032]]", "[[FEAT-0033]]", "[[FEAT-0034]]", "[[FEAT-0035]]"]
 requirements: []
 tasks: ["[[TASK-0178]]", "[[TASK-0188]]", "[[TASK-0191]]", "[[TASK-0192]]", "[[TASK-0193]]", "[[TASK-0194]]", "[[TASK-0195]]", "[[TASK-0196]]", "[[TASK-0197]]", "[[TASK-0198]]", "[[TASK-0199]]", "[[TASK-0200]]", "[[TASK-0201]]", "[[TASK-0202]]", "[[TASK-0203]]", "[[TASK-0204]]", "[[TASK-0205]]", "[[TASK-0206]]", "[[TASK-0207]]", "[[TASK-0208]]", "[[TASK-0209]]", "[[TASK-0210]]", "[[TASK-0211]]", "[[TASK-0212]]"]
 issues: []
-depends: ["[[PHASE-0002-Glass]]"]
-related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
+depends: []
+related: ["[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[DES-0002-The-Glass-Cockpit]]"]
 tags: [phase, parity, console, cockpit]
 ---
 
 # Parity
+
+> [!note] Deck is the overview since 2026-10-23
+> Spread, Glass and the orbit left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and are kept under the git tag `original-deck-2026-10-23`. Where this phase says "the field", it describes the plan as it was written. The shell drawer took the console's place ([[FEAT-0035-Plain-Shells-Open-In-A-Drawer-Several-At-Once]]), and FEAT-0021 moved to PHASE-0002, parked with the Glass documents it builds on.
 
 ## Goal
 
@@ -67,7 +70,7 @@ Two words are used throughout. **Parity** means Deck does what the cockpit does 
 
 **Why this phase comes after Glass and before Vault.** Edwin, 2026-09-07: build Glass first, iron out its issues, then work on parity. The walk that judges Deck against the cockpit was PHASE-0001's seventh criterion and could not be answered there; it belongs to the phase whose whole purpose is that Deck can carry a working day. Vault was third in the order of 2026-09-06 and is now fourth; its note says its place was the stated order rather than a technical constraint.
 
-**Depends on [[PHASE-0002-Glass]].** The console is furniture in the field, so the field's obstacle rule and slot geometry exist first. Nothing here depends on the orbit arrangement or on FEAT-0001's measurements.
+**Depends on nothing still open.** It was written to depend on [[PHASE-0002-Glass]], because the console was to be furniture in the field. Since 2026-10-23 the field has left main ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), and the console is the shell drawer, which needs no field.
 
 **Some features of this phase are not scaffolded yet.** FEAT-0032 to FEAT-0035 were scaffolded on 2026-10-22 when the phase opened. [[FEAT-0021-Project-To-Evidence-Levels-Guide-Deck]] is one backlog note for the proposed project-to-evidence progression. It has no requirements, tasks or acceptance check until the cockpit decides DES-0015 and DES-0016 and this phase opens. Other features are cut from the adoption table when the phase opens, one feature per group of rows above, so the register remains the list of what parity means. Two are certain: the console (with the T3 Code evaluation as its first task) and the pages.
 

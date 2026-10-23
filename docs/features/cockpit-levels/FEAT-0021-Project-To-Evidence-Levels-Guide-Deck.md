@@ -2,11 +2,11 @@
 type: "[[feature]]"
 id: FEAT-0021
 title: "Project-to-evidence levels guide Deck after cockpit contracts are decided"
-status: backlog
-phase: "[[PHASE-0004-Parity]]"
+status: deferred
+phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin 2026-10-01: 'Review the current electron glass functionality and suggest how to make it more like a real minority report style UX, also consider the suggested layering and abstractions that have been defined as part of the ../project-os-cockpit project.'", "Edwin 2026-10-01: 'Okay, create the notes (requirements/features/tasks etc) which cover these changes.'", "[[REFERENCE-GLASS-AND-COCKPIT-LEVELS-REVIEW]]", "Edwin: This sounds great update the documents to support this fully.", "[[REFERENCE-GLASS-INTERACTION-COMPARABLES-REVIEW]]"]
 goal: "Deck can move from an exact project summary to flows, subjects, full notes and evidence while preserving the selected project or note."
 requirements: []
@@ -17,6 +17,9 @@ related: ["[[PHASE-0004-Parity]]", "[[FEAT-0020-Collections-And-Full-Notes-Live-
 ---
 
 # Project-to-evidence levels guide Deck after cockpit contracts are decided
+
+> [!note] Parked 2026-10-23
+> This feature opens its evidence on Glass's documents (FEAT-0020, FEAT-0022, FEAT-0024), which left main with the original Deck by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. It moved from PHASE-0004 to PHASE-0002 and is parked with it. Its code base is kept under the git tag `original-deck-2026-10-23`.
 
 ## Goal
 

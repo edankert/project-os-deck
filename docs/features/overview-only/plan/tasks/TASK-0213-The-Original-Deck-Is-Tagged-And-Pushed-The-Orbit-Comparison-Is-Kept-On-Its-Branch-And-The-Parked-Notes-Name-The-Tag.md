@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0213
 aliases: ["TASK-0213"]
 title: "The original Deck is tagged and pushed, the orbit comparison is kept on its own branch, and every parked note names the tag"
-status: backlog
+status: done
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23
@@ -23,10 +23,10 @@ tests: ["[[TST-0109]]"]
 **After this task the tag and the branch are on origin, and every unfinished note of the original Deck is `deferred` and says where its code went.** Nothing is removed from the code yet.
 
 ## Definition of Done
-- [ ] `git ls-remote --tags origin original-deck-2026-10-23` names commit `b1bc30b` (the annotated tag exists locally already).
-- [ ] `parked/original-deck`, which starts at the tag, holds TASK-0005's orbit comparison and is pushed. That work is the TASK-0005 note's edits, `docs/designs/DES-0001-orbit-comparison.html` and `docs/designs/__attachments__/TASK-0005-orbit-comparison/`.
-- [ ] TASK-0005 on main is parked as below.
-- [ ] The phase notes are edited as below, and `bash tools/scripts/validate-docs.sh` reports no new finding.
+- [x] `git ls-remote --tags origin original-deck-2026-10-23` names commit `b1bc30b` (the annotated tag exists locally already).
+- [x] `parked/original-deck`, which starts at the tag, holds TASK-0005's orbit comparison and is pushed. That work is the TASK-0005 note's edits, `docs/designs/DES-0001-orbit-comparison.html` and `docs/designs/__attachments__/TASK-0005-orbit-comparison/`.
+- [x] TASK-0005 on main is parked as below.
+- [x] The phase notes are edited as below, and `bash tools/scripts/validate-docs.sh` reports no new finding.
 
 ## Done in the preflight (2026-10-23)
 - PHASE-0001, PHASE-0002 and PHASE-0003 are `deferred`, each with a "Parked" callout naming ADR-0010 and the tag.
@@ -59,3 +59,10 @@ tests: ["[[TST-0109]]"]
 
 ## Notes
 The validator does not check status transitions, only allowed values. STATUSES.md lists `planned → deferred` for a phase, and PHASE-0001 and PHASE-0002 went from `active` to `deferred`; nothing refuses that. Deferred items keep `phase:` on their own deferred phase, which satisfies DEFER-HOME: that is where they would resume.
+
+## Verification
+
+- 2026-10-23: `git ls-remote --tags origin original-deck-2026-10-23` names the annotated tag object `c29c3f4`, which points at commit `b1bc30b`. `parked/original-deck` is on origin at `4dbf274`, one commit on the tag. Each of its ten files was compared byte for byte with the working tree (`git show parked/original-deck:<path> | cmp`) before the working tree was cleared.
+- TASK-0005 is `deferred` with `origin:` FEAT-0001 and no parent, and FEAT-0001 lists it under `deferred:`. DES-0001, DES-0002 and DES-0003 carry the Parked callout and stay `proposed`.
+- FEAT-0021 moved to PHASE-0002 and is `deferred`, because its evidence opens on Glass's documents. PHASE-0004 depends on nothing still open, and PHASE-0005 and `docs/PHASES.md` say what left main and what stays.
+- `bash tools/scripts/validate-docs.sh` reports no error. Its ten CITES-SUPERSEDED warnings name test notes that TASK-0216 retires, plus DES-0003 and RISK-0007, which TASK-0217 rewrites.

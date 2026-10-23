@@ -3,13 +3,14 @@ type: "[[task]]"
 id: TASK-0005
 aliases: ["TASK-0005"]
 title: "The treatment is chosen, not assumed — the sky, the instrument and the wooden table are drawn, and a person picks"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["Edwin 2026-09-05: 'this feels a little minority report like or did you have something more like (wooden) play blocks in mind'"]
-parent: "FEAT-0001"
+parent: ""
+origin: "[[FEAT-0001-The-Corpus-Has-An-Inside]]"
 effort: ""
 due: ""
 depends: []
@@ -19,6 +20,11 @@ tests: []
 ---
 
 # The treatment is chosen, not assumed
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
+>
+> The orbit comparison this task was making when it stopped, never committed, is saved on the branch `parked/original-deck`.
 
 ## Objective
 

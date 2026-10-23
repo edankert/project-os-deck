@@ -21,6 +21,9 @@ related: ["[[DES-0002]]", "[[ADR-0006]]", "[[REQ-0001]]", "[[REQ-0002]]", "[[REQ
 
 # Collections and documents on Glass
 
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
+
 ## Problem
 
 Glass's collections and full note text currently compete with fixed columns and small panes. The existing focus specification also preserves duplicate neighbour cards and changes a document's size or arrangement when it moves. These behaviors prevent the person from treating the field as a dependable workspace.
