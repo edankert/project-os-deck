@@ -3,7 +3,7 @@ type: "[[adr]]"
 id: ADR-0007
 aliases: ["ADR-0007"]
 title: "A scene is a saved desk that is read live when reopened, and a handoff between windows waits for the destination to draw the note"
-status: proposed
+status: superseded
 owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-02
@@ -28,7 +28,7 @@ consequences:
   - "FEAT-0015's open question, whether a saved desk remembers its view, is answered for version 2 scenes only, and that answer is Edwin's to confirm"
   - "RISK-0007 is widened to cover the scene version and a handoff's rollback"
 supersedes: ""
-superseded: ""
+superseded: "[[ADR-0010]]"
 amends: ""
 related: ["[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]", "[[REQ-0004-A-Glass-Scene-Reopens-With-Live-Content-And-Says-What-Changed]]", "[[REQ-0005-A-Handoff-Is-Acknowledged-Before-The-Source-Lets-Go]]", "[[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[DES-0003-Collections-And-Documents-On-Glass]]", "[[FEAT-0015-Each-View-Keeps-Its-Own-Desk]]", "[[FEAT-0014-The-Hands]]", "[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]", "[[RISK-0007-Glass-Restoration-Loses-Identity-Or-Layout]]"]
 ---

@@ -3,11 +3,11 @@ type: "[[phase]]"
 id: PHASE-0001
 aliases: ["PHASE-0001"]
 title: "Deck — one store, windows on any screen, and Spread as the first view"
-status: active
+status: deferred
 order: 1
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-11
+updated: 2026-10-23
 goal: "Deck becomes a running application beside the cockpit: one Electron shell whose state lives in the main process, notes shown as cards a person can move onto any screen, and the same renderer served read-only over the local network for a tablet."
 features: ["[[FEAT-0002-Deck-Opens-A-Workspace]]", "[[FEAT-0003-One-Store-In-The-Main-Process]]", "[[FEAT-0004-Windows-On-Any-Screen]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[FEAT-0006-Every-State-Has-An-Address]]", "[[FEAT-0007-Views-Come-From-A-Provider]]", "[[FEAT-0008-One-Renderer-Two-Hosts]]", "[[FEAT-0011-Decks-Own-Index]]", "[[FEAT-0012-A-View-Is-A-Description]]", "[[FEAT-0013-The-First-Write]]"]
 requirements: []
@@ -19,6 +19,10 @@ tags: [phase, deck, spread, shell]
 ---
 
 # Deck
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
+> The finished foundation this phase built stays on main and carries the overview: the store, Deck's own index, the sidecar client, the host that serves a tablet read-only, and writes through the shell. What is parked is the rest: Spread, the satellite and pop-out windows, the view switcher and the four acceptance tests still owed.
 
 ## Where PHASE-0001 stands, 2026-09-10
 

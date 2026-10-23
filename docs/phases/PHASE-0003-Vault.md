@@ -3,11 +3,11 @@ type: "[[phase]]"
 id: PHASE-0003
 aliases: ["PHASE-0003"]
 title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
-status: planned
+status: deferred
 order: 4
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-10-23
 goal: "Deck opens an Obsidian vault as a workspace and shows what that vault already carries — its note types, its saved views, its boards and its statuses — reading everything and writing none of Obsidian's files."
 features: []
 requirements: []
@@ -19,6 +19,10 @@ tags: [phase, vault, obsidian, profile]
 ---
 
 # Vault
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
+> Vault was never opened. It was built on Spread's view provider, which leaves main with Spread.
 
 ## Goal
 

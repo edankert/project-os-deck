@@ -3,15 +3,16 @@ type: "[[feature]]"
 id: FEAT-0017
 aliases: ["FEAT-0017"]
 title: "An opened note stands in the middle of its neighbours: in Glass and in the orbit a lifted note moves to the middle of the field, and the notes it is joined to gather on a ring around it"
-status: review
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin 2026-09-11: 'when selecting something in orbit the main item should open up and all the directly connected items show as mini notes'", "Edwin 2026-09-11: 'when selecting in glass, the opened up item should replace the note (possibly move to the center?? Review and research how this work fully online) and the associated notes should show their connections and should be shown around the opened note.'", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]", "[[DES-0002-The-Glass-Cockpit]]", "Edwin: This sounds great update the documents to support this fully."]
 goal: "A selected note opens at the person's chosen reading size with its existing related cards around it. Moving the document preserves that size and carries its neighbourhood. A note has one spatial object, and off-screen neighbours remain reachable."
 requirements: []
-tasks: ["[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring]]", "[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
+tasks: ["[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0068-An-Opened-Note-Moves-To-The-Middle]]", "[[TASK-0069-The-Neighbours-Gather-On-A-Ring-As-Mini-Notes]]", "[[TASK-0070-The-Orbit-Opens-A-Note-The-Same-Way]]", "[[TASK-0071-The-Smoke-Run-Drives-The-Middle-And-The-Ring]]"]
+deferred: ["[[TASK-0104]]"]
 release: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-02
@@ -24,6 +25,9 @@ related: ["[[PHASE-0002-Glass]]", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]", "[[DES-0
 ---
 
 # An opened note keeps its size and neighbourhood
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Goal
 

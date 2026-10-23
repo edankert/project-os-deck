@@ -2,11 +2,11 @@
 type: "[[issue]]"
 id: ISS-0092
 title: "The window smoke run in CI fails about half the time on one Glass check, a second press through a document that is still growing"
-status: open
-phase:
+status: deferred
+phase: "[[PHASE-0002-Glass]]"
 owner: unassigned
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-23
 source: ["CI deck-smoke runs on main, 2026-10-14 to 2026-10-16"]
 reported_by: agent
 question: ""
@@ -19,6 +19,9 @@ tasks: ["[[TASK-0170]]", "[[TASK-0171]]", "[[TASK-0172]]", "[[TASK-0174]]", "[[T
 ---
 
 # The window smoke run in CI fails about half the time on one Glass check
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Problem
 

@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0001
 aliases: ["FEAT-0001"]
 title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-05
-updated: 2026-09-11
+updated: 2026-10-23
 source: ["Edwin 2026-09-05: 'I like the idea of the 3d world fly-through ... I would like an orbit view in the application in general, so feel free to create the corresponding docs for thus'", "Edwin 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity'"]
 goal: "Give Deck a view of the link graph as a whole — 16148 edges over 1537 notes, coloured by status band, entered by flying rather than by listing — so the structural questions the reader cannot currently ask (what does nothing link to, which clusters hang by one edge) have somewhere to be asked."
 requirements: []
@@ -20,6 +20,9 @@ related: ["[[DES-0001-Nine-Ways-To-Read-The-Record]]", "[[DES-0002-The-Glass-Coc
 ---
 
 # The corpus has an inside
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Goal
 

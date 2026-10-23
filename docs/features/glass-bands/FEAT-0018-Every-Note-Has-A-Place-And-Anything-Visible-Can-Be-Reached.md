@@ -3,18 +3,19 @@ type: "[[feature]]"
 id: FEAT-0018
 aliases: ["FEAT-0018"]
 title: "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward"
-status: review
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-10-23
 source:
   - "Edwin 2026-09-12: 'Not sure now I know what the quiet band was supposed to be used for. Maybe we need more bands and allow cards to be brought up to the active front band????'"
   - "Edwin 2026-09-12, agreeing to the plan below: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.'"
   - "[[ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place]]"
 goal: "Every note a Glass view holds is somewhere a person can see and point at. The work the middle had no room for stands in a fourth band, the outer field, rather than being counted and dropped, and a finished note behind you can be clicked, tabbed to and pulled forward. No band promises to draw all of it: each one places what its shape holds, says how many it left out, and takes that shape from how much it is actually holding."
 requirements: []
-tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]", "[[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]", "[[TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit]]", "[[TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]", "[[TASK-0173-A-View-Switch-Shapes-The-Bands-From-That-Views-Own-Notes]]"]
+tasks: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]", "[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]", "[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]", "[[TASK-0075-The-Field-Draws-Four-Bands-And-States-Every-Remainder]]", "[[TASK-0076-Anything-Visible-Is-Clickable-On-The-Canvas-Too]]", "[[TASK-0077-A-Tile-Large-Enough-Becomes-A-Real-Card]]", "[[TASK-0078-The-Smoke-Run-Clicks-A-Finished-Note-And-Pulls-It-Forward]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-All-Three-Workspaces]]", "[[TASK-0080-A-Free-List-Behind-Glasss-Note-To-Element-Map]]", "[[TASK-0081-A-Box-For-The-Smoke-Run-To-Open-Windows-In]]", "[[TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned]]", "[[TASK-0173-A-View-Switch-Shapes-The-Bands-From-That-Views-Own-Notes]]"]
+deferred: ["[[TASK-0082]]", "[[TASK-0083]]"]
 release: ""
 acceptance_exception: ""
 reviewed_by: model:claude-opus-5
@@ -25,6 +26,9 @@ related: ["[[PHASE-0002-Glass]]", "[[ADR-0005-Four-Bands-And-Every-Band-States-W
 ---
 
 # Every note has a place, and anything visible can be reached
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Goal
 

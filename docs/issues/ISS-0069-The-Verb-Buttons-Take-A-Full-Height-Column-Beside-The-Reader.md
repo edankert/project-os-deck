@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0069
 aliases: ["ISS-0069"]
 title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
-status: open
+status: deferred
 phase: "[[PHASE-0001-Deck]]"
 owner: user:edwin
 created: 2026-09-11
-updated: "2026-10-02"
+updated: 2026-10-23
 source: ["Edwin 2026-09-11: 'On spread an list when selecting an item which needs to be approved or declined it opens a huge vertical area on the right, this should probably be handled differently and shown as just a strip somewhere??? Review and suggest.'", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]"]
 reported_by: user:edwin
 severity: medium
@@ -19,6 +19,9 @@ question: "Where should the approve and decline buttons go in Spread and List? O
 ---
 
 # The approve and decline buttons take a full-height column beside the reader
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Problem
 

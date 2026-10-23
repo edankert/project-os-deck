@@ -2,11 +2,11 @@
 type: "[[requirement]]"
 id: REQ-0005
 title: "A handoff between windows is acknowledged before the source lets go"
-status: approved
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin 2026-10-02: 'Scaffold FEAT-0023 into implementable requirements, tasks and tests, then deliver named scenes and reliable cross-screen handoff.'", "[[ADR-0007-A-Scene-Is-A-Saved-Desk-Read-Live-And-A-Handoff-Waits-For-The-Destination]]", "[[DES-0003-Collections-And-Documents-On-Glass]]"]
 priority: high
 scope: "A note sent from a Glass desk to another Deck window, a display or the tablet"
@@ -18,6 +18,9 @@ tests: ["[[TST-0073-A-Scene-Reopens-And-A-Note-Crosses-Screens]]", "[[TST-0075-A
 ---
 
 # A handoff between windows is acknowledged before the source lets go
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Statement
 

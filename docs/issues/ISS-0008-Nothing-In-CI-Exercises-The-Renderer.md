@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0008
 aliases: ["ISS-0008"]
 title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
-status: open
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-07
-updated: "2026-09-19"
+updated: 2026-10-23
 source: ["Independent review of the PHASE-0001 Spread work, 2026-09-07"]
 reported_by: review
 severity: medium
@@ -19,6 +19,9 @@ question: "Is the smoke run (now in CI on every push, and runnable locally in a 
 ---
 
 # Nothing in continuous integration exercises the renderer
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Problem
 

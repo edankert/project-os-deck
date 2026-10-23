@@ -2,13 +2,14 @@
 type: "[[task]]"
 id: TASK-0104
 title: "Preserve note identity, chosen size and neighbourhood while moving"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin: This sounds great update the documents to support this fully.", "[[ISS-0070]]", "[[ISS-0071]]", "[[ISS-0072]]", "[[REFERENCE-GLASS-INTERACTION-COMPARABLES-REVIEW]]"]
-parent: "[[FEAT-0017]]"
+parent: ""
+origin: "[[FEAT-0017]]"
 effort: large
 due: ""
 depends: []
@@ -18,6 +19,9 @@ tests: ["[[TST-0052]]", "[[TST-0045]]", "[[TST-0051]]", "[[TST-0065]]"]
 ---
 
 # Keep one note and its neighbourhood intact
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 A note opened in Glass is now drawn once, at the size the person chose, and dragging it carries the cards gathered round it. The repair is committed. An independent review on 2026-10-02 found two defects in it and gaps in its two suites. Those are fixed in the commits merged in `0dc5708`, and the pass at `18f5405` ran the fixes; "Notes" says what they were. One box below is still open, the rendering cost on the Mac, so this task stays `doing`. TST-0052, the walk a person makes, has not been walked.
 

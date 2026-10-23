@@ -3,7 +3,7 @@ type: "[[adr]]"
 id: ADR-0002
 aliases: ["ADR-0002"]
 title: "Glass is Deck's main view, built before parity with the cockpit; Spread stays a view beside it and the two share one desk"
-status: accepted
+status: superseded
 owner: user:edwin
 created: 2026-09-07
 updated: 2026-09-07
@@ -14,7 +14,7 @@ decided_option: 2
 alternatives: ["Keep the order: finish Spread, reach parity, then build Glass gated on the measurements", "Build Glass now as the main view, with the measurements as exit criteria", "Build Glass only and retire Spread"]
 consequences: ["The surface Deck opens for a workspace is Glass; Spread is reached by switching", "The address grammar gains a surface, with glass the default when the address does not say", "Views stay the provider's; Glass arranges the groups the sidecar already sends, and asks nothing new of the sidecar", "The desk is one store object shown by both surfaces, so a note lifted in Glass is on the desk in Spread", "FEAT-0001's measurements are written down as numbers when the phase closes, and a failed number costs the orbit arrangement, not the field", "If the field cannot hold its frame rate on a laptop, Spread returns to being the default and the phase note records it", "TST-0015 moves to the Parity phase, PHASE-0004, and PHASE-0001 loses that criterion"]
 supersedes: ""
-superseded: ""
+superseded: "[[ADR-0010]]"
 related: ["[[PHASE-0002-Glass]]", "[[PHASE-0004-Parity]]", "[[PHASE-0001-Deck]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0001-The-Corpus-Has-An-Inside]]", "[[FEAT-0005-Spread-Cards-On-A-Desk]]", "[[TST-0015-One-Real-Task-Done-In-Deck-Instead-Of-The-Cockpit]]", "[[DES-0002-The-Glass-Cockpit]]", "[[REFERENCE-DES-0002-REVIEW]]", "[[REFERENCE-SURFACE-ARCHITECTURE-OPTIONS]]"]
 ---
 

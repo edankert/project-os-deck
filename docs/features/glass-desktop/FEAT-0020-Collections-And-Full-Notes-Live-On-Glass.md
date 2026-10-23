@@ -2,15 +2,16 @@
 type: "[[feature]]"
 id: FEAT-0020
 title: "Collections and full notes live on the Glass desktop"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin 2026-10-01: This sounds great update the documents to support this fully.", "[[REFERENCE-GLASS-INTERACTION-COMPARABLES-REVIEW]]", "Edwin 2026-10-01: 'Agree but I also want to see the actual note detailed/text view to be visible as part of the desktop and the derived lists should also be visible in the actual view to interact with not to the side like they currently are. Review and suggest how to handle this'", "Edwin 2026-10-01: 'Okay, create the notes (requirements/features/tasks etc) which cover these changes.'", "[[REFERENCE-GLASS-AND-COCKPIT-LEVELS-REVIEW]]"]
 goal: "The current derived list and any opened note's full text are movable, readable objects on the main Glass desktop. A row, document and field card identify the same note and can be used together."
 requirements: ["[[REQ-0001-Glass-Collections-Remain-Exact-And-Interactive]]", "[[REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk]]"]
-tasks: ["[[TASK-0095-Model-An-Exact-Collection-On-The-Desk]]", "[[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]]", "[[TASK-0097-Open-The-Full-Note-As-A-Glass-Document]]", "[[TASK-0098-Keep-Collection-Document-And-Field-In-Sync]]", "[[TASK-0099-Walk-The-Glass-Desktop-At-Real-Scale]]", "[[TASK-0100-Document-The-Glass-Interaction-Direction]]"]
+tasks: ["[[TASK-0095-Model-An-Exact-Collection-On-The-Desk]]", "[[TASK-0096-Draw-And-Operate-The-Collection-In-Glass]]", "[[TASK-0097-Open-The-Full-Note-As-A-Glass-Document]]", "[[TASK-0098-Keep-Collection-Document-And-Field-In-Sync]]", "[[TASK-0100-Document-The-Glass-Interaction-Direction]]"]
+deferred: ["[[TASK-0099]]"]
 release: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-02
@@ -22,6 +23,9 @@ related: ["[[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]]", "[[DES
 ---
 
 # Collections and full notes live on the Glass desktop
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Goal
 

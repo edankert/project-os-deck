@@ -3,11 +3,11 @@ type: "[[issue]]"
 id: ISS-0086
 aliases: ["ISS-0086"]
 title: "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the feature's title and goal promise more than the field delivers"
-status: open
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: "2026-09-19"
+updated: 2026-10-23
 source: ["Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17", "Recorded and not decided when the feature was built, 2026-09-12"]
 reported_by: review
 question: "On Your Trainer's Features view 186 of 317 notes are counted but drawn nowhere; should the outer field gain more layers so they are drawn (more work, and the field needs re-measuring), or should FEAT-0018's title and Goal be narrowed to say no note is dropped silently and every band states what it could not place (no code)? Recommendation: narrow the title and Goal now, and file layers as a separate issue if you want them."
@@ -19,6 +19,9 @@ tests: []
 ---
 
 # The outer field leaves 186 notes unplaced
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Problem
 

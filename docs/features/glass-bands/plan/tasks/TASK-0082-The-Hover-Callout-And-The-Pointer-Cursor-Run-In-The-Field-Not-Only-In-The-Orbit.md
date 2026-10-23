@@ -3,13 +3,14 @@ type: "[[task]]"
 id: TASK-0082
 aliases: ["TASK-0082"]
 title: "The hover callout and the pointer cursor run in the field as well as in the orbit, and the check that stands for the cursor asserts the cursor"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: 2026-10-23
 source: ["[[ISS-0081-Resting-The-Pointer-On-A-Tile-Does-Nothing-Because-The-Handler-Only-Runs-In-The-Orbit]]", "Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17"]
-parent: "FEAT-0018"
+parent: ""
+origin: "[[FEAT-0018]]"
 effort: "S"
 due: ""
 depends: []
@@ -19,6 +20,9 @@ tests: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[TST-0056-Every-No
 ---
 
 # The hover callout and the pointer cursor run in the field
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Objective
 

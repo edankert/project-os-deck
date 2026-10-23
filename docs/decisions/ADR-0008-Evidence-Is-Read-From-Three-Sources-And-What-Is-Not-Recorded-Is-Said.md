@@ -3,7 +3,7 @@ type: "[[adr]]"
 id: ADR-0008
 aliases: ["ADR-0008"]
 title: "Evidence is read from Deck's index, the acceptance ledger's payload and the rendered note, and what none of them records is said in words"
-status: proposed
+status: superseded
 owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-02
@@ -27,7 +27,7 @@ consequences:
   - "A test with a `command:` shows no result, in this feature and until some source records one"
   - "FEAT-0021's levels, flows, level control, level address and A1 counts stay parked in PHASE-0004"
 supersedes: ""
-superseded: ""
+superseded: "[[ADR-0010]]"
 amends: ""
 related: ["[[FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports]]", "[[REQ-0006-Evidence-Beside-A-Claim-Names-Its-Source-And-Says-What-Is-Missing]]", "[[FEAT-0021-Project-To-Evidence-Levels-Guide-Deck]]", "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[ADR-0001-Deck-Serves-Its-Own-Read-Only-Host]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk]]", "[[DES-0003-Collections-And-Documents-On-Glass]]", "[[REFERENCE-COCKPIT-ADOPTION]]", "[[RISK-0008-The-Evidence-Panel-Misreports-A-Verdict-When-The-Acceptance-Payload-Changes]]", "[[project-os-cockpit#DES-0016]]", "[[project-os-cockpit#REFERENCE-CAPABILITY-REGISTER]]"]
 ---

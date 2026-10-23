@@ -2,13 +2,14 @@
 type: "[[task]]"
 id: TASK-0110
 title: "Walk scenes and handoff at real scale"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"]
-parent: "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"
+parent: ""
+origin: "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"
 effort: M
 due: ""
 depends: ["[[TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass]]", "[[TASK-0109-Show-The-Destination-The-Arrival-And-The-Way-Back]]"]
@@ -18,6 +19,9 @@ tests: ["[[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]", "[[TST
 ---
 
 # Walk scenes and handoff at real scale
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 The evidence for FEAT-0023. Two scripted walks drive scenes and handoff in the real application with a real pointer and keyboard and keep pictures: `desktop/demos/glass-scenes.cjs` and `desktop/demos/glass-handoff.cjs`. The acceptance check is a person's, and this task prepares it without recording a verdict for it.
 

@@ -2,13 +2,14 @@
 type: "[[task]]"
 id: TASK-0103
 title: "Walk collection forms and arrangements at scale"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"]
-parent: "[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"
+parent: ""
+origin: "[[FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored]]"
 effort: medium
 due: ""
 depends: ["[[TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements]]"]
@@ -18,6 +19,9 @@ tests: ["[[TST-0064-Glass-Collections-And-Arrangements-Stay-Exact]]"]
 ---
 
 # Walk collection forms and arrangements at scale
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Definition of Done
 

@@ -2,15 +2,16 @@
 type: "[[feature]]"
 id: FEAT-0023
 title: "A Glass scene reopens and crosses screens without losing its work"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin 2026-10-02: 'Complete the documented later Glass enhancements: Scaffold FEAT-0023 into implementable requirements, tasks and tests, then deliver named scenes and reliable cross-screen handoff.'", "Edwin 2026-10-01: 'This sounds great update the documents to support this fully.'", "[[REFERENCE-GLASS-INTERACTION-COMPARABLES-REVIEW]]"]
 goal: "A person can return to a named arrangement of a view's live collection and documents, and send a document to another window or display without losing its identity, size or reading position."
 requirements: ["[[REQ-0004-A-Glass-Scene-Reopens-With-Live-Content-And-Says-What-Changed]]", "[[REQ-0005-A-Handoff-Is-Acknowledged-Before-The-Source-Lets-Go]]"]
-tasks: ["[[TASK-0106-Keep-A-Scene-In-The-Store]]", "[[TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass]]", "[[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]]", "[[TASK-0109-Show-The-Destination-The-Arrival-And-The-Way-Back]]", "[[TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale]]"]
+tasks: ["[[TASK-0106-Keep-A-Scene-In-The-Store]]", "[[TASK-0107-Save-Reopen-And-Undo-Scenes-In-Glass]]", "[[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]]"]
+deferred: ["[[TASK-0109]]", "[[TASK-0110]]"]
 release: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-02
@@ -21,6 +22,9 @@ related: ["[[DES-0003-Collections-And-Documents-On-Glass]]", "[[ADR-0007-A-Scene
 ---
 
 # Return to a Glass scene and carry work across screens
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 > [!quote] As asked — Edwin, 2026-10-02
 > 4. Complete the documented later Glass enhancements: Scaffold FEAT-0023 into implementable requirements, tasks and tests, then deliver named scenes and reliable cross-screen handoff. […] Respect the documented phase and authority boundaries. Do not fabricate evidence, relationship meanings or unsupported backend fields. Identify any genuinely external dependency precisely and continue all independent work.

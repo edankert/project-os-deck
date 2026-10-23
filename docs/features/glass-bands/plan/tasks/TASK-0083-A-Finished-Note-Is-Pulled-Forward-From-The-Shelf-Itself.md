@@ -3,13 +3,14 @@ type: "[[task]]"
 id: TASK-0083
 aliases: ["TASK-0083"]
 title: "A finished note is pulled to the front band from the shelf as it is drawn, by the keyboard and by a drag, without first being zoomed into an element"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-17
-updated: 2026-09-17
+updated: 2026-10-23
 source: ["[[ISS-0082-A-Finished-Note-On-A-Large-Workspace-Can-Never-Be-Pulled-To-The-Front-Band]]", "Independent review of [[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]], round one, 2026-09-17", "Edwin 2026-09-12: 'Maybe we need more bands and allow cards to be brought up to the active front band????'"]
-parent: "FEAT-0018"
+parent: ""
+origin: "[[FEAT-0018]]"
 effort: "M"
 due: ""
 depends: []
@@ -19,6 +20,9 @@ tests: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[TST-0056-Every-No
 ---
 
 # A finished note is pulled forward from the shelf itself
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Objective
 

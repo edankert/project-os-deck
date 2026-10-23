@@ -2,13 +2,14 @@
 type: "[[task]]"
 id: TASK-0109
 title: "Show the destination, the arrival and the way back"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"]
-parent: "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"
+parent: ""
+origin: "[[FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens]]"
 effort: M
 due: ""
 depends: ["[[TASK-0108-Acknowledge-A-Handoff-In-The-Main-Process]]"]
@@ -18,6 +19,9 @@ tests: ["[[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]", "[[TST
 ---
 
 # Show the destination, the arrival and the way back
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 The window's half of the handoff. A person sees where a note is going and which act it is before they let go, sees it arrive in the other window, and can send it back. TASK-0108 supplies the states; this task draws them. It was built in commit `f80339f`. The arrival in a desk window was changed in `5f706a5` and `9379a0c`. Commit `9d94fa0` built the seven things the first close-out found missing and fixed two defects. Commit `972985f` drew the chooser's sentence whole, and commits `5d5b38f`, `39915fe` and `972ce73` fixed what the independent review found in the handoff.
 

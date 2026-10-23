@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0015
 aliases: ["FEAT-0015"]
 title: "Each view keeps its own desk, a note can be kept on every view, and one button hides every held note in a window"
-status: review
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["Edwin 2026-09-11: 'I need a button to hide everything (all the open items) on the desk. Also, we probably need to have different open items on different views, maybe some can be marked to be open on all views?'", "[[DES-0002-The-Glass-Cockpit]]"]
 goal: "A person can hide every note they are holding with one button and bring them all back with the same button, without putting any of them back. Each view (Issues, Features and the rest) keeps its own set of held notes, so switching view shows the notes held for that view; a note marked 'on every view' stays on the desk whichever view is chosen."
 requirements: []
@@ -19,6 +19,9 @@ related: ["[[PHASE-0002-Glass]]", "[[FEAT-0010-Lifting-A-Note]]", "[[FEAT-0014-T
 ---
 
 # Each view keeps its own desk, and held notes can be hidden
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Goal
 

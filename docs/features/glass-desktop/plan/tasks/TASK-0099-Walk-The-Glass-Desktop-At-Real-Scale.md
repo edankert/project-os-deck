@@ -2,13 +2,14 @@
 type: "[[task]]"
 id: TASK-0099
 title: "Walk the Glass desktop at real scale"
-status: doing
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"]
-parent: "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"
+parent: ""
+origin: "[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]"
 effort: medium
 due: ""
 depends: ["[[TASK-0098-Keep-Collection-Document-And-Field-In-Sync]]"]
@@ -18,6 +19,9 @@ tests: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]"]
 ---
 
 # Walk the Glass desktop at real scale
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Definition of Done
 

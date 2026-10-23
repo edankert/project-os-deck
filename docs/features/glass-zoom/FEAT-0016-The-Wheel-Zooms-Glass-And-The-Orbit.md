@@ -3,11 +3,11 @@ type: "[[feature]]"
 id: FEAT-0016
 aliases: ["FEAT-0016"]
 title: "The mouse wheel zooms Glass and the orbit toward the pointer, and three keys do the same from the keyboard"
-status: review
+status: deferred
 phase: "[[PHASE-0002-Glass]]"
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-23
 source: ["Edwin 2026-09-11: 'On glass and orbit views: add zoom (using a mouse wheel)'", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]"]
 goal: "In Glass and in the orbit a person zooms with the mouse wheel or a trackpad pinch, and whatever is under the pointer stays under it. The zoom runs from 0.6 to 2.5 times; the plus, minus and zero keys do the same from the keyboard, and the zoom belongs to the window, like the turn of the field."
 requirements: []
@@ -18,6 +18,9 @@ related: ["[[PHASE-0002-Glass]]", "[[REFERENCE-FOCUS-ZOOM-AND-VERBS]]", "[[FEAT-
 ---
 
 # The mouse wheel zooms Glass and the orbit
+
+> [!note] Parked 2026-10-23
+> This is part of the original Deck, which left main by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Its code is kept under the git tag `original-deck-2026-10-23`. To pick it up again, make a new repository from that tag and re-adopt this note there.
 
 ## Goal
 

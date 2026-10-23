@@ -2,7 +2,7 @@
 type: "[[adr]]"
 id: ADR-0006
 title: "Collections and documents occupy the Glass desk"
-status: accepted
+status: superseded
 owner: user:edwin
 created: 2026-10-01
 updated: 2026-10-01
@@ -13,7 +13,7 @@ context: "The fixed navigator is 264 pixels wide, and a widened reader moves int
 alternatives: ["Keep the fixed navigator and separate reader column", "Put the list on the surface but keep full text in the reader column", "Put both the collection and full note on the surface"]
 consequences: ["Amend PHASE-0002's navigator and reader scope statements", "Keep the collection's query identity and layout in the per-view desk, but derive rows from the live source", "Keep the sidecar's rendered HTML and legal actions in the document", "Leave cockpit DES-0015 and DES-0016 unadopted"]
 supersedes: ""
-superseded: ""
+superseded: "[[ADR-0010]]"
 amends: ""
 related: ["[[FEAT-0020-Collections-And-Full-Notes-Live-On-Glass]]", "[[PHASE-0002-Glass]]", "[[ADR-0002-Glass-Is-The-Main-View]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[DES-0002-The-Glass-Cockpit]]", "[[DES-0003]]", "[[FEAT-0022]]", "[[FEAT-0023]]"]
 ---

@@ -45,31 +45,39 @@ docs_system:
 
 # ID allocation helpers (highest allocated numbers).
 counters:
-  ADR: 9
+  ADR: 10
   CHG:
     last_date: 0
   DES: 6
-  FEAT: 35
+  FEAT: 36
   ISS: 92
   PHASE: 5
   REQ: 6
-  RISK: 17
+  RISK: 18
   REL: 0
-  TASK: 212
-  TST: 108
+  TASK: 217
+  TST: 109
   WF: 3 # high-water mark only. WF-0001..0003 were removed 2026-08-14 (they restated tools/); counters never fall, so 3 stays and the next project-authored workflow is WF-0004
 
 # Current focus (set when something is actively being worked).
 focus:
-  phase: "PHASE-0004"
-  feature: "FEAT-0035"
-  task: "TASK-0212"
-  note: "2026-10-23: round one of the reviews asked for changes on FEAT-0033, FEAT-0034 and FEAT-0035; the fixes are TASK-0209, TASK-0210 and TASK-0211, then round two. 2026-10-22, evening: Edwin asked 'Can you build the DES-0006 functionality?', so PHASE-0004 Parity opens now (recorded in PHASE-0004 and in ADR-0009's decision record). PHASE-0005 has nothing left to build: FEAT-0025 to FEAT-0031 wait at review on Edwin's acceptance tests and DES-0005. The build is four features, in order: FEAT-0032 the session engine in Deck's main process (TASK-0191 to TASK-0196, first TASK-0191, the conversation model and a fake provider), FEAT-0033 the session pane, the agents on the towers and Work on this (TASK-0197 to TASK-0201), FEAT-0034 one Needs you and the cockpit's overview panels (TASK-0202 to TASK-0204), FEAT-0035 the shell drawer (TASK-0205, TASK-0206). Suites TST-0104 to TST-0107; Edwin's acceptance test TST-0108 at draft. Risks RISK-0012 to RISK-0017. Sessions always ask before acting: never bypassPermissions, never codex's never-approve, whatever Edwin's shell alias or settings say (RISK-0013). Node suites use fake providers, never a real model (RISK-0017). Deck's repo is public: no prompt or reply text and no dollar costs in fixtures, pictures or logs (RISK-0016). Open for Edwin: DES-0006's side pane; whether Deck may answer the cockpit's permission requests only when it started the sidecar; whether a shell must survive a Deck restart. TASK-0005's orbit comparison is another session's uncommitted work; leave it alone."
+  phase: "PHASE-0005"
+  feature: "FEAT-0036"
+  task: "TASK-0213"
+  note: "2026-10-23: Edwin decided 'tag and remove; park Vault too' (ADR-0010). Deck becomes the overview only. Spread, Glass and the orbit leave main and are kept under the annotated tag original-deck-2026-10-23 (commit b1bc30b, local, not pushed yet); PHASE-0001, PHASE-0002 and PHASE-0003 are deferred with their unfinished features, tasks, issues and requirements. FEAT-0036 does the removal, TASK-0213 first: push the tag, put TASK-0005's uncommitted orbit comparison on the branch parked/original-deck, then park TASK-0005 on main (the frontmatter is in TASK-0213). The DES-0006 build (FEAT-0032 to FEAT-0035) is at review after round two; FEAT-0025 to FEAT-0031 wait on Edwin's acceptance tests and DES-0005. Sessions always ask before acting (RISK-0013). Node suites use fake providers (RISK-0017). Deck's repo is public (RISK-0016)."
 
 # Canonical state for tracked items (empty for a fresh template).
 items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
+    FEAT-0036:
+      status: planned
+      file: "docs/features/overview-only/FEAT-0036-Deck-Opens-Only-On-The-Overview-And-The-Original-Deck-Is-Kept-Under-A-Tag.md"
+      owner: system:claude
+      phase: PHASE-0005
+      requirements: []
+      tasks: ["TASK-0213", "TASK-0214", "TASK-0215", "TASK-0216", "TASK-0217"]
+      note: "PLANNED 2026-10-23 from Edwin's 'tag and remove; park Vault too' (ADR-0010). Deck becomes the overview only: Spread, Glass and the orbit leave main, kept whole under the annotated tag original-deck-2026-10-23 (commit b1bc30b); TASK-0005's uncommitted orbit comparison goes on the branch parked/original-deck. PHASE-0001, PHASE-0002 and PHASE-0003 are deferred with their unfinished children. Order: TASK-0213 (push the tag and branch, finish the parking: TASK-0005, PHASE-0004, PHASE-0005, PHASES.md), TASK-0214 (the page), TASK-0215 (main process and store), TASK-0216 (smoke and test notes; the retire list is in the task), TASK-0217 (README, CLAUDE.md, adoption table, change note). Acceptance TST-0109 at draft. RISK-0018."
     FEAT-0032:
       status: review
       file: "docs/features/agent-engine/FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On.md"
@@ -134,7 +142,7 @@ items:
     FEAT-0024:
       file: "docs/features/glass-evidence/FEAT-0024-Evidence-Stands-Beside-The-Claim-It-Supports.md"
       title: "Evidence stands beside the claim it supports"
-      status: review
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0006"]
@@ -143,27 +151,30 @@ items:
     FEAT-0022:
       file: "docs/features/glass-arrangements/FEAT-0022-Collections-And-Documents-Can-Be-Arranged-And-Restored.md"
       title: "Collections and documents can be arranged and restored"
-      status: doing
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0003"]
-      tasks: ["TASK-0101", "TASK-0102", "TASK-0103"]
+      tasks: ["TASK-0101", "TASK-0102"]
+      deferred: ["TASK-0103"]
     FEAT-0023:
       file: "docs/features/glass-scenes/FEAT-0023-A-Glass-Scene-Reopens-And-Crosses-Screens.md"
       title: "A Glass scene reopens and crosses screens without losing its work"
-      status: doing
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0004", "REQ-0005"]
-      tasks: ["TASK-0106", "TASK-0107", "TASK-0108", "TASK-0109", "TASK-0110"]
+      tasks: ["TASK-0106", "TASK-0107", "TASK-0108"]
+      deferred: ["TASK-0109", "TASK-0110"]
     FEAT-0020:
       file: "docs/features/glass-desktop/FEAT-0020-Collections-And-Full-Notes-Live-On-Glass.md"
       title: "Collections and full notes live on the Glass desktop"
-      status: doing
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: ["REQ-0001", "REQ-0002"]
-      tasks: ["TASK-0095", "TASK-0096", "TASK-0097", "TASK-0098", "TASK-0099", "TASK-0100"]
+      tasks: ["TASK-0095", "TASK-0096", "TASK-0097", "TASK-0098", "TASK-0100"]
+      deferred: ["TASK-0099"]
     FEAT-0021:
       file: "docs/features/cockpit-levels/FEAT-0021-Project-To-Evidence-Levels-Guide-Deck.md"
       title: "Project-to-evidence levels guide Deck after cockpit contracts are decided"
@@ -183,7 +194,7 @@ items:
     FEAT-0001:
       file: "docs/features/orbit-view/FEAT-0001-The-Corpus-Has-An-Inside.md"
       title: "The corpus has an inside — an orbit view of the whole link graph, flown rather than listed, in Deck"
-      status: doing
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -309,7 +320,7 @@ items:
     FEAT-0015:
       file: "docs/features/view-desks/FEAT-0015-Each-View-Keeps-Its-Own-Desk.md"
       title: "Each view keeps its own desk, a note can be kept on every view, and one button hides every held note in a window"
-      status: review
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -318,7 +329,7 @@ items:
     FEAT-0016:
       file: "docs/features/glass-zoom/FEAT-0016-The-Wheel-Zooms-Glass-And-The-Orbit.md"
       title: "The mouse wheel zooms Glass and the orbit toward the pointer, and three keys do the same from the keyboard"
-      status: review
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
@@ -327,22 +338,49 @@ items:
     FEAT-0017:
       file: "docs/features/glass-focus/FEAT-0017-An-Opened-Note-Stands-In-The-Middle-Of-Its-Neighbours.md"
       title: "An opened note stands in the middle of its neighbours: in Glass and in the orbit a lifted note moves to the middle of the field, and the notes it is joined to gather on a ring around it"
-      status: review
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
-      tasks: ["TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0104"]
+      tasks: ["TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071"]
       note: "ADDED 2026-09-11 from Edwin's requests about selecting in the orbit and in Glass, building REFERENCE-FOCUS-ZOOM-AND-VERBS recommendation 2. A lift grows the card into a pane where it stood (300 ms), then moves it to the middle (700 ms); the neighbours (context read) move by angle and distance to a ring of up to 16 mini notes (15 plus '+N more'), keeping their circular order, with a solid line to what it links to and a dashed line from what links to it; a mini note is a door. REVISITS DES-0002 by Edwin's request (rev 7 dropped re-arranging around an opened note: 'does not survive a second note and collapses at three'): only the note on top of the desk is in the middle, the other held notes wait as headers in a dock at the left edge, and the field dims and keeps its slots. The focus is the TOP OF THE DRAWN DESK plus a per-window switch; nothing new in the store or the address. Escape first leaves the middle, a second Escape sweeps. While a note is in the middle its neighbourhood does not take the front band; leaving deals it there and turns to face it. Amends DES-0002, FEAT-0010, TASK-0035, TASK-0036, TASK-0054, FEAT-0015, FEAT-0001, TASK-0004, PHASE-0002 exit criterion 3 and the walk TST-0024, each by an appended paragraph in a task step. The same focus in the orbit, drift stopped. Tablet unchanged. No RISK note. Open question: what 'the associated notes should show their connections' should show."
+      deferred: ["TASK-0104"]
     FEAT-0018:
       file: "docs/features/glass-bands/FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached.md"
       title: "Every note the view holds has a place in the field, every band says what it could not place, and anything a person can see they can click, tab to and pull forward"
-      status: review
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       requirements: []
-      tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0173"]
+      tasks: ["TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0084", "TASK-0173"]
       note: "PLANNED 2026-09-12 from six issues Edwin filed and agreed the same day: 'Fully agree, plan the full solution and on ISS-0078: do as suggested.' TWO HOLES. Active work past the mid band's 64 slots is drawn NOWHERE (dealField counts midOverflow and drops the entry), which on a 409-note view is hundreds of ACTIVE notes with no position; and the quiet band is painted on a canvas no pointer or keyboard reads, so several hundred finished notes are visible and unreachable. Decided in ADR-0005 (proposed): a FOURTH BAND, the outer field, between mid and quiet, drawn as small cards; EVERY band places what fits and states the rest, the quiet one included (a capacity, never a deletion); each band's shape DERIVED from its own population in this deal, recomputed on a view or workspace change only, adapting by SIZE AND DETAIL with depth fixed. ISS-0073 is a REGRESSION against DES-0002's own rule 'anything visible is clickable', so nothing is decided there, only carried to the canvas. NO NEW GESTURE for Edwin's 'brought up to the active front band': FEAT-0014's pull already does it and only needed something to grab. Order: pure layer first (TASK-0072 deal, TASK-0073 geometry, TASK-0074 detail thresholds), then the renderer (0075), the hit test and keyboard (0076), promotion (0077), smoke (0078), THEN THE MEASUREMENT (0079) which decides whether the free list (0080) is built at all. RESOLVES ISS-0079, ISS-0076, ISS-0078, ISS-0073 and ISS-0074 steps 1-3; ISS-0077 stays open behind the measurement. AMENDS DES-0002 (four bands; the clickable rule reaches the canvas) and FEAT-0016's out-of-scope line (semantic zoom lands here). RE-OPENS PHASE-0002's frame-time criterion. BOTH OPEN QUESTIONS ANSWERED 2026-09-12 by Edwin: the fourth band is the OUTER FIELD ('outer' in BandName -- mid and outer are a pair, and 'quiet' stays the odd name out on purpose because it names a state and not a distance), and exit criterion 1 is reworded to 'Every note the view holds is in a band or counted on screen, and no band is silently short', the sentence TST-0056 walks."
+      deferred: ["TASK-0082", "TASK-0083"]
   tasks:
+    TASK-0213:
+      file: docs/features/overview-only/plan/tasks/TASK-0213-The-Original-Deck-Is-Tagged-And-Pushed-The-Orbit-Comparison-Is-Kept-On-Its-Branch-And-The-Parked-Notes-Name-The-Tag.md
+      status: backlog
+      parent: FEAT-0036
+      phase: "[[PHASE-0005]]"
+    TASK-0214:
+      file: docs/features/overview-only/plan/tasks/TASK-0214-Deck-s-Page-Boots-Only-The-Rail-The-Overview-The-Agent-Pane-And-The-Shell-Drawer.md
+      status: backlog
+      parent: FEAT-0036
+      phase: "[[PHASE-0005]]"
+    TASK-0215:
+      file: docs/features/overview-only/plan/tasks/TASK-0215-The-Main-Process-And-The-Store-Keep-Nothing-Only-Spread-Glass-And-The-Orbit-Used.md
+      status: backlog
+      parent: FEAT-0036
+      phase: "[[PHASE-0005]]"
+    TASK-0216:
+      file: docs/features/overview-only/plan/tasks/TASK-0216-The-Smoke-Run-Checks-The-Overview-And-The-Test-Notes-Of-Removed-Code-Are-Retired.md
+      status: backlog
+      parent: FEAT-0036
+      phase: "[[PHASE-0005]]"
+    TASK-0217:
+      file: docs/features/overview-only/plan/tasks/TASK-0217-The-Readme-Files-Claude-Md-And-The-Adoption-Table-Describe-Deck-As-The-Overview.md
+      status: backlog
+      parent: FEAT-0036
+      phase: "[[PHASE-0005]]"
     TASK-0212:
       file: docs/features/shell-drawer/plan/tasks/TASK-0212-The-Shells-Button-Stands-At-The-Foot-Of-The-Rail-So-The-Header-Keeps-One-Line.md
       status: done
@@ -735,16 +773,16 @@ items:
     TASK-0109:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0109-Show-The-Destination-The-Arrival-And-The-Way-Back.md"
       title: "Show the destination, the arrival and the way back"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: FEAT-0023
+      origin: "FEAT-0023"
       phase: PHASE-0002
     TASK-0110:
       file: "docs/features/glass-scenes/plan/tasks/TASK-0110-Walk-Scenes-And-Handoff-At-Real-Scale.md"
       title: "Walk scenes and handoff at real scale"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: FEAT-0023
+      origin: "FEAT-0023"
       phase: PHASE-0002
     TASK-0105:
       file: docs/features/native-glass-evaluation/plan/tasks/TASK-0105-Remove-The-Native-Glass-Evaluation-From-The-Tree.md
@@ -775,16 +813,16 @@ items:
     TASK-0103:
       file: "docs/features/glass-arrangements/plan/tasks/TASK-0103-Walk-Collection-Forms-And-Arrangements-At-Scale.md"
       title: "Walk collection forms and arrangements at scale"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: FEAT-0022
+      origin: "FEAT-0022"
       phase: PHASE-0002
     TASK-0104:
       file: "docs/features/glass-focus/plan/tasks/TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving.md"
       title: "Preserve note identity, chosen size and neighbourhood while moving"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: FEAT-0017
+      origin: "FEAT-0017"
       phase: PHASE-0002
     TASK-0095:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0095-Model-An-Exact-Collection-On-The-Desk.md"
@@ -819,9 +857,9 @@ items:
     TASK-0099:
       file: "docs/features/glass-desktop/plan/tasks/TASK-0099-Walk-The-Glass-Desktop-At-Real-Scale.md"
       title: "Walk the Glass desktop at real scale"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: FEAT-0020
+      origin: "FEAT-0020"
       phase: PHASE-0002
       depends: ["TASK-0098"]
     TASK-0094:
@@ -1245,16 +1283,16 @@ items:
     TASK-0082:
       file: "docs/features/glass-bands/plan/tasks/TASK-0082-The-Hover-Callout-And-The-Pointer-Cursor-Run-In-The-Field-Not-Only-In-The-Orbit.md"
       title: "The hover callout and the pointer cursor run in the field as well as in the orbit, and the check that stands for the cursor asserts the cursor"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: "FEAT-0018"
+      origin: "FEAT-0018"
       phase: PHASE-0002
     TASK-0083:
       file: "docs/features/glass-bands/plan/tasks/TASK-0083-A-Finished-Note-Is-Pulled-Forward-From-The-Shelf-Itself.md"
       title: "A finished note is pulled to the front band from the shelf as it is drawn, by the keyboard and by a drag, without first being zoomed into an element"
-      status: doing
+      status: deferred
       owner: user:edwin
-      parent: "FEAT-0018"
+      origin: "FEAT-0018"
       phase: PHASE-0002
     TASK-0084:
       file: "docs/features/glass-bands/plan/tasks/TASK-0084-A-Promoted-Card-Is-Laid-Out-At-The-Size-Its-Promotion-Earned.md"
@@ -1271,6 +1309,12 @@ items:
       parent: "ISS-0089"
       phase: PHASE-0002
   issues:
+    ISS-0092:
+      file: "docs/issues/ISS-0092-The-Glass-Smoke-Check-Of-A-Press-Through-A-Growing-Document-Fails-Half-The-Time-In-CI.md"
+      status: deferred
+      owner: user:edwin
+      phase: PHASE-0002
+      note: "Deferred 2026-10-23 with Glass (ADR-0010). The check it is about leaves main in TASK-0216; it comes back only if the original Deck is revived from the tag."
     ISS-0089:
       file: "docs/issues/ISS-0089-Three-Small-Defects-From-The-Issue-Review-Are-Still-In-Deck.md"
       title: "Three real defects found by the 2026-09-19 issue review are still in Deck, each small enough to fix with one test"
@@ -1314,7 +1358,7 @@ items:
     ISS-0086:
       file: "docs/issues/ISS-0086-The-Outer-Field-Leaves-186-Notes-Unplaced-And-The-Features-Title-Says-Every-Note-Has-A-Place.md"
       title: "On Your Trainer's Features view 186 of 317 notes are counted and drawn nowhere, so the feature's title and goal promise more than the field delivers"
-      status: open
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -1474,7 +1518,7 @@ items:
     ISS-0069:
       file: "docs/issues/ISS-0069-The-Verb-Buttons-Take-A-Full-Height-Column-Beside-The-Reader.md"
       title: "The approve and decline buttons take a full-height column of their own between the desk and the reader in Spread and List, because their container sits in the window's row of columns instead of in the reader"
-      status: open
+      status: deferred
       owner: user:edwin
       phase: PHASE-0001
       severity: medium
@@ -1994,7 +2038,7 @@ items:
     ISS-0008:
       file: "docs/issues/ISS-0008-Nothing-In-CI-Exercises-The-Renderer.md"
       title: "Nothing in continuous integration exercises the renderer, so four of Spread's tasks make claims that only a run on Edwin's machine can check"
-      status: open
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       severity: medium
@@ -2055,42 +2099,42 @@ items:
     REQ-0006:
       file: "docs/requirements/REQ-0006-Evidence-Beside-A-Claim-Names-Its-Source-And-Says-What-Is-Missing.md"
       title: "Evidence beside a claim names its source and says what is missing"
-      status: approved
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0024
     REQ-0004:
       file: "docs/requirements/REQ-0004-A-Glass-Scene-Reopens-With-Live-Content-And-Says-What-Changed.md"
       title: "A Glass scene reopens with live content and says what changed"
-      status: approved
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0023
     REQ-0005:
       file: "docs/requirements/REQ-0005-A-Handoff-Is-Acknowledged-Before-The-Source-Lets-Go.md"
       title: "A handoff between windows is acknowledged before the source lets go"
-      status: approved
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0023
     REQ-0003:
       file: "docs/requirements/REQ-0003-Glass-Arrangements-Preserve-Membership-And-Reading-Size.md"
       title: "Glass arrangements preserve membership and reading size"
-      status: approved
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0022
     REQ-0001:
       file: "docs/requirements/REQ-0001-Glass-Collections-Remain-Exact-And-Interactive.md"
       title: "Glass collections remain exact and interactive"
-      status: approved
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0020
     REQ-0002:
       file: "docs/requirements/REQ-0002-Glass-Opens-The-Full-Note-On-Its-Desk.md"
       title: "Glass opens the full note on its desk"
-      status: approved
+      status: deferred
       owner: user:edwin
       phase: PHASE-0002
       implements: FEAT-0020
@@ -2103,36 +2147,36 @@ items:
     PHASE-0001:
       file: "docs/phases/PHASE-0001-Deck.md"
       title: "Deck — one store, windows on any screen, and Spread as the first view"
-      status: active
+      status: deferred
       order: 1
       owner: user:edwin
       features: ["FEAT-0002", "FEAT-0003", "FEAT-0004", "FEAT-0005", "FEAT-0006", "FEAT-0007", "FEAT-0008", "FEAT-0011", "FEAT-0012", "FEAT-0013"]
       requirements: []
       tasks: ["TASK-0038", "TASK-0039", "TASK-0040", "TASK-0041", "TASK-0042", "TASK-0043", "TASK-0044", "TASK-0045", "TASK-0046", "TASK-0047", "TASK-0048", "TASK-0049", "TASK-0050", "TASK-0051", "TASK-0052", "TASK-0006", "TASK-0007", "TASK-0008", "TASK-0009", "TASK-0010", "TASK-0011", "TASK-0012", "TASK-0013", "TASK-0014", "TASK-0015", "TASK-0016", "TASK-0017", "TASK-0018", "TASK-0019", "TASK-0020", "TASK-0021", "TASK-0022", "TASK-0023", "TASK-0024", "TASK-0025", "TASK-0026", "TASK-0027", "TASK-0028"]
       issues: ["ISS-0069", "ISS-0001", "ISS-0002", "ISS-0003", "ISS-0004", "ISS-0005", "ISS-0006", "ISS-0007", "ISS-0009", "ISS-0010", "ISS-0011", "ISS-0012", "ISS-0013", "ISS-0014", "ISS-0015", "ISS-0016", "ISS-0017", "ISS-0018", "ISS-0019", "ISS-0020", "ISS-0021", "ISS-0022", "ISS-0023", "ISS-0024", "ISS-0025", "ISS-0026", "ISS-0027", "ISS-0028", "ISS-0029", "ISS-0030", "ISS-0031", "ISS-0032", "ISS-0033", "ISS-0034", "ISS-0035", "ISS-0036", "ISS-0037", "ISS-0038", "ISS-0039", "ISS-0040", "ISS-0041", "ISS-0042", "ISS-0043", "ISS-0044", "ISS-0045", "ISS-0046", "ISS-0047", "ISS-0048", "ISS-0049", "ISS-0050", "ISS-0051", "ISS-0052", "ISS-0053", "ISS-0054", "ISS-0055", "ISS-0056", "ISS-0057", "ISS-0067"]
-      note: "2026-09-10: ALL TEN FEATURES DONE AND APPROVED, the 26 commits PUSHED on 2026-09-09, and both CI jobs (validate-docs, deck-smoke) GREEN on main; the first CI run found two things a developer's machine cannot (ISS-0057, fixed). What holds the phase open is a person's work only: FOUR WALKS in the ledger (TST-0010 tablet, TST-0011 quit, TST-0027 base file against Obsidian, TST-0028 tick seen in the cockpit), collected into one ninety-minute sitting in REFERENCE-FOUR-WALKS-OWED, with no ledger entry since 2026-09-08; and ISS-0056 at triage naming this phase (its first action, the push, is done; a gate decision on the four smoke-only guards and seven small findings remain). No task at backlog or doing; every risk closed. WIDENED 2026-09-08 by Edwin ('happy to reopen phase-0001 to implement this'): FEAT-0011 Deck's own index, FEAT-0012 a view is a description, FEAT-0013 the first write, TASK-0052 under FEAT-0006, ADR-0003 and ADR-0004, RISK-0003 and RISK-0004, five exit criteria; the 'Reads only' scope bullet reversed. The tasks list here is that new work only; the 23 completed before are in the note. The phase that makes Deck a thing you can open, carrying the foundations rather than a separate foundations phase before it, because a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge. Asks nothing new of the sidecar."
+      note: "DEFERRED 2026-10-23 (ADR-0010): the original Deck left main and is kept under the tag original-deck-2026-10-23. The finished foundation (store, index, sidecar client, host, writes through the shell) stays on main and carries the overview. 2026-09-10: ALL TEN FEATURES DONE AND APPROVED, the 26 commits PUSHED on 2026-09-09, and both CI jobs (validate-docs, deck-smoke) GREEN on main; the first CI run found two things a developer's machine cannot (ISS-0057, fixed). What holds the phase open is a person's work only: FOUR WALKS in the ledger (TST-0010 tablet, TST-0011 quit, TST-0027 base file against Obsidian, TST-0028 tick seen in the cockpit), collected into one ninety-minute sitting in REFERENCE-FOUR-WALKS-OWED, with no ledger entry since 2026-09-08; and ISS-0056 at triage naming this phase (its first action, the push, is done; a gate decision on the four smoke-only guards and seven small findings remain). No task at backlog or doing; every risk closed. WIDENED 2026-09-08 by Edwin ('happy to reopen phase-0001 to implement this'): FEAT-0011 Deck's own index, FEAT-0012 a view is a description, FEAT-0013 the first write, TASK-0052 under FEAT-0006, ADR-0003 and ADR-0004, RISK-0003 and RISK-0004, five exit criteria; the 'Reads only' scope bullet reversed. The tasks list here is that new work only; the 23 completed before are in the note. The phase that makes Deck a thing you can open, carrying the foundations rather than a separate foundations phase before it, because a phase whose exit criterion is 'a window opens and shows a note' is not a milestone anyone can judge. Asks nothing new of the sidecar."
     PHASE-0002:
       file: "docs/phases/PHASE-0002-Glass.md"
       title: "Glass — the main view, where depth carries priority, a person arranges the field by hand, and a held note brings its neighbourhood to the front"
-      status: active
+      status: deferred
       order: 2
       owner: user:edwin
       features: ["FEAT-0009", "FEAT-0010", "FEAT-0014", "FEAT-0001", "FEAT-0015", "FEAT-0016", "FEAT-0017", "FEAT-0018", "FEAT-0019", "FEAT-0020", "FEAT-0022", "FEAT-0023", "FEAT-0024"]
       requirements: [REQ-0001, REQ-0002, REQ-0003, REQ-0004, REQ-0005, REQ-0006]
       tasks: ["TASK-0029", "TASK-0030", "TASK-0031", "TASK-0032", "TASK-0033", "TASK-0034", "TASK-0035", "TASK-0036", "TASK-0037", "TASK-0053", "TASK-0054", "TASK-0055", "TASK-0056", "TASK-0057", "TASK-0001", "TASK-0002", "TASK-0003", "TASK-0004", "TASK-0005", "TASK-0058", "TASK-0059", "TASK-0060", "TASK-0061", "TASK-0062", "TASK-0063", "TASK-0064", "TASK-0065", "TASK-0066", "TASK-0067", "TASK-0068", "TASK-0069", "TASK-0070", "TASK-0071", "TASK-0072", "TASK-0073", "TASK-0074", "TASK-0075", "TASK-0076", "TASK-0077", "TASK-0078", "TASK-0079", "TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083", "TASK-0084", "TASK-0085", "TASK-0086", "TASK-0087", "TASK-0088", "TASK-0089", "TASK-0090", "TASK-0091", "TASK-0092", "TASK-0093", "TASK-0094", "TASK-0095", "TASK-0096", "TASK-0097", "TASK-0098", "TASK-0099", "TASK-0100", "TASK-0101", "TASK-0102", "TASK-0103", "TASK-0104", "TASK-0105", "TASK-0106", "TASK-0107", "TASK-0108", "TASK-0109", "TASK-0110", "TASK-0111", "TASK-0112", "TASK-0113", "TASK-0114", "TASK-0170", "TASK-0171", "TASK-0172", "TASK-0173", "TASK-0174", "TASK-0175", "TASK-0180"]
-      issues: ["ISS-0008", "ISS-0058", "ISS-0059", "ISS-0060", "ISS-0061", "ISS-0062", "ISS-0063", "ISS-0064", "ISS-0065", "ISS-0066", "ISS-0068", "ISS-0070", "ISS-0071", "ISS-0072", "ISS-0073", "ISS-0074", "ISS-0075", "ISS-0076", "ISS-0077", "ISS-0078", "ISS-0079", "ISS-0080", "ISS-0081", "ISS-0082", "ISS-0083", "ISS-0084", "ISS-0085", "ISS-0086", "ISS-0087", "ISS-0088", "ISS-0090", "ISS-0091"]
-      note: "2026-09-11, later: FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) ADDED at Edwin's request from REFERENCE-FOCUS-ZOOM-AND-VERBS, eight tasks TASK-0064 to TASK-0071, suites TST-0050 and TST-0051, walk TST-0052; no new exit criterion, and criterion 3 is amended by TASK-0069 (a lift fills a ring first, the front band after leaving). FEAT-0017 revisits DES-0002 by Edwin's request. 2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
+      issues: ["ISS-0008", "ISS-0058", "ISS-0059", "ISS-0060", "ISS-0061", "ISS-0062", "ISS-0063", "ISS-0064", "ISS-0065", "ISS-0066", "ISS-0068", "ISS-0070", "ISS-0071", "ISS-0072", "ISS-0073", "ISS-0074", "ISS-0075", "ISS-0076", "ISS-0077", "ISS-0078", "ISS-0079", "ISS-0080", "ISS-0081", "ISS-0082", "ISS-0083", "ISS-0084", "ISS-0085", "ISS-0086", "ISS-0087", "ISS-0088", "ISS-0090", "ISS-0091", "ISS-0092"]
+      note: "DEFERRED 2026-10-23 (ADR-0010): Glass and the orbit left main and are kept under the tag original-deck-2026-10-23, with their unfinished features, tasks, issues and requirements deferred here. 2026-09-11, later: FEAT-0016 (the wheel zooms Glass and the orbit) and FEAT-0017 (an opened note stands in the middle of its neighbours, in Glass and the orbit) ADDED at Edwin's request from REFERENCE-FOCUS-ZOOM-AND-VERBS, eight tasks TASK-0064 to TASK-0071, suites TST-0050 and TST-0051, walk TST-0052; no new exit criterion, and criterion 3 is amended by TASK-0069 (a lift fills a ring first, the front band after leaving). FEAT-0017 revisits DES-0002 by Edwin's request. 2026-09-11: FEAT-0015 ADDED at Edwin's request (a Hide notes button; each view keeps its own desk; a note can be kept on every view), six tasks TASK-0058 to TASK-0063, walk TST-0048; no new exit criterion. REVIEWED 2026-09-10 BEFORE THE BUILD (REFERENCE-GLASS-PHASE-REVIEW) against Edwin's instruction that the phase 'is not just a one to one replacement skin it is considerably more, the goal is to create a real minority report style UX'. As planned the person could turn, switch view, lift and put back, and every band and position was the record's opinion: a reading surface with one verb. A fourth feature carries what was missing, FEAT-0014 THE HANDS: pull and push for the session, a held note as a pane, a THROW to a window on another screen or to the tablet, REACH by hover, and the served page following the store (found: host-bridge.ts keeps a local state without the bridge, so the tablet never sees the Mac's desk today). Three exit criteria added: the field arranged by hand with git status clean, a throw that lands, and whether anyone looked behind after a week, which the DES-0002 review had demanded and TASK-0031 promised. ISS-0008's premise changed on 2026-09-09 when deck-smoke reached CI; grooming re-reads it. Not adopted (review Part 5): a threshold dial, the workspace ring, a time scrub, the tablet as a controller (an ADR-0001 decision, Edwin's). OPENED 2026-09-07 by Edwin's decision (ADR-0002): Glass is the main view, built now, before parity with the cockpit. Was gated on FEAT-0001's three measurements; those are EXIT CRITERIA written as numbers, not a gate. FEAT-0009 the field (bands from the description's band section; the review's hybrid renderer; the surface in the address with glass the default), FEAT-0010 lifting a note onto Spread's desk with the neighbourhood taking the front band, FEAT-0001 the orbit arrangement of the same field, last, behind an issue in the cockpit repository for its payload. Four acceptance walks: TST-0023, TST-0024, TST-0025, TST-0038. Asks nothing new of the sidecar except FEAT-0001's endpoint. If the frame time fails on a laptop, Spread returns to default and the note says so. Depends on PHASE-0001 for the store, the desk with positions, the navigator, the addresses, the window book and the tablet host; starts when PHASE-0001 closes."
     PHASE-0003:
       file: "docs/phases/PHASE-0003-Vault.md"
       title: "Vault — Deck opens an Obsidian vault and shows what the vault already declares"
-      status: planned
+      status: deferred
       order: 4
       owner: user:edwin
       features: []
       requirements: []
       tasks: []
       issues: []
-      note: "Point Deck at ~/Notes and the vault's own structure appears: types detected from its templates and properties, its .base files as views, its .canvas files as read-only boards, its statuses banded. Reads everything, writes none of Obsidian's files. Depends on PHASE-0001 for the seam (the view provider the renderer asks; this phase adds the one that reads .base files) and NOT on PHASE-0002; FOURTH place since 2026-09-07 (ADR-0002 put a parity phase, PHASE-0004, before it); the place is Edwin's stated order, not a technical constraint, so grooming can bring it forward. One blocker lives in the other repository: the cockpit's indexer drops a list-valued type:, which leaves 99 of the vault's 407 notes untyped, and that is project-os-cockpit ISS-0279 at triage. The cross-repo reference is kept in prose and related: only."
+      note: "DEFERRED 2026-10-23 (ADR-0010): never opened; it was built on Spread's view provider, which leaves main. Revived only with the original Deck, from the tag original-deck-2026-10-23. Point Deck at ~/Notes and the vault's own structure appears: types detected from its templates and properties, its .base files as views, its .canvas files as read-only boards, its statuses banded. Reads everything, writes none of Obsidian's files. Depends on PHASE-0001 for the seam (the view provider the renderer asks; this phase adds the one that reads .base files) and NOT on PHASE-0002; FOURTH place since 2026-09-07 (ADR-0002 put a parity phase, PHASE-0004, before it); the place is Edwin's stated order, not a technical constraint, so grooming can bring it forward. One blocker lives in the other repository: the cockpit's indexer drops a list-valued type:, which leaves 99 of the vault's 407 notes untyped, and that is project-os-cockpit ISS-0279 at triage. The cross-repo reference is kept in prose and related: only."
     PHASE-0004:
       file: "docs/phases/PHASE-0004-Parity.md"
       title: "Parity — Deck carries a working day, so a real task is done in Deck instead of the cockpit"
@@ -2145,6 +2189,12 @@ items:
       issues: []
       note: "CREATED 2026-09-07 (ADR-0002) as the phase after Glass and before Vault. Takes the cockpit register's not-yet rows a working day needs: several consoles as furniture in the field, the pages (checks with the mark dialog, history, release, accept, test-run), the verbs behind the sidecar's guards (Deck's first write path, opt-in by row, the served host still read-only), agents, live changes announced, the command line. TST-0015 MOVED HERE from PHASE-0001 with the seventh criterion: Edwin's walk on 2026-09-07 came back as a question because Deck did not carry enough of a day to judge. EDWIN'S NOTE 2026-09-07: evaluate T3 Code's terminal (a Node server owning PTYs with node-pty over a WebSocket to xterm.js, github.com/pingdotgg/t3code) instead of the cockpit's IPC-only terminal before building the console; the outcome is an ADR, because it decides where PTYs live. Features are cut from the adoption table when the phase opens; the console and the pages are certain."
   risks:
+    RISK-0018:
+      file: "docs/risks/RISK-0018-The-Cut-Removes-Something-The-Overview-Still-Reaches-And-Only-A-Window-Run-Shows-It.md"
+      status: open
+      owner: system:claude
+      phase: PHASE-0005
+      note: "Risk scan for FEAT-0036, 2026-10-23: a directory layout change. The compiler catches a removed import, not an element id, a style or an IPC channel name the overview still uses; only a window run shows those."
     RISK-0012:
       file: "docs/risks/RISK-0012-The-Agent-SDK-And-Codex-App-Server-Change-Shape-Under-Deck.md"
       status: open
@@ -2813,22 +2863,27 @@ items:
       owner: user:edwin
       note: "The phase's implementation. Deck opens, lists workspaces, draws a workspace's notes as cards and opens one in a reader -- all of it read-only, through three locks (a client with no write method, a proxy that answers 405 to anything that is not a read, and the sidecar's own loopback guard). New: desktop/, and tools/scripts/run-desktop-tests.sh, which each TST-* command names. Deck opens a SECOND PORT for its own host, loopback unless --lan. It REUSES a running sidecar after checking the root it reports, and stops only the ones it started (RISK-0001). Also fixes a mistake made when the phase opened: .cockpit/ was committed and is now ignored and untracked."
   decisions:
+    ADR-0010:
+      file: "docs/decisions/ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag.md"
+      status: accepted
+      owner: user:edwin
+      note: "Accepted 2026-10-23, Edwin's decision ('tag and remove; park Vault too'). Supersedes ADR-0002, ADR-0005, ADR-0006, ADR-0007 and ADR-0008, which describe code that leaves main; amends ADR-0004 (Deck's own index stays, the description language and view provider go). ADR-0001, ADR-0003 and ADR-0009 stand."
     ADR-0008:
       file: "docs/decisions/ADR-0008-Evidence-Is-Read-From-Three-Sources-And-What-Is-Not-Recorded-Is-Said.md"
       title: "Evidence is read from Deck's index, the acceptance ledger's payload and the rendered note, and what none of them records is said in words"
-      status: proposed
+      status: superseded
       owner: user:edwin
       note: "Proposed 2026-10-02 by the implementing session, not accepted by Edwin. FEAT-0024 is built against it. Five threads are open under its Acceptance section: adopting a cockpit capability in Glass and not in Parity, the walker's reasons readable on the local network, a workspace's own staleness override, the register listing the route under two keys, and a workspace with no ledger."
     ADR-0007:
       file: "docs/decisions/ADR-0007-A-Scene-Is-A-Saved-Desk-Read-Live-And-A-Handoff-Waits-For-The-Destination.md"
       title: "A scene is a saved desk that is read live when reopened, and a handoff between windows waits for the destination to draw the note"
-      status: proposed
+      status: superseded
       owner: user:edwin
       note: "Proposed 2026-10-02 by the implementing session, not accepted by Edwin. FEAT-0023 is built against it. Three threads are open under its Acceptance section: whether a scene reports a note whose file moved, FEAT-0015's question about a saved desk remembering its view, and the heading words a reading anchor keeps."
     ADR-0006:
       file: "docs/decisions/ADR-0006-Collections-And-Documents-Occupy-The-Glass-Desk.md"
       title: "Collections and documents occupy the Glass desk"
-      status: accepted
+      status: superseded
       owner: user:edwin
     ADR-0001:
       file: "docs/decisions/ADR-0001-Deck-Serves-Its-Own-Read-Only-Host.md"
@@ -2839,7 +2894,7 @@ items:
     ADR-0002:
       file: "docs/decisions/ADR-0002-Glass-Is-The-Main-View.md"
       title: "Glass is Deck's main view, built before parity with the cockpit; Spread stays a view beside it and the two share one desk"
-      status: accepted
+      status: superseded
       owner: user:edwin
       note: "Edwin, 2026-09-07: 'I am still very much thinking that glass should be the main view, so let's build glass now first, iron out issues and then work on parity.' Option 2 of three (keep the order; Glass now as the main view; Glass only and retire Spread). Consequences: Deck opens in Glass and the address gains a surface with glass the default; views stay the provider's; ONE DESK shown by both surfaces; FEAT-0001's measurements become exit criteria of PHASE-0002 rather than a gate; a failed frame time returns Spread to default and is recorded; TST-0015 and PHASE-0001's seventh criterion move to the new PHASE-0004 Parity, which comes before Vault. Triggered by his ledger remark on TST-0015 that relationships and dependencies are what he cannot see in Deck."
     ADR-0003:
@@ -2857,7 +2912,7 @@ items:
     ADR-0005:
       file: "docs/decisions/ADR-0005-Four-Bands-And-Every-Band-States-What-It-Could-Not-Place.md"
       title: "The Glass field has four bands, every band places only what fits and states the rest on screen, and each band's shape is derived from how much it holds"
-      status: proposed
+      status: superseded
       owner: user:edwin
       note: "Edwin, 2026-09-12: 'Fully agree, plan the full solution and on ISS-0078: do as suggested', after 'Maybe we need more bands and allow cards to be brought up to the active front band????'. Option 1 of three (a fourth band with derived geometry -- chosen; overflow the middle into the quiet band, which is what the DES-0002 prototype did and which conflates finished with did-not-fit; page the middle). A RULE-ADR: every band places at most its own capacity and states on screen how many it did not place, over the four bands named in BandName/Band, discharged by TST-0053 which is authoritative on disagreement. Consequences: DES-0002 amended (four bands; 'anything visible is clickable' carried to the canvas), PHASE-0002 exit criterion 1's wording owed from Edwin (the count now sits beside a remainder), the frame-time criterion re-opened and retaken on all three workspaces, BandTable gains outerCapacity and deepCapacity, the orbit untouched because it assigns its own slots, and ISS-0077 left open behind the measurement. Built by FEAT-0018."
   designs:
@@ -2892,17 +2947,17 @@ items:
 
 metrics:
   counts:
-    features_total: 35
+    features_total: 36
     features_done: 13
     phases_total: 5
     phases_done: 0
-    tasks_total: 203
+    tasks_total: 208
     tasks_done: 183
     tests_total: 74
     tests_passing: 9
     tests_failing: 0
-    issues_open: 4
+    issues_open: 0
     issues_triage: 0
-    risks_open: 11
+    risks_open: 12
     releases_total: 0
-    decisions_total: 9
+    decisions_total: 10

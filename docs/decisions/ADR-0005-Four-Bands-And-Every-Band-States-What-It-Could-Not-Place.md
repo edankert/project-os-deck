@@ -3,7 +3,7 @@ type: "[[adr]]"
 id: ADR-0005
 aliases: ["ADR-0005"]
 title: "The Glass field has four bands, every band places only what fits and states the rest on screen, and each band's shape is derived from how much it holds"
-status: proposed
+status: superseded
 owner: user:edwin
 created: 2026-09-12
 updated: 2026-09-12
@@ -28,7 +28,7 @@ consequences:
   - "The orbit assigns its own slots and paints through `paintOrbit`, so it does not read the band geometry and is untouched"
   - "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]] stays open behind the measurement: the free list is built only if the numbers ask for it"
 supersedes: ""
-superseded: ""
+superseded: "[[ADR-0010]]"
 related: ["[[FEAT-0018-Every-Note-Has-A-Place-And-Anything-Visible-Can-Be-Reached]]", "[[ISS-0079-Active-Work-Past-The-Mid-Bands-Capacity-Is-Drawn-Nowhere]]", "[[ISS-0078-The-Quiet-Band-Is-The-Only-Band-That-Insists-On-Drawing-Everything]]", "[[ISS-0076-The-Quiet-Band-Is-Shaped-For-A-Corpus-Ten-Times-Most-Projects]]", "[[ISS-0073-Nothing-In-The-Quiet-Band-Can-Be-Clicked]]", "[[ISS-0074-Zoom-Makes-A-Card-Bigger-Without-Showing-More-Of-The-Note]]", "[[ISS-0077-Glass-Draws-One-Element-Per-Note-And-Never-Uses-The-Pool]]", "[[FEAT-0009-The-Field-Where-Depth-Carries-Priority]]", "[[DES-0002-The-Glass-Cockpit]]", "[[PHASE-0002-Glass]]"]
 ---
 
