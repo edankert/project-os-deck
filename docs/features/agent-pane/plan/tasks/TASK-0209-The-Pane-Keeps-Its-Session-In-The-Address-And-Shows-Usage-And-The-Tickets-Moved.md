@@ -50,3 +50,5 @@ tests: ["[[TST-0105]]"]
 - The composer forgets its text and an armed Stop when the pane opens another session or closes; a Send that fails, or whose call throws, puts the text back and says why.
 
 [[TST-0105]] has 26 checks and [[TST-0104]] 34. Each guard above was broken once on the committed code, eleven in all, and a check failed for each. The first attempt at two of them proved nothing: one removed line changed nothing the checks looked at, so a check now gives a usage record before the first prompt; the other did not compile.
+
+**After round two (2026-10-23).** One reviewer found the bars and the "Moved" line were checked only as the pane's model, not as drawn: removing the drawing passed every check, and so did a Send whose call throws. A [[TST-0105]] check now opens the pane on a stand-in page and reads both bars, the Moved line, and the text given back after a thrown Send; each of the three breaks fails it. The overview's call that hands the pane its moved tickets is still guarded by reading. [[TST-0105]] has 27 checks.

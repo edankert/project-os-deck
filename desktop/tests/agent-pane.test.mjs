@@ -370,3 +370,31 @@ test('the composer starts empty for each session it opens, a Stop armed on one i
   assert.ok(await pane.open(b.id));
   assert.equal(box().value, '', 'closing forgets it');
 });
+
+test('the pane draws the two bars and the tickets moved in its head, and a Send whose call throws still gives the text back', async () => {
+  const document = standInPage();
+  const { AgentPane } = await loadWeb('renderer/agent-pane.js');
+  const a = session({ id: 'aaaaaaaa-1' });
+  const said = [];
+  const agents = {
+    list: async () => [a],
+    conversation: async () => [{ kind: 'usage', at: at(1), context: { used: 170000, window: 200000 } }, { kind: 'usage', at: at(2), limit: { percent: 40, window: '5-hour' } }],
+    subscribe: () => () => undefined,
+    send: async () => { throw new Error('the main process is gone'); },
+    interrupt: async () => ({ ok: true }), stop: async () => ({ ok: true }), answer: async () => ({ ok: true }),
+  };
+  const pane = new AgentPane({ agents, parent: document.createElement('div'), say: (m) => said.push(m), closed: () => undefined });
+  assert.ok(await pane.open(a.id));
+  pane.setMoved(['TASK-0002', 'TASK-0003']);
+  const head = pane.body.children[0];
+  const bars = head.children.filter((c) => (c.className ?? '').startsWith('ag-bar'));
+  assert.deepEqual(bars.map((b) => [b.className, b.getAttribute('aria-label')]), [['ag-bar is-high', 'context 85% (170k of 200k)'], ['ag-bar', '40% of the 5-hour limit used']]);
+  assert.equal(head.children.find((c) => c.className === 'ag-moved').textContent, 'Moved TASK-0002, TASK-0003');
+  const box = pane.composer.children[0];
+  box.value = 'invented words';
+  box.fire('input');
+  pane.composer.children[2].children.find((x) => x.textContent === 'Send').fire('click');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(pane.composer.children[0].value, 'invented words');
+  assert.deepEqual(said, ['the main process is gone']);
+});
