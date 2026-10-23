@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0036
 aliases: ["FEAT-0036"]
 title: "Deck opens only on the overview, and the original Deck is kept under a tag"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23
@@ -19,10 +19,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: ""
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-23
+review_verdict: changes-requested
+review_round: 1
 related: ["[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]", "[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[PHASE-0004-Parity]]", "[[RISK-0018]]", "[[TST-0109]]"]
 ---
 
@@ -71,6 +71,19 @@ Out of scope:
 - 2026-10-23: built in [[TASK-0213]] to [[TASK-0217]]. `npm test` runs 542 checks, all passing. The container smoke passes on loopback and on the network, and its loopback half makes 30 checks about the workspace, the overview in a window, the served page, the guards and the quit. Its old-address check was shown to fail when broken. The overview's five walks pass in the container.
 - The tag `original-deck-2026-10-23` is on origin at `b1bc30b`, and `parked/original-deck` holds TASK-0005's orbit comparison.
 - Still Edwin's: [[TST-0109]], which opens Deck on his own state file and runs the original Deck from the tag. A copy of his state file from before the cut is kept at `~/Library/Application Support/project-os-deck/deck-state.before-overview-only-2026-10-23.json`.
+
+## Review
+
+**Round one, 2026-10-23, at 765c0e5: changes requested by both reviewers.** Both ran `claude-opus-5-5` from the packet in fresh contexts, read the files that were rewritten rather than the 42,000 deleted lines, and broke five guards between them in a scratch copy (the old state file's workspace, the served state's name, the window's allowed actions); each break failed a check.
+
+What they found, both of them, fixed in [[TASK-0219]]:
+
+- The ticket screen still made two addresses only Spread could open: a link in a ticket's text to a note that is not a ticket (a phase, a change note, a reference note), and the button on a ticket waiting on such a note. Both threw the person onto the wheel with a line saying a view was gone. A phase now opens its own screen; any other note leaves the person where they are, and the button is drawn off and says why.
+- The "not in this Deck" line was said even when the wheel did not open, over the line that said why. It is now said only once the wheel is open.
+- An overview address that also named a desk, a panel or a surface dropped those parts without a word. It now says what it dropped.
+- The smoke's check that an old address lands on the wheel passed trivially, because the window was on the wheel already. It now starts from the re-phasing screen.
+
+Left as they are: the smoke's list of ids that must be gone is a spot check of eight, which is enough while the modules that drew the rest are deleted. The reserved flow cursor left with the old store; nothing had written it, and a flow that needs one adds it back. The validator reading the tag as the last release is a rule of the template's `validate-docs.py`, which this repository does not edit: CI clones without tags and still shows every finding, and a local run says how many it hides.
 
 ## Notes
 

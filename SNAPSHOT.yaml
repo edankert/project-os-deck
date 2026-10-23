@@ -63,7 +63,7 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0036"
-  task: "TASK-0219"
+  task: "TASK-0217"
   note: "2026-10-23: Edwin decided 'tag and remove; park Vault too' (ADR-0010). Deck becomes the overview only. Spread, Glass and the orbit leave main and are kept under the annotated tag original-deck-2026-10-23 (commit b1bc30b, local, not pushed yet); PHASE-0001, PHASE-0002 and PHASE-0003 are deferred with their unfinished features, tasks, issues and requirements. FEAT-0036 does the removal, TASK-0213 first: push the tag, put TASK-0005's uncommitted orbit comparison on the branch parked/original-deck, then park TASK-0005 on main (the frontmatter is in TASK-0213). The DES-0006 build (FEAT-0032 to FEAT-0035) is at review after round two; FEAT-0025 to FEAT-0031 wait on Edwin's acceptance tests and DES-0005. Sessions always ask before acting (RISK-0013). Node suites use fake providers (RISK-0017). Deck's repo is public (RISK-0016)."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -71,7 +71,7 @@ items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0036:
-      status: doing
+      status: review
       file: "docs/features/overview-only/FEAT-0036-Deck-Opens-Only-On-The-Overview-And-The-Original-Deck-Is-Kept-Under-A-Tag.md"
       owner: system:claude
       phase: PHASE-0005
@@ -359,7 +359,7 @@ items:
   tasks:
     TASK-0219:
       file: docs/features/overview-only/plan/tasks/TASK-0219-A-Link-Or-A-Waiting-Button-To-A-Note-That-Is-Not-A-Ticket-Stays-On-The-Screen.md
-      status: doing
+      status: done
       parent: FEAT-0036
       phase: "[[PHASE-0005]]"
     TASK-0218:
@@ -2963,7 +2963,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 210
-    tasks_done: 189
+    tasks_done: 190
     tests_total: 74
     tests_passing: 9
     tests_failing: 0
