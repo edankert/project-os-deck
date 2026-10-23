@@ -21,8 +21,8 @@ acceptance: ""
 design: ""
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
 review_date: 2026-10-23
-review_verdict: changes-requested
-review_round: 1
+review_verdict: approved
+review_round: 2
 related: ["[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]", "[[PHASE-0001-Deck]]", "[[PHASE-0002-Glass]]", "[[PHASE-0003-Vault]]", "[[PHASE-0004-Parity]]", "[[RISK-0018]]", "[[TST-0109]]"]
 ---
 
@@ -84,6 +84,8 @@ What they found, both of them, fixed in [[TASK-0219]]:
 - The smoke's check that an old address lands on the wheel passed trivially, because the window was on the wheel already. It now starts from the re-phasing screen.
 
 Left as they are: the smoke's list of ids that must be gone is a spot check of eight, which is enough while the modules that drew the rest are deleted. The reserved flow cursor left with the old store; nothing had written it, and a flow that needs one adds it back. The validator reading the tag as the last release is a rule of the template's `validate-docs.py`, which this repository does not edit: CI clones without tags and still shows every finding, and a local run says how many it hides.
+
+**Round two, 2026-10-23, at 534e918: approved by one reviewer.** Each of the four findings is fixed. The waiting button is pinned by a node check, which the reviewer broke in a copy and saw fail. The link follower, the line said only when the wheel opens, and the dropped parts were checked by reading, since no node suite runs the page's code; the re-phasing start of the smoke check was read, and the container smoke ran it. FEAT-0036 stays at `review` until Edwin runs [[TST-0109]].
 
 ## Notes
 
