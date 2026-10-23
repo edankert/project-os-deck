@@ -25,7 +25,7 @@ tests: ["[[TST-0109]]"]
 ## Definition of Done
 - [x] The smoke run's checks are about the overview, the agent pane and the shell drawer. It still fails on a page error.
 - [x] The container smoke passes on loopback and on the network (`tools/scripts/run-smoke.sh both`), and the `deck-smoke` job passes in CI.
-- [x] Every test note in the retire list below is `retired`, with one line naming ADR-0010 and the tag.
+- [x] Every test note in the retire list below is `retired`, with one line naming ADR-0010 and the tag, except seven passing walks, which are parked (see Verification).
 - [x] Test notes that stay but name removed code in `covers:` or their procedure are rewritten.
 - [x] RISK-0007 and RISK-0008 are `closed`: the code they watched has left main.
 
@@ -51,6 +51,7 @@ tests: ["[[TST-0109]]"]
 - The old-address check was shown to bite: with the sentence changed to say "gone", the loopback smoke failed on exactly that check, 29 passed and 1 failed, and passed again once the sentence was restored.
 - `tools/scripts/run-smoke.sh` now prints every check line when `DECK_SMOKE_DEBUG=1`, whatever the verdict, so a passing run can say what it made.
 - The overview's walks in the container, on a copy of the notes: the overview drive (TST-0093) passes, after [[TASK-0218]] fixed its count of the cockpit panel's rows and its served-page step now expects the wheel at once; towers-rubric 35 checks, agent-sessions 24, agent-needs 12 and shell-drawer 9, all holding. The nine Glass and Spread walks are removed, and the shared walk helpers keep only what the overview's walks use.
-- Retired with one line naming ADR-0010 and the tag: 53 test notes in all across TASK-0214 to TASK-0216, 24 of them here (TST-0008, 0009, 0012, 0020, 0023, 0024, 0025, 0027, 0028, 0038, 0045, 0048, 0052, 0056, 0063, 0064, 0068, 0069, 0071, 0072, 0073, 0076, 0077, 0079). Its suite, `panels.test.mjs`, went with TST-0020. TST-0059 stays at `ready`: it was never run, and a retired manual test must say when it last was.
+- Retired with one line naming ADR-0010 and the tag: 46 test notes in all across TASK-0214 to TASK-0216, 17 of them here (TST-0008, 0009, 0012, 0020, 0023, 0024, 0025, 0027, 0028, 0038, 0048, 0052, 0056, 0063, 0064, 0073, 0077). Its suite, `panels.test.mjs`, went with TST-0020. TST-0059 stays at `ready`: it was never run, and a retired manual test must say when it last was.
+- **Seven walks that were `passing` are parked, not retired:** TST-0045, 0068, 0069, 0071, 0072, 0076 and 0079. Finished tasks and fixed issues rest on them, and a fresh clone (as CI makes, with no tag to hide older findings) refused 25 of those once the tests were retired. Each now carries a Parked callout and stays `passing` as the record of what it verified at the tag. TST-0076 and TST-0079 stay on the review grandfather list.
 - Kept and rewritten: TST-0015 (Parity's day in Deck, now in the overview), TST-0037 (one guard of four is left, the script guard). TST-0003, TST-0005, TST-0010, TST-0011, TST-0013, TST-0026, TST-0036 and TST-0046 still describe code on main and are unchanged.
-- RISK-0007 and RISK-0008 are closed. TST-0076 and TST-0079 left `tools/GRANDFATHERED.yaml` with their retirement.
+- RISK-0007 and RISK-0008 are closed.

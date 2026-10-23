@@ -41,7 +41,7 @@ Then re-adopt the parked notes there. Nothing in this repository is restored for
 - **The main process.** `main.ts` went from 2,725 lines to 1,131. Deck has one kind of window. Gone: satellite windows, pop-out panels, handing a note between windows and its six IPC channels, the orbit's graph service and worker, the measuring run (`npm run measure`) and the host's extra reads.
 - **The store.** It holds the workspace, the name Deck writes with, the revision and the index revisions. A state file an older Deck wrote opens with its workspace and its name, and the rest of it is passed over and not written back.
 - **Removed modules.** Five renderer modules, four main-process modules and 24 shared modules. The walk driver's pointer and keyboard helpers moved to `desktop/src/main/input.ts`.
-- **Tests.** Twenty-eight node suites of removed code are removed, and 53 test notes are retired, each naming ADR-0010 and the tag. The smoke run checks the overview in a real window and fails when an old address is not answered.
+- **Tests.** Twenty-eight node suites of removed code are removed, and 46 test notes are retired, each naming ADR-0010 and the tag. Seven walks that were passing stay `passing`, marked parked, because finished tasks rest on them. The smoke run checks the overview in a real window and fails when an old address is not answered.
 - **The phases.** PHASE-0001 Deck, PHASE-0002 Glass and PHASE-0003 Vault are `deferred`, with their unfinished features, tasks, issues and requirements. ADR-0010 supersedes ADR-0002, ADR-0005, ADR-0006, ADR-0007 and ADR-0008, and amends ADR-0004.
 
 ## Verification
@@ -57,7 +57,7 @@ Then re-adopt the parked notes there. Nothing in this repository is restored for
 - requirements: updated (REQ-0001 to REQ-0006 parked)
 - tasks: new (TASK-0213 to TASK-0217); updated (eight parked)
 - issues: updated (four parked)
-- tests: updated (53 retired, nine updated); new (TST-0109)
+- tests: updated (46 retired, seven parked, nine updated); new (TST-0109)
 - workflows: not-applicable
 - decisions: new (ADR-0010); updated (five superseded, one amended)
 - risks: new (RISK-0018); updated (RISK-0007 and RISK-0008 closed)
