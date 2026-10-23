@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0050
 aliases: ["TST-0050"]
 title: "Zoom keeps the point under the pointer still, stays between 0.6 and 2.5 times, never loses the field off the screen, and at 1 times changes nothing"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-23
 source: ["[[TASK-0064-The-Zoom-Is-A-Pure-View-Transform]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[FEAT-0016-The-W
 ---
 
 # Zoom keeps the point under the pointer still
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

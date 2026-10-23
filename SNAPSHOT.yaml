@@ -63,7 +63,7 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0036"
-  task: "TASK-0213"
+  task: "TASK-0215"
   note: "2026-10-23: Edwin decided 'tag and remove; park Vault too' (ADR-0010). Deck becomes the overview only. Spread, Glass and the orbit leave main and are kept under the annotated tag original-deck-2026-10-23 (commit b1bc30b, local, not pushed yet); PHASE-0001, PHASE-0002 and PHASE-0003 are deferred with their unfinished features, tasks, issues and requirements. FEAT-0036 does the removal, TASK-0213 first: push the tag, put TASK-0005's uncommitted orbit comparison on the branch parked/original-deck, then park TASK-0005 on main (the frontmatter is in TASK-0213). The DES-0006 build (FEAT-0032 to FEAT-0035) is at review after round two; FEAT-0025 to FEAT-0031 wait on Edwin's acceptance tests and DES-0005. Sessions always ask before acting (RISK-0013). Node suites use fake providers (RISK-0017). Deck's repo is public (RISK-0016)."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -71,7 +71,7 @@ items:
   # Pruned by retention policy (ADR-0018); the notes remain the archive.
   features:
     FEAT-0036:
-      status: planned
+      status: doing
       file: "docs/features/overview-only/FEAT-0036-Deck-Opens-Only-On-The-Overview-And-The-Original-Deck-Is-Kept-Under-A-Tag.md"
       owner: system:claude
       phase: PHASE-0005
@@ -364,12 +364,12 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0214:
       file: docs/features/overview-only/plan/tasks/TASK-0214-Deck-s-Page-Boots-Only-The-Rail-The-Overview-The-Agent-Pane-And-The-Shell-Drawer.md
-      status: backlog
+      status: done
       parent: FEAT-0036
       phase: "[[PHASE-0005]]"
     TASK-0215:
       file: docs/features/overview-only/plan/tasks/TASK-0215-The-Main-Process-And-The-Store-Keep-Nothing-Only-Spread-Glass-And-The-Orbit-Used.md
-      status: backlog
+      status: doing
       parent: FEAT-0036
       phase: "[[PHASE-0005]]"
     TASK-0216:
@@ -2359,7 +2359,7 @@ items:
       covers: ["FEAT-0024"]
     TST-0078:
       file: "docs/features/glass-evidence/plan/tests/TST-0078-Evidence-Says-What-Is-Recorded-And-Names-What-Is-Not.md"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: feature
@@ -2489,7 +2489,7 @@ items:
     TST-0004:
       file: "docs/features/spread/plan/tests/TST-0004-A-Desk-Reopens-As-It-Was-Left.md"
       title: "A desk reopens as it was left, and a desk naming a note that is gone opens without it"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0005"]
@@ -2585,7 +2585,7 @@ items:
     TST-0016:
       file: "docs/features/spread/plan/tests/TST-0016-The-Groups-The-Sidecar-Sends-Are-Drawn.md"
       title: "The groups the sidecar sends are drawn, and no note is lost or repeated on the way"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0005"]
@@ -2593,7 +2593,7 @@ items:
     TST-0017:
       file: "docs/features/spread/plan/tests/TST-0017-Search-And-Filter-Narrow-The-Navigator.md"
       title: "Search and filter narrow the navigator, and find a note no card on screen holds"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0005"]
@@ -2601,7 +2601,7 @@ items:
     TST-0018:
       file: "docs/features/spread/plan/tests/TST-0018-A-Card-Shows-What-Its-Note-Is.md"
       title: "A card shows what its note is, and a type Deck has never heard of still draws"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0005"]
@@ -2609,7 +2609,7 @@ items:
     TST-0019:
       file: "docs/features/spread/plan/tests/TST-0019-The-Desk-Is-Chosen-And-Arranged.md"
       title: "The desk is a chosen set of cards a person arranges, and it survives being saved and reopened"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0005"]
@@ -2697,7 +2697,7 @@ items:
     TST-0030:
       file: "docs/features/descriptions/plan/tests/TST-0030-A-Description-Parses-Or-Says-Why-Not.md"
       title: "A description parses or says why not, the seven project-os views still match the cockpit, and twelve real base files come back with their unsupported constructs named"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0012"]
@@ -2705,7 +2705,7 @@ items:
     TST-0031:
       file: "docs/features/descriptions/plan/tests/TST-0031-The-Evaluator-Runs-The-Seeded-Language.md"
       title: "The evaluator runs the seeded language over Deck's index, the three type spellings agree, and nothing unsupported returns an empty list without saying so"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0012"]
@@ -2713,7 +2713,7 @@ items:
     TST-0032:
       file: "docs/features/descriptions/plan/tests/TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit.md"
       title: "Band and face follow the description rather than the code, and the status vocabulary Deck copies still equals the cockpit's"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0012"]
@@ -2761,7 +2761,7 @@ items:
     TST-0050:
       file: "docs/features/glass-zoom/plan/tests/TST-0050-Zoom-Keeps-The-Point-Under-The-Pointer.md"
       title: "Zoom keeps the point under the pointer still, stays between 0.6 and 2.5 times, never loses the field off the screen, and at 1 times changes nothing"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0016"]
@@ -2769,7 +2769,7 @@ items:
     TST-0051:
       file: "docs/features/glass-focus/plan/tests/TST-0051-The-Ring-Keeps-Order-Clears-The-Pane-And-Moves-On-Arcs.md"
       title: "The seats round an opened note hold every neighbour at browsing size, never overlap the document or each other, keep the cards' circular order, and run on past the field's left and right edges"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0017"]
@@ -2785,7 +2785,7 @@ items:
     TST-0053:
       file: "docs/features/glass-bands/plan/tests/TST-0053-Every-Note-Has-A-Band-And-Every-Band-States-Its-Remainder.md"
       title: "Every note the view holds has a band and every band states its remainder: the four lists plus the four counts add up, the middle's remainder is placed rather than dropped, and a pushed note is never the one a capacity drops"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0018"]
@@ -2793,7 +2793,7 @@ items:
     TST-0054:
       file: "docs/features/glass-bands/plan/tests/TST-0054-Each-Bands-Shape-Follows-How-Much-It-Holds.md"
       title: "Each band's shape follows how much it holds: a table of populations from forty to twenty-seven hundred, both ends clamped, no band's depth moving, and today's constants returned at the large end"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0018"]
@@ -2801,7 +2801,7 @@ items:
     TST-0055:
       file: "docs/features/glass-bands/plan/tests/TST-0055-Detail-Follows-Apparent-Size.md"
       title: "Detail follows apparent size: the thresholds are monotonic, the unzoomed field resolves to exactly what it draws today, a zoomed mid card reaches its face line, and the promotion threshold is not above the brief one"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0018"]
@@ -2953,7 +2953,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 208
-    tasks_done: 184
+    tasks_done: 185
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

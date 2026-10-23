@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0040
 aliases: ["TST-0040"]
 title: "The field deals every view into three bands: owed in front and never moved by a hand, the view in the middle, finished work behind, over the real payloads"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[TASK-0029-The-Band-Function]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -25,6 +25,9 @@ review_verdict: ""
 related: ["[[TST-0032-Band-And-Face-Follow-The-Description-And-The-Vocabularies-Match-The-Cockpit]]", "[[DES-0002-The-Glass-Cockpit]]"]
 ---
 # The field deals every view into three bands
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

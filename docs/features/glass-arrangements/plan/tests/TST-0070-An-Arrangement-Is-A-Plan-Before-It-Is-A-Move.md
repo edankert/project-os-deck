@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0070
 aliases: ["TST-0070"]
 title: "An arrangement is a plan before it is a move: Read, Compare and Show related name what they move, never change a size, leave alone what they do not name, and can be put back except where a person has changed something since"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0102-Preview-Apply-And-Undo-Glass-Arrangements]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0071-Collection-Forms-And-Arrangements-Are-Walked-With-A-Real-P
 ---
 
 # An arrangement is a plan before it is a move
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

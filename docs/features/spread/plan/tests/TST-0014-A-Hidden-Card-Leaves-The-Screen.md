@@ -6,7 +6,7 @@ title: "A card the pool has hidden leaves the screen, and no stylesheet rule can
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-10-23
 source: ["[[ISS-0001-Cards-From-The-Previous-View-Stay-On-Screen]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -38,7 +38,7 @@ Guards [[ISS-0001-Cards-From-The-Previous-View-Stay-On-Screen]]. The card pool m
 - Parse the built stylesheet into rules, with comments stripped, so what is read is the rules and not the prose about them.
 - Assert some rule matches `[hidden]` and sets `display: none !important`.
 - Assert no other rule sets `display` with `!important`, since one would outrank the guard.
-- Assert the card rule still sets `display`, which is what makes the guard necessary and says so where somebody would otherwise remove it.
+- Assert the session pane's rule still sets `display`, which is what makes the guard necessary and says so where somebody would otherwise remove it. Until 2026-10-23 this step read the card rule; the cards left main with Spread ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), and the guard still covers everything Deck hides.
 
 ## Expected results
 
@@ -48,7 +48,7 @@ Guards [[ISS-0001-Cards-From-The-Previous-View-Stay-On-Screen]]. The card pool m
 ## Evidence
 
 - `bash tools/scripts/run-desktop-tests.sh render`: 4 checks, all passing on 2026-09-06.
-- The behavioural half is the smoke run, which counts what the browser displays rather than what the DOM is marked as: `every card the pool hid left the screen` and `the screen shows what the view says it has`.
+- The behavioural half was the smoke run's count of what the browser displays. It left with Spread on 2026-10-23.
 
 ## Adequacy (who verifies this test?)
 

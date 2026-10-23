@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0054
 aliases: ["TST-0054"]
 title: "Each band's shape follows how much it holds: a table of populations from forty to twenty-seven hundred, both ends clamped, no band's depth moving, and today's constants returned at the large end"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-10-23
 source: ["[[TASK-0073-Each-Bands-Shape-Follows-What-It-Holds]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0041-The-Slot-Geometry-Places-Every-Note-And-Keeps-Obstacles-Cl
 ---
 
 # Each band's shape follows how much it holds
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

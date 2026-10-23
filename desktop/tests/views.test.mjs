@@ -76,22 +76,3 @@ test('a view the provider did not return cannot be resolved', () => {
   assert.equal(registry.resolve(WORKSPACE, 'not-a-view'), null);
   assert.notEqual(registry.resolve(WORKSPACE, DEFAULT_VIEW_ID), null);
 });
-
-test('no view id is written into the renderer', () => {
-  // Crude on purpose. It is the only kind of check that catches the failure
-  // this rule exists to prevent: someone adding one convenient hard-coded
-  // button, which then survives every provider change.
-  const dir = path.join(desktopRoot, 'dist', 'web', 'renderer');
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.js'));
-  assert.ok(files.length > 0, 'the renderer was not built');
-  const offences = [];
-  for (const file of files) {
-    const source = fs.readFileSync(path.join(dir, file), 'utf-8');
-    for (const view of fixture.views) {
-      if (source.includes(`'${view.id}'`) || source.includes(`"${view.id}"`) || source.includes(`\`${view.id}\``)) {
-        offences.push(`${file} names the view "${view.id}"`);
-      }
-    }
-  }
-  assert.deepEqual(offences, []);
-});

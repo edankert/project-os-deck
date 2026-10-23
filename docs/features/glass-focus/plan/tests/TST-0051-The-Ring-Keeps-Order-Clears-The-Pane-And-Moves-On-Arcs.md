@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0051
 aliases: ["TST-0051"]
 title: "The seats round an opened note hold every neighbour at browsing size, never overlap the document or each other, keep the cards' circular order, and run on past the field's left and right edges"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0067-The-Ring-Is-A-Pure-Layout]]", "[[TASK-0104-Preserve-Note-Identity-Size-And-Neighbourhood-While-Moving]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]", "[[TST-0065-A-Note
 ---
 
 # The seats keep order, clear the document and run past the edge
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

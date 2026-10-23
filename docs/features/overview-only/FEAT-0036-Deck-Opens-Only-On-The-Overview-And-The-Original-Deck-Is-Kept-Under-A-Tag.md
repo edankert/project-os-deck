@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0036
 aliases: ["FEAT-0036"]
 title: "Deck opens only on the overview, and the original Deck is kept under a tag"
-status: planned
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23

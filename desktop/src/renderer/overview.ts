@@ -1024,7 +1024,7 @@ function place(): void {
   const bar = document.querySelector('.bar');
   const rail = document.getElementById('rail');
   const top = bar === null ? 0 : bar.getBoundingClientRect().bottom;
-  const railBox = rail === null || document.body.classList.contains('pinned') ? null : rail.getBoundingClientRect();
+  const railBox = rail === null ? null : rail.getBoundingClientRect();
   area.style.top = `${Math.round(top)}px`;
   area.style.left = `${railBox === null || railBox.width === 0 ? 0 : Math.round(railBox.right)}px`;
   // Above the status line, which is where Deck says what it is doing.

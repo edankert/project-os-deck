@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0044
 aliases: ["TST-0044"]
 title: "The neighbourhood is read once per note per revision and shared by the lift and the reach, what held notes share is their intersection, and a throw is recognised from pointer samples and window bounds"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[TASK-0036-The-Neighbourhood-Takes-The-Front-Band]]", "[[TASK-0055-Throw-To-A-Screen]]", "[[TASK-0056-Reach]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -25,6 +25,9 @@ review_verdict: ""
 related: ["[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 # The neighbourhood is read once, and a throw is recognised
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

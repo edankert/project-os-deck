@@ -6,8 +6,9 @@
 // anything. That is what happened: switching to a shorter view repainted its
 // cards over the top of the previous view's, which stayed put.
 //
-// This suite guards the stylesheet's half. The behavioural half is the smoke
-// run, which counts what the browser actually displays.
+// This suite guards the stylesheet's half. Spread and its cards left main on
+// 2026-10-23 (ADR-0010); the rule still guards everything Deck hides, such as
+// the session pane.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -56,12 +57,13 @@ test('nothing else claims display with !important, which would outrank the hidde
   assert.deepEqual(offenders, [], 'these rules could beat [hidden] and put a hidden card back on screen');
 });
 
-test('the card rule still sets display, which is why the guard is needed', () => {
-  // Not a style preference: this documents the collision. If `.card` ever
-  // stops setting `display`, the guard above is still correct and this test
-  // is the place that says why it was added.
+test('the session pane rule still sets display, which is why the guard is needed', () => {
+  // Not a style preference: this documents the collision. Spread's cards were the first
+  // to meet it, and left with Spread (ADR-0010); the session pane is hidden and shown
+  // the same way, and its rule sets `display` too. If it ever stops, the guard above
+  // is still correct and this test is the place that says why it was added.
   const parsed = rules(fs.readFileSync(cssPath, 'utf8'));
-  const card = parsed.find((r) => r.selector === '.card');
-  assert.ok(card, 'no .card rule in the stylesheet');
-  assert.match(card.body, /display\s*:/, 'the .card rule no longer sets display; the collision may be gone');
+  const pane = parsed.find((r) => r.selector === '.ag-pane');
+  assert.ok(pane, 'no .ag-pane rule in the stylesheet');
+  assert.match(pane.body, /display\s*:/, 'the .ag-pane rule no longer sets display; the collision may be gone');
 });

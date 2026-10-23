@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0031
 aliases: ["TST-0031"]
 title: "The evaluator runs the seeded language over Deck's index, the three type spellings agree, and nothing unsupported returns an empty list without saying so"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-10-23
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[PHASE-0001-Deck]]", "[[RISK-0003-Two-Evaluators-Of-The-Bases-Langua
 ---
 
 # The evaluator runs the seeded language
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0016
 aliases: ["TST-0016"]
 title: "The groups the sidecar sends are drawn, and no note is lost or repeated on the way"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-10-23
 source: ["[[FEAT-0005-Spread-Cards-On-A-Desk]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[PHASE-0001-Deck]]", "[[TASK-0023-The-Groups-The-Sidecar-Sends-Are-D
 ---
 
 # The groups the sidecar sends are drawn
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0055
 aliases: ["TST-0055"]
 title: "Detail follows apparent size: the thresholds are monotonic, the unzoomed field resolves to exactly what it draws today, a zoomed mid card reaches its face line, and the promotion threshold is not above the brief one"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-10-14
+updated: 2026-10-23
 source: ["[[TASK-0074-Detail-Follows-Apparent-Size-Not-The-Band]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0050-Zoom-Keeps-The-Point-Under-The-Pointer]]", "[[FEAT-0016-Th
 ---
 
 # Detail follows apparent size
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

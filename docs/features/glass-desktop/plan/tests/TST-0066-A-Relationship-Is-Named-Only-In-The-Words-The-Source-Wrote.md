@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0066
 aliases: ["TST-0066"]
 title: "A relationship between two notes is named only in the words the source wrote: the frontmatter key a link stands under, or 'link', and never a meaning Deck made up"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0098-Keep-Collection-Document-And-Field-In-Sync]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[DES-0003-Collections-And-Documents-On-Glass]]", "[[TST-0068-The-Gla
 ---
 
 # A relationship is named only in the words the source wrote
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

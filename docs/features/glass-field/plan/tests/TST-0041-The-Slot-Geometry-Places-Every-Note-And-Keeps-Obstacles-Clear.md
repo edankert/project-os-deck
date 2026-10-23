@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0041
 aliases: ["TST-0041"]
 title: "The slot geometry places every note, gives a thousand quiet tiles a stated shape, keeps an obstacle clear at any yaw, and deals nothing on a turn"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[TASK-0030-The-Slot-Geometry]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -25,6 +25,9 @@ review_verdict: ""
 related: ["[[REFERENCE-DES-0002-REVIEW]]"]
 ---
 # The slot geometry places every note and keeps obstacles clear
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

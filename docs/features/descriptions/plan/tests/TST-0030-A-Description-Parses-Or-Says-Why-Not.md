@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0030
 aliases: ["TST-0030"]
 title: "A description parses or says why not, the seven project-os views still match the cockpit, and twelve real base files come back with their unsupported constructs named"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-20
+updated: 2026-10-23
 source: ["[[FEAT-0012-A-View-Is-A-Description]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[PHASE-0001-Deck]]", "[[ADR-0004-A-View-Is-A-Description]]", "[[TST-
 ---
 
 # A description parses, or says why not
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

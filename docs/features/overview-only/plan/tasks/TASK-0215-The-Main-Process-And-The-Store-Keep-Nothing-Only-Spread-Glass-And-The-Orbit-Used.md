@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0215
 aliases: ["TASK-0215"]
 title: "The main process and the store keep nothing that only Spread, Glass and the orbit used"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23

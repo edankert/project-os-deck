@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0053
 aliases: ["TST-0053"]
 title: "Every note the view holds has a band and every band states its remainder: the four lists plus the four counts add up, the middle's remainder is placed rather than dropped, and a pushed note is never the one a capacity drops"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-10-23
 source: ["[[TASK-0072-Every-Band-Has-A-Capacity-And-The-Deal-Places-A-Fourth]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0040-The-Field-Deals-Every-View-Into-Three-Bands]]", "[[FEAT-00
 ---
 
 # Every note has a band and every band states its remainder
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -27,7 +27,7 @@ export type NoteLoader = (noteId: string) => Promise<string>;
 /** Follows a link inside a note's text: the path after `/docs/`, as Glass's reader reads it. */
 export type LinkFollower = (rel: string) => Promise<void>;
 
-/** Where the sidecar's rendered links to other notes start (as in `glass.ts`). */
+/** Where the sidecar's rendered links to other notes start. */
 const NOTE_LINK_PREFIX = '/docs/';
 
 export interface PanelLayer {
