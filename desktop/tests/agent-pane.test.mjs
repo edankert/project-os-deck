@@ -287,6 +287,7 @@ test('the head draws how full the context is and how much of the limit is used, 
   assert.deepEqual([m.context.percent, m.context.words], [85, 'context 85% (170k of 200k)']);
   assert.deepEqual([m.limit.percent, m.limit.words], [12, '12% of the 5-hour limit used']);
   assert.deepEqual(paneTurns(records), paneTurns(CONVERSATION), 'usage draws in no turn');
+  assert.deepEqual(paneTurns([{ kind: 'usage', at: at(0), limit: { percent: 3, window: 'weekly' } }, ...CONVERSATION]), paneTurns(CONVERSATION), 'nor starts one of its own');
   const none = paneOf(session(), CONVERSATION);
   assert.deepEqual([none.context, none.limit], [null, null], 'nothing until the agent reports it');
   assert.equal(paneOf(session(), [{ kind: 'usage', at: at(1), context: { used: 5, window: 0 } }]).context, null, 'a window of nothing is no bar');

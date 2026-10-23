@@ -345,7 +345,7 @@ items:
   tasks:
     TASK-0209:
       file: docs/features/agent-pane/plan/tasks/TASK-0209-The-Pane-Keeps-Its-Session-In-The-Address-And-Shows-Usage-And-The-Tickets-Moved.md
-      status: doing
+      status: done
       parent: FEAT-0033
       phase: "[[PHASE-0004]]"
     TASK-0210:
@@ -2892,7 +2892,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 202
-    tasks_done: 179
+    tasks_done: 180
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

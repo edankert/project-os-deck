@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0209
 aliases: ["TASK-0209"]
 title: "An open session stays in the overview's address with no marker, the pane shows context and usage and the tickets the session moved, and the Agents list leaves no session out"
-status: doing
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-23
@@ -33,10 +33,20 @@ tests: ["[[TST-0105]]"]
 
 ## Definition of Done
 
-- [ ] An open session is in the wheel's address whether or not it has a marker; the right panels make way and Escape offers "Close the session".
-- [ ] A session records its context use and its usage limits as they are reported, as a `usage` record, never a cost; the pane's head draws them as two bars.
-- [ ] A Deck session's pane lists the tickets the session moved, from the cockpit's record of the same session.
-- [ ] Every cockpit session is kept, and the drawn Agents list says how many more there are than it draws.
-- [ ] A test fails when `agentsFor` answers anything but undefined with no bridge.
-- [ ] Opening or closing a session clears the composer's text and an armed Stop; a failed Send puts the text back and says why.
-- [ ] [[TST-0105]] has a check for each, and fails when each is undone.
+- [x] An open session is in the wheel's address whether or not it has a marker; the right panels make way and Escape offers "Close the session".
+- [x] A session records its context use and its usage limits as they are reported, as a `usage` record, never a cost; the pane's head draws them as two bars.
+- [x] A Deck session's pane lists the tickets the session moved, from the cockpit's record of the same session.
+- [x] Every cockpit session is kept, and the drawn Agents list says how many more there are than it draws.
+- [x] A test fails when `agentsFor` answers anything but undefined with no bridge.
+- [x] Opening or closing a session clears the composer's text and an armed Stop; a failed Send puts the text back and says why.
+- [x] [[TST-0105]] has a check for each, and fails when each is undone.
+
+## What was built (2026-10-23)
+
+- `wheelScene` (`desktop/src/shared/overview-wheel.ts`) takes the open session from the address whenever the page has sessions to show.
+- A `usage` record (`desktop/src/shared/agent-types.ts`) carries the context in tokens against its window, and the limit as a percentage with its span. Claude's provider reads the last main-conversation call's tokens and the result's largest `contextWindow`, never its costs, and the `rate_limit_event`'s share used. Codex's reads `thread/tokenUsage/updated` and `account/rateLimits/updated`. `paneOf` draws the latest of each as the head's two bars, amber from 80%.
+- `deckSummaries` reads the cockpit's record of each Deck session by its id and lists the tickets it moved; the pane shows them under the bars.
+- `cockpitSummaries` keeps every session (the cockpit keeps at most 50). The window's Agents list scrolls; the flat picture draws five and says "+N more sessions". A cockpit session that has ended reads as stopped.
+- The composer forgets its text and an armed Stop when the pane opens another session or closes; a Send that fails, or whose call throws, puts the text back and says why.
+
+[[TST-0105]] has 26 checks and [[TST-0104]] 34. Each guard above was broken once on the committed code, eleven in all, and a check failed for each. The first attempt at two of them proved nothing: one removed line changed nothing the checks looked at, so a check now gives a usage record before the first prompt; the other did not compile.
