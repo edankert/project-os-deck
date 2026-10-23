@@ -126,7 +126,8 @@ function fakeQuery(turns) {
         const steps = turns[t++] ?? [];
         for (const step of steps) {
           if (interrupted) break;
-          if (step.text) yield { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'text', text: step.text }] } };
+          if (step.text) yield { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'text', text: step.text }], ...(step.usage ? { usage: step.usage } : {}) } };
+          if (step.raw) yield step.raw;
           if (step.use) {
             const [name, input, id] = step.use;
             yield { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id, name, input }] } };
@@ -134,7 +135,7 @@ function fakeQuery(turns) {
             yield { type: 'user', session_id: 'sdk-session-1', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: id, is_error: answer.behavior !== 'allow', content: answer.behavior === 'allow' ? 'ok' : answer.message }] } };
           }
         }
-        yield { type: 'result', subtype: 'success', is_error: false, session_id: 'sdk-session-1', prompt: p };
+        yield { type: 'result', subtype: 'success', is_error: false, session_id: 'sdk-session-1', prompt: p, ...(steps.find((x) => x.result)?.result ?? {}) };
       }
     })();
     gen.interrupt = async () => { interrupted = true; };
@@ -684,4 +685,38 @@ test('an agent whose next steps run while a change is being told never leaves th
   assert.equal(s.record.state, 'idle');
   assert.equal(told.at(-1), 'idle', 'the last state told is the one the session is in');
   assert.equal(latest(s.records).filter((r) => r.kind === 'state').at(-1).state, 'idle');
+});
+
+// --- TASK-0209: context and usage, as the agents report them ---
+
+const { paneTurns: paneTurnsOf } = load('shared/agent-pane.js');
+
+test('a Claude session records how full its context is and how much of the limit is used, and never a cost', async () => {
+  const q = fakeQuery([[
+    { text: 'Reading.', usage: { input_tokens: 1000, cache_read_input_tokens: 40000, cache_creation_input_tokens: 2000, output_tokens: 500 } },
+    { text: 'A subagent step.', raw: { type: 'assistant', session_id: 'sdk-session-1', parent_tool_use_id: 'task-1', message: { content: [], usage: { input_tokens: 190000, output_tokens: 1 } } } },
+    { raw: { type: 'rate_limit_event', session_id: 'sdk-session-1', rate_limit_info: { status: 'allowed', utilization: 0.42, rateLimitType: 'five_hour' } } },
+    { result: { total_cost_usd: 1.5, modelUsage: { 'claude-opus-5-5': { contextWindow: 200000, costUSD: 1.5 }, 'claude-haiku-5-5': { contextWindow: 100000, costUSD: 0 } } } },
+  ]]);
+  const s = new AgentSession(record(), new ClaudeProvider(q, now, {}), now);
+  await s.start('Work on TASK-0001, invented.');
+  await until(() => s.record.state === 'idle');
+  const usage = s.records.filter((r) => r.kind === 'usage');
+  assert.deepEqual(usage.map((u) => [u.context, u.limit]), [[undefined, { percent: 42, window: '5-hour' }], [{ used: 43500, window: 200000 }, undefined]], 'the main conversation\'s last call, against the largest window; a subagent\'s call is not the context');
+  assert.doesNotMatch(JSON.stringify(s.records), /usd|cost|1\.5/i);
+  assert.ok(!paneTurnsOf(s.records).some((t) => t.items.some((i) => JSON.stringify(i).includes('usage'))), 'usage stands in the head, in no turn');
+  await s.stop();
+});
+
+test('a Codex session records its context from the token update and its limit from the rate-limit update', async () => {
+  const { provider } = fakeCodex([[{ say: 'Looking.' }, { usage: { tokens: 51000, window: 258000, percent: 63, minutes: 300 } }, { usage: { tokens: 0, window: 258000, percent: null } }]]);
+  const folder = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-codex-ws-')));
+  const s = new AgentSession(record({ agent: 'codex', model: 'gpt-6-astra', effort: 'medium', folder }), provider, now);
+  await s.start('Work on TASK-0001, invented.');
+  try {
+    await until(() => s.record.state === 'idle');
+    assert.deepEqual(s.records.filter((r) => r.kind === 'usage').map((u) => [u.context, u.limit]), [[{ used: 51000, window: 258000 }, undefined], [undefined, { percent: 63, window: '5-hour' }]], 'an update with no tokens or no window records nothing');
+  } finally {
+    await s.stop();
+  }
 });

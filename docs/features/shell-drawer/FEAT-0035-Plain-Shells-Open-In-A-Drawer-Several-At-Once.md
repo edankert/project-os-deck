@@ -11,7 +11,7 @@ updated: 2026-10-22
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'", "Edwin 2026-09-07, PHASE-0004: 'I want to see if we can introduce the t3.codes console solution instead of our current console.'"]
 goal: "In Deck's shell Edwin opens a drawer of plain terminals, several at once, each in a workspace's folder or a session's worktree, without leaving Deck."
 requirements: []
-tasks: ["[[TASK-0205]]", "[[TASK-0206]]"]
+tasks: ["[[TASK-0205]]", "[[TASK-0206]]", "[[TASK-0211]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""

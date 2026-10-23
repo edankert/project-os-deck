@@ -52,6 +52,23 @@ export class AgentPane {
 
   /** A cockpit session open to read: what the cockpit records, with nothing to send (TASK-0199). */
   private cockpitId: string | null = null;
+  /** The tickets the open session moved, from the cockpit's record of it (TASK-0209). */
+  private moved: string[] = [];
+
+  /** The tickets the open session moved, as the overview last read them; drawn again only when they change. */
+  setMoved(tickets: readonly string[]): void {
+    if (JSON.stringify(tickets) === JSON.stringify(this.moved)) return;
+    this.moved = [...tickets];
+    this.draw();
+  }
+
+  /** What the composer held for the last session: never carried to the next (review, round one). */
+  private forget(): void {
+    this.draft = '';
+    this.stopArmed = false;
+    this.composerShape = '';
+    this.moved = [];
+  }
 
   get openId(): string | null {
     return this.session?.id ?? this.cockpitId;
@@ -66,7 +83,7 @@ export class AgentPane {
     this.unsubscribe = null;
     this.session = null;
     this.records = [];
-    this.composerShape = '';
+    this.forget();
     this.cockpitId = s.id;
     const word = AGENT_WORD[s.agent];
     const box = el('header', 'ag-head');
@@ -96,6 +113,7 @@ export class AgentPane {
     }
     this.unsubscribe?.();
     this.cockpitId = null;
+    if (this.session?.id !== session.id) this.forget();
     this.session = session;
     this.records = (await this.options.agents.conversation(id)) as ConversationRecord[];
     this.unsubscribe = this.options.agents.subscribe((raw) => {
@@ -117,19 +135,19 @@ export class AgentPane {
     this.session = null;
     this.cockpitId = null;
     this.records = [];
-    this.composerShape = '';
+    this.forget();
     this.element.hidden = true;
     if (tell) this.options.closed();
   }
 
   /** The pane as laid out now, for the window run and the suite. */
   model(): PaneModel | null {
-    return this.session === null ? null : paneOf(this.session, this.records);
+    return this.session === null ? null : paneOf(this.session, this.records, this.moved);
   }
 
   private draw(toEnd = false): void {
     if (this.session === null) return;
-    const m = paneOf(this.session, this.records);
+    const m = paneOf(this.session, this.records, this.moved);
     // A reader at the end follows new records; one who scrolled up stays where they are.
     const atEnd = toEnd || this.body.scrollHeight - this.body.scrollTop - this.body.clientHeight < 24;
     const keep = this.body.scrollTop;
@@ -150,6 +168,23 @@ export class AgentPane {
     title.appendChild(close);
     const facts = el('div', 'ag-facts', [h.ticket ?? 'no ticket', h.where, h.model, h.effort, h.access, `started ${time(h.created)}`, `${m.minutes} min`].filter(Boolean).join(' · '));
     box.append(title, facts);
+    // Context and usage, as two bars, once the agent has reported them; never a cost.
+    for (const bar of [m.context, m.limit]) {
+      if (bar === null) continue;
+      const row = el('div', `ag-bar${bar.percent >= 80 ? ' is-high' : ''}`);
+      row.setAttribute('role', 'meter');
+      row.setAttribute('aria-valuemin', '0');
+      row.setAttribute('aria-valuemax', '100');
+      row.setAttribute('aria-valuenow', String(bar.percent));
+      row.setAttribute('aria-label', bar.words);
+      const fill = el('span', 'ag-bar-fill');
+      fill.style.width = `${bar.percent}%`;
+      const track = el('span', 'ag-bar-track');
+      track.appendChild(fill);
+      row.append(track, el('span', 'ag-bar-words', bar.words));
+      box.appendChild(row);
+    }
+    if (m.moved.length > 0) box.appendChild(el('div', 'ag-moved', `Moved ${m.moved.join(', ')}`));
     return box;
   }
 
@@ -290,9 +325,18 @@ export class AgentPane {
     if (this.session === null) return;
     const text = this.draft.trim() === '' ? fallback ?? '' : this.draft;
     if (text.trim() === '') return;
+    const id = this.session.id;
+    const typed = this.draft;
     this.draft = '';
-    const res = (await this.options.agents.send(this.session.id, text)) as { ok?: boolean; error?: string };
-    if (res?.ok !== true) this.options.say(res?.error ?? 'the prompt was not sent', true);
+    const res = (await this.options.agents.send(id, text).catch((err: unknown) => ({ ok: false, error: err instanceof Error ? err.message : String(err) }))) as { ok?: boolean; error?: string };
+    if (res?.ok === true) return;
+    // A prompt that did not go is given back, in the box, with why (review, round one).
+    if (this.session?.id === id && this.draft === '') {
+      this.draft = typed;
+      this.composerShape = '';
+      this.draw();
+    }
+    this.options.say(res?.error ?? 'the prompt was not sent', true);
   }
 
   private async stop(): Promise<void> {

@@ -1664,6 +1664,12 @@ body[data-overview-screen]:not([data-overview-screen=""]) .navigator { visibilit
 .ag-close { margin-left: auto; all: unset; cursor: pointer; padding: 0 6px; font-size: 18px; color: hsl(205 25% 70%); }
 .ag-close:hover { color: #fff; }
 .ag-facts { font-size: 11.5px; color: hsl(205 25% 64%); }
+/* Context and usage (TASK-0209): a thin bar each, its words beside it; amber from 80%. */
+.ag-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: hsl(205 25% 64%); }
+.ag-bar-track { flex: 0 0 120px; height: 5px; border-radius: 3px; background: hsl(210 30% 18%); overflow: hidden; }
+.ag-bar-fill { display: block; height: 100%; background: hsl(190 70% 55%); }
+.ag-bar.is-high .ag-bar-fill { background: var(--owed); }
+.ag-moved { margin-top: 6px; font-size: 11.5px; color: hsl(205 25% 72%); }
 .ag-turn { display: flex; flex-direction: column; gap: 6px; }
 .ag-prompt { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 12px 12px 2px 12px; background: hsla(200, 70%, 40%, 0.35); white-space: pre-wrap; }
 .ag-text { white-space: pre-wrap; }

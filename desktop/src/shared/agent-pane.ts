@@ -9,7 +9,7 @@
  * The real words are shown: the pane draws a session on Edwin's own machine. Nothing here
  * is ever a cost (FEAT-0030, RISK-0016).
  */
-import { latest, type AccessLevel, type AgentKind, type ConversationRecord, type SessionRecord, type SessionState } from './agent-types.js';
+import { latest, usageOf, type AccessLevel, type AgentKind, type ContextUse, type ConversationRecord, type LimitUse, type SessionRecord, type SessionState } from './agent-types.js';
 
 export const AGENT_WORD: Readonly<Record<AgentKind, string>> = { claude: 'Claude', codex: 'Codex' };
 export const AGENT_GLYPH: Readonly<Record<AgentKind, string>> = { claude: '✳', codex: '◎' };
@@ -53,6 +53,11 @@ export interface PaneModel {
   };
   /** Minutes the session has run, from its first record to its last. No cost, ever. */
   minutes: number;
+  /** How full its context is, and how much of the usage limit is used: the head's two bars, each null until the agent reports it. */
+  context: (ContextUse & { percent: number; words: string }) | null;
+  limit: (LimitUse & { words: string }) | null;
+  /** The tickets the session moved, as the cockpit recorded them; its start ticket first when it moved it. */
+  moved: string[];
   turns: PaneTurn[];
   /** "Claude is waiting for you", for a session waiting on a person; else null. */
   waiting: string | null;
@@ -74,6 +79,8 @@ export function paneTurns(records: readonly ConversationRecord[]): PaneTurn[] {
     }
     // A change of state with nothing to say draws nothing, and starts no turn of its own.
     if (r.kind === 'state' && r.state !== 'failed' && r.reason === undefined) continue;
+    // Context and usage stand in the head, not in a turn.
+    if (r.kind === 'usage') continue;
     const items = turn().items;
     const last = items[items.length - 1];
     if (r.kind === 'text') items.push({ kind: 'text', text: r.text });
@@ -108,7 +115,13 @@ export function paneTurns(records: readonly ConversationRecord[]): PaneTurn[] {
   return turns;
 }
 
-export function paneOf(session: SessionRecord, records: readonly ConversationRecord[]): PaneModel {
+const kTokens = (n: number): string => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)));
+const pct = (n: number): number => Math.max(0, Math.min(100, Math.round(n)));
+
+export function paneOf(session: SessionRecord, records: readonly ConversationRecord[], moved: readonly string[] = []): PaneModel {
+  const use = usageOf(records);
+  const context = use.context === null || use.context.window <= 0 ? null : { ...use.context, percent: pct((use.context.used / use.context.window) * 100), words: `context ${pct((use.context.used / use.context.window) * 100)}% (${kTokens(use.context.used)} of ${kTokens(use.context.window)})` };
+  const limit = use.limit === null ? null : { ...use.limit, percent: pct(use.limit.percent), words: `${pct(use.limit.percent)}% of the ${use.limit.window === '' ? 'usage' : use.limit.window} limit used` };
   const word = AGENT_WORD[session.agent];
   const open = latest(records).filter((r): r is PermissionRecord => r.kind === 'permission' && r.outcome === 'open');
   const first = records[0]?.at ?? session.created;
@@ -122,6 +135,9 @@ export function paneOf(session: SessionRecord, records: readonly ConversationRec
       model: session.model, effort: session.effort, access: ACCESS_WORD[session.access],
     },
     minutes: Number.isFinite(minutes) ? minutes : 0,
+    context,
+    limit,
+    moved: [...moved],
     turns: paneTurns(records),
     waiting: session.state === 'waiting' ? `${word} is waiting for you` : null,
     open,

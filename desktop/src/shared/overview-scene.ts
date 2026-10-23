@@ -189,6 +189,8 @@ export interface PanelAgents {
     target: string;
     label: string;
   }>;
+  /** How many rows the flat picture draws; the rest it counts as "+N more". */
+  keep: number;
 }
 
 /**

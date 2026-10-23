@@ -36,6 +36,11 @@ async function play(turnId) {
       const answer = await ask('item/fileChange/requestApproval', { threadId: 'thread-1', turnId, itemId: item.id });
       send({ method: 'item/completed', params: { threadId: 'thread-1', turnId, item: { ...item, status: answer.decision === 'accept' ? 'completed' : 'declined' } } });
     }
+    if (step.usage) {
+      const u = step.usage;
+      send({ method: 'thread/tokenUsage/updated', params: { threadId: 'thread-1', turnId, tokenUsage: { total: { totalTokens: u.tokens * 3 }, last: { totalTokens: u.tokens, inputTokens: u.tokens }, modelContextWindow: u.window } } });
+      send({ method: 'account/rateLimits/updated', params: { rateLimits: { limitId: null, primary: u.percent === null ? null : { usedPercent: u.percent, windowDurationMins: u.minutes ?? null, resetsAt: null }, secondary: null } } });
+    }
     if (step.unknown) await ask(step.unknown, {}).then((r) => send({ method: 'item/completed', params: { threadId: 'thread-1', turnId, item: { type: 'agentMessage', id: 'u', text: `answered ${JSON.stringify(r)}` } } }));
   }
   send({ method: 'turn/completed', params: { threadId: 'thread-1', turn: { id: turnId, status, items: [], error: null } } });

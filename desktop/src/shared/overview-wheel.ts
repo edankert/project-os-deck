@@ -112,7 +112,9 @@ export function wheelScene(model: OverviewModel, ctx: ScreenContext, options: To
   const selected = selectionPanels(model, layout, ctx, WHEEL_SELECTION, { workOn: options.agents !== undefined });
   const board = nextUpPanel(model, layout, ctx, WHEEL_BOARD);
   // The session pane stands at the right as a selected ticket's pane does; the panels there make way for either.
-  const session = layout.session === null ? null : options.session ?? null;
+  // The open session comes from the address, not from its marker: a session on no ticket, or on one off the ring,
+  // has no marker and is still open (review, round one). A page with no sessions to show opens none.
+  const session = options.agents !== undefined ? options.session ?? null : null;
   const right = layout.selection !== null || session !== null ? [] : [needsPanel(model, ctx, WHEEL_NEEDS, options.agents !== undefined && options.needs !== undefined ? { needs: options.needs, agents: options.agents } : undefined), weeksPanel(model, options.today ?? todayOf(model), WHEEL_WEEKS)];
   // Every agent session, in the shell only: a page given no sessions to show has no list (RISK-0015). While a
   // session is open the ring moves left of its pane, so the panels on the left make way too, and its marker and

@@ -580,11 +580,15 @@ function syncSessionPane(address: DeckAddress, model: OverviewModel): void {
     if (pane.openId !== null) pane.close(false);
     return;
   }
-  if (pane.openId === address.session) return;
   const summary = summaryOf(address.workspaceId, model, address.session);
+  if (pane.openId === address.session) {
+    // Each redraw brings the tickets the session has moved since (TASK-0209).
+    if (summary?.source === 'deck') pane.setMoved(summary.moved);
+    return;
+  }
   // A cockpit session shows what the cockpit records; Deck cannot send to it.
   if (summary?.source === 'cockpit') pane.openCockpit(summary);
-  else void pane.open(address.session);
+  else void pane.open(address.session).then((ok) => { if (ok && summary !== undefined) pane.setMoved(summary.moved); });
 }
 
 async function closeSessionAddress(): Promise<void> {

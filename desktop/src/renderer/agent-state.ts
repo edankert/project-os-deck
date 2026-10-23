@@ -49,7 +49,7 @@ export function agentsFor(workspaceId: string, model: Pick<OverviewModel, 'ticke
     cockpit.set(workspaceId, null);
     void reloadCockpit(workspaceId);
   }
-  const mine = deckSummaries(deck, workspaceId);
+  const mine = deckSummaries(deck, workspaceId, cockpit.get(workspaceId), model);
   return allSummaries(mine, cockpitSummaries(cockpit.get(workspaceId), model, new Set(mine.map((s) => s.id))));
 }
 
@@ -93,7 +93,8 @@ async function reloadCockpit(workspaceId: string): Promise<void> {
 function changed(): void {
   const shape = JSON.stringify([
     deck.map((s) => [s.id, s.workspaceId, s.state, s.ticket]),
-    [...cockpit.entries()].map(([k, v]) => [k, ((v as { sessions?: Array<{ session_id: string; state: string; ended: unknown }> } | null)?.sessions ?? []).map((s) => [s.session_id, s.state, s.ended])]),
+    // The tickets a session moved draw its curves and its count, so a new one draws again.
+    [...cockpit.entries()].map(([k, v]) => [k, ((v as { sessions?: Array<{ session_id: string; state: string; ended: unknown; status_touched?: Record<string, unknown> }> } | null)?.sessions ?? []).map((s) => [s.session_id, s.state, s.ended, Object.keys(s.status_touched ?? {}).length])]),
     [...needs.entries()],
   ]);
   if (shape === lastShape) return;

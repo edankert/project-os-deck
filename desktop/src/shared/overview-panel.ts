@@ -286,11 +286,14 @@ function agentsFlat(panel: PanelNode & { body: PanelAgents }): SceneNode[] {
   const { x, y, w, h } = panel;
   const out: SceneNode[] = [{ kind: 'mark', tag: 'rect', attrs: { x, y, width: w, height: h, rx: 10 }, cls: 'ov-track' }];
   out.push({ kind: 'text', x: x + 16, y: y + 24, text: panel.label, rest: true, role: 'label', size: 11.5, cls: 'ov-title' });
-  panel.body.rows.forEach((r, i) => {
+  const drawn = panel.body.rows.slice(0, panel.body.keep);
+  drawn.forEach((r, i) => {
     const cy = y + 48 + i * 28;
     out.push({ kind: 'mark', tag: 'circle', attrs: { cx: x + 22, cy, r: 6 }, cls: `ov-agent ag-${r.agent} st-${r.state}`, target: r.target, label: r.label });
     out.push({ kind: 'text', x: x + 36, y: cy + 4, text: `${r.agent === 'codex' ? 'Codex' : 'Claude'} ${r.id.slice(0, 8)} · ${r.start ?? 'no ticket'}${r.more > 0 ? ` +${r.more}` : ''} · ${r.word}`, rest: true, role: 'label', size: 11.5 });
   });
+  const rest = panel.body.rows.length - drawn.length;
+  if (rest > 0) out.push({ kind: 'text', x: x + 16, y: y + 48 + drawn.length * 28, text: `+${rest} more session${rest === 1 ? '' : 's'}`, rest: true, role: 'label', size: 11.5 });
   return out;
 }
 
@@ -411,6 +414,7 @@ div.ov-needs-ask-what { cursor: default; }
 .ov-ck-mix { display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: hsla(205, 30%, 30%, 0.4); }
 .ov-ck-checks i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .ov-panel-agents { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; background: hsla(210, 50%, 8%, 0.9); border: 1px solid hsla(190, 90%, 65%, 0.3); border-radius: 12px; pointer-events: auto; }
+.ov-panel-agents .ov-rows { overflow-y: auto; min-height: 0; }
 .ov-agents-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: hsl(195 40% 82%); }
 .ov-agent-row { grid-template-columns: 14px auto 1fr auto; cursor: pointer; }
 .ov-agent-row.is-open { outline: 1px solid hsl(190 90% 65%); border-radius: 6px; }

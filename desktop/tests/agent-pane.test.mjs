@@ -203,7 +203,7 @@ test('a cockpit session stands over the first ticket whose status it changed, an
     { session_id: 'deck-own', agent: 'claude', state: 'busy', started: at(3), ended: null, live: true, status_touched: {} },
   ] };
   const got = cockpitSummaries(payload, model, new Set(['deck-own']));
-  assert.deepEqual(got.map((s) => [s.id, s.start, s.state, s.source]), [['cock-1', ids[0], 'working', 'cockpit'], ['cock-2', null, 'idle', 'cockpit']]);
+  assert.deepEqual(got.map((s) => [s.id, s.start, s.state, s.source]), [['cock-1', ids[0], 'working', 'cockpit'], ['cock-2', null, 'stopped', 'cockpit']]);
   assert.deepEqual(got[0].tickets, [ids[0], ids[1]], 'in the order the cockpit first saw them; one the workspace does not hold is left out');
   assert.equal(startOf({ changed: [['TASK-1', 'done']] }), 'TASK-1');
   const all = allSummaries(deckSummaries([deckSession('deck-own', ids[2], { state: 'waiting' })], 'abcd1234'), got);
@@ -257,4 +257,115 @@ test('what the dialog sends, with its defaults or with Codex chosen, is a start 
   const req = parseStart({ workspaceId: 'abcd1234', ticket: 'TASK-0008', ...d }, rootOf);
   assert.deepEqual([req.root, req.ticket, req.agent, req.access, req.place, req.prompt], ['/repo', 'TASK-0008', 'claude', 'ask', 'checkout', 'Work on TASK-0008: Another invented ticket']);
   for (const m of MODELS.codex) for (const effort of EFFORTS.codex) assert.equal(typeof parseStart({ workspaceId: 'abcd1234', ticket: 'TASK-0008', ...d, agent: 'codex', model: m.id, effort, place: 'worktree', access: 'edits' }, rootOf), 'object', `${m.id} ${effort}`);
+});
+
+// --- TASK-0209: the review's round one ---
+
+import { loadWeb, standInPage } from './stand-in-page.mjs';
+const { panelSvgNodes } = load('shared/overview-panel.js');
+
+test('a session open with no marker is still open: it stays in the address, the right side makes way, and Escape closes it', () => {
+  const model = fixture('deck');
+  for (const ticket of [null, 'TASK-9999']) {
+    const agents = deckSummaries([deckSession('aaaaaaaa-1', ticket)], 'abcd1234');
+    const scene = wheelScene(model, ctx, { agents, session: 'aaaaaaaa-1' });
+    assert.equal(parseAddress(scene.address).session, 'aaaaaaaa-1', `on ${ticket ?? 'no ticket'}`);
+    const panels = [...walkScene(scene.nodes)].filter((n) => n.kind === 'panel').map((n) => n.key);
+    assert.ok(!panels.includes('needs-you') && !panels.includes('weeks'), 'the pane stands where they were');
+    assert.equal(parseAddress(scene.list.find((r) => r.id === 'back').target).session, null, 'Escape closes it');
+  }
+  // A page given no sessions to show opens none, whatever its address says.
+  assert.equal(parseAddress(wheelScene(model, ctx, { session: 'aaaaaaaa-1' }).address).session, null);
+});
+
+test('the head draws how full the context is and how much of the limit is used, from the latest each, and no cost', () => {
+  const records = [...CONVERSATION,
+    { kind: 'usage', at: at(16), context: { used: 40000, window: 200000 } },
+    { kind: 'usage', at: at(17), limit: { percent: 12.4, window: '5-hour' } },
+    { kind: 'usage', at: at(18), context: { used: 170000, window: 200000 } }];
+  const m = paneOf(session(), records);
+  assert.deepEqual([m.context.percent, m.context.words], [85, 'context 85% (170k of 200k)']);
+  assert.deepEqual([m.limit.percent, m.limit.words], [12, '12% of the 5-hour limit used']);
+  assert.deepEqual(paneTurns(records), paneTurns(CONVERSATION), 'usage draws in no turn');
+  const none = paneOf(session(), CONVERSATION);
+  assert.deepEqual([none.context, none.limit], [null, null], 'nothing until the agent reports it');
+  assert.equal(paneOf(session(), [{ kind: 'usage', at: at(1), context: { used: 5, window: 0 } }]).context, null, 'a window of nothing is no bar');
+  assert.doesNotMatch(JSON.stringify(m), /\$|usd|cost/i);
+});
+
+test('a Deck session lists the tickets it moved, from the cockpit\'s record of the same session, its start ticket first', () => {
+  const model = fixture('deck');
+  const ids = Object.keys(model.tickets).slice(0, 3);
+  const cockpit = { sessions: [{ session_id: 'aaaaaaaa-1', agent: 'claude', state: 'busy', started: at(1), ended: null, live: true, status_touched: { b: { id: ids[2], ts: at(30) }, a: { id: ids[1], ts: at(20) }, x: { id: 'TASK-9999', ts: at(5) } } }] };
+  const [s] = deckSummaries([deckSession('aaaaaaaa-1', ids[0])], 'abcd1234', cockpit, model);
+  assert.deepEqual(s.moved, [ids[1], ids[2]], 'in the order the cockpit saw them; one the workspace does not hold is left out');
+  assert.deepEqual(s.tickets, [ids[0], ids[1], ids[2]]);
+  assert.deepEqual(cockpitSummaries(cockpit, model, new Set(['aaaaaaaa-1'])), [], 'and it is not also a cockpit session');
+  assert.deepEqual(paneOf(session(), CONVERSATION, s.moved).moved, [ids[1], ids[2]]);
+  assert.deepEqual(deckSummaries([deckSession('aaaaaaaa-1', ids[0])], 'abcd1234')[0].moved, [], 'with no cockpit record, none');
+});
+
+test('the Agents list leaves no session out: every cockpit session is kept, the window lists all, and the flat picture counts those it does not draw', async () => {
+  const model = fixture('deck');
+  const payload = { sessions: Array.from({ length: 14 }, (_, i) => ({ session_id: `cock-${i}`, agent: 'claude', state: 'idle', started: at(i), ended: null, live: true, status_touched: {} })) };
+  const cockpit = cockpitSummaries(payload, model, new Set());
+  assert.equal(cockpit.length, 14);
+  const all = allSummaries(deckSummaries([deckSession('aaaaaaaa-1', null)], 'abcd1234'), cockpit);
+  const { node, rows } = agentsPanel(all, ctx, null, { x: 0, y: 0, w: 420, h: 196 });
+  assert.equal(rows.length, 15);
+  assert.equal(node.body.rows.length, 15);
+  assert.match(node.label, /^15 agent sessions/);
+  const flat = [...walkScene(panelSvgNodes(node))].filter((n) => n.kind === 'text').map((n) => n.text);
+  assert.ok(flat.includes('+10 more sessions'), flat.join(' | '));
+  const { buildPanels } = await loadWeb('renderer/overview-panels.js');
+  const document = standInPage();
+  const scene = { screen: 'wheel', address: ctx.address({ page: 'wheel' }), width: 1600, height: 1000, title: 't', nodes: [node], list: rows };
+  const layer = buildPanels(scene, document.createElement('div'), { reduced: true, loader: null });
+  const descendants = (n) => [n, ...n.children.flatMap(descendants)];
+  assert.equal(descendants(layer.element).filter((n) => (n.className ?? '').includes('ov-agent-row')).length, 15, 'the window draws every row, in a list that scrolls');
+});
+
+test('with no bridge, as on a served page, the overview is given no sessions and no Needs you extras, not empty lists', async () => {
+  const { agentsFor, needsFor, watchAgents } = await loadWeb('renderer/agent-state.js');
+  watchAgents(null, () => undefined);
+  assert.equal(agentsFor('abcd1234', fixture('deck')), undefined);
+  assert.equal(needsFor('abcd1234'), undefined);
+});
+
+test('the composer starts empty for each session it opens, a Stop armed on one is not armed on the next, and a failed Send gives the text back with why', async () => {
+  const document = standInPage();
+  const { AgentPane } = await loadWeb('renderer/agent-pane.js');
+  const a = session({ id: 'aaaaaaaa-1' });
+  const b = session({ id: 'bbbbbbbb-2' });
+  const said = [];
+  const sent = [];
+  const agents = {
+    list: async () => [a, b],
+    conversation: async () => [],
+    subscribe: () => () => undefined,
+    send: async (id, text) => { sent.push([id, text]); return { ok: false, error: 'the session has ended' }; },
+    interrupt: async () => ({ ok: true }), stop: async () => ({ ok: true }), answer: async () => ({ ok: true }),
+  };
+  const pane = new AgentPane({ agents, parent: document.createElement('div'), say: (m) => said.push(m), closed: () => undefined });
+  const box = () => pane.composer.children[0];
+  const buttons = () => pane.composer.children[2].children;
+  const press = (word) => buttons().find((x) => x.textContent.startsWith(word)).fire('click');
+  assert.ok(await pane.open(a.id));
+  box().value = 'words for the first';
+  box().fire('input');
+  press('Stop');
+  assert.ok(buttons().some((x) => x.textContent === 'Stop? Press again'));
+  assert.ok(await pane.open(b.id));
+  assert.equal(box().value, '', 'the first session\'s words are not in the second\'s box');
+  assert.ok(buttons().some((x) => x.textContent === 'Stop'), 'nor is its armed Stop');
+  box().value = 'push it, invented';
+  box().fire('input');
+  press('Send');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(sent, [[b.id, 'push it, invented']]);
+  assert.equal(box().value, 'push it, invented', 'a prompt that did not go is given back');
+  assert.deepEqual(said, ['the session has ended']);
+  pane.close(false);
+  assert.ok(await pane.open(b.id));
+  assert.equal(box().value, '', 'closing forgets it');
 });

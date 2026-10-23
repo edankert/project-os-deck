@@ -73,7 +73,42 @@ export type ConversationRecord =
   | { kind: 'edit'; at: string; path: string; added: number; removed: number; diff: string }
   | { kind: 'plan'; at: string; steps: Array<{ text: string; done: boolean }> }
   | { kind: 'permission'; at: string; id: string; toolUse?: string; tool: string; summary: string; outcome: PermissionOutcome; message?: string }
-  | { kind: 'state'; at: string; state: SessionState; reason?: string };
+  | { kind: 'state'; at: string; state: SessionState; reason?: string }
+  | { kind: 'usage'; at: string; context?: ContextUse; limit?: LimitUse };
+
+/** How full the agent's context is, in tokens, as the agent last reported it. */
+export interface ContextUse {
+  used: number;
+  window: number;
+}
+
+/** How much of the account's usage limit is used, as the agent last reported it. A share, never a cost. */
+export interface LimitUse {
+  /** 0 to 100. */
+  percent: number;
+  /** The limit's span, in words: "5-hour", "weekly". */
+  window: string;
+}
+
+/** A limit's span in words, from its length in minutes. */
+export function limitWindow(minutes: number | null | undefined): string {
+  if (minutes === 300) return '5-hour';
+  if (minutes === 10080) return 'weekly';
+  if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes <= 0) return '';
+  return minutes % 1440 === 0 ? `${minutes / 1440}-day` : minutes % 60 === 0 ? `${minutes / 60}-hour` : `${minutes}-minute`;
+}
+
+/** The latest context use and the latest limit use a session's records hold; each null until reported. */
+export function usageOf(records: readonly ConversationRecord[]): { context: ContextUse | null; limit: LimitUse | null } {
+  let context: ContextUse | null = null;
+  let limit: LimitUse | null = null;
+  for (const r of records) {
+    if (r.kind !== 'usage') continue;
+    if (r.context !== undefined) context = r.context;
+    if (r.limit !== undefined) limit = r.limit;
+  }
+  return { context, limit };
+}
 
 export type RecordKind = ConversationRecord['kind'];
 

@@ -23,6 +23,8 @@ export interface AgentSummary {
   start: string | null;
   /** Every ticket it worked on, the start first. */
   tickets: string[];
+  /** The tickets whose status it changed, as the cockpit recorded them, first change first. */
+  moved: string[];
   last: string;
   /** Deck's own session, or one the cockpit recorded (read only: Deck cannot send to it). */
   source: 'deck' | 'cockpit';
@@ -33,38 +35,53 @@ export function startOf(session: { changed?: ReadonlyArray<readonly [string, ...
   return session.changed?.[0]?.[0] ?? session.tickets?.[0] ?? null;
 }
 
-/** Deck's own sessions as summaries: each over the ticket it was started for. */
-export function deckSummaries(sessions: readonly SessionRecord[], workspaceId: string): AgentSummary[] {
-  return sessions.filter((s) => s.workspaceId === workspaceId).map((s) => ({
-    id: s.id, agent: s.agent, state: s.state, start: s.ticket, tickets: s.ticket === null ? [] : [s.ticket], last: s.lastActive, source: 'deck' as const,
-  }));
+/**
+ * Deck's own sessions as summaries: each over the ticket it was started for. Deck reports each of its
+ * sessions to the cockpit under its own id, so the cockpit's record of that id says which tickets the
+ * session moved (TASK-0209); its start ticket stays first.
+ */
+export function deckSummaries(sessions: readonly SessionRecord[], workspaceId: string, cockpit?: unknown, model?: Pick<OverviewModel, 'tickets'>): AgentSummary[] {
+  const reported = new Map<string, Record<string, unknown>>();
+  for (const raw of (((cockpit ?? {}) as { sessions?: unknown[] }).sessions ?? []) as Array<Record<string, unknown>>) reported.set(String(raw['session_id'] ?? ''), raw);
+  return sessions.filter((s) => s.workspaceId === workspaceId).map((s) => {
+    const raw = reported.get(s.id);
+    const moved = raw !== undefined && model !== undefined ? touchedOf(raw, model) : [];
+    return { id: s.id, agent: s.agent, state: s.state, start: s.ticket, tickets: [...new Set([...(s.ticket === null ? [] : [s.ticket]), ...moved])], moved, last: s.lastActive, source: 'deck' as const };
+  });
+}
+
+/** The tickets a cockpit session record changed the status of, in the order the cockpit first saw each change; only those the model holds. */
+function touchedOf(raw: Record<string, unknown>, model: Pick<OverviewModel, 'tickets'>): string[] {
+  const touched = Object.values((raw['status_touched'] ?? {}) as Record<string, { id?: unknown; ts?: unknown }>)
+    .map((c) => ({ id: String(c?.id ?? ''), ts: String(c?.ts ?? '') }))
+    .sort((a, b) => a.ts.localeCompare(b.ts))
+    .map((c) => c.id).filter((t) => model.tickets[t] !== undefined);
+  return [...new Set(touched)];
 }
 
 const STATES: Readonly<Record<string, SessionState>> = { busy: 'working', working: 'working', 'needs-input': 'waiting', waiting: 'waiting', idle: 'idle' };
 
 /**
  * The cockpit's sessions from its sidecar's `/api/cockpit/sessions`, as summaries, leaving out
- * those Deck reported itself (the same id). Only tickets the model holds count.
+ * those Deck reported itself (the same id). Only tickets the model holds count. Every one is kept:
+ * the cockpit keeps at most 50 a workspace (review, round one: cutting to ten lost the rest).
  */
-export function cockpitSummaries(payload: unknown, model: Pick<OverviewModel, 'tickets'>, deckIds: ReadonlySet<string>, keep = 10): AgentSummary[] {
+export function cockpitSummaries(payload: unknown, model: Pick<OverviewModel, 'tickets'>, deckIds: ReadonlySet<string>): AgentSummary[] {
   const sessions = ((payload ?? {}) as { sessions?: unknown[] }).sessions ?? [];
   const out: AgentSummary[] = [];
   for (const raw of sessions as Array<Record<string, unknown>>) {
     const id = String(raw['session_id'] ?? '');
     if (id === '' || deckIds.has(id)) continue;
     // In the order the cockpit first saw each change, so the first is the ticket it started on.
-    const touched = Object.values((raw['status_touched'] ?? {}) as Record<string, { id?: unknown; ts?: unknown }>)
-      .map((c) => ({ id: String(c?.id ?? ''), ts: String(c?.ts ?? '') }))
-      .sort((a, b) => a.ts.localeCompare(b.ts))
-      .map((c) => c.id).filter((t) => model.tickets[t] !== undefined);
-    const tickets = [...new Set(touched)];
+    const tickets = touchedOf(raw, model);
     const ended = raw['ended'] !== null && raw['ended'] !== undefined && raw['live'] !== true;
     out.push({
-      id, agent: raw['agent'] === 'codex' ? 'codex' : 'claude', state: ended ? 'idle' : STATES[String(raw['state'] ?? 'idle')] ?? 'idle',
-      start: startOf({ tickets }), tickets, last: String(raw['ended'] ?? raw['started'] ?? ''), source: 'cockpit',
+      // A session that has ended reads as stopped, not as one idle between turns.
+      id, agent: raw['agent'] === 'codex' ? 'codex' : 'claude', state: ended ? 'stopped' : STATES[String(raw['state'] ?? 'idle')] ?? 'idle',
+      start: startOf({ tickets }), tickets, moved: tickets, last: String(raw['ended'] ?? raw['started'] ?? ''), source: 'cockpit',
     });
   }
-  return out.sort((a, b) => b.last.localeCompare(a.last)).slice(0, keep);
+  return out.sort((a, b) => b.last.localeCompare(a.last));
 }
 
 export interface AgentMarker {
@@ -123,7 +140,10 @@ export function allSummaries(deck: readonly AgentSummary[], cockpit: readonly Ag
 /** The address that opens a session in the pane, on the wheel. */
 export const sessionTarget = (ctx: ScreenContext, id: string): string => ctx.address({ page: 'wheel', session: id });
 
-/** The Agents list, on the wheel's left (TASK-0199): every session, a row each, at most `keep` drawn. */
+/**
+ * The Agents list, on the wheel's left (TASK-0199): every session, a row each. The window's list scrolls;
+ * the flat picture draws `keep` and counts the rest (review, round one: rows past five were drawn nowhere).
+ */
 export function agentsPanel(summaries: readonly AgentSummary[], ctx: ScreenContext, open: string | null, place: { x: number; y: number; w: number; h: number }, keep = 5): { node: PanelNode; rows: ListRow[] } {
   const rows: PanelAgents['rows'] = summaries.map((s) => {
     const word = s.agent === 'codex' ? 'Codex' : 'Claude';
@@ -136,7 +156,7 @@ export function agentsPanel(summaries: readonly AgentSummary[], ctx: ScreenConte
   });
   const waiting = summaries.filter((s) => s.state === 'waiting').length;
   return {
-    node: { kind: 'panel', key: 'agents', ...place, label: `${summaries.length} agent session${summaries.length === 1 ? '' : 's'}${waiting > 0 ? `, ${waiting} waiting for you` : ''}`, body: { kind: 'agents', rows: rows.slice(0, keep) } },
+    node: { kind: 'panel', key: 'agents', ...place, label: `${summaries.length} agent session${summaries.length === 1 ? '' : 's'}${waiting > 0 ? `, ${waiting} waiting for you` : ''}`, body: { kind: 'agents', rows, keep } },
     rows: rows.map((r) => ({ id: `agent-${r.id}`, label: r.label, group: 'Agents', target: r.target })),
   };
 }

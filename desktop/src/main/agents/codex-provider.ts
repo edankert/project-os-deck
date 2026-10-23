@@ -22,7 +22,7 @@
 import crypto from 'node:crypto';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import type { AccessLevel, ConversationRecord } from '../../shared/agent-types.js';
+import { limitWindow, type AccessLevel, type ConversationRecord } from '../../shared/agent-types.js';
 import type { AgentProvider, ProviderHooks, ProviderSession, StartOptions } from './provider.js';
 import { cleanEnvironment } from './claude-provider.js';
 
@@ -154,6 +154,16 @@ export class CodexProvider implements AgentProvider {
         if (turn['status'] === 'failed') hooks.record({ kind: 'text', at, text: `The turn failed${turn['error'] ? `: ${String((turn['error'] as Json)['message'] ?? '')}` : ''}.` });
         turnId = '';
         hooks.turnEnded();
+      } else if (method === 'thread/tokenUsage/updated') {
+        // The last call's tokens against the model's window: how full the context is (TASK-0209).
+        const usage = (params['tokenUsage'] ?? {}) as Json;
+        const used = Number(((usage['last'] ?? {}) as Json)['totalTokens'] ?? 0);
+        const window = Number(usage['modelContextWindow'] ?? 0);
+        if (used > 0 && window > 0) hooks.record({ kind: 'usage', at, context: { used, window } });
+      } else if (method === 'account/rateLimits/updated') {
+        // A sparse update: a window it leaves out is not cleared.
+        const primary = (((params['rateLimits'] ?? {}) as Json)['primary'] ?? null) as Json | null;
+        if (primary !== null && typeof primary['usedPercent'] === 'number') hooks.record({ kind: 'usage', at, limit: { percent: primary['usedPercent'], window: limitWindow(primary['windowDurationMins'] as number | null) } });
       } else if (method === 'error') {
         hooks.record({ kind: 'text', at, text: `Codex reported an error: ${clip(String(((params['error'] ?? {}) as Json)['message'] ?? params['message'] ?? ''))}` });
       }

@@ -29,8 +29,38 @@ export interface SdkMessage {
   session_id?: string;
   is_error?: boolean;
   result?: string;
-  message?: { content?: unknown };
+  message?: { content?: unknown; usage?: Record<string, unknown> };
   parent_tool_use_id?: string | null;
+  /** On a result: each model's figures. Only `contextWindow` is read; the costs beside it never are (RISK-0016). */
+  modelUsage?: Record<string, { contextWindow?: unknown }>;
+  /** On a rate_limit_event. */
+  rate_limit_info?: { utilization?: unknown; rateLimitType?: unknown };
+}
+
+const LIMIT_WINDOW: Readonly<Record<string, string>> = { five_hour: '5-hour', seven_day: 'weekly', seven_day_opus: 'weekly Opus', seven_day_sonnet: 'weekly Sonnet' };
+
+/**
+ * Context and limit use from the SDK's messages (TASK-0209). The context is the last main-conversation
+ * call's input and output tokens, against the largest window the result names; the limit is the
+ * rate-limit event's share used, which the SDK gives as a fraction or a percentage.
+ */
+export function usageRecord(m: SdkMessage, lastCall: { tokens: number }, at: string): Extract<ConversationRecord, { kind: 'usage' }> | null {
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  if (m.type === 'assistant' && !m.parent_tool_use_id && m.message?.usage !== undefined) {
+    const u = m.message.usage;
+    const tokens = n(u['input_tokens']) + n(u['cache_creation_input_tokens']) + n(u['cache_read_input_tokens']) + n(u['output_tokens']);
+    if (tokens > 0) lastCall.tokens = tokens;
+    return null;
+  }
+  if (m.type === 'result' && m.modelUsage !== undefined) {
+    const window = Math.max(0, ...Object.values(m.modelUsage).map((x) => n(x?.contextWindow)));
+    return window > 0 && lastCall.tokens > 0 ? { kind: 'usage', at, context: { used: lastCall.tokens, window } } : null;
+  }
+  if (m.type === 'rate_limit_event' && typeof m.rate_limit_info?.utilization === 'number') {
+    const u = m.rate_limit_info.utilization;
+    return { kind: 'usage', at, limit: { percent: u <= 1 ? u * 100 : u, window: LIMIT_WINDOW[String(m.rate_limit_info.rateLimitType ?? '')] ?? '' } };
+  }
+  return null;
 }
 
 export type CanUseTool = (toolName: string, input: Record<string, unknown>, options: { signal: AbortSignal; decisionReason?: string; toolUseID?: string }) => Promise<{ behavior: 'allow'; updatedInput?: Record<string, unknown> } | { behavior: 'deny'; message: string; interrupt?: boolean }>;
@@ -150,6 +180,7 @@ export class ClaudeProvider implements AgentProvider {
     const handle = query({ prompt: prompts, options: claudeOptions(options, canUseTool, abort, this.env) });
     prompts.push(options.prompt);
     let identified = false;
+    const lastCall = { tokens: 0 };
     const read = async (): Promise<void> => {
       try {
         for await (const m of handle) {
@@ -158,6 +189,8 @@ export class ClaudeProvider implements AgentProvider {
             hooks.identified(m.session_id);
           }
           for (const r of this.recordsOf(m, toolNames)) hooks.record(r);
+          const usage = usageRecord(m, lastCall, this.now());
+          if (usage !== null) hooks.record(usage);
           if (m.type === 'result') {
             if (m.is_error === true && m.subtype !== 'success') hooks.record({ kind: 'text', at: this.now(), text: `The turn ended with an error (${m.subtype ?? 'error'}).` });
             hooks.turnEnded();

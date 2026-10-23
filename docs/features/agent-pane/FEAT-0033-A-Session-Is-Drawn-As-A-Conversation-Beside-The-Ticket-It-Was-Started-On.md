@@ -11,7 +11,7 @@ updated: 2026-10-22
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'", "Edwin 2026-10-22, on DES-0006: 'I think side pane as suggested but open for discussion - The ones they started on (is this not the same?)'"]
 goal: "In Deck's shell, Edwin opens any agent session from its marker on the towers or from the Agents list, reads its conversation in the side pane, answers its permission requests in place, sends it a prompt, and starts a new one from a ticket with Work on this."
 requirements: []
-tasks: ["[[TASK-0197]]", "[[TASK-0198]]", "[[TASK-0199]]", "[[TASK-0200]]", "[[TASK-0201]]"]
+tasks: ["[[TASK-0197]]", "[[TASK-0198]]", "[[TASK-0199]]", "[[TASK-0200]]", "[[TASK-0201]]", "[[TASK-0209]]"]
 release: ""
 acceptance_exception: ""
 acceptance: ""
