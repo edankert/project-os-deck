@@ -1,5 +1,5 @@
 // TST-0002 — the store broadcasts to every window and survives a restart,
-// including a state file that has been damaged.
+// including a state file that has been damaged, and one an older Deck wrote.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { desktopRoot, load } from './helpers.mjs';
 
-const { reduce, initialState, normaliseState, deskKey } = load('shared/store-state.js');
+const { reduce, initialState, normaliseState, persistable, isRendererAction } = load('shared/store-state.js');
 const { DeckStore } = load('main/store.js');
 const { writeJsonFileAtomic, readJsonFile } = load('main/atomic-json.js');
 
@@ -19,96 +19,47 @@ function tmpFile(name) {
 test('the reducer is pure: it does not touch the state it was given', () => {
   const before = initialState();
   const snapshot = JSON.parse(JSON.stringify(before));
-  const after = reduce(before, { type: 'select-view', viewId: 'a-view' });
+  const after = reduce(before, { type: 'open-workspace', workspaceId: 'aaaa1111' });
   assert.deepEqual(before, snapshot, 'the input state was mutated');
   assert.notEqual(after, before);
-  assert.equal(after.viewId, 'a-view');
+  assert.equal(after.workspaceId, 'aaaa1111');
+  assert.equal(after.revision, before.revision + 1);
 });
 
 test('an action that changes nothing returns the same object', () => {
-  const state = reduce(initialState(), { type: 'select-view', viewId: 'a-view' });
-  assert.equal(reduce(state, { type: 'select-view', viewId: 'a-view' }), state);
-});
-
-test('opening a different workspace clears what belonged to the old one', () => {
-  // Every field the title claims, not three of them. This check asserted
-  // viewId, noteId and deskName while `filters` outlived the workspace and
-  // narrowed the next one invisibly (ISS-0012); a title wider than its
-  // assertions is why nobody saw it.
-  let state = initialState();
-  state = reduce(state, { type: 'open-workspace', workspaceId: 'aaaa1111' });
-  state = reduce(state, { type: 'select-view', viewId: 'a-view' });
-  state = reduce(state, { type: 'focus-note', noteId: 'FEAT-0002' });
-  state = reduce(state, { type: 'save-desk', name: 'triage' });
-  state = reduce(state, { type: 'set-query', text: 'ble' });
-  state = reduce(state, { type: 'set-filters', filters: { statuses: ['doing'], types: ['issue'] } });
-  state = reduce(state, { type: 'open-workspace', workspaceId: 'bbbb2222' });
-  assert.equal(state.viewId, null);
-  assert.equal(state.noteId, null);
-  assert.equal(state.deskName, null);
-  assert.equal(state.query, '');
-  assert.deepEqual(state.filters, { statuses: [], types: [] });
-});
-
-test('a filter belongs to the view it was set on; a search string does not', () => {
-  // ISS-0012. A filter's values come from the view: Issues offers `issue` and
-  // Features does not, so the select for the new view has no option matching
-  // the stored value, the DOM ignores the assignment, and the control reads
-  // "any type" while the filter is still hiding everything. A search string is
-  // text a person typed and can see, so it survives.
-  let state = initialState();
-  state = reduce(state, { type: 'open-workspace', workspaceId: 'aaaa1111' });
-  state = reduce(state, { type: 'select-view', viewId: 'issues' });
-  state = reduce(state, { type: 'set-query', text: 'ble' });
-  state = reduce(state, { type: 'set-filters', filters: { statuses: ['open'], types: ['issue'] } });
-  state = reduce(state, { type: 'select-view', viewId: 'features' });
-  assert.deepEqual(state.filters, { statuses: [], types: [] }, 'a filter outlived the view it was set on');
-  assert.equal(state.query, 'ble', 'the search box was emptied by a view change');
-});
-
-test('two filters are the same only when every value is, and the store\'s source is text', () => {
-  // The reducer compares two lists by joining each with a character no status
-  // or type can hold. Until 2026-10-02 that character stood in the source as
-  // four raw NUL bytes, so `file` called the source data and `grep` skipped
-  // it. It is written as an escape now, and is the same character.
-  const state = reduce(initialState(), { type: 'set-filters', filters: { statuses: ['a', 'b'], types: ['x', 'y'] } });
-  assert.equal(reduce(state, { type: 'set-filters', filters: { statuses: ['a', 'b'], types: ['x', 'y'] } }), state);
-  for (const other of [['ab'], ['a b'], ['a,b'], ['a', 'b', 'c'], ['b', 'a']]) {
-    assert.notEqual(reduce(state, { type: 'set-filters', filters: { statuses: other, types: ['x', 'y'] } }), state, `statuses ${JSON.stringify(other)} read as a, b`);
-    assert.notEqual(reduce(state, { type: 'set-filters', filters: { statuses: ['a', 'b'], types: other } }), state, `types ${JSON.stringify(other)} read as x, y`);
-  }
-  // The one pair the join cannot tell apart is the pair that shows which
-  // character it is: a value holding a NUL. Any other separator fails here.
-  assert.equal(reduce(state, { type: 'set-filters', filters: { statuses: ['a\0b'], types: ['x', 'y'] } }), state);
-  assert.equal(reduce(state, { type: 'set-filters', filters: { statuses: ['a', 'b'], types: ['x\0y'] } }), state);
-  const source = fs.readFileSync(path.join(desktopRoot, 'src', 'shared', 'store-state.ts'));
-  const control = [...source].filter((byte) => byte < 0x20 && byte !== 0x0a && byte !== 0x09);
-  assert.deepEqual(control, [], 'the source holds bytes that are not text');
+  const state = reduce(initialState(), { type: 'open-workspace', workspaceId: 'aaaa1111' });
+  assert.equal(reduce(state, { type: 'open-workspace', workspaceId: 'aaaa1111' }), state);
+  const named = reduce(state, { type: 'set-actor', actor: 'user:someone' });
+  assert.equal(reduce(named, { type: 'set-actor', actor: 'user:someone' }), named);
 });
 
 test('an action this build does not know is ignored rather than fatal', () => {
   const state = initialState();
   assert.equal(reduce(state, { type: 'from-a-later-version' }), state);
+  // And so is every action Spread and Glass used to send (ADR-0010).
+  for (const action of [{ type: 'select-view', viewId: 'issues' }, { type: 'put-on-desk', noteId: 'X', x: 1, y: 2 }, { type: 'select-surface', surface: 'glass' }]) {
+    assert.equal(reduce(state, action), state, `${action.type} changed the state`);
+  }
 });
 
 test('every live subscriber sees every change, and a closed one sees none', () => {
   const store = new DeckStore({ file: tmpFile('state.json'), writeDelayMs: 5 });
   const windowA = [];
   const windowB = [];
-  const unsubscribeA = store.subscribe((s) => windowA.push(s.noteId));
-  store.subscribe((s) => windowB.push(s.noteId));
+  const unsubscribeA = store.subscribe((s) => windowA.push(s.workspaceId));
+  store.subscribe((s) => windowB.push(s.workspaceId));
   // A subscriber is handed the current state at once.
   assert.deepEqual(windowA, [null]);
   assert.deepEqual(windowB, [null]);
 
-  store.dispatch({ type: 'focus-note', noteId: 'FEAT-0002' });
-  assert.deepEqual(windowA, [null, 'FEAT-0002']);
-  assert.deepEqual(windowB, [null, 'FEAT-0002']);
+  store.dispatch({ type: 'open-workspace', workspaceId: 'aaaa1111' });
+  assert.deepEqual(windowA, [null, 'aaaa1111']);
+  assert.deepEqual(windowB, [null, 'aaaa1111']);
 
   unsubscribeA();
-  store.dispatch({ type: 'focus-note', noteId: 'FEAT-0003' });
-  assert.deepEqual(windowA, [null, 'FEAT-0002'], 'a closed window was still written to');
-  assert.deepEqual(windowB, [null, 'FEAT-0002', 'FEAT-0003']);
+  store.dispatch({ type: 'open-workspace', workspaceId: 'bbbb2222' });
+  assert.deepEqual(windowA, [null, 'aaaa1111'], 'a closed window was still written to');
+  assert.deepEqual(windowB, [null, 'aaaa1111', 'bbbb2222']);
   store.close();
 });
 
@@ -118,29 +69,57 @@ test('one window that throws while rendering does not stop the others', () => {
   store.subscribe(() => {
     throw new Error('this window is broken');
   });
-  store.subscribe((s) => seen.push(s.noteId));
-  store.dispatch({ type: 'focus-note', noteId: 'FEAT-0002' });
-  assert.deepEqual(seen, [null, 'FEAT-0002']);
+  store.subscribe((s) => seen.push(s.workspaceId));
+  store.dispatch({ type: 'open-workspace', workspaceId: 'aaaa1111' });
+  assert.deepEqual(seen, [null, 'aaaa1111']);
   store.close();
 });
 
-test('the state survives a restart', () => {
+test('the state survives a restart, and the index revisions do not', () => {
   const file = tmpFile('state.json');
   const first = new DeckStore({ file, writeDelayMs: 1 });
   first.dispatch({ type: 'open-workspace', workspaceId: 'aaaa1111' });
-  first.dispatch({ type: 'select-view', viewId: 'a-view' });
-  first.dispatch({ type: 'focus-note', noteId: 'FEAT-0002' });
-  first.dispatch({ type: 'put-on-desk', noteId: 'FEAT-0002', x: 10, y: 20 });
-  first.dispatch({ type: 'save-desk', name: 'triage' });
+  first.dispatch({ type: 'set-actor', actor: 'user:someone' });
+  first.dispatch({ type: 'index-changed', workspaceId: 'aaaa1111', revision: 3 });
   first.close();
 
   const second = new DeckStore({ file, writeDelayMs: 1 });
   const state = second.getState();
   assert.equal(state.workspaceId, 'aaaa1111');
-  assert.equal(state.viewId, 'a-view');
-  assert.equal(state.noteId, 'FEAT-0002');
-  assert.deepEqual(state.desks[deskKey('aaaa1111', 'triage')].cards, [{ noteId: 'FEAT-0002', x: 10, y: 20 }]);
+  assert.equal(state.actor, 'user:someone');
+  // Rebuilt from disk at every start, so a number carried over would claim a change nobody made.
+  assert.deepEqual(state.indexRevisions, {});
   second.close();
+});
+
+test('a state file an older Deck wrote opens with its workspace and its name, and nothing else', () => {
+  // The shape a Deck with Spread and Glass wrote, before 2026-10-23 (ADR-0010).
+  const old = {
+    workspaceId: 'aaaa1111',
+    viewId: 'issues',
+    deskName: 'triage',
+    noteId: 'FEAT-0002',
+    desks: { 'aaaa1111:triage': { name: 'triage', workspaceId: 'aaaa1111', cards: [{ noteId: 'FEAT-0002', x: 10, y: 20 }] } },
+    deskCards: { aaaa1111: [{ noteId: 'FEAT-0002', x: 10, y: 20 }] },
+    viewDesks: { aaaa1111: { issues: [{ noteId: 'ISS-0001', x: 1, y: 2, w: 400, h: 300 }] } },
+    readingSizes: { aaaa1111: { issues: { w: 640, h: 480 } } },
+    collections: { aaaa1111: { issues: { x: 0, y: 0, w: 420, h: 600, collapsed: false, as: 'table' } } },
+    actor: 'user:someone',
+    query: 'ble',
+    filters: { statuses: ['open'], types: ['issue'] },
+    folds: { quiet: true },
+    revision: 41,
+    flowCursor: null,
+    surface: 'glass',
+  };
+  const file = tmpFile('deck-state.json');
+  fs.writeFileSync(file, JSON.stringify(old), 'utf-8');
+  const store = new DeckStore({ file, writeDelayMs: 1 });
+  assert.deepEqual(store.getState(), { workspaceId: 'aaaa1111', actor: 'user:someone', revision: 41, indexRevisions: {} });
+  // The next write keeps only what Deck still has.
+  store.dispatch({ type: 'set-actor', actor: 'user:another' });
+  store.close();
+  assert.deepEqual(readJsonFile(file), { workspaceId: 'aaaa1111', actor: 'user:another', revision: 42 });
 });
 
 test('a damaged state file leaves Deck starting from defaults', () => {
@@ -149,7 +128,7 @@ test('a damaged state file leaves Deck starting from defaults', () => {
     ['truncated JSON', '{"workspaceId": "aaa'],
     ['JSON of the wrong shape', '["not", "an", "object"]'],
     ['a number where the state should be', '42'],
-    ['fields of the wrong type', '{"workspaceId": 5, "desks": "no", "revision": "later"}'],
+    ['fields of the wrong type', '{"workspaceId": 5, "actor": ["no"], "revision": "later"}'],
   ]) {
     const file = tmpFile('state.json');
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -160,18 +139,9 @@ test('a damaged state file leaves Deck starting from defaults', () => {
   }
 });
 
-test('a desk of the wrong shape is dropped rather than kept half-read', () => {
-  const state = normaliseState({
-    workspaceId: 'aaaa1111',
-    desks: {
-      good: { name: 'a', workspaceId: 'aaaa1111', cards: [{ noteId: 'X', x: 1, y: 2 }] },
-      nameless: { workspaceId: 'aaaa1111', cards: [] },
-      notAnObject: 7,
-      badCards: { name: 'b', workspaceId: 'aaaa1111', cards: [{ x: 1 }, { noteId: 'Y' }] },
-    },
-  });
-  assert.deepEqual(Object.keys(state.desks).sort(), ['badCards', 'good']);
-  assert.deepEqual(state.desks.badCards.cards, [{ noteId: 'Y', x: 0, y: 0 }]);
+test('what is written is the workspace, the name and the revision', () => {
+  const state = normaliseState({ workspaceId: 'aaaa1111', actor: 'user:someone', revision: 7 });
+  assert.deepEqual(persistable(reduce(state, { type: 'index-changed', workspaceId: 'aaaa1111', revision: 2 })), { workspaceId: 'aaaa1111', actor: 'user:someone', revision: 8 });
 });
 
 test('the write is atomic: a reader never sees half a file', () => {
@@ -193,15 +163,22 @@ test('reading a file that is not there is not an error', () => {
   assert.equal(readJsonFile(path.join(os.tmpdir(), 'deck-does-not-exist-1234.json')), null);
 });
 
-
-test('a window may not replace the whole state through the dispatch channel', () => {
-  const { isRendererAction } = load('shared/store-state.js');
-  assert.equal(isRendererAction({ type: 'focus-note', noteId: 'X' }), true);
-  assert.equal(isRendererAction({ type: 'save-desk', desk: {} }), true);
-  // `restore` carries a whole state, saved desks included.
+test('a window may dispatch only what a window does: open a workspace and set the name', () => {
+  assert.equal(isRendererAction({ type: 'open-workspace', workspaceId: 'aaaa1111' }), true);
+  assert.equal(isRendererAction({ type: 'set-actor', actor: 'user:someone' }), true);
+  // `restore` carries a whole state; `index-changed` would tell every window its picture is stale.
   assert.equal(isRendererAction({ type: 'restore', state: initialState() }), false);
+  assert.equal(isRendererAction({ type: 'index-changed', workspaceId: 'aaaa1111', revision: 9 }), false);
   assert.equal(isRendererAction({ type: 'anything-else' }), false);
   assert.equal(isRendererAction(null), false);
-  assert.equal(isRendererAction('focus-note'), false);
+  assert.equal(isRendererAction('open-workspace'), false);
   assert.equal(isRendererAction({}), false);
+});
+
+test("the store's source is text", () => {
+  // Until 2026-10-02 a separator stood in the source as four raw NUL bytes, so `file`
+  // called it data and `grep` skipped it.
+  const source = fs.readFileSync(path.join(desktopRoot, 'src', 'shared', 'store-state.ts'));
+  const control = [...source].filter((byte) => byte < 0x20 && byte !== 0x0a && byte !== 0x09);
+  assert.deepEqual(control, [], 'the source holds bytes that are not text');
 });

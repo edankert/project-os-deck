@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0043
 aliases: ["TST-0043"]
 title: "The hands’ state is shared and never kept: pull, push and let go are store transitions the persister drops, a pane is the desk record Spread saves, and the surface is Glass unless chosen"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[TASK-0053-Pull-Forward-And-Push-Behind]]", "[[TASK-0054-A-Held-Note-Is-A-Pane]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -25,6 +25,9 @@ review_verdict: ""
 related: ["[[TST-0002-The-Store-Broadcasts-And-Survives-A-Restart]]", "[[TST-0005-Every-State-Round-Trips-Through-Its-Address]]"]
 ---
 # The hands' state is shared and never kept
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

@@ -6,7 +6,7 @@ title: "The grammar carries surface, page, flow and step, every old address stil
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-10-23
 source: ["[[FEAT-0006-Every-State-Has-An-Address]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -45,7 +45,7 @@ Every reachable Deck state has an address, which is what makes a pop-out window,
 - Assert an address naming an unregistered panel kind is refused by name.
 - Register that kind, parse the same address again, and assert it now parses. Refusing before and parsing after is what proves the registry is real.
 - Assert the three existing kinds — `needs-you`, `note`, `desk` — are registered from where they are built rather than from a list in the parser.
-- Assert the store carries a flow cursor field, that nothing writes it and nothing reads it, and that its comment names this task.
+- Until 2026-10-23: assert the store carries a flow cursor field that nothing writes or reads. The cursor left with the old store (ADR-0010), and so did this step.
 
 ## Expected results
 
@@ -55,6 +55,7 @@ Every reachable Deck state has an address, which is what makes a pop-out window,
 
 ## Evidence
 
+- 2026-10-23: the store's reserved flow cursor left with the old store ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), so its two checks are removed. The address checks stand: an old address naming a panel or a surface still parses, so Deck can say that part is gone. 13 checks pass.
 - `bash tools/scripts/run-desktop-tests.sh panel-registry`: 15 checks pass, 2026-09-09.
 - The round-trip table holds the same six states before and after, and the malformed table the same twelve addresses. Both moved to `desktop/tests/address-table.mjs` and are now run by this suite and by [[TST-0005-Every-State-Round-Trips-Through-Its-Address]], so the two cannot drift into two tables.
 - The six states gained four parts each — `surface`, `page`, `flow`, `step` — absent in every one of them, and their WRITTEN form is byte-for-byte what it was, which is what a person who copied an address yesterday actually depends on.

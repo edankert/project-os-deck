@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0074
 aliases: ["TST-0074"]
 title: "A scene keeps places and nothing derived: what it holds and never holds, a reading position found again by its heading, an old desk that still opens, a newer version left alone, and the desk before a scene put back"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[TASK-0106-Keep-A-Scene-In-The-Store]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer]]", "[[A
 ---
 
 # A scene keeps places and nothing derived
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

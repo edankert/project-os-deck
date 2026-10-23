@@ -6,7 +6,7 @@ title: "The host serves the renderer, proxies reads, and refuses every method an
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-10-02
+updated: 2026-10-23
 source: ["[[FEAT-0008-One-Renderer-Two-Hosts]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -54,6 +54,7 @@ Deck's own host is the only network surface Deck exposes. This suite drives it o
 
 ## Evidence
 
+- 2026-10-23: the pop-out capability left with Spread's windows ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]); the capability checks now use adding a workspace, which the shell can do and the served host cannot.
 - `bash tools/scripts/run-desktop-tests.sh host`: 20 checks, all passing on 2026-09-07, driven over real HTTP with a fake sidecar behind the host. It was 17 on 2026-09-06; three arrived with the query lock and the starting-sidecar answer.
 - Refused with 405: `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` through `fetch`, and `TRACE`, `PROPFIND` and an invented method down a raw socket. The fake sidecar recorded no request at all for any of them.
 - Refused: five traversal spellings, plain and percent-encoded. None returned any part of the file they aimed at.

@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0057
 aliases: ["TST-0057"]
 title: "A measurement run writes its numbers to a file as well as printing them, so a trimmed terminal no longer costs the run"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-10-23
 source: ["[[ISS-0080-The-Measurement-Prints-Its-Numbers-And-Keeps-Them-Nowhere]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: system
@@ -26,6 +26,9 @@ related: ["[[PHASE-0002-Glass]]", "[[TASK-0079-The-Field-Is-Measured-Again-On-Al
 ---
 
 # The measurement is kept in a file
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

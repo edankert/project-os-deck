@@ -203,7 +203,7 @@ export interface HostOptions {
   /**
    * The store's state, for `/deck/state` and `/deck/events` (TASK-0057).
    *
-   * Both are READS. A tablet follows the Mac's desk by reading it and sends
+   * Both are READS. A tablet follows the Mac's state by reading it and sends
    * nothing back, because this host answers 405 to every method that is not a
    * read (ADR-0001). Absent, both routes answer 404: a host with no store to
    * describe is not one that should pretend to have an empty one.
@@ -211,12 +211,6 @@ export interface HostOptions {
   state?: () => DeckState;
   /** Called with every state the store broadcasts. Returns its own unsubscribe. */
   subscribeState?: (fn: (state: DeckState) => void) => () => void;
-  /**
-   * Anything else this host serves, as `{ path: answer }`, checked before the
-   * files. How the graph a Glass arrangement reads reaches a page without the
-   * host knowing what a graph is (TASK-0001).
-   */
-  extraReads?: (pathname: string, search: URLSearchParams) => unknown | Promise<unknown> | undefined;
 }
 
 export interface Listening {
@@ -341,14 +335,6 @@ export class DeckHost {
       if (answer === null) plain(res, 404, 'Deck has no overview for that workspace');
       else json(res, 200, answer);
       return;
-    }
-    if (this.options.extraReads !== undefined) {
-      const answer = await this.options.extraReads(pathname, url.searchParams);
-      if (answer !== undefined) {
-        if (answer === null) plain(res, 404, 'nothing there');
-        else json(res, 200, answer);
-        return;
-      }
     }
     if (pathname.startsWith(RECORDS_PREFIX)) {
       this.records(pathname.slice(RECORDS_PREFIX.length), url.searchParams.get('rel'), url.searchParams.get('type'), res, url.searchParams.get('id'));

@@ -1,7 +1,7 @@
 ---
 type: "[[plan]]"
 title: "Plan for FEAT-0036: Deck opens only on the overview"
-status: draft
+status: active
 owner: system:claude
 created: 2026-10-23
 updated: 2026-10-23

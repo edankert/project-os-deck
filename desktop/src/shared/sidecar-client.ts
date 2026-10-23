@@ -7,8 +7,6 @@
  * a read (ADR-0001); this module is the third lock, and the cheapest: a write
  * has nowhere to be called from.
  */
-import type { CardGroup, CardModel } from './types.js';
-
 export class SidecarError extends Error {
   readonly url: string;
   constructor(message: string, url: string) {
@@ -315,36 +313,6 @@ export function contextFromPayload(raw: unknown, url = 'a recorded payload'): No
   };
 }
 
-/** Every note in a context, once: what the note links to and what links to it. */
-export function neighboursOf(context: NoteContext): ContextItem[] {
-  const seen = new Map<string, ContextItem>();
-  for (const item of [...context.linked, ...context.backlinks]) {
-    if (!seen.has(item.id)) seen.set(item.id, item);
-  }
-  return [...seen.values()];
-}
-
-/** A neighbour from outside the view, as a card the field can draw and a person can open. */
-export function cardFromContext(item: ContextItem): CardModel {
-  return {
-    noteId: item.id,
-    title: item.title,
-    noteType: item.type,
-    status: item.status,
-    rel: item.rel,
-    subtitle: null,
-    owed: false,
-    owedVerb: null,
-    groupKey: 'deck:joined',
-    severity: item.severity,
-    lastVerified: null,
-    stale: false,
-    progress: null,
-    children: [],
-    frontmatter: null,
-  };
-}
-
 export function navFromPayload(raw: unknown, mode: string, url = 'a recorded payload'): NavPayload {
   const obj = requireObject(raw, url);
   const rawGroups = obj['groups'];
@@ -355,116 +323,6 @@ export function navFromPayload(raw: unknown, mode: string, url = 'a recorded pay
     mode: typeof obj['mode'] === 'string' ? obj['mode'] : mode,
     groups: rawGroups.map((g) => toGroup(g, url)),
   };
-}
-
-/**
- * The groups a view shows, with the structure the payload carried.
- *
- * Deck used to flatten every group, every child and every mark into one list
- * of four hundred identical cards (TASK-0023). The sidecar already says which
- * notes need a person, which are finished, what is owed on each and what each
- * one holds; all of that is kept here and drawn by the navigator.
- *
- * Ids repeat ACROSS groups on purpose: the sidecar puts an owed note in
- * "Needs you" and again under its phase, and dropping the second one would
- * empty the phase. Inside one group an id appears once.
- */
-export function groupsFromNav(payload: NavPayload): CardGroup[] {
-  return payload.groups.map((group) => ({
-    key: group.key,
-    label: group.label,
-    needsHuman: group.needsHuman,
-    suppressed: isFinishedWork(group),
-    cards: cardsFromItems(group.items, group.key, new Set<string>()),
-  }));
-}
-
-/**
- * Whether a group holds work that is over, and should arrive folded.
- *
- * The sidecar says so in two different ways. The features view sends one group
- * marked `suppressed`, labelled "Quiet". The issues view does not use that
- * flag at all: it repeats each severity band for the finished issues and
- * suffixes the key with ":done". Reading only the flag left 309 finished
- * issues drawn as rows in Your Trainer, under headings identical to the live
- * ones, which is the pile this was meant to remove (TASK-0023).
- */
-export function isFinishedWork(group: { key: string; suppressed: boolean }): boolean {
-  return group.suppressed || group.key.endsWith(':done');
-}
-
-function cardsFromItems(items: NavItem[], groupKey: string, seen: Set<string>): CardModel[] {
-  const out: CardModel[] = [];
-  for (const item of items) {
-    if (item.id === '' || seen.has(item.id)) continue;
-    seen.add(item.id);
-    out.push({
-      noteId: item.id,
-      title: item.title,
-      noteType: item.noteType,
-      status: item.status,
-      rel: relFromUrl(item.url),
-      subtitle: item.subtitle,
-      owed: item.owed,
-      owedVerb: item.owedVerb,
-      groupKey,
-      severity: severityFromGroup(groupKey),
-      lastVerified: item.lastVerified,
-      stale: item.stale,
-      progress: item.progress,
-      // Children carry their own seen-set: a task under one feature is not the
-      // same row as the same task under another, and a parent that repeats a
-      // child of its own is what the dedup is for.
-      children: cardsFromItems(item.children, groupKey, new Set<string>()),
-      // The navigation payload carries the fields the cockpit chose, not the
-      // note's own frontmatter. A card built from Deck's index carries that.
-      frontmatter: null,
-    });
-  }
-  return out;
-}
-
-/**
- * An issue's severity is the group it arrived in, not a field on the item.
- *
- * The sidecar bands issues by severity and repeats the bands for finished
- * ones with a ":done" suffix, so "high:done" is still a high issue.
- */
-const SEVERITIES = new Set(['critical', 'high', 'medium', 'low', 'major', 'minor', 'cosmetic', 'enhancement', 'unset']);
-
-export function severityFromGroup(groupKey: string): string | null {
-  const head = groupKey.split(':')[0] ?? '';
-  return SEVERITIES.has(head) ? head : null;
-}
-
-/** Every card in a view, groups and children flattened, each id once. */
-export function flattenGroups(groups: CardGroup[]): CardModel[] {
-  const out: CardModel[] = [];
-  const seen = new Set<string>();
-  const walk = (cards: CardModel[]): void => {
-    for (const card of cards) {
-      if (!seen.has(card.noteId)) {
-        seen.add(card.noteId);
-        out.push(card);
-      }
-      if (card.children.length > 0) walk(card.children);
-    }
-  };
-  walk(groups.flatMap((g) => g.cards));
-  return out;
-}
-
-/** The rows a view shows, with the groups flattened away. */
-export function cardsFromNav(payload: NavPayload): CardModel[] {
-  return flattenGroups(groupsFromNav(payload));
-}
-
-/** The sidecar's item urls are docs-root-relative paths, sometimes with a fragment. */
-function relFromUrl(url: string | null): string | null {
-  if (url === null || url === '') return null;
-  const withoutHash = url.split('#')[0] ?? '';
-  const cleaned = withoutHash.replace(/^\/+/, '');
-  return cleaned === '' ? null : cleaned;
 }
 
 function toGroup(value: unknown, url: string): NavGroup {

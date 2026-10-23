@@ -6,7 +6,7 @@ title: "The store broadcasts to every window and survives a restart, including a
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-10-23
 source: ["[[FEAT-0003-One-Store-In-The-Main-Process]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -50,6 +50,7 @@ The state lives once and every window sees it change. This suite tests the reduc
 
 ## Evidence
 
+- 2026-10-23: the store holds only what the overview needs: the workspace, the name Deck writes with and the index revisions ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]). The suite was rewritten to match, 13 checks, and it now checks that a state file a Deck with Spread and Glass wrote opens with its workspace and its name and drops the rest.
 - `bash tools/scripts/run-desktop-tests.sh store`: 12 checks, all passing on 2026-09-06.
 - In the running application: a note focused in the main process moved the HIGHLIGHTED CARD in a second window, and closing a desk in one window took the other window from one card to thirty. Both are read from the page, not from the state the page holds. **The first version of this check read `window.__deckLastState`**, which passed while the cards never moved; the independent review caught it, and the defect it was hiding — the repaint was missing from the subscription — is fixed.
 - The state file round-tripped through a real restart of the smoke run before that run was given a state directory of its own.

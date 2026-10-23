@@ -6,7 +6,7 @@ title: "The served page follows the store by reading it: the state a tablet is t
 status: active
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[TASK-0057-The-Served-Page-Follows-The-Store]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -48,6 +48,7 @@ A tablet now shows the desk the Mac holds. Until [[TASK-0057-The-Served-Page-Fol
 
 ## Evidence
 
+- 2026-10-23: the tablet keeps only its own workspace; the desk, the view, the surface and following the Mac's note left with Spread and Glass ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]). The checks of the merged state were rewritten for that; the route checks stand. 9 checks pass.
 2026-09-10: 10 of 10 pass. The smoke run adds the real window: a page opened without the preload, as a tablet loads it, received a note put on the desk in the main process within a second, and a click on it left the Mac's desk as it was. `npm run smoke:lan` asserts the five 405s from the machine's network address.
 
 ## Adequacy (who verifies this test?)

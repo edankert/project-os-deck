@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { load, fakeSidecar, HEALTH, navPayload, item } from './helpers.mjs';
 
-const { SidecarClient, SidecarError, cardsFromNav } = load('shared/sidecar-client.js');
+const { SidecarClient, SidecarError } = load('shared/sidecar-client.js');
 const { describeWorkspace, detectKind, workspaceIdFor, WorkspaceBook } = load('main/workspaces.js');
 
 const ROUTES = {
@@ -141,33 +141,6 @@ test('a sidecar that never answers gives up rather than hanging', async () => {
     server.closeAllConnections?.();
     await new Promise((r) => server.close(r));
   }
-});
-
-test('cardsFromNav shows each note once, even when several groups carry it', () => {
-  const payload = navPayload([item('FEAT-0002', 'a', 'doing', 'feature'), item('FEAT-0003', 'b', 'planned', 'feature')]);
-  const client = new SidecarClient('http://127.0.0.1:1');
-  assert.equal(typeof client.nav, 'function');
-  const cards = cardsFromNav({
-    mode: 'features',
-    groups: payload.groups.map((g) => ({
-      key: g.key,
-      label: g.label,
-      status: null,
-      needsHuman: g.needs_human === true,
-      suppressed: false,
-      items: g.items.map((i) => ({
-        id: i.id,
-        title: i.title,
-        status: i.status,
-        url: i.url,
-        subtitle: null,
-        noteType: i.type,
-        owed: i.owed === true,
-        children: [],
-      })),
-    })),
-  });
-  assert.deepEqual(cards.map((c) => c.noteId), ['FEAT-0002', 'FEAT-0003']);
 });
 
 // --- workspace discovery -----------------------------------------------

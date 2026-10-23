@@ -6,7 +6,7 @@ title: "The sidecar client reads what Deck needs and has no way to write"
 status: active
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-10-23
 source: ["[[FEAT-0002-Deck-Opens-A-Workspace]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -52,6 +52,7 @@ Deck's only route to the sidecar is one typed client. This suite runs that clien
 
 ## Evidence
 
+- 2026-10-23: the helpers that turned the sidecar's navigation into Spread's cards left with Spread ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), and so did their one check. The read checks stand.
 - `bash tools/scripts/run-desktop-tests.sh sidecar-client`, from the repository root: 23 checks, all passing on 2026-09-06.
 - The fake sidecar records every request it receives. After exercising every client method, the set of methods it saw was exactly `['GET']`.
 - Run live against the sidecar the cockpit already had open on this repository: Deck reused it rather than starting a second one, and read 8 groups' worth of notes through it. Run again against a repository with no sidecar, where Deck started its own on its own port range and stopped it at exit.

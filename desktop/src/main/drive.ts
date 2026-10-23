@@ -14,8 +14,8 @@
  * logs is written to `drive.json` beside the pictures, with the time each
  * step took, so a recorded demonstration says what was done and when.
  *
- * Like the smoke run and the measurement it starts from a throwaway state
- * directory, so it never reads or changes the desk a person has arranged, and
+ * Like the smoke run it starts from a throwaway state directory, so it never
+ * reads or changes the state of a Deck a person is using, and
  * it writes nothing to the workspace: what it reads through is the sidecar's
  * read routes, and `git status` in the workspace is recorded before and after.
  */
@@ -23,12 +23,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type { DeckAction } from '../shared/store-state.js';
-import type { DeckState, WindowRole } from '../shared/types.js';
-import { click, delay, drag, gitStatus, pointer, press } from './smoke-glass.js';
+import type { DeckState } from '../shared/types.js';
+import { click, delay, drag, gitStatus, pointer, press } from './input.js';
 
 export interface DriveHost {
   store: { dispatch(action: DeckAction): DeckState; getState(): DeckState };
-  createWindow(role: WindowRole, address: string | null, panel: string | null): BrowserWindow;
+  createWindow(address: string | null): BrowserWindow;
   untilBooted(win: BrowserWindow): Promise<void>;
   focusApp(win: BrowserWindow): void;
   /** The workspace the run opens: this repository unless `--workspace` names another. */
@@ -90,7 +90,7 @@ export async function runDrive(host: DriveHost, scriptPath: string, out: string)
     },
     log,
     open: async (address, size = { width: 1440, height: 900 }) => {
-      const win = host.createWindow('focus', address, null);
+      const win = host.createWindow(address);
       win.setBounds({ x: 0, y: 0, ...size });
       await new Promise<void>((resolve) => win.webContents.once('did-finish-load', () => resolve()));
       await host.untilBooted(win);

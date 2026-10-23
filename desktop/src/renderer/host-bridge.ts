@@ -29,17 +29,6 @@ interface BridgeShape {
     dispatch(action: DeckAction): Promise<DeckState>;
     subscribe(fn: (state: DeckState) => void): () => void;
   };
-  windows: {
-    role(): Promise<unknown>;
-    openPanel(address: string): Promise<unknown>;
-    list(): Promise<unknown>;
-    throw(request: unknown): Promise<unknown>;
-    pendingArrivals(): Promise<unknown>;
-    onArrival(fn: (arrival: unknown) => void): () => void;
-    onSourceClosed(fn: (gone: unknown) => void): () => void;
-    acknowledge(answer: unknown): Promise<unknown>;
-    sendBack(request: unknown): Promise<unknown>;
-  };
   clipboard: { write(text: string): Promise<unknown>; read(): Promise<unknown> };
   agents?: AgentBridge;
   shells?: ShellBridge;
@@ -96,11 +85,10 @@ export class Host {
   private unsubscribeShared: (() => void) | null = null;
   /**
    * On a served page: the Mac's state as last read, and the tablet's own
-   * choices. What the page draws is the two merged (TASK-0057).
+   * workspace. What the page draws is the two merged (TASK-0057).
    */
   private remote: DeckState | null = null;
   private own: DeckState = initialState();
-  private follow = false;
   private events: EventSource | null = null;
 
   async start(): Promise<void> {
@@ -151,36 +139,9 @@ export class Host {
 
   private recompute(): void {
     if (this.remote === null) return;
-    const next = mergeServed(this.remote, this.own, this.follow);
+    const next = mergeServed(this.remote, this.own);
     this.local = next;
     for (const fn of [...this.listeners]) fn(next);
-  }
-
-  /** Whether this page reads the Mac's store rather than keeping its own. */
-  followsTheStore(): boolean {
-    return this.remote !== null;
-  }
-
-  /**
-   * Whether this page can change the desk, the hand's sets and the panes.
-   *
-   * Only the shell. A served page that follows the store would have its change
-   * overwritten by the next broadcast, and a page that could send one back
-   * would be a tablet that steers, which is a decision nobody has made.
-   */
-  canArrange(): boolean {
-    return bridge() !== null;
-  }
-
-  /** Whether the tablet shows the note the Mac's shell has focused. */
-  following(): boolean {
-    return this.follow;
-  }
-
-  setFollowing(on: boolean): void {
-    if (this.follow === on) return;
-    this.follow = on;
-    this.recompute();
   }
 
   /**
@@ -262,67 +223,6 @@ export class Host {
     if (b !== null) return (await b.workspaces.open(id)) as { ok: boolean; error?: string };
     await this.dispatch({ type: 'open-workspace', workspaceId: id });
     return { ok: true };
-  }
-
-  async openPanel(address: string): Promise<{ ok: boolean; error?: string }> {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to open' };
-    return (await b.windows.openPanel(address)) as { ok: boolean; error?: string };
-  }
-
-  /** Every other Deck window and display, for a throw. Nothing on a served page. */
-  async windowList(): Promise<unknown> {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return null;
-    return b.windows.list();
-  }
-
-  /** Send a note to another window, a display or the tablet (TASK-0055). */
-  async throwNote(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; landed?: string; said?: string; acknowledged?: boolean; mode?: string }> {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to throw to' };
-    return (await b.windows.throw(request)) as { ok: boolean; error?: string; landed?: string; said?: string; acknowledged?: boolean; mode?: string };
-  }
-
-  /** The notes that arrived in this window by a handoff and are waiting to be shown (FEAT-0023). None on a served page. */
-  async pendingArrivals(): Promise<unknown[]> {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return [];
-    return ((await b.windows.pendingArrivals()) as unknown[]) ?? [];
-  }
-
-  /** Be told when a note arrives in this window. A served page has no bridge and is never told. */
-  onArrival(fn: (arrival: unknown) => void): () => void {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return () => undefined;
-    return b.windows.onArrival(fn);
-  }
-
-  /** Be told when the window a note arrived from has closed. */
-  onSourceClosed(fn: (gone: unknown) => void): () => void {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return () => undefined;
-    return b.windows.onSourceClosed(fn);
-  }
-
-  /** Tell the source this window shows the note, or could not. False when the source is no longer waiting for the answer. */
-  async acknowledgeArrival(answer: { id: string; ok: boolean; error?: string }): Promise<boolean> {
-    const b = bridge();
-    if (b === null) return false;
-    const reply = (await b.windows.acknowledge(answer)) as { ok?: boolean } | null;
-    return reply?.ok === true;
-  }
-
-  async sendBack(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; said?: string }> {
-    const b = bridge();
-    if (b === null || !this.caps.popOutWindows) return { ok: false, error: 'this host has no windows to send to' };
-    return (await b.windows.sendBack(request)) as { ok: boolean; error?: string; said?: string };
-  }
-
-  async windowRole(): Promise<{ role: string; panel: string | null }> {
-    const b = bridge();
-    if (b === null) return { role: 'focus', panel: null };
-    return (await b.windows.role()) as { role: string; panel: string | null };
   }
 
   async writeClipboard(text: string): Promise<boolean> {

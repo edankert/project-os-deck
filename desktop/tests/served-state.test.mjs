@@ -2,8 +2,9 @@
 // to the two new routes is refused (TASK-0057).
 //
 // Until TASK-0057 a page served by Deck's host kept a fresh local state, so a
-// tablet showed its own desk and never saw a note lifted on the Mac. Found by
-// reading the code in the phase review of 2026-09-10; no walk had asked.
+// tablet never saw what the Mac did. Found by reading the code in the phase
+// review of 2026-09-10. Since 2026-10-23 the state is the overview's: the
+// workspace, the name Deck writes with and the index revisions (ADR-0010).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -13,7 +14,7 @@ import { load, desktopRoot, fakeSidecar, HEALTH } from './helpers.mjs';
 const { DeckHost } = load('main/host.js');
 const { SERVED_CAPABILITIES } = load('shared/capability.js');
 const { servedState, mergeServed, TABLET_LOCAL_ACTIONS } = load('shared/served-state.js');
-const { initialState, reduce, deskCardsOf } = load('shared/store-state.js');
+const { initialState, reduce } = load('shared/store-state.js');
 
 const WEB_ROOT = path.join(desktopRoot, 'dist', 'web');
 const OPEN = { id: 'aaaa1111', root: '/repo', name: 'open', kind: 'project-os' };
@@ -22,78 +23,40 @@ const CLOSED = { id: 'bbbb2222', root: '/other', name: 'closed', kind: 'project-
 function macState() {
   let state = initialState();
   state = reduce(state, { type: 'set-actor', actor: 'user:someone' });
-  state = reduce(state, { type: 'open-workspace', workspaceId: CLOSED.id });
-  state = reduce(state, { type: 'select-view', viewId: 'issues' });
-  state = reduce(state, { type: 'put-on-desk', noteId: 'ISS-0009', x: 10, y: 10 });
-  // One note on every view in the closed workspace too, so both desk maps
-  // have something the filter must leave out (FEAT-0015).
-  state = reduce(state, { type: 'set-every-view', noteId: 'ISS-0009', on: true });
-  state = reduce(state, { type: 'save-desk', name: 'secret' });
-  state = reduce(state, { type: 'pull', noteId: 'ISS-0009' });
+  state = reduce(state, { type: 'index-changed', workspaceId: CLOSED.id, revision: 4 });
+  state = reduce(state, { type: 'index-changed', workspaceId: OPEN.id, revision: 2 });
   state = reduce(state, { type: 'open-workspace', workspaceId: OPEN.id });
-  state = reduce(state, { type: 'select-view', viewId: 'issues' });
-  state = reduce(state, { type: 'put-on-desk', noteId: 'FEAT-0002', x: 20, y: 30 });
-  state = reduce(state, { type: 'focus-note', noteId: 'FEAT-0002' });
-  state = reduce(state, { type: 'push', noteId: 'TASK-0001' });
   return state;
 }
 
 test('the served state leaves out the name Deck writes with and every workspace with no sidecar', () => {
   const served = servedState(macState(), new Set([OPEN.id]));
   assert.equal(served.actor, '', 'the actor belongs to the shell, the only host that writes');
-  assert.deepEqual(Object.keys(served.deskCards), [], 'the closed workspace’s notes on every view are not described');
-  assert.deepEqual(Object.keys(served.viewDesks), [OPEN.id], 'nor are its views’ desks');
-  assert.deepEqual(Object.values(served.desks), [], 'a desk saved in a closed workspace is not described');
-  assert.equal(CLOSED.id in served.session.pulled, false, 'the pull was made in the closed workspace');
-  assert.deepEqual(served.session.pushed[OPEN.id], ['TASK-0001']);
+  assert.deepEqual(served.indexRevisions, { [OPEN.id]: 2 }, 'the closed workspace is not described');
   assert.equal(served.workspaceId, OPEN.id);
-  assert.equal(served.noteId, 'FEAT-0002');
 });
 
 test('a Mac whose current workspace has no sidecar tells the network nothing about where it is', () => {
-  let state = macState();
-  state = reduce(state, { type: 'open-workspace', workspaceId: CLOSED.id });
+  const state = reduce(macState(), { type: 'open-workspace', workspaceId: CLOSED.id });
   const served = servedState(state, new Set([OPEN.id]));
   assert.equal(served.workspaceId, null);
-  assert.equal(served.viewId, null);
-  assert.equal(served.noteId, null);
 });
 
-test("a tablet keeps its own view and surface, and takes the Mac's desk", () => {
-  const remote = servedState(macState(), new Set([OPEN.id]));
-  let own = initialState();
-  own = reduce(own, { type: 'open-workspace', workspaceId: OPEN.id });
-  own = reduce(own, { type: 'select-view', viewId: 'features' });
-  own = reduce(own, { type: 'select-surface', surface: 'spread' });
-  const drawn = mergeServed(remote, own, false);
-  assert.equal(drawn.viewId, 'features', "a view switch on the Mac does not move the tablet's view");
-  assert.equal(drawn.surface, 'spread');
-  assert.equal(drawn.noteId, null, 'with follow off, the Mac focusing a note does not move the tablet');
-  // The desk of the Mac's CURRENT view, Issues, though the tablet browses
-  // Features: a throw to the tablet lands there (FEAT-0015, decision 13).
-  assert.deepEqual(
-    deskCardsOf(drawn, OPEN.id).map((c) => c.noteId),
-    ['FEAT-0002'],
-    'the desk is the Mac’s',
-  );
-});
-
-test("with follow on, the tablet takes the Mac's workspace, view and note", () => {
-  const remote = servedState(macState(), new Set([OPEN.id]));
-  let own = reduce(initialState(), { type: 'select-view', viewId: 'features' });
-  const drawn = mergeServed(remote, own, true);
-  assert.equal(drawn.viewId, 'issues');
-  assert.equal(drawn.noteId, 'FEAT-0002');
-  assert.equal(drawn.workspaceId, OPEN.id);
+test("a tablet keeps its own workspace, and starts where the Mac is until it chooses one", () => {
+  const remote = servedState(macState(), new Set([OPEN.id, CLOSED.id]));
+  assert.equal(mergeServed(remote, initialState()).workspaceId, OPEN.id, 'a tablet that chose nothing starts where the Mac is');
+  const own = reduce(initialState(), { type: 'open-workspace', workspaceId: CLOSED.id });
+  const drawn = mergeServed(remote, own);
+  assert.equal(drawn.workspaceId, CLOSED.id, "the Mac opening another workspace does not move the tablet's");
+  assert.deepEqual(drawn.indexRevisions, remote.indexRevisions, 'the revisions are the Mac\'s');
+  assert.equal(drawn.revision, Math.max(remote.revision, own.revision));
 });
 
 test('a tablet applies only the actions that change what it keeps for itself', () => {
-  for (const type of ['put-on-desk', 'take-off-desk', 'move-card', 'clear-desk', 'save-desk', 'pull', 'push', 'let-go', 'resize-card', 'raise-card', 'widen-card', 'set-actor']) {
+  for (const type of ['set-actor', 'index-changed', 'restore']) {
     assert.equal(TABLET_LOCAL_ACTIONS.has(type), false, `${type} would change the Mac's state`);
   }
-  for (const type of ['select-view', 'select-surface', 'focus-note', 'set-query']) {
-    assert.equal(TABLET_LOCAL_ACTIONS.has(type), true);
-  }
+  assert.deepEqual([...TABLET_LOCAL_ACTIONS], ['open-workspace']);
 });
 
 async function standUp(state) {
@@ -127,7 +90,8 @@ test('GET /deck/state answers with the served state', async () => {
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.actor, '');
-    assert.deepEqual(Object.keys(body.viewDesks), [OPEN.id]);
+    assert.deepEqual(body.indexRevisions, { [OPEN.id]: 2 });
+    assert.equal(body.workspaceId, OPEN.id);
   } finally {
     await host.close();
     await sidecar.close();
@@ -191,12 +155,12 @@ test('the event stream sends the state at once, and a change within a second of 
     const events = await readEvents(`${origin}/deck/events`, (list) => {
       if (list.length === 1) {
         sentAt = Date.now();
-        broadcast(reduce(start, { type: 'put-on-desk', noteId: 'TASK-0057', x: 1, y: 1 }));
+        broadcast(reduce(start, { type: 'index-changed', workspaceId: OPEN.id, revision: 3 }));
       }
       return list.length >= 2;
     });
-    assert.deepEqual(deskCardsOf(events[0].state, OPEN.id).map((c) => c.noteId), ['FEAT-0002']);
-    assert.deepEqual(deskCardsOf(events[1].state, OPEN.id).map((c) => c.noteId), ['FEAT-0002', 'TASK-0057']);
+    assert.equal(events[0].state.indexRevisions[OPEN.id], 2);
+    assert.equal(events[1].state.indexRevisions[OPEN.id], 3);
     assert.ok(events[1].at - sentAt < 1000, `the change took ${events[1].at - sentAt}ms`);
     assert.equal(events[1].state.actor, '', 'the stream is filtered the same way as the read');
   } finally {

@@ -1,7 +1,5 @@
 /** Shapes shared by the main process, the preload bridge and the renderer. */
-import type { CollectionLayout } from './collection.js';
-
-/** What kind of workspace this is. The view provider is chosen by it. */
+/** What kind of workspace this is. */
 export type WorkspaceKind = 'project-os' | 'vault';
 
 export interface Workspace {
@@ -22,287 +20,45 @@ export interface Workspace {
   open?: boolean;
 }
 
-/** Where a view's contents come from. The renderer never names a sidecar route. */
-export type ViewSource =
-  | { kind: 'nav'; mode: string }
-  /** Evaluated over Deck's own index, rather than fetched as groups. */
-  | { kind: 'query' }
-  | { kind: 'stats' };
-
-export interface DeckView {
-  id: string;
-  label: string;
-  source: ViewSource;
-}
-
-/** How much of something is finished, when the payload says. */
-export interface Progress {
-  done: number;
-  total: number;
-  stale: number;
-}
-
-export interface CardModel {
-  noteId: string;
-  title: string;
-  noteType: string;
-  status: string;
-  /** Docs-root-relative path, when the payload carried one. */
-  rel: string | null;
-  /** The sidecar's own one-line description, where it sends one. */
-  subtitle: string | null;
-  /** Whether a person owes this note something, and what. */
-  owed: boolean;
-  owedVerb: string | null;
-  /** The group this card was drawn from, which is how an issue knows its severity. */
-  groupKey: string;
-  severity: string | null;
-  /** A test's last walk, and whether that walk has gone stale. */
-  lastVerified: string | null;
-  stale: boolean;
-  /** Finished out of total, for anything that holds other notes. */
-  progress: Progress | null;
-  /** The notes this one holds: a feature's tasks, a surface's tests. */
-  children: CardModel[];
-  /**
-   * The note's own frontmatter, when the card came from Deck's index.
-   *
-   * A face names the properties it shows, and a vault's character shows its
-   * role and its archetype without anything in the renderer knowing what those
-   * are. Null for a card built from the sidecar's navigation payload, which
-   * carries the fields the cockpit chose rather than the note's own.
-   */
-  frontmatter: Record<string, unknown> | null;
-}
-
-/** One heading in a view, with the cards under it. */
-export interface CardGroup {
-  key: string;
-  label: string;
-  /** The sidecar's mark for a group a person has to act on. */
-  needsHuman: boolean;
-  /** Finished work, folded away until somebody asks for it. */
-  suppressed: boolean;
-  cards: CardModel[];
-}
-
-export interface DeskCard {
-  noteId: string;
-  x: number;
-  y: number;
-  /**
-   * A pane's size, when a person resized it in Glass (TASK-0054).
-   *
-   * Optional, so every desk saved before panes existed reads exactly as it
-   * did, and Spread, which draws every card at one size, ignores both.
-   */
-  w?: number;
-  h?: number;
-  /**
-   * Whether this note is in the reading column: the fixed-width column at the
-   * side of the field that a widened pane moves to. At most one card per desk
-   * has it, because widening a second pane replaces the first.
-   */
-  wide?: boolean;
-  /**
-   * Where the card stands in the stack of the desk it is drawn on: higher is
-   * nearer the top (FEAT-0015). Optional, and a card without one counts as 0,
-   * so a desk written before this draws in its list order. It exists because
-   * a desk is now drawn from two lists, the notes on every view and the
-   * view's own, and a press must be able to raise a note from either.
-   */
-  z?: number;
-}
-
-/** A document's width and height in pixels, as a person chose them. */
-export interface ReadingSize {
-  w: number;
-  h: number;
-}
-
-export interface Desk {
-  name: string;
-  workspaceId: string;
-  cards: DeskCard[];
-  /**
-   * Present on a scene (FEAT-0023, ADR-0007): a saved desk that also keeps
-   * the view, the search, the collection's layout and where each document
-   * was being read. Absent on a desk saved before scenes, which opens as it
-   * always did. `shared/scenes.ts` says what each field is and is not.
-   */
-  version?: number;
-  view?: string;
-  query?: string;
-  filters?: Filters;
-  collection?: CollectionLayout;
-  anchors?: Record<string, ReadingAnchor>;
-  field?: { w: number; h: number };
-  savedAt?: string;
-}
-
 /**
- * Where a document was being read: the heading above the top of what was in
- * view, by its text, and how far past it; and how far down the whole text
- * that was, for when the heading is gone.
- */
-export interface ReadingAnchor {
-  /** The nearest heading at or above the top of the view, or null when the view was above the first one. */
-  heading: string | null;
-  /**
-   * Which heading with those words it is, counted from 1 down the text: a
-   * note may have "Steps" under two sections. A position kept before this
-   * was recorded has none, and means the first.
-   */
-  occurrence?: number;
-  /** How many pixels past that heading's top the view was scrolled. */
-  past: number;
-  /** The scroll position as a share of the scroll range, 0 to 1. */
-  fraction: number;
-}
-
-/**
- * What a popped-out window carries. One thing, named in its address.
- *
- * A string rather than a union of three, because the kinds come from a
- * registry each phase adds to (`shared/panels.ts`, TASK-0052). The guarantee
- * is unchanged and is enforced where it belongs: the address grammar refuses a
- * panel nothing has registered, so an address still cannot name something Deck
- * cannot draw.
+ * The panel an address from before 2026-10-23 may name. Popped-out panels left
+ * Deck with Spread (ADR-0010); the address grammar still reads one, so an old
+ * address opens the overview and says that part is gone rather than failing.
  */
 export type PanelType = string;
 
-export interface Filters {
-  statuses: string[];
-  types: string[];
-}
-
+/**
+ * Deck's shared state (`store-state.ts`): what the overview needs, and nothing
+ * Spread or Glass kept (ADR-0010).
+ */
 export interface DeckState {
+  /** The workspace open in Deck's window; a served page keeps its own. */
   workspaceId: string | null;
-  viewId: string | null;
-  deskName: string | null;
-  noteId: string | null;
-  /** Keyed `<workspaceId>:<desk name>`, so two workspaces may both have a "triage". */
-  desks: Record<string, Desk>;
-  /**
-   * The notes held on EVERY view of a workspace, keyed by workspace id
-   * (FEAT-0015). Until 2026-09-11 this was the whole desk, one per workspace;
-   * each view's own notes are in `viewDesks` now, and a file written before
-   * reads every note it held as on every view, which is what it showed.
-   *
-   * The desk is a chosen subset rather than everything the view holds, so it
-   * has to be written down somewhere. It lives here rather than being read
-   * back off the DOM, which is what made a saved desk worth nothing before
-   * (TASK-0024).
-   */
-  deskCards: Record<string, DeskCard[]>;
-  /**
-   * Each view's own held notes, keyed by workspace id and then view id
-   * (FEAT-0015). `deskCards` above holds the notes on EVERY view of a
-   * workspace; the desk drawn for a view is both lists (`deskCardsOf`). A
-   * state file written before desks per view has only `deskCards`, so every
-   * note it held reads as on every view, which is exactly what it showed.
-   */
-  viewDesks: Record<string, Record<string, DeskCard[]>>;
-  /**
-   * The size a person last gave an opened note, per view, keyed by workspace
-   * id and then view id (TASK-0104, ISS-0071). A note opened afterwards on
-   * that view opens at this size. A note's own `w` and `h` win over it, and a
-   * view with no entry opens notes at the first-use size (`shared/panes.ts`).
-   * Kept in the store, so a second window on the same view reads it. A state
-   * file written before this has none, and reads as an empty table.
-   */
-  readingSizes: Record<string, Record<string, ReadingSize>>;
-  /**
-   * Where each view's collection stands on the Glass desk and how it is
-   * presented, keyed by workspace id and then view id (FEAT-0020, ADR-0006).
-   * The collection is the view's derived list as an object on the desk. Only
-   * its place, size, collapse and presentation are here: its rows are derived
-   * from the view's source every time, so a desk reopened later shows what
-   * the source returns then. A view with no entry draws the default
-   * (`shared/collection.ts`), which is what a state file written before
-   * collections existed gets.
-   */
-  collections: Record<string, Record<string, CollectionLayout>>;
-  /**
-   * The view whose desk this state draws, when that is not `viewId`. Set only
-   * on a served page: the tablet browses its own view and draws the desk of
-   * the Mac's current view (FEAT-0015, decision 13). Never stored.
-   */
-  deskView?: string | null;
   /**
    * Who Deck says made a write.
    *
    * A setting rather than a literal: the cockpit hard-codes `user:edwin` in
    * four places in its renderer, and that name cannot be copied into a second
    * application without making it unusable by anybody else (TASK-0048). The
-   * sidecar does not verify it, so this is a record of intent — it says who
+   * sidecar does not verify it, so this is a record of intent: it says who
    * claimed to act, not who was proven to.
    */
   actor: string;
-  /** What the navigator is narrowed to. Shared, so a second window narrows with it. */
-  query: string;
-  filters: Filters;
-  /** Group key to whether it is folded. Absent means the group's own default. */
-  folds: Record<string, boolean>;
   /** Rises on every accepted change; lets a subscriber drop a stale broadcast. */
   revision: number;
   /**
    * How many times each workspace's NOTES have changed, keyed by workspace id.
    *
-   * A second number beside `revision`, not the same one, and the reason is
-   * worth stating: `revision` counts changes to what Deck is doing — a card
-   * moved, a view chosen — and this counts changes to what Deck is looking at.
-   * A window that redrew because somebody dragged a card has not gone stale.
-   * Two revisions that mean different things must not share a name
-   * (TASK-0039).
-   *
-   * Monotonic per workspace within a run, and NOT persisted: the index is
-   * rebuilt from disk at every start, so a number carried over from the last
-   * run would be a number this run's index could not honour.
+   * A second number beside `revision`, because the two count different things:
+   * `revision` counts changes to what Deck is doing, and this counts changes to
+   * what Deck is looking at (TASK-0039). Not persisted: the index is rebuilt
+   * from disk at every start.
    */
   indexRevisions: Record<string, number>;
-  /**
-   * Where a person is in a flow. RESERVED by TASK-0052; nothing writes it and
-   * nothing reads it, and `normaliseState` does not read it back off disk
-   * either, because nothing could have put it there honestly.
-   *
-   * A flow's steps and their done-states are read from the record, so this
-   * cursor is the only piece of a flow that is not already somewhere else —
-   * which is why the slot is worth reserving before a flow is designed.
-   * `docs/ARCHITECTURE.md`, "Flows", carries the concept in words.
-   */
-  flowCursor: FlowCursor | null;
-  /**
-   * Which surface draws the view: `glass`, the field, or `spread`, the desk.
-   *
-   * Glass unless a person chose otherwise (ADR-0002). Shared, so a second
-   * window follows the first, and written into an address only when it is
-   * NOT the default: an address without it means Glass (TASK-0033).
-   */
-  surface: string;
-  /**
-   * What a person's hands did to the field this session (TASK-0053).
-   *
-   * The first state that every window shares and that must NOT be kept: the
-   * store's persister drops this whole part, so a restart starts with both
-   * sets empty, and neither is ever in an address. Keyed by workspace id,
-   * because the field a hand arranged belongs to one workspace.
-   */
-  session: SessionState;
-}
-
-/** The part of the state that lasts for the session and is never written to disk. */
-export interface SessionState {
-  /** Notes a hand brought into the front band. */
-  pulled: Record<string, string[]>;
-  /** Notes a hand sent behind the person, into the quiet band. */
-  pushed: Record<string, string[]>;
 }
 
 /** What a host can do. The renderer asks rather than testing for Electron. */
 export interface Capabilities {
-  /** Open a panel in its own operating-system window. */
-  popOutWindows: boolean;
   /** Read and write the system clipboard through the main process. */
   clipboard: boolean;
   /** Add or remove a workspace. */
@@ -317,21 +73,24 @@ export interface Capabilities {
    * Change a note, through the shell's loopback call to the sidecar.
    *
    * False on the served page, and the verbs are then ABSENT rather than
-   * disabled — the same rule pop-out windows follow (TASK-0022). A control
-   * that is greyed out is a promise that it could work.
+   * disabled (TASK-0022). A control that is greyed out is a promise that it
+   * could work.
    */
   write: boolean;
 }
 
-export type WindowRole = 'focus' | 'satellite';
-
 export interface DeckAddress {
   workspaceId: string;
   viewId: string;
+  /**
+   * A desk, a note in a view, a popped-out panel and a surface: what an address
+   * from Spread and Glass carried. Still read, so such an address opens the
+   * overview and says that part is not in this Deck (ADR-0010). A note is also
+   * what a phase or a ticket screen names (`?page=ticket&note=TASK-0001`).
+   */
   desk: string | null;
   note: string | null;
   panel: PanelType | null;
-  /** Which surface draws the view: the list, cards on a desk, or the field. */
   surface: string | null;
   /** A whole screen that is not a view of notes: the acceptance checks, a release. */
   page: string | null;
@@ -347,21 +106,4 @@ export interface DeckAddress {
   group: string | null;
   /** The agent session open in the pane, on the wheel (FEAT-0033, TASK-0199). */
   session: string | null;
-}
-
-/**
- * Where a person is in a flow.
- *
- * RESERVED by TASK-0052 and written by nothing. A flow is an ordered list of
- * steps whose done-state is read from the record and whose verb comes from the
- * registry, so the only state outside the record is this cursor —
- * `docs/ARCHITECTURE.md`, "Flows", carries the concept. Edwin said on
- * 2026-09-08 that he does not yet know what flows should look like and wants
- * them considered now and fleshed out over time, so the slot exists and
- * nothing fills it. The acceptance runner's position, which the cockpit loses
- * when its window closes, is what it is for.
- */
-export interface FlowCursor {
-  flow: string;
-  step: string;
 }

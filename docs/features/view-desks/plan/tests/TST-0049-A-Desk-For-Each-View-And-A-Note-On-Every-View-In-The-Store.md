@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0049
 aliases: ["TST-0049"]
 title: "A desk for each view and a note on every view, in the store: an old state file reads unchanged, the mark moves a note between lists, and the tablet is told only about open workspaces"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-23
 source: ["[[TASK-0058-The-Store-Keeps-A-Desk-For-Each-View]]", "[[TASK-0059-A-Note-Is-Kept-On-Every-View]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[TST-0019-The-Desk-Is-Chosen-And-Arranged]]", "[[TST-0043-The-Hands-
 ---
 
 # A desk for each view and a note on every view, in the store
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

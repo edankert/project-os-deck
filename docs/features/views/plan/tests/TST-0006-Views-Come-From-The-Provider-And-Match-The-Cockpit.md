@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0006
 aliases: ["TST-0006"]
 title: "Views come from the provider, match the cockpit's list, and appear nowhere as literals in the renderer"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-10-23
 source: ["[[FEAT-0007-Views-Come-From-A-Provider]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -26,6 +26,9 @@ related: ["[[PHASE-0001-Deck]]"]
 ---
 
 # Views come from the provider
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

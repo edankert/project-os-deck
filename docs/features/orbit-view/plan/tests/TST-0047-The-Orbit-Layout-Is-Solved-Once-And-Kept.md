@@ -3,10 +3,10 @@ type: "[[test]]"
 id: TST-0047
 aliases: ["TST-0047"]
 title: "The orbit’s layout is solved once and kept, fills the cylinder, moves nothing already placed when a note arrives, and marks an orphan and a cluster held on by one link"
-status: active
+status: retired
 owner: user:edwin
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-10-23
 source: ["[[TASK-0002-The-Layout-Is-Computed-Once-And-Kept]]"]
 phase: "[[PHASE-0002-Glass]]"
 scope: feature
@@ -25,6 +25,9 @@ review_verdict: ""
 related: ["[[TST-0025-A-Planted-Orphan-And-A-Single-Edge-Cluster-Are-Visible]]", "[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]"]
 ---
 # The orbit's layout is solved once and kept
+
+> [!note] Retired 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
 
 ## Purpose
 

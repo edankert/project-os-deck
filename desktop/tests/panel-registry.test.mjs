@@ -16,7 +16,6 @@ import { BAD, STATES, WORKSPACE } from './address-table.mjs';
 const { addressFor, formatAddress, parseAddress, tryParseAddress, AddressError } = load('shared/address.js');
 const { panelKinds } = load('shared/panels.js');
 const { surfaceKinds, pageKinds, flowKinds } = load('shared/vocabularies.js');
-const { initialState, normaliseState, reduce } = load('shared/store-state.js');
 
 // ---- nothing that parsed before parses differently now ----
 
@@ -164,37 +163,3 @@ test('registering one id twice with two labels is refused rather than silently w
 });
 
 // ---- the reserved flow cursor ----
-
-test('the store carries a flow cursor, and nothing writes it', () => {
-  const state = initialState();
-  assert.equal(state.flowCursor, null);
-  assert.ok('flowCursor' in state, 'the slot has to exist to be reserved');
-
-  // Every action a window may dispatch, and the two it may not. None of them
-  // touches the cursor: it is reserved for a flow that is not built yet.
-  const actions = [
-    { type: 'open-workspace', workspaceId: WORKSPACE },
-    { type: 'select-view', viewId: 'issues' },
-    { type: 'focus-note', noteId: 'ISS-0256' },
-    { type: 'save-desk', name: 'triage' },
-    { type: 'open-desk', name: 'triage' },
-    { type: 'put-on-desk', noteId: 'ISS-0256', x: 1, y: 2 },
-    { type: 'move-card', noteId: 'ISS-0256', x: 3, y: 4 },
-    { type: 'take-off-desk', noteId: 'ISS-0256' },
-    { type: 'clear-desk' },
-    { type: 'set-query', text: 'anything' },
-    { type: 'set-filters', filters: { statuses: ['open'], types: [] } },
-    { type: 'set-fold', key: 'g:main', folded: true },
-    { type: 'set-flow-step', flow: 'acceptance', step: 'walk-it' },
-  ];
-  let current = state;
-  for (const action of actions) {
-    current = reduce(current, action);
-    assert.equal(current.flowCursor, null, `${action.type} wrote the reserved cursor`);
-  }
-});
-
-test('a cursor found in a state file is not read back, because nothing could have written it', () => {
-  const restored = normaliseState({ flowCursor: { flow: 'acceptance', step: 'walk-it' } });
-  assert.equal(restored.flowCursor, null);
-});

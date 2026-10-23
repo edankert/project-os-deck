@@ -6,7 +6,7 @@ title: "The write channel exists in the shell and not when served, the verbs com
 status: active
 owner: user:edwin
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-10-23
 source: ["[[FEAT-0013-The-First-Write]]"]
 phase: "[[PHASE-0001-Deck]]"
 scope: feature
@@ -62,6 +62,7 @@ Deck writes for the first time, and [[ADR-0003-Deck-Writes-Through-The-Shell]] p
 
 ## Evidence
 
+- 2026-10-23: the store now trims the name Deck writes with, as before, in the smaller store of [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. Every check passes unchanged.
 2026-10-14: TASK-0142 adds a deterministic scan-boundary regression. Temporary JavaScript fixtures must be excluded; root preload.js and representative main, shared and web outputs must remain included. The full desktop run passes 737 tests with no failures or skips.
 
 - `bash tools/scripts/run-desktop-tests.sh write-channel`: 21 checks pass, 2026-09-09.

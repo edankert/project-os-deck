@@ -317,9 +317,9 @@ test('the served host reports reading capability and nothing only the shell can 
     const response = await fetch(`${origin}/deck/capabilities`);
     const caps = await response.json();
     assert.deepEqual(caps, SERVED_CAPABILITIES);
-    assert.equal(caps.popOutWindows, false);
+    assert.equal(caps.manageWorkspaces, false);
     assert.equal(caps.sharedStore, false);
-    assert.equal(SHELL_CAPABILITIES.popOutWindows, true, 'the shell should still offer what the served host cannot');
+    assert.equal(SHELL_CAPABILITIES.manageWorkspaces, true, 'the shell should still offer what the served host cannot');
 
     const list = await (await fetch(`${origin}/deck/workspaces`)).json();
     // Each workspace says whether a sidecar is answering for it, because a
@@ -359,13 +359,13 @@ test('a workspace with no sidecar is offered as unavailable, not as openable (IS
 });
 
 test('a capability this build does not know is ignored rather than granted', () => {
-  const caps = normaliseCapabilities({ popOutWindows: true, timeTravel: true, clipboard: 'yes' });
-  assert.equal(caps.popOutWindows, true);
+  const caps = normaliseCapabilities({ manageWorkspaces: true, timeTravel: true, clipboard: 'yes' });
+  assert.equal(caps.manageWorkspaces, true);
   assert.equal(caps.clipboard, false, 'a non-true value is not permission');
   assert.equal('timeTravel' in caps, false);
-  assert.equal(can(null, 'popOutWindows'), false);
+  assert.equal(can(null, 'manageWorkspaces'), false);
   assert.equal(can(undefined, 'clipboard'), false);
-  assert.equal(can({ popOutWindows: true }, 'popOutWindows'), true);
+  assert.equal(can({ manageWorkspaces: true }, 'manageWorkspaces'), true);
 });
 
 test('the two capability sets differ exactly where the host does', () => {

@@ -63,7 +63,7 @@ counters:
 focus:
   phase: "PHASE-0005"
   feature: "FEAT-0036"
-  task: "TASK-0215"
+  task: "TASK-0216"
   note: "2026-10-23: Edwin decided 'tag and remove; park Vault too' (ADR-0010). Deck becomes the overview only. Spread, Glass and the orbit leave main and are kept under the annotated tag original-deck-2026-10-23 (commit b1bc30b, local, not pushed yet); PHASE-0001, PHASE-0002 and PHASE-0003 are deferred with their unfinished features, tasks, issues and requirements. FEAT-0036 does the removal, TASK-0213 first: push the tag, put TASK-0005's uncommitted orbit comparison on the branch parked/original-deck, then park TASK-0005 on main (the frontmatter is in TASK-0213). The DES-0006 build (FEAT-0032 to FEAT-0035) is at review after round two; FEAT-0025 to FEAT-0031 wait on Edwin's acceptance tests and DES-0005. Sessions always ask before acting (RISK-0013). Node suites use fake providers (RISK-0017). Deck's repo is public (RISK-0016)."
 
 # Canonical state for tracked items (empty for a fresh template).
@@ -369,12 +369,12 @@ items:
       phase: "[[PHASE-0005]]"
     TASK-0215:
       file: docs/features/overview-only/plan/tasks/TASK-0215-The-Main-Process-And-The-Store-Keep-Nothing-Only-Spread-Glass-And-The-Orbit-Used.md
-      status: doing
+      status: done
       parent: FEAT-0036
       phase: "[[PHASE-0005]]"
     TASK-0216:
       file: docs/features/overview-only/plan/tasks/TASK-0216-The-Smoke-Run-Checks-The-Overview-And-The-Test-Notes-Of-Removed-Code-Are-Retired.md
-      status: backlog
+      status: doing
       parent: FEAT-0036
       phase: "[[PHASE-0005]]"
     TASK-0217:
@@ -2386,7 +2386,7 @@ items:
       covers: ["FEAT-0023"]
     TST-0074:
       file: "docs/features/glass-scenes/plan/tests/TST-0074-A-Scene-Keeps-Places-And-Nothing-Derived.md"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: feature
@@ -2395,7 +2395,7 @@ items:
       covers: ["FEAT-0023", "REQ-0004"]
     TST-0075:
       file: "docs/features/glass-scenes/plan/tests/TST-0075-A-Move-Is-Never-Half-Done.md"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       scope: feature
@@ -2505,7 +2505,7 @@ items:
     TST-0006:
       file: "docs/features/views/plan/tests/TST-0006-Views-Come-From-The-Provider-And-Match-The-Cockpit.md"
       title: "Views come from the provider, match the cockpit's list, and appear nowhere as literals in the renderer"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0001
       covers: ["FEAT-0007"]
@@ -2753,7 +2753,7 @@ items:
     TST-0049:
       file: "docs/features/view-desks/plan/tests/TST-0049-A-Desk-For-Each-View-And-A-Note-On-Every-View-In-The-Store.md"
       title: "A desk for each view and a note on every view, in the store: an old state file reads unchanged, the mark moves a note between lists, and the tablet is told only about open workspaces"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["FEAT-0015"]
@@ -2817,7 +2817,7 @@ items:
     TST-0057:
       file: "docs/tests/TST-0057-The-Measurement-Is-Kept-In-A-File.md"
       title: "A measurement run writes its numbers to a file as well as printing them, so a trimmed terminal no longer costs the run"
-      status: active
+      status: retired
       owner: user:edwin
       phase: PHASE-0002
       covers: ["ISS-0080"]
@@ -2953,7 +2953,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 208
-    tasks_done: 185
+    tasks_done: 186
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

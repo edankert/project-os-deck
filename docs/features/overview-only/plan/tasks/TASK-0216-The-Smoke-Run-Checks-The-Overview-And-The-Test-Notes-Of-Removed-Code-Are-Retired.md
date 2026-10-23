@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0216
 aliases: ["TASK-0216"]
 title: "The smoke run checks the overview, and the test notes of removed code are retired"
-status: backlog
+status: doing
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23
