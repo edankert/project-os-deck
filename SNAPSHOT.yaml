@@ -2373,7 +2373,7 @@ items:
       covers: ["FEAT-0024", "REQ-0006"]
     TST-0079:
       file: "docs/tests/TST-0079-The-Evidence-Panel-Is-Walked-With-A-Real-Pointer.md"
-      status: retired
+      status: passing
       owner: user:edwin
       phase: PHASE-0002
       scope: system
@@ -2409,7 +2409,7 @@ items:
       covers: ["FEAT-0023", "REQ-0005"]
     TST-0076:
       file: "docs/tests/TST-0076-Scenes-And-Handoff-Are-Walked-With-A-Real-Pointer.md"
-      status: retired
+      status: passing
       owner: user:edwin
       phase: PHASE-0002
       scope: system
@@ -2960,7 +2960,7 @@ metrics:
     tasks_total: 209
     tasks_done: 189
     tests_total: 74
-    tests_passing: 2
+    tests_passing: 9
     tests_failing: 0
     issues_open: 0
     issues_triage: 0

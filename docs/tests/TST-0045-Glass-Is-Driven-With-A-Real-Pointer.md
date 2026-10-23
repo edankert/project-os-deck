@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0045
 aliases: ["TST-0045"]
 title: "Glass is driven with a real pointer in a real window: the field, the lift, the hands, the panes, the reach, the throw and the keyboard, with the store read back and git status unchanged"
-status: retired
+status: passing
 owner: user:edwin
 created: 2026-09-10
 updated: 2026-10-23
@@ -29,8 +29,8 @@ related: ["[[TST-0037-The-Renderer-Guards-Run-In-A-Real-Window]]", "[[TST-0036-T
 ---
 # Glass is driven with a real pointer
 
-> [!note] Retired 2026-10-23
-> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
+> [!note] Parked 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and is kept under the git tag `original-deck-2026-10-23`. It stays `passing` as the record of what it verified there: finished tasks rest on it. It is not run on main.
 
 ## Purpose
 

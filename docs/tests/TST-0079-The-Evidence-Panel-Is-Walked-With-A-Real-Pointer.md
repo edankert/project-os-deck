@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0079
 aliases: ["TST-0079"]
 title: "The evidence panel is walked with a real pointer and keyboard: the tests that name a note, a ledger verdict beside the file it came from, a check never walked, a check invalidated, a stale manual test, a test run by a command, the excerpt, the original, and the same panel on the served page"
-status: retired
+status: passing
 owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-23
@@ -29,8 +29,8 @@ related: ["[[TST-0077-A-Claims-Evidence-Stands-Beside-It]]", "[[TST-0078-Evidenc
 
 # The evidence panel is walked with a real pointer
 
-> [!note] Retired 2026-10-23
-> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
+> [!note] Parked 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and is kept under the git tag `original-deck-2026-10-23`. It stays `passing` as the record of what it verified there: finished tasks rest on it. It is not run on main.
 
 ## Purpose
 

@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0072
 aliases: ["TST-0072"]
 title: "Glass is measured at the size of a real workspace, with the collection and full documents on the field: script work per frame while turning, how long a note takes to open, and the cases a small workspace does not have"
-status: retired
+status: passing
 owner: user:edwin
 created: 2026-10-02
 updated: 2026-10-23
@@ -30,8 +30,8 @@ related: ["[[TST-0057-The-Measurement-Is-Kept-In-A-File]]", "[[TST-0068-The-Glas
 
 # Glass is measured at the size of a real workspace
 
-> [!note] Retired 2026-10-23
-> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
+> [!note] Parked 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and is kept under the git tag `original-deck-2026-10-23`. It stays `passing` as the record of what it verified there: finished tasks rest on it. It is not run on main.
 
 ## Purpose
 

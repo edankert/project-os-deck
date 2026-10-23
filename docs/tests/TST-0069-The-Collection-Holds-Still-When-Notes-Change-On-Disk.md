@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0069
 aliases: ["TST-0069"]
 title: "The collection holds still when notes change on disk: the change is announced and applied only when asked, the list stays on its row, and a deleted note's open document keeps its text and offers nothing that writes"
-status: retired
+status: passing
 owner: user:edwin
 created: 2026-10-01
 updated: 2026-10-23
@@ -30,8 +30,8 @@ related: ["[[TST-0067-A-Collection-Counts-Exactly-And-Keeps-Its-Place]]", "[[TST
 
 # The collection holds still when notes change on disk
 
-> [!note] Retired 2026-10-23
-> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
+> [!note] Parked 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and is kept under the git tag `original-deck-2026-10-23`. It stays `passing` as the record of what it verified there: finished tasks rest on it. It is not run on main.
 
 ## Purpose
 

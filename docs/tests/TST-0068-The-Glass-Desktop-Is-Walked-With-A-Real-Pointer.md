@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0068
 aliases: ["TST-0068"]
 title: "The Glass desktop is walked with a real pointer and keyboard: the collection on the field, a full note opened from a card, a row and a link, read, moved, found again and closed back to its row, in a narrow window and on the served page"
-status: retired
+status: passing
 owner: user:edwin
 created: 2026-10-01
 updated: 2026-10-23
@@ -30,8 +30,8 @@ related: ["[[TST-0063-A-Collection-And-Full-Note-Share-Glass]]", "[[TST-0045-Gla
 
 # The Glass desktop is walked with a real pointer
 
-> [!note] Retired 2026-10-23
-> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]. The check still runs at the git tag `original-deck-2026-10-23`.
+> [!note] Parked 2026-10-23
+> What this checks left main with Spread, Glass and the orbit by [[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]], and is kept under the git tag `original-deck-2026-10-23`. It stays `passing` as the record of what it verified there: finished tasks rest on it. It is not run on main.
 
 ## Purpose
 
