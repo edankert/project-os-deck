@@ -3,7 +3,7 @@ type: "[[feature]]"
 id: FEAT-0036
 aliases: ["FEAT-0036"]
 title: "Deck opens only on the overview, and the original Deck is kept under a tag"
-status: doing
+status: review
 phase: "[[PHASE-0005-Overview]]"
 owner: system:claude
 created: 2026-10-23
@@ -68,7 +68,9 @@ Out of scope:
 
 ## Verification
 
-Not built yet.
+- 2026-10-23: built in [[TASK-0213]] to [[TASK-0217]]. `npm test` runs 542 checks, all passing. The container smoke passes on loopback and on the network, and its loopback half makes 30 checks about the workspace, the overview in a window, the served page, the guards and the quit. Its old-address check was shown to fail when broken. The overview's five walks pass in the container.
+- The tag `original-deck-2026-10-23` is on origin at `b1bc30b`, and `parked/original-deck` holds TASK-0005's orbit comparison.
+- Still Edwin's: [[TST-0109]], which opens Deck on his own state file and runs the original Deck from the tag. A copy of his state file from before the cut is kept at `~/Library/Application Support/project-os-deck/deck-state.before-overview-only-2026-10-23.json`.
 
 ## Notes
 

@@ -3,7 +3,7 @@ type: "[[test]]"
 id: TST-0109
 aliases: ["TST-0109"]
 title: "Deck opens only on the overview, a state file from before opens cleanly, and the tag still holds the original Deck"
-status: draft
+status: active
 owner: user:edwin
 created: 2026-10-23
 updated: 2026-10-23
@@ -32,7 +32,7 @@ after: []
 
 ## Purpose
 
-**Edwin checks that Deck now opens on the overview and nothing else, that the Deck he already ran opens without losing anything, and that the original Deck can still be had from its tag.** It stays `draft` until [[TASK-0216]] is done, because nothing is built yet.
+**Edwin checks that Deck now opens on the overview and nothing else, that the Deck he already ran opens without losing anything, and that the original Deck can still be had from its tag.**
 
 ## Setup
 

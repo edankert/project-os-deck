@@ -4,19 +4,21 @@ id: GLOSSARY
 status: active
 owner: team:docs
 created: 2026-01-26
-updated: 2026-09-06
+updated: 2026-10-23
 tags: [glossary]
 ---
 
 # Glossary
 
-- **Deck**: this application. Notes as cards you arrange across windows and screens, over a project-os repository or an Obsidian vault. The repository is `project-os-deck`; inside the application the short name is Deck.
-- **Spread**: Deck's 2D view. A desk of open notes, lists that drive selection, panels that dock, float or pop out into their own window. The word is a comic spread: two pages side by side.
-- **Glass**: Deck's 3D view, the field from DES-0002. Depth is priority: what needs you is at the front, the finished work is behind you.
-- **the desk**: the notes you have picked up, one desk per view, surviving a workspace switch. Nothing on the desk is written to the record.
-- **the field**: every note of a workspace, arranged by the current view's rule.
-- **panel**: one instance of a surface (a navigator in one mode, a reader on one note, a terminal on one PTY). Panels can exist more than once and each has an address.
-- **the store**: the one state in Deck's main process that every window subscribes to.
+- **Deck**: this application. It opens on the overview of a project-os repository, runs agent sessions beside it and has a drawer of shells. The repository is `project-os-deck`; inside the application the short name is Deck.
+- **the overview**: the screens Deck shows since 2026-10-23 ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]): the wheel of phases with each feature a tower of its tickets, a phase brought close, a ticket's own screen, re-phasing, and the flows that accept a design, a test result and a ticket.
+- **the original Deck**: Spread, Glass and the orbit, parked on 2026-10-23 and kept whole under the git tag `original-deck-2026-10-23`.
+- **Spread**: parked on 2026-10-23 ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), kept under the tag `original-deck-2026-10-23`. Deck's 2D view. A desk of open notes, lists that drive selection, panels that dock, float or pop out into their own window. The word is a comic spread: two pages side by side.
+- **Glass**: parked on 2026-10-23 ([[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]), kept under the tag `original-deck-2026-10-23`. Deck's 3D view, the field from DES-0002. Depth is priority: what needs you is at the front, the finished work is behind you.
+- **the desk**: (the original Deck, parked 2026-10-23) the notes you have picked up, one desk per view, surviving a workspace switch. Nothing on the desk is written to the record.
+- **the field**: (the original Deck, parked 2026-10-23) every note of a workspace, arranged by the current view's rule.
+- **panel**: (the original Deck, parked 2026-10-23) one instance of a surface (a navigator in one mode, a reader on one note, a terminal on one PTY). Panels can exist more than once and each has an address.
+- **the store**: the one state in Deck's main process that the window and a tablet's page read: the workspace open, the name Deck writes with, and how often each workspace's notes changed.
 - **the sidecar**: project-os-cockpit's Python server, one per workspace. Deck shares it and does not fork it.
 - **the cockpit**: project-os-cockpit, the current application. Still the primary place where new functionality is built; Deck tracks its capability register.
 - **capability register**: the cockpit's list of what it can do, one stable key per capability. Deck's adoption table cites those keys.

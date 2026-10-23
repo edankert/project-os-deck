@@ -42,6 +42,8 @@ Primary entrypoints for this documentation system.
 
 ## Glass interaction planning
 
+Parked on 2026-10-23 with the original Deck, which is kept under the tag `original-deck-2026-10-23` ([ADR-0010](decisions/ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag.md)). These notes describe the code at the tag.
+
 - Interaction specification and visual plates: [DES-0003](designs/DES-0003-Collections-And-Documents-On-Glass.md).
 - Collection and full-document delivery: [FEAT-0020 plan](features/glass-desktop/plan/PLAN.md).
 - Collection presentations and reversible arrangements: [FEAT-0022 plan](features/glass-arrangements/plan/PLAN.md).

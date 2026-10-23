@@ -16,7 +16,7 @@ superseded_by: ""
 reviewed_by: ""
 review_date: ""
 review_verdict: ""
-related: ["[[DES-0002]]", "[[ADR-0006]]", "[[REQ-0001]]", "[[REQ-0002]]", "[[REQ-0003]]", "[[FEAT-0023]]", "[[FEAT-0021]]", "[[ISS-0070]]", "[[ISS-0071]]", "[[ISS-0072]]", "[[ISS-0086]]"]
+related: ["[[DES-0002]]", "[[ADR-0010-Deck-Is-The-Overview-And-The-Original-Deck-Is-Parked-Under-A-Tag]]", "[[REQ-0001]]", "[[REQ-0002]]", "[[REQ-0003]]", "[[FEAT-0023]]", "[[FEAT-0021]]", "[[ISS-0070]]", "[[ISS-0071]]", "[[ISS-0072]]", "[[ISS-0086]]"]
 ---
 
 # Collections and documents on Glass
