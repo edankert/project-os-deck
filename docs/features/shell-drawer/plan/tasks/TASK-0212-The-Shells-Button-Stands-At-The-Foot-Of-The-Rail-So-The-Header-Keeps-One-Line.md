@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0212
 aliases: ["TASK-0212"]
 title: "The Shells button stands at the foot of the workspace rail, so the header keeps to one line and Glass is laid out as before"
-status: doing
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-23
@@ -30,7 +30,13 @@ Found by bisecting in a clone, a loopback smoke in the container per step: passi
 
 ## Definition of Done
 
-- [ ] The button is not in the header. It stands at the foot of the workspace rail, in Deck's own window only, and opens and closes the drawer as before.
-- [ ] A served page still has no button and no drawer.
-- [ ] The loopback and network smoke runs pass in the container.
-- [ ] The shell drawer's walk finds the button in the rail and opens the drawer from it.
+- [x] The button is not in the header. It stands at the foot of the workspace rail, in Deck's own window only, and opens and closes the drawer as before.
+- [x] A served page still has no button and no drawer.
+- [x] The loopback and network smoke runs pass in the container.
+- [x] The shell drawer's walk finds the button in the rail and opens the drawer from it.
+
+## What was built (2026-10-23)
+
+`renderer.ts` makes the ⌘ Shells button only when the host gives shells, and `renderRail` keeps it at the rail's foot each time the rail is drawn. `index.html` no longer holds it. [[TST-0107]] checks the page has no such button and the renderer makes it only with a shells bridge; it has 16 checks.
+
+At 871f2bc the container smoke passed on loopback and on the network, and `walk-in-a-box.sh shell-drawer --copy` held its 9 checks, the first being that the button stands in the rail and opens the drawer.

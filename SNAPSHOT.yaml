@@ -345,7 +345,7 @@ items:
   tasks:
     TASK-0212:
       file: docs/features/shell-drawer/plan/tasks/TASK-0212-The-Shells-Button-Stands-At-The-Foot-Of-The-Rail-So-The-Header-Keeps-One-Line.md
-      status: doing
+      status: done
       parent: FEAT-0035
       phase: "[[PHASE-0004]]"
     TASK-0209:
@@ -2897,7 +2897,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 203
-    tasks_done: 182
+    tasks_done: 183
     tests_total: 74
     tests_passing: 9
     tests_failing: 0
