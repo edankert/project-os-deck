@@ -7,7 +7,7 @@ status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
-updated: 2026-10-22
+updated: 2026-10-23
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'", "Edwin 2026-10-22, on DES-0006: 'It should be possible to hide the overview panels - Think it would be good to do permission requests first?'"]
 goal: "On Deck's ring Edwin sees everything waiting on him in one Needs you, permission requests first, and the cockpit's overview panels (since you last looked, the record, the checks, decisions waiting), which one button hides."
 requirements: []
@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-22
+review_verdict: changes-requested
+review_round: 1
 related: ["[[FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On]]", "[[FEAT-0033-A-Session-Is-Drawn-As-A-Conversation-Beside-The-Ticket-It-Was-Started-On]]", "[[FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]", "[[RISK-0015]]"]
 ---
 
@@ -59,6 +59,18 @@ Out of scope:
 Built on 2026-10-22, [[TASK-0202]] to [[TASK-0204]]. [[TST-0106]] (`bash tools/scripts/run-desktop-tests.sh agent-needs`) has 17 checks against both fixtures, a real git repository and a fake sidecar; `cd desktop && npm test` passes. The walk `bash tools/scripts/walk-in-a-box.sh agent-needs` ran the panels, ◫ Overview, Caught up and a request answered from Needs you in a real Deck window in the container: 12 checks, all held.
 
 Not yet shown: a cockpit request answered from Deck through a sidecar Deck started, against the real cockpit (the suite shows Deck's side with a fake). Edwin's acceptance test is [[TST-0108]].
+
+## Review
+
+**Round one, 2026-10-22, at 7e9e42d: changes requested by one reviewer, approved with one finding by the other.** Both ran `claude-opus-5-5` from the packet, each in its own worktree.
+
+What they found, each fixed in [[TASK-0210]]:
+
+- A cockpit request would usually be gone before Needs you showed it. Deck started its sidecar with no approval wait, so the sidecar used its default of 5 s and handed the request back to the cockpit's terminal, while Deck read the requests every 15 s. Found by reading the code against the cockpit's; not run against a real cockpit.
+- TST-0106's check that only a sidecar Deck started gives its secret matched the source text. Returning the secret for a borrowed sidecar, with the text kept, passed all 17 checks.
+- Nothing tested the line that decides whether a cockpit request gets Approve and Deny. Setting it to true passed every check; the answer call would still have refused, so the harm was a wrong panel.
+
+Also changed: a stopped sidecar's secret is forgotten with its record. Not changed: "the choice survives a restart" is shown by a window reload, which reads the same `localStorage` a restart does; the cockpit's four panels also draw on a served page, without Caught up, which nothing in the Scope rules out; and the answer action joins its fields with ":", which holds while session ids carry no colon, as Deck's and the cockpit's do not.
 
 ## Links
 

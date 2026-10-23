@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0211
 aliases: ["TASK-0211"]
 title: "A test shows quitting ends every shell and its jobs, a reloaded window finds the shells still running, and a large paste arrives whole"
-status: doing
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-23
@@ -32,10 +32,22 @@ tests: ["[[TST-0107]]", "[[TST-0108]]"]
 
 ## Definition of Done
 
-- [ ] A test opens real shells through node-pty, starts a background job in one, runs `closeAll`, and finds neither the shells nor the job running. It is skipped, by name, where node-pty is not installed.
-- [ ] A test fails when `shutdown()` stops calling `closeAll`.
-- [ ] [[TST-0108]] expects no shell process left after a quit.
-- [ ] The notes and the code say what the frame can reach and what keeps it harmless.
-- [ ] A window that loads while shells run draws a tab for each, with what each printed most recently.
-- [ ] An exit before the frame is ready is shown once it is; a large paste is sent in pieces, in order.
-- [ ] A test fails when `Host.shells()` stops checking the capability.
+- [x] A test opens real shells through node-pty, starts a background job in one, runs `closeAll`, and finds neither the shells nor the job running. It is skipped, by name, where node-pty is not installed.
+- [x] A test fails when `shutdown()` stops calling `closeAll`.
+- [x] [[TST-0108]] expects no shell process left after a quit.
+- [x] The notes and the code say what the frame can reach and what keeps it harmless.
+- [x] A window that loads while shells run draws a tab for each, with what each printed most recently.
+- [x] An exit before the frame is ready is shown once it is; a large paste is sent in pieces, in order.
+- [x] A test fails when `Host.shells()` stops checking the capability.
+
+## What was built (2026-10-23)
+
+- **Quitting is tested.** A [[TST-0107]] check opens two real login shells through node-pty, starts `sleep 4242 &` in one and reads its pid, runs `closeAll`, and waits for both shells and the job to be gone. It is skipped, by name, where node-pty did not install. It kills every pty it made at its end whatever happens: the first version left live shells holding the suite open when `closeAll` was broken, so the suite hung for ten minutes instead of failing. Now it fails in 14 s. A second check reads `shutdown()` in `main.ts` for its `shells.closeAll()`, and that `will-quit` and both signals reach it; no suite runs Electron's main process.
+- [[TST-0108]] step 8 starts a job in a shell and asks Edwin to run `pgrep -fl 'sleep 4242'` after quitting; it should print nothing.
+- **What the frame can reach** is said in `shell-drawer.ts`, `terminal-frame.ts` and [[TASK-0206]], corrected in place.
+- **A reloaded window finds its shells.** `ShellManager` keeps each shell's latest 100,000 characters, cut at a line's start (`keepRecent`). `deck:shells:list` with `recent` answers them, and the drawer makes a tab for each running shell with that output.
+- An end that comes before a frame is ready is posted after the output, once the frame is ready.
+- A paste is sent in pieces of 16,384 characters, in order, never between the halves of a character outside the basic plane (`piecesOf`).
+- A check runs `Host.shells()` with the capability on, off, and on a served page.
+
+[[TST-0107]] has 15 checks. Eight guards were each broken once on the committed code, and a check failed for each.

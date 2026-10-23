@@ -7,7 +7,7 @@ status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
-updated: 2026-10-22
+updated: 2026-10-23
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'", "Edwin 2026-10-22, on DES-0006: 'I think side pane as suggested but open for discussion - The ones they started on (is this not the same?)'"]
 goal: "In Deck's shell, Edwin opens any agent session from its marker on the towers or from the Agents list, reads its conversation in the side pane, answers its permission requests in place, sends it a prompt, and starts a new one from a ticket with Work on this."
 requirements: []
@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-22
+review_verdict: changes-requested
+review_round: 1
 related: ["[[FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On]]", "[[FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures]]", "[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[RISK-0013]]", "[[RISK-0015]]", "[[RISK-0016]]"]
 ---
 
@@ -65,6 +65,20 @@ Out of scope:
 Built on 2026-10-22, [[TASK-0197]] to [[TASK-0201]]. [[TST-0105]] (`bash tools/scripts/run-desktop-tests.sh agent-pane`) has 20 checks on both overview fixtures; `cd desktop && npm test` passes. The walk `bash tools/scripts/walk-in-a-box.sh agent-sessions --copy` ran the screens in a real Deck window in the container, with the suite's scripted agent: 24 checks, all held. It found three faults, each fixed (see [[TASK-0201]] and [[TASK-0208]]).
 
 Not yet shown: a real agent in the pane (Edwin allowed one real session, which was read-only and ran before the pane existed). Edwin's acceptance test is [[TST-0108]], `draft` until FEAT-0034 and FEAT-0035 give it its last steps.
+
+## Review
+
+**Round one, 2026-10-22, at 09c2d87: changes requested by both reviewers.** Both ran `claude-opus-5-5` from the packet, each in its own worktree, and broke three guards each; a check failed for five of the six.
+
+What they found, each fixed in [[TASK-0209]]:
+
+- An open session with no marker dropped out of the overview's address. A session on no ticket, or on a ticket off the ring, opened in the pane, but back and forward lost it, the panels on the right stayed under the pane, and Escape offered no "Close the session". One line in `wheelScene` took the open session from the marker.
+- Three things the Scope promises were not built at that commit: the context and usage bars, the tickets a session moved, and Open its shell. Open its shell came with [[TASK-0206]] in FEAT-0035; the other two are built now.
+- The Agents list left sessions out: the cockpit's were cut to ten before anything was drawn, and the drawn list showed five with no "+N more".
+- No check failed when `agentsFor` answered an empty list instead of nothing with no bridge, the served page's guard.
+- The composer kept one session's words and an armed Stop when another opened, and a failed Send lost its words without saying why.
+
+Also changed: a cockpit session that has ended reads as stopped, not idle. Left as they are: the model, effort and access choices in the composer are shown, not changeable, because they are chosen when a session starts; Resume beside an enabled Send on an idle session sends "Carry on." when the box is empty.
 
 ## Links
 

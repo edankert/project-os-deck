@@ -7,7 +7,7 @@ status: review
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-22
-updated: 2026-10-22
+updated: 2026-10-23
 source: ["Edwin 2026-10-22: 'Can you build the DES-0006 functionality?'", "Edwin 2026-09-07, PHASE-0004: 'I want to see if we can introduce the t3.codes console solution instead of our current console.'"]
 goal: "In Deck's shell Edwin opens a drawer of plain terminals, several at once, each in a workspace's folder or a session's worktree, without leaving Deck."
 requirements: []
@@ -16,10 +16,10 @@ release: ""
 acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
-reviewed_by: ""
-review_date: ""
-review_verdict: ""
-review_round: ""
+reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
+review_date: 2026-10-22
+review_verdict: changes-requested
+review_round: 1
 related: ["[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[FEAT-0033-A-Session-Is-Drawn-As-A-Conversation-Beside-The-Ticket-It-Was-Started-On]]", "[[RISK-0014]]", "[[RISK-0015]]", "[[RISK-0010-Three-Js-Is-A-New-Runtime-Dependency-Of-The-Renderer]]"]
 ---
 
@@ -54,6 +54,20 @@ Out of scope:
 Built on 2026-10-22, [[TASK-0205]] and [[TASK-0206]]. [[TST-0107]] (`bash tools/scripts/run-desktop-tests.sh shell-drawer`) has 8 checks on a fake pty; `cd desktop && npm test` passes. The walk `bash tools/scripts/walk-in-a-box.sh shell-drawer --copy` ran real shells through node-pty in a Deck window in the container: 9 checks, all held.
 
 Not yet shown: that quitting Deck leaves no shell process running, in a real quit. The suite shows every shell is killed, and Deck's quit calls it, but no run has looked for leftover processes afterwards. Edwin's acceptance test is [[TST-0108]].
+
+## Review
+
+**Round one, 2026-10-22, at b65ccf4: changes requested by both reviewers.** Both ran `claude-opus-5-5` from the packet, each in its own worktree. Neither could refute a behaviour in the code; the refutations are of the tests and of one claim.
+
+What they found, each fixed in [[TASK-0211]]:
+
+- Nothing tested that quitting ends the shells. Deleting `shells.closeAll()` from `shutdown()` passed every check, and [[TST-0108]] had no line looking for a shell left after a quit. Both reviewers ran real shells through node-pty themselves and found the mechanism works.
+- Nothing tested the served page's capability guard in `Host.shells()`.
+- The claim that the terminal frame has no bridge was wrong. The frame is served from Deck's own origin, so script in it could reach the page's bridge; what keeps it harmless is that it runs only Deck's own script files.
+- A window reloaded or closed left its shells running with no tab to reach them until Deck quit.
+- An exit that arrived before a frame was ready was lost, and a paste over 65,536 characters was dropped without a word.
+
+Left as they are: every shell's output goes to every Deck window, which now draws every running shell; the frame's own messages are checked by origin and source, a guard no node suite runs because it lives in the frame; and a session whose worktree was deleted would open its shell in a missing folder, which node-pty refuses with its own error.
 
 ## Links
 

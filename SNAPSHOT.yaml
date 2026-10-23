@@ -355,7 +355,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0211:
       file: docs/features/shell-drawer/plan/tasks/TASK-0211-Quitting-Is-Tested-To-End-Every-Shell-And-A-Reloaded-Window-Finds-Its-Shells.md
-      status: doing
+      status: done
       parent: FEAT-0035
       phase: "[[PHASE-0004]]"
     TASK-0207:
@@ -2892,7 +2892,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 202
-    tasks_done: 181
+    tasks_done: 182
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

@@ -252,7 +252,12 @@ test('Deck\'s quit ends every shell: shutdown calls closeAll', () => {
 const pty = loadPty();
 test('real shells and a job started in one are gone after closeAll', { skip: pty === null ? 'node-pty is not installed here' : false }, async () => {
   const folder = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-pty-')));
-  const m = new ShellManager(pty, { ...process.env, SHELL: fs.existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh' });
+  // Every pty this check makes is killed at its end whatever happens: a closeAll that did nothing would
+  // otherwise leave live shells holding the suite open, so it hung instead of failing (TASK-0211's mutations).
+  const made = [];
+  const m = new ShellManager((...a) => { const p = pty(...a); made.push(p); return p; }, { ...process.env, SHELL: fs.existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh' });
+  let job = 0;
+  try {
   const out = new Map();
   m.onEvent((e) => { if (e.kind === 'data') out.set(e.id, (out.get(e.id) ?? '') + e.data); });
   const a = m.open(folder);
@@ -262,7 +267,7 @@ test('real shells and a job started in one are gone after closeAll', { skip: pty
   // A job in the background of one shell, its pid printed between markers the typed line itself does not contain.
   m.write(a.id, 'sleep 4242 & echo "J""OB=$!="\r');
   await until(() => /JOB=(\d+)=/.test(out.get(a.id) ?? ''), `the job's pid: ${JSON.stringify(out.get(a.id))}`);
-  const job = Number(/JOB=(\d+)=/.exec(out.get(a.id))[1]);
+  job = Number(/JOB=(\d+)=/.exec(out.get(a.id))[1]);
   m.write(b.id, 'echo "P""ID=$$="\r');
   await until(() => /PID=(\d+)=/.test(out.get(b.id) ?? ''), 'the second shell answers');
   const shells = [Number(/PID=(\d+)=/.exec(out.get(b.id))[1])];
@@ -270,4 +275,8 @@ test('real shells and a job started in one are gone after closeAll', { skip: pty
   m.closeAll();
   await until(() => !alive(job) && !shells.some(alive), 'the shells and the job end');
   assert.equal(m.list().length, 0);
+  } finally {
+    for (const p of made) try { p.kill('SIGKILL'); } catch { /* already gone */ }
+    if (job > 0) try { process.kill(job, 'SIGKILL'); } catch { /* already gone */ }
+  }
 });
