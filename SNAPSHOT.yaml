@@ -350,7 +350,7 @@ items:
       phase: "[[PHASE-0004]]"
     TASK-0210:
       file: docs/features/agent-needs/plan/tasks/TASK-0210-A-Cockpit-Request-Waits-Long-Enough-To-Be-Answered-From-Deck.md
-      status: doing
+      status: done
       parent: FEAT-0034
       phase: "[[PHASE-0004]]"
     TASK-0211:
@@ -2892,7 +2892,7 @@ metrics:
     phases_total: 5
     phases_done: 0
     tasks_total: 202
-    tasks_done: 180
+    tasks_done: 181
     tests_total: 74
     tests_passing: 9
     tests_failing: 0

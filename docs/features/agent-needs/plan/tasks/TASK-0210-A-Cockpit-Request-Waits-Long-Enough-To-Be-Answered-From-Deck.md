@@ -3,7 +3,7 @@ type: "[[task]]"
 id: TASK-0210
 aliases: ["TASK-0210"]
 title: "A cockpit request waits long enough to be answered from Deck, and the tests check the secret and the answerable flag by behaviour"
-status: doing
+status: done
 phase: "[[PHASE-0004-Parity]]"
 owner: system:claude
 created: 2026-10-23
@@ -31,8 +31,17 @@ tests: ["[[TST-0106]]"]
 
 ## Definition of Done
 
-- [ ] Deck's sidecar is started with the longest wait the cockpit allows, 30 seconds.
-- [ ] Needs you reads the requests every 3 seconds while the overview is open, and the git state at most every 15 seconds.
-- [ ] A test runs `secretFor` on a sidecar Deck started and on a borrowed one.
-- [ ] A test runs the needs call with a sidecar, borrowed and owned, and checks which requests get buttons.
-- [ ] A stopped sidecar's secret is forgotten.
+- [x] Deck's sidecar is started with the longest wait the cockpit allows, 30 seconds.
+- [x] Needs you reads the requests every 3 seconds while the overview is open, and the git state at most every 15 seconds.
+- [x] A test runs `secretFor` on a sidecar Deck started and on a borrowed one.
+- [x] A test runs the needs call with a sidecar, borrowed and owned, and checks which requests get buttons.
+- [x] A stopped sidecar's secret is forgotten.
+
+## What was built (2026-10-23)
+
+- `shellLine` in `desktop/src/main/sidecar.ts` writes `{"secret", "approval_wait_ms": 30000}`. 30 s is the cockpit's `APPROVAL_WAIT_MAX_MS`; the cockpit's own shell lets each workspace choose, and Deck has no such setting yet, so it asks for the longest.
+- `agent-state.ts` reads Needs you every 3 s and the cockpit's sessions every 15 s, as before. The main process answers git's commands from `cachedGit` for 15 s.
+- The supervisor's `drop` forgets a sidecar's secret with its record, on exit, on a failed start and on stop.
+- [[TST-0106]] has 21 checks. The source-text match for "only a sidecar Deck owns gives its secret" is gone; a check runs `secretFor` on an owned and a borrowed record instead. A check runs the needs call against a stand-in sidecar, with and without the secret. Six guards were each broken once on the committed code, and a check failed for each.
+
+Not checked by a test: that the window really reads Needs you every 3 s. That is a timer's constant in the renderer, which no suite runs.
