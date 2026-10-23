@@ -24,13 +24,14 @@ function fakeFactory() {
 
 test('a shell is the person\'s login shell in the folder named, its output streamed and its input written', () => {
   const { factory, made } = fakeFactory();
-  const m = new ShellManager(factory, { SHELL: '/bin/zsh', HOME: '/h', COCKPIT_SECRET_THING: 'x', CLAUDE_CODE_PLUGIN_DIRS: '/p', PATH: '/bin' });
+  // /bin/sh, which every machine has: a $SHELL that is not there is passed over, and CI's Linux has no zsh.
+  const m = new ShellManager(factory, { SHELL: '/bin/sh', HOME: '/h', COCKPIT_SECRET_THING: 'x', CLAUDE_CODE_PLUGIN_DIRS: '/p', PATH: '/bin' });
   const events = [];
   m.onEvent((e) => events.push(e));
   const s = m.open('/repo/project', { cols: 120, rows: 40 });
   assert.deepEqual([s.id, s.title, s.folder, s.session, s.exited], ['shell-1', 'project', '/repo/project', null, false]);
   const p = made[0];
-  assert.deepEqual([p.file, p.args, p.options.cwd, p.options.cols, p.options.rows, p.options.env.TERM], ['/bin/zsh', ['-l'], '/repo/project', 120, 40, 'xterm-256color']);
+  assert.deepEqual([p.file, p.args, p.options.cwd, p.options.cols, p.options.rows, p.options.env.TERM], ['/bin/sh', ['-l'], '/repo/project', 120, 40, 'xterm-256color']);
   assert.ok(!('COCKPIT_SECRET_THING' in p.options.env) && !('CLAUDE_CODE_PLUGIN_DIRS' in p.options.env), 'the cockpit\'s variables stay out of a plain shell');
   p.say('hello\r\n');
   assert.deepEqual(events, [{ kind: 'data', id: 'shell-1', data: 'hello\r\n' }]);
