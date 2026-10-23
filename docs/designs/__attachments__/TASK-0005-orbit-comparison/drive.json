@@ -1,0 +1,146 @@
+{
+  "script": "compare.cjs",
+  "workspace": "project-os-deck",
+  "ok": true,
+  "error": null,
+  "workspaceUnchanged": true,
+  "tookMs": 11011,
+  "entries": [
+    {
+      "atMs": 2756,
+      "what": "Corpus",
+      "data": {
+        "nodes": 412,
+        "links": 7198
+      }
+    },
+    {
+      "atMs": 4369,
+      "what": "constellation",
+      "data": {
+        "nodes": 412,
+        "visibleDots": 122,
+        "visibleLinks": 1261,
+        "yaw": 0,
+        "label": "the link graph: 412 notes, 6962 links, nearer is more linked-to · 17 with no link · 0 holding a cluster on · 56 pointing at nothing"
+      }
+    },
+    {
+      "atMs": 4485,
+      "what": "shot orbit-constellation"
+    },
+    {
+      "atMs": 5086,
+      "what": "glass",
+      "data": {
+        "nodes": 412,
+        "visibleDots": 122,
+        "visibleLinks": 1261,
+        "yaw": 0,
+        "label": "the link graph: 412 notes, 6962 links, nearer is more linked-to · 17 with no link · 0 holding a cluster on · 56 pointing at nothing"
+      }
+    },
+    {
+      "atMs": 5193,
+      "what": "shot orbit-glass"
+    },
+    {
+      "atMs": 5796,
+      "what": "blocks",
+      "data": {
+        "nodes": 412,
+        "visibleDots": 122,
+        "visibleLinks": 0,
+        "yaw": 0,
+        "label": "the link graph: 412 notes, 6962 links, nearer is more linked-to · 17 with no link · 0 holding a cluster on · 56 pointing at nothing"
+      }
+    },
+    {
+      "atMs": 5950,
+      "what": "shot orbit-blocks"
+    },
+    {
+      "atMs": 7152,
+      "what": "Blocks hover",
+      "data": {
+        "target": "CHANGES-README",
+        "reach": null
+      }
+    },
+    {
+      "atMs": 7275,
+      "what": "shot orbit-blocks-hover"
+    },
+    {
+      "atMs": 9086,
+      "what": "Blocks near-card hover",
+      "data": {
+        "target": "FEAT-0017",
+        "reach": {
+          "noteId": "FEAT-0017",
+          "neighbours": [
+            "TASK-0004",
+            "TASK-0035",
+            "TASK-0036",
+            "TASK-0037",
+            "TASK-0054",
+            "TASK-0056",
+            "TASK-0067",
+            "TASK-0068",
+            "TASK-0069",
+            "TASK-0070",
+            "TASK-0071",
+            "TASK-0104",
+            "FEAT-0001",
+            "FEAT-0010",
+            "FEAT-0014",
+            "FEAT-0015",
+            "FEAT-0016",
+            "FEAT-0020",
+            "ISS-0070",
+            "ISS-0071",
+            "ISS-0072",
+            "CHG-20261002-Glass-Collections-Documents-And-Arrangements",
+            "PHASE-0002",
+            "TST-0024",
+            "TST-0045",
+            "TST-0051",
+            "TST-0052",
+            "TST-0065",
+            "REFERENCE-FOCUS-ZOOM-AND-VERBS",
+            "DES-0002",
+            "DES-0003",
+            "TASK-0064",
+            "FEAT-0022",
+            "ISS-0069",
+            "CHG-20260911-Zoom-And-A-Note-In-The-Middle",
+            "CHG-20261001-Glass-Interaction-Delivery-Plan",
+            "TST-0068",
+            "TST-0072",
+            "DES-0004"
+          ]
+        }
+      }
+    },
+    {
+      "atMs": 9225,
+      "what": "shot orbit-blocks-card-hover"
+    },
+    {
+      "atMs": 10831,
+      "what": "Constellation link hover",
+      "data": {
+        "source": "CHG-20260911-Zoom-And-A-Note-In-The-Middle",
+        "target": "TST-0050",
+        "callout": {
+          "shown": true,
+          "text": "CHG-20260911-Zoom-And-A-Note-In-The-Middle → TST-0050related: [\"[[PHASE-0002-Glass]]\", \"[[DES-0002-The-Glass-Cockpit]]\", \"[[FEAT-0010-Lifting-A-Note]]\", \"[[TST-0045-Glass-Is-Driven-With-A-Real-Pointer]]\", \"[[TST-0050-Zoom-Keeps-The-Point-Under-The-Pointer]]\", \"[[TST-0051-The-Ring-Keeps-Order-Clears-The-Pane-And-Moves-On-Arcs]]\"]"
+        }
+      }
+    },
+    {
+      "atMs": 10923,
+      "what": "shot orbit-constellation-link-hover"
+    }
+  ]
+}

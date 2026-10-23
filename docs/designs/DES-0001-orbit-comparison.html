@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbit treatment comparison · TASK-0005</title>
+<style>
+  :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #101218; color: #e3e7f0; }
+  body { max-width: 1800px; margin: auto; padding: 28px; }
+  h1 { margin-bottom: 8px; font-size: 28px; }
+  p { max-width: 90ch; }
+  a { color: #9dc4ff; }
+  fieldset { border: 1px solid #485065; border-radius: 8px; padding: 14px; margin: 24px 0; }
+  label { display: inline-block; padding: 8px 12px; cursor: pointer; }
+  input { accent-color: #9dc4ff; }
+  .plates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  figure { margin: 0; background: #1a1e29; border: 1px solid #485065; border-radius: 8px; overflow: hidden; }
+  figure h2, figcaption { padding: 0 16px; }
+  figure h2 { font-size: 20px; }
+  img { display: block; width: 100%; height: auto; }
+  figcaption { padding-bottom: 16px; }
+  body:has(#constellation:checked) .plates, body:has(#glass:checked) .plates, body:has(#blocks:checked) .plates { grid-template-columns: 1fr; }
+  body:has(#constellation:checked) figure:not(.constellation), body:has(#glass:checked) figure:not(.glass), body:has(#blocks:checked) figure:not(.blocks) { display: none; }
+  .evidence { margin-top: 28px; }
+  @media (max-width: 700px) { body { padding: 16px; } .plates { grid-template-columns: 1fr; } }
+</style>
+<h1>Choose the orbit's treatment</h1>
+<p>These are captures of the built application over the same 412 notes in project-os-deck, taken on 14 October 2026 at revision <code>9948c9d</code>. Every treatment keeps the same note positions and camera. The application remains switchable; Edwin's choice and reason are still pending.</p>
+<fieldset>
+  <legend>Compare all three or inspect one at full width</legend>
+  <label><input type="radio" name="view" id="all" checked> Side by side</label>
+  <label><input type="radio" name="view" id="constellation"> Constellation</label>
+  <label><input type="radio" name="view" id="glass"> Glass</label>
+  <label><input type="radio" name="view" id="blocks"> Blocks</label>
+</fieldset>
+<div class="plates">
+  <figure class="constellation">
+    <h2>Constellation</h2>
+    <a href="__attachments__/TASK-0005-orbit-comparison/orbit-constellation.png"><img src="__attachments__/TASK-0005-orbit-comparison/orbit-constellation.png" alt="Constellation: coloured dots and pale links on a dark field, with the Issues collection at left."></a>
+    <figcaption>122 visible node targets and 1,261 links at this camera angle. Status bands retain separate colours. Hovering a link shows its source text. This is the current default.</figcaption>
+  </figure>
+  <figure class="glass">
+    <h2>Glass</h2>
+    <a href="__attachments__/TASK-0005-orbit-comparison/orbit-glass.png"><img src="__attachments__/TASK-0005-orbit-comparison/orbit-glass.png" alt="Glass: the same layout rendered with cyan square outlines and cyan links on a dark field."></a>
+    <figcaption>The same 122 node targets and 1,261 links. Several statuses share a cyan family. Blocked remains red and archived is muted; the other status distinctions still depend on reading the note.</figcaption>
+  </figure>
+  <figure class="blocks">
+    <h2>Blocks</h2>
+    <a href="__attachments__/TASK-0005-orbit-comparison/orbit-blocks.png"><img src="__attachments__/TASK-0005-orbit-comparison/orbit-blocks.png" alt="Blocks: the same notes drawn as small painted squares on a tan field, without the full graph's links."></a>
+    <figcaption>The same 122 node targets, with no whole-graph links. Finished notes are wood-coloured. The current renderer paints flat squares with shadows; it does not build stacked wooden solids.</figcaption>
+  </figure>
+</div>
+<section class="evidence">
+  <h2>What the interaction check found</h2>
+  <p><a href="__attachments__/TASK-0005-orbit-comparison/orbit-constellation-link-hover.png">Constellation's link callout</a> showed the source text for a link. In Blocks, <a href="__attachments__/TASK-0005-orbit-comparison/orbit-blocks-card-hover.png">hovering the near card FEAT-0017</a> gathered its 40 neighbours. <a href="__attachments__/TASK-0005-orbit-comparison/orbit-blocks-hover.png">Hovering a painted canvas node</a> did not start that interaction. The renderer's canvas pointer handler does not request a neighbourhood, so Blocks does not yet provide the promised replacement for every node.</p>
+  <p><strong>Recommendation:</strong> Constellation preserves the graph's links and separates its status colours. Choose Glass if the consistent instrument appearance is worth weaker colour distinctions. A Blocks choice still needs an answer for relationships on painted nodes.</p>
+  <p>The graph request returned 7,198 link records, including 6,962 resolved links. The view contains the whole corpus; this camera shows only part of it. Captures were made at 1440 × 900 in the existing Linux container, with reduced motion enabled for a fixed camera. This checks switching and placement, not laptop performance or a person's usability verdict.</p>
+  <p><a href="__attachments__/TASK-0005-orbit-comparison/drive.json">Capture log</a> · <a href="__attachments__/TASK-0005-orbit-comparison/compare.cjs">Replay script</a> · <a href="../features/orbit-view/plan/tasks/TASK-0005-The-Treatment-Is-Chosen-Not-Assumed.md">Task and pending decision</a> · <a href="DES-0001-Nine-Ways-To-Read-The-Record.md">Original design</a></p>
+</section>
+</html>
