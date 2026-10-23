@@ -265,7 +265,7 @@ Spatial memory and 3D:
 
 Focus+context, piles, animation:
 
-- Furnas, Generalized fisheye views (1986): https://cspages.ucalgary.ca/~saul/581/exer.eps/4furnas86.pdf and the 2006 follow-up: http://vis-ucb-maneesh.stanford.edu/files/chi06/Furnas_p999.pdf
+- Furnas, Generalized fisheye views (1986): https://cspages.ucalgary.ca/~saul/581/exer.eps/4furnas86.pdf and the 2006 follow-up: https://dl.acm.org/doi/10.1145/1124772.1124921 (A fisheye follow-up, CHI 2006)
 - Gutwin, Improving focus targeting in interactive fisheye views (CHI 2002): https://dl.acm.org/doi/10.1145/503376.503424
 - Mander, Salomon and Wong, A pile metaphor (CHI 1992): http://www.cs.columbia.edu/~feiner/courses/csw4170/resources/p627-mander.pdf
 - Agarawala and Balakrishnan, BumpTop (CHI 2006): https://www.dgp.toronto.edu/~ravin/papers/chi2006_bumptop.pdf
