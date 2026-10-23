@@ -45,3 +45,5 @@ tests: ["[[TST-0106]]"]
 - [[TST-0106]] has 21 checks. The source-text match for "only a sidecar Deck owns gives its secret" is gone; a check runs `secretFor` on an owned and a borrowed record instead. A check runs the needs call against a stand-in sidecar, with and without the secret. Six guards were each broken once on the committed code, and a check failed for each.
 
 Not checked by a test: that the window really reads Needs you every 3 s. That is a timer's constant in the renderer, which no suite runs.
+
+**After round two (2026-10-23).** Both reviewers found that no check failed when the start path wrote the old line without the wait. A check now starts the supervisor with a stand-in interpreter that records its standard input, and finds the secret and `approval_wait_ms: 30000`; with the old line put back, it fails. [[TST-0106]] has 22 checks.

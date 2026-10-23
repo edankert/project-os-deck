@@ -51,3 +51,5 @@ tests: ["[[TST-0107]]", "[[TST-0108]]"]
 - A check runs `Host.shells()` with the capability on, off, and on a served page.
 
 [[TST-0107]] has 15 checks. Eight guards were each broken once on the committed code, and a check failed for each.
+
+**After round two (2026-10-23).** One reviewer found that a window already open did not pick up a shell another window opened later; only a window that loaded afterwards did. The drawer now asks for the running shells again when an event names one it has no tab for, once however many events come. A [[TST-0107]] check fails without it; the suite has 16 checks.

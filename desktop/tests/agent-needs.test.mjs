@@ -307,3 +307,25 @@ test('git is asked again only after 15 s, so reading Needs you every 3 s runs gi
   assert.equal((await git(['status'], '/r')).stdout, '3');
   assert.deepEqual(asked, ['status', 'status', 'status']);
 });
+
+test('a sidecar Deck starts is handed that line on its standard input, with the secret and the 30 s wait', async () => {
+  // A stand-in for Python that writes the line it reads to a file and exits, so the start fails after it.
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-stdin-')));
+  const fake = path.join(dir, 'python');
+  fs.writeFileSync(fake, '#!/bin/sh\nhead -n 1 > "$DECK_FAKE_STDIN"\nexit 1\n', { mode: 0o755 });
+  const root = path.join(dir, 'repo');
+  fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+  const saved = process.env.DECK_FAKE_STDIN;
+  process.env.DECK_FAKE_STDIN = path.join(dir, 'stdin.txt');
+  try {
+    const sup = new SidecarSupervisor(fake);
+    await assert.rejects(sup.resolve({ id: 'w', name: 'repo', root }));
+    const line = JSON.parse(fs.readFileSync(process.env.DECK_FAKE_STDIN, 'utf8'));
+    assert.deepEqual(Object.keys(line).sort(), ['approval_wait_ms', 'secret']);
+    assert.equal(line.approval_wait_ms, 30000);
+    assert.match(line.secret, /^[0-9a-f]{48}$/);
+    assert.equal(sup.secretFor('w'), null, 'and a start that failed leaves no secret behind');
+  } finally {
+    if (saved === undefined) delete process.env.DECK_FAKE_STDIN; else process.env.DECK_FAKE_STDIN = saved;
+  }
+});

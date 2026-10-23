@@ -102,9 +102,19 @@ export class ShellDrawer {
     }
     options.shells.subscribe((raw) => this.onShellEvent(raw as { kind: string; id: string; data?: string; code?: number }));
     window.addEventListener('message', (event) => this.onFrameMessage(event));
-    // Shells already running, opened before this window loaded or by another of Deck's windows, are drawn
-    // here too, each with its latest output; they would otherwise run on with no tab to reach them (TASK-0211).
-    void options.shells.list(true).then((res) => {
+    void this.adopt();
+    if (stored(OPEN_KEY) === 'yes') this.toggle(true);
+  }
+
+  private adopting: Promise<void> | null = null;
+
+  /**
+   * Shells already running, opened before this window loaded or by another of Deck's windows, are drawn
+   * here too, each with its latest output; they would otherwise run on with no tab to reach them
+   * (TASK-0211). Asked again when an event names a shell this window has no tab for.
+   */
+  private adopt(): Promise<void> {
+    this.adopting ??= this.options.shells.list(true).then((res) => {
       const r = res as { available?: boolean; shells?: ShellTab[]; recent?: Record<string, string> };
       this.available = r.available !== false;
       for (const shell of r.shells ?? []) {
@@ -117,8 +127,8 @@ export class ShellDrawer {
         this.state = tabsAfter(this.state, { kind: 'opened', tab: shell });
       }
       this.draw();
-    });
-    if (stored(OPEN_KEY) === 'yes') this.toggle(true);
+    }).finally(() => { this.adopting = null; });
+    return this.adopting;
   }
 
   get tabs(): TabsState {
@@ -209,7 +219,11 @@ export class ShellDrawer {
 
   private onShellEvent(e: { kind: string; id: string; data?: string; code?: number }): void {
     const f = this.frames.get(e.id);
-    if (f === undefined) return;
+    // A shell another window opened: its tab is made from the list, whose output includes this event's.
+    if (f === undefined) {
+      void this.adopt();
+      return;
+    }
     if (e.kind === 'data' && typeof e.data === 'string') {
       if (f.ready) f.frame.contentWindow?.postMessage({ kind: 'data', data: e.data }, location.origin);
       else f.waiting.push(e.data);

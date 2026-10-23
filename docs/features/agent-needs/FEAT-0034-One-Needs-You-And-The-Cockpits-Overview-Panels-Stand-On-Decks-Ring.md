@@ -17,9 +17,9 @@ acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
-review_date: 2026-10-22
-review_verdict: changes-requested
-review_round: 1
+review_date: 2026-10-23
+review_verdict: approved
+review_round: 2
 related: ["[[FEAT-0032-Deck-Starts-And-Owns-Claude-And-Codex-Sessions-Each-Tied-To-The-Ticket-It-Was-Started-On]]", "[[FEAT-0033-A-Session-Is-Drawn-As-A-Conversation-Beside-The-Ticket-It-Was-Started-On]]", "[[FEAT-0031-The-Towers-In-Deck-Show-Links-Search-Next-Up-Needs-You-Ages-Weeks-And-Pictures]]", "[[ADR-0003-Deck-Writes-Through-The-Shell]]", "[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[RISK-0001-A-Second-Sidecar-Takes-Over-Focus-Routing]]", "[[RISK-0015]]"]
 ---
 
@@ -71,6 +71,8 @@ What they found, each fixed in [[TASK-0210]]:
 - Nothing tested the line that decides whether a cockpit request gets Approve and Deny. Setting it to true passed every check; the answer call would still have refused, so the harm was a wrong panel.
 
 Also changed: a stopped sidecar's secret is forgotten with its record. Not changed: "the choice survives a restart" is shown by a window reload, which reads the same `localStorage` a restart does; the cockpit's four panels also draw on a served page, without Caught up, which nothing in the Scope rules out; and the answer action joins its fields with ":", which holds while session ids carry no colon, as Deck's and the cockpit's do not.
+
+**Round two, 2026-10-23, at 86854d0: approved by both reviewers.** Each broke every fix in turn and saw a check fail for all three findings. Both found one line no check guarded: the start path could have gone back to writing the line without the wait. A check now fails if it does ([[TASK-0210]]). The renderer's 3-second timer is still guarded by reading only, as the task says.
 
 ## Links
 

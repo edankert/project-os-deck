@@ -17,9 +17,9 @@ acceptance_exception: ""
 acceptance: ""
 design: "[[DES-0006-Agent-Sessions-Stand-Beside-The-Work]]"
 reviewed_by: ["model:claude-opus-5-5", "model:claude-opus-5-5"]
-review_date: 2026-10-22
-review_verdict: changes-requested
-review_round: 1
+review_date: 2026-10-23
+review_verdict: approved
+review_round: 2
 related: ["[[ADR-0009-Deck-Runs-Its-Own-Agent-Sessions-Drawn-As-Conversations]]", "[[FEAT-0033-A-Session-Is-Drawn-As-A-Conversation-Beside-The-Ticket-It-Was-Started-On]]", "[[RISK-0014]]", "[[RISK-0015]]", "[[RISK-0010-Three-Js-Is-A-New-Runtime-Dependency-Of-The-Renderer]]"]
 ---
 
@@ -68,6 +68,8 @@ What they found, each fixed in [[TASK-0211]]:
 - An exit that arrived before a frame was ready was lost, and a paste over 65,536 characters was dropped without a word.
 
 Left as they are: every shell's output goes to every Deck window, which now draws every running shell; the frame's own messages are checked by origin and source, a guard no node suite runs because it lives in the frame; and a session whose worktree was deleted would open its shell in a missing folder, which node-pty refuses with its own error.
+
+**Round two, 2026-10-23, at 86854d0: approved by both reviewers.** Each broke every fix in turn and saw a check fail. The quit is covered by a check on real shells and by a reading of `shutdown()`, which no suite can run. One reviewer found the fourth finding only half fixed: a window already open did not pick up a shell another window opened later. It does now, with a check ([[TASK-0211]]). Whether [[TST-0108]] finds no shell left after a real quit is Edwin's step.
 
 ## Links
 

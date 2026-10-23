@@ -280,3 +280,15 @@ test('real shells and a job started in one are gone after closeAll', { skip: pty
     if (job > 0) try { process.kill(job, 'SIGKILL'); } catch { /* already gone */ }
   }
 });
+
+test('a window already open picks up a shell another window opened, the first time it hears of it', async () => {
+  const running = [];
+  const t = await drawerOn(running);
+  assert.deepEqual(t.d.tabs.tabs, []);
+  running.push({ shell: { id: 'shell-7', title: 'repo', folder: '/repo', session: null, exited: false }, recent: 'made elsewhere\r\n' });
+  t.tell({ kind: 'data', id: 'shell-7', data: 'made elsewhere\r\n' });
+  t.tell({ kind: 'data', id: 'shell-7', data: 'more' });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(t.d.tabs.tabs.map((x) => x.id), ['shell-7'], 'one tab, though two events named it');
+  assert.deepEqual(t.d.frames.get('shell-7').waiting, ['made elsewhere\r\n']);
+});
