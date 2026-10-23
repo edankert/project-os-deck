@@ -10,7 +10,7 @@
  */
 import { ACCESS_LEVELS, type AccessLevel, type AgentKind, type PermissionAnswer } from '../../shared/agent-types.js';
 import type { SessionManager, StartRequest } from './sessions.js';
-import { gatherNeeds } from './needs.js';
+import { cachedGit, gatherNeeds } from './needs.js';
 import { answerCockpitApproval, postCaughtUp } from '../../shared/write-client.js';
 import { runGit } from './sessions.js';
 
@@ -75,6 +75,8 @@ export interface CockpitAnswering {
 
 export function registerAgentCalls(handle: Handle, manager: SessionManager, rootOf: (workspaceId: string) => string | null, cockpitBase: (workspaceId: string) => string | null = () => null, cockpit: CockpitAnswering = { secretFor: () => null, actor: () => '' }): void {
   const cockpitAnswerable = (workspaceId: string): boolean => cockpitBase(workspaceId) !== null && cockpit.secretFor(workspaceId) !== null;
+  // Needs you is read every few seconds; git's state is read at most every 15 (TASK-0210).
+  const needsGit = cachedGit(runGit, 15_000);
   handle('deck:agents:list', () => manager.list());
   // Caught up (TASK-0203): the digest's own time, written by the main process to the workspace's sidecar.
   handle('deck:cockpit:caught-up', async (_e, workspaceId, at) => {
@@ -116,7 +118,7 @@ export function registerAgentCalls(handle: Handle, manager: SessionManager, root
         if (!res.ok) throw new Error(`the sidecar answered ${res.status}`);
         return res.json();
       },
-      git: runGit, cockpitAnswerable: cockpitAnswerable(workspaceId),
+      git: needsGit, cockpitAnswerable: cockpitAnswerable(workspaceId),
     });
     return { ok: true, needs };
   });

@@ -18,6 +18,18 @@ import type { Workspace } from '../shared/types.js';
 import { SidecarClient } from '../shared/sidecar-client.js';
 import { sameDirectory } from './paths.js';
 
+/**
+ * The longest the cockpit's sidecar holds a permission request for an answer: its own upper bound
+ * (`APPROVAL_WAIT_MAX_MS`). Its default is 5 s, shorter than Deck reads the requests, so a request
+ * went back to the cockpit's terminal before Needs you showed it (TASK-0210).
+ */
+export const APPROVAL_WAIT_MS = 30_000;
+
+/** The one line Deck writes to the standard input of a sidecar it starts (`--secret-stdin`). */
+export function shellLine(secret: string): string {
+  return `${JSON.stringify({ secret, approval_wait_ms: APPROVAL_WAIT_MS })}\n`;
+}
+
 export interface SidecarHandle {
   workspaceId: string;
   base: string;
@@ -220,7 +232,7 @@ export class SidecarSupervisor {
     const secret = crypto.randomBytes(24).toString('hex');
     this.secrets.set(workspace.id, secret);
     child.stdin?.on('error', () => undefined);
-    child.stdin?.end(`${JSON.stringify({ secret })}\n`);
+    child.stdin?.end(shellLine(secret));
 
     const record: Record_ = { workspaceId: workspace.id, base, ownedByDeck: true, process: child, stderrTail: [], ready: false };
     // Registered BEFORE the readiness wait, so a quit mid-wait still kills it.
@@ -241,7 +253,7 @@ export class SidecarSupervisor {
     let exited = false;
     child.once('exit', () => {
       exited = true;
-      if (this.records.get(workspace.id) === record) this.records.delete(workspace.id);
+      if (this.records.get(workspace.id) === record) this.drop(workspace.id);
     });
     // An interpreter that is not there raises 'error', not 'exit'. Without this
     // handler that is an unhandled event, which takes the whole main process
@@ -249,7 +261,7 @@ export class SidecarSupervisor {
     child.once('error', (err: Error) => {
       exited = true;
       record.stderrTail.push(`could not start ${this.python}: ${err.message}\n`);
-      if (this.records.get(workspace.id) === record) this.records.delete(workspace.id);
+      if (this.records.get(workspace.id) === record) this.drop(workspace.id);
     });
 
     const ready = await waitForHealth(base, workspace.root, () => exited);
@@ -296,10 +308,16 @@ export class SidecarSupervisor {
     this.records.delete(workspaceId);
   }
 
+  /** A sidecar gone: its record, and the secret it was started with, which nothing may use again. */
+  private drop(workspaceId: string): void {
+    this.records.delete(workspaceId);
+    this.secrets.delete(workspaceId);
+  }
+
   stopOne(workspaceId: string): void {
     const record = this.records.get(workspaceId);
     if (record === undefined) return;
-    this.records.delete(workspaceId);
+    this.drop(workspaceId);
     if (!record.ownedByDeck || record.process === null) return;
     const child = record.process;
     child.kill('SIGTERM');

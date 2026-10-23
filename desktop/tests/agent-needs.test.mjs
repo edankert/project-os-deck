@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { desktopRoot, load } from './helpers.mjs';
+import { desktopRoot, fakeSidecar, load } from './helpers.mjs';
 
 const { needsPanel, ANSWER } = load('shared/overview-needs.js');
 const { waitingAgents, gitWords, unpushed } = load('shared/agent-needs.js');
@@ -176,7 +176,6 @@ test('Deck\'s own sidecar is started with --secret-stdin and a fresh secret of a
   const src = fs.readFileSync(path.join(desktopRoot, 'src', 'main', 'sidecar.ts'), 'utf8');
   assert.match(src, /'--secret-stdin'/);
   assert.match(src, /randomBytes\(24\)\.toString\('hex'\)/, '48 hex characters, made at each start');
-  assert.match(src, /record\.ownedByDeck \? this\.secrets\.get/, 'only a sidecar Deck owns gives its secret');
   assert.ok(!/console\.(log|warn|error)\([^)]*secret/.test(src), 'never logged');
 });
 
@@ -247,4 +246,64 @@ test('Caught up is sent by the main process with the digest\'s time, and nothing
   assert.deepEqual(sent, [['http://127.0.0.1:9', '2026-10-22T22:13:40+01:00']]);
   assert.match((await h.get('deck:cockpit:caught-up')({}, 'w', 'yesterday')).error, /digest's time/);
   assert.equal(sent.length, 1);
+});
+
+// --- TASK-0210: the review's round one ---
+
+const { SidecarSupervisor, shellLine, APPROVAL_WAIT_MS } = load('main/sidecar.js');
+const { cachedGit } = load('main/agents/needs.js');
+
+test('Deck\'s sidecar is told to hold a request for 30 s, the longest the cockpit allows, in the line the cockpit reads', () => {
+  const line = shellLine('c'.repeat(48));
+  assert.ok(line.endsWith('\n'));
+  assert.deepEqual(JSON.parse(line), { secret: 'c'.repeat(48), approval_wait_ms: 30000 });
+  assert.equal(APPROVAL_WAIT_MS, 30000);
+});
+
+test('only a sidecar Deck started gives its secret, and a stopped one gives none', () => {
+  const sup = new SidecarSupervisor('python3');
+  const secret = 'd'.repeat(48);
+  sup.records.set('w', { workspaceId: 'w', base: 'http://127.0.0.1:9', ownedByDeck: true, process: null, stderrTail: [], ready: true });
+  sup.secrets.set('w', secret);
+  assert.equal(sup.secretFor('w'), secret);
+  assert.ok(!JSON.stringify(sup.handle('w')).includes(secret), 'a handle never carries it');
+  sup.records.set('w', { ...sup.records.get('w'), ownedByDeck: false });
+  assert.equal(sup.secretFor('w'), null, 'a borrowed sidecar gives none, whatever the map holds');
+  sup.records.set('w', { ...sup.records.get('w'), ownedByDeck: true });
+  sup.stopOne('w');
+  assert.equal(sup.secrets.has('w'), false, 'stopping it forgets its secret');
+  assert.equal(sup.secretFor('w'), null);
+  assert.equal(sup.secretFor('nobody'), null);
+});
+
+test('Needs you offers buttons on the cockpit\'s requests only when Deck holds its sidecar\'s secret', async () => {
+  const side = await fakeSidecar({ '/api/cockpit/approvals': { approvals: [{ approval_id: 'ap-1', session_id: 'cockpit-s', status: 'open', agent: 'claude', tool: 'Bash', prompt: 'an invented command' }] } });
+  try {
+    const of = async (secret) => {
+      const h = new Map();
+      const manager = new SessionManager(fs.mkdtempSync(path.join(os.tmpdir(), 'deck-needs-')), {});
+      registerAgentCalls((ch, fn) => h.set(ch, fn), manager, (id) => (id === 'w' ? fs.mkdtempSync(path.join(os.tmpdir(), 'deck-needs-repo-')) : null), () => side.base, { secretFor: () => secret, actor: () => 'u' });
+      const res = await h.get('deck:agents:needs')({}, 'w');
+      return res.needs.requests.map((r) => [r.id, r.source, r.answerable]);
+    };
+    assert.deepEqual(await of(null), [['ap-1', 'cockpit', false]], 'a borrowed sidecar: no buttons');
+    assert.deepEqual(await of('e'.repeat(48)), [['ap-1', 'cockpit', true]], 'Deck\'s own: Approve and Deny');
+    assert.ok(side.received.some((r) => r.url === '/api/cockpit/approvals'));
+    assert.ok(!side.received.some((r) => JSON.stringify(r).includes('e'.repeat(48))), 'the read carries no secret');
+  } finally {
+    await side.close();
+  }
+});
+
+test('git is asked again only after 15 s, so reading Needs you every 3 s runs git at most every 15', async () => {
+  let t = 0;
+  const asked = [];
+  const git = cachedGit(async (args, cwd) => { asked.push(args.join(' ')); return { ok: true, stdout: String(asked.length), stderr: '' }; }, 15000, () => t);
+  assert.equal((await git(['status'], '/r')).stdout, '1');
+  t = 3000;
+  assert.equal((await git(['status'], '/r')).stdout, '1', 'from what it last answered');
+  assert.equal((await git(['status'], '/other')).stdout, '2', 'another folder is its own question');
+  t = 15000;
+  assert.equal((await git(['status'], '/r')).stdout, '3');
+  assert.deepEqual(asked, ['status', 'status', 'status']);
 });

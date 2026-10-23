@@ -66,3 +66,19 @@ export async function gitState(root: string, git: GitRunner): Promise<AgentNeeds
     changed: status.ok ? status.stdout.split('\n').filter((l) => l.trim() !== '').length : 0,
   };
 }
+
+/**
+ * A git runner that answers a repeated command from what it last answered, for `ms` (TASK-0210): Needs
+ * you is read every few seconds while a cockpit request may be open, and git's state need not be.
+ */
+export function cachedGit(git: GitRunner, ms: number, now: () => number = Date.now): GitRunner {
+  const seen = new Map<string, { at: number; result: Awaited<ReturnType<GitRunner>> }>();
+  return async (args, cwd) => {
+    const key = JSON.stringify([cwd, args]);
+    const hit = seen.get(key);
+    if (hit !== undefined && now() - hit.at < ms) return hit.result;
+    const result = await git(args, cwd);
+    seen.set(key, { at: now(), result });
+    return result;
+  };
+}

@@ -14,6 +14,11 @@ import type { AgentNeeds } from '../shared/agent-needs.js';
 
 /** How often the cockpit's sessions are read again while the overview is open. */
 const COCKPIT_EVERY_MS = 15_000;
+/**
+ * How often Needs you is read again: often enough that a cockpit request, which its sidecar holds for
+ * 30 s, is seen with most of that left (TASK-0210). The main process reads git at most every 15 s.
+ */
+const NEEDS_EVERY_MS = 3_000;
 
 let bridge: AgentBridge | null = null;
 let deck: SessionRecord[] = [];
@@ -38,8 +43,10 @@ export function watchAgents(agents: AgentBridge | null, onChange: () => void): v
   });
   setInterval(() => {
     for (const workspaceId of cockpit.keys()) void reloadCockpit(workspaceId);
-    for (const workspaceId of needs.keys()) void reloadNeeds(workspaceId);
   }, COCKPIT_EVERY_MS);
+  setInterval(() => {
+    for (const workspaceId of needs.keys()) void reloadNeeds(workspaceId);
+  }, NEEDS_EVERY_MS);
 }
 
 /** Every session on a workspace, Deck's and the cockpit's; undefined where the host has none to give. */
