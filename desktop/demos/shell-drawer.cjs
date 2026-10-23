@@ -24,8 +24,8 @@ module.exports = async function (d) {
   const tabs = () => js(`[...document.querySelectorAll('.sh-drawer .sh-tab')].map((t) => ({ id: t.dataset.shell, words: t.textContent, active: t.classList.contains('is-active') }))`);
   const screen = (id) => js(`(() => { const f = document.querySelector('.sh-frame[data-shell="${id}"]'); const r = f && f.contentDocument && f.contentDocument.querySelector('.xterm-rows'); return r ? r.textContent : null; })()`);
 
-  check((await t.rect('#shells-toggle')) !== null, '⌘ Shells stands in the header');
-  await clickOn('#shells-toggle', 600);
+  check((await t.rect('#rail #shells-toggle')) !== null, '⌘ Shells stands at the foot of the workspace rail');
+  await clickOn('#rail #shells-toggle', 600);
   check((await t.rect('.sh-drawer')) !== null, 'and opens the drawer', { text: await t.text('.sh-drawer') });
   for (let i = 0; i < 3; i += 1) {
     await clickOn('.sh-drawer .sh-new', 900);

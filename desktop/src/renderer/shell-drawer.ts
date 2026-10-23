@@ -1,6 +1,7 @@
 /**
  * The shell drawer (FEAT-0035, TASK-0206; ADR-0009): plain terminals at the bottom of Deck, a tab
- * each, several at once. ⌘ Shells in the header opens and closes it; it keeps its height.
+ * each, several at once. ⌘ Shells, at the foot of the workspace rail, opens and closes it; it keeps its
+ * height.
  *
  * Each tab is a frame (`terminal.html`) where xterm.js draws the shell, under a policy of its own
  * that allows the inline styles xterm.js writes; Deck's page keeps its own policy. This module, in

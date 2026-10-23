@@ -93,6 +93,9 @@ body {
 .rail button[aria-current="true"] { background: var(--panel-2); border-color: var(--line); }
 .rail button:disabled { cursor: default; color: var(--ink-dim); }
 .rail .kind { display: block; color: var(--ink-dim); font-size: 11px; }
+/* The shell drawer's button, set apart below the workspaces (TASK-0212). */
+.rail .rail-shells { margin-top: 12px; border-color: var(--line); color: var(--ink-dim); }
+.rail .rail-shells[aria-pressed="true"] { color: var(--ink); background: var(--panel-2); }
 
 /* The navigator: what the view holds, in the groups the sidecar sent. */
 .navigator {

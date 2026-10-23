@@ -589,7 +589,18 @@ async function boot(): Promise<void> {
   renderRail();
   // The shell drawer, in the shell only (FEAT-0035): no bridge on a served page, so no drawer and no button.
   const shellBridge = host.shells();
-  if (shellBridge !== null) initShellDrawer({ shells: shellBridge, workspaceId: () => host.state().workspaceId, say }, document.getElementById('shells-toggle') as HTMLButtonElement | null);
+  if (shellBridge !== null) {
+    shellsButton = document.createElement('button');
+    shellsButton.type = 'button';
+    shellsButton.id = 'shells-toggle';
+    shellsButton.className = 'rail-shells';
+    shellsButton.hidden = true;
+    shellsButton.setAttribute('aria-pressed', 'false');
+    shellsButton.title = 'Plain shells, in a drawer at the bottom';
+    shellsButton.textContent = '⌘ Shells';
+    el.rail.appendChild(shellsButton);
+    initShellDrawer({ shells: shellBridge, workspaceId: () => host.state().workspaceId, say }, shellsButton);
+  }
 
   initOverview({
     workspaceId: () => host.state().workspaceId,
@@ -700,7 +711,13 @@ function renderRail(): void {
     });
     el.rail.appendChild(add);
   }
+  // The shell drawer's button stands at the rail's foot, not in the header, whose view switcher wraps
+  // when the header runs out of width: there it made Glass's field shorter (TASK-0212).
+  if (shellsButton !== null) el.rail.appendChild(shellsButton);
 }
+
+/** ⌘ Shells, made in Deck's own window only (FEAT-0035); a served page has none. */
+let shellsButton: HTMLButtonElement | null = null;
 
 async function selectWorkspace(id: string, options: { wheel?: boolean } = {}): Promise<void> {
   const workspace = workspaceById(id);

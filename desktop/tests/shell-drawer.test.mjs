@@ -131,7 +131,10 @@ test('closing a tab that is not shown keeps the shown one; an ended shell says s
 
 test('the drawer\'s button starts hidden, the terminal frame keeps its own policy, and Deck\'s page keeps its own', () => {
   const page = fs.readFileSync(path.join(desktopRoot, 'src', 'renderer', 'index.html'), 'utf8');
-  assert.match(page, /id="shells-toggle" hidden/);
+  assert.doesNotMatch(page, /shells-toggle/, 'not in the header, whose switcher wraps when it runs out of width (TASK-0212)');
+  const renderer = fs.readFileSync(path.join(desktopRoot, 'src', 'renderer', 'renderer.ts'), 'utf8');
+  assert.match(renderer, /if \(shellBridge !== null\) \{\n\s+shellsButton = document\.createElement\('button'\);/, 'made only when the host gives shells');
+  assert.match(renderer, /if \(shellsButton !== null\) el\.rail\.appendChild\(shellsButton\);/, 'and kept at the rail\'s foot when the rail is drawn again');
   assert.match(page, /style-src 'self';/, 'Deck\'s page still allows no inline style');
   const frame = fs.readFileSync(path.join(desktopRoot, 'src', 'renderer', 'terminal.html'), 'utf8');
   assert.match(frame, /style-src 'self' 'unsafe-inline'/);
